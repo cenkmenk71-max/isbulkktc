@@ -87,8 +87,8 @@ export function PackagesInteractiveShowcase({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedDuration, setSelectedDuration] = useState<ListingDuration>(30);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [sceneStarted, setSceneStarted] = useState(false);
-  const [sceneVisible, setSceneVisible] = useState(false);
+  const [sceneStarted, setSceneStarted] = useState(true);
+  const [sceneVisible, setSceneVisible] = useState(true);
   const [sceneUnavailable, setSceneUnavailable] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -123,11 +123,11 @@ export function PackagesInteractiveShowcase({
   );
 
   useEffect(() => {
+    setSceneStarted(true);
     const stage = stageRef.current;
     if (!stage) return;
     if (!("IntersectionObserver" in window)) {
       const frame = requestAnimationFrame(() => {
-        setSceneStarted(true);
         setSceneVisible(true);
       });
       return () => cancelAnimationFrame(frame);
@@ -135,12 +135,9 @@ export function PackagesInteractiveShowcase({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setSceneStarted(true);
-        }
         setSceneVisible(entry.isIntersecting);
       },
-      { rootMargin: "220px 0px" },
+      { rootMargin: "600px 0px" },
     );
     observer.observe(stage);
     return () => observer.disconnect();

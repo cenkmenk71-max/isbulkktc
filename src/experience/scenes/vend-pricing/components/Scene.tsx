@@ -8,6 +8,7 @@ import {
   disposeLabels,
   loadLabels,
   labelsReady,
+  makeLabels,
   type Labels,
   type SceneLabels,
 } from "../lib/labels";
@@ -270,20 +271,30 @@ export function Scene({
   labelCopy: SceneLabels;
   sceneVisible: boolean;
 }) {
-  const [maxTextureSize, setMaxTextureSize] = useState<number | null>(null);
+  const [maxTextureSize, setMaxTextureSize] = useState<number>(2048);
   const [labels, setLabels] = useState<Labels | null>(null);
   const [documentVisible, setDocumentVisible] = useState(!document.hidden);
   const [closeUp, setCloseUp] = useState(false);
   const closeUpRef = useRef(false);
   useEffect(() => {
-    if (maxTextureSize === null) return;
     let alive = true;
     let loaded: Labels | null = null;
-    void loadLabels(plans, labelCopy, maxTextureSize).then((l) => {
-      loaded = l;
-      if (alive) setLabels(l);
-      else disposeLabels(l);
-    });
+    void loadLabels(plans, labelCopy, maxTextureSize)
+      .then((l) => {
+        loaded = l;
+        if (alive) setLabels(l);
+        else disposeLabels(l);
+      })
+      .catch((err) => {
+        console.warn("loadLabels fallback engaged:", err);
+        try {
+          const l = makeLabels(plans, labelCopy, maxTextureSize);
+          loaded = l;
+          if (alive) setLabels(l);
+        } catch {
+          // ignore
+        }
+      });
     return () => {
       alive = false;
       if (loaded) disposeLabels(loaded);
@@ -320,7 +331,7 @@ export function Scene({
             : "always"
           : "never"
       }
-      gl={{ antialias: true, preserveDrawingBuffer: CAPTURE }}
+      gl={{ antialias: true, preserveDrawingBuffer: true }}
       // Neutral tone mapping keeps the neon and the white cabinet true (ACES shifts them)
       onCreated={({ gl }) => {
         setMaxTextureSize(gl.capabilities.maxTextureSize);

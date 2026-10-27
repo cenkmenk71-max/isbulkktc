@@ -31,11 +31,28 @@ export type SceneLabels = {
   quote: string;
 };
 
-// Canvas text must wait for the web fonts, or the fallback font is baked in for good
-export const labelsReady = Promise.all([
-  document.fonts.load(`700 64px ${DISPLAY}`),
-  document.fonts.load(`400 64px ${DOT}`),
-]).then(() => undefined);
+// Canvas text waits for web fonts if available, with a fast safe fallback
+export const labelsReady = (async () => {
+  if (typeof document === "undefined" || !document.fonts?.load) {
+    return undefined;
+  }
+  try {
+    const primaryDisplay = DISPLAY.split(",")[0].trim().replace(/['"]/g, "");
+    const primaryDot = DOT.split(",")[0].trim().replace(/['"]/g, "");
+
+    await Promise.race([
+      Promise.allSettled([
+        document.fonts.load(`700 64px "${primaryDisplay}"`).catch(() => []),
+        document.fonts.load(`400 64px "${primaryDot}"`).catch(() => []),
+        document.fonts.ready.catch(() => undefined),
+      ]),
+      new Promise((resolve) => setTimeout(resolve, 400)),
+    ]);
+  } catch (err) {
+    console.warn("Font loading fallback engaged:", err);
+  }
+  return undefined;
+})();
 
 type LogicalCanvas = { width: number; height: number; scale: number };
 const logicalCanvases = new WeakMap<CanvasRenderingContext2D, LogicalCanvas>();
@@ -424,8 +441,15 @@ export function makeLabels(
 export type Labels = ReturnType<typeof makeLabels>;
 export const disposeLabels = (labels: Labels) => labels.dispose();
 
-export const loadLabels = (
+export const loadLabels = async (
   plans: Plan[],
   copy: SceneLabels,
   maxTextureSize?: number,
-) => labelsReady.then(() => makeLabels(plans, copy, maxTextureSize));
+) => {
+  try {
+    await labelsReady;
+  } catch {
+    // proceed safely
+  }
+  return makeLabels(plans, copy, maxTextureSize);
+};
