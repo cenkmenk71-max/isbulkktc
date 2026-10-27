@@ -360,7 +360,7 @@ for (const [asset, component] of [
   );
   assert.match(component, new RegExp(`/images/${asset}\\.webp`));
 }
-assert.match(editorialPages, /className="editorial-hero-background-image"/);
+assert.match(editorialPages, /className="editorial-hero-background-image\b/);
 assert.match(css, /\.editorial-hero\s*\{[\s\S]*?minmax\(300px,\s*0\.9fr\)/);
 assert.match(css, /\.home-page \.hero-photo-image \{\s*transform: none;/);
 assert.doesNotMatch(css, /\.hero-scene-window|\.hero-scene-foliage/);
@@ -450,7 +450,10 @@ assert.doesNotMatch(packagesPlans, /HEADLINE|TAGLINE|PLAN_COLORS/);
 assert.doesNotMatch(packagesMachineControls, /interactive\?/);
 assert.match(packagesLabels, /getComputedStyle\(document\.documentElement\)/);
 assert.match(packagesLabels, /texture\(2048, 768/);
-assert.match(packagesLabels, /maxTextureSize >= 4096 \? 1\.5 : 1/);
+assert.match(packagesLabels, /textScale = 1/);
+assert.match(packagesLabels, /new THREE\.DataTexture/);
+assert.match(packagesLabels, /export function makeFallbackLabels/);
+assert.match(packagesScene, /makeFallbackLabels/);
 assert.match(packagesLabels, /toLocaleUpperCase\(labels\.locale\)/);
 assert.doesNotMatch(
   packagesLabels,
