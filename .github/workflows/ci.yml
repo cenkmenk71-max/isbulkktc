@@ -32,16 +32,16 @@ jobs:
         run: bun run security:audit
 
       - name: Lint
-        run: npm run lint
+        run: bun run lint
 
       - name: Type check
-        run: npm run typecheck
+        run: bun run typecheck
 
       - name: Validate form schemas
-        run: npm run test:unit
+        run: bun run test:unit
 
       - name: Build
-        run: npm run build
+        run: bun run build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
 
@@ -49,7 +49,7 @@ jobs:
         run: bunx playwright install --with-deps chromium
 
       - name: End-to-end tests
-        run: npm run test:e2e
+        run: bun run test:e2e
         env:
           NEXT_TELEMETRY_DISABLED: "1"
 
@@ -79,11 +79,11 @@ jobs:
           version: 2.120.0
 
       - name: Start the isolated local Supabase stack
-        run: npm run db:start
+        run: bun run db:start
 
       - name: Apply migrations and run pgTAP tests
-        run: npm run test:db
+        run: bun run test:db
 
       - name: Stop the local Supabase stack
         if: always()
-        run: npm run db:stop -- --no-backup
+        run: bun run db:stop -- --no-backup
