@@ -69,7 +69,7 @@ function texture(
   h: number,
   draw: (g: CanvasRenderingContext2D) => void,
   scale = 1,
-) {
+): THREE.Texture {
   const c = document.createElement("canvas");
   c.width = w * scale;
   c.height = h * scale;
@@ -84,9 +84,13 @@ function texture(
 }
 
 // Redraw an existing texture in place when its animated display changes.
-function redraw(t: THREE.CanvasTexture, draw: (g: CanvasRenderingContext2D) => void) {
-  const c = t.image as HTMLCanvasElement;
-  const context = c.getContext("2d")!;
+function redraw(t: THREE.Texture, draw: (g: CanvasRenderingContext2D) => void) {
+  const image = t.image as HTMLCanvasElement | undefined;
+  // The low-memory label fallback uses DataTextures, which intentionally have no
+  // canvas to redraw. Keep their neutral surfaces stable instead of throwing.
+  if (!image || typeof image.getContext !== "function") return;
+  const context = image.getContext("2d");
+  if (!context) return;
   const logical = logicalCanvases.get(context);
   context.setTransform(logical?.scale ?? 1, 0, 0, logical?.scale ?? 1, 0, 0);
   draw(context);
@@ -216,9 +220,11 @@ function drawSelection(g: CanvasRenderingContext2D, labels: SceneLabels) {
 export function makeLabels(
   plans: Plan[],
   copy: SceneLabels,
-  maxTextureSize = 4096,
+  textScale = 1,
 ) {
-  const textScale = maxTextureSize >= 4096 ? 1.5 : 1;
+  // Keep the default texture budget conservative. GPU maxTextureSize is only a
+  // dimension limit, not a signal that the browser has spare canvas/GPU memory.
+  // Callers may explicitly request a smaller scale for a recovery attempt.
   const cans = plans.map((p) =>
     texture(2048, 768, (g) => drawCan(g, p, copy), textScale),
   );
@@ -444,12 +450,92 @@ export const disposeLabels = (labels: Labels) => labels.dispose();
 export const loadLabels = async (
   plans: Plan[],
   copy: SceneLabels,
-  maxTextureSize?: number,
+  textScale = 1,
 ) => {
   try {
     await labelsReady;
   } catch {
     // proceed safely
   }
-  return makeLabels(plans, copy, maxTextureSize);
+  return makeLabels(plans, copy, textScale);
+};
+
+function solidTexture(color: string, alpha = 255): THREE.DataTexture {
+  const normalized = color.startsWith("#") ? color.slice(1) : color;
+  const parsed = /^[0-9a-f]{6}$/i.test(normalized)
+    ? Number.parseInt(normalized, 16)
+    : 0x9cbba7;
+  const data = new Uint8Array([
+    (parsed >> 16) & 0xff,
+    (parsed >> 8) & 0xff,
+    parsed & 0xff,
+    alpha,
+  ]);
+  const result = new THREE.DataTexture(data, 1, 1, THREE.RGBAFormat);
+  result.colorSpace = THREE.SRGBColorSpace;
+  result.magFilter = THREE.LinearFilter;
+  result.minFilter = THREE.LinearFilter;
+  result.generateMipmaps = false;
+  result.needsUpdate = true;
+  return result;
+}
+
+/**
+ * Last-resort materials for environments where 2D canvas labels cannot be
+ * allocated. The procedural machine geometry remains visible and selectable;
+ * only text, reflections-on-labels, and animated condensation are simplified.
+ */
+export function makeFallbackLabels(plans: Plan[]): Labels {
+  const cans = plans.map((plan) => solidTexture(plan.color));
+  const strips = plans.map((plan) => solidTexture(plan.color));
+  const buttons = plans.map((plan) => solidTexture(plan.color));
+  const slot = solidTexture("#0a0203");
+  const fog = solidTexture("#c9d8d2", 28);
+  const selection = solidTexture("#07110d");
+  const interior = solidTexture("#b9cde0");
+  const sheen = solidTexture("#ffffff", 28);
+  const grille = solidTexture("#2a3140");
+  const glow = solidTexture("#ffffff", 150);
+  const sign = solidTexture("#9cbba7");
+  const open = solidTexture(CYAN, 180);
+  const cold = solidTexture(MAGENTA, 180);
+  const puddles = solidTexture("#7f8d84");
+  const textures = [
+    ...cans,
+    ...strips,
+    ...buttons,
+    slot,
+    fog,
+    selection,
+    interior,
+    sheen,
+    grille,
+    glow,
+    sign,
+    open,
+    cold,
+    puddles,
+  ];
+
+  return {
+    cans,
+    slot,
+    fog,
+    setSlot() {},
+    drawFog() {},
+    interior,
+    sheen,
+    grille,
+    glow,
+    strips,
+    selection,
+    buttons,
+    sign,
+    open,
+    cold,
+    puddles,
+    dispose() {
+      textures.forEach((item) => item.dispose());
+    },
+  };
 };
