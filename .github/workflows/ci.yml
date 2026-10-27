@@ -29,12 +29,6 @@ jobs:
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
 
-      - name: Set up Supabase CLI
-        id: supabase_cli
-        uses: supabase/setup-cli@v3
-        with:
-          version: 2.120.0
-
       - name: Audit production dependencies
         run: $HOME/.bun/bin/bun audit --prod --audit-level=moderate
 
@@ -54,6 +48,12 @@ jobs:
 
       - name: Install Playwright browser
         run: bunx playwright install --with-deps chromium
+
+      - name: Set up Supabase CLI
+        id: supabase_cli
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.120.0
 
       - name: Start the seeded local Supabase stack
         id: supabase_start
