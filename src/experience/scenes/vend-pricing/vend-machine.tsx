@@ -40,7 +40,7 @@ type Props = {
   onUnavailable: () => void;
 };
 
-function supportsWebGL() {
+async function supportsWebGL(): Promise<boolean> {
   if (typeof window === "undefined" || typeof document === "undefined") return false;
   try {
     const canvas = document.createElement("canvas");
@@ -51,9 +51,26 @@ function supportsWebGL() {
     }) as WebGL2RenderingContext | null;
     if (!context || context.isContextLost()) return false;
 
-    // Do not keep a throwaway GPU context alive alongside the real renderer.
-    context.getExtension("WEBGL_lose_context")?.loseContext();
-    return true;
+    const loseContext = context.getExtension("WEBGL_lose_context");
+    if (!loseContext) return false;
+
+    // Release the probe context before R3F creates its own. Calling loseContext()
+    // and immediately returning races the real renderer on constrained CI GPUs.
+    return await new Promise<boolean>((resolve) => {
+      let timeout: number | undefined;
+      let settled = false;
+      const finish = (supported: boolean) => {
+        if (settled) return;
+        settled = true;
+        if (timeout !== undefined) window.clearTimeout(timeout);
+        canvas.removeEventListener("webglcontextlost", onContextLost);
+        resolve(supported);
+      };
+      const onContextLost = () => finish(true);
+      canvas.addEventListener("webglcontextlost", onContextLost, { once: true });
+      timeout = window.setTimeout(() => finish(context.isContextLost()), 1000);
+      loseContext.loseContext();
+    });
   } catch {
     return false;
   }
@@ -113,12 +130,18 @@ export default function VendMachine({
   );
 
   useEffect(() => {
+    let alive = true;
     const frame = requestAnimationFrame(() => {
-      const isAvailable = supportsWebGL();
-      setAvailable(isAvailable);
-      if (!isAvailable) onUnavailable();
+      void supportsWebGL().then((isAvailable) => {
+        if (!alive) return;
+        setAvailable(isAvailable);
+        if (!isAvailable) onUnavailable();
+      });
     });
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      alive = false;
+      cancelAnimationFrame(frame);
+    };
   }, [onUnavailable]);
 
   useEffect(() => {

@@ -33,12 +33,12 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
+    command: process.env.CI ? "npm run start" : "npm run dev",
     url: readinessURL,
     env: {
       NEXT_PUBLIC_APP_URL: baseURL,
       AUTH_OAUTH_PROVIDERS: process.env.PLAYWRIGHT_AUTH_OAUTH_PROVIDERS ?? "",
-      NEXT_DIST_DIR: ".next-playwright",
+      ...(process.env.CI ? {} : { NEXT_DIST_DIR: ".next-playwright" }),
       PORT: port,
     },
     reuseExistingServer: !process.env.CI,

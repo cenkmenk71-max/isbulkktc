@@ -12016,3 +12016,54 @@ html[dir="rtl"] input[name="slug"] {
     font-weight: 650;
   }
 }
+
+
+/* Prevent narrow company-directory cards from forcing horizontal scroll. */
+.company-directory-grid > .company-directory-card {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.company-directory-card-top {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.company-directory-card-badges {
+  flex: 1 1 120px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.company-directory-category {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.company-directory-card-details,
+.company-directory-location,
+.company-directory-card-actions {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.company-directory-card-details p > span,
+.company-directory-card-details p > a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.company-directory-card-actions a {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.company-directory-card-actions a span {
+  min-width: 0;
+  max-width: 100%;
+}
