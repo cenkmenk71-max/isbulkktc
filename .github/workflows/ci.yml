@@ -23,7 +23,7 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3
+          bun-version: 1.4
 
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
@@ -68,12 +68,13 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3
+          bun-version: 1.4
 
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
 
       - name: Set up Supabase CLI
+        id: supabase_cli
         uses: supabase/setup-cli@v3
         with:
           version: 2.120.0
@@ -85,5 +86,5 @@ jobs:
         run: bun run test:db
 
       - name: Stop the local Supabase stack
-        if: always()
+        if: always() && steps.supabase_cli.outcome == 'success'
         run: bun run db:stop -- --no-backup
