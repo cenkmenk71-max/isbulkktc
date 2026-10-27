@@ -715,28 +715,25 @@ export async function getPendingJobsForReview(): Promise<JobRow[]> {
 export async function getMyApplications() {
   const user = await getCurrentUser();
   if (!user || user.status !== "active") {
-    throw new Error("An active user session is required to read applications.");
+    return { applications: [], notifications: [] };
   }
 
-  const supabase = await createSupabaseServerClient();
-  const [{ data, error }, { data: notifications, error: notificationsError }] =
-    await Promise.all([
-      supabase.rpc("list_my_applications"),
-      supabase.rpc("list_my_application_notifications"),
-    ]);
+  try {
+    const supabase = await createSupabaseServerClient();
+    const [{ data, error }, { data: notifications, error: notificationsError }] =
+      await Promise.all([
+        supabase.rpc("list_my_applications"),
+        supabase.rpc("list_my_application_notifications"),
+      ]);
 
-  if (error) {
-    throw new Error("Candidate applications could not be loaded.", {
-      cause: error,
-    });
-  }
-  if (notificationsError) {
-    throw new Error("Candidate application notifications could not be loaded.", {
-      cause: notificationsError,
-    });
-  }
+    if (error || notificationsError) {
+      return { applications: [], notifications: [] };
+    }
 
-  return { applications: data, notifications };
+    return { applications: data ?? [], notifications: notifications ?? [] };
+  } catch {
+    return { applications: [], notifications: [] };
+  }
 }
 
 export async function getCompanyApplications(companyId: string) {

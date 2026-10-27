@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
 
 export default async function CandidateDashboardPage() {
-  const [{ user, profile }, copy, applicationData] = await Promise.all([
-    getCandidateWorkspace(),
+  const { user, profile } = await getCandidateWorkspace();
+  const [copy, applicationData] = await Promise.all([
     getTranslations("CandidateDashboard"),
     getMyApplications(),
   ]);

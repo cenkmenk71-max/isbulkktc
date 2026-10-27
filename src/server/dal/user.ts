@@ -19,6 +19,33 @@ export type CurrentUserDTO = {
   status: "active" | "suspended" | "closed";
 };
 
+function isMissingOrUnauthenticatedAuthError(error: unknown): boolean {
+  if (!error) return false;
+  if (isCorruptedSupabaseAuthError(error)) return true;
+  if (typeof error === "object" && error !== null) {
+    const err = error as { name?: unknown; message?: unknown; cause?: unknown };
+    if (err.name === "AuthSessionMissingError") return true;
+    if (typeof err.message === "string") {
+      const msg = err.message.toLowerCase();
+      if (
+        msg.includes("auth session missing") ||
+        msg.includes("session missing") ||
+        msg.includes("jwt") ||
+        msg.includes("token") ||
+        msg.includes("fetch failed") ||
+        msg.includes("enotfound") ||
+        msg.includes("network")
+      ) {
+        return true;
+      }
+    }
+    if (err.cause && isMissingOrUnauthenticatedAuthError(err.cause)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export const getCurrentUser = cache(
   async (): Promise<CurrentUserDTO | null> => {
     const supabase = await createSupabaseServerClient();
@@ -34,21 +61,21 @@ export const getCurrentUser = cache(
       user = result.data.user;
       authError = result.error;
     } catch (error) {
-      if (isCorruptedSupabaseAuthError(error)) {
+      if (isMissingOrUnauthenticatedAuthError(error)) {
         return null;
       }
 
-      throw error;
+      console.warn("Supabase auth session check failed; treating as unauthenticated.", error);
+      return null;
     }
 
     if (authError) {
-      if (isCorruptedSupabaseAuthError(authError)) {
+      if (isMissingOrUnauthenticatedAuthError(authError)) {
         return null;
       }
 
-      throw new Error("The current session could not be verified.", {
-        cause: authError,
-      });
+      console.warn("The session could not be verified; treating as unauthenticated.", authError);
+      return null;
     }
 
     if (!user) return null;
