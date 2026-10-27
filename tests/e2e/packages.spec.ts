@@ -92,16 +92,147 @@ test("package proposals and the interactive vending machine are public", async (
 
   await page.goto("/packages");
   await page.locator(".packages-vend-stage").scrollIntoViewIfNeeded();
-  await expect(
-    page.locator(".packages-vend-accessible-controls button"),
-  ).toHaveCount(5);
-
   const machine = page.locator(".packages-vend-stage");
-  await page.locator(".packages-vend-accessible-controls button").nth(1).focus();
-  await page.keyboard.press("Enter");
-  await expect(machine).toHaveAttribute("data-selected-package", "growth");
+  const fallback = page.locator(".packages-vend-fallback");
+  const canvas = page.locator(".packages-vend-canvas canvas");
 
-  await page.locator(".packages-vend-accessible-controls button").last().focus();
-  await page.keyboard.press("Enter");
-  await expect(machine).toHaveAttribute("data-duration", "1");
+  // Both paths are valid: render the machine where WebGL 2 is supported, and
+  // provide fully working package controls if the browser/GPU cannot create it.
+  await expect
+    .poll(async () => (await fallback.isVisible()) || (await canvas.isVisible()), {
+      timeout: 20_000,
+    })
+    .toBe(true);
+
+  if (await fallback.isVisible()) {
+    await expect(page.locator(".packages-vend-fallback-controls button")).toHaveCount(4);
+    await page.locator(".packages-vend-fallback-controls button").nth(1).click();
+    await expect(machine).toHaveAttribute("data-selected-package", "growth");
+    await expect(page.locator(".vend-panel")).toBeVisible();
+  } else {
+    await expect(
+      page.locator(".packages-vend-accessible-controls button"),
+    ).toHaveCount(5);
+    await expect(canvas).toBeVisible();
+
+    // A visible stage or hidden accessibility buttons do not prove the WebGL
+    // scene rendered. Sample the actual canvas framebuffer for non-uniform pixels.
+    await page.waitForFunction(
+      () => {
+        const canvasElement = document.querySelector<HTMLCanvasElement>(
+          ".packages-vend-canvas canvas",
+        );
+        if (
+          !canvasElement ||
+          canvasElement.width < 32 ||
+          canvasElement.height < 32
+        ) {
+          return false;
+        }
+        const gl = canvasElement.getContext("webgl2");
+        if (!gl || gl.isContextLost()) return false;
+
+        // Downsample the preserved WebGL output to a tiny 32x32 probe. This verifies
+        // real non-uniform pixels without allocating a full-resolution framebuffer copy
+        // on every poll (which can be tens of megabytes on HiDPI displays).
+        const probe = document.createElement("canvas");
+        probe.width = 32;
+        probe.height = 32;
+        const context = probe.getContext("2d");
+        if (!context) return false;
+        context.drawImage(canvasElement, 0, 0, probe.width, probe.height);
+        const pixels = context.getImageData(0, 0, probe.width, probe.height).data;
+        const colors = new Set<string>();
+        for (let offset = 0; offset < pixels.length; offset += 4) {
+          colors.add(`${pixels[offset]},${pixels[offset + 1]},${pixels[offset + 2]}`);
+        }
+        return colors.size > 10;
+      },
+      undefined,
+      { polling: 250, timeout: 20_000 },
+    );
+
+    await page.locator(".packages-vend-accessible-controls button").nth(1).focus();
+    await page.keyboard.press("Enter");
+    await expect(machine).toHaveAttribute("data-selected-package", "growth");
+
+    await page.locator(".packages-vend-accessible-controls button").last().focus();
+    await page.keyboard.press("Enter");
+    await expect(machine).toHaveAttribute("data-duration", "1");
+  }
+});
+
+
+test("package pricing stays usable when WebGL 2 is unavailable", async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+      configurable: true,
+      value: function (this: HTMLCanvasElement, type: string, ...args: unknown[]) {
+        // Simulate an environment that exposes WebGL 1 but cannot create WebGL 2.
+        // Current Three.js requires WebGL 2, so the app must select its DOM fallback.
+        if (type === "webgl2") return null;
+        return Reflect.apply(originalGetContext, this, [type, ...args]);
+      },
+    });
+  });
+
+  await page.goto("/packages");
+  const machine = page.locator(".packages-vend-stage");
+  await machine.scrollIntoViewIfNeeded();
+  await expect(page.locator(".packages-vend-fallback")).toBeVisible();
+  await expect(
+    page.locator(".packages-vend-fallback-controls button"),
+  ).toHaveCount(4);
+  await page.locator(".packages-vend-fallback-controls button").nth(1).click();
+  await expect(machine).toHaveAttribute("data-selected-package", "growth");
+  await expect(page.locator(".vend-panel")).toBeVisible();
+});
+
+
+test("package vending machine remains rendered when label canvas allocation fails", async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+      configurable: true,
+      value: function (this: HTMLCanvasElement, type: string, ...args: unknown[]) {
+        // Simulate a preview/browser where large 2D label canvases cannot be
+        // allocated. The app should keep the 3D geometry with tiny DataTextures.
+        if (type === "2d" && this.width >= 512 && this.height >= 192) return null;
+        return Reflect.apply(originalGetContext, this, [type, ...args]);
+      },
+    });
+  });
+
+  await page.goto("/packages");
+  const machine = page.locator(".packages-vend-stage");
+  const canvas = page.locator(".packages-vend-canvas canvas");
+  await machine.scrollIntoViewIfNeeded();
+  await expect(canvas).toBeVisible();
+  await expect(page.locator(".packages-vend-fallback")).toHaveCount(0);
+
+  await page.waitForFunction(
+    () => {
+      const element = document.querySelector<HTMLCanvasElement>(".packages-vend-canvas canvas");
+      if (!element || element.width < 32 || element.height < 32) return false;
+      const probe = document.createElement("canvas");
+      probe.width = 32;
+      probe.height = 32;
+      const context = probe.getContext("2d");
+      if (!context) return false;
+      context.drawImage(element, 0, 0, 32, 32);
+      const pixels = context.getImageData(0, 0, 32, 32).data;
+      const colors = new Set<string>();
+      for (let offset = 0; offset < pixels.length; offset += 4) {
+        colors.add(`${pixels[offset]},${pixels[offset + 1]},${pixels[offset + 2]}`);
+      }
+      return colors.size > 10;
+    },
+    undefined,
+    { polling: 250, timeout: 20_000 },
+  );
+
+  await page.locator(".packages-vend-accessible-controls button").nth(1).click();
+  await expect(machine).toHaveAttribute("data-selected-package", "growth");
+  await expect(page.locator(".vend-panel")).toBeVisible();
 });
