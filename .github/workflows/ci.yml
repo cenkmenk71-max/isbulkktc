@@ -3,9 +3,15 @@ name: isbulkktc CI
 on:
   pull_request:
   push:
+    branches:
+      - main
 
 permissions:
   contents: read
+
+concurrency:
+  group: isbulkktc-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   app:
