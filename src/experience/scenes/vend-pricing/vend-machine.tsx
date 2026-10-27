@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Component,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
 import { Scene } from "./components/Scene";
 import { takeOver } from "./lib/live";
 import type { SceneLabels } from "./lib/labels";
@@ -33,15 +41,51 @@ type Props = {
 };
 
 function supportsWebGL() {
-  if (typeof window === "undefined") return false;
+  if (typeof window === "undefined" || typeof document === "undefined") return false;
   try {
     const canvas = document.createElement("canvas");
-    return Boolean(
-      window.WebGLRenderingContext &&
-        (canvas.getContext("webgl2") || canvas.getContext("webgl")),
-    );
+    // Three.js r163+ requires WebGL 2. A WebGL 1-only probe is a false positive:
+    // it marks this scene available even though WebGLRenderer cannot initialize.
+    const context = canvas.getContext("webgl2", {
+      failIfMajorPerformanceCaveat: false,
+    }) as WebGL2RenderingContext | null;
+    if (!context || context.isContextLost()) return false;
+
+    // Do not keep a throwaway GPU context alive alongside the real renderer.
+    context.getExtension("WEBGL_lose_context")?.loseContext();
+    return true;
   } catch {
     return false;
+  }
+}
+
+type SceneErrorBoundaryProps = {
+  children: ReactNode;
+  onError: (error: Error) => void;
+};
+
+type SceneErrorBoundaryState = { hasError: boolean };
+
+class SceneErrorBoundary extends Component<
+  SceneErrorBoundaryProps,
+  SceneErrorBoundaryState
+> {
+  state: SceneErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): SceneErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[packages-vend] 3D scene failed to render.", {
+      error,
+      componentStack: info.componentStack,
+    });
+    this.props.onError(error);
+  }
+
+  render() {
+    return this.state.hasError ? null : this.props.children;
   }
 }
 
@@ -131,20 +175,27 @@ export default function VendMachine({
     setAmbience(nextMode === "all");
     setMode(nextMode);
   };
-  const modeLabel = { fx: soundLabels.effects, all: soundLabels.rain, off: soundLabels.off }[mode];
+  const modeLabel = {
+    fx: soundLabels.effects,
+    all: soundLabels.rain,
+    off: soundLabels.off,
+  }[mode];
 
   return (
     <>
-      <Scene
-        labelCopy={labelCopy}
-        onFrame={onFrame}
-        onReady={connectControls}
-        onCoin={onCoin}
-        onSelect={onSelect}
-        onWipe={onWipe}
-        plans={plans}
-        sceneVisible={sceneVisible}
-      />
+      <SceneErrorBoundary onError={onUnavailable}>
+        <Scene
+          labelCopy={labelCopy}
+          onFrame={onFrame}
+          onReady={connectControls}
+          onCoin={onCoin}
+          onSelect={onSelect}
+          onWipe={onWipe}
+          onUnavailable={onUnavailable}
+          plans={plans}
+          sceneVisible={sceneVisible}
+        />
+      </SceneErrorBoundary>
       <button
         aria-label={`${soundLabels.button}: ${modeLabel}`}
         className="packages-vend-sound"
