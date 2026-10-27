@@ -9,16 +9,16 @@ içindedir. Eski şartname projeden kaldırılmıştır. V4 bir hedef mimaridir;
 ## Gereksinimler
 
 - Node.js 24 LTS (sürüm `24.x`; yerel geliştirmede `.nvmrc` ile sabitlenir)
-- npm 10 veya üstü
+- Bun 1.3 veya üstü (kilitli bağımlılık kurulumu ve güvenlik denetimi için)
 - Supabase yerel geliştirmesi için Docker Engine (Docker Desktop veya WSL2
   Ubuntu içinde) ve Supabase CLI (isteğe bağlı)
 
 ## Başlangıç
 
 ```powershell
-npm ci
+bun install --frozen-lockfile
 Copy-Item .env.example .env.local
-npm run dev
+bun run dev
 ```
 
 Uygulama varsayılan olarak `http://localhost:3000` adresinde açılır. Supabase
@@ -28,15 +28,15 @@ doldurun; gizli anahtarları kaynak denetimine eklemeyin.
 ## Yararlı komutlar
 
 ```powershell
-npm run lint
-npm run typecheck
-npm run test:unit
-npm run security:audit
-npm run db:start
-npm run test:db
-npm run db:stop
-npm run test:e2e
-npm run build
+bun run lint
+bun run typecheck
+bun run test:unit
+bun run security:audit
+bun run db:start
+bun run test:db
+bun run db:stop
+bun run test:e2e
+bun run build
 ```
 
 `db:start` ve `test:db` için erişilebilir bir Docker Engine gerekir. Bu Windows
@@ -44,10 +44,10 @@ projesinde Supabase CLI proje bağımlılığıdır; WSL2 Ubuntu Docker motorunu
 kullanmak için ayrıca proje içindeki Linux CLI'yı bir kez kurun:
 
 ```powershell
-npm run tools:supabase-wsl
-npm run db:start
-npm run test:db
-npm run db:stop
+bun run tools:supabase-wsl
+bun run db:start
+bun run test:db
+bun run db:stop
 ```
 
 İlk Playwright kullanımından önce tarayıcıyı D: sürücüsündeki proje önbelleğine
@@ -55,11 +55,11 @@ kurun ve aynı PowerShell oturumunda çalıştırın:
 
 ```powershell
 $env:PLAYWRIGHT_BROWSERS_PATH="$PWD\.tools\playwright-browsers"
-npm exec -- playwright install chromium
-npm run test:e2e
+bunx playwright install chromium
+bun run test:e2e
 ```
 
-Geliştirme sırasında DB gerekirse `npm run db:start` çalıştırın. Sign-in/signup
+Geliştirme sırasında DB gerekirse `bun run db:start` çalıştırın. Sign-in/signup
 ve oturum korumalı sayfalar için çalışan yerel Supabase gerekir;
 `.env.example` değerlerini çalışan yerel Supabase
 anahtarlarıyla `.env.local` dosyasına girin; `NEXT_PUBLIC_APP_URL` değerini
