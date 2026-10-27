@@ -1,0 +1,6 @@
+253a2d8cfea3277b3f816e092fc68874c6ea4c348aa049f836213043f9853805  src/experience/scenes/vend-pricing/vend-machine.tsx
+9340add675d80e4c94241dc3a0933c9f95994449956ec7a9a9a9539e9c8f9456  src/experience/scenes/vend-pricing/components/Scene.tsx
+c5563ee2d5e997ce9adc26f45d34dc8a9c88d8835c6b6f26e4e0310aadd9cfad  src/experience/scenes/vend-pricing/lib/labels.ts
+18b77276bf368ac75240150855ed4c79d9767ca65e42f0bf4af596b208a5e63f  tests/e2e/packages.spec.ts
+bf4b666f089da149883ef81bb2d57582f9e11c8d8c2c8feaa45cba901c866adc  scripts/check-frontend-source.mjs
+fc58179133032d8ac718ef8c9d7df0ced74735c17acca8080868b6969aaedaa0  VEND-MACHINE-RENDER-FIX.md
