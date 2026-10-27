@@ -14,6 +14,17 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "retain-on-failure",
+    launchOptions: {
+      // GitHub-hosted Linux runners may not expose a physical GPU. Use Chromium's
+      // software WebGL implementation so the 3D scene and fallback path are exercised.
+      args: [
+        "--enable-webgl",
+        "--ignore-gpu-blocklist",
+        "--use-gl=angle",
+        "--use-angle=swiftshader",
+        "--enable-unsafe-swiftshader",
+      ],
+    },
   },
   projects: [
     {

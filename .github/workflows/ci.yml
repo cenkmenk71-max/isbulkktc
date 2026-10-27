@@ -9,16 +9,17 @@ permissions:
 
 jobs:
   app:
-    name: Type check, lint, unit, build and E2E
+    name: Quality, database and E2E
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
+          package-manager-cache: false
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -27,6 +28,12 @@ jobs:
 
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
+
+      - name: Set up Supabase CLI
+        id: supabase_cli
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.120.0
 
       - name: Audit production dependencies
         run: bun run security:audit
@@ -48,43 +55,33 @@ jobs:
       - name: Install Playwright browser
         run: bunx playwright install --with-deps chromium
 
-      - name: End-to-end tests
-        run: bun run test:e2e
-        env:
-          NEXT_TELEMETRY_DISABLED: "1"
-
-  database:
-    name: Supabase migrations and RLS
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4
-
-      - name: Install locked dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Set up Supabase CLI
-        id: supabase_cli
-        uses: supabase/setup-cli@v3
-        with:
-          version: 2.120.0
-
-      - name: Start the isolated local Supabase stack
+      - name: Start the seeded local Supabase stack
+        id: supabase_start
         run: bun run db:start
+
+      - name: Configure local Supabase credentials for E2E
+        shell: bash
+        run: |
+          supabase status -o env > /tmp/supabase.env
+          set -a
+          source /tmp/supabase.env
+          set +a
+          test -n "${API_URL:-}"
+          key="${PUBLISHABLE_KEY:-${ANON_KEY:-}}"
+          test -n "$key"
+          {
+            printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$API_URL"
+            printf 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=%s\n' "$key"
+          } >> "$GITHUB_ENV"
 
       - name: Apply migrations and run pgTAP tests
         run: bun run test:db
 
-      - name: Stop the local Supabase stack
-        if: always() && steps.supabase_cli.outcome == 'success'
+      - name: End-to-end tests against seeded Supabase
+        run: bun run test:e2e
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+
+      - name: Stop local Supabase stack
+        if: always() && steps.supabase_cli.outcome == 'success' && steps.supabase_start.outcome != 'skipped'
         run: bun run db:stop -- --no-backup

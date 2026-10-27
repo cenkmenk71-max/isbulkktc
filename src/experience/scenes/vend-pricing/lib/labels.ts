@@ -73,7 +73,12 @@ function texture(
   const c = document.createElement("canvas");
   c.width = w * scale;
   c.height = h * scale;
-  const context = c.getContext("2d")!;
+  const context = c.getContext("2d");
+  if (!context) {
+    throw new Error(
+      "Canvas 2D context unavailable while creating a " + c.width + "x" + c.height + " label texture.",
+    );
+  }
   logicalCanvases.set(context, { width: w, height: h, scale });
   context.scale(scale, scale);
   draw(context);
