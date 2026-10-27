@@ -1,7 +1,10 @@
 import "server-only";
 
 export function getAppBaseUrl(): URL {
-  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const configuredUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_URL ||
+    "http://localhost:3000";
 
   if (!configuredUrl) {
     throw new Error("NEXT_PUBLIC_APP_URL must be configured for secure auth callbacks.");

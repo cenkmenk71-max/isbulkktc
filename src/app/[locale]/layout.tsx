@@ -138,11 +138,36 @@ export default async function LocaleLayout({
   const siteUrl = getAppBaseUrl();
   const websiteStructuredData = {
     "@context": "https://schema.org",
-    "@type": "WebSite",
-    "@id": new URL("#website", siteUrl).toString(),
-    name: "İşBul KKTC",
-    url: siteUrl.toString(),
-    inLanguage: routing.locales,
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": new URL("#website", siteUrl).toString(),
+        name: "İşBul KKTC",
+        url: siteUrl.toString(),
+        description: "Kuzey Kıbrıs Türk Cumhuriyeti'nin güvenilir kariyer, istihdam ve iş ilanı platformu.",
+        inLanguage: routing.locales,
+        potentialAction: {
+          "@type": "SearchAction",
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: `${siteUrl.origin}/jobs?q={search_term_string}`,
+          },
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "EmploymentAgency",
+        "@id": new URL("#organization", siteUrl).toString(),
+        name: "İşBul KKTC",
+        url: siteUrl.toString(),
+        logo: new URL("/icon-dark-32x32.png", siteUrl).toString(),
+        description: "Kuzey Kıbrıs genelinde iş arayanlar ve işverenleri bir araya getiren istihdam platformu.",
+        areaServed: {
+          "@type": "AdministrativeArea",
+          name: "Kuzey Kıbrıs Türk Cumhuriyeti",
+        },
+      },
+    ],
   };
 
   return (

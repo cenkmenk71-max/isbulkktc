@@ -5,6 +5,7 @@ import { getAppBaseUrl } from "@/server/config/app-url";
 
 const publicPages = [
   { pathname: "/", changeFrequency: "weekly", priority: 1 },
+  { pathname: "/jobs", changeFrequency: "daily", priority: 0.9 },
   { pathname: "/companies", changeFrequency: "weekly", priority: 0.8 },
   { pathname: "/freelance", changeFrequency: "monthly", priority: 0.7 },
   { pathname: "/packages", changeFrequency: "monthly", priority: 0.7 },

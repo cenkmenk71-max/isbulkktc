@@ -10,5 +10,6 @@ test-results/
 *.tsbuildinfo
 .env.local
 .vscode/
+.aistudio/
 supabase/.temp/
 supabase/.branches/

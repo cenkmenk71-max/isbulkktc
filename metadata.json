@@ -1,0 +1,6 @@
+{
+  "name": "İşBul KKTC",
+  "description": "Kuzey Kıbrıs Türk Cumhuriyeti iş arama, kariyer ve iş ilanı platformu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
