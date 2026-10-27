@@ -8,6 +8,7 @@ import {
   disposeLabels,
   loadLabels,
   labelsReady,
+  makeFallbackLabels,
   makeLabels,
   type Labels,
   type SceneLabels,
@@ -215,18 +216,50 @@ function Director({
 }
 
 // Procedural reflections for the chrome, cans and glass, balanced for the warm daylight palette.
+function WebGLContextGuard({ onUnavailable }: { onUnavailable: () => void }) {
+  const gl = useThree((state) => state.gl);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const onContextLost = () => {
+      console.error(
+        "[packages-vend] WebGL context was lost; switching to the accessible package controls.",
+      );
+      onUnavailable();
+    };
+    canvas.addEventListener("webglcontextlost", onContextLost);
+    return () => canvas.removeEventListener("webglcontextlost", onContextLost);
+  }, [gl, onUnavailable]);
+
+  return null;
+}
+
 function Reflections() {
   const { gl, scene } = useThree();
   useEffect(() => {
-    const pmrem = new THREE.PMREMGenerator(gl);
-    const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-    // Three.js scenes are mutable; assigning the environment is renderer setup.
-    // eslint-disable-next-line react-hooks/immutability
-    scene.environment = env;
-    scene.environmentIntensity = 0.58;
+    let pmrem: THREE.PMREMGenerator | null = null;
+    let env: THREE.Texture | null = null;
+    try {
+      pmrem = new THREE.PMREMGenerator(gl);
+      env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      // Three.js scenes are mutable; assigning the environment is renderer setup.
+      // eslint-disable-next-line react-hooks/immutability
+      scene.environment = env;
+      scene.environmentIntensity = 0.58;
+    } catch (error) {
+      // Environment reflections are a visual enhancement, not a prerequisite for the machine.
+      // Keep the scene usable on GPUs/driver combinations that reject PMREM generation.
+      console.warn(
+        "[packages-vend] reflection setup failed; continuing without environment reflections.",
+        error,
+      );
+      // eslint-disable-next-line react-hooks/immutability
+      scene.environment = null;
+      scene.environmentIntensity = 0;
+    }
     return () => {
-      env.dispose();
-      pmrem.dispose();
+      env?.dispose();
+      pmrem?.dispose();
     };
   }, [gl, scene]);
   return null;
@@ -263,6 +296,7 @@ export function Scene({
   plans,
   labelCopy,
   sceneVisible,
+  onUnavailable,
 }: {
   onFrame: (f: Frame, touring: boolean) => void;
   onReady: (controls: { press: (index: number) => void; insertCoin: () => void; close: () => void } | null) => void;
@@ -272,8 +306,8 @@ export function Scene({
   plans: Plan[];
   labelCopy: SceneLabels;
   sceneVisible: boolean;
+  onUnavailable: () => void;
 }) {
-  const [maxTextureSize, setMaxTextureSize] = useState<number>(2048);
   const [labels, setLabels] = useState<Labels | null>(null);
   const [documentVisible, setDocumentVisible] = useState(!document.hidden);
   const [closeUp, setCloseUp] = useState(false);
@@ -281,27 +315,51 @@ export function Scene({
   useEffect(() => {
     let alive = true;
     let loaded: Labels | null = null;
-    void loadLabels(plans, labelCopy, maxTextureSize)
+    // Always start with the conservative 1x texture budget. maxTextureSize is
+    // not a GPU-memory budget and previously caused high-memory 1.5x canvas
+    // allocations merely because the device reported a large texture dimension.
+    void loadLabels(plans, labelCopy, 1)
       .then((l) => {
         loaded = l;
         if (alive) setLabels(l);
         else disposeLabels(l);
       })
-      .catch((err) => {
-        console.warn("loadLabels fallback engaged:", err);
+      .catch((err: unknown) => {
+        console.warn(
+          "[packages-vend] label texture generation failed; retrying at the baseline texture scale.",
+          err,
+        );
         try {
-          const l = makeLabels(plans, labelCopy, maxTextureSize);
+          // If normal-resolution text textures cannot be allocated, retry at
+          // half scale before degrading to tiny DataTextures.
+          const l = makeLabels(plans, labelCopy, 0.5);
           loaded = l;
           if (alive) setLabels(l);
-        } catch {
-          // ignore
+          else disposeLabels(l);
+        } catch (fallbackError) {
+          console.error(
+            "[packages-vend] canvas label generation failed; keeping the 3D machine with simplified DataTextures.",
+            { originalError: err, fallbackError },
+          );
+          try {
+            const l = makeFallbackLabels(plans);
+            loaded = l;
+            if (alive) setLabels(l);
+            else disposeLabels(l);
+          } catch (minimalFallbackError) {
+            console.error(
+              "[packages-vend] even the minimal material fallback failed; switching to accessible package controls.",
+              { originalError: err, fallbackError, minimalFallbackError },
+            );
+            if (alive) onUnavailable();
+          }
         }
       });
     return () => {
       alive = false;
       if (loaded) disposeLabels(loaded);
     };
-  }, [labelCopy, maxTextureSize, plans]);
+  }, [labelCopy, onUnavailable, plans]);
 
   useEffect(() => {
     const updateVisibility = () => setDocumentVisible(!document.hidden);
@@ -336,7 +394,6 @@ export function Scene({
       gl={{ antialias: true, preserveDrawingBuffer: true }}
       // Neutral tone mapping keeps the neon and the white cabinet true (ACES shifts them)
       onCreated={({ gl }) => {
-        setMaxTextureSize(gl.capabilities.maxTextureSize);
         gl.toneMapping = THREE.NeutralToneMapping;
       }}
       camera={{ position: [0, 1.8, 7.4], fov: 32 }}
@@ -347,6 +404,7 @@ export function Scene({
       <directionalLight position={[3, 6, 5]} intensity={1.05} color="#fff3d6" />
       <Reflections />
       <PointerTracker />
+      <WebGLContextGuard onUnavailable={onUnavailable} />
       <Director
         active={active}
         labelsLoaded={Boolean(labels)}
