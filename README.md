@@ -9,7 +9,7 @@ içindedir. Eski şartname projeden kaldırılmıştır. V4 bir hedef mimaridir;
 ## Gereksinimler
 
 - Node.js 24 LTS (sürüm `24.x`; yerel geliştirmede `.nvmrc` ile sabitlenir)
-- Bun 1.3 veya üstü (kilitli bağımlılık kurulumu ve güvenlik denetimi için)
+- Bun 1.4 veya üstü (kilitli bağımlılık kurulumu ve güvenlik denetimi için)
 - Supabase yerel geliştirmesi için Docker Engine (Docker Desktop veya WSL2
   Ubuntu içinde) ve Supabase CLI (isteğe bağlı)
 
