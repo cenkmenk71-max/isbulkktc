@@ -57,18 +57,17 @@ async function supportsWebGL(): Promise<boolean> {
     // Release the probe context before R3F creates its own. Calling loseContext()
     // and immediately returning races the real renderer on constrained CI GPUs.
     return await new Promise<boolean>((resolve) => {
-      let timeout: number | undefined;
       let settled = false;
       const finish = (supported: boolean) => {
         if (settled) return;
         settled = true;
-        if (timeout !== undefined) window.clearTimeout(timeout);
+        window.clearTimeout(timeout);
         canvas.removeEventListener("webglcontextlost", onContextLost);
         resolve(supported);
       };
       const onContextLost = () => finish(true);
       canvas.addEventListener("webglcontextlost", onContextLost, { once: true });
-      timeout = window.setTimeout(() => finish(context.isContextLost()), 1000);
+      const timeout = window.setTimeout(() => finish(context.isContextLost()), 1000);
       loseContext.loseContext();
     });
   } catch {
