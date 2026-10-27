@@ -36,7 +36,7 @@ jobs:
           version: 2.120.0
 
       - name: Audit production dependencies
-        run: bun run security:audit
+        run: "$HOME/.bun/bin/bun" audit --prod --audit-level=moderate
 
       - name: Lint
         run: bun run lint
