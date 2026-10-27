@@ -28,7 +28,7 @@
     "vscode:open": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/open-vscode.ps1",
     "test:e2e": "node scripts/run-playwright.mjs test",
     "test:e2e:ui": "node scripts/run-playwright.mjs test --ui",
-    "security:audit": "bun audit --audit-level=moderate",
+    "security:audit": "bun audit --prod --audit-level=moderate",
     "optimize:assets": "tsx scripts/optimize-assets.ts",
     "logos:fetch": "node scripts/fetch-company-logos.mjs",
     "shot": "tsx scripts/shot.ts"
