@@ -538,4 +538,4 @@ export function makeFallbackLabels(plans: Plan[]): Labels {
       textures.forEach((item) => item.dispose());
     },
   };
-};
+}
