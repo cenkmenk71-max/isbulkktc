@@ -1,0 +1,1133 @@
+{
+  "Meta": {
+    "title": "İşBul KKTC — Kuzey Kıbrıs’ta iş ve kariyer",
+    "description": "Aday profilinizi oluşturun, uzmanlık alanlarınızı öne çıkarın ve Kuzey Kıbrıs’ta şirket kaydınızı başlatın."
+  },
+  "HomeMeta": {
+    "title": "Kuzey Kıbrıs’ta iş ve kariyer",
+    "description": "Mesleki profilinizi oluşturun, becerilerinizi yönetin ve Kuzey Kıbrıs’ta şirket kayıt sürecinizi başlatın."
+  },
+  "FreelanceMeta": {
+    "title": "Kuzey Kıbrıs’ta serbest çalışma",
+    "description": "Serbest çalışma profilinizi mesleki başlık, konum ve becerilerinizle oluşturun. İşBul KKTC hesabınızla bilgilerinizi yönetin."
+  },
+  "PackagesMeta": {
+    "title": "İşveren ilan hakları | Kuzey Kıbrıs",
+    "description": "İlan paketlerini inceleyin. Ödeme web sitesinde alınmaz; IBAN ve ödeme talimatı, paket görüşmesi sonrası e-posta veya WhatsApp gibi kanallardan özel olarak iletilir."
+  },
+  "AdminPackages": {
+    "eyebrow": "GÜVENLİ YÖNETİCİ ALANI",
+    "title": "İlan hakları yönetimi",
+    "description": "Paketleri tanımlayın ve yalnızca doğrulanmış şirketlere atayın. Kritik işlemler için TOTP çok faktörlü doğrulama gerekir.",
+    "mfaVerified": "Yönetici MFA doğrulandı",
+    "companyReviews": "Şirket incelemeleri",
+    "catalogEyebrow": "PAKET KATALOĞU",
+    "catalogTitle": "Paket tanımları",
+    "newPackage": "Yeni paket oluştur",
+    "createPackage": "Paketi oluştur",
+    "savePackage": "Değişiklikleri kaydet",
+    "saving": "Kaydediliyor…",
+    "active": "Etkin",
+    "inactive": "Devre dışı",
+    "fields": {
+      "code": "Benzersiz kod",
+      "name": "Paket adı",
+      "description": "Açıklama",
+      "activeJobs": "Eşzamanlı aktif ilan sınırı",
+      "duration": "İlan süresi (gün)",
+      "visibility": "Katalog durumu",
+      "company": "Doğrulanmış şirket",
+      "package": "Etkin paket",
+      "assignmentDuration": "Atama süresi (gün, boş bırakılırsa süresiz)"
+    },
+    "messages": {
+      "idle": "",
+      "invalid": "Bilgileri kontrol edin; paket kodu benzersiz ve alanlar sınırlar içinde olmalı.",
+      "unauthorized": "Bu yönetici işlemi için yetkiniz veya güncel MFA doğrulamanız yok.",
+      "saveFailed": "Paket kaydedilemedi. Lütfen tekrar deneyin.",
+      "saved": "Paket kaydedildi.",
+      "assignFailed": "Paket atanamadı. Şirketin doğrulanmış ve paketin etkin olduğunu kontrol edin.",
+      "assigned": "Paket şirkete atandı."
+    },
+    "assignPackage": "Şirkete paket ata",
+    "selectCompany": "Şirket seçin",
+    "selectPackage": "Paket seçin",
+    "unlimited": "Süresiz",
+    "assigning": "Atanıyor…",
+    "assign": "Paketi ata",
+    "emptyPackages": "Henüz paket yok. Yeni paket oluşturarak başlayın.",
+    "companiesEyebrow": "ŞİRKET HAKLARI",
+    "companiesTitle": "Doğrulanmış şirketler",
+    "companiesDescription": "Paket ataması mevcut atamanın yerini alır. Atama anındaki haklar şirket için sabitlenir.",
+    "emptyCompanies": "Paket ataması yapılabilecek doğrulanmış şirket bulunmuyor.",
+    "assignedPackage": "Atanmış paket",
+    "activeJobs": "Aktif ilanlar",
+    "jobDuration": "İlan süresi",
+    "days": "{count} gün",
+    "assignmentExpiry": "Atama bitişi",
+    "noAssignment": "Etkin paket ataması yok.",
+    "mfa": {
+      "eyebrow": "YÖNETİCİ HESABI GÜVENLİĞİ",
+      "challengeTitle": "Tek kullanımlık kodla doğrulayın.",
+      "enrollTitle": "Yönetici hesabınıza MFA ekleyin.",
+      "challengeDescription": "Yönetim ekranına erişmek için kimlik doğrulama uygulamanızdaki güncel altı haneli kodu girin.",
+      "enrollDescription": "İşlemleri korumak için bir kimlik doğrulama uygulamasıyla TOTP kurun. QR kodunu tarayın, sonra uygulamanın ürettiği kodu doğrulayın.",
+      "starting": "Güvenli oturum hazırlanıyor…",
+      "startChallenge": "Doğrulamayı başlat",
+      "startEnrollment": "MFA kurulumunu başlat",
+      "qrAlt": "Kimlik doğrulama uygulaması için TOTP kurulum QR kodu",
+      "manualEntry": "QR kodu kullanamıyorsanız bu anahtarı uygulamaya elle girin:",
+      "codeLabel": "6 haneli doğrulama kodu",
+      "verifying": "Doğrulanıyor…",
+      "verify": "Kodu doğrula",
+      "footnote": "Bu ekran yalnızca platform yöneticilerine açıktır. TOTP factor bilgileri uygulama tarafından kalıcı olarak saklanmaz.",
+      "messages": {
+        "unauthorized": "Yönetici oturumu doğrulanamadı. Yeniden giriş yapıp deneyin.",
+        "setupFailed": "MFA işlemi başlatılamadı. Biraz sonra tekrar deneyin.",
+        "invalidCode": "Kod geçersiz veya süresi dolmuş. Uygulamanızdaki en son kodu girin.",
+        "verifyFailed": "MFA doğrulanamadı. Yeniden deneyin."
+      }
+    }
+  },
+  "AboutMeta": {
+    "title": "Hakkımızda",
+    "description": "İşBul KKTC’nin Kuzey Kıbrıs’ın yerel ihtiyaçlarını gözeten kariyer platformu yaklaşımını tanıyın."
+  },
+  "BlogMeta": {
+    "title": "Kuzey Kıbrıs iş ve kariyer gündemi",
+    "description": "KKTC’de istihdam, çalışma hayatı ve kariyerle ilgili güncel haber başlıklarını yayıncı kaynaklarıyla takip edin."
+  },
+  "ContactMeta": {
+    "title": "İletişim",
+    "description": "İşBul KKTC iletişim kanallarını ve iletişim bilgileri için güncel durumu görüntüleyin."
+  },
+  "CompaniesMeta": {
+    "title": "Kuzey Kıbrıs şirket rehberi",
+    "description": "Kuzey Kıbrıs'taki şirketleri ad, sektör ve konuma göre arayın; telefon, adres ve web sitesi bilgilerini inceleyin."
+  },
+  "JobsMeta": {
+    "title": "Kuzey Kıbrıs güncel iş ilanları",
+    "description": "Kuzey Kıbrıs'ta yayımlanan iş ilanlarını pozisyon, ilçe, çalışma türü ve çalışma düzenine göre arayın."
+  },
+  "PackagesPage": {
+    "eyebrow": "İŞVERENLER İÇİN İLAN HAKLARI",
+    "title": "İşe alım hakları, açık ve anlaşılır.",
+    "description": "İlan paketlerini inceleyin. Ödeme web sitesinde alınmaz; IBAN ve ödeme talimatı, paket görüşmesi sonrası e-posta veya WhatsApp gibi kanallardan özel olarak iletilir.",
+    "heroLink": "Paket haklarını inceleyin",
+    "locationLine": "KUZEY KIBRIS · TR / EN",
+    "catalog": {
+      "eyebrow": "ETKİN PAKETLER",
+      "title": "İlan yayınlama hakları",
+      "description": "Aşağıdaki katalog yalnız etkin paketleri gösterir. Haklar, atandıkları anda şirket için sabitlenir.",
+      "activeJobs": "Aynı anda yayındaki ilan",
+      "duration": "İlan yayın süresi",
+      "days": "{count} gün",
+      "empty": "Henüz etkin paket tanımlanmadı.",
+      "noDescription": "Paket için ek açıklama bulunmuyor."
+    },
+    "showcase": {
+      "eyebrow": "İŞVEREN PAKETLERİ",
+      "title": "İşe alımınıza uygun ilan paketini seçin.",
+      "instruction": "İlan adedini belirleyin; her ilan için 1, 7 veya 30 gün seçin.",
+      "brand": "İşBul KKTC · İşveren paketleri",
+      "platformLabel": "KARİYER PLATFORMU",
+      "status": "Bilgilendirme amaçlı fiyat · Ödeme sitede alınmaz; IBAN talimatı paket görüşmesi sonrası özel kanaldan iletilir.",
+      "back": "Paket seçimine dön",
+      "selectPackage": "İşveren paketi seçin",
+      "sceneFallback": "3D sahne kullanılamıyor. Paket seçimi ve ayrıntılar kullanılabilir.",
+      "packageContents": "Paket kapsamı",
+      "terms": {
+        "oneListing": "1 ilan hakkı",
+        "durationOptions": "Her ilan için 1, 7 veya 30 gün",
+        "onePosition": "Tek bir açık pozisyon için",
+        "threeListings": "En fazla 3 ilan hakkı",
+        "multiplePositions": "Birden fazla pozisyon için",
+        "fiveListings": "En fazla 5 ilan hakkı",
+        "regularHiring": "Düzenli işe alım yapan ekipler için",
+        "finiteScope": "İlan adedi yazılı teklifte netleştirilir",
+        "writtenOffer": "Kapsam ve süre teklif öncesi onaylanır"
+      },
+      "ctaTitle": "İşveren hesabınızı oluşturun; bu adım satın alma değildir.",
+      "ctaAction": "İşveren hesabı oluştur",
+      "pricing": {
+        "durationLabel": "İlan süresi",
+        "durationGroup": "İlan süresi seçin",
+        "oneDay": "1 gün",
+        "sevenDays": "7 gün",
+        "thirtyDays": "30 gün",
+        "priceSummary": "Paket toplamı",
+        "customPrice": "Özel kapsam · yazılı teklifle",
+        "disclaimer": "Tutarlar bilgilendirme amaçlıdır; kesin paket koşulları ve IBAN ile ödeme talimatı ekip tarafından özel iletişim kanallarından iletilir. Web sitesinde ödeme alınmaz.",
+        "quoteAction": "Ekiple görüşün, teklif alın",
+        "quoteTitle": "Kurumsal işe alım ihtiyacınızı birlikte netleştirelim.",
+        "quoteInstructions": "E-posta taslağınız açılır. Göndermeden önce şirket adınızı, istediğiniz ilan adedini ve iletişim bilgilerinizi ekleyin.",
+        "quoteUnavailable": "Teklif e-posta adresi henüz yapılandırılmadı; talep şu an gönderilemiyor.",
+        "quoteEmailSubject": "İşBul KKTC · Kurumsal ilan paketi teklifi",
+        "quoteEmailBody": "Merhaba,\n\nKurumsal ilan paketi için yazılı teklif rica ediyorum.\nİlan başına tercih edilen süre: %DAYS% gün.\nLütfen ilan adedini ve yayın süresini açıkça belirten, sınırları belirli bir kapsam paylaşın.\n\nŞirket adı, iletişim bilgileri ve diğer ihtiyaçlar:"
+      },
+      "sound": {
+        "button": "Ses modu",
+        "effects": "Etkileşim sesleri",
+        "rain": "Etkileşim ve yağmur sesleri",
+        "off": "Kapalı"
+      },
+      "scene": {
+        "package": "Paket",
+        "selectPackage": "İlan süresi",
+        "viewScope": "Jetonla Paketi Değiştir",
+        "insertCoin": "Jetonla Paketi Değiştir",
+        "careerHub": "Kariyer",
+        "region": "Kuzey Kıbrıs",
+        "listing": "ilan",
+        "quote": "teklif"
+      },
+      "cards": {
+        "singleListing": {
+          "audience": "TEK AÇIK POZİSYON",
+          "title": "Tek İlan",
+          "summary": "Bir pozisyonu, ihtiyacınıza uygun 1, 7 veya 30 günlük süreyle yayımlamak için."
+        },
+        "growth": {
+          "audience": "BİRDEN FAZLA POZİSYON",
+          "title": "Büyüme",
+          "summary": "Aynı dönemde en fazla üç pozisyon için sade ve ölçülü bir ilan kapsamı."
+        },
+        "professional": {
+          "audience": "DÜZENLİ İŞE ALIM",
+          "title": "Profesyonel",
+          "summary": "Aynı dönemde en fazla beş pozisyon yayımlayan işe alım ekipleri için."
+        },
+        "enterprise": {
+          "audience": "KURUMSAL İŞE ALIM",
+          "title": "Kurumsal",
+          "summary": "İlan adedi ve süreleri önceden belirlenmiş, yazılı özel teklif isteyen kuruluşlar için."
+        }
+      }
+    }
+  },
+  "Nav": {
+    "login": "Giriş yap",
+    "openMenu": "Menüyü aç",
+    "closeMenu": "Menüyü kapat",
+    "skipToContent": "İçeriğe atla",
+    "primaryNavigation": "Ana gezinme",
+    "jobs": "İş İlanları",
+    "freelance": "Serbest çalışma",
+    "candidate": "Adaylar",
+    "employer": "Şirketler",
+    "packages": "Paketler",
+    "about": "Hakkımızda",
+    "blog": "İş Haberleri",
+    "contact": "İletişim",
+    "register": "Ücretsiz Kayıt Ol",
+    "homeLabel": "İşBul KKTC ana sayfa",
+    "currentLanguage": "Seçili dil"
+  },
+  "Footer": {
+    "tagline": "Kuzey Kıbrıs’ta aday ve şirket kayıt süreçleri.",
+    "candidates": "Adaylar",
+    "employers": "İşverenler",
+    "account": "Hesabınız",
+    "information": "İşBul KKTC",
+    "links": {
+      "jobs": "İş ilanlarını keşfet",
+      "register": "Aday profili oluştur",
+      "freelance": "Serbest çalışma",
+      "directory": "Şirketleri keşfet",
+      "createCompany": "Şirket kaydını başlat",
+      "login": "Giriş yap",
+      "profile": "Aday profilim",
+      "about": "Hakkımızda",
+      "blog": "İş Haberleri",
+      "contact": "İletişim"
+    },
+    "rights": "© {year} İşBul KKTC. Tüm hakları saklıdır.",
+    "madeIn": "Kuzey Kıbrıs",
+    "footerNavigation": "Alt gezinme",
+    "siteFooterLabel": "Alt bilgi",
+    "homeLinkLabel": "İşBul KKTC ana sayfa",
+    "location": "Alsancak, KKTC"
+  },
+  "AboutPage": {
+    "eyebrow": "İŞBUL KKTC · YAKLAŞIMIMIZ",
+    "title": "Kuzey Kıbrıs’ın çalışma hayatına yerelden bakış.",
+    "lead": "İşBul KKTC; adayların mesleki birikimini ve şirketlerin işe alım ihtiyaçlarını, bölgenin gerçeklerine duyarlı ve anlaşılır bir dijital deneyimde buluşturma hedefiyle geliştiriliyor.",
+    "directoryLink": "Şirket rehberini keşfedin",
+    "heroAsideLabel": "KURULDUĞUMUZ YER",
+    "heroAsideTitle": "Kuzey Kıbrıs.",
+    "heroAsideBody": "Yerel ihtiyaçları gözeten, erişilebilir ve güven veren bir kariyer deneyimi için.",
+    "beliefLabel": "NEDEN VARIZ",
+    "beliefTitle": "İyi bir kariyer deneyimi, güven veren bir başlangıçla kurulur.",
+    "beliefBody": "İş aramak ve doğru insanlarla buluşmak karmaşık olmak zorunda değil. Bilgiyi açık sunan, kullanıcısına saygı duyan ve gelişimini gerçek ihtiyaçlara göre sürdüren bir platform kurmayı önemsiyoruz.",
+    "valuesLabel": "İLKELERİMİZ",
+    "values": {
+      "localTitle": "Önce yerel ihtiyaçlar",
+      "localBody": "Dil, coğrafya ve çalışma hayatına dair yerel bağlamı merkeze alan bir deneyim tasarlıyoruz.",
+      "clearTitle": "Açık ve dürüst bilgi",
+      "clearBody": "Kullanılabilir özellikleri, kaynakları ve henüz devrede olmayan adımları birbirinden ayırıyoruz.",
+      "careTitle": "Özenli bir deneyim",
+      "careBody": "Her adımda erişilebilirliği, anlaşılır dili ve kullanıcıya saygılı tasarımı gözetiyoruz."
+    },
+    "realityKicker": "BUGÜNÜN DURUMU",
+    "realityTitle": "Ne sunduğumuzu, neyin henüz hazır olmadığını açıkça anlatıyoruz.",
+    "realityBody": "Şirket rehberi, sağlanan kaynaklardaki kayıtları aramaya açar; listelenmek şirketin İşBul KKTC tarafından doğrulandığı anlamına gelmez. Paketler sitede incelenir; ödeme web sitesinde alınmaz. IBAN ve ödeme talimatı, paket koşulları görüşüldükten sonra e-posta veya WhatsApp gibi kanallardan özel olarak iletilir.",
+    "packagesLink": "Paketlerin güncel durumunu görün",
+    "closingKicker": "BİRLİKTE GELİŞELİM",
+    "closingTitle": "Her güçlü yerel ağ, iyi bir diyalogla büyür.",
+    "contactLink": "İletişim sayfasına gidin"
+  },
+  "BlogPage": {
+    "eyebrow": "İŞBUL KKTC · YEREL GÜNDEM",
+    "title": "Kuzey Kıbrıs’ta iş ve çalışma hayatı.",
+    "lead": "KKTC’de istihdamı, çalışma hayatını ve kariyer gündemini etkileyen güncel haber başlıklarını yayıncı kaynaklarına ulaşarak takip edin.",
+    "sourceSearchLink": "Tüm güncel başlıkları açın",
+    "feedAsideLabel": "SON GÜNDEM",
+    "feedAsideBody": "Son 30 günde yayımlanan, yerel çalışma hayatıyla ilgili başlıklar.",
+    "feedKicker": "GÜNCEL AKIŞ",
+    "feedTitle": "İş ve kariyer gündemi",
+    "latestBadge": "EN YENİ",
+    "localNewsBadge": "YEREL GÜNDEM",
+    "illustrativeImage": "TEMSİLİ · UNSPLASH",
+    "readSource": "{source} kaynağındaki haberi açın",
+    "emptyTitle": "Şu an gösterilecek haber başlığı yok.",
+    "emptyBody": "Akış güncellendiğinde yeni başlıklar burada görünür. Bu arada kaynak aramasını açabilirsiniz.",
+    "editorialNoteTitle": "Kaynağı görün, haberi asıl yayıncıdan okuyun.",
+    "editorialNoteBody": "Bu sayfa güncel başlıkları ve yayıncı adlarını listeler; haber metinlerini kopyalamaz veya İşBul KKTC’nin özgün haberi gibi sunmaz. Haber kartlarındaki Unsplash görselleri konuya uygun temsili fotoğraflardır, haberin olay fotoğrafları değildir. İçeriğin tamamı ve bağlamı için kaynak yayını ziyaret edin.",
+    "photoLicense": "Unsplash görsel lisansı"
+  },
+  "ContactPage": {
+    "eyebrow": "İŞBUL KKTC · İLETİŞİM",
+    "title": "İşBul KKTC ile iletişim",
+    "lead": "Aday, işveren veya yerel bir kuruluş olun; İşBul KKTC’ye e-posta, telefon ya da WhatsApp üzerinden ulaşın.",
+    "promiseLabel": "AÇIK İLETİŞİM",
+    "promiseTitle": "Size ulaşmaya hazırız.",
+    "promiseBody": "İhtiyacınız için bize doğrudan ulaşın.",
+    "channelsKicker": "BİZE ULAŞIN",
+    "channelsTitle": "İletişim kanalları",
+    "channelsBody": "Sorularınız ve iş birliği talepleriniz için aşağıdaki iletişim kanallarını kullanabilirsiniz.",
+    "contactStatus": "İLETİŞİME AÇIK",
+    "emailLabel": "E-posta",
+    "emailSubject": "İşBul KKTC iletişim",
+    "emailBody": "Merhaba İşBul KKTC,\n\nSize şu konuda ulaşmak istiyorum:\n\nMesajınızı buraya yazın.\n\nAdınız:\nTelefon (isteğe bağlı):\n\nTeşekkürler.",
+    "phoneLabel": "Telefon / WhatsApp",
+    "locationLabel": "Bölge",
+    "whatsappAction": "WhatsApp’tan yazın",
+    "regionValue": "Alsancak, KKTC",
+    "messageGuidance": "Size daha iyi yardımcı olabilmemiz için mesajınızda iletişim nedeninizi kısaca belirtin.",
+    "nextKicker": "DAHA FAZLASINI KEŞFEDİN",
+    "nextTitle": "Şirket rehberini inceleyin.",
+    "nextBody": "Kuzey Kıbrıs şirket rehberinde kayıtları şirket adına, faaliyet alanına ve konuma göre arayabilirsiniz. Rehber kayıtlarının kaynak veriden geldiğini ve doğrulanmış şirket profili olmadığını unutmayın.",
+    "directoryLink": "Şirket rehberine gidin"
+  },
+  "NotFound": {
+    "title": "Sayfa bulunamadı",
+    "body": "Aradığınız sayfa bulunamadı.",
+    "home": "Ana sayfaya dön",
+    "register": "Aday profili oluştur"
+  },
+  "AppError": {
+    "eyebrow": "İSTEK TAMAMLANAMADI",
+    "title": "Bu sayfa şu anda yüklenemiyor.",
+    "body": "Geçici bir sorun oluştu. Biraz sonra yeniden deneyin veya ana sayfaya dönün.",
+    "retry": "Yeniden dene",
+    "home": "Ana sayfaya dön"
+  },
+  "AccountPages": {
+    "register": {
+      "back": "Ana sayfaya dön",
+      "sceneMediaLabel": "Kıbrıs'tan görüntüler ve videolar",
+      "sceneVideoUnavailable": "Video şu anda oynatılamıyor.",
+      "candidate": {
+        "eyebrow": "ADAY HESABI",
+        "title": "Kariyer yolculuğunuz için sağlam bir başlangıç.",
+        "description": "Hesabınızı oluşturun; mesleki başlığınızı, konumunuzu ve becerilerinizi kendi profilinizde düzenleyin.",
+        "storyEyebrow": "KENDİ YOLUNUZ, KENDİ PROFİLİNİZ",
+        "storyTitle": "Kuzey Kıbrıs’ta yeni bir adım.",
+        "storyBody": "Profil bilgilerinizi hesabınızda saklayın ve ihtiyaç duyduğunuzda güncelleyin."
+      },
+      "employer": {
+        "eyebrow": "İŞVEREN HESABI",
+        "title": "Şirketiniz için güvenli bir başlangıç.",
+        "description": "Önce yetkili kişi olarak hesabınızı oluşturun. E-posta doğrulamasından sonra şirket bilgilerinizi ayrı kayıt adımında ekleyin.",
+        "storyEyebrow": "İŞVEREN KAYIT AKIŞI",
+        "storyTitle": "Önce hesabınız, sonra şirketiniz.",
+        "storyBody": "Hesabınızı doğruladıktan sonra şirket bilgilerini ekleyip inceleme sürecini başlatabilirsiniz."
+      }
+    },
+    "login": {
+      "back": "Ana sayfaya dön",
+      "sceneMediaLabel": "Kıbrıs'tan görüntüler ve videolar",
+      "sceneVideoUnavailable": "Video şu anda oynatılamıyor.",
+      "inactiveMessage": "Bu hesap şu anda etkin değil. Erişiminizle ilgili destek almak için proje yöneticisiyle iletişime geçin.",
+      "verificationMessage": "E-posta bağlantısı doğrulanamadı veya süresi doldu. Giriş bilgilerinizi kontrol edin ya da kayıt işlemini yeniden deneyin.",
+      "oauthMessage": "Sosyal hesapla giriş tamamlanamadı. Yeniden deneyin veya e-posta ve şifrenizle giriş yapın.",
+      "resetSuccessMessage": "Şifreniz güncellendi. Yeni şifrenizle giriş yapabilirsiniz.",
+      "signOut": "Oturumu kapat",
+      "candidate": {
+        "eyebrow": "ADAY GİRİŞİ",
+        "title": "Aday profilinize dönün.",
+        "description": "Aday hesabınızla giriş yapıp profil bilgilerinizi görüntüleyin ve güncelleyin.",
+        "storyEyebrow": "ADAY ALANI",
+        "storyTitle": "Mesleki profiliniz size özel.",
+        "storyBody": "Girişiniz doğrulandıktan sonra aday profilinize yönlendirilirsiniz."
+      },
+      "employer": {
+        "eyebrow": "İŞVEREN GİRİŞİ",
+        "title": "Şirket kayıt adımınıza devam edin.",
+        "description": "İşveren hesabınızla giriş yapın; şirket bilgilerinizi eklemek için işveren kayıt alanına geçin.",
+        "storyEyebrow": "İŞVEREN ALANI",
+        "storyTitle": "Şirket kaydınızı güvenle sürdürün.",
+        "storyBody": "Girişiniz doğrulandıktan sonra şirket kayıt formuna yönlendirilirsiniz."
+      }
+    },
+    "reset": {
+      "eyebrow": "HESAP GÜVENLİĞİ",
+      "title": "Şifrenizi yenileyin.",
+      "description": "E-posta adresinizi girin; size güvenli bir şifre yenileme bağlantısı gönderelim.",
+      "back": "Giriş sayfasına dön",
+      "sceneMediaLabel": "Kıbrıs'tan görüntüler ve videolar",
+      "sceneVideoUnavailable": "Video şu anda oynatılamıyor.",
+      "storyEyebrow": "GÜVENLİ HESAP ERİŞİMİ",
+      "storyTitle": "Erişim bilgileriniz size ait.",
+      "storyBody": "Yenileme bağlantısı yalnızca kayıtlı e-posta adresinize gönderilir ve kısa süre geçerlidir.",
+      "expiredMessage": "Şifre yenileme bağlantısı geçersiz veya süresi dolmuş. Lütfen yeni bir bağlantı isteyin."
+    },
+    "resetPassword": {
+      "eyebrow": "YENİ ŞİFRE",
+      "title": "Yeni şifrenizi belirleyin.",
+      "description": "Hesabınız için güçlü bir yeni şifre oluşturun ve kaydedin.",
+      "back": "Giriş sayfasına dön",
+      "sceneMediaLabel": "Kıbrıs'tan görüntüler ve videolar",
+      "sceneVideoUnavailable": "Video şu anda oynatılamıyor.",
+      "storyEyebrow": "SON ADIM",
+      "storyTitle": "Hesabınız yeniden güvende.",
+      "storyBody": "Yeni şifrenizi kaydettikten sonra hesap güvenliği için yeniden giriş yapmanız istenir."
+    }
+  },
+  "AccountAudience": {
+    "chooseAudience": "Hesap türünüzü seçin",
+    "candidate": {
+      "title": "Aday",
+      "description": "Aday profilinizi oluşturun ve yönetin."
+    },
+    "employer": {
+      "title": "İşveren",
+      "description": "Şirket kayıt adımına devam edin."
+    }
+  },
+  "AuthForms": {
+    "nameLabel": "Adınız",
+    "contactNameLabel": "Yetkili kişi adı",
+    "emailLabel": "E-posta adresi",
+    "accountEmailLabel": "Hesap e-posta adresi",
+    "passwordLabel": "Şifre",
+    "passwordHint": "En az 8 karakter.",
+    "showPassword": "Şifreyi göster",
+    "hidePassword": "Şifreyi gizle",
+    "createCandidateAccount": "Aday hesabı oluştur",
+    "createEmployerAccount": "İşveren hesabı oluştur",
+    "creatingAccount": "Hesap oluşturuluyor…",
+    "signIn": "Giriş yap",
+    "candidateSignIn": "Aday girişi",
+    "employerSignIn": "İşveren girişi",
+    "signingIn": "Giriş yapılıyor…",
+    "forgotPassword": "Şifrenizi mi unuttunuz?",
+    "alreadyHaveAccount": "Zaten hesabınız var mı?",
+    "candidateSignInLink": "Aday girişi",
+    "employerSignInLink": "İşveren girişi",
+    "noAccount": "Hesabınız yok mu?",
+    "createCandidateAccountLink": "Aday olarak kayıt olun",
+    "createEmployerAccountLink": "İşveren olarak kayıt olun",
+    "companyAccountNote": "Hesabınızı oluşturup e-postanızı doğruladıktan sonra şirket bilgilerinizi ekleyeceğiniz kayıt formuna geçersiniz.",
+    "sendResetLink": "Şifre yenileme bağlantısı gönder",
+    "sendingResetLink": "Bağlantı gönderiliyor…",
+    "resetLinkNote": "E-posta adresinize bir bağlantı göndereceğiz. Bağlantı kısa süre geçerlidir.",
+    "newPasswordLabel": "Yeni şifre",
+    "confirmPasswordLabel": "Yeni şifre (tekrar)",
+    "passwordMatch": "Şifreler eşleşiyor.",
+    "updatePassword": "Şifreyi güncelle",
+    "updatingPassword": "Şifre güncelleniyor…",
+    "oauth": {
+      "continueWith": "{provider} ile devam et",
+      "eyebrow": "GÜVENLİ HESAP GİRİŞİ",
+      "title": "Hesabınızla devam edin",
+      "description": "Aday veya işveren hesabınız için kullanmak istediğiniz yöntemi seçin.",
+      "enabled": "Hazır",
+      "providers": {
+        "google": "Google hesabınız",
+        "linkedin_oidc": "Profesyonel ağ hesabınız",
+        "facebook": "Facebook hesabınız",
+        "instagram": "Instagram, İşBul KKTC’ye giriş yöntemi olarak desteklenmiyor."
+      },
+      "orEmail": "veya e-posta ile devam edin",
+      "pending": "Etkin değil",
+      "setupPending": "Bazı sosyal giriş sağlayıcıları yapılandırılmamış. E-posta ile devam edebilirsiniz.",
+      "instagramUnavailable": "Desteklenmiyor",
+      "whatsappNote": "WhatsApp, İşBul KKTC hesabına giriş yöntemi olarak desteklenmiyor."
+    },
+    "messages": {
+      "invalid": "Bilgileri kontrol edip tekrar deneyin.",
+      "signInFailed": "Giriş yapılamadı. E-posta adresinizi ve şifrenizi kontrol edin.",
+      "signUpFailed": "Kayıt tamamlanamadı. Bilgileri kontrol edip tekrar deneyin.",
+      "verificationSent": "Devam etmek için e-posta adresinize gönderilen doğrulama bağlantısını kullanın.",
+      "oauthUnavailable": "Bu giriş seçeneği henüz etkin değil. E-posta ve şifrenizi kullanın.",
+      "oauthStartFailed": "Sosyal hesapla giriş başlatılamadı. Lütfen yeniden deneyin.",
+      "resetRequestSent": "Bu e-posta adresi kayıtlıysa şifre yenileme bağlantısı gönderildi. Gelen kutunuzu ve spam klasörünüzü kontrol edin.",
+      "resetRequestFailed": "Şifre yenileme bağlantısı gönderilemedi. Lütfen tekrar deneyin.",
+      "passwordUpdateFailed": "Şifre güncellenemedi. Lütfen tekrar deneyin.",
+      "sessionExpired": "Bağlantınızın süresi dolmuş. Lütfen yeni bir şifre yenileme bağlantısı isteyin.",
+      "passwordMismatch": "Şifreler eşleşmiyor. Aynı şifreyi iki alana da girin."
+    }
+  },
+  "CompanyRegistration": {
+    "eyebrow": "{name} · İşveren alanı",
+    "title": "Şirketinizi kaydedin.",
+    "description": "Şirket bilgilerinizi ekleyin. Kaydınız incelemeye alınır; doğrulama tamamlanana kadar ilan yayımlanamaz.",
+    "back": "Aday profilime dön",
+    "nameLabel": "Şirket adı",
+    "namePlaceholder": "Şirketinizin adı",
+    "slugLabel": "Şirket bağlantı adı",
+    "slugHint": "Kısa ad; İngilizce harf, rakam ve tek tire kullanın.",
+    "saving": "Kaydediliyor…",
+    "submit": "İncelemeye gönder",
+    "storyEyebrow": "ŞİRKET KAYIT AKIŞI",
+    "storyTitle": "Önce bilgilerinizi iletin.",
+    "storyBody": "Gönderdiğiniz şirket bilgileri inceleme sürecine alınır. Doğrulama tamamlanmadan ilan yayımlama etkin değildir.",
+    "messages": {
+      "invalid": "Şirket adı ve bağlantı adını kontrol edip tekrar deneyin.",
+      "duplicate": "Bu şirket bağlantı adı zaten kullanılıyor.",
+      "unauthorized": "Oturumunuz sona ermiş olabilir. Yeniden giriş yapıp deneyin.",
+      "failed": "Şirket kaydı oluşturulamadı. Lütfen tekrar deneyin.",
+      "saved": "Şirketiniz inceleme için kaydedildi. Doğrulama tamamlanana kadar ilan yayımlanamaz."
+    }
+  },
+  "FeatureStrip": {
+    "ariaLabel": "İşBul KKTC özellikleri",
+    "trustedTitle": "Yayındaki ilanları keşfedin",
+    "trustedBody": "Önizlemede doğrulanmış şirket adı ve ilan başlığı yer alır.",
+    "localTitle": "CV’nizden profil taslağına",
+    "localBody": "Bilgileri gözden geçirip siz kaydedersiniz.",
+    "applyTitle": "Profiliniz sizin kontrolünüzde",
+    "applyBody": "Bilgilerinizi hesabınızdan dilediğiniz zaman güncelleyin."
+  },
+  "LanguageMenu": {
+    "title": "Arayüz dili",
+    "notice": "Türkçe, İngilizce, Rusça, Yunanca, Farsça ve Almanca arayüz çevirileri kullanılabilir."
+  },
+  "Analytics": {
+    "regionLabel": "Analitik tercihleri",
+    "description": "Site kullanımını ölçerek deneyimi geliştirmemize yardımcı olan Google Analytics çerezleri yalnızca izninizle kullanılır.",
+    "accept": "Kabul et",
+    "reject": "Reddet",
+    "settings": "Analitik tercihleri"
+  },
+  "HomePage": {
+    "eyebrow": "KUZEY KIBRIS İSTİHDAM AĞI",
+    "title": "<line>Kuzey Kıbrıs’ta</line> <line>kariyerinizin bir sonraki</line> <accent>adımını keşfedin.</accent>",
+    "sectorEyebrow": "BÖLGESEL ODAKLAR",
+    "sectorTitle": "Kuzey Kıbrıs’ta öne çıkan çalışma alanları",
+    "sectorRegion": "Kuzey Kıbrıs",
+    "sectorMoreLabel": "Çalışma alanlarını keşfet",
+    "sectorLessLabel": "Kataloğu kapat",
+    "sectorExplorerTitle": "Kuzey Kıbrıs’ta çalışma alanınızı keşfedin",
+    "sectorExplorerDescription": "16 çalışma alanının tamamında arayın; konu başlıklarıyla daraltın.",
+    "sectorSearchLabel": "Çalışma alanlarında ara",
+    "sectorSearchPlaceholder": "Meslek veya çalışma alanı",
+    "sectorFilterLabel": "Çalışma alanı grupları",
+    "sectorAllLabel": "Tümü",
+    "sectorTotalLabel": "alan",
+    "sectorTotalCount": "Toplam {count} çalışma alanı",
+    "sectorFeaturedLabel": "Öne çıkan",
+    "sectorResultCountSingular": "{count} çalışma alanı gösteriliyor",
+    "sectorResultCountPlural": "{count} çalışma alanı gösteriliyor",
+    "sectorClearSearch": "Aramayı temizle",
+    "sectorEmptyTitle": "Eşleşen çalışma alanı bulunamadı",
+    "sectorEmptyDescription": "Başka bir meslek alanı deneyin veya seçili filtreleri kaldırın.",
+    "sectorClearFilters": "Tüm filtreleri temizle",
+    "sectorCategories": {
+      "digital": "Dijital, yaratıcı ve esnek çalışma",
+      "services": "Hizmetler & yaşam",
+      "industry": "Üretim & altyapı"
+    },
+    "sectors": {
+      "technology": {
+        "title": "Teknoloji & Yazılım",
+        "description": "Dijital çözümlerle geleceği şekillendirin."
+      },
+      "education": {
+        "title": "Eğitim",
+        "description": "Bilginizle yeni fırsatlara kapı açın."
+      },
+      "health": {
+        "title": "Sağlık",
+        "description": "Toplum sağlığına değer katan uzmanlıklar."
+      },
+      "tourism": {
+        "title": "Turizm & Seyahat",
+        "description": "Ada turizmine deneyiminizle katkı sunun."
+      },
+      "architecture": {
+        "title": "Mimarlık & İç Mekân Tasarımı",
+        "description": "Yaşam alanlarını özgün tasarımlarla şekillendirin."
+      },
+      "construction": {
+        "title": "İnşaat & Mühendislik",
+        "description": "Güvenli yapılar ve güçlü altyapılar inşa edin."
+      },
+      "businessServices": {
+        "title": "İş ve Profesyonel Hizmetler",
+        "description": "Uzmanlığınızla kurumların gelişimine katkı verin."
+      },
+      "gastronomy": {
+        "title": "Gastronomi & Yiyecek-İçecek",
+        "description": "Lezzet ve hizmet deneyimini birlikte sunun."
+      },
+      "manufacturing": {
+        "title": "Üretim & Sanayi",
+        "description": "Üretim gücüyle ekonomiye değer katın."
+      },
+      "creativeMedia": {
+        "title": "Dijital Tasarım & Medya",
+        "description": "Yaratıcı fikirleri etkileyici deneyimlere dönüştürün."
+      },
+      "remoteWork": {
+        "title": "Uzaktan & Serbest Çalışma",
+        "description": "Uzmanlığınızı esnek çalışma biçimleriyle buluşturun."
+      },
+      "renewableEnergy": {
+        "title": "Yenilenebilir Enerji",
+        "description": "Daha sürdürülebilir bir gelecek için üretin."
+      },
+      "agriculture": {
+        "title": "Tarım & Seracılık",
+        "description": "Toprağa ve üretime değer katan çalışmalara katılın."
+      },
+      "foodProduction": {
+        "title": "Gıda Üretimi & Tedarik",
+        "description": "Tarladan sofraya güvenilir üretimi destekleyin."
+      },
+      "hospitality": {
+        "title": "Otelcilik & Konaklama",
+        "description": "Konuklara özenli ve nitelikli deneyimler sunun."
+      },
+      "logistics": {
+        "title": "Lojistik & Taşımacılık",
+        "description": "Ürünleri ve işletmeleri güvenle birbirine bağlayın."
+      }
+    }
+  },
+  "HomeJourney": {
+    "eyebrow": "İKİ FARKLI YOL. NET BİR SONRAKİ ADIM.",
+    "title": "Adaylar ve işverenler için doğru başlangıç.",
+    "description": "İhtiyacınız olan yolu seçin: aday profilinizi kendi kontrolünüzde oluşturun; şirketinizi kaydedip ilan sürecini güvenle başlatın.",
+    "candidate": {
+      "audience": "ADAYLAR İÇİN",
+      "title": "CV’nizden profil taslağına. Son söz sizde.",
+      "description": "CV’nizdeki bilgileri profil taslağınıza aktarın; kontrol edip onayınızla kaydedin. Açık ilanları üyelik oluşturmadan arayın.",
+      "steps": {
+        "account": {
+          "title": "Aday hesabınızı oluşturun",
+          "description": "E-postanızı doğrulayın, kişisel profil alanınıza geçin."
+        },
+        "resume": {
+          "title": "CV’nizi seçin",
+          "description": "Metin tabanlı PDF veya DOCX bilgileri tarayıcınızda taslağa aktarılsın."
+        },
+        "profile": {
+          "title": "Kontrol edin ve kaydedin",
+          "description": "Bilgileri düzenleyin; profiliniz siz kaydettiğinizde güncellensin."
+        }
+      },
+      "privacy": "CV dosyanız sunucuya yüklenmez; ayrıştırma tarayıcınızda yapılır.",
+      "action": "Aday hesabı oluştur"
+    },
+    "employer": {
+      "audience": "İŞVERENLER İÇİN",
+      "title": "Şirketinizi tanıtın. İlan sürecini güvenle yönetin.",
+      "description": "Şirket profilinizi ekleyin; doğrulama ve yayın yetkisi tamamlandığında ilanınızı hazırlayıp yönetin.",
+      "steps": {
+        "company": {
+          "title": "Şirket profilinizi oluşturun",
+          "description": "Rehber kaydınız varsa eşleştirin; bilgileri gözden geçirip başvurunuzu gönderin."
+        },
+        "review": {
+          "title": "Doğrulama sürecine girin",
+          "description": "Şirket bilgileriniz incelenir; rehber eşleşmesi tek başına doğrulama değildir."
+        },
+        "listing": {
+          "title": "İlan akışına geçin",
+          "description": "Şirketiniz doğrulanıp yayın yetkisi tanımlandığında ilanınızı hazırlayın."
+        }
+      },
+      "privacy": "İlan yayını, şirket doğrulaması ve yayın yetkisinin tanımlanmasına bağlıdır.",
+      "action": "İşveren hesabı oluştur"
+    }
+  },
+  "HomeJobSearch": {
+    "eyebrow": "KARİYERİNİZ İÇİN AÇIK İLANLAR",
+    "title": "Fırsatları hesap açmadan keşfedin.",
+    "description": "Gizliliği gözeten önizlemelerde yalnızca ilan başlığı ve doğrulanmış şirket adı gösterilir.",
+    "keywordLabel": "Pozisyon veya şirket",
+    "keywordPlaceholder": "Unvan, şirket adı ya da anahtar kelime",
+    "districtLabel": "Konum",
+    "allDistricts": "Tüm ilçeler",
+    "jobTypeLabel": "Çalışma türü",
+    "allJobTypes": "Tüm türler",
+    "workplaceLabel": "Çalışma düzeni",
+    "allWorkplaces": "Tüm düzenler",
+    "searchAction": "İlanları ara",
+    "clearFilters": "Filtreleri temizle",
+    "resultsTitle": "Güncel ilanlar",
+    "resultCountSingular": "1 ilan bulundu",
+    "resultCountPlural": "{count} ilan bulundu",
+    "emptyTitle": "Şu anda eşleşen yayında ilan yok",
+    "emptyDescription": "Filtreleri değiştirin veya yeni fırsatlar için daha sonra yeniden göz atın.",
+    "invalidFilters": "Arama filtreleri geçersiz. Seçimlerinizi kontrol edip yeniden deneyin.",
+    "paginationLabel": "İlan sonuçları sayfalama",
+    "previousPage": "Önceki",
+    "nextPage": "Sonraki",
+    "pageCount": "Sayfa {page} / {pages}",
+    "districts": {
+      "lefkosia": "Lefkoşa",
+      "magusa": "Mağusa",
+      "girne": "Girne",
+      "guzelyurt": "Güzelyurt",
+      "iskele": "İskele",
+      "lefke": "Lefke"
+    },
+    "jobTypes": {
+      "full_time": "Tam zamanlı",
+      "part_time": "Yarı zamanlı",
+      "contract": "Sözleşmeli",
+      "temporary": "Geçici",
+      "internship": "Staj",
+      "freelance": "Serbest çalışma"
+    },
+    "workplaceModes": {
+      "on_site": "İş yerinde",
+      "hybrid": "Hibrit",
+      "remote": "Uzaktan"
+    }
+  },
+  "JobsPage": {
+    "eyebrow": "İŞBUL KKTC · KARİYER FIRSATLARI",
+    "title": "Sıradaki işinizi bulun.",
+    "description": "Yayındaki ilanları tek yerde keşfedin; konum, çalışma türü ve çalışma düzenine göre aramanızı daraltın.",
+    "oneOpening": "Şu anda 1 yayındaki ilan",
+    "openings": "Şu anda {count} yayındaki ilan",
+    "filterEyebrow": "ARAMANIZI NETLEŞTİRİN",
+    "filterTitle": "Size uygun ilanı bulun",
+    "resultsEyebrow": "GÜNCEL FIRSATLAR",
+    "resultsTitle": "Yayındaki iş ilanları",
+    "postedOn": "{date} tarihinde yayımlandı",
+    "viewDetails": "İlanı incele"
+  },
+  "JobDetail": {
+    "eyebrow": "KARİYER FIRSATI",
+    "backToListings": "Tüm ilanlara dön",
+    "locationNotSpecified": "Konum belirtilmedi",
+    "publishedOn": "{date} tarihinde yayımlandı",
+    "descriptionTitle": "Pozisyon hakkında",
+    "responsibilitiesTitle": "Görev ve sorumluluklar",
+    "requirementsTitle": "Aranan nitelikler",
+    "companyLabel": "İŞVEREN",
+    "companyLocation": "Şirket konumu",
+    "companyWebsite": "Web sitesi",
+    "companyDirectoryLink": "Şirket rehberinde görüntüle"
+  },
+  "JobApplication": {
+    "title": "Bu ilana başvurun",
+    "description": "Başvurunuz siteye kaydedilir ve ilgili işverenin hesabına iletilir.",
+    "coverLetterLabel": "Ön yazı (isteğe bağlı)",
+    "coverLetterPlaceholder": "Bu pozisyon için uygunluğunuzu kısaca paylaşın.",
+    "coverLetterHint": "En fazla 5.000 karakter. Göndermeden önce bilgilerinizi kontrol edin.",
+    "shareContactEmail": "İşverenin başvurum üzerinden kayıtlı e-posta adresimi görmesine izin veriyorum. Bu onay isteğe bağlıdır.",
+    "submit": "Başvuruyu gönder",
+    "submitting": "Gönderiliyor…",
+    "loginAction": "Giriş yapın",
+    "messages": {
+      "idle": "",
+      "invalid": "Başvuru bilgileri geçerli değil. Lütfen kontrol edip tekrar deneyin.",
+      "unauthorized": "Başvuru için giriş yapmanız ve aday profilinizi oluşturmanız gerekir.",
+      "applyFailed": "Başvurunuz gönderilemedi. Lütfen biraz sonra tekrar deneyin.",
+      "applied": "Başvurunuz başarıyla iletildi.",
+      "duplicate": "Bu ilana daha önce başvurdunuz.",
+      "transitionFailed": "Başvuru durumu güncellenemedi.",
+      "updated": "Başvuru durumu güncellendi."
+    }
+  },
+  "CompanyDirectory": {
+    "eyebrow": "KUZEY KIBRIS İŞLETME REHBERİ",
+    "title": "Aradığınız şirketi bulun.",
+    "description": "Şirket adını arayın; sektör ve KKTC'nin altı ilçesiyle sonuçları daraltın.",
+    "totalLabel": "{count} şirket kaydı",
+    "jobEmployersEyebrow": "GÜNCEL İLANLAR",
+    "jobEmployersTitle": "İşe alım yapan firmalar",
+    "jobEmployersDescription": "Kaynak ilanlarında şu anda açık pozisyonu bulunan firmalar.",
+    "jobEmployersCount": "{count} firma",
+    "activeJobCount": "{count} açık ilan",
+    "jobEmployersVerificationNote": "Bu bölümde görünmek, şirketin İşBul KKTC tarafından doğrulandığı anlamına gelmez.",
+    "companyWebsite": "Web sitesi",
+    "sourceProfileLink": "Kaynak şirket profili",
+    "sourceListingLink": "Kaynak ilanı görüntüle",
+    "resultsLabel": "Şirket arama sonuçları",
+    "searchLabel": "Şirket adı içinde ara",
+    "searchPlaceholder": "Şirket adının herhangi bir bölümünü yazın",
+    "clearSearch": "Arama metnini temizle",
+    "categoryLabel": "Sektör / faaliyet alanı",
+    "categoryPlaceholder": "Sektör seçin",
+    "categoryAll": "Tüm sektörler",
+    "locationLabel": "İlçe",
+    "locationAll": "Tüm ilçeler",
+    "districts": {
+      "lefkosia": "Lefkoşa",
+      "magusa": "Mağusa",
+      "girne": "Girne",
+      "guzelyurt": "Güzelyurt",
+      "iskele": "İskele",
+      "lefke": "Lefke"
+    },
+    "locationPlaceholder": "İlçe seçin",
+    "sortLabel": "Şirketleri sırala",
+    "sortAscending": "Türkçe A–Z",
+    "sortDescending": "Türkçe Z–A",
+    "resultCount": "{count, plural, one {# şirket bulundu} other {# şirket bulundu}}",
+    "locationCount": "{count} şube",
+    "clearFilters": "Filtreleri temizle",
+    "mapLink": "Haritada gör",
+    "noContact": "Telefon veya web sitesi bilgisi yok",
+    "emptyTitle": "Eşleşen şirket bulunamadı",
+    "emptyDescription": "Başka bir şirket adı, sektör veya ilçe deneyin ya da filtreleri temizleyin.",
+    "paginationLabel": "Şirket sonuçları sayfaları",
+    "previous": "Önceki",
+    "next": "Sonraki",
+    "pageCount": "Sayfa {current} / {total}",
+    "sourceNote": "Kapsam kaynak koordinatlarına göre yaklaşık belirlenmiştir; resmi bir sınır değerlendirmesi değildir. Rehber, şirket kaydı veya doğrulama anlamına gelmez.",
+    "districtDataNote": "Güvenilir ilçe bilgisi bulunmayan {count} şube, ilçe filtresi seçildiğinde sonuçlara dahil edilmez."
+  },
+  "CandidateDashboard": {
+    "eyebrow": "ADAY PROFİLİ",
+    "title": "Merhaba, {name}.",
+    "description": "Mesleki bilgilerinizi oluşturun ve hesabınızda güncel tutun.",
+    "applicationsTitle": "Başvurularım",
+    "applicationsDescription": "Başvurunuzun işverene iletilip iletilmediğini, durumunu ve işverenin başvuruyu ilk ne zaman görüntülediğini buradan takip edin.",
+    "noApplications": "Henüz bir iş ilanına başvurmadınız.",
+    "applicationSubmittedAt": "Başvuru tarihi",
+    "applicationViewedAt": "İşverenin ilk görüntüleme zamanı",
+    "applicationNotViewed": "İşveren başvurunuzu henüz görüntülemedi.",
+    "applicationStatuses": {
+      "submitted": "İşverene iletildi",
+      "reviewing": "İşveren inceliyor",
+      "shortlisted": "Ön değerlendirmeyi geçti",
+      "rejected": "Olumsuz sonuçlandı",
+      "hired": "İşe alım tamamlandı",
+      "withdrawn": "Geri çekildi"
+    },
+    "profileTitle": "Profil bilgileri",
+    "profileDescription": "Kaydettiğiniz bilgiler hesabınıza özeldir.",
+    "completionEyebrow": "PROFİLİNİZ",
+    "completionTitle": "Temel bilgiler",
+    "completionOf": "/ {total} bilgi eklendi",
+    "completionLabel": "{total} temel bilginin {current} tanesi eklendi",
+    "completionHint": "CV’den çıkarılan bilgiler önce formda öneri olarak gösterilir. Kontrol ettikten sonra Değişiklikleri kaydet ile onaylayın.",
+    "completionFields": {
+      "headline": "Mesleki başlık",
+      "location": "Konum",
+      "skills": "Beceriler",
+      "experience": "İş deneyimi",
+      "education": "Eğitim",
+      "languages": "Diller",
+      "certifications": "Sertifikalar"
+    },
+    "privacyTitle": "Profiliniz size özel",
+    "privacyDescription": "Bu bilgiler hesabınızda saklanır; herkese açık aday profili olarak yayımlanmaz.",
+    "headlineLabel": "Mesleki başlık",
+    "headlinePlaceholder": "Uzmanlık alanınızı yazın",
+    "headlineHint": "En fazla 140 karakter.",
+    "locationLabel": "İlçe",
+    "locationPlaceholder": "İlçe seçin",
+    "districts": {
+      "lefkosia": "Lefkoşa",
+      "magusa": "Mağusa",
+      "girne": "Girne",
+      "guzelyurt": "Güzelyurt",
+      "iskele": "İskele",
+      "lefke": "Lefke"
+    },
+    "skillsLabel": "Beceriler",
+    "skillsPlaceholder": "Becerileri virgül veya yeni satırla ayırın",
+    "skillsHint": "En fazla 40 beceri ekleyebilirsiniz.",
+    "save": "Değişiklikleri kaydet",
+    "saving": "Kaydediliyor…",
+    "signOut": "Güvenli çıkış",
+    "employerWorkspaceLink": "İşveren alanı",
+    "messages": {
+      "invalid": "Bilgileri kontrol edip tekrar deneyin.",
+      "unauthorized": "Devam etmek için hesabınıza giriş yapın.",
+      "inactive": "Bu hesap şu anda güncellenemez.",
+      "saveFailed": "Profil kaydedilemedi. Lütfen tekrar deneyin.",
+      "saved": "Profiliniz kaydedildi."
+    },
+    "profileIndex": "PROFİL · 01",
+    "sectionsDescription": "Eklemek istediğiniz bilgileri girin. Tüm bölümler isteğe bağlıdır; CV’den çıkarılan önerileri kaydetmeden önce inceleyip düzenleyebilirsiniz.",
+    "additionalDetails": "Deneyim, eğitim ve diğer detaylar · {count} kayıt",
+    "additionalDetailsHint": "Bu bölümler isteğe bağlıdır. CV’den çıkarılan bilgiler mevcut kayıtlarınız korunarak forma eklenir; kaydetmeden önce kontrol edip düzenleyebilirsiniz.",
+    "entryLabel": "Kayıt {number}",
+    "removeEntry": "Bu kaydı kaldır",
+    "fields": {
+      "role": "Görev unvanı",
+      "organization": "Şirket",
+      "startDate": "Başlangıç tarihi",
+      "endDate": "Bitiş tarihi",
+      "dateHint": "Yıl veya ay ve yıl yazabilirsiniz.",
+      "description": "Açıklama",
+      "institution": "Okul veya kurum",
+      "qualification": "Derece veya yeterlilik",
+      "field": "Eğitim alanı",
+      "language": "Dil",
+      "proficiency": "Dil seviyesi",
+      "certification": "Sertifika veya lisans",
+      "issuer": "Düzenleyen kurum",
+      "issueDate": "Düzenlenme tarihi",
+      "expiryDate": "Son geçerlilik tarihi"
+    },
+    "sections": {
+      "experience": {
+        "title": "İş deneyimi",
+        "add": "Deneyim ekle",
+        "description": "Görevlerinizi, sorumluluklarınızı ve öne çıkan sonuçlarınızı ekleyin."
+      },
+      "education": {
+        "title": "Eğitim",
+        "add": "Eğitim ekle",
+        "description": "Eğitim geçmişinizi, derecelerinizi ve ilgili alanları belirtin."
+      },
+      "languages": {
+        "title": "Diller",
+        "add": "Dil ekle",
+        "description": "Bildiğiniz dilleri ve her biri için seviyenizi ekleyin."
+      },
+      "certifications": {
+        "title": "Sertifika ve lisanslar",
+        "add": "Sertifika ekle",
+        "description": "Mesleki sertifika ve lisanslarınızı listeleyin."
+      }
+    },
+    "resumeImport": {
+      "title": "CV’den içe aktar",
+      "description": "Metin tabanlı PDF veya DOCX seçin; çıkarılan bilgiler profil formunda incelenip düzenlenebilecek öneriler olarak gösterilir.",
+      "privacy": "Dosya bu tarayıcıda okunur; yüklenmez veya saklanmaz. Öneriler, siz kontrol edip Değişiklikleri kaydet’i seçene kadar profilinize kaydedilmez.",
+      "chooseFile": "CV dosyası seç",
+      "processing": "CV okunuyor…",
+      "processingStatus": "CV’niz tarayıcıda okunuyor.",
+      "fileHint": "PDF veya DOCX · en fazla 5 MB ve 25 sayfa · taranmış dosyalar desteklenmez",
+      "imported": "CV’den çıkarılan bilgiler forma öneri olarak eklendi; henüz kaydedilmedi. Kontrol edip düzenledikten sonra Değişiklikleri kaydet’i seçin.",
+      "importedWithSkipped": "CV önerileri forma eklendi; henüz kaydedilmedi. Bölüm sınırı nedeniyle {count} kayıt eklenmedi. Önerileri kontrol edip Değişiklikleri kaydet’i seçin.",
+      "noNewInformation": "CV okundu ancak eklenecek yeni bilgi bulunamadı. Profiliniz değiştirilmedi.",
+      "noNewInformationWithSkipped": "Eklenecek yeni bilgi bulunamadı; {count} kayıt profil sınırını aştığı için eklenmedi. Mevcut profiliniz değiştirilmedi.",
+      "errors": {
+        "unsupported": "PDF veya DOCX dosyası seçin.",
+        "tooLarge": "Dosya veya çıkarılan metin desteklenen sınırı aşıyor.",
+        "tooManyPages": "PDF dosyaları en fazla 25 sayfa olabilir.",
+        "empty": "CV’den desteklenen profil bilgisi çıkarılamadı. Metin tabanlı başka bir dosya deneyin veya eksik bilgileri ekleyin.",
+        "unreadable": "Dosya okunamadı. Metin tabanlı başka bir PDF veya DOCX deneyin."
+      }
+    }
+  },
+  "CompanyManagement": {
+    "eyebrow": "İŞVEREN ALANI",
+    "title": "{name}, şirket profilinizi yönetin.",
+    "description": "Şirket bilgilerinizi güncel tutun. Değişiklikler, herkese açık rehbere yansımadan önce incelemeye gönderilir.",
+    "applicationsTitle": "İlan başvuruları",
+    "applicationsDescription": "Aday başvurularını, görüntülenme durumunu ve adayın paylaşmayı seçtiği iletişim bilgisini buradan yönetin.",
+    "noApplications": "Şirket ilanlarınıza henüz başvuru yapılmadı.",
+    "candidateLabel": "Aday",
+    "applicationSubmittedAt": "Başvuru tarihi",
+    "applicationViewedAt": "İlk görüntülendi",
+    "applicationNotViewed": "Henüz görüntülenmedi",
+    "openApplication": "Başvuruyu aç",
+    "applicationDetailTitle": "Başvuru ayrıntıları",
+    "coverLetterLabel": "Adayın ön yazısı",
+    "candidateContactEmail": "Adayın iletişim e-postası",
+    "candidateContactNotShared": "Aday iletişim e-postasını paylaşmayı seçmedi.",
+    "candidateContactConsentNote": "Aday bu e-posta adresini başvurusu kapsamında işverenle paylaşmayı onayladı.",
+    "applicationStatusLabel": "Başvuru durumu",
+    "updateApplicationStatus": "Durumu güncelle",
+    "updatingApplicationStatus": "Güncelleniyor…",
+    "applicationStatuses": {
+      "submitted": "Yeni başvuru",
+      "reviewing": "İnceleniyor",
+      "shortlisted": "Ön değerlendirmeyi geçti",
+      "rejected": "Olumsuz sonuçlandı",
+      "hired": "İşe alım tamamlandı",
+      "withdrawn": "Geri çekildi"
+    },
+    "workspace": {
+      "navigation": "Şirket çalışma alanı bölümleri",
+      "overview": "Genel bakış",
+      "companyProfile": "Şirket profili",
+      "directoryListing": "Rehber görünümü",
+      "profileDetailsSection": "Profil açıklaması ve sektör",
+      "overviewKicker": "ŞİRKET ÇALIŞMA ALANI",
+      "overviewTitle": "Şirketinizin bilgilerini tek yerden yönetin.",
+      "overviewDescription": "Profil içeriğinizi tamamlayın, rehber eşleşmesini gözden geçirin ve inceleme durumunu takip edin.",
+      "locationNotAdded": "Konum eklenmedi",
+      "profileCompleteness": "Profilin hazır olma durumu",
+      "completedFields": "{completed} / {total} temel alan tamamlandı",
+      "completionLabel": "Profil %{percent} tamamlandı",
+      "completionDescription": "Bu gösterge, girilmiş profil bilgilerini özetler; doğrulama veya yayın onayı anlamına gelmez.",
+      "completeProfile": "Profil bilgilerini düzenle",
+      "summary": "Şirket profili durumu",
+      "reviewSummary": "Profil incelemesi",
+      "reviewSummaryDescription": "Rehberde yayınlanacak değişikliklerin inceleme durumu.",
+      "directorySummary": "Rehber eşleşmesi",
+      "directoryNotLinked": "Bir şube seçilmedi",
+      "directorySummaryDescription": "Yalnızca yönettiğiniz mevcut şube ile eşleştirin.",
+      "verificationSummary": "Şirket doğrulaması",
+      "verificationSummaryDescription": "Bu durum profil yayın incelemesinden ayrıdır.",
+      "noSubmission": "Henüz incelemeye gönderilmedi",
+      "directoryListingEyebrow": "KAYITLI PROFİL İÇERİĞİ",
+      "profileLabel": "ŞİRKET PROFİLİ",
+      "moreCategories": "+{count} alan daha",
+      "categoriesNotAdded": "Henüz sektör veya hizmet alanı eklenmedi.",
+      "descriptionNotAdded": "Şirket açıklaması eklenmedi.",
+      "notAdded": "Eklenmedi",
+      "listingPrivacyNote": "Bu kart, gönderdiğiniz bilgileri gösterir. Onaylanana kadar herkese açık olmaz.",
+      "listingPublishedNote": "Bu içerik incelenip onaylandı ve şirket rehberinde yayımlandı.",
+      "verificationNoticeTitle": "İnceleme ve doğrulama farklıdır",
+      "verificationNoticeDescription": "Rehber profilinin onaylanması şirketin resmi doğrulama durumunu değiştirmez. Belge yükleme, güvenli saklama ve silme kuralları netleşene kadar kapalıdır.",
+      "identitySection": "Şirket kimliği",
+      "contactSection": "İletişim bilgileri",
+      "locationSection": "Konum ve rehber eşleşmesi",
+      "documentsTitle": "Şirket belgeleri"
+    },
+    "addCompany": "Şirket ekle",
+    "candidateWorkspaceLink": "Aday profilim",
+    "signOut": "Güvenli çıkış",
+    "companySwitcher": "Şirketleriniz",
+    "profileTitle": "Şirket bilgileri",
+    "profileDescription": "Taslağınız, incelenip yayımlanması onaylanana kadar şirket hesabınıza özeldir.",
+    "verification": {
+      "pending": "Şirket doğrulaması bekliyor",
+      "verified": "Şirket doğrulandı",
+      "rejected": "Şirket doğrulaması onaylanmadı",
+      "suspended": "Şirket hesabı askıya alındı"
+    },
+    "submission": {
+      "pending": "Profil değişiklikleri inceleme bekliyor.",
+      "approved": "Profil onaylandı ve yayımlandı.",
+      "rejected": "Profil onaylanmadı. Bilgileri güncelleyip yeniden gönderin."
+    },
+    "companyName": "Şirket adı",
+    "description": "Şirket açıklaması",
+    "categories": "Sektör veya hizmet alanları",
+    "categoriesHint": "En fazla 12 alanı virgülle ayırın.",
+    "website": "Web sitesi",
+    "phone": "Herkese açık telefon",
+    "publicEmail": "Herkese açık e-posta",
+    "address": "Açık adres",
+    "municipality": "İlçe",
+    "districtPlaceholder": "İlçe seçin",
+    "districts": {
+      "lefkosia": "Lefkoşa",
+      "magusa": "Mağusa",
+      "girne": "Girne",
+      "guzelyurt": "Güzelyurt",
+      "iskele": "İskele",
+      "lefke": "Lefke"
+    },
+    "directoryTarget": "Rehberdeki mevcut şirket ve şube",
+    "directoryTargetNone": "Listede yok / şube ile eşleştirme",
+    "directoryTargetHint": "Yönettiğiniz konumu seçin. Onaylanan bilgiler yalnızca bu şubenin rehber kaydını günceller.",
+    "directorySearchLabel": "Şirketinizi rehberde bulun",
+    "directorySearchPlaceholder": "Şirket adını veya konumunu yazın",
+    "directorySearchHint": "Listeden yönettiğiniz doğru şubeyi seçin. Rehberdeki sektör, iletişim ve konum bilgileri boş alanlara eklenir; göndermeden önce kontrol edip değiştirebilirsiniz. Bulamazsanız boş bırakın.",
+    "directoryMatchApplied": "Mevcut rehber bilgileri boş alanlara eklendi. Göndermeden önce gözden geçirin.",
+    "optionalDetails": "İsteğe bağlı profil bilgileri",
+    "optionalDetailsHint": "Açıklama, sektör, iletişim ve konum bilgilerini buradan ekleyip düzenleyebilirsiniz. Rehber eşleşmesi bulunan alanları otomatik doldurur; hiçbir ek alan zorunlu değildir.",
+    "documentsUnavailable": "Bu işlem belgeyi göndermez ve şirketi doğrulamaz. Yalnızca şirket profilindeki boş alanları doldurur; bilgileri gözden geçirip ayrıca incelemeye göndermeniz gerekir.",
+    "documentImport": {
+      "title": "Şirket profilini belgeden doldur",
+      "description": "Metin tabanlı şirket sicil veya işletme belgesindeki açıkça etiketlenmiş alanları forma öneri olarak aktarın.",
+      "privacy": "Belge yalnızca bu tarayıcıda okunur; yüklenmez veya saklanmaz. Öneriler, siz kontrol edip değişiklikleri incelemeye gönderene kadar kaydedilmez.",
+      "chooseFile": "Belgeden bilgi al",
+      "processing": "Belge okunuyor…",
+      "processingStatus": "Belge tarayıcıda okunuyor; dosya gönderilmiyor.",
+      "fileHint": "PDF veya DOCX · en fazla 5 MB ve 25 sayfa",
+      "imported": "{count} boş profil alanı forma aktarıldı; henüz kaydedilmedi. Mevcut değerler korundu. Bilgileri kontrol edip incelemeye gönderin.",
+      "suggestionApplied": "Seçtiğiniz belge değeri forma uygulandı ancak henüz kaydedilmedi. Değişiklikleri kontrol edip incelemeye gönderin.",
+      "suggestionsOnly": "Boş alan yoktu; mevcut bilgilerle farklı {count} öneri bulundu. Mevcut değerler değiştirilmedi.",
+      "conflictsTitle": "Belgedeki farklı değerler mevcut bilgilerin üzerine yazılmadı. İsterseniz öneriyi tek tek uygulayın:",
+      "applySuggestion": "Bu öneriyi kullan",
+      "noNewInformation": "Yeni ve boş bir alana eklenebilecek bilgi bulunamadı. Mevcut değerleriniz korunmuştur.",
+      "errors": {
+        "unsupported": "Metin tabanlı PDF veya DOCX seçin.",
+        "tooLarge": "Belge veya çıkarılan metin desteklenen sınırı aşıyor.",
+        "tooManyPages": "PDF dosyaları en fazla 25 sayfa olabilir.",
+        "empty": "Desteklenen ve açıkça etiketlenmiş şirket bilgisi bulunamadı. Alanları elle girebilirsiniz.",
+        "unreadable": "Belge okunamadı. Başka bir metin tabanlı PDF veya DOCX deneyin."
+      }
+    },
+    "publicationNote": "Buraya girdiğiniz e-posta, onaylanması hâlinde herkese açık görünür.",
+    "submitForReview": "Değişiklikleri incelemeye gönder",
+    "saving": "Gönderiliyor…",
+    "messages": {
+      "invalid": "Şirket bilgilerini ve seçilen şubeyi kontrol edip tekrar deneyin.",
+      "unauthorized": "Bu şirketi yönetme yetkiniz yok.",
+      "inactive": "Bu hesap şu anda şirket bilgisi gönderemez.",
+      "saveFailed": "Şirket profili gönderilemedi. Lütfen tekrar deneyin.",
+      "submitted": "Değişiklikleriniz incelemeye gönderildi.",
+      "pending": "Profil incelemesi zaten sürüyor. Bekleyen bilgileri güncelleyebilirsiniz."
+    }
+  },
+  "CompanyReview": {
+    "eyebrow": "ŞİRKET REHBERİ",
+    "title": "Şirket profil değişikliklerini inceleyin",
+    "description": "Yayımlamadan önce herkese açık bilgileri inceleyin. Onay profil bilgisini yayımlar; şirketin ayrı doğrulama durumunu değiştirmez.",
+    "emptyTitle": "İncelenecek profil değişikliği yok",
+    "emptyDescription": "Yeni şirket profili başvuruları burada görünür.",
+    "pending": "İnceleme bekliyor",
+    "categories": "Sektörler",
+    "publicEmail": "Herkese açık e-posta",
+    "phone": "Herkese açık telefon",
+    "website": "Web sitesi",
+    "location": "Konum",
+    "reviewNote": "Karar notu (şirket tarafından görülür)",
+    "saving": "Kaydediliyor…",
+    "approveAndPublish": "Onayla ve yayımla",
+    "reject": "Düzeltme iste",
+    "messages": {
+      "unauthorized": "Bu hesap şirket profillerini inceleyemez.",
+      "failed": "İnceleme kaydedilemedi. Sayfayı yenileyip tekrar deneyin.",
+      "branchUnavailable": "Seçilen rehber şubesi artık mevcut değil. Bu başvuruyu onaylamayın.",
+      "approved": "Profil onaylandı ve yayımlandı.",
+      "rejected": "Profil düzenleme için geri gönderildi."
+    }
+  },
+  "Freelance": {
+    "eyebrow": "SERBEST ÇALIŞANLAR İÇİN",
+    "title": "Serbest çalışma deneyiminizi aday profilinizde düzenleyin.",
+    "description": "Mesleki başlığınızı, konumunuzu ve becerilerinizi aday profilinizde düzenleyin. Bilgiler hesabınızda saklanır; bu sayfa herkese açık bir serbest çalışan profili oluşturmaz.",
+    "createProfile": "Profilini oluştur",
+    "signIn": "Hesabına giriş yap",
+    "benefitsEyebrow": "PROFİLİNİZDE",
+    "benefitsTitle": "İş deneyiminizi doğru anlatan temel bilgiler.",
+    "benefitsDescription": "Özgeçmişinizin ana hatlarını anlaşılır bir profilde düzenleyin.",
+    "points": {
+      "headline": {
+        "title": "Mesleki başlık",
+        "body": "Uzmanlık alanınızı tek cümlede ifade edin."
+      },
+      "location": {
+        "title": "Konum",
+        "body": "Çalışmak istediğiniz bölgeyi belirtin."
+      },
+      "skills": {
+        "title": "Beceriler",
+        "body": "Öne çıkarmak istediğiniz yetkinlikleri ekleyin."
+      }
+    },
+    "ctaEyebrow": "BUGÜN BAŞLAYIN",
+    "ctaTitle": "Profilinizi hazırlayın, bilgilerinizi kontrolünüzde tutun."
+  }
+}

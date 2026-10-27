@@ -1,0 +1,1133 @@
+{
+  "Meta": {
+    "title": "İşBul KKTC — Arbeit und Karriere in Nordzypern",
+    "description": "Erstellen Sie Ihr Bewerberprofil, präsentieren Sie Ihre Fähigkeiten und starten Sie die Unternehmensregistrierung in Nordzypern."
+  },
+  "HomeMeta": {
+    "title": "Arbeit und Karriere in Nordzypern",
+    "description": "Erstellen Sie Ihr berufliches Profil, verwalten Sie Ihre Fähigkeiten und starten Sie die Unternehmensregistrierung in Nordzypern."
+  },
+  "FreelanceMeta": {
+    "title": "Selbstständiges Arbeiten in Nordzypern",
+    "description": "Erstellen Sie ein Profil für selbstständige Arbeit mit beruflicher Überschrift, Standort und Fähigkeiten."
+  },
+  "PackagesMeta": {
+    "title": "Anzeigenrechte für Arbeitgeber | Nordzypern",
+    "description": "Entdecken Sie Anzeigenpakete. Die Zahlung erfolgt per IBAN-Überweisung außerhalb der Website; Bankdaten und Anweisungen werden nach Besprechung der Paketbedingungen privat mitgeteilt."
+  },
+  "AdminPackages": {
+    "eyebrow": "SICHERER ADMIN-BEREICH",
+    "title": "Verwaltung der Anzeigenrechte",
+    "description": "Definieren Sie Pakete und weisen Sie sie ausschließlich geprüften Unternehmen zu. Für privilegierte Aktionen ist TOTP-MFA erforderlich.",
+    "mfaVerified": "Administrator-MFA bestätigt",
+    "companyReviews": "Unternehmensprüfungen",
+    "catalogEyebrow": "PAKETKATALOG",
+    "catalogTitle": "Paketdefinitionen",
+    "newPackage": "Paket erstellen",
+    "createPackage": "Paket erstellen",
+    "savePackage": "Änderungen speichern",
+    "saving": "Wird gespeichert…",
+    "active": "Aktiv",
+    "inactive": "Deaktiviert",
+    "fields": {
+      "code": "Eindeutiger Code",
+      "name": "Paketname",
+      "description": "Beschreibung",
+      "activeJobs": "Limit gleichzeitig aktiver Anzeigen",
+      "duration": "Anzeigendauer (Tage)",
+      "visibility": "Katalogstatus",
+      "company": "Geprüftes Unternehmen",
+      "package": "Aktives Paket",
+      "assignmentDuration": "Zuweisungsdauer (Tage; leer bedeutet unbegrenzt)"
+    },
+    "messages": {
+      "idle": "",
+      "invalid": "Prüfen Sie die Angaben. Paketcodes müssen eindeutig und Werte innerhalb der zulässigen Grenzen sein.",
+      "unauthorized": "Für diese Admin-Aktion fehlen Berechtigung oder aktuelle MFA-Bestätigung.",
+      "saveFailed": "Das Paket konnte nicht gespeichert werden. Bitte erneut versuchen.",
+      "saved": "Paket gespeichert.",
+      "assignFailed": "Das Paket konnte nicht zugewiesen werden. Prüfen Sie Unternehmensstatus und Paketaktivierung.",
+      "assigned": "Paket dem Unternehmen zugewiesen."
+    },
+    "assignPackage": "Paket einem Unternehmen zuweisen",
+    "selectCompany": "Unternehmen auswählen",
+    "selectPackage": "Paket auswählen",
+    "unlimited": "Unbegrenzt",
+    "assigning": "Wird zugewiesen…",
+    "assign": "Paket zuweisen",
+    "emptyPackages": "Noch keine Pakete vorhanden. Erstellen Sie ein Paket.",
+    "companiesEyebrow": "UNTERNEHMENSRECHTE",
+    "companiesTitle": "Geprüfte Unternehmen",
+    "companiesDescription": "Eine neue Zuweisung ersetzt die aktuelle. Die Rechte werden zum Zuweisungszeitpunkt für das Unternehmen gespeichert.",
+    "emptyCompanies": "Es gibt keine geprüften Unternehmen für eine Paketzuweisung.",
+    "assignedPackage": "Zugewiesenes Paket",
+    "activeJobs": "Aktive Anzeigen",
+    "jobDuration": "Anzeigendauer",
+    "days": "{count} Tage",
+    "assignmentExpiry": "Ende der Zuweisung",
+    "noAssignment": "Keine aktive Paketzuweisung.",
+    "mfa": {
+      "eyebrow": "SICHERHEIT DES ADMIN-KONTOS",
+      "challengeTitle": "Mit einem Einmalcode bestätigen.",
+      "enrollTitle": "MFA für Ihr Administratorkonto einrichten.",
+      "challengeDescription": "Geben Sie den aktuellen sechsstelligen Code Ihrer Authenticator-App ein, um die Verwaltung zu öffnen.",
+      "enrollDescription": "Schützen Sie privilegierte Aktionen mit TOTP. Scannen Sie den QR-Code und bestätigen Sie anschließend den App-Code.",
+      "starting": "Sichere Bestätigung wird vorbereitet…",
+      "startChallenge": "Bestätigung starten",
+      "startEnrollment": "MFA einrichten",
+      "qrAlt": "TOTP-Einrichtungs-QR-Code für eine Authenticator-App",
+      "manualEntry": "Falls Sie den QR-Code nicht scannen können, geben Sie diesen Schlüssel manuell ein:",
+      "codeLabel": "Sechsstelliger Bestätigungscode",
+      "verifying": "Wird bestätigt…",
+      "verify": "Code bestätigen",
+      "footnote": "Diese Seite ist nur für Plattformadministratoren zugänglich. Die Anwendung speichert keine TOTP-Geheimnisse.",
+      "messages": {
+        "unauthorized": "Die Admin-Sitzung konnte nicht bestätigt werden. Melden Sie sich erneut an.",
+        "setupFailed": "MFA konnte nicht gestartet werden. Bitte später erneut versuchen.",
+        "invalidCode": "Der Code ist ungültig oder abgelaufen. Geben Sie den neuesten App-Code ein.",
+        "verifyFailed": "Die MFA-Prüfung ist fehlgeschlagen. Bitte erneut versuchen."
+      }
+    }
+  },
+  "AboutMeta": {
+    "title": "Über uns",
+    "description": "Erfahren Sie, wie İşBul KKTC eine Karriereplattform für die Bedürfnisse Nordzyperns entwickelt."
+  },
+  "BlogMeta": {
+    "title": "Arbeit und Karriere in Nordzypern",
+    "description": "Verfolgen Sie aktuelle Meldungen zu Beschäftigung und Arbeitsleben in Nordzypern mit Links zu den Herausgebern."
+  },
+  "ContactMeta": {
+    "title": "Kontakt",
+    "description": "Erfahren Sie, wie Sie İşBul KKTC erreichen, und sehen Sie den aktuellen Stand der Kontaktdaten."
+  },
+  "CompaniesMeta": {
+    "title": "Unternehmensverzeichnis Nordzypern",
+    "description": "Suchen Sie Unternehmen in Nordzypern nach Name, Branche und Standort."
+  },
+  "JobsMeta": {
+    "title": "Aktuelle Stellenangebote in Nordzypern",
+    "description": "Suchen Sie aktuelle Stellenangebote in Nordzypern nach Position, Bezirk, Beschäftigungsart und Arbeitsmodell."
+  },
+  "Nav": {
+    "login": "Anmelden",
+    "openMenu": "Menü öffnen",
+    "closeMenu": "Menü schließen",
+    "skipToContent": "Zum Inhalt springen",
+    "primaryNavigation": "Hauptnavigation",
+    "jobs": "Stellenangebote",
+    "freelance": "Freiberuflich",
+    "candidate": "Bewerbende",
+    "employer": "Unternehmen",
+    "packages": "Pakete",
+    "about": "Über uns",
+    "blog": "Geschäftsnachrichten",
+    "contact": "Kontakt",
+    "register": "Kostenloses Konto erstellen",
+    "homeLabel": "İşBul KKTC Startseite",
+    "currentLanguage": "Aktuelle Sprache"
+  },
+  "Footer": {
+    "tagline": "Registrierung für Bewerbende und Unternehmen in Nordzypern.",
+    "candidates": "Bewerbende",
+    "employers": "Arbeitgeber",
+    "account": "Ihr Konto",
+    "information": "İşBul KKTC",
+    "links": {
+      "jobs": "Stellenangebote entdecken",
+      "register": "Bewerberprofil erstellen",
+      "freelance": "Selbstständige Arbeit",
+      "directory": "Unternehmen entdecken",
+      "createCompany": "Unternehmensregistrierung starten",
+      "login": "Anmelden",
+      "profile": "Mein Bewerberprofil",
+      "about": "Über uns",
+      "blog": "Geschäftsnachrichten",
+      "contact": "Kontakt"
+    },
+    "rights": "© {year} İşBul KKTC. Alle Rechte vorbehalten.",
+    "madeIn": "Nordzypern",
+    "footerNavigation": "Footer-Navigation",
+    "siteFooterLabel": "Fußbereich",
+    "homeLinkLabel": "İşBul KKTC Startseite",
+    "location": "Alsancak, Nordzypern"
+  },
+  "LanguageMenu": {
+    "title": "Sprache der Benutzeroberfläche",
+    "notice": "Türkische, englische, russische, griechische, persische und deutsche Übersetzungen sind verfügbar."
+  },
+  "Analytics": {
+    "regionLabel": "Analyse-Einstellungen",
+    "description": "Google-Analytics-Cookies zur Verbesserung der Website werden nur mit Ihrer Zustimmung verwendet.",
+    "accept": "Akzeptieren",
+    "reject": "Ablehnen",
+    "settings": "Analyse-Einstellungen"
+  },
+  "NotFound": {
+    "title": "Seite nicht gefunden",
+    "body": "Die angeforderte Seite konnte nicht gefunden werden.",
+    "home": "Zur Startseite",
+    "register": "Bewerberprofil erstellen"
+  },
+  "AppError": {
+    "eyebrow": "ANFRAGE NICHT ABGESCHLOSSEN",
+    "title": "Diese Seite ist gerade nicht verfügbar.",
+    "body": "Es ist ein vorübergehendes Problem aufgetreten. Versuchen Sie es gleich noch einmal oder kehren Sie zur Startseite zurück.",
+    "retry": "Erneut versuchen",
+    "home": "Zur Startseite"
+  },
+  "PackagesPage": {
+    "eyebrow": "ANZEIGENRECHTE FÜR ARBEITGEBER",
+    "title": "Klare Rechte für Ihre Personalsuche.",
+    "description": "Entdecken Sie Anzeigenpakete. Die Zahlung erfolgt per IBAN-Überweisung außerhalb der Website; Bankdaten und Anweisungen werden nach Besprechung der Paketbedingungen privat mitgeteilt.",
+    "heroLink": "Paketrechte ansehen",
+    "locationLine": "NORDZYPERN · DE / TR",
+    "catalog": {
+      "eyebrow": "AKTIVE PAKETE",
+      "title": "Rechte für Stellenanzeigen",
+      "description": "Hier werden nur aktive Pakete angezeigt. Die Rechte werden bei der Zuweisung für das Unternehmen festgehalten.",
+      "activeJobs": "Gleichzeitig aktive Anzeigen",
+      "duration": "Anzeigendauer",
+      "days": "{count} Tage",
+      "empty": "Es sind noch keine aktiven Pakete eingerichtet.",
+      "noDescription": "Keine zusätzliche Paketbeschreibung verfügbar."
+    },
+    "showcase": {
+      "eyebrow": "ARBEITGEBERPAKETE",
+      "title": "Wählen Sie ein Stellenpaket passend zu Ihrem Bedarf.",
+      "instruction": "Legen Sie die Anzahl der Anzeigen fest und wählen Sie je Anzeige 1, 7 oder 30 Tage.",
+      "brand": "İşBul KKTC · Arbeitgeberpakete",
+      "platformLabel": "KARRIEREPLATTFORM",
+      "status": "Unverbindliche Preisangaben · Zahlungen erfolgen nicht auf der Website; IBAN und Zahlungsanweisungen werden nach Besprechung des Pakets privat mitgeteilt.",
+      "back": "Zurück zur Paketauswahl",
+      "selectPackage": "Arbeitgeberpaket auswählen",
+      "sceneFallback": "Die 3D-Szene ist nicht verfügbar. Paketauswahl und Details funktionieren weiterhin.",
+      "packageContents": "Paketumfang",
+      "terms": {
+        "oneListing": "1 Stellenanzeige",
+        "durationOptions": "Je Anzeige 1, 7 oder 30 Tage",
+        "onePosition": "Für eine offene Stelle",
+        "threeListings": "Bis zu 3 Stellenanzeigen",
+        "multiplePositions": "Für mehrere offene Stellen",
+        "fiveListings": "Bis zu 5 Stellenanzeigen",
+        "regularHiring": "Für Teams mit regelmäßigem Personalbedarf",
+        "finiteScope": "Die Anzeigenzahl wird im schriftlichen Angebot festgelegt",
+        "writtenOffer": "Umfang und Laufzeit werden vor dem Angebot vereinbart"
+      },
+      "ctaTitle": "Erstellen Sie ein Arbeitgeberkonto; dies ist kein Kauf.",
+      "ctaAction": "Arbeitgeberkonto erstellen",
+      "pricing": {
+        "durationLabel": "Anzeigendauer",
+        "durationGroup": "Anzeigendauer auswählen",
+        "oneDay": "1 Tag",
+        "sevenDays": "7 Tage",
+        "thirtyDays": "30 Tage",
+        "priceSummary": "Gesamtpreis des Pakets",
+        "customPrice": "Individueller Umfang · schriftliches Angebot",
+        "disclaimer": "Diese Empfehlungen beruhen auf den bereitgestellten Marktvergleichen; Anzahl und Laufzeit sind klar angegeben. Es handelt sich weder um freigegebene Tarife noch um ein Kaufangebot.",
+        "quoteAction": "Angebot mit unserem Team besprechen",
+        "quoteTitle": "Lassen Sie uns den Personalbedarf Ihrer Organisation abstimmen.",
+        "quoteInstructions": "Ein E-Mail-Entwurf wird geöffnet. Ergänzen Sie vor dem Versand Ihr Unternehmen, die gewünschte Anzeigenzahl und Ihre Kontaktdaten.",
+        "quoteUnavailable": "Die Vertriebs-E-Mail ist noch nicht eingerichtet; Angebotsanfragen können nicht versendet werden.",
+        "quoteEmailSubject": "İşBul KKTC · Angebot für ein Unternehmenspaket",
+        "quoteEmailBody": "Guten Tag,\n\nbitte senden Sie mir ein schriftliches Angebot für ein Unternehmenspaket für Stellenanzeigen.\nGewünschte Laufzeit je Anzeige: %DAYS% Tage.\nBitte geben Sie eine begrenzte Anzeigenzahl und Veröffentlichungsdauer an.\n\nUnternehmensname, Kontaktdaten und weitere Anforderungen:"
+      },
+      "sound": {
+        "button": "Soundmodus",
+        "effects": "Interaktionsgeräusche",
+        "rain": "Interaktions- und Regengeräusche",
+        "off": "Aus"
+      },
+      "scene": {
+        "package": "Paket",
+        "selectPackage": "Anzeigendauer",
+        "viewScope": "Paket mit einer Münze wechseln",
+        "insertCoin": "Paket mit einer Münze wechseln",
+        "careerHub": "Karriereplattform",
+        "region": "Nordzypern",
+        "listing": "Anzeigen",
+        "quote": "Angebot"
+      },
+      "cards": {
+        "singleListing": {
+          "audience": "EINE OFFENE STELLE",
+          "title": "Einzelanzeige",
+          "summary": "Veröffentlichen Sie eine Stelle für 1, 7 oder 30 Tage – passend zu Ihrem Bedarf."
+        },
+        "growth": {
+          "audience": "MEHRERE OFFENE STELLEN",
+          "title": "Wachstum",
+          "summary": "Einfacher Anzeigenumfang für bis zu drei gleichzeitig offene Stellen."
+        },
+        "professional": {
+          "audience": "REGELMÄSSIGE PERSONALSUCHE",
+          "title": "Professionell",
+          "summary": "Für Teams, die bis zu fünf offene Stellen gleichzeitig veröffentlichen."
+        },
+        "enterprise": {
+          "audience": "PERSONALSUCHE FÜR UNTERNEHMEN",
+          "title": "Unternehmen",
+          "summary": "Für Organisationen, die ein schriftliches Angebot mit festgelegter Anzeigenzahl und Laufzeit benötigen."
+        }
+      }
+    }
+  },
+  "AboutPage": {
+    "eyebrow": "İŞBUL KKTC · UNSER ANSATZ",
+    "title": "Ein lokaler Blick auf die Arbeitswelt in Nordzypern.",
+    "lead": "İşBul KKTC wird entwickelt, um die berufliche Erfahrung von Bewerbenden und den Personalbedarf von Unternehmen in einer klaren digitalen Umgebung zusammenzubringen, die auf die Gegebenheiten der Region eingeht.",
+    "directoryLink": "Unternehmensverzeichnis entdecken",
+    "heroAsideLabel": "VERWURZELT IN",
+    "heroAsideTitle": "Nordzypern.",
+    "heroAsideBody": "Für eine zugängliche, vertrauenswürdige Karriereplattform, die lokale Bedürfnisse ernst nimmt.",
+    "beliefLabel": "WARUM ES UNS GIBT",
+    "beliefTitle": "Eine gute Karriereerfahrung beginnt mit Vertrauen.",
+    "beliefBody": "Die Suche nach Arbeit und passenden Menschen muss nicht kompliziert sein. Wir möchten Informationen klar darstellen, unsere Nutzenden respektieren und die Plattform an echten Bedürfnissen ausrichten.",
+    "valuesLabel": "UNSERE GRUNDSÄTZE",
+    "values": {
+      "localTitle": "Lokale Bedürfnisse zuerst",
+      "localBody": "Sprache, Geografie und den lokalen Arbeitskontext stellen wir in den Mittelpunkt.",
+      "clearTitle": "Klarheit und Ehrlichkeit",
+      "clearBody": "Wir unterscheiden verfügbare Funktionen und Quellen von noch nicht aktiven Schritten.",
+      "careTitle": "Ein durchdachtes Erlebnis",
+      "careBody": "Barrierefreiheit, verständliche Sprache und sorgfältiges Design sind uns bei jedem Schritt wichtig."
+    },
+    "realityKicker": "AKTUELLER STAND",
+    "realityTitle": "Wir zeigen klar, was verfügbar ist und woran noch gearbeitet wird.",
+    "realityBody": "Das Unternehmensverzeichnis macht Einträge aus bereitgestellten Quelldateien durchsuchbar; ein Eintrag bedeutet nicht, dass İşBul KKTC das Unternehmen geprüft hat. Pakete können auf der Website angesehen werden; die Zahlung per IBAN erfolgt außerhalb der Website. IBAN und Zahlungsanweisungen werden nach Besprechung der Konditionen privat per E-Mail oder WhatsApp mitgeteilt.",
+    "packagesLink": "Aktuellen Paketstatus ansehen",
+    "closingKicker": "GEMEINSAM ENTWICKELT",
+    "closingTitle": "Jedes starke lokale Netzwerk wächst durch guten Austausch.",
+    "contactLink": "Kontaktseite besuchen"
+  },
+  "BlogPage": {
+    "eyebrow": "İŞBUL KKTC · LOKALER ÜBERBLICK",
+    "title": "Arbeit und Karriere in Nordzypern.",
+    "lead": "Verfolgen Sie aktuelle Meldungen zu Beschäftigung und Arbeitsleben in Nordzypern mit Links zu den Herausgebenden.",
+    "sourceSearchLink": "Alle aktuellen Meldungen öffnen",
+    "feedAsideLabel": "DIE NEUESTEN MELDUNGEN",
+    "feedAsideBody": "Meldungen zum lokalen Arbeitsleben aus den vergangenen 30 Tagen.",
+    "feedKicker": "AKTUELLE MELDUNGEN",
+    "feedTitle": "Neuigkeiten zu Arbeit und Karriere",
+    "latestBadge": "NEU",
+    "localNewsBadge": "LOKALER ÜBERBLICK",
+    "illustrativeImage": "SYMBOLBILD · UNSPLASH",
+    "readSource": "Artikel von {source} öffnen",
+    "emptyTitle": "Zurzeit gibt es keine Meldungen.",
+    "emptyBody": "Neue Meldungen erscheinen nach der Aktualisierung des Feeds. Bis dahin können Sie die Quellensuche öffnen.",
+    "editorialNoteTitle": "Quelle ansehen. Bericht beim Herausgeber lesen.",
+    "editorialNoteBody": "Diese Seite zeigt aktuelle Schlagzeilen und Herausgebernamen. Sie kopiert keine Artikeltexte und stellt sie nicht als eigene Berichte von İşBul KKTC dar. Die Unsplash-Fotos auf den Karten illustrieren passende Themen, zeigen aber nicht die konkreten Ereignisse. Den vollständigen Bericht und Kontext finden Sie beim Herausgeber.",
+    "photoLicense": "Unsplash-Bildlizenz"
+  },
+  "ContactPage": {
+    "eyebrow": "İŞBUL KKTC · KONTAKT",
+    "title": "İşBul KKTC kontaktieren",
+    "lead": "Bewerbende, Arbeitgebende und lokale Organisationen erreichen İşBul KKTC per E-Mail, Telefon oder WhatsApp.",
+    "promiseLabel": "OFFENE KOMMUNIKATION",
+    "promiseTitle": "Wir freuen uns auf Ihre Nachricht.",
+    "promiseBody": "Kontaktieren Sie uns und teilen Sie uns mit, wie wir helfen können.",
+    "channelsKicker": "ERREICHEN SIE UNS",
+    "channelsTitle": "Kontaktwege",
+    "channelsBody": "Nutzen Sie einen der folgenden Kontaktwege für Fragen und Kooperationsanfragen.",
+    "contactStatus": "ERREICHBAR",
+    "emailLabel": "E-Mail",
+    "emailSubject": "Kontakt zu İşBul KKTC",
+    "emailBody": "Guten Tag İşBul KKTC,\n\nich wende mich wegen folgender Angelegenheit an Sie:\n\nSchreiben Sie Ihre Nachricht hier.\n\nIhr Name:\nTelefon (optional):\n\nVielen Dank.",
+    "phoneLabel": "Telefon / WhatsApp",
+    "locationLabel": "Region",
+    "whatsappAction": "Per WhatsApp schreiben",
+    "regionValue": "Alsancak, Nordzypern",
+    "messageGuidance": "Damit wir gezielt helfen können, nennen Sie bitte kurz den Grund Ihrer Anfrage.",
+    "nextKicker": "MEHR ENTDECKEN",
+    "nextTitle": "Unternehmensverzeichnis entdecken.",
+    "nextBody": "Durchsuchen Sie Unternehmenseinträge in Nordzypern nach Name, Branche und Standort. Die Einträge stammen aus Quelldaten und sind keine geprüften Unternehmensprofile.",
+    "directoryLink": "Zum Unternehmensverzeichnis"
+  },
+  "FeatureStrip": {
+    "ariaLabel": "Funktionen von İşBul KKTC",
+    "trustedTitle": "Aktuelle Stellen entdecken",
+    "trustedBody": "Vorschauen zeigen Stellentitel und verifizierte Unternehmen.",
+    "localTitle": "Vom Lebenslauf zum Profilentwurf",
+    "localBody": "Prüfen Sie die übernommenen Angaben vor dem Speichern.",
+    "applyTitle": "Ihr Profil bleibt in Ihrer Hand",
+    "applyBody": "Aktualisieren Sie Ihre Angaben jederzeit im Konto."
+  },
+  "AccountPages": {
+    "register": {
+      "back": "Zurück zur Startseite",
+      "sceneMediaLabel": "Nordzypern in Bildern und Videos",
+      "sceneVideoUnavailable": "Dieses Video ist derzeit nicht verfügbar.",
+      "candidate": {
+        "eyebrow": "BEWERBERKONTO",
+        "title": "Ein durchdachter Start in Ihren Karriereweg.",
+        "description": "Erstellen Sie ein Konto und organisieren Sie beruflichen Titel, Standort und Fähigkeiten in Ihrem Profil.",
+        "storyEyebrow": "IHR WEG · IHR PROFIL",
+        "storyTitle": "Ein neuer Schritt in Nordzypern.",
+        "storyBody": "Speichern Sie Ihre Profildaten in Ihrem Konto und aktualisieren Sie sie bei Bedarf."
+      },
+      "employer": {
+        "eyebrow": "ARBEITGEBERKONTO",
+        "title": "Ein sicherer Start für Ihr Unternehmen.",
+        "description": "Erstellen Sie zuerst ein Konto für die Kontaktperson des Unternehmens. Bestätigen Sie Ihre E-Mail-Adresse und ergänzen Sie anschließend die Unternehmensdaten in einem separaten Schritt.",
+        "storyEyebrow": "ARBEITGEBERREGISTRIERUNG",
+        "storyTitle": "Zuerst Ihr Konto, dann Ihr Unternehmen.",
+        "storyBody": "Nach der Bestätigung Ihres Kontos können Sie die Unternehmensdaten ergänzen und die Prüfung starten."
+      }
+    },
+    "login": {
+      "back": "Zurück zur Startseite",
+      "sceneMediaLabel": "Nordzypern in Bildern und Videos",
+      "sceneVideoUnavailable": "Dieses Video ist derzeit nicht verfügbar.",
+      "inactiveMessage": "Dieses Konto ist derzeit inaktiv. Wenden Sie sich wegen des Zugangs an die Projektadministration.",
+      "verificationMessage": "Der Link aus der E-Mail konnte nicht bestätigt werden oder ist abgelaufen. Prüfen Sie Ihre Anmeldedaten oder versuchen Sie die Registrierung erneut.",
+      "oauthMessage": "Die Anmeldung über ein soziales Konto konnte nicht abgeschlossen werden. Versuchen Sie es erneut oder melden Sie sich mit E-Mail und Passwort an.",
+      "resetSuccessMessage": "Ihr Passwort wurde aktualisiert. Sie können sich jetzt mit dem neuen Passwort anmelden.",
+      "signOut": "Abmelden",
+      "candidate": {
+        "eyebrow": "ANMELDUNG FÜR BEWERBENDE",
+        "title": "Kehren Sie zu Ihrem Bewerberprofil zurück.",
+        "description": "Melden Sie sich in Ihrem Bewerberkonto an, um Ihre Profildaten anzusehen und zu bearbeiten.",
+        "storyEyebrow": "BEREICH FÜR BEWERBENDE",
+        "storyTitle": "Ihr berufliches Profil bleibt Ihres.",
+        "storyBody": "Nach der Anmeldung gelangen Sie zu Ihrem Bewerberprofil."
+      },
+      "employer": {
+        "eyebrow": "ANMELDUNG FÜR ARBEITGEBENDE",
+        "title": "Setzen Sie die Unternehmensregistrierung fort.",
+        "description": "Melden Sie sich mit Ihrem Arbeitgeberkonto an, um zur Unternehmensregistrierung zurückzukehren.",
+        "storyEyebrow": "ARBEITGEBERBEREICH",
+        "storyTitle": "Setzen Sie Ihre Unternehmensregistrierung sicher fort.",
+        "storyBody": "Nach der Anmeldung gelangen Sie zum Registrierungsformular Ihres Unternehmens."
+      }
+    },
+    "reset": {
+      "eyebrow": "KONTO-SICHERHEIT",
+      "title": "Passwort zurücksetzen.",
+      "description": "Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen sicheren Link zum Zurücksetzen des Passworts.",
+      "back": "Zurück zur Anmeldung",
+      "sceneMediaLabel": "Nordzypern in Bildern und Videos",
+      "sceneVideoUnavailable": "Dieses Video ist derzeit nicht verfügbar.",
+      "storyEyebrow": "SICHERER KONTOZUGANG",
+      "storyTitle": "Ihre Zugangsdaten gehören Ihnen.",
+      "storyBody": "Der Link zum Zurücksetzen wird nur an Ihre hinterlegte E-Mail-Adresse gesendet und ist nur kurze Zeit gültig.",
+      "expiredMessage": "Der Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen Link an."
+    },
+    "resetPassword": {
+      "eyebrow": "NEUES PASSWORT",
+      "title": "Legen Sie Ihr neues Passwort fest.",
+      "description": "Erstellen und speichern Sie ein starkes neues Passwort für Ihr Konto.",
+      "back": "Zurück zur Anmeldung",
+      "sceneMediaLabel": "Nordzypern in Bildern und Videos",
+      "sceneVideoUnavailable": "Dieses Video ist derzeit nicht verfügbar.",
+      "storyEyebrow": "LETZTER SCHRITT",
+      "storyTitle": "Ihr Konto ist wieder sicher.",
+      "storyBody": "Nach dem Speichern Ihres neuen Passworts werden Sie aus Sicherheitsgründen aufgefordert, sich erneut anzumelden."
+    }
+  },
+  "AccountAudience": {
+    "chooseAudience": "Kontotyp auswählen",
+    "candidate": {
+      "title": "Bewerbende",
+      "description": "Erstellen und verwalten Sie Ihr Bewerberprofil."
+    },
+    "employer": {
+      "title": "Arbeitgebende",
+      "description": "Mit der Unternehmensregistrierung fortfahren."
+    }
+  },
+  "AuthForms": {
+    "nameLabel": "Ihr Name",
+    "contactNameLabel": "Kontaktperson des Unternehmens",
+    "emailLabel": "E-Mail-Adresse",
+    "accountEmailLabel": "E-Mail-Adresse des Kontos",
+    "passwordLabel": "Passwort",
+    "passwordHint": "Mindestens 8 Zeichen.",
+    "showPassword": "Passwort anzeigen",
+    "hidePassword": "Passwort ausblenden",
+    "createCandidateAccount": "Bewerberkonto erstellen",
+    "createEmployerAccount": "Arbeitgeberkonto erstellen",
+    "creatingAccount": "Konto wird erstellt…",
+    "signIn": "Anmelden",
+    "candidateSignIn": "Anmeldung für Bewerbende",
+    "employerSignIn": "Anmeldung für Arbeitgebende",
+    "signingIn": "Anmeldung läuft…",
+    "forgotPassword": "Passwort vergessen?",
+    "alreadyHaveAccount": "Sie haben bereits ein Konto?",
+    "candidateSignInLink": "Anmeldung für Bewerbende",
+    "employerSignInLink": "Anmeldung für Arbeitgebende",
+    "noAccount": "Neu bei İşBul KKTC?",
+    "createCandidateAccountLink": "Als Bewerberin oder Bewerber registrieren",
+    "createEmployerAccountLink": "Als Arbeitgeber registrieren",
+    "companyAccountNote": "Nach der Kontoerstellung und E-Mail-Bestätigung gelangen Sie zum Formular für Ihre Unternehmensdaten.",
+    "sendResetLink": "Link zum Zurücksetzen senden",
+    "sendingResetLink": "Link wird gesendet…",
+    "resetLinkNote": "Wir senden einen Link an Ihre E-Mail-Adresse. Der Link ist nur kurze Zeit gültig.",
+    "newPasswordLabel": "Neues Passwort",
+    "confirmPasswordLabel": "Neues Passwort (Wiederholung)",
+    "passwordMatch": "Die Passwörter stimmen überein.",
+    "updatePassword": "Passwort aktualisieren",
+    "updatingPassword": "Passwort wird aktualisiert…",
+    "oauth": {
+      "continueWith": "Weiter mit {provider}",
+      "eyebrow": "SICHERER KONTOZUGANG",
+      "title": "Mit Ihrem Konto fortfahren",
+      "description": "Wählen Sie den Zugang zu Ihrem Bewerber- oder Arbeitgeberkonto.",
+      "enabled": "Bereit",
+      "providers": {
+        "google": "Ihr Google-Konto",
+        "linkedin_oidc": "Ihr berufliches Netzwerk-Konto",
+        "facebook": "Ihr Facebook-Konto",
+        "instagram": "Die Anmeldung bei İşBul KKTC über Instagram wird nicht unterstützt."
+      },
+      "orEmail": "oder mit E-Mail fortfahren",
+      "pending": "Nicht aktiviert",
+      "setupPending": "Einige Social-Login-Anbieter sind nicht konfiguriert. Sie können mit E-Mail fortfahren.",
+      "instagramUnavailable": "Nicht unterstützt",
+      "whatsappNote": "Eine Anmeldung bei İşBul KKTC über WhatsApp wird nicht unterstützt."
+    },
+    "messages": {
+      "invalid": "Prüfen Sie Ihre Angaben und versuchen Sie es erneut.",
+      "signInFailed": "Anmeldung nicht möglich. Prüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.",
+      "signUpFailed": "Konto konnte nicht erstellt werden. Prüfen Sie Ihre Angaben und versuchen Sie es erneut.",
+      "verificationSent": "Verwenden Sie den Bestätigungslink aus Ihrer E-Mail, um fortzufahren.",
+      "oauthUnavailable": "Diese Anmeldeoption ist noch nicht aktiviert. Verwenden Sie stattdessen E-Mail und Passwort.",
+      "oauthStartFailed": "Die Anmeldung über ein soziales Konto konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
+      "resetRequestSent": "Falls diese E-Mail-Adresse registriert ist, wurde ein Link zum Zurücksetzen gesendet. Prüfen Sie Ihren Posteingang und den Spam-Ordner.",
+      "resetRequestFailed": "Der Link zum Zurücksetzen konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
+      "passwordUpdateFailed": "Das Passwort konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+      "sessionExpired": "Ihre Sitzung ist abgelaufen. Bitte fordern Sie einen neuen Link zum Zurücksetzen des Passworts an.",
+      "passwordMismatch": "Die Passwörter stimmen nicht überein. Geben Sie dasselbe Passwort in beide Felder ein."
+    }
+  },
+  "CompanyRegistration": {
+    "eyebrow": "{name} · Arbeitgeberbereich",
+    "title": "Registrieren Sie Ihr Unternehmen.",
+    "description": "Ergänzen Sie Ihre Unternehmensdaten. Die Registrierung wird geprüft; Anzeigen können erst nach abgeschlossener Bestätigung veröffentlicht werden.",
+    "back": "Zurück zu meinem Bewerberprofil",
+    "nameLabel": "Unternehmensname",
+    "namePlaceholder": "Name Ihres Unternehmens",
+    "slugLabel": "Unternehmensname für die URL",
+    "slugHint": "Verwenden Sie kleine englische Buchstaben, Ziffern und einzelne Bindestriche.",
+    "saving": "Wird gespeichert…",
+    "submit": "Zur Prüfung einreichen",
+    "storyEyebrow": "UNTERNEHMENSREGISTRIERUNG",
+    "storyTitle": "Beginnen Sie mit Ihren Angaben.",
+    "storyBody": "Eingereichte Unternehmensdaten werden geprüft. Anzeigen können erst nach abgeschlossener Bestätigung veröffentlicht werden.",
+    "messages": {
+      "invalid": "Prüfen Sie Unternehmensnamen und URL-Namen und versuchen Sie es erneut.",
+      "duplicate": "Dieser Unternehmens-URL-Name wird bereits verwendet.",
+      "unauthorized": "Ihre Sitzung ist möglicherweise abgelaufen. Melden Sie sich erneut an und versuchen Sie es noch einmal.",
+      "failed": "Die Unternehmensregistrierung konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+      "saved": "Ihr Unternehmen wurde zur Prüfung eingereicht. Anzeigen können erst nach abgeschlossener Bestätigung veröffentlicht werden."
+    }
+  },
+  "HomePage": {
+    "eyebrow": "ARBEITSNETZWERK NORDZYPERN",
+    "title": "<line>Entdecken Sie in Nordzypern</line> <line>Ihren nächsten</line> <accent>Karriereschritt.</accent>",
+    "sectorEyebrow": "REGIONALER FOKUS",
+    "sectorTitle": "Berufsfelder in Nordzypern",
+    "sectorRegion": "Nordzypern",
+    "sectorMoreLabel": "Berufsfelder entdecken",
+    "sectorLessLabel": "Verzeichnis schließen",
+    "sectorExplorerTitle": "Berufsfelder in Nordzypern entdecken",
+    "sectorExplorerDescription": "Entdecken Sie alle 16 Berufsfelder und grenzen Sie die Liste nach Themen ein.",
+    "sectorSearchLabel": "Berufsfelder durchsuchen",
+    "sectorSearchPlaceholder": "Beruf oder Berufsfeld",
+    "sectorFilterLabel": "Gruppen der Berufsfelder",
+    "sectorAllLabel": "Alle",
+    "sectorTotalLabel": "Berufsfelder",
+    "sectorTotalCount": "{count} Berufsfelder insgesamt",
+    "sectorFeaturedLabel": "Empfohlen",
+    "sectorResultCountSingular": "{count} Berufsfeld wird angezeigt",
+    "sectorResultCountPlural": "{count} Berufsfelder werden angezeigt",
+    "sectorClearSearch": "Suche löschen",
+    "sectorEmptyTitle": "Keine passenden Berufsfelder gefunden",
+    "sectorEmptyDescription": "Versuchen Sie ein anderes Berufsfeld oder entfernen Sie ausgewählte Filter.",
+    "sectorClearFilters": "Alle Filter zurücksetzen",
+    "sectorCategories": {
+      "digital": "Digitale und kreative Berufsfelder, flexible Arbeitsformen",
+      "services": "Menschen und Dienstleistungen",
+      "industry": "Industrie und Infrastruktur"
+    },
+    "sectors": {
+      "technology": {
+        "title": "Technologie und Software",
+        "description": "Gestalten Sie die Zukunft mit digitalen Lösungen."
+      },
+      "education": {
+        "title": "Bildung",
+        "description": "Eröffnen Sie durch Lernen neue Möglichkeiten."
+      },
+      "health": {
+        "title": "Gesundheitswesen",
+        "description": "Unterstützen Sie mit Ihrer Fachkenntnis die Gesundheit der Gemeinschaft."
+      },
+      "tourism": {
+        "title": "Tourismus und Reisen",
+        "description": "Schaffen Sie unvergessliche Erlebnisse auf der Insel."
+      },
+      "architecture": {
+        "title": "Architektur und Innenarchitektur",
+        "description": "Gestalten Sie Räume, in denen Menschen leben und arbeiten."
+      },
+      "construction": {
+        "title": "Bauwesen und Ingenieurwesen",
+        "description": "Bauen Sie sichere Gebäude und eine starke Infrastruktur."
+      },
+      "businessServices": {
+        "title": "Unternehmens- und professionelle Dienstleistungen",
+        "description": "Unterstützen Sie Organisationen mit Ihrer Fachkenntnis."
+      },
+      "gastronomy": {
+        "title": "Lebensmittel und Getränke",
+        "description": "Verbinden Sie aufmerksamen Service mit gutem Essen."
+      },
+      "manufacturing": {
+        "title": "Fertigung und Industrie",
+        "description": "Schaffen Sie Mehrwert durch qualifizierte Produktion."
+      },
+      "creativeMedia": {
+        "title": "Digitales Design und Medien",
+        "description": "Verwandeln Sie kreative Ideen in überzeugende Erlebnisse."
+      },
+      "remoteWork": {
+        "title": "Remote-Arbeit und Freelance",
+        "description": "Setzen Sie Ihre Fachkenntnisse flexibel ein."
+      },
+      "renewableEnergy": {
+        "title": "Erneuerbare Energien",
+        "description": "Gestalten Sie eine nachhaltigere Energieversorgung mit."
+      },
+      "agriculture": {
+        "title": "Landwirtschaft und Gewächshäuser",
+        "description": "Tragen Sie zur Erzeugung unserer Lebensmittel bei."
+      },
+      "foodProduction": {
+        "title": "Lebensmittelproduktion und -versorgung",
+        "description": "Unterstützen Sie verlässliche Herstellung vom Feld bis zum Tisch."
+      },
+      "hospitality": {
+        "title": "Hotels und Unterkünfte",
+        "description": "Schaffen Sie aufmerksame und einladende Gästeerlebnisse."
+      },
+      "logistics": {
+        "title": "Logistik und Transport",
+        "description": "Verbinden Sie Produkte, Unternehmen und Gemeinschaften."
+      }
+    }
+  },
+  "HomeJourney": {
+    "eyebrow": "ZWEI KLARE WEGE. EIN SICHERER NÄCHSTER SCHRITT.",
+    "title": "Ein guter Start für Bewerbende und Unternehmen.",
+    "description": "Wählen Sie Ihren Weg: Erstellen Sie Ihr Bewerberprofil selbstbestimmt oder registrieren Sie Ihr Unternehmen und bereiten Sie die Personalsuche vor.",
+    "candidate": {
+      "audience": "FÜR BEWERBENDE",
+      "title": "Vom Lebenslauf zum Profilentwurf – Sie behalten die Kontrolle.",
+      "description": "Übernehmen Sie Angaben aus Ihrem Lebenslauf in einen bearbeitbaren Entwurf. Prüfen Sie alles vor dem Speichern und suchen Sie ohne Registrierung nach Stellen.",
+      "steps": {
+        "account": {
+          "title": "Bewerberkonto erstellen",
+          "description": "Bestätigen Sie Ihre E-Mail-Adresse, um zu beginnen."
+        },
+        "resume": {
+          "title": "Lebenslauf auswählen",
+          "description": "Text aus PDF oder DOCX wird im Browser verarbeitet und in den Entwurf übernommen."
+        },
+        "profile": {
+          "title": "Prüfen und speichern",
+          "description": "Bearbeiten Sie Ihre Angaben. Ihr Profil wird erst nach Ihrer Speicheraktion aktualisiert."
+        }
+      },
+      "privacy": "Ihre Lebenslaufdatei bleibt im Browser und wird nicht auf den Server hochgeladen.",
+      "action": "Bewerberkonto erstellen"
+    },
+    "employer": {
+      "audience": "FÜR ARBEITGEBENDE",
+      "title": "Vom Unternehmensprofil bis zur Stellenanzeige – ein klarer Ablauf.",
+      "description": "Registrieren Sie Ihr Unternehmen und verwalten Sie Stellenanzeigen, sobald Prüfung und Veröffentlichungsrechte abgeschlossen sind.",
+      "steps": {
+        "company": {
+          "title": "Unternehmensprofil anlegen",
+          "description": "Ordnen Sie Ihren Standort im Verzeichnis zu, falls vorhanden, und prüfen Sie Ihre Angaben."
+        },
+        "review": {
+          "title": "Zur Prüfung einreichen",
+          "description": "Ihre Unternehmensangaben werden geprüft; ein Verzeichniseintrag allein ist keine Verifizierung."
+        },
+        "listing": {
+          "title": "Stellenanzeigen vorbereiten",
+          "description": "Erstellen und veröffentlichen Sie Anzeigen nach Verifizierung und Freigabe der Veröffentlichungsrechte."
+        }
+      },
+      "privacy": "Veröffentlichungen setzen eine Unternehmensprüfung und entsprechende Rechte voraus.",
+      "action": "Arbeitgeberkonto erstellen"
+    }
+  },
+  "HomeJobSearch": {
+    "eyebrow": "AKTUELLE STELLENANGEBOTE",
+    "title": "Entdecken Sie Chancen ohne Anmeldung.",
+    "description": "Datenschutzfreundliche Vorschauen zeigen nur Stellentitel und verifizierte Unternehmen.",
+    "keywordLabel": "Position oder Unternehmen",
+    "keywordPlaceholder": "Stellentitel, Unternehmensname oder Stichwort",
+    "districtLabel": "Standort",
+    "allDistricts": "Alle Bezirke",
+    "jobTypeLabel": "Beschäftigungsart",
+    "allJobTypes": "Alle Arten",
+    "workplaceLabel": "Arbeitsmodell",
+    "allWorkplaces": "Alle Modelle",
+    "searchAction": "Stellen suchen",
+    "clearFilters": "Filter zurücksetzen",
+    "resultsTitle": "Aktuelle Stellen",
+    "resultCountSingular": "1 Stelle gefunden",
+    "resultCountPlural": "{count} Stellen gefunden",
+    "emptyTitle": "Keine aktiven Stellen passen zu Ihrer Suche",
+    "emptyDescription": "Passen Sie die Filter an oder schauen Sie später wieder vorbei.",
+    "invalidFilters": "Diese Suchfilter sind ungültig. Prüfen Sie Ihre Auswahl und versuchen Sie es erneut.",
+    "paginationLabel": "Seiten der Suchergebnisse",
+    "previousPage": "Zurück",
+    "nextPage": "Weiter",
+    "pageCount": "Seite {page} von {pages}",
+    "districts": {
+      "lefkosia": "Nikosia",
+      "magusa": "Famagusta",
+      "girne": "Kyrenia",
+      "guzelyurt": "Morphou",
+      "iskele": "Trikomo",
+      "lefke": "Lefke"
+    },
+    "jobTypes": {
+      "full_time": "Vollzeit",
+      "part_time": "Teilzeit",
+      "contract": "Vertrag",
+      "temporary": "Befristet",
+      "internship": "Praktikum",
+      "freelance": "Freiberuflich"
+    },
+    "workplaceModes": {
+      "on_site": "Vor Ort",
+      "hybrid": "Hybrid",
+      "remote": "Remote"
+    }
+  },
+  "JobsPage": {
+    "eyebrow": "İŞBUL KKTC · KARRIERECHANCEN",
+    "title": "Finden Sie Ihre nächste Stelle.",
+    "description": "Entdecken Sie aktuelle Stellen an einem Ort und grenzen Sie die Suche nach Standort, Beschäftigungsart und Arbeitsmodell ein.",
+    "oneOpening": "Derzeit 1 offene Stelle",
+    "openings": "Derzeit {count} offene Stellen",
+    "filterEyebrow": "SUCHE VERFEINERN",
+    "filterTitle": "Finden Sie die passende Stelle",
+    "resultsEyebrow": "AKTUELLE MÖGLICHKEITEN",
+    "resultsTitle": "Offene Stellenangebote",
+    "postedOn": "Veröffentlicht am {date}",
+    "viewDetails": "Stelle ansehen"
+  },
+  "JobDetail": {
+    "eyebrow": "KARRIERECHANCE",
+    "backToListings": "Zurück zu allen Stellen",
+    "locationNotSpecified": "Standort nicht angegeben",
+    "publishedOn": "Veröffentlicht am {date}",
+    "descriptionTitle": "Über die Stelle",
+    "responsibilitiesTitle": "Aufgaben und Verantwortlichkeiten",
+    "requirementsTitle": "Anforderungen",
+    "companyLabel": "ARBEITGEBER",
+    "companyLocation": "Unternehmensstandort",
+    "companyWebsite": "Website",
+    "companyDirectoryLink": "Im Unternehmensverzeichnis ansehen"
+  },
+  "JobApplication": {
+    "title": "Auf diese Stelle bewerben",
+    "description": "Ihre Bewerbung wird auf der Website gespeichert und dem Arbeitgeberkonto übermittelt.",
+    "coverLetterLabel": "Anschreiben (optional)",
+    "coverLetterPlaceholder": "Erklären Sie kurz, warum Sie für diese Stelle geeignet sind.",
+    "coverLetterHint": "Bis zu 5.000 Zeichen. Prüfen Sie Ihre Angaben vor dem Absenden.",
+    "shareContactEmail": "Ich stimme zu, dem Arbeitgeber meine Konto-E-Mail-Adresse in dieser Bewerbung mitzuteilen. Dies ist freiwillig.",
+    "submit": "Bewerbung senden",
+    "submitting": "Wird gesendet…",
+    "loginAction": "Anmelden",
+    "messages": {
+      "idle": "",
+      "invalid": "Die Bewerbungsangaben sind ungültig. Bitte prüfen Sie sie und versuchen Sie es erneut.",
+      "unauthorized": "Melden Sie sich an und erstellen Sie ein Bewerberprofil, bevor Sie sich bewerben.",
+      "applyFailed": "Ihre Bewerbung konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.",
+      "applied": "Ihre Bewerbung wurde erfolgreich gesendet.",
+      "duplicate": "Sie haben sich bereits auf diese Stelle beworben.",
+      "transitionFailed": "Der Bewerbungsstatus konnte nicht geändert werden.",
+      "updated": "Der Bewerbungsstatus wurde aktualisiert."
+    }
+  },
+  "CompanyDirectory": {
+    "eyebrow": "UNTERNEHMENSVERZEICHNIS NORDZYPERN",
+    "title": "Finden Sie das passende Unternehmen.",
+    "description": "Suchen Sie nach Unternehmen und filtern Sie nach Branche und einem der sechs Bezirke Nordzyperns.",
+    "totalLabel": "{count} Unternehmenseinträge",
+    "jobEmployersEyebrow": "AKTUELLE ANZEIGEN",
+    "jobEmployersTitle": "Unternehmen mit offenen Stellen",
+    "jobEmployersDescription": "Unternehmen mit aktuell offenen Stellen in den Quellanzeigen.",
+    "jobEmployersCount": "{count} Unternehmen",
+    "activeJobCount": "{count} offene Stellen",
+    "jobEmployersVerificationNote": "Die Anzeige in diesem Abschnitt bedeutet nicht, dass İşBul KKTC das Unternehmen verifiziert hat.",
+    "companyWebsite": "Website",
+    "sourceProfileLink": "Quellprofil des Unternehmens",
+    "sourceListingLink": "Originalanzeige ansehen",
+    "resultsLabel": "Suchergebnisse für Unternehmen",
+    "searchLabel": "Unternehmensnamen suchen",
+    "searchPlaceholder": "Beliebigen Teil des Unternehmensnamens eingeben",
+    "clearSearch": "Suchtext löschen",
+    "categoryLabel": "Branche oder Geschäftsfeld",
+    "categoryPlaceholder": "Branche auswählen",
+    "categoryAll": "Alle Branchen",
+    "locationLabel": "Bezirk",
+    "locationAll": "Alle Bezirke",
+    "districts": {
+      "lefkosia": "Nikosia (Lefkoşa)",
+      "magusa": "Famagusta",
+      "girne": "Kyrenia (Girne)",
+      "guzelyurt": "Güzelyurt",
+      "iskele": "İskele (Trikomo)",
+      "lefke": "Lefke"
+    },
+    "locationPlaceholder": "Bezirk auswählen",
+    "sortLabel": "Unternehmen sortieren",
+    "sortAscending": "Türkisches Alphabet A–Z",
+    "sortDescending": "Türkisches Alphabet Z–A",
+    "resultCount": "{count, plural, one {# Unternehmen gefunden} other {# Unternehmen gefunden}}",
+    "locationCount": "{count} Standorte",
+    "clearFilters": "Filter zurücksetzen",
+    "mapLink": "Auf der Karte ansehen",
+    "noContact": "Keine Telefonnummer oder Website angegeben",
+    "emptyTitle": "Keine passenden Unternehmen gefunden",
+    "emptyDescription": "Versuchen Sie einen anderen Unternehmensnamen, eine andere Branche oder einen anderen Bezirk oder löschen Sie die Filter.",
+    "paginationLabel": "Ergebnisseiten für Unternehmen",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "pageCount": "Seite {current} von {total}",
+    "sourceNote": "Die Abdeckung wird anhand von Quellkoordinaten geschätzt und ist keine offizielle Grenze. Ein Eintrag bedeutet nicht, dass das Unternehmen registriert oder geprüft ist.",
+    "districtDataNote": "{count} Standorte ohne zuverlässige Bezirksangabe werden bei Auswahl eines Bezirksfilters ausgeschlossen."
+  },
+  "CandidateDashboard": {
+    "eyebrow": "BEWERBERPROFIL",
+    "title": "Willkommen, {name}.",
+    "description": "Ergänzen Sie Ihre beruflichen Angaben und halten Sie sie in Ihrem Konto aktuell.",
+    "applicationsTitle": "Meine Bewerbungen",
+    "applicationsDescription": "Verfolgen Sie die Übermittlung, den Status und den Zeitpunkt, zu dem der Arbeitgeber Ihre Bewerbung erstmals angesehen hat.",
+    "noApplications": "Sie haben sich noch nicht auf eine Stelle beworben.",
+    "applicationSubmittedAt": "Beworben am",
+    "applicationViewedAt": "Erstmals vom Arbeitgeber angesehen",
+    "applicationNotViewed": "Der Arbeitgeber hat Ihre Bewerbung noch nicht angesehen.",
+    "applicationStatuses": {
+      "submitted": "An Arbeitgeber übermittelt",
+      "reviewing": "Wird geprüft",
+      "shortlisted": "In der engeren Auswahl",
+      "rejected": "Nicht ausgewählt",
+      "hired": "Eingestellt",
+      "withdrawn": "Zurückgezogen"
+    },
+    "profileTitle": "Profilangaben",
+    "profileDescription": "Ihre gespeicherten Informationen sind nur für Ihr Konto bestimmt.",
+    "completionEyebrow": "IHR PROFIL",
+    "completionTitle": "Das Wichtigste",
+    "completionOf": "/ {total} Angaben ergänzt",
+    "completionLabel": "{current} von {total} wichtigen Profilangaben ergänzt",
+    "completionHint": "Aus dem CV extrahierte Angaben erscheinen zuerst als Vorschläge im Formular. Prüfen Sie sie und wählen Sie zum Bestätigen „Änderungen speichern“.",
+    "completionFields": {
+      "headline": "Beruflicher Titel",
+      "location": "Standort",
+      "skills": "Fähigkeiten",
+      "experience": "Berufserfahrung",
+      "education": "Ausbildung",
+      "languages": "Sprachen",
+      "certifications": "Zertifikate"
+    },
+    "privacyTitle": "Ihr Profil ist privat",
+    "privacyDescription": "Diese Angaben bleiben in Ihrem Konto und werden nicht als öffentliches Bewerberprofil veröffentlicht.",
+    "headlineLabel": "Beruflicher Titel",
+    "headlinePlaceholder": "Beschreiben Sie Ihr Fachgebiet",
+    "headlineHint": "Bis zu 140 Zeichen.",
+    "locationLabel": "Bezirk",
+    "locationPlaceholder": "Bezirk auswählen",
+    "districts": {
+      "lefkosia": "Nikosia (Lefkoşa)",
+      "magusa": "Famagusta",
+      "girne": "Kyrenia (Girne)",
+      "guzelyurt": "Güzelyurt",
+      "iskele": "İskele (Trikomo)",
+      "lefke": "Lefke"
+    },
+    "skillsLabel": "Fähigkeiten",
+    "skillsPlaceholder": "Fähigkeiten durch Kommas oder Zeilenumbrüche trennen",
+    "skillsHint": "Sie können bis zu 40 Fähigkeiten hinzufügen.",
+    "save": "Änderungen speichern",
+    "saving": "Wird gespeichert…",
+    "signOut": "Sicher abmelden",
+    "employerWorkspaceLink": "Arbeitgeberbereich",
+    "messages": {
+      "invalid": "Prüfen Sie die Angaben und versuchen Sie es erneut.",
+      "unauthorized": "Melden Sie sich an, um fortzufahren.",
+      "inactive": "Dieses Konto kann derzeit nicht aktualisiert werden.",
+      "saveFailed": "Ihr Profil konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+      "saved": "Ihr Profil wurde gespeichert."
+    },
+    "profileIndex": "PROFIL · 01",
+    "sectionsDescription": "Ergänzen Sie die gewünschten Angaben. Alle Bereiche sind optional; prüfen und bearbeiten Sie CV-Vorschläge vor dem Speichern.",
+    "additionalDetails": "Erfahrung, Ausbildung und mehr · {count} Einträge",
+    "additionalDetailsHint": "Diese Bereiche sind optional. CV-Angaben werden ohne Löschen vorhandener Einträge in das Formular übernommen; prüfen und bearbeiten Sie sie vor dem Speichern.",
+    "entryLabel": "Eintrag {number}",
+    "removeEntry": "Diesen Eintrag entfernen",
+    "fields": {
+      "role": "Berufsbezeichnung",
+      "organization": "Unternehmen",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "dateHint": "Geben Sie ein Jahr oder Monat und Jahr an.",
+      "description": "Beschreibung",
+      "institution": "Schule oder Bildungseinrichtung",
+      "qualification": "Abschluss oder Qualifikation",
+      "field": "Studienfach",
+      "language": "Sprache",
+      "proficiency": "Sprachkenntnisse",
+      "certification": "Zertifikat oder Lizenz",
+      "issuer": "Ausstellende Stelle",
+      "issueDate": "Ausstellungsdatum",
+      "expiryDate": "Ablaufdatum"
+    },
+    "sections": {
+      "experience": {
+        "title": "Berufserfahrung",
+        "add": "Berufserfahrung hinzufügen",
+        "description": "Ergänzen Sie Positionen, Verantwortlichkeiten und wichtige Ergebnisse."
+      },
+      "education": {
+        "title": "Ausbildung",
+        "add": "Ausbildung hinzufügen",
+        "description": "Geben Sie Ausbildung, Abschlüsse und relevante Studienfächer an."
+      },
+      "languages": {
+        "title": "Sprachen",
+        "add": "Sprache hinzufügen",
+        "description": "Listen Sie Ihre Sprachen und Ihre Kenntnisse in jeder Sprache auf."
+      },
+      "certifications": {
+        "title": "Zertifikate und Lizenzen",
+        "add": "Zertifikat hinzufügen",
+        "description": "Führen Sie beruflich relevante Zertifikate und Lizenzen auf."
+      }
+    },
+    "resumeImport": {
+      "title": "Lebenslauf importieren",
+      "description": "Wählen Sie eine textbasierte PDF- oder DOCX-Datei; extrahierte Angaben erscheinen als Vorschläge in Ihrem bearbeitbaren Profilformular.",
+      "privacy": "Die Datei wird in diesem Browser gelesen und weder hochgeladen noch gespeichert. Vorschläge werden erst nach Ihrer Prüfung und Auswahl von „Änderungen speichern“ im Profil gespeichert.",
+      "chooseFile": "Lebenslauf auswählen",
+      "processing": "Lebenslauf wird gelesen …",
+      "processingStatus": "Der Lebenslauf wird in diesem Browser gelesen.",
+      "fileHint": "PDF oder DOCX · höchstens 5 MB und 25 Seiten · Scans werden nicht unterstützt",
+      "imported": "CV-Angaben wurden als Vorschläge in das Formular übernommen und noch nicht gespeichert. Prüfen oder bearbeiten Sie sie und wählen Sie dann „Änderungen speichern“.",
+      "importedWithSkipped": "CV-Vorschläge wurden in das Formular übernommen, aber noch nicht gespeichert. {count} Einträge überschritten Abschnittsgrenzen. Prüfen und speichern Sie die Änderungen.",
+      "noNewInformation": "Der CV wurde gelesen, enthielt aber keine neuen Angaben. Ihr Profil wurde nicht geändert.",
+      "noNewInformationWithSkipped": "Es gab keine neuen Angaben; {count} Einträge überschritten die Profilgrenzen. Ihr vorhandenes Profil wurde nicht geändert.",
+      "errors": {
+        "unsupported": "Wählen Sie eine PDF- oder DOCX-Datei aus.",
+        "tooLarge": "Die Datei oder der extrahierte Text überschreitet die zulässige Größe.",
+        "tooManyPages": "PDF-Dateien dürfen höchstens 25 Seiten enthalten.",
+        "empty": "Aus dem CV konnten keine passenden Profilangaben extrahiert werden. Versuchen Sie eine andere Textdatei oder ergänzen Sie fehlende Angaben.",
+        "unreadable": "Die Datei konnte nicht gelesen werden. Versuchen Sie es mit einer anderen textbasierten PDF- oder DOCX-Datei."
+      }
+    }
+  },
+  "CompanyManagement": {
+    "eyebrow": "ARBEITGEBERBEREICH",
+    "title": "{name}, verwalten Sie Ihr Unternehmensprofil.",
+    "description": "Halten Sie Ihre Unternehmensangaben aktuell. Änderungen werden geprüft, bevor sie im öffentlichen Verzeichnis erscheinen.",
+    "applicationsTitle": "Bewerbungen",
+    "applicationsDescription": "Prüfen Sie Bewerbungen, Status und Kontaktdaten, die Kandidaten freigegeben haben.",
+    "noApplications": "Für Ihre Stellen sind noch keine Bewerbungen eingegangen.",
+    "candidateLabel": "Bewerber",
+    "applicationSubmittedAt": "Beworben am",
+    "applicationViewedAt": "Erstmals angesehen",
+    "applicationNotViewed": "Noch nicht angesehen",
+    "openApplication": "Bewerbung öffnen",
+    "applicationDetailTitle": "Bewerbungsdetails",
+    "coverLetterLabel": "Anschreiben des Bewerbers",
+    "candidateContactEmail": "Kontakt-E-Mail des Bewerbers",
+    "candidateContactNotShared": "Der Bewerber hat keine Kontakt-E-Mail freigegeben.",
+    "candidateContactConsentNote": "Der Bewerber hat zugestimmt, diese E-Mail für diese Bewerbung mitzuteilen.",
+    "applicationStatusLabel": "Bewerbungsstatus",
+    "updateApplicationStatus": "Status aktualisieren",
+    "updatingApplicationStatus": "Wird aktualisiert…",
+    "applicationStatuses": {
+      "submitted": "Neue Bewerbung",
+      "reviewing": "Wird geprüft",
+      "shortlisted": "In der engeren Auswahl",
+      "rejected": "Nicht ausgewählt",
+      "hired": "Eingestellt",
+      "withdrawn": "Zurückgezogen"
+    },
+    "workspace": {
+      "navigation": "Bereiche des Unternehmensarbeitsplatzes",
+      "overview": "Übersicht",
+      "companyProfile": "Unternehmensprofil",
+      "directoryListing": "Verzeichniseintrag",
+      "profileDetailsSection": "Profilbeschreibung und Branche",
+      "overviewKicker": "UNTERNEHMENSARBEITSPLATZ",
+      "overviewTitle": "Verwalten Sie Ihre Unternehmensangaben an einem Ort.",
+      "overviewDescription": "Vervollständigen Sie Ihr Profil, prüfen Sie den Verzeichniseintrag und verfolgen Sie den Prüfstatus.",
+      "locationNotAdded": "Kein Standort hinzugefügt",
+      "profileCompleteness": "Profilbereitschaft",
+      "completedFields": "{completed} von {total} wichtigen Angaben ausgefüllt",
+      "completionLabel": "Profil zu {percent}% ausgefüllt",
+      "completionDescription": "Diese Anzeige fasst eingetragene Profildaten zusammen; sie bedeutet weder eine Unternehmensprüfung noch eine Veröffentlichungsfreigabe.",
+      "completeProfile": "Unternehmensangaben bearbeiten",
+      "summary": "Status des Unternehmensprofils",
+      "reviewSummary": "Profilprüfung",
+      "reviewSummaryDescription": "Prüfstatus von Änderungen für das Verzeichnis.",
+      "directorySummary": "Verzeichniseintrag",
+      "directoryNotLinked": "Kein Standort ausgewählt",
+      "directorySummaryDescription": "Verknüpfen Sie nur einen Verzeichniseintrag, den Sie verwalten.",
+      "verificationSummary": "Unternehmensprüfung",
+      "verificationSummaryDescription": "Dieser Status ist unabhängig von der Freigabe des Profils.",
+      "noSubmission": "Noch nicht zur Prüfung eingereicht",
+      "directoryListingEyebrow": "GESPEICHERTE PROFILANGABEN",
+      "profileLabel": "UNTERNEHMENSPROFIL",
+      "moreCategories": "+{count} weitere",
+      "categoriesNotAdded": "Noch keine Branchen oder Dienstleistungen hinzugefügt.",
+      "descriptionNotAdded": "Keine Unternehmensbeschreibung hinzugefügt.",
+      "notAdded": "Nicht angegeben",
+      "listingPrivacyNote": "Diese Karte zeigt Ihre eingereichten Angaben. Vor der Freigabe sind sie nicht öffentlich.",
+      "listingPublishedNote": "Diese Angaben wurden geprüft, freigegeben und im Unternehmensverzeichnis veröffentlicht.",
+      "verificationNoticeTitle": "Prüfung und Verifizierung sind verschieden",
+      "verificationNoticeDescription": "Die Freigabe eines Verzeichniseintrags ändert nicht den offiziellen Prüfstatus des Unternehmens. Dokument-Uploads bleiben deaktiviert, bis sichere Speicher- und Löschregeln festgelegt sind.",
+      "identitySection": "Unternehmensdaten",
+      "contactSection": "Kontaktdaten",
+      "locationSection": "Standort und Verzeichniseintrag",
+      "documentsTitle": "Unternehmensdokumente"
+    },
+    "addCompany": "Unternehmen hinzufügen",
+    "signOut": "Sicher abmelden",
+    "candidateWorkspaceLink": "Bewerberprofil",
+    "companySwitcher": "Ihre Unternehmen",
+    "profileTitle": "Unternehmensangaben",
+    "profileDescription": "Ihr Entwurf bleibt für Ihr Unternehmenskonto privat, bis er geprüft und zur Veröffentlichung freigegeben wurde.",
+    "verification": {
+      "pending": "Unternehmensprüfung ausstehend",
+      "verified": "Unternehmen bestätigt",
+      "rejected": "Unternehmensprüfung nicht bestätigt",
+      "suspended": "Unternehmenskonto gesperrt"
+    },
+    "submission": {
+      "pending": "Profiländerungen warten auf Prüfung.",
+      "approved": "Das Profil wurde freigegeben und veröffentlicht.",
+      "rejected": "Das Profil wurde nicht freigegeben. Aktualisieren Sie die Angaben und reichen Sie sie erneut ein."
+    },
+    "companyName": "Unternehmensname",
+    "description": "Unternehmensbeschreibung",
+    "categories": "Branchen oder Dienstleistungen",
+    "categoriesHint": "Trennen Sie bis zu 12 Einträge durch Kommas.",
+    "website": "Website",
+    "phone": "Öffentliche Telefonnummer",
+    "publicEmail": "Öffentliche E-Mail-Adresse",
+    "address": "Straße und Hausnummer",
+    "municipality": "Bezirk",
+    "districtPlaceholder": "Bezirk auswählen",
+    "districts": {
+      "lefkosia": "Nikosia (Lefkoşa)",
+      "magusa": "Famagusta",
+      "girne": "Kyrenia (Girne)",
+      "guzelyurt": "Güzelyurt",
+      "iskele": "İskele (Trikomo)",
+      "lefke": "Lefke"
+    },
+    "directoryTarget": "Unternehmen und Standort im bestehenden Verzeichnis",
+    "directoryTargetNone": "Nicht gelistet / keinen Standort verknüpfen",
+    "directoryTargetHint": "Wählen Sie den von Ihnen verwalteten Standort. Freigegebene Angaben aktualisieren nur den Eintrag dieses Standorts.",
+    "directorySearchLabel": "Unternehmen im Verzeichnis finden",
+    "directorySearchPlaceholder": "Unternehmensname oder Standort eingeben",
+    "directorySearchHint": "Wählen Sie den von Ihnen verwalteten Standort. Verfügbare Branchen-, Kontakt- und Standortangaben füllen nur leere Felder aus. Prüfen und bearbeiten Sie diese vor dem Einreichen. Wenn Sie das Unternehmen nicht finden, lassen Sie das Feld leer.",
+    "directoryMatchApplied": "Verfügbare Verzeichnisangaben wurden in leere Felder übernommen. Prüfen Sie sie vor dem Einreichen.",
+    "optionalDetails": "Optionale Profilangaben",
+    "optionalDetailsHint": "Hier können Sie Beschreibung, Branche, Kontakt- und Standortangaben ergänzen oder bearbeiten. Bei einem Verzeichnistreffer werden verfügbare Angaben automatisch übernommen; alle weiteren Felder sind freiwillig.",
+    "documentsUnavailable": "Das Dokument wird weder hochgeladen noch verifiziert es das Unternehmen. Nur leere Profilfelder werden ergänzt; prüfen Sie die Angaben und reichen Sie sie separat zur Prüfung ein.",
+    "documentImport": {
+      "title": "Unternehmensprofil aus Dokument ausfüllen",
+      "description": "Übernehmen Sie Vorschläge aus eindeutig beschrifteten Angaben eines textbasierten Handelsregisterdokuments oder einer Gewerbeerlaubnis in das Formular.",
+      "privacy": "Das Dokument wird nur in diesem Browser gelesen und weder hochgeladen noch gespeichert. Vorschläge werden erst nach Ihrer Prüfung und Einreichung zur Prüfung gespeichert.",
+      "chooseFile": "Aus Dokument übernehmen",
+      "processing": "Dokument wird gelesen …",
+      "processingStatus": "Das Dokument wird im Browser gelesen; die Datei wird nicht übertragen.",
+      "fileHint": "PDF oder DOCX · höchstens 5 MB und 25 Seiten",
+      "imported": "{count} leere Profilfelder wurden im Formular ergänzt und noch nicht gespeichert. Vorhandene Angaben bleiben erhalten; prüfen Sie alles und reichen Sie es zur Prüfung ein.",
+      "suggestionApplied": "Der ausgewählte Dokumentwert wurde in das Formular übernommen, aber noch nicht gespeichert. Prüfen Sie die Änderungen und reichen Sie sie zur Prüfung ein.",
+      "suggestionsOnly": "Es waren keine Felder leer; {count} Dokumentangaben wichen vom Profil ab. Nichts wurde überschrieben.",
+      "conflictsTitle": "Abweichende Dokumentangaben haben vorhandene Werte nicht ersetzt. Übernehmen Sie einen Vorschlag nur, wenn er korrekt ist:",
+      "applySuggestion": "Vorschlag übernehmen",
+      "noNewInformation": "Es wurden keine neuen Angaben zum Ergänzen leerer Felder gefunden. Vorhandene Angaben bleiben erhalten.",
+      "errors": {
+        "unsupported": "Wählen Sie eine textbasierte PDF- oder DOCX-Datei aus.",
+        "tooLarge": "Das Dokument oder der extrahierte Text überschreitet die zulässige Größe.",
+        "tooManyPages": "PDF-Dateien dürfen höchstens 25 Seiten enthalten.",
+        "empty": "Es wurden keine unterstützten, eindeutig beschrifteten Unternehmensangaben gefunden. Sie können die Felder manuell ausfüllen.",
+        "unreadable": "Das Dokument konnte nicht gelesen werden. Versuchen Sie es mit einer anderen textbasierten PDF- oder DOCX-Datei."
+      }
+    },
+    "publicationNote": "Die hier angegebene E-Mail-Adresse ist nach Freigabe öffentlich sichtbar.",
+    "submitForReview": "Änderungen zur Prüfung einreichen",
+    "saving": "Wird eingereicht …",
+    "messages": {
+      "invalid": "Prüfen Sie die Unternehmensangaben und den ausgewählten Standort und versuchen Sie es erneut.",
+      "unauthorized": "Sie dürfen dieses Unternehmen nicht verwalten.",
+      "inactive": "Dieses Konto kann derzeit keine Unternehmensänderungen einreichen.",
+      "saveFailed": "Das Unternehmensprofil konnte nicht eingereicht werden. Bitte versuchen Sie es erneut.",
+      "submitted": "Ihre Änderungen wurden zur Prüfung eingereicht.",
+      "pending": "Eine Profilprüfung läuft bereits. Sie können die ausstehenden Angaben aktualisieren."
+    }
+  },
+  "CompanyReview": {
+    "eyebrow": "UNTERNEHMENSVERZEICHNIS",
+    "title": "Änderungen am Unternehmensprofil prüfen",
+    "description": "Prüfen Sie öffentliche Angaben vor der Veröffentlichung. Die Freigabe veröffentlicht das Profil, ändert jedoch nicht den separaten Verifizierungsstatus des Unternehmens.",
+    "emptyTitle": "Keine Profiländerungen zur Prüfung",
+    "emptyDescription": "Neue Unternehmensprofileinreichungen erscheinen hier.",
+    "pending": "Prüfung ausstehend",
+    "categories": "Branchen",
+    "publicEmail": "Öffentliche E-Mail-Adresse",
+    "phone": "Öffentliche Telefonnummer",
+    "website": "Website",
+    "location": "Standort",
+    "reviewNote": "Entscheidungsnotiz (für das Unternehmen sichtbar)",
+    "saving": "Wird gespeichert …",
+    "approveAndPublish": "Freigeben und veröffentlichen",
+    "reject": "Änderungen anfordern",
+    "messages": {
+      "unauthorized": "Dieses Konto darf keine Unternehmensprofile prüfen.",
+      "failed": "Die Prüfung konnte nicht gespeichert werden. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "branchUnavailable": "Der ausgewählte Verzeichniseintrag ist nicht mehr verfügbar. Geben Sie diese Anfrage nicht frei.",
+      "approved": "Das Profil wurde freigegeben und veröffentlicht.",
+      "rejected": "Das Profil wurde zur Überarbeitung zurückgegeben."
+    }
+  },
+  "Freelance": {
+    "eyebrow": "FÜR SELBSTSTÄNDIGE FACHKRÄFTE",
+    "title": "Ordnen Sie Ihre selbstständige Berufserfahrung in Ihrem Bewerberprofil.",
+    "description": "Ergänzen Sie beruflichen Titel, Standort und Fähigkeiten in Ihrem Bewerberprofil. Ihre Angaben bleiben in Ihrem Konto; diese Seite erstellt kein öffentliches Profil für Selbstständige.",
+    "createProfile": "Profil erstellen",
+    "signIn": "Im Konto anmelden",
+    "benefitsEyebrow": "IHR PROFIL",
+    "benefitsTitle": "Die wichtigsten Angaben zu Ihrem beruflichen Weg.",
+    "benefitsDescription": "Ordnen Sie die zentralen Informationen Ihrer Erfahrung in einem klaren Profil.",
+    "points": {
+      "headline": {
+        "title": "Beruflicher Titel",
+        "body": "Beschreiben Sie Ihr Fachgebiet in einem prägnanten Satz."
+      },
+      "location": {
+        "title": "Standort",
+        "body": "Geben Sie die Region an, in der Sie arbeiten möchten."
+      },
+      "skills": {
+        "title": "Fähigkeiten",
+        "body": "Heben Sie Kompetenzen hervor, die Arbeitgebende wahrnehmen sollen."
+      }
+    },
+    "ctaEyebrow": "JETZT STARTEN",
+    "ctaTitle": "Erstellen Sie Ihr Profil und behalten Sie Ihre Angaben unter Kontrolle."
+  }
+}

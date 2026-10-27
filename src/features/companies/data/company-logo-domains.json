@@ -1,0 +1,32 @@
+{
+  "note": "Researched official domains for directory entries whose own website is missing, dead or blocking automated reads. Consumed by scripts/fetch-company-logos.mjs.",
+  "domains": {
+    "ChIJpQScRczJ3xQRbsPOZQBRKHw": ["ezic.com.tr"],
+    "ChIJUVsvliZr3hQRbNjAPpUcIPk": ["ezic.com.tr"],
+    "ChIJQYb4dVoN3hQRT9li-wiGcw0": ["pinebayclub.com"],
+    "ChIJVzM-F89s3hQRjY4K45rqyZ0": ["lordsresidencehotel.com"],
+    "ChIJ35RYZeUM3hQRxWqlEjtiakw": ["riversideholidayvillage.com"],
+    "ChIJoUtMlyMR3hQRExL3XSAXjIw": ["tedkuzeykibris.k12.tr"],
+    "ChIJM1sPefxx3xQRrwVJ-fO-_00": ["theresahotelcyprus.com"],
+    "ChIJkWu0vTkL3hQRjUvFqAa_dRs": ["silverrocksrestaurant.com"],
+    "ChIJ1ZsJVkAN3hQRpEBHJKJg8qU": ["necatbritishcollege.com"],
+    "ChIJuU-MlnVt3hQRmOQbbDxWC7E": ["davidpeople.com"],
+    "ChIJH5DXxzIT3hQReHOENMB8bB4": ["kryolan.com"],
+    "ChIJJYL-HC0T3hQRA_pmh2Bb5Oc": ["merithotels.com"],
+    "ChIJQ7J5vVAT3hQRBqyDuBw3Sac": ["merithotels.com"],
+    "ChIJQyZYA9gN3hQR8k863ZjmJ0o": ["merithotels.com"],
+    "ChIJtV25VQDJ3xQRXUqQoK2WDHQ": ["emu.edu.tr", "medicine.emu.edu.tr"],
+    "ChIJ05nVfw0T3hQRGV5MVDQfaac": ["gau.edu.tr"],
+    "ChIJd6RmYTcX3hQRAgoGXAwWwbM": ["mebnet.net"],
+    "ChIJfZSrM9sQ3hQRVfR7kzkgC2Q": ["cobanogluclinic.com"],
+    "ChIJc0svKAAX3hQRs1tIjirGG9g": ["ktimo.org"],
+    "ChIJ34Q5yTAX3hQR0hIyqfj_HVY": ["ktimb.org"],
+    "ChIJdyvBSTsX3hQRNEiYq9FHaZ0": ["ktimb.org"],
+    "ChIJVyXwCGoX3hQRkgiepSFVi2M": ["ktimb.org"],
+    "ChIJp5ntUE4X3hQRSvMQhHxtJn8": ["rdu.edu.tr"],
+    "ChIJdVPnSBQR3hQRoX7cmN397Qw": ["neu.edu.tr"],
+    "ChIJB04DYgAN3hQRyXVg9NCJgCQ": ["eurocoastgroup.com"],
+    "ChIJYyuEXQDJ3xQRAKuD3dxEi0s": ["noyanlarinvest.com"],
+    "ChIJe46sm9Ns3hQRa1JnhYnEVIY": ["letamemar.com", "lefkosatanimerkezi.com"]
+  }
+}

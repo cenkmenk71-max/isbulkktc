@@ -1,0 +1,58 @@
+# İşBul KKTC — Frontend visual and product handoff
+
+**Revision:** Reference layout with refined editorial typography  
+**Date:** 22 October 2026  
+**Design source:** Supplied V3 material system  
+**Architecture source:** [Architecture V4](../architecture-v4.md)  
+**Implementation status:** Turkish and English public pages, account flows, company registration, and private candidate-profile editing are implemented. Job publishing, applications, CV file upload, and payments are not implemented.
+
+## Visual direction
+
+- The homepage uses only the six user-provided originals in `public/images/`: `Girne.webp` (3840 × 2500), `Gazimağusa.webp` (1216 × 684), `güzelyurt.jpg` (2048 × 1536), `iskele.jpg` (1638 × 2048), `lefkoşa.jpeg` (1920 × 1280), and `lefke.jpg` (1024 × 1024). Each is statically imported directly from that folder; the homepage no longer falls back to the older `assets-src` harbor photo or differently named district copies. `<Image>` serves responsive, on-demand WebP at quality 100 for homepage slides and sector cards, preserving as much detail as each supplied source allows. WebP is enforced because Next.js 16.4.2 internally scales its AVIF encoder quality parameter, which made AVIF output visibly softer when enlarged. If a browser does not accept WebP, Next.js returns the original source format. Next.js caches optimized variants rather than adding generated copies to the source tree. The provided Gazimağusa and Lefke originals have fewer source pixels than the other districts, so close zoom will show their native resolution limit; no optimizer can recover detail absent from an original.
+- The source photo is not retouched, composited, or pre-filtered. The layout uses a responsive cover crop; contrast/readability, warmth, vignette, and the metallic feature-strip texture remain independent frontend layers. The added edge-frame/foliage treatment is removed.
+- The homepage preserves the reference composition: overlay navigation, the original career headline, a two-route registration panel, and four featured sector cards (technology, education, healthcare, and tourism). A clearly labeled, keyboard-operable directory control opens the complete set of 16 in a full catalog; the four featured cards are hidden while that catalog is open, so each sector appears once in either view. Search covers localized names/descriptions and Turkish/English role synonyms, handles Turkish character normalization, and combines with three topic filters whose counts respond to the current search. The catalog reports singular/plural result counts, offers Escape and clear/reset controls, provides an actionable empty state, and adapts its image-card grid to the viewport without horizontal scrolling. Sector cards are informational rather than fake links; search and filter actions are real, and reduced-motion preferences are honored. The high-resolution sector JPG originals remain in `assets-src/sector-photos/` and are imported directly; the older lower-resolution duplicate WebP crops are no longer used. `next/image` serves responsive WebP variants at quality 100 for the homepage city slides and sector cards, without adding duplicate source files. The same card style is used throughout, with Turkish and English sector copy. No job-search form or sample search suggestions are shown while live listings are unavailable.
+- Vanadium, Crayon, and Shade Green remain the canonical palette. The layout uses opaque surfaces for forms and content cards, with restrained glass/metal treatments reserved for the header and decorative surfaces.
+- Typography uses Literata for expressive display headings, Geist for interface and body copy, and IBM Plex Sans Arabic for Persian RTL. Next.js self-hosts the selected script subsets at build time; public, account, and editorial pages keep bounded heading scales and readable line heights while controls remain highly legible.
+- **İşBul KKTC** is the canonical public brand spelling across the logo lockup, localized copy, package scene, and SEO/social metadata. Asset filenames remain unchanged; they are implementation details rather than visible brand copy.
+- Desktop, tablet, and narrow mobile layouts retain visible keyboard focus, reduced-motion support, and readable form controls.
+- The supplied page studies were used as visual references, with **isbul KKTC Web Tasarım Kolajı-23** selected for its consistent image-led page family and distinct account layouts. The main homepage hero photo, headline, navigation labels, and featured-sector composition remain unchanged. Registration, sign-in, password-recovery notice, company registration, and candidate-profile editing share the existing palette and high-resolution Kyrenia image; password recovery remains clearly unavailable until its email provider is configured.
+- Account entry pages provide an accessible candidate/employer choice on the same localized sign-in and registration routes. The selected audience changes the copy and post-auth destination; it is only a navigation preference, never an authorization role. Employer registration creates and verifies the contact account first, then opens the existing authenticated company-details form. Company ownership still comes only from the server-verified session and `create_company` RPC. The candidate workspace adds a live completion indicator derived from the signed-in user's editable headline, location, and skills; it updates as details are entered and does not imply a public profile, job search, or application feature.
+
+## Real user-facing flows
+
+- The homepage gives candidates a direct route to candidate registration and sends employers to the employer-selected account registration step before the authenticated company-details form. Reference navigation labels remain in place; the job-listings and packages labels do not render fictional listing results or package purchase controls.
+- The candidate workspace loads only the signed-in user's profile through the server DAL. Its Server Action validates headline, location, and up to 40 skills, takes the user ID from the verified session, and writes with the user's Supabase client. PostgreSQL RLS restricts access to the owner; profile visibility is kept private.
+- The independent-work page explains how the same working candidate profile can present a professional headline, location, and skills. Its calls to action lead to registration or sign-in; it does not present fictional providers, projects, filters, or earnings.
+- Candidate/company actions lead to implemented registration entry points. Job publishing/search, package purchasing, payment, and application processing remain unimplemented and are not simulated with demo data.
+
+## Search and sharing metadata
+
+- Public homepage and freelance pages have localized titles/descriptions, route-specific canonical URLs, reciprocal Turkish/English `hreflang` links, Open Graph metadata, and large-image Twitter cards. The social image is the original 3840 × 2500 Kyrenia harbor WebP.
+- The public `/packages` page retains its full-bleed editorial harbor hero, restrained emerald accents, and warm mineral background. Its 3D vending machine starts in a full view; selecting a profile rolls and drops its can, plays interaction audio, then dollies in and opens that profile's panel. Reduced-motion mode suppresses the automatic tour and pointer sway but preserves this finite, user-triggered vending sequence. The scene uses the existing site palette, loads only when visible, and has a static fallback; profile selection, terms, and registration remain usable without WebGL. The hero remains unobstructed and uses the original 3840 × 2500 harbor image.
+- The package scene uses the site's Geist type family with a clear display/body hierarchy, accessible 13–15 px control and supporting copy, and restrained emerald/mineral gradients on the selector, can labels, and machine signage. Ambient light drift and a slow selected-marker glint use transform/opacity animation and are disabled for reduced-motion users.
+- The employer profiles (Starter, Professional, Premium, and Corporate) retain their audience messaging and profile-specific scope headings. The DOM selector mirrors 3D selection for keyboard and assistive-technology users. The employer-registration CTA leads to the existing employer-selected registration flow. No package entitlement, price, quantity, duration, purchase action, or payment flow is invented; terms remain explicitly unpublished.
+- `NEXT_PUBLIC_APP_URL` is the canonical public origin; set it to the deployed HTTPS origin before building for production. The same origin is used by `sitemap.xml`, `robots.txt`, and secure auth callbacks. No production domain is assumed in source.
+- The sitemap lists the homepage, freelance, and package-information pages in the two implemented locales. Sign-in, registration, password recovery, candidate dashboard, and company registration carry `noindex`; `robots.txt` does not block them so crawlers can read that directive.
+
+## Product boundary
+
+The current candidate profile is not a complete CV builder or a public résumé. File upload, résumé parsing, public candidate discovery, job records, search, applications, employer directories, and payments remain outside the implemented slice. The interface does not claim these are available and contains no synthetic listings, example employers, salaries, regional counts, or simulated application success.
+
+The project uses Turkish and English. Other V4 target languages, RTL layouts, the homepage Three.js scene, and external integrations remain unimplemented. The package-page Three.js display is decorative: it does not set package terms, grant entitlements, or replace the accessible DOM controls.
+
+## Verification
+
+Run the focused source, unit, and E2E checks alongside the project's standard static checks:
+
+```bash
+npm run check:frontend-source
+npm run test:unit
+npm run test:e2e
+npm run lint
+npm run typecheck
+npm run build
+```
+
+The source gate checks the design palette and contrast pairs, uploaded-photo dimensions and delivery budget, WebP-first optimized image configuration, all 16 sector source/delivery images and their dimensions/budgets, the four featured/16-item catalog layout, retained hero treatment, active routes, private candidate-profile writes, bilingual key parity, and absence of synthetic demo copy. The E2E suite checks localized canonical/alternate URLs and social metadata, sitemap and robots output, private-page `noindex`, hero and sector photo delivery, locale copy and per-sector image mapping, bilingual sector search synonyms and diacritic handling, search-aware topic counts, empty-state recovery, disclosure keyboard interaction, independent overlay effects, real entry links, the profile-auth boundary, freelance-profile messaging and image delivery, localized registration/sign-in/recovery paths, password visibility, and narrow-viewport overflow.
+
+These frontend checks do not replace real Supabase RLS/pgTAP tests, assistive-technology review, production-service testing, or the release gates in Architecture V4.

@@ -1,0 +1,14 @@
+node_modules/
+.next/
+.next-*/
+.tools/
+.cache/
+.artifacts/
+.playwright/
+.playwright-cli/
+test-results/
+*.tsbuildinfo
+.env.local
+.vscode/
+supabase/.temp/
+supabase/.branches/

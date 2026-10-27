@@ -1,0 +1,2 @@
+-- Keep development data synthetic. Add explicit, repeatable fixtures here
+-- after the initial database schema and product data model are agreed.
