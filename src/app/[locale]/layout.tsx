@@ -3,7 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import { IBM_Plex_Sans_Arabic, Literata } from "next/font/google";
 import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -135,6 +135,9 @@ export default async function LocaleLayout({
     notFound();
   }
   setRequestLocale(locale);
+  const [messages] = await Promise.all([
+    getMessages(),
+  ]);
   const siteUrl = getAppBaseUrl();
   const websiteStructuredData = {
     "@context": "https://schema.org",
@@ -178,7 +181,7 @@ export default async function LocaleLayout({
       className={`${GeistSans.variable} ${GeistMono.variable} ${LiterataFont.variable} ${ArabicFont.variable}`}
     >
       <body className="flex min-h-svh flex-col">
-        <NextIntlClientProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{

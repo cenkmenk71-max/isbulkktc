@@ -86,7 +86,10 @@ export function AccountSceneMedia({
           loop
           muted
           playsInline
-          preload="none"
+          preload="auto"
+          onCanPlay={(e) => {
+            void e.currentTarget.play().catch(() => {});
+          }}
           onError={() => {
             setVideoError(true);
             setActiveVideoIndex(null);

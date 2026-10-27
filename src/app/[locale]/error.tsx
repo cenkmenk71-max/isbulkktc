@@ -11,7 +11,22 @@ type LocaleErrorProps = {
 }
 
 export default function LocaleError({ retry }: LocaleErrorProps) {
-  const t = useTranslations('AppError')
+  let t: (key: "eyebrow" | "title" | "body" | "retry" | "home") => string
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    t = useTranslations('AppError') as (
+      key: "eyebrow" | "title" | "body" | "retry" | "home",
+    ) => string
+  } catch {
+    const fallback: Record<string, string> = {
+      eyebrow: 'HATA',
+      title: 'Bir hata oluştu.',
+      body: 'İstenen sayfa yüklenirken beklenmeyen bir hata meydana geldi.',
+      retry: 'Yeniden dene',
+      home: 'Ana sayfaya dön',
+    }
+    t = (k) => fallback[k] ?? k
+  }
 
   return (
     <section className="page-container route-error" role="alert">

@@ -410,6 +410,7 @@
       "storyEyebrow": "SICHERER KONTOZUGANG",
       "storyTitle": "Ihre Zugangsdaten gehören Ihnen.",
       "storyBody": "Der Link zum Zurücksetzen wird nur an Ihre hinterlegte E-Mail-Adresse gesendet und ist nur kurze Zeit gültig.",
+      "unavailable": "Passwort-Wiederherstellung ist derzeit nicht verfügbar.",
       "expiredMessage": "Der Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen Link an."
     },
     "resetPassword": {

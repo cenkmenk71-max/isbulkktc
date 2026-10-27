@@ -182,9 +182,86 @@ function createFallbackJobFromSource(job: IskibrisSourceJob): PublicJobListing {
   });
 }
 
+const seededFallbackJobs: PublicJobListing[] = [
+  publicJobListingSchema.parse({
+    id: "50000000-0000-4000-8000-000000000017",
+    company_id: "40000000-0000-4000-8000-000000000017",
+    title: "Garson",
+    slug: "source-iskibris-garson",
+    summary:
+      "İskele'de otel restoranı için misafir memnuniyeti odaklı garson aranıyor.",
+    description:
+      "Pozisyon; misafirleri karşılamayı, siparişleri alıp servis ekibiyle koordine etmeyi ve masa düzenini korumayı kapsıyor.",
+    requirements:
+      "Turizm eğitimi veya 1–2 yıl benzer deneyim tercih ediliyor. İyi iletişim, misafir odaklılık, vardiyalı ve yoğun tempoda çalışma.",
+    responsibilities:
+      "Misafirleri karşılamak, siparişleri almak, servis ve mutfak koordinasyonunu sağlamak, masa düzeni ve hijyen standartlarını korumak.",
+    job_type: "full_time",
+    workplace_mode: "on_site",
+    district: "İskele",
+    published_at: "2026-09-15T14:09:09.000Z",
+    expires_at: "2026-11-14T13:34:42.000Z",
+    publication_source: "source_site",
+    source_site: null,
+    source_listing_url: null,
+    company: {
+      id: "40000000-0000-4000-8000-000000000017",
+      name: "Parvistamare Development",
+      slug: "source-iskibris-parvistamare-development",
+      profile_description: null,
+      categories: [],
+      website: null,
+      municipality: "İskele",
+      source_profile_url: null,
+      logo_url: null,
+    },
+  }),
+  publicJobListingSchema.parse({
+    id: "50000000-0000-4000-8000-000000000011",
+    company_id: "40000000-0000-4000-8000-000000000011",
+    title: "Muhasebe ve Denetim Personeli",
+    slug: "source-isbulkibris-muhasebe-denetim-personeli",
+    summary:
+      "Lefkoşa'da muhasebe ve denetim süreçlerine destek verecek personel aranıyor.",
+    description:
+      "Kaynak ilanı, finansal tabloları ve dönemsel vergi bildirimlerini bilen, muhasebe ofisi deneyimli bir çalışan arıyor. Kaynak çalışma çizelgesinde hafta içi 08:00-17:00 saatleri listeleniyor.",
+    requirements:
+      "KKTC'de ikamet; muhasebe eğitimi ve en az lise mezuniyeti; Expert muhasebe programı; en az 2 yıl ofis deneyimi; mali tablolar ve aylık vergi beyannameleri bilgisi. İngilizce avantaj.",
+    responsibilities:
+      "Muhasebe kayıtları, mali tablolar ve vergi bildirimleriyle ilgili çalışmalara destek vermek.",
+    job_type: "full_time",
+    workplace_mode: "on_site",
+    district: "Lefkoşa",
+    published_at: "2026-10-01T07:53:41.947Z",
+    expires_at: "2026-10-31T07:53:41.947Z",
+    publication_source: "source_site",
+    source_site: null,
+    source_listing_url: null,
+    company: {
+      id: "40000000-0000-4000-8000-000000000011",
+      name: "Fikri & Co Chartered Accountants",
+      slug: "source-isbulkibris-fikri-co-chartered-accountants",
+      profile_description:
+        "1979’da kurulan, ICAEW üyesi muhasebe ve denetim firması.",
+      categories: ["Muhasebe & Denetim"],
+      website: "https://www.fikrico.com/",
+      municipality: "Lefkoşa",
+      source_profile_url:
+        "https://isbulkibris.com/firmalar/fikri-co-chartered-accountants",
+      logo_url:
+        "https://api.isbulkibris.com/api/employer/logo/2fbccd9f-9949-4297-bdcc-a951f0a759a3",
+    },
+  }),
+];
+
 async function fetchFallbackPublicJobs(): Promise<PublicJobListing[]> {
-  const sourceJobs = await liveJobCatalogCache();
-  return sourceJobs.map(createFallbackJobFromSource);
+  try {
+    const sourceJobs = await liveJobCatalogCache();
+    const mapped = sourceJobs.map(createFallbackJobFromSource);
+    return [...seededFallbackJobs, ...mapped];
+  } catch {
+    return seededFallbackJobs;
+  }
 }
 
 async function searchFallbackPublicJobs(
@@ -406,14 +483,29 @@ export async function searchPublicJobPreviews(input: unknown) {
     return { previews, total, page, pageSize };
   } catch {
     const jobs = await fetchFallbackPublicJobs();
-    const fallbackPreviews = jobs.map((job) => ({
+    const query = filters.query.trim().toLocaleLowerCase("tr");
+    const filtered = jobs.filter((job) => {
+      const haystack = [job.title, job.company.name, job.summary, job.description]
+        .join(" ")
+        .toLocaleLowerCase("tr");
+      const matchesQuery = !query || haystack.includes(query);
+      const matchesDistrict = !filters.district || job.district === filters.district;
+      const matchesJobType = !filters.jobType || job.job_type === filters.jobType;
+      const matchesWorkplaceMode = !filters.workplaceMode || job.workplace_mode === filters.workplaceMode;
+      return matchesQuery && matchesDistrict && matchesJobType && matchesWorkplaceMode;
+    });
+
+    const total = filtered.length;
+    const page = Math.min(filters.page, Math.max(1, Math.ceil(total / pageSize) || 1));
+    const start = (page - 1) * pageSize;
+    const fallbackPreviews = filtered.slice(start, start + pageSize).map((job) => ({
       title: job.title,
       companyName: job.company.name,
     }));
     return {
       previews: fallbackPreviews,
-      total: fallbackPreviews.length,
-      page: filters.page,
+      total,
+      page,
       pageSize,
     };
   }
@@ -524,7 +616,7 @@ export async function getPublicJobCompanies(): Promise<PublicJobCompany[]> {
     return mergeJobCompaniesByName(z.array(publicJobCompanySchema).parse(data));
   } catch {
     const jobs = await fetchFallbackPublicJobs();
-    const companies = jobs.map((job) => ({
+    const companies: PublicJobCompany[] = jobs.map((job) => ({
       company_name: job.company.name,
       company_slug: job.company.slug,
       active_job_count: 1,
@@ -538,7 +630,21 @@ export async function getPublicJobCompanies(): Promise<PublicJobCompany[]> {
       source_listing_url: job.source_listing_url,
     }));
 
-    return mergeJobCompaniesByName(companies as PublicJobCompany[]);
+    companies.push({
+      company_name: "Fikri & Co Chartered Accountants",
+      company_slug: "source-isbulkibris-fikri-co-chartered-accountants",
+      active_job_count: 1,
+      profile_description: "1979’da kurulan, ICAEW üyesi muhasebe ve denetim firması.",
+      categories: ["Muhasebe & Denetim"],
+      website: "https://www.fikrico.com/",
+      municipality: "Lefkoşa",
+      source_profile_url: "https://isbulkibris.com/firmalar/fikri-co-chartered-accountants",
+      logo_url: "https://api.isbulkibris.com/api/employer/logo/2fbccd9f-9949-4297-bdcc-a951f0a759a3",
+      source_sites: ["isbulkibris"],
+      source_listing_url: null,
+    });
+
+    return mergeJobCompaniesByName(companies);
   }
 }
 

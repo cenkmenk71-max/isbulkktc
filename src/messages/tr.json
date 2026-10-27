@@ -390,6 +390,7 @@
       "storyEyebrow": "GÜVENLİ HESAP ERİŞİMİ",
       "storyTitle": "Erişim bilgileriniz size ait.",
       "storyBody": "Yenileme bağlantısı yalnızca kayıtlı e-posta adresinize gönderilir ve kısa süre geçerlidir.",
+      "unavailable": "Şifre yenileme şu anda kullanılamıyor.",
       "expiredMessage": "Şifre yenileme bağlantısı geçersiz veya süresi dolmuş. Lütfen yeni bir bağlantı isteyin."
     },
     "resetPassword": {

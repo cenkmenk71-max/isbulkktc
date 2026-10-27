@@ -390,6 +390,7 @@
       "storyEyebrow": "SECURE ACCOUNT ACCESS",
       "storyTitle": "Your credentials belong to you.",
       "storyBody": "The reset link is sent only to your registered email address and expires after a short time.",
+      "unavailable": "Password recovery is not available yet.",
       "expiredMessage": "This password reset link is invalid or has expired. Please request a new one."
     },
     "resetPassword": {

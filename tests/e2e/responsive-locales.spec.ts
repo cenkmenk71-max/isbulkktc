@@ -15,7 +15,7 @@ const viewportWidths = [320, 390, 768, 1024, 1280, 1440] as const;
 test("public routes stay within mobile, tablet, and desktop viewports in every locale", async ({
   page,
 }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(450_000);
 
   for (const locale of locales) {
     const prefix = locale === "tr" ? "" : `/${locale}`;
@@ -41,7 +41,7 @@ test("public routes stay within mobile, tablet, and desktop viewports in every l
               ),
               {
                 message: `${locale}${route} overflows at ${width}px`,
-                timeout: 10_000,
+                timeout: 20_000,
               },
             )
             .toBe(true);

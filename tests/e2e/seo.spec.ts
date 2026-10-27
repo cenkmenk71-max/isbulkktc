@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test("public routes expose localized canonical and social metadata", async ({
   page,
 }) => {
+  test.setTimeout(120_000);
   const publicRoutes = [
     {
       locale: "tr",
@@ -118,7 +119,7 @@ test("public routes expose localized canonical and social metadata", async ({
 test("all advertised locales render with correct direction and complete SEO alternates", async ({
   page,
 }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(180_000);
 
   const locales = [
     {

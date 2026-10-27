@@ -79,7 +79,7 @@ export async function AboutPageContent({ locale }: { locale: AppLocale }) {
             preload
             sizes="100vw"
             quality={85}
-            className="editorial-hero-background-image"
+            className="editorial-hero-background-image editorial-hero-aside-image"
           />
           <div className="editorial-hero-orbit" aria-hidden="true" />
           <div className="editorial-hero-copy">
@@ -197,7 +197,7 @@ export async function ContactPageContent({ locale }: { locale: AppLocale }) {
             preload
             sizes="100vw"
             quality={85}
-            className="editorial-hero-background-image"
+            className="editorial-hero-background-image editorial-hero-aside-image"
           />
           <div className="editorial-hero-orbit" aria-hidden="true" />
           <div className="editorial-hero-copy">
@@ -307,7 +307,7 @@ export async function BlogPageContent({ locale }: { locale: AppLocale }) {
             preload
             sizes="100vw"
             quality={85}
-            className="editorial-hero-background-image"
+            className="editorial-hero-background-image editorial-hero-aside-image"
           />
           <div className="editorial-hero-orbit" aria-hidden="true" />
           <div className="editorial-hero-copy">

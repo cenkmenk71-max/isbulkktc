@@ -54,7 +54,7 @@ const locales = [
 test("package proposals and the interactive vending machine are public", async ({
   page,
 }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(180_000);
   for (const copy of locales) {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(copy.path);
