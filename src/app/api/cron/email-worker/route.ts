@@ -116,6 +116,7 @@ export async function GET(req: NextRequest) {
         }
       } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : "ERR_SEND";
+        console.error("Email worker exception:", errorMsg);
         await supabase.rpc("finish_notification_email", {
           _outbox_id: item.outbox_id,
           _provider_message_id: null,

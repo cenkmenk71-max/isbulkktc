@@ -87,7 +87,7 @@ export function PackagesInteractiveShowcase({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedDuration, setSelectedDuration] = useState<ListingDuration>(30);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [sceneStarted, setSceneStarted] = useState(true);
+  const sceneStarted = true;
   const [sceneVisible, setSceneVisible] = useState(true);
   const [sceneUnavailable, setSceneUnavailable] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -123,7 +123,6 @@ export function PackagesInteractiveShowcase({
   );
 
   useEffect(() => {
-    setSceneStarted(true);
     const stage = stageRef.current;
     if (!stage) return;
     if (!("IntersectionObserver" in window)) {

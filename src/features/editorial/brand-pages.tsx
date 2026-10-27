@@ -338,7 +338,7 @@ export async function BlogPageContent({ locale }: { locale: AppLocale }) {
 
           {feed.articles.length > 0 ? (
             <div className="blog-article-grid">
-              {feed.articles.map((article, index) => {
+              {feed.articles.map((article) => {
                 const publishedAt = new Date(article.publishedAt);
                 const publishedDate = new Intl.DateTimeFormat(
                   {
@@ -355,6 +355,7 @@ export async function BlogPageContent({ locale }: { locale: AppLocale }) {
                 return (
                   <article className="blog-article-card" key={article.id}>
                     <div className="blog-article-image" aria-hidden="true">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={article.imageUrl ?? getArticleImage(article.title)}
                         alt=""
