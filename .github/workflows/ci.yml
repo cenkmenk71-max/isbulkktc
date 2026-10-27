@@ -69,14 +69,14 @@ jobs:
             printf 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=%s\n' "$key"
           } >> "$GITHUB_ENV"
 
+      - name: Apply migrations and run pgTAP tests
+        run: bun run test:db
+
       - name: Build
         run: bun run build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_APP_URL: "http://localhost:3000"
-
-      - name: Apply migrations and run pgTAP tests
-        run: bun run test:db
 
       - name: End-to-end tests against seeded Supabase
         run: bun run test:e2e
