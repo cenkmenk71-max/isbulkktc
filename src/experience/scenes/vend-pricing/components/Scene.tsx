@@ -97,10 +97,12 @@ function Director({
   onFrame,
   onReady,
   active,
+  labelsLoaded,
 }: {
   onFrame: (f: Frame) => void;
   onReady: (controls: { press: (index: number) => void; insertCoin: () => void; close: () => void } | null) => void;
   active: boolean;
+  labelsLoaded: boolean;
 }) {
   const { camera, invalidate } = useThree();
   const shots = useShots();
@@ -108,8 +110,8 @@ function Director({
   const reducedMotionFrame = useRef<number | null>(null);
 
   useEffect(() => {
-    if (active) invalidate();
-  }, [active, invalidate]);
+    invalidate();
+  }, [active, labelsLoaded, invalidate]);
 
   const animateReducedMotion = useMemo(
     () => () => {
@@ -329,7 +331,7 @@ export function Scene({
           ? CAPTURE || REDUCED_MOTION
             ? "demand"
             : "always"
-          : "never"
+          : "demand"
       }
       gl={{ antialias: true, preserveDrawingBuffer: true }}
       // Neutral tone mapping keeps the neon and the white cabinet true (ACES shifts them)
@@ -345,7 +347,12 @@ export function Scene({
       <directionalLight position={[3, 6, 5]} intensity={1.05} color="#fff3d6" />
       <Reflections />
       <PointerTracker />
-      <Director active={active} onFrame={handleFrame} onReady={onReady} />
+      <Director
+        active={active}
+        labelsLoaded={Boolean(labels)}
+        onFrame={handleFrame}
+        onReady={onReady}
+      />
       {labels && (
         <>
           <Displays labels={labels} />
