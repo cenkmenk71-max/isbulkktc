@@ -21,7 +21,13 @@ type ResolvedLocation = {
 };
 
 type Selection = {
-  component: string | null;
+  /** Ancestor components, closest first; the server resolves the first hit. */
+  chain: string[];
+  /** Literal `id`/class tokens used when the fiber chain cannot resolve. */
+  domId: string | null;
+  classes: string[];
+  ancestors: Array<{ id?: string; classes: string[] }>;
+  resolved: string | null;
   tag: string;
   domPath: string;
   props: Record<string, unknown>;
@@ -143,35 +149,44 @@ function findFiberKey(element: Element): string | undefined {
 
 /**
  * React names host elements by their tag but components by their function or
- * display name. Walking up `return` finds the nearest owner that has a name,
- * which is what a developer wants to see when they point at some markup.
+ * display name. Walking up `return` collects every ancestor component, from the
+ * closest outward.
+ *
+ * The whole chain matters: framework internals (Next's `SegmentViewNode`,
+ * `LayoutRouter`, …) sit between the markup and the app's own component, so the
+ * nearest name is frequently *not* the one a developer cares about. The server
+ * picks the first entry it can actually resolve to a file instead.
  */
-function componentNameFor(element: Element): string | null {
+function componentChainFor(element: Element): string[] {
   const key = findFiberKey(element);
-  if (!key) return null;
+  if (!key) return [];
 
   let fiber = (element as unknown as Record<string, unknown>)[key] as
     | { type?: unknown; return?: unknown }
     | undefined;
 
+  const chain: string[] = [];
   for (let depth = 0; fiber && depth < 60; depth += 1) {
     const type = fiber.type;
+    let name: string | undefined;
     if (typeof type === "function") {
       const named = type as { displayName?: string; name?: string };
-      const name = named.displayName || named.name;
-      if (name && /^[A-Z]/.test(name)) return name;
+      name = named.displayName || named.name;
     } else if (typeof type === "object" && type !== null) {
       // forwardRef/memo wrappers keep the name on `render` or `type`.
       const wrapper = type as {
         displayName?: string;
         render?: { displayName?: string; name?: string };
       };
-      const name = wrapper.displayName || wrapper.render?.displayName || wrapper.render?.name;
-      if (name && /^[A-Z]/.test(name)) return name;
+      name =
+        wrapper.displayName || wrapper.render?.displayName || wrapper.render?.name;
+    }
+    if (name && /^[A-Z]/.test(name) && !chain.includes(name)) {
+      chain.push(name);
     }
     fiber = fiber.return as typeof fiber;
   }
-  return null;
+  return chain;
 }
 
 function describeElement(element: Element): string {
@@ -271,8 +286,21 @@ export function ComponentInspector() {
   }, []);
 
   const describe = useCallback((element: Element): Selection => {
+    const ancestors: Array<{ id?: string; classes: string[] }> = [];
+    let parent = element.parentElement;
+    for (let depth = 0; parent && depth < 12; depth += 1) {
+      const classes = Array.from(parent.classList);
+      if (parent.id || classes.length > 0) {
+        ancestors.push({ id: parent.id || undefined, classes });
+      }
+      parent = parent.parentElement;
+    }
     return {
-      component: componentNameFor(element),
+      chain: componentChainFor(element),
+      domId: element.id || null,
+      classes: Array.from(element.classList),
+      ancestors,
+      resolved: null,
       tag: describeElement(element),
       domPath: domPathFor(element),
       props: propsFor(element),
@@ -282,24 +310,49 @@ export function ComponentInspector() {
   }, []);
 
   const resolveLocation = useCallback(async (selection: Selection) => {
-    if (!selection.component) return;
+    if (
+      selection.chain.length === 0 &&
+      !selection.domId &&
+      selection.classes.length === 0 &&
+      selection.ancestors.length === 0
+    ) {
+      setSelected((current) =>
+        current && current.domPath === selection.domPath
+          ? { ...current, resolved: null, lookup: "missing" }
+          : current,
+      );
+      return;
+    }
     setSelected((current) =>
       current && current.domPath === selection.domPath
         ? { ...current, lookup: "loading" }
         : current,
     );
     try {
-      const response = await fetch(
-        `/api/devtools/component?name=${encodeURIComponent(selection.component)}`,
-      );
+      const response = await fetch("/api/devtools/component", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          chain: selection.chain,
+          id: selection.domId,
+          classes: selection.classes,
+          ancestors: selection.ancestors,
+        }),
+      });
       const payload = (await response.json()) as {
         found?: boolean;
+        name?: string | null;
         location?: ResolvedLocation;
       };
       const location = payload.found && payload.location ? payload.location : null;
       setSelected((current) =>
         current && current.domPath === selection.domPath
-          ? { ...current, location, lookup: location ? "found" : "missing" }
+          ? {
+              ...current,
+              resolved: payload.name ?? null,
+              location,
+              lookup: location ? "found" : "missing",
+            }
           : current,
       );
     } catch {
@@ -408,7 +461,7 @@ export function ComponentInspector() {
     if (!selected) return;
     const location = selected.location;
     const report = [
-      `component: ${selected.component ?? "(unknown)"}`,
+      `component: ${selected.resolved ?? selected.chain[0] ?? "(unknown)"}`,
       `element:   ${selected.tag}`,
       location
         ? `source:    ${location.file}:${location.line}:${location.column} (${location.kind})`
@@ -454,7 +507,9 @@ export function ComponentInspector() {
         <div className="component-inspector-panel">
           <div className="component-inspector-row">
             <span className="component-inspector-label">Bileşen</span>
-            <code>{detail.component ?? "(bilinmiyor)"}</code>
+            <code>
+              {detail.resolved ?? detail.chain[0] ?? "(bilinmiyor)"}
+            </code>
           </div>
           <div className="component-inspector-row">
             <span className="component-inspector-label">Öğe</span>

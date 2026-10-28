@@ -6,6 +6,8 @@ import test from "node:test";
 import {
   buildComponentIndex,
   resolveComponent,
+  resolveComponentChain,
+  resolveDomProbe,
 } from "../../src/server/devtools/component-source";
 
 function withFixture(files: Record<string, string>, run: (root: string) => void) {
@@ -102,6 +104,128 @@ test("returns null for an unknown component name", () => {
     (root) => {
       const index = buildComponentIndex(root);
       assert.equal(resolveComponent(index, "Missing"), null);
+    },
+  );
+});
+
+test("chain resolution skips framework internals and stops at the app component", () => {
+  withFixture(
+    {
+      "src/components/home/hero.tsx":
+        "export function Hero() { return <h1>hi</h1>; }",
+    },
+    (root) => {
+      const index = buildComponentIndex(root);
+      const match = resolveComponentChain(index, [
+        "SegmentViewNode",
+        "LayoutRouter",
+        "Hero",
+        "Section",
+      ]);
+      assert.ok(match);
+      assert.equal(match.name, "Hero");
+      assert.equal(match.location.file, "src/components/home/hero.tsx");
+    },
+  );
+});
+
+test("chain resolution returns null when nothing in the chain is known", () => {
+  withFixture(
+    { "src/components/home/hero.tsx": "export function Hero() { return null; }" },
+    (root) => {
+      const index = buildComponentIndex(root);
+      assert.equal(
+        resolveComponentChain(index, ["SegmentViewNode", "LayoutRouter"]),
+        null,
+      );
+    },
+  );
+});
+
+test("indexes literal id and class attributes, ignoring dynamic values", () => {
+  withFixture(
+    {
+      "src/components/home/search.tsx": [
+        "export function Search() {",
+        '  return <section id="home-search" className="search shell">',
+        '    <input className={styles.field} />',
+        "  </section>;",
+        "}",
+      ].join("\n"),
+    },
+    (root) => {
+      const index = buildComponentIndex(root);
+      assert.ok(index.domHints["id:home-search"]);
+      assert.ok(index.domHints["class:search"]);
+      assert.ok(index.domHints["class:shell"]);
+      assert.equal(index.domHints["class:styles.field"], undefined);
+    },
+  );
+});
+
+test("DOM probe resolves a unique id to its enclosing component", () => {
+  withFixture(
+    {
+      "src/components/home/search.tsx": [
+        "export function Search() {",
+        '  return <section id="home-search"><h2>x</h2></section>;',
+        "}",
+      ].join("\n"),
+    },
+    (root) => {
+      const index = buildComponentIndex(root);
+      const match = resolveDomProbe(index, { id: "home-search" });
+      assert.ok(match);
+      assert.equal(match.name, "Search");
+      assert.equal(match.confident, true);
+    },
+  );
+});
+
+test("DOM probe walks ancestors when the element itself has no hints", () => {
+  withFixture(
+    {
+      "src/components/home/search.tsx": [
+        "export function Search() {",
+        '  return <label className="search-field"><input /></label>;',
+        "}",
+      ].join("\n"),
+    },
+    (root) => {
+      const index = buildComponentIndex(root);
+      const match = resolveDomProbe(index, {
+        id: "",
+        classes: [],
+        ancestors: [{ classes: ["search-field"] }],
+      });
+      assert.ok(match);
+      assert.equal(match.name, "Search");
+      assert.equal(match.confident, true);
+    },
+  );
+});
+
+test("DOM probe marks a class shared by many components as not confident", () => {
+  withFixture(
+    {
+      "src/components/a.tsx": "export function A() { return <div className=\"shell\">a</div>; }",
+      "src/components/b.tsx": "export function B() { return <div className=\"shell\">b</div>; }",
+    },
+    (root) => {
+      const index = buildComponentIndex(root);
+      const match = resolveDomProbe(index, { classes: ["shell"] });
+      assert.ok(match);
+      assert.equal(match.confident, false);
+    },
+  );
+});
+
+test("DOM probe returns null when nothing matches", () => {
+  withFixture(
+    { "src/components/a.tsx": "export function A() { return <div className=\"a\">a</div>; }" },
+    (root) => {
+      const index = buildComponentIndex(root);
+      assert.equal(resolveDomProbe(index, { classes: ["nope"] }), null);
     },
   );
 });
