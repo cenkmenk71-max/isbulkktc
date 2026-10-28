@@ -45,6 +45,7 @@ export type SignInFormState = {
     | "idle"
     | "invalid"
     | "signInFailed"
+    | "emailNotConfirmed"
     | "signUpFailed"
     | "verificationSent"
     | "oauthUnavailable"

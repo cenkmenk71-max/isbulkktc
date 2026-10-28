@@ -28,6 +28,56 @@ additional_redirect_urls = [
   "http://127.0.0.1:3000/**"
 ]
 jwt_expiry = 3600
+# Aligns with the application's zod schema and the on-screen password hint.
+# No composition rules are enforced on purpose: current guidance (NIST SP
+# 800-63B) prefers length plus breached-password screening over character-class
+# rules, which the hosted project enables in the Auth dashboard.
+minimum_password_length = 8
+password_requirements = ""
+
+[auth.rate_limit]
+# Bounds password-reset and signup-confirmation mail so the local stack mirrors
+# the abuse limits the hosted project is expected to enforce.
+email_sent = 30
+sms_sent = 30
+anonymous_users = 30
+token_refresh = 150
+sign_in_sign_ups = 30
+token_verifications = 30
+web3 = 30
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+# Requires a verified mailbox before a new account can sign in. The sign-up
+# action already handles both the confirmed and pending branches.
+enable_confirmations = true
+# secure_password_change is deliberately left off. It gates updateUser({password})
+# on a recent sign-in, and this repository's reset flow performs that update on a
+# recovery session. Enable it only after verifying the recovery path on a
+# non-production project (see docs/runbooks/production-launch.md).
+secure_password_change = false
+# Throttles repeated confirmation/recovery mail to the same address.
+max_frequency = "60s"
+otp_length = 6
+otp_expiry = 3600
+
+[auth.email.template.confirmation]
+subject = "İşBul KKTC e-posta adresinizi doğrulayın"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "İşBul KKTC şifre yenileme bağlantınız"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.reauthentication]
+subject = "İşBul KKTC doğrulama kodunuz"
+content_path = "./supabase/templates/reauthentication.html"
+
+[auth.email.notification.password_changed]
+enabled = true
+subject = "İşBul KKTC şifreniz güncellendi"
+content_path = "./supabase/templates/password-changed.html"
 
 [analytics]
 enabled = false

@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { EditorialFormPage } from "@/components/layout/editorial-form-page";
+import { PasswordResetForm } from "@/features/identity/password-reset-form";
 import { noIndexMetadata } from "@/lib/seo";
 
 export const metadata = noIndexMetadata;
@@ -25,9 +26,7 @@ export default async function ForgotPasswordPage({
       storyTitle={copy("storyTitle")}
       title={copy("title")}
     >
-      <p className="editorial-page-alert" aria-live="polite" role="status">
-        {copy("unavailable")}
-      </p>
+      <PasswordResetForm />
       {error === "expired" ? (
         <p className="editorial-page-alert" aria-live="polite" role="status">
           {copy("expiredMessage")}

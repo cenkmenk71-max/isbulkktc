@@ -116,7 +116,7 @@ test("registration, sign-in, and recovery pages stay localized and usable", asyn
             companyStep: "şirket bilgilerinizi ekleyeceğiniz kayıt formuna",
             audienceLabel: "Hesap türünüzü seçin",
             forgotPassword: "Şifrenizi mi unuttunuz?",
-            resetUnavailable: "Şifre yenileme şu anda kullanılamıyor.",
+            sendResetLink: "Şifre yenileme bağlantısı gönder",
           }
         : {
             title: "A considered start to your career journey.",
@@ -138,7 +138,7 @@ test("registration, sign-in, and recovery pages stay localized and usable", asyn
             companyStep: "form for your company details",
             audienceLabel: "Choose your account type",
             forgotPassword: "Forgot your password?",
-            resetUnavailable: "Password recovery is not available yet.",
+            sendResetLink: "Send reset link",
           };
 
     await page.goto(locale === "tr" ? "/tr/register" : "/en/register");
@@ -342,8 +342,13 @@ test("registration, sign-in, and recovery pages stay localized and usable", asyn
 
     await page.getByRole("link", { name: copy.forgotPassword }).click();
     await expect(page).toHaveURL(new RegExp(`${prefix}/forgot-password$`));
-    await expect(page.getByRole("status")).toContainText(copy.resetUnavailable);
-    await expect(page.getByRole("textbox")).toHaveCount(0);
+    // Password recovery is a working form, not a placeholder notice.
+    const resetEmail = page.getByLabel(copy.email, { exact: true });
+    await expect(resetEmail).toBeVisible();
+    await expect(resetEmail).toHaveAttribute("type", "email");
+    await expect(
+      page.getByRole("button", { name: copy.sendResetLink }),
+    ).toBeVisible();
 
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 844 });

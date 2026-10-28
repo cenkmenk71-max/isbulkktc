@@ -410,7 +410,6 @@
       "storyEyebrow": "SICHERER KONTOZUGANG",
       "storyTitle": "Ihre Zugangsdaten gehören Ihnen.",
       "storyBody": "Der Link zum Zurücksetzen wird nur an Ihre hinterlegte E-Mail-Adresse gesendet und ist nur kurze Zeit gültig.",
-      "unavailable": "Passwort-Wiederherstellung ist derzeit nicht verfügbar.",
       "expiredMessage": "Der Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen Link an."
     },
     "resetPassword": {
@@ -489,6 +488,7 @@
     "messages": {
       "invalid": "Prüfen Sie Ihre Angaben und versuchen Sie es erneut.",
       "signInFailed": "Anmeldung nicht möglich. Prüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.",
+      "emailNotConfirmed": "Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie sich anmelden. Öffnen Sie den Link in Ihrem Postfach.",
       "signUpFailed": "Konto konnte nicht erstellt werden. Prüfen Sie Ihre Angaben und versuchen Sie es erneut.",
       "verificationSent": "Verwenden Sie den Bestätigungslink aus Ihrer E-Mail, um fortzufahren.",
       "oauthUnavailable": "Diese Anmeldeoption ist noch nicht aktiviert. Verwenden Sie stattdessen E-Mail und Passwort.",
