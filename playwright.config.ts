@@ -32,11 +32,13 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      // The visual test suite includes an H.264 MP4 background. The branded
+      // Chrome channel provides the media codecs that stock Playwright Chromium omits.
+      use: { ...devices["Desktop Chrome"], channel: "chrome" },
     },
   ],
   webServer: {
-    command: process.env.CI ? "npm run start" : "npm run dev",
+    command: process.env.CI ? "node .next/standalone/server.js" : "npm run dev",
     url: readinessURL,
     env: {
       NEXT_PUBLIC_APP_URL: baseURL,

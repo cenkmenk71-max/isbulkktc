@@ -14,6 +14,17 @@ export async function proxy(request: NextRequest) {
   const isInternalLocaleRewrite = routing.locales.some(
     (locale) => locale === rewrittenLocale && locale === pathnameLocale,
   );
+
+  // With localePrefix="as-needed", the default locale must have a single public
+  // URL. Do this before locale routing so /tr/... cannot remain a duplicate URL
+  // or publish a prefixed canonical URL in metadata.
+  if (!isInternalLocaleRewrite && pathnameLocale === routing.defaultLocale) {
+    const url = request.nextUrl.clone();
+    const prefix = `/${routing.defaultLocale}`;
+    url.pathname = url.pathname.slice(prefix.length) || "/";
+    return NextResponse.redirect(url, 308);
+  }
+
   const response = isInternalLocaleRewrite
     ? NextResponse.next({ request })
     : handleI18nRouting(request);

@@ -191,7 +191,9 @@ test("registration, sign-in, and recovery pages stay localized and usable", asyn
     expect(sceneCopyGeometry.bottomGap).toBeGreaterThan(80);
     expect(sceneCopyGeometry.marginLeft).toBe("0px");
     expect(sceneCopyGeometry.backgroundImage).toContain("0.32");
-    await expect(sceneMedia.getByRole("group").getByRole("button")).toHaveCount(3);
+    await expect(sceneMedia.getByRole("group").getByRole("button")).toHaveCount(2);
+    await expect(sceneMedia.getByRole("button", { name: "Othello Kalesi" })).toBeVisible();
+    await expect(sceneMedia.getByRole("button", { name: "St. Hilarion Kalesi" })).toBeVisible();
     await expect(sceneMedia.locator("video")).toHaveCount(0);
     const headerBottom = await page
       .locator(".site-header")

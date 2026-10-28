@@ -232,7 +232,10 @@ test("package vending machine remains rendered when label canvas allocation fail
     { polling: 250, timeout: 20_000 },
   );
 
-  await page.locator(".packages-vend-accessible-controls button").nth(1).click();
+  // These twin controls are intentionally visually clipped, so exercise
+  // them with the keyboard as a real assistive-technology user would.
+  const growthControl = page.locator(".packages-vend-accessible-controls button").nth(1);
+  await growthControl.press("Enter");
   await expect(machine).toHaveAttribute("data-selected-package", "growth");
   await expect(page.locator(".vend-panel")).toBeVisible();
 });

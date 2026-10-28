@@ -9103,7 +9103,7 @@ main :where(p) {
   position: absolute;
   z-index: -1;
   top: -82px;
-  right: -82px;
+  right: 0;
   width: 180px;
   height: 180px;
   border-radius: 50%;
@@ -11958,6 +11958,11 @@ html[dir="rtl"] input[name="slug"] {
     z-index: 80;
     top: 78px;
     inset-inline: 0;
+    /* Override .page-container's fixed calculated width while absolutely positioned. */
+    width: auto;
+    max-width: 100%;
+    margin-inline: 0;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -12026,9 +12031,32 @@ html[dir="rtl"] input[name="slug"] {
   max-width: 100%;
 }
 
-.company-directory-card-top {
+.company-directory-card > *,
+.company-directory-card-top,
+.company-directory-card-details,
+.company-directory-location,
+.company-directory-card-actions {
+  box-sizing: border-box;
   min-width: 0;
+  max-width: 100%;
+}
+
+.company-directory-card-top {
   flex-wrap: wrap;
+}
+
+.company-directory-card-details,
+.company-directory-location {
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+}
+
+.company-directory-card h2,
+.company-directory-profile-description,
+.company-directory-secondary-category {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .company-directory-card-badges {

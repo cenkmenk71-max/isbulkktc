@@ -48,32 +48,23 @@ test("public routes stay within mobile, tablet, and desktop viewports in every l
         } catch (error) {
           const details = await page.evaluate(() => {
             const root = document.documentElement;
-            const offenders = [
-              ...document.body.querySelectorAll<HTMLElement>("*"),
-            ]
-              .map((element) => ({
-                element,
-                rect: element.getBoundingClientRect(),
-              }))
-              .filter(
-                ({ rect }) =>
-                  rect.right > root.clientWidth + 1 || rect.left < -1,
-              )
-              .slice(0, 8)
-              .map(
-                ({ element, rect }) =>
-                  `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ""}.${[...element.classList].join(".")} left=${Math.round(rect.left)} right=${Math.round(rect.right)}`,
-              );
-            const scrollables = [
-              ...document.body.querySelectorAll<HTMLElement>("*"),
-            ]
+            const describe = (element: HTMLElement) => {
+              const rect = element.getBoundingClientRect();
+              return `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ""}.${[...element.classList].join(".")} rect=${Math.round(rect.left)}..${Math.round(rect.right)} scroll=${element.scrollWidth}/${element.clientWidth}`;
+            };
+            const elements = [...document.body.querySelectorAll<HTMLElement>("*")];
+            const offenders = elements
+              .map((element) => ({ element, rect: element.getBoundingClientRect() }))
+              .filter(({ rect }) => rect.right > root.clientWidth + 1 || rect.left < -1)
+              .sort((a, b) => Math.max(b.rect.right - root.clientWidth, -b.rect.left) - Math.max(a.rect.right - root.clientWidth, -a.rect.left))
+              .slice(0, 10)
+              .map(({ element }) => describe(element));
+            const scrollables = elements
               .filter((element) => element.scrollWidth > element.clientWidth + 1)
-              .slice(0, 5)
-              .map(
-                (element) =>
-                  `${element.tagName.toLowerCase()}.${[...element.classList].join(".")} scroll=${element.scrollWidth}/${element.clientWidth}`,
-              );
-            return `dir=${root.dir}; document=${root.scrollWidth}/${root.clientWidth}; ${offenders.join(", ")}; scrollables=${scrollables.join(", ")}`;
+              .sort((a, b) => (b.scrollWidth - b.clientWidth) - (a.scrollWidth - a.clientWidth))
+              .slice(0, 10)
+              .map(describe);
+            return `url=${location.pathname}; dir=${root.dir}; document=${root.scrollWidth}/${root.clientWidth}; offenders=${offenders.join(" | ")}; scrollables=${scrollables.join(" | ")}`;
           });
           throw new Error(`${String(error)}\nOverflow details: ${details}`);
         }
