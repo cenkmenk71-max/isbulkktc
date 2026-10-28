@@ -8681,6 +8681,12 @@ main :where(p) {
 .employer-logo.employer-logo-wide {
   width: calc(var(--logo-tile) * var(--logo-ratio, 1.75));
 }
+/* Portrait artwork: narrow the tile to the same optical rule as the wide chip,
+   so a tall logo fills its box on the dominant axis instead of floating small
+   inside a square. */
+.employer-logo.employer-logo-narrow {
+  width: calc(var(--logo-tile) * var(--logo-ratio, 0.75));
+}
 .employer-logo-image {
   background: linear-gradient(150deg, #ffffff 0%, var(--surface-raised) 100%);
 }
