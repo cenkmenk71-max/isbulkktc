@@ -114,6 +114,32 @@ branch by itself starts nothing — open a PR to get a run.
   tsconfig.json next-env.d.ts` afterwards, or the diff will carry unrelated
   config churn.
 
+- **The visual layer has two guards; a styling change is not done until both
+  pass.** `tests/e2e/accessibility.spec.ts` runs axe-core (`@axe-core/playwright`)
+  over every public route in all six locales — mobile everywhere, desktop only
+  for `tr`/`de`/`fa` (shared layout; `de` longest strings, `fa` RTL).
+  `tests/unit/design-tokens.test.ts` holds the token contract: WCAG contrast
+  floors, palette anchors, radius/type-scale sanity, and a ratchet against new
+  hardcoded hex values outside `@theme`. When you legitimately add a colour,
+  move it into `@theme` instead of appending to
+  `tests/unit/design-token-drift.baseline.json` (that list may only shrink).
+
+- **Accessible names must contain the visible text (WCAG 2.5.3).** Four real
+  violations shipped before the axe guard existed, and none were visible to the
+  eye: the brand lockup renders as `İşBul KKTC` but a `flex-direction: column`
+  drops the whitespace, so its DOM text was the concatenated `İşBulKKTC`; the
+  language `<summary>` shows `TR` while its `aria-label` was just
+  `Arayüz dili`; the vend sound button showed `FX` under an unrelated label;
+  company map links showed `Haritada gör 1` but omitted the suffix. Prefer
+  dropping a redundant `aria-label` over writing a longer one — an element with
+  no `aria-label` uses its visible text and cannot mismatch.
+
+- **Prove a "no visual change" claim with pixels, not prose.** Screenshot the
+  element before and after (Playwright `locator.screenshot` at
+  `deviceScaleFactor: 2`) and diff the raw buffers with `sharp`. The
+  accessibility fixes above measured `0/343040` pixels changed on the header,
+  which is what made "the design is untouched" a fact rather than a hope.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know
