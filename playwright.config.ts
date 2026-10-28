@@ -14,6 +14,9 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "retain-on-failure",
+    // The visual-motion E2E tests assert animated states; tests for reduced motion
+    // explicitly emulate that preference so the suite is deterministic in CI.
+    reducedMotion: "no-preference",
     launchOptions: {
       // GitHub-hosted Linux runners may not expose a physical GPU. Use Chromium's
       // software WebGL implementation so the 3D scene and fallback path are exercised.
