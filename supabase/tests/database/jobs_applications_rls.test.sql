@@ -1,5 +1,13 @@
 begin;
 
+-- The local stack seeds real source listings (supabase/seed-source-jobs.sql)
+-- before this suite runs. The assertions below count only the fixtures defined
+-- in this file, so remove any committed source data first; the transaction
+-- rolls back, leaving the seed intact for the E2E run that follows.
+delete from public.job_source_imports;
+delete from public.jobs where publication_source = 'source_site';
+delete from public.companies where slug like 'source-%';
+
 select plan(70);
 
 insert into auth.users (id, email, raw_user_meta_data)
