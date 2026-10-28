@@ -76,6 +76,24 @@ branch by itself starts nothing — open a PR to get a run.
   `emailNotConfirmed` message; do not fold it back into the generic
   `signInFailed` copy.
 
+- **React 19 hides component source locations from the browser.** The component
+  inspector reads a component name off `fiber.type` (still available), but
+  `fiber._debugSource` no longer exists and Turbopack leaves `_debugStack`
+  empty. Source `file:line` therefore comes from the server:
+  `src/server/devtools/component-source.ts` parses `src/**/*.tsx` with the
+  TypeScript compiler API and `GET /api/devtools/component?name=...` answers
+  with the declaration site. The route returns **404 outside development**;
+  keep it that way so it cannot leak filesystem paths from a deployed build.
+
+- **Dev-only UI must be gated by a static `process.env.NODE_ENV` check.**
+  A bare `dynamic(() => import(...))` still emits a chunk into the production
+  bundle. Wrapping the `dynamic()` call in
+  `process.env.NODE_ENV === "development" ? ... : () => null` lets the minifier
+  drop the unreachable `import()`, and the inspector's styles live inside the
+  component (injected `<style>`) rather than in `global.css` for the same
+  reason. Verify with
+  `grep -rl "component-inspector" <distDir>/static/` after a build.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know
