@@ -50,6 +50,9 @@ test("global display typography follows each locale's writing system", async ({
 test("shared navigation stays usable across locale-specific desktop widths", async ({
   page,
 }) => {
+  // Six locales are visited in one test and the default-locale homepage runs
+  // animated 3D scenes; software WebGL in CI needs more than the 60s default.
+  test.setTimeout(120_000);
   for (const { path, locale } of localeDisplayFonts) {
     await page.setViewportSize({ width: 1200, height: 900 });
     await page.goto(path);
