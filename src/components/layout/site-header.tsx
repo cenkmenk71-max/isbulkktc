@@ -67,7 +67,9 @@ export function SiteHeader() {
           </nav>
           <div className="header-actions">
             <details className="language-picker">
-              <summary className="language-switch" aria-label={languageCopy('title')}>
+              {/* The locale code is the visible label, so the accessible name
+                  must contain it; a bare "Interface language" fails WCAG 2.5.3. */}
+              <summary className="language-switch" aria-label={`${languageCopy('title')}: ${locale.toUpperCase()}`}>
                 <Globe size={15} aria-hidden="true" /><span>{locale.toUpperCase()}</span><ChevronDown size={12} aria-hidden="true" />
               </summary>
               <div className="language-menu" aria-label={languageCopy('title')}>

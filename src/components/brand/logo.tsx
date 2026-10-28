@@ -28,8 +28,12 @@ export function Logo({ className, tone = 'light' }: LogoProps) {
         height={766}
         sizes="(max-width: 740px) 48px, 68px"
       />
+      {/* The explicit space keeps the visible text ("İşBul KKTC") a substring of
+          the accessible name; a flex column never renders it, so the lockup
+          looks identical. Without it the concatenated "İşBulKKTC" fails WCAG
+          2.5.3 Label in Name. */}
       <span className="brand-wordmark" aria-hidden="true">
-        <strong>İşBul</strong>
+        <strong>İşBul</strong>{" "}
         <small>KKTC</small>
       </span>
     </span>

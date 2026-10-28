@@ -328,7 +328,7 @@ export function CompanyDirectory({
                     const locationSuffix =
                       company.locations.length > 1 ? ` ${index + 1}` : "";
                     const mapLabel = [
-                      t("mapLink"),
+                      `${t("mapLink")}${locationSuffix}`,
                       company.name,
                       location.address,
                       getNorthernCyprusDistrictForLocation(location),
