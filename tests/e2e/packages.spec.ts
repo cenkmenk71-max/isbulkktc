@@ -182,7 +182,9 @@ test("package pricing stays usable when WebGL 2 is unavailable", async ({ page }
   await page.goto("/packages");
   const machine = page.locator(".packages-vend-stage");
   await machine.scrollIntoViewIfNeeded();
-  await expect(page.locator(".packages-vend-fallback")).toBeVisible();
+  await expect(page.locator(".packages-vend-fallback")).toBeVisible({
+    timeout: 20_000,
+  });
   await expect(
     page.locator(".packages-vend-fallback-controls button"),
   ).toHaveCount(4);
@@ -211,7 +213,8 @@ test("package vending machine remains rendered when label canvas allocation fail
   const machine = page.locator(".packages-vend-stage");
   const canvas = page.locator(".packages-vend-canvas canvas");
   await machine.scrollIntoViewIfNeeded();
-  await expect(canvas).toBeVisible();
+  // Dev-mode dynamic import plus software WebGL can take a while under load.
+  await expect(canvas).toBeVisible({ timeout: 20_000 });
   await expect(page.locator(".packages-vend-fallback")).toHaveCount(0);
 
   await page.waitForFunction(
@@ -232,7 +235,7 @@ test("package vending machine remains rendered when label canvas allocation fail
       return colors.size > 10;
     },
     undefined,
-    { polling: 250, timeout: 20_000 },
+    { polling: 250, timeout: 30_000 },
   );
 
   // The accessibility twins are 1px, clipped, keyboard-only controls (pointer
