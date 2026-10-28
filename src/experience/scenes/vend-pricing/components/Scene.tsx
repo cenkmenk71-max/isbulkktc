@@ -253,7 +253,6 @@ function Reflections() {
         "[packages-vend] reflection setup failed; continuing without environment reflections.",
         error,
       );
-      // eslint-disable-next-line react-hooks/immutability
       scene.environment = null;
       scene.environmentIntensity = 0;
     }

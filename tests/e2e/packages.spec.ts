@@ -108,7 +108,8 @@ test("package proposals and the interactive vending machine are public", async (
     await expect(page.locator(".packages-vend-fallback-controls button")).toHaveCount(4);
     await page.locator(".packages-vend-fallback-controls button").nth(1).click();
     await expect(machine).toHaveAttribute("data-selected-package", "growth");
-    await expect(page.locator(".vend-panel")).toBeVisible();
+    // Panel opening is driven by the 3D frame loop; software renderers need slack.
+    await expect(page.locator(".vend-panel")).toBeVisible({ timeout: 15_000 });
   } else {
     await expect(
       page.locator(".packages-vend-accessible-controls button"),
@@ -117,6 +118,9 @@ test("package proposals and the interactive vending machine are public", async (
 
     // A visible stage or hidden accessibility buttons do not prove the WebGL
     // scene rendered. Sample the actual canvas framebuffer for non-uniform pixels.
+    // Do not call canvas.getContext() here: probing before React Three Fiber
+    // mounts its renderer would create the context first, without
+    // preserveDrawingBuffer, and every later readback would be blank.
     await page.waitForFunction(
       () => {
         const canvasElement = document.querySelector<HTMLCanvasElement>(
@@ -129,8 +133,6 @@ test("package proposals and the interactive vending machine are public", async (
         ) {
           return false;
         }
-        const gl = canvasElement.getContext("webgl2");
-        if (!gl || gl.isContextLost()) return false;
 
         // Downsample the preserved WebGL output to a tiny 32x32 probe. This verifies
         // real non-uniform pixels without allocating a full-resolution framebuffer copy
@@ -149,7 +151,7 @@ test("package proposals and the interactive vending machine are public", async (
         return colors.size > 10;
       },
       undefined,
-      { polling: 250, timeout: 20_000 },
+      { polling: 250, timeout: 30_000 },
     );
 
     await page.locator(".packages-vend-accessible-controls button").nth(1).focus();
@@ -180,13 +182,16 @@ test("package pricing stays usable when WebGL 2 is unavailable", async ({ page }
   await page.goto("/packages");
   const machine = page.locator(".packages-vend-stage");
   await machine.scrollIntoViewIfNeeded();
-  await expect(page.locator(".packages-vend-fallback")).toBeVisible();
+  await expect(page.locator(".packages-vend-fallback")).toBeVisible({
+    timeout: 20_000,
+  });
   await expect(
     page.locator(".packages-vend-fallback-controls button"),
   ).toHaveCount(4);
   await page.locator(".packages-vend-fallback-controls button").nth(1).click();
   await expect(machine).toHaveAttribute("data-selected-package", "growth");
-  await expect(page.locator(".vend-panel")).toBeVisible();
+  // Panel opening is driven by the 3D frame loop; software renderers need slack.
+  await expect(page.locator(".vend-panel")).toBeVisible({ timeout: 15_000 });
 });
 
 
@@ -208,7 +213,8 @@ test("package vending machine remains rendered when label canvas allocation fail
   const machine = page.locator(".packages-vend-stage");
   const canvas = page.locator(".packages-vend-canvas canvas");
   await machine.scrollIntoViewIfNeeded();
-  await expect(canvas).toBeVisible();
+  // Dev-mode dynamic import plus software WebGL can take a while under load.
+  await expect(canvas).toBeVisible({ timeout: 20_000 });
   await expect(page.locator(".packages-vend-fallback")).toHaveCount(0);
 
   await page.waitForFunction(
@@ -229,13 +235,14 @@ test("package vending machine remains rendered when label canvas allocation fail
       return colors.size > 10;
     },
     undefined,
-    { polling: 250, timeout: 20_000 },
+    { polling: 250, timeout: 30_000 },
   );
 
-  // These twin controls are intentionally visually clipped, so exercise
-  // them with the keyboard as a real assistive-technology user would.
-  const growthControl = page.locator(".packages-vend-accessible-controls button").nth(1);
-  await growthControl.press("Enter");
+  // The accessibility twins are 1px, clipped, keyboard-only controls (pointer
+  // users click the 3D machine itself), so activate them the way they are used.
+  await page.locator(".packages-vend-accessible-controls button").nth(1).focus();
+  await page.keyboard.press("Enter");
   await expect(machine).toHaveAttribute("data-selected-package", "growth");
-  await expect(page.locator(".vend-panel")).toBeVisible();
+  // Panel opening is driven by the 3D frame loop; software renderers need slack.
+  await expect(page.locator(".vend-panel")).toBeVisible({ timeout: 15_000 });
 });

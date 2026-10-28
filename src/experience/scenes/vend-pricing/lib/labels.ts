@@ -75,8 +75,11 @@ function texture(
   c.height = h * scale;
   const context = c.getContext("2d");
   if (!context) {
+    // Large label canvases can be refused in memory-constrained browsers. Fail
+    // with a descriptive error so the caller can retry at a smaller scale or
+    // fall back to DataTextures instead of surfacing a WeakMap TypeError.
     throw new Error(
-      "Canvas 2D context unavailable while creating a " + c.width + "x" + c.height + " label texture.",
+      `[packages-vend] 2D canvas context unavailable for a ${c.width}x${c.height} label texture`,
     );
   }
   logicalCanvases.set(context, { width: w, height: h, scale });
