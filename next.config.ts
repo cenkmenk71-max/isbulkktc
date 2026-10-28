@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
+  allowedDevOrigins: (process.env.NEXT_ALLOWED_DEV_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   experimental: {
     agentUpgrade: "security",
   },
