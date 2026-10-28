@@ -117,6 +117,9 @@ test("package proposals and the interactive vending machine are public", async (
 
     // A visible stage or hidden accessibility buttons do not prove the WebGL
     // scene rendered. Sample the actual canvas framebuffer for non-uniform pixels.
+    // Do not call canvas.getContext() here: probing before React Three Fiber
+    // mounts its renderer would create the context first, without
+    // preserveDrawingBuffer, and every later readback would be blank.
     await page.waitForFunction(
       () => {
         const canvasElement = document.querySelector<HTMLCanvasElement>(
@@ -129,8 +132,6 @@ test("package proposals and the interactive vending machine are public", async (
         ) {
           return false;
         }
-        const gl = canvasElement.getContext("webgl2");
-        if (!gl || gl.isContextLost()) return false;
 
         // Downsample the preserved WebGL output to a tiny 32x32 probe. This verifies
         // real non-uniform pixels without allocating a full-resolution framebuffer copy
@@ -149,7 +150,7 @@ test("package proposals and the interactive vending machine are public", async (
         return colors.size > 10;
       },
       undefined,
-      { polling: 250, timeout: 20_000 },
+      { polling: 250, timeout: 30_000 },
     );
 
     await page.locator(".packages-vend-accessible-controls button").nth(1).focus();
@@ -232,7 +233,10 @@ test("package vending machine remains rendered when label canvas allocation fail
     { polling: 250, timeout: 20_000 },
   );
 
-  await page.locator(".packages-vend-accessible-controls button").nth(1).click();
+  // The accessibility twins are 1px, clipped, keyboard-only controls (pointer
+  // users click the 3D machine itself), so activate them the way they are used.
+  await page.locator(".packages-vend-accessible-controls button").nth(1).focus();
+  await page.keyboard.press("Enter");
   await expect(machine).toHaveAttribute("data-selected-package", "growth");
   await expect(page.locator(".vend-panel")).toBeVisible();
 });

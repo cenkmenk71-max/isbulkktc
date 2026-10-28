@@ -55,3 +55,25 @@ WebGL destekli gerçek tarayıcıda `/packages` sayfasını da açıp otomatın 
 ## Sonuç
 
 Kod düzeyinde tespit edilen boş-sahne hata yolu kapatıldı ve texture sorunu olsa bile 3D geometriyi koruyan bir düşük ayrıntı modu eklendi. Kaynak/transpile kontrolleri geçti. Ancak bağımlılık kurulumu tamamlanamadığı için full production build ve gerçek browser E2E doğrulaması henüz yok; bu nedenle canlı tarayıcıda yüzde yüz doğrulanmış olduğu iddia edilmiyor.
+
+## Doğrulama kaydı — 28 Ekim 2026
+
+Bağımlılıklar `npm ci` ile kuruldu; yukarıdaki "kurulum tamamlanamadı" notu yalnız o günkü ortam için geçerlidir.
+
+Çalıştırılan kontroller (hepsi bu checkout üzerinde):
+
+- `npm ci` — **PASS**
+- `npm run lint` — **PASS** (0 hata, 0 uyarı; `Scene.tsx` içindeki kullanılmayan `react-hooks/immutability` direktifi kaldırıldı)
+- `npm run typecheck` — **PASS**
+- `npm run test:unit` — **PASS** (83/83)
+- `npm run check:frontend-source` — **PASS**
+- `npm run build` — **PASS**
+- `node scripts/run-playwright.mjs test tests/e2e/packages.spec.ts` — **PASS** (3/3, Chromium + WebGL 2, gerçek framebuffer okuması)
+
+E2E çalışmasında bulunan ve düzeltilen iki test/kod sorunu:
+
+1. Framebuffer yoklaması `canvas.getContext("webgl2")` çağırıyordu. Yoklama React Three Fiber renderer'ı kurmadan önce çalıştığında bu çağrı bağlamı `preserveDrawingBuffer: false` ile oluşturuyor; sonraki tüm `drawImage` okumaları boş (tek renk) dönüyordu. Kanıt: erken çağrıda `preserve=false`, yoklamada `390x844` boyuta rağmen `colors=1`; geç çağrıda `preserve=true`, `colors=449`. Yoklama artık bağlam oluşturmuyor, yalnızca mevcut canvas'ı örnekliyor (30 sn tolerans).
+2. `.packages-vend-control-twin` düğmeleri 1 px, `clip-path` ile gizlenmiş klavye ekran okuyucu kontrolleridir; işaretçi tıklaması üst kapsayıcı tarafından engellenir. Test bunları gerçek kullanım biçimine uygun olarak `focus()` + `Enter` ile etkinleştirir.
+
+Ek olarak `labels.ts` içindeki `texture()` fonksiyonu, 2D bağlam alınamadığında `WeakMap` kaynaklı belirsiz `TypeError` yerine canvas boyutunu içeren açıklayıcı bir hata fırlatır; düşük ayrıntı moduna geçiş aynı kalır.
+
