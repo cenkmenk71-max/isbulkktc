@@ -12,6 +12,8 @@ steps locally. Run them in this order:
 
 - `npm run lint`
 - `npm run typecheck`
+- `npm run check:frontend-source` (design gate: palette tokens, contrast
+  pairs, uploaded-photo budgets, locale routing — 175 assertions)
 - `npm run test:unit`
 - `npm run build`, then `npm run test:e2e` (E2E runs against the production
   standalone server at `.next/standalone/server.js`)
