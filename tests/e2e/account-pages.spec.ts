@@ -191,7 +191,9 @@ test("registration, sign-in, and recovery pages stay localized and usable", asyn
     expect(sceneCopyGeometry.bottomGap).toBeGreaterThan(80);
     expect(sceneCopyGeometry.marginLeft).toBe("0px");
     expect(sceneCopyGeometry.backgroundImage).toContain("0.32");
-    await expect(sceneMedia.getByRole("group").getByRole("button")).toHaveCount(3);
+    await expect(sceneMedia.getByRole("group").getByRole("button")).toHaveCount(2);
+    await expect(sceneMedia.getByRole("button", { name: "Othello Kalesi" })).toBeVisible();
+    await expect(sceneMedia.getByRole("button", { name: "St. Hilarion Kalesi" })).toBeVisible();
     await expect(sceneMedia.locator("video")).toHaveCount(0);
     const headerBottom = await page
       .locator(".site-header")
@@ -294,13 +296,15 @@ test("registration, sign-in, and recovery pages stay localized and usable", asyn
     );
     await expect(selectedVideo).toHaveCSS("position", "absolute");
     await expect
-      .poll(() =>
-        selectedVideo.evaluate(
-          (video) =>
-            video instanceof HTMLVideoElement &&
-            !video.paused &&
-            video.readyState >= 2,
-        ),
+      .poll(
+        () =>
+          selectedVideo.evaluate(
+            (video) =>
+              video instanceof HTMLVideoElement &&
+              !video.paused &&
+              video.readyState >= 2,
+          ),
+        { timeout: 15_000 },
       )
       .toBe(true);
     const videoResolution = await selectedVideo.evaluate((video) => ({

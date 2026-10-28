@@ -14,20 +14,36 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "retain-on-failure",
+    // The visual-motion E2E tests assert animated states; tests for reduced motion
+    // explicitly emulate that preference so the suite is deterministic in CI.
+    reducedMotion: "no-preference",
+    launchOptions: {
+      // GitHub-hosted Linux runners may not expose a physical GPU. Use Chromium's
+      // software WebGL implementation so the 3D scene and fallback path are exercised.
+      args: [
+        "--enable-webgl",
+        "--ignore-gpu-blocklist",
+        "--use-gl=angle",
+        "--use-angle=swiftshader",
+        "--enable-unsafe-swiftshader",
+      ],
+    },
   },
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      // The visual test suite includes an H.264 MP4 background. The branded
+      // Chrome channel provides the media codecs that stock Playwright Chromium omits.
+      use: { ...devices["Desktop Chrome"], channel: "chrome" },
     },
   ],
   webServer: {
-    command: "npm run dev",
+    command: process.env.CI ? "node .next/standalone/server.js" : "npm run dev",
     url: readinessURL,
     env: {
       NEXT_PUBLIC_APP_URL: baseURL,
       AUTH_OAUTH_PROVIDERS: process.env.PLAYWRIGHT_AUTH_OAUTH_PROVIDERS ?? "",
-      NEXT_DIST_DIR: ".next-playwright",
+      ...(process.env.CI ? {} : { NEXT_DIST_DIR: ".next-playwright" }),
       PORT: port,
     },
     reuseExistingServer: !process.env.CI,

@@ -9103,7 +9103,7 @@ main :where(p) {
   position: absolute;
   z-index: -1;
   top: -82px;
-  right: -82px;
+  right: 0;
   width: 180px;
   height: 180px;
   border-radius: 50%;
@@ -11917,8 +11917,9 @@ html[dir="rtl"] input[name="slug"] {
     gap: clamp(8px, 1.2vw, 16px);
   }
   .desktop-nav {
-    gap: clamp(7px, 0.8vw, 13px);
-    margin-left: clamp(8px, 1.2vw, 20px);
+    /* Long Greek/German labels must still fit at the 1201px desktop breakpoint. */
+    gap: clamp(6px, 0.7vw, 13px);
+    margin-left: clamp(8px, 1vw, 20px);
   }
   .desktop-nav a {
     font-size: clamp(10.5px, 0.85vw, 12px);
@@ -11927,7 +11928,7 @@ html[dir="rtl"] input[name="slug"] {
     gap: clamp(6px, 0.75vw, 10px);
   }
   .header-actions .header-post {
-    padding-inline: clamp(9px, 0.9vw, 15px);
+    padding-inline: clamp(8px, 0.7vw, 15px);
     font-size: clamp(10.5px, 0.85vw, 12px);
   }
 }
@@ -11958,6 +11959,11 @@ html[dir="rtl"] input[name="slug"] {
     z-index: 80;
     top: 78px;
     inset-inline: 0;
+    /* Override .page-container's fixed calculated width while absolutely positioned. */
+    width: auto;
+    max-width: 100%;
+    margin-inline: 0;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -12015,4 +12021,78 @@ html[dir="rtl"] input[name="slug"] {
     color: var(--surface-raised);
     font-weight: 650;
   }
+}
+
+
+/* Prevent narrow company-directory cards from forcing horizontal scroll. */
+.company-directory-grid > .company-directory-card {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.company-directory-card > *,
+.company-directory-card-top,
+.company-directory-card-details,
+.company-directory-location,
+.company-directory-card-actions {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.company-directory-card-top {
+  flex-wrap: wrap;
+}
+
+.company-directory-card-details,
+.company-directory-location {
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+}
+
+.company-directory-card h2,
+.company-directory-profile-description,
+.company-directory-secondary-category {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.company-directory-card-badges {
+  flex: 1 1 120px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.company-directory-category {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.company-directory-card-details,
+.company-directory-location,
+.company-directory-card-actions {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.company-directory-card-details p > span,
+.company-directory-card-details p > a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.company-directory-card-actions a {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.company-directory-card-actions a span {
+  min-width: 0;
+  max-width: 100%;
 }

@@ -3,75 +3,96 @@ name: isbulkktc CI
 on:
   pull_request:
   push:
+    branches:
+      - main
 
 permissions:
   contents: read
 
+concurrency:
+  group: isbulkktc-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   app:
-    name: Type check, lint, unit, build and E2E
+    name: Quality, database and E2E
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
-          cache: npm
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4
 
       - name: Install locked dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Audit production dependencies
-        run: npm run security:audit
+        run: $HOME/.bun/bin/bun audit --prod --audit-level=moderate
 
       - name: Lint
-        run: npm run lint
+        run: bun run lint
 
       - name: Type check
-        run: npm run typecheck
+        run: bun run typecheck
 
       - name: Validate form schemas
-        run: npm run test:unit
-
-      - name: Build
-        run: npm run build
-        env:
-          NEXT_TELEMETRY_DISABLED: "1"
+        run: bun run test:unit
 
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
-
-      - name: End-to-end tests
-        run: npm run test:e2e
-        env:
-          NEXT_TELEMETRY_DISABLED: "1"
-
-  database:
-    name: Supabase migrations and RLS
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
+        run: bunx playwright install --with-deps chrome
 
       - name: Set up Supabase CLI
+        id: supabase_cli
         uses: supabase/setup-cli@v3
         with:
           version: 2.120.0
 
-      - name: Start the isolated local Supabase stack
-        run: npm run db:start
+      - name: Start the seeded local Supabase stack
+        id: supabase_start
+        run: bun run db:start
+
+      - name: Configure local Supabase credentials for E2E
+        shell: bash
+        run: |
+          supabase status -o env > /tmp/supabase.env
+          set -a
+          source /tmp/supabase.env
+          set +a
+          test -n "${API_URL:-}"
+          key="${PUBLISHABLE_KEY:-${ANON_KEY:-}}"
+          test -n "$key"
+          {
+            printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$API_URL"
+            printf 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=%s\n' "$key"
+          } >> "$GITHUB_ENV"
 
       - name: Apply migrations and run pgTAP tests
-        run: npm run test:db
+        run: bun run test:db
 
-      - name: Stop the local Supabase stack
-        if: always()
-        run: npm run db:stop -- --no-backup
+      - name: Build production standalone server
+        run: |
+          bun run build
+          mkdir -p .next/standalone/.next .next/standalone/public
+          cp -a .next/static/. .next/standalone/.next/static/
+          cp -a public/. .next/standalone/public/
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+
+      - name: End-to-end tests against seeded Supabase
+        run: bun run test:e2e
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+
+      - name: Stop local Supabase stack
+        if: always() && steps.supabase_cli.outcome == 'success' && steps.supabase_start.outcome != 'skipped'
+        run: bun run db:stop -- --no-backup

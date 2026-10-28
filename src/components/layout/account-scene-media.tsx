@@ -13,10 +13,6 @@ const photos = [
 
 const videos = [
   {
-    src: "/videos/account-gallery/mavi-kosk.mp4",
-    title: "Mavi Köşk",
-  },
-  {
     src: "/videos/account-gallery/othello-kalesi.mp4",
     title: "Othello Kalesi",
   },

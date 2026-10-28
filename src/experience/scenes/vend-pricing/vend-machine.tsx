@@ -40,24 +40,6 @@ type Props = {
   onUnavailable: () => void;
 };
 
-function supportsWebGL() {
-  if (typeof window === "undefined" || typeof document === "undefined") return false;
-  try {
-    const canvas = document.createElement("canvas");
-    // Three.js r163+ requires WebGL 2. A WebGL 1-only probe is a false positive:
-    // it marks this scene available even though WebGLRenderer cannot initialize.
-    const context = canvas.getContext("webgl2", {
-      failIfMajorPerformanceCaveat: false,
-    }) as WebGL2RenderingContext | null;
-    if (!context || context.isContextLost()) return false;
-
-    // Do not keep a throwaway GPU context alive alongside the real renderer.
-    context.getExtension("WEBGL_lose_context")?.loseContext();
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 type SceneErrorBoundaryProps = {
   children: ReactNode;
@@ -113,13 +95,12 @@ export default function VendMachine({
   );
 
   useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      const isAvailable = supportsWebGL();
-      setAvailable(isAvailable);
-      if (!isAvailable) onUnavailable();
-    });
+    // Mount the actual R3F canvas once. A separate WebGL probe allocates a second
+    // context and can exhaust the hosted browser's context budget before Canvas
+    // initializes; the scene error boundary/context guard handles real failures.
+    const frame = requestAnimationFrame(() => setAvailable(true));
     return () => cancelAnimationFrame(frame);
-  }, [onUnavailable]);
+  }, []);
 
   useEffect(() => {
     if (!available) return;

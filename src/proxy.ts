@@ -8,16 +8,20 @@ import { isCorruptedSupabaseAuthError } from "@/server/auth/supabase-guards";
 const handleI18nRouting = createMiddleware(routing);
 
 export async function proxy(request: NextRequest) {
-  // next-intl forwards this header on locale rewrites; avoid redirecting the internal target again.
-  const rewrittenLocale = request.headers.get("x-next-intl-locale");
   const pathnameLocale = request.nextUrl.pathname.split("/")[1];
-  const isInternalLocaleRewrite = routing.locales.some(
-    (locale) => locale === rewrittenLocale && locale === pathnameLocale,
-  );
-  const response = isInternalLocaleRewrite
-    ? NextResponse.next({ request })
-    : handleI18nRouting(request);
-  if (!isInternalLocaleRewrite && !response.ok) {
+
+  // The default locale has one canonical public URL when localePrefix="as-needed".
+  // Do not exempt requests based on x-next-intl-locale: that header can also be
+  // present on the incoming prefixed URL and would let /tr/... bypass this redirect.
+  if (pathnameLocale === routing.defaultLocale) {
+    const url = request.nextUrl.clone();
+    const prefix = `/${routing.defaultLocale}`;
+    url.pathname = url.pathname.slice(prefix.length) || "/";
+    return NextResponse.redirect(url, 308);
+  }
+
+  const response = handleI18nRouting(request);
+  if (!response.ok) {
     return response;
   }
 

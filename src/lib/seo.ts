@@ -44,12 +44,16 @@ export function createLocalizedPageMetadata({
   description: string;
 }): Metadata {
   const baseUrl = getAppBaseUrl();
-  const canonicalUrl = getLocalizedPageUrl(locale, pathname, baseUrl);
+  // Next.js treats a `URL` instance passed as `alternates.canonical` as a base and
+  // re-resolves it against the current request pathname, which prefixes the default
+  // locale onto already-canonical URLs (e.g. /freelance -> /tr/freelance). Pass an
+  // absolute string so the value is emitted verbatim.
+  const canonicalUrl = getLocalizedPageUrl(locale, pathname, baseUrl).toString();
   const defaultLocaleUrl = getLocalizedPageUrl(
     routing.defaultLocale,
     pathname,
     baseUrl,
-  );
+  ).toString();
   const openGraphLocales = {
     tr: "tr_TR",
     en: "en_GB",
