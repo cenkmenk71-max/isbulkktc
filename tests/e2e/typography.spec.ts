@@ -86,16 +86,36 @@ test("shared navigation stays usable across locale-specific desktop widths", asy
       const nav = document.querySelector(".desktop-nav")!.getBoundingClientRect();
       const actions = document.querySelector(".header-actions")!.getBoundingClientRect();
       const overlap = Math.min(nav.right, actions.right) - Math.max(nav.left, actions.left);
+      const centerOf = (selector: string) => {
+        const el = document.querySelector(selector);
+        if (!el) return null;
+        const rect = el.getBoundingClientRect();
+        return rect.top + rect.height / 2;
+      };
+      const centers = [
+        centerOf(".header-brand"),
+        centerOf(".desktop-nav a"),
+        centerOf(".language-switch"),
+        centerOf(".header-login"),
+        centerOf(".header-post"),
+      ].filter((value): value is number => value !== null);
       return {
         overlap,
         documentWidth: document.documentElement.scrollWidth,
         viewportWidth: document.documentElement.clientWidth,
+        headerCenterSpread: centers.length
+          ? Math.max(...centers) - Math.min(...centers)
+          : 0,
       };
     });
     expect(desktopMetrics.overlap).toBeLessThanOrEqual(1);
     expect(desktopMetrics.documentWidth).toBeLessThanOrEqual(
       desktopMetrics.viewportWidth,
     );
+    // Brand, nav, language switch, sign-in, and the register CTA must share one
+    // optical center line. Asymmetric padding or a stray margin on the CTA used
+    // to push it ~6px below the rest of the bar.
+    expect(desktopMetrics.headerCenterSpread).toBeLessThanOrEqual(1);
   }
 });
 

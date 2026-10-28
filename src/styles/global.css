@@ -1300,7 +1300,6 @@ a {
   display: flex;
   align-items: center;
   gap: clamp(18px, 3vw, 44px);
-  padding-top: 12px;
 }
 .header-brand {
   position: relative;
@@ -1456,7 +1455,6 @@ a {
 }
 .header-post {
   min-height: 36px;
-  margin-top: 12px;
   padding-inline: 18px;
   gap: 9px;
   border-radius: 999px;
