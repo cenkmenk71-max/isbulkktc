@@ -161,6 +161,7 @@ export default function VendMachine({
     all: soundLabels.rain,
     off: soundLabels.off,
   }[mode];
+  const modeShortLabel = mode === "fx" ? "FX" : mode === "all" ? "RAIN" : "OFF";
 
   return (
     <>
@@ -178,12 +179,12 @@ export default function VendMachine({
         />
       </SceneErrorBoundary>
       <button
-        aria-label={`${soundLabels.button}: ${modeLabel}`}
+        aria-label={`${soundLabels.button}: ${modeShortLabel} — ${modeLabel}`}
         className="packages-vend-sound"
         onClick={cycleSound}
         type="button"
       >
-        {mode === "fx" ? "FX" : mode === "all" ? "RAIN" : "OFF"}
+        {modeShortLabel}
       </button>
     </>
   );
