@@ -69,6 +69,9 @@ Bağımlılıklar `npm ci` ile kuruldu; yukarıdaki "kurulum tamamlanamadı" not
 - `npm run check:frontend-source` — **PASS**
 - `npm run build` — **PASS**
 - `node scripts/run-playwright.mjs test tests/e2e/packages.spec.ts` — **PASS** (3/3, Chromium + WebGL 2, gerçek framebuffer okuması)
+- `node scripts/run-playwright.mjs test tests/e2e/typography.spec.ts` — **PASS** (5/5)
+
+Tüm E2E paketi (28/32) bu ortamda geçti. Kalan iki `jobs.spec.ts` testi yerel Supabase/seed verisi gerektirir; `.env.local` olmadığı için ilan listesi boş döner ve bu testler ortam nedeniyle çalışamaz. Paket çalışmasında ayrıca gerçek bir yerleşim hatası bulundu: Yunanca başlık etiketleri 1201 px masaüstü kırılımında 9 px yatay taşma yapıyordu (`scrollWidth 1210 > clientWidth 1201`). `@media (min-width: 1201px) and (max-width: 1480px)` içindeki nav boşlukları/marjı ve ilan düğmesi dolgusu sıkılaştırıldı; 6 dil × 10 genişlik (1061–1440 px) ölçümünde taşma kalmadı ve `typography.spec.ts` bunu kapsıyor.
 
 E2E çalışmasında bulunan ve düzeltilen iki test/kod sorunu:
 

@@ -108,7 +108,8 @@ test("package proposals and the interactive vending machine are public", async (
     await expect(page.locator(".packages-vend-fallback-controls button")).toHaveCount(4);
     await page.locator(".packages-vend-fallback-controls button").nth(1).click();
     await expect(machine).toHaveAttribute("data-selected-package", "growth");
-    await expect(page.locator(".vend-panel")).toBeVisible();
+    // Panel opening is driven by the 3D frame loop; software renderers need slack.
+    await expect(page.locator(".vend-panel")).toBeVisible({ timeout: 15_000 });
   } else {
     await expect(
       page.locator(".packages-vend-accessible-controls button"),
@@ -187,7 +188,8 @@ test("package pricing stays usable when WebGL 2 is unavailable", async ({ page }
   ).toHaveCount(4);
   await page.locator(".packages-vend-fallback-controls button").nth(1).click();
   await expect(machine).toHaveAttribute("data-selected-package", "growth");
-  await expect(page.locator(".vend-panel")).toBeVisible();
+  // Panel opening is driven by the 3D frame loop; software renderers need slack.
+  await expect(page.locator(".vend-panel")).toBeVisible({ timeout: 15_000 });
 });
 
 
@@ -238,5 +240,6 @@ test("package vending machine remains rendered when label canvas allocation fail
   await page.locator(".packages-vend-accessible-controls button").nth(1).focus();
   await page.keyboard.press("Enter");
   await expect(machine).toHaveAttribute("data-selected-package", "growth");
-  await expect(page.locator(".vend-panel")).toBeVisible();
+  // Panel opening is driven by the 3D frame loop; software renderers need slack.
+  await expect(page.locator(".vend-panel")).toBeVisible({ timeout: 15_000 });
 });
