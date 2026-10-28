@@ -77,13 +77,25 @@ branch by itself starts nothing — open a PR to get a run.
   `signInFailed` copy.
 
 - **React 19 hides component source locations from the browser.** The component
-  inspector reads a component name off `fiber.type` (still available), but
+  inspector reads component names off `fiber.type` (still available), but
   `fiber._debugSource` no longer exists and Turbopack leaves `_debugStack`
   empty. Source `file:line` therefore comes from the server:
   `src/server/devtools/component-source.ts` parses `src/**/*.tsx` with the
-  TypeScript compiler API and `GET /api/devtools/component?name=...` answers
-  with the declaration site. The route returns **404 outside development**;
-  keep it that way so it cannot leak filesystem paths from a deployed build.
+  TypeScript compiler API and `POST /api/devtools/component` answers with the
+  declaration site. The route returns **404 outside development**; keep it that
+  way so it cannot leak filesystem paths from a deployed build.
+
+- **React Server Components are invisible to the browser.** They never appear
+  in the fiber tree, carry no `_debugOwner`, and the flight payload omits source
+  positions, so a fiber walk from rendered markup stops at framework internals
+  (`SegmentViewNode`, `IntlProvider`, …) and reports the wrong component. The
+  inspector therefore sends the whole ancestor chain plus the element's literal
+  `id`/class tokens (and those of its nearest ancestors). The server tries the
+  chain first and then matches the DOM hints against the JSX that produced the
+  markup, preferring a hint that is unique in the source. Anything that resolves
+  an element to a component must keep both paths working — `HomeJobSearch`,
+  `SiteFooter`, and `HomeExperience` are server components and are only
+  reachable through the DOM-hint path.
 
 - **Dev-only UI must be gated by a static `process.env.NODE_ENV` check.**
   A bare `dynamic(() => import(...))` still emits a chunk into the production
@@ -93,6 +105,14 @@ branch by itself starts nothing — open a PR to get a run.
   component (injected `<style>`) rather than in `global.css` for the same
   reason. Verify with
   `grep -rl "component-inspector" <distDir>/static/` after a build.
+
+- **Do not run a production build in the working tree without a throwaway
+  `NEXT_DIST_DIR`.** `npm run build` rewrites `tsconfig.json` and
+  `next-env.d.ts` to point at the dist directory it used; both files are
+  tracked, so the build leaves the tree dirty. Build with
+  `NEXT_DIST_DIR=.next-<name> npm run build` and `git checkout --
+  tsconfig.json next-env.d.ts` afterwards, or the diff will carry unrelated
+  config churn.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
