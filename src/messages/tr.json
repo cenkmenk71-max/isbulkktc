@@ -390,7 +390,6 @@
       "storyEyebrow": "GÜVENLİ HESAP ERİŞİMİ",
       "storyTitle": "Erişim bilgileriniz size ait.",
       "storyBody": "Yenileme bağlantısı yalnızca kayıtlı e-posta adresinize gönderilir ve kısa süre geçerlidir.",
-      "unavailable": "Şifre yenileme şu anda kullanılamıyor.",
       "expiredMessage": "Şifre yenileme bağlantısı geçersiz veya süresi dolmuş. Lütfen yeni bir bağlantı isteyin."
     },
     "resetPassword": {
@@ -469,6 +468,7 @@
     "messages": {
       "invalid": "Bilgileri kontrol edip tekrar deneyin.",
       "signInFailed": "Giriş yapılamadı. E-posta adresinizi ve şifrenizi kontrol edin.",
+      "emailNotConfirmed": "Giriş yapmadan önce e-posta adresinizi doğrulamanız gerekiyor. Gelen kutunuza gönderdiğimiz bağlantıyı açın.",
       "signUpFailed": "Kayıt tamamlanamadı. Bilgileri kontrol edip tekrar deneyin.",
       "verificationSent": "Devam etmek için e-posta adresinize gönderilen doğrulama bağlantısını kullanın.",
       "oauthUnavailable": "Bu giriş seçeneği henüz etkin değil. E-posta ve şifrenizi kullanın.",

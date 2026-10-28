@@ -59,6 +59,23 @@ branch by itself starts nothing — open a PR to get a run.
   with `curl -o /dev/null -w '%{http_code}'` (S3 should be 200, the employer API
   redirects 302 to `s3.simeray.com`) before trusting a seed row.
 
+- **Auth email templates live in `supabase/templates/`.** `config.toml` points
+  at them with `[auth.email.template.<name>]` / `[auth.email.notification.<name>]`
+  plus `content_path`. The CLI resolves `content_path` relative to the project
+  root *and* falls back to a `supabase/`-prefixed path, so keep the
+  `./supabase/templates/...` form. A template name is an arbitrary TOML key, so a
+  typo (e.g. `recovry`) parses silently and GoTrue just keeps its built-in
+  template — cross-check the section name against the GoTrue template list
+  (`confirmation`, `recovery`, `invite`, `magic_link`, `email_change`,
+  `reauthentication`) when adding one.
+
+- **`auth.email.enable_confirmations = true` gates sign-in on a verified mailbox.**
+  Any E2E or manual flow that signs in must first consume the confirmation link
+  from the local mail catcher (port `54324`), or Supabase answers
+  `email_not_confirmed`. The sign-in action maps that code to the
+  `emailNotConfirmed` message; do not fold it back into the generic
+  `signInFailed` copy.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

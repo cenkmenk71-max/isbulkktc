@@ -6,8 +6,10 @@ import {
 } from "../../src/features/companies/schemas";
 import {
   oauthSignInSchema,
+  requestPasswordResetSchema,
   signInSchema,
   signUpSchema,
+  updatePasswordSchema,
 } from "../../src/features/identity/schemas";
 import { parseEnabledOAuthProviders } from "../../src/features/identity/oauth-providers";
 import {
@@ -267,5 +269,44 @@ test("OAuth availability is explicit, deduplicated, and rejects unknown provider
   assert.throws(
     () => parseEnabledOAuthProviders("google,instagram"),
     /AUTH_OAUTH_PROVIDERS/,
+  );
+});
+
+test("password reset requests canonicalize the email and reject bad locales", () => {
+  assert.deepEqual(
+    requestPasswordResetSchema.parse({
+      email: "  Aday@Example.COM ",
+      locale: "tr",
+    }),
+    { email: "aday@example.com", locale: "tr" },
+  );
+
+  assert.equal(
+    requestPasswordResetSchema.safeParse({ email: "not-an-email", locale: "tr" })
+      .success,
+    false,
+  );
+  assert.equal(
+    requestPasswordResetSchema.safeParse({ email: "a@b.com", locale: "xx" })
+      .success,
+    false,
+  );
+});
+
+test("password updates enforce the shared eight-character minimum", () => {
+  assert.equal(
+    updatePasswordSchema.safeParse({ password: "a".repeat(8), locale: "en" })
+      .success,
+    true,
+  );
+  assert.equal(
+    updatePasswordSchema.safeParse({ password: "a".repeat(7), locale: "en" })
+      .success,
+    false,
+  );
+  assert.equal(
+    updatePasswordSchema.safeParse({ password: "a".repeat(129), locale: "en" })
+      .success,
+    false,
   );
 });

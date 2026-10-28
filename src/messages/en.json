@@ -390,7 +390,6 @@
       "storyEyebrow": "SECURE ACCOUNT ACCESS",
       "storyTitle": "Your credentials belong to you.",
       "storyBody": "The reset link is sent only to your registered email address and expires after a short time.",
-      "unavailable": "Password recovery is not available yet.",
       "expiredMessage": "This password reset link is invalid or has expired. Please request a new one."
     },
     "resetPassword": {
@@ -469,6 +468,7 @@
     "messages": {
       "invalid": "Check your details and try again.",
       "signInFailed": "Could not sign in. Check your email address and password.",
+      "emailNotConfirmed": "You must verify your email address before signing in. Open the link we sent to your inbox.",
       "signUpFailed": "Your account could not be created. Check your details and try again.",
       "verificationSent": "Use the verification link sent to your email address to continue.",
       "oauthUnavailable": "This sign-in option is not enabled yet. Use your email and password instead.",

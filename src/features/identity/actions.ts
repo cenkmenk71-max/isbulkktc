@@ -114,6 +114,16 @@ export async function signIn(
 
   if (error) {
     console.error("Supabase sign-in failed.", { code: error.code });
+
+    // Supabase returns this when email confirmations are enabled and the
+    // address has not been verified yet; the generic message would mislead.
+    if (error.code === "email_not_confirmed") {
+      return {
+        status: "error",
+        message: "emailNotConfirmed",
+      };
+    }
+
     return {
       status: "error",
       message: "signInFailed",

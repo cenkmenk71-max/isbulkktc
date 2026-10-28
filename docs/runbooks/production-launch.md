@@ -166,7 +166,43 @@ recipient read the email.
 To pause the schedule, find its job ID in `cron.job` and run
 `select cron.unschedule(<job-id>);`. Do not delete queued notification records.
 
-## 5. Production release checks
+## 5. Configure authentication and account email
+
+`supabase/config.toml` describes the local stack only. Reproduce these settings
+in the hosted project's Auth dashboard; a local `config.toml` change does not
+reach production.
+
+1. In Auth > Providers, keep Email enabled and turn on **Confirm email**. The
+   local stack already requires a verified mailbox before sign-in, and the
+   sign-in action expects the resulting `email_not_confirmed` code.
+2. Set **Minimum password length** to 8 to match `updatePasswordSchema` and
+   `signUpSchema`. Leave character-class rules off; prefer Supabase's
+   **leaked password protection** (HaveIBeenPwned) instead, which the local
+   config intentionally does not attempt to emulate.
+3. Under Auth > Rate Limits, set the email send limit to a production-appropriate
+   value. The local stack uses 30/hour as a development default; the hosted
+   free plan's own limits apply on top and may be lower.
+4. Under Auth > Email Templates, replace each built-in template with the
+   repository versions in `supabase/templates/` (`confirmation.html`,
+   `recovery.html`, `reauthentication.html`, `password-changed.html`). Copy the
+   HTML and subject from those files, and confirm the `{{ .ConfirmationURL }}`,
+   `{{ .Token }}`, `{{ .Email }}`, and `{{ .SiteURL }}` variables survive the
+   paste.
+5. Configure custom SMTP so sign-up, recovery, and password-changed mail is not
+   limited by Supabase's shared sender. Resend works here: use the verified
+   sending domain and an SMTP credential, and never put the API key in a
+   `NEXT_PUBLIC_*` variable.
+6. Walk the full lifecycle once with a synthetic account on a non-production
+   project: register, confirm, sign in, request a reset, set a new password,
+   confirm the password-changed notice arrives, and verify the old password no
+   longer works. Then repeat the sign-in and reset checks on the live domain.
+
+Password recovery is enabled in the application; the `/forgot-password` page
+renders a working form. Do not reintroduce a placeholder that hides the form
+while SMTP is unconfigured — an unconfigured sender should fail loudly in the
+reset action, not silently disable the feature.
+
+## 6. Production release checks
 
 - Confirm the Vercel Production deployment uses the correct domain and
   Production environment variables, not Preview/local values.
