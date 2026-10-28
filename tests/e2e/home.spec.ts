@@ -861,6 +861,47 @@ test("the sector directory searches and filters all sectors", async ({
   await expect(industryFilter).toHaveAttribute("aria-pressed", "false");
 });
 
+test("sector category badges stay legible and unclipped", async ({ page }) => {
+  const measureBadges = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll(".sector-image-category")]
+        .map((el) => {
+          const rect = el.getBoundingClientRect();
+          if (rect.width < 1) return null;
+          return {
+            fontSize: parseFloat(getComputedStyle(el).fontSize),
+            clipped: el.scrollWidth > el.clientWidth + 1,
+            text: el.textContent?.trim() ?? "",
+          };
+        })
+        .filter((badge) => badge !== null),
+    );
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const locale of ["/tr", "/de"]) {
+    await page.goto(locale);
+    await page.locator("button.sector-directory-trigger").click();
+    const badges = await measureBadges();
+    expect(badges.length).toBeGreaterThan(0);
+    for (const badge of badges) {
+      expect(
+        badge.fontSize,
+        `${locale} "${badge.text}" font-size`,
+      ).toBeGreaterThanOrEqual(10);
+      expect(badge.clipped, `${locale} "${badge.text}" must not clip`).toBe(
+        false,
+      );
+    }
+  }
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const desktopBadges = await measureBadges();
+  for (const badge of desktopBadges) {
+    expect(badge.fontSize).toBeGreaterThanOrEqual(11);
+    expect(badge.clipped).toBe(false);
+  }
+});
+
 test("freelance career page links to the real candidate profile flow", async ({
   page,
 }) => {
