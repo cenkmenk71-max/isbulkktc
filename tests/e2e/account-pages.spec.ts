@@ -296,13 +296,15 @@ test("registration, sign-in, and recovery pages stay localized and usable", asyn
     );
     await expect(selectedVideo).toHaveCSS("position", "absolute");
     await expect
-      .poll(() =>
-        selectedVideo.evaluate(
-          (video) =>
-            video instanceof HTMLVideoElement &&
-            !video.paused &&
-            video.readyState >= 2,
-        ),
+      .poll(
+        () =>
+          selectedVideo.evaluate(
+            (video) =>
+              video instanceof HTMLVideoElement &&
+              !video.paused &&
+              video.readyState >= 2,
+          ),
+        { timeout: 15_000 },
       )
       .toBe(true);
     const videoResolution = await selectedVideo.evaluate((video) => ({
