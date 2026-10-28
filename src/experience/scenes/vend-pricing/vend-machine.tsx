@@ -40,40 +40,6 @@ type Props = {
   onUnavailable: () => void;
 };
 
-async function supportsWebGL(): Promise<boolean> {
-  if (typeof window === "undefined" || typeof document === "undefined") return false;
-  try {
-    const canvas = document.createElement("canvas");
-    // Three.js r163+ requires WebGL 2. A WebGL 1-only probe is a false positive:
-    // it marks this scene available even though WebGLRenderer cannot initialize.
-    const context = canvas.getContext("webgl2", {
-      failIfMajorPerformanceCaveat: false,
-    }) as WebGL2RenderingContext | null;
-    if (!context || context.isContextLost()) return false;
-
-    const loseContext = context.getExtension("WEBGL_lose_context");
-    if (!loseContext) return false;
-
-    // Release the probe context before R3F creates its own. Calling loseContext()
-    // and immediately returning races the real renderer on constrained CI GPUs.
-    return await new Promise<boolean>((resolve) => {
-      let settled = false;
-      const finish = (supported: boolean) => {
-        if (settled) return;
-        settled = true;
-        window.clearTimeout(timeout);
-        canvas.removeEventListener("webglcontextlost", onContextLost);
-        resolve(supported);
-      };
-      const onContextLost = () => finish(true);
-      canvas.addEventListener("webglcontextlost", onContextLost, { once: true });
-      const timeout = window.setTimeout(() => finish(context.isContextLost()), 1000);
-      loseContext.loseContext();
-    });
-  } catch {
-    return false;
-  }
-}
 
 type SceneErrorBoundaryProps = {
   children: ReactNode;
@@ -129,19 +95,12 @@ export default function VendMachine({
   );
 
   useEffect(() => {
-    let alive = true;
-    const frame = requestAnimationFrame(() => {
-      void supportsWebGL().then((isAvailable) => {
-        if (!alive) return;
-        setAvailable(isAvailable);
-        if (!isAvailable) onUnavailable();
-      });
-    });
-    return () => {
-      alive = false;
-      cancelAnimationFrame(frame);
-    };
-  }, [onUnavailable]);
+    // Mount the actual R3F canvas once. A separate WebGL probe allocates a second
+    // context and can exhaust the hosted browser's context budget before Canvas
+    // initializes; the scene error boundary/context guard handles real failures.
+    const frame = requestAnimationFrame(() => setAvailable(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     if (!available) return;
