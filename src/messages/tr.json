@@ -550,6 +550,11 @@
       "services": "Hizmetler & yaşam",
       "industry": "Üretim & altyapı"
     },
+    "sectorCategoryBadges": {
+      "digital": "Dijital & yaratıcı",
+      "services": "Hizmetler & yaşam",
+      "industry": "Üretim & altyapı"
+    },
     "sectors": {
       "technology": {
         "title": "Teknoloji & Yazılım",

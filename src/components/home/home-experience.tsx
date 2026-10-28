@@ -221,6 +221,7 @@ export async function HomeExperience({
     title: copy(`sectors.${sector.key}.title`),
     description: copy(`sectors.${sector.key}.description`),
     category: copy(`sectorCategories.${sector.category}`),
+    categoryBadge: copy(`sectorCategoryBadges.${sector.category}`),
     categoryKey: sector.category,
     searchTerms: [...sector.searchTerms],
     featuredLabel: copy("sectorFeaturedLabel"),

@@ -550,6 +550,11 @@
       "services": "People & services",
       "industry": "Industry & infrastructure"
     },
+    "sectorCategoryBadges": {
+      "digital": "Digital & creative",
+      "services": "People & services",
+      "industry": "Industry & infrastructure"
+    },
     "sectors": {
       "technology": {
         "title": "Technology & Software",

@@ -548,7 +548,12 @@
     "sectorCategories": {
       "digital": "Цифровые и творческие направления, гибкие форматы работы",
       "services": "Люди и услуги",
-      "industry": "Промышленность и инфраструктура"
+      "industry": "Промышленность"
+    },
+    "sectorCategoryBadges": {
+      "digital": "Цифровые и креативные",
+      "services": "Люди и услуги",
+      "industry": "Промышленность"
     },
     "sectors": {
       "technology": {

@@ -550,6 +550,11 @@
       "services": "افراد و خدمات",
       "industry": "صنعت و زیرساخت"
     },
+    "sectorCategoryBadges": {
+      "digital": "دیجیتال و خلاق",
+      "services": "افراد و خدمات",
+      "industry": "صنعت و زیرساخت"
+    },
     "sectors": {
       "technology": {
         "title": "فناوری و نرم‌افزار",
