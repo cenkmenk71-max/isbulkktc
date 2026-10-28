@@ -46,6 +46,19 @@ branch by itself starts nothing — open a PR to get a run.
   is unprefixed in canonical/`x-default` output but prefixed in the served URL.
   Keep this in mind when asserting on URLs.
 
+- **Employer logos are square canvases with the mark inside.** Every
+  `source_site` company logo is stored on S3 at a 1:1 ratio (verified across the
+  seed), so measuring the *rendered* aspect of an uploaded logo reports ~1.0 and
+  cannot detect a wide wordmark. Aspect-driven tile shaping (`EmployerLogo`)
+  only triggers for locally collected `/public/logos/*.webp` artwork, which the
+  collector stores at its own ratio. Don't "fix" wide logos by measuring the
+  employer canvas — the padding is baked into the bitmap.
+
+- **A DB `logo_url` is not proof the image loads.** `Kıbet`'s S3 object returns
+  **403**, so the card silently falls back to a monogram. Validate new logo URLs
+  with `curl -o /dev/null -w '%{http_code}'` (S3 should be 200, the employer API
+  redirects 302 to `s3.simeray.com`) before trusting a seed row.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

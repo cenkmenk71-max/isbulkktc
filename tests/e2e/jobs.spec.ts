@@ -145,3 +145,43 @@ test("source employer details stay separate and link back to their public source
     page.locator('.job-detail-aside a[href^="https://"]'),
   ).toHaveCount(0);
 });
+
+test("every employer logo tile centres its artwork without distortion", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/tr/jobs");
+  await expect(page.locator(".employer-logo").first()).toBeVisible();
+  await page.waitForLoadState("networkidle");
+
+  // Any source size must land centred inside its tile: `contain` never crops or
+  // stretches, and the artwork stays centred on both axes. The tile itself may
+  // widen for a wordmark or narrow for portrait artwork, never collapse.
+  const violations = await page.evaluate(() => {
+    const issues: string[] = [];
+    for (const tile of document.querySelectorAll(".employer-logo")) {
+      const box = tile.getBoundingClientRect();
+      if (box.width < 20 || box.height < 20) {
+        issues.push(`tile collapsed: ${Math.round(box.width)}x${Math.round(box.height)}`);
+      }
+      const img = tile.querySelector("img");
+      if (!img) continue;
+      const style = getComputedStyle(img);
+      if (style.objectFit !== "contain") issues.push(`object-fit=${style.objectFit}`);
+      if (style.objectPosition.replace(/\s+/g, " ") !== "50% 50%") {
+        issues.push(`object-position=${style.objectPosition}`);
+      }
+      const rendered = img.getBoundingClientRect();
+      const dx = Math.abs(
+        rendered.left + rendered.width / 2 - (box.left + box.width / 2),
+      );
+      const dy = Math.abs(
+        rendered.top + rendered.height / 2 - (box.top + box.height / 2),
+      );
+      if (dx > 1.5 || dy > 1.5) issues.push(`off-centre dx=${dx.toFixed(1)} dy=${dy.toFixed(1)}`);
+    }
+    return issues;
+  });
+
+  expect(violations).toEqual([]);
+});
