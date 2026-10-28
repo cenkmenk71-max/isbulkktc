@@ -437,7 +437,14 @@ assert.match(
   /live\.motionUntil = REDUCED_MOTION && !CAPTURE \? clock\.time \+ VEND_DONE/,
 );
 assert.match(packagesLive, /sfx\.coin\(\)/);
-assert.match(packagesMachine, /supportsWebGL/);
+// The scene no longer probes WebGL with a throwaway context (a second context
+// can exhaust the hosted browser's budget before Canvas initialises). Failure
+// handling moved to the error boundary in vend-machine.tsx plus the context
+// guard in Scene.tsx, so assert on those instead.
+assert.match(packagesMachine, /class SceneErrorBoundary/);
+assert.match(packagesMachine, /getDerivedStateFromError/);
+assert.match(packagesScene, /function WebGLContextGuard/);
+assert.match(packagesScene, /"webglcontextlost"/);
 assert.match(packagesMachine, /onUnavailable/);
 assert.match(
   packagesMachine,

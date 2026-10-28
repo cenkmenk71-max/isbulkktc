@@ -44,7 +44,10 @@ jobs:
       - name: Type check
         run: bun run typecheck
 
-      - name: Validate form schemas
+      - name: Frontend source and design-token gate
+        run: bun run check:frontend-source
+
+      - name: Unit tests
         run: bun run test:unit
 
       - name: Install Playwright browser
