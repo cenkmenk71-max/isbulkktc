@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { getCurrentUser } from "@/server/dal/user";
+import { redirectLocalized } from "@/i18n/redirect";
 import { getLocalePrefix } from "@/i18n/routing";
 import {
   getApplicationForActor,
@@ -384,7 +385,7 @@ export async function applyToJob(
 export async function markApplicationViewed(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user || user.status !== "active") {
-    redirect("/login");
+    return redirectLocalized("/login");
   }
 
   const result = applicationIdSchema.safeParse({

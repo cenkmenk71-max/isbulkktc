@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
-import { redirect } from "next/navigation";
 import { CreateCompanyForm } from "@/features/companies/create-company-form";
 import { getCurrentUser } from "@/server/dal/user";
+import { redirectLocalized } from "@/i18n/redirect";
 import { EditorialFormPage } from "@/components/layout/editorial-form-page";
 import { noIndexMetadata } from "@/lib/seo";
 
@@ -14,9 +14,9 @@ export default async function NewCompanyPage() {
     getTranslations("CompanyRegistration"),
   ]);
 
-  if (!user) redirect("/login?audience=employer");
+  if (!user) return redirectLocalized("/login?audience=employer");
   if (user.status !== "active") {
-    redirect("/login?audience=employer&error=account");
+    return redirectLocalized("/login?audience=employer&error=account");
   }
 
   return (

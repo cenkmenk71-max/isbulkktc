@@ -13,6 +13,7 @@ import {
 import { parseEnabledOAuthProviders } from "./oauth-providers";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { getAppBaseUrl } from "@/server/config/app-url";
+import { redirectLocalized } from "@/i18n/redirect";
 import { getLocalePrefix } from "@/i18n/routing";
 import {
   createOAuthSignupIntent,
@@ -288,5 +289,5 @@ export async function signOut(): Promise<void> {
     throw new Error("Oturum kapatılamadı.", { cause: error });
   }
 
-  redirect("/login");
+  return redirectLocalized("/login");
 }
