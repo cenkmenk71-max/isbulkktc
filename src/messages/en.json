@@ -536,7 +536,8 @@
     "rejectAll": "Reject all",
     "savePreferences": "Save preferences",
     "acceptAll": "Accept all",
-    "close": "Close"
+    "close": "Close",
+    "backToPreferences": "Back to preferences"
   },
   "HomePage": {
     "eyebrow": "NORTHERN CYPRUS EMPLOYMENT NETWORK",

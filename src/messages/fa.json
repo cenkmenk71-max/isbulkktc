@@ -186,7 +186,8 @@
     "rejectAll": "رد همه",
     "savePreferences": "ذخیره تنظیمات",
     "acceptAll": "پذیرش همه",
-    "close": "بستن"
+    "close": "بستن",
+    "backToPreferences": "بازگشت به تنظیمات"
   },
   "NotFound": {
     "title": "صفحه پیدا نشد",

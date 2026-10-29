@@ -536,7 +536,8 @@
     "rejectAll": "Tümünü reddet",
     "savePreferences": "Tercihleri kaydet",
     "acceptAll": "Tümünü kabul et",
-    "close": "Kapat"
+    "close": "Kapat",
+    "backToPreferences": "Tercihlere dön"
   },
   "HomePage": {
     "eyebrow": "KUZEY KIBRIS İSTİHDAM AĞI",

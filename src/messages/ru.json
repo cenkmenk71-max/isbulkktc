@@ -186,7 +186,8 @@
     "rejectAll": "Отклонить все",
     "savePreferences": "Сохранить настройки",
     "acceptAll": "Принять все",
-    "close": "Закрыть"
+    "close": "Закрыть",
+    "backToPreferences": "Назад к настройкам"
   },
   "NotFound": {
     "title": "Страница не найдена",

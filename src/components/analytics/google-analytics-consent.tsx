@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { Link, usePathname } from "@/i18n/navigation";
+import { usePathname } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Cookie, ShieldCheck } from "lucide-react";
@@ -109,17 +109,29 @@ function ConsentSwitch({
 export function GoogleAnalyticsConsent() {
   const pathname = usePathname();
   const t = useTranslations("Analytics");
+  const legal = useTranslations("Legal");
   const consent = useSyncExternalStore(
     subscribeToConsent,
     getStableSnapshot,
     () => UNDECIDED,
   );
   const [panelOpen, setPanelOpen] = useState(false);
+  const [policyOpen, setPolicyOpen] = useState(false);
   const [draft, setDraft] = useState<ConsentCategories>({
     analytics: false,
     marketing: false,
   });
   const [scriptReady, setScriptReady] = useState(false);
+
+  // The policy is read straight out of the legal catalogue so the inline card
+  // and the /cookies page can never drift apart.
+  const policySections = (["s1", "s2", "s3"] as const).map((key) => ({
+    title: legal(`cookies.sections.${key}.title`),
+    paragraphs:
+      key === "s1"
+        ? [legal(`cookies.sections.${key}.p1`)]
+        : [legal(`cookies.sections.${key}.p1`), legal(`cookies.sections.${key}.p2`)],
+  }));
 
   const analyticsConfigured =
     Boolean(measurementId) && /^G-[A-Z0-9]+$/.test(measurementId ?? "");
@@ -204,7 +216,7 @@ export function GoogleAnalyticsConsent() {
             </div>
           </header>
 
-          <div className="consent-categories">
+          <div className="consent-categories" hidden={policyOpen}>
             <div className="consent-category">
               <div className="consent-category-copy">
                 <span className="consent-category-label">
@@ -238,7 +250,30 @@ export function GoogleAnalyticsConsent() {
             />
           </div>
 
-          <div className="consent-card-actions">
+          {policyOpen && (
+            <div className="consent-policy-panel">
+              <h3 className="consent-policy-title">
+                {legal("cookies.title")}
+              </h3>
+              <p className="consent-policy-updated">
+                {legal("lastUpdated", { date: legal("cookies.updated") })}
+              </p>
+              {policySections.map((section) => (
+                <section key={section.title}>
+                  <h4 className="consent-policy-section-title">
+                    {section.title}
+                  </h4>
+                  {section.paragraphs.map((paragraph) => (
+                    <p key={paragraph} className="consent-policy-paragraph">
+                      {paragraph}
+                    </p>
+                  ))}
+                </section>
+              ))}
+            </div>
+          )}
+
+          <div className="consent-card-actions" hidden={policyOpen}>
             <button
               type="button"
               className="consent-btn consent-btn-ghost"
@@ -263,14 +298,31 @@ export function GoogleAnalyticsConsent() {
           </div>
 
           <footer className="consent-card-footer">
-            <Link className="consent-policy-link" href="/cookies">
-              {t("policyLink")}
-            </Link>
+            {policyOpen ? (
+              <button
+                type="button"
+                className="consent-policy-link"
+                onClick={() => setPolicyOpen(false)}
+              >
+                {t("backToPreferences")}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="consent-policy-link"
+                onClick={() => setPolicyOpen(true)}
+              >
+                {t("policyLink")}
+              </button>
+            )}
             {consent.decided && (
               <button
                 type="button"
                 className="consent-close"
-                onClick={() => setPanelOpen(false)}
+                onClick={() => {
+                  setPolicyOpen(false);
+                  setPanelOpen(false);
+                }}
               >
                 {t("close")}
               </button>

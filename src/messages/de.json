@@ -186,7 +186,8 @@
     "rejectAll": "Alle ablehnen",
     "savePreferences": "Einstellungen speichern",
     "acceptAll": "Alle akzeptieren",
-    "close": "Schließen"
+    "close": "Schließen",
+    "backToPreferences": "Zurück zu den Einstellungen"
   },
   "NotFound": {
     "title": "Seite nicht gefunden",

@@ -186,7 +186,8 @@
     "rejectAll": "Απόρριψη όλων",
     "savePreferences": "Αποθήκευση",
     "acceptAll": "Αποδοχή όλων",
-    "close": "Κλείσιμο"
+    "close": "Κλείσιμο",
+    "backToPreferences": "Πίσω στις ρυθμίσεις"
   },
   "NotFound": {
     "title": "Η σελίδα δεν βρέθηκε",
