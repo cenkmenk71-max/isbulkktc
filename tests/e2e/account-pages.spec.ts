@@ -326,6 +326,40 @@ test("registration, sign-in, and recovery pages stay localized and usable", asyn
       height: video instanceof HTMLVideoElement ? video.videoHeight : 0,
     }));
     expect(videoResolution).toEqual({ width: 1080, height: 1920 });
+    // A frozen poster or a single-frame stub would satisfy the resolution check
+    // above; require the frames to actually change so the clip is real footage.
+    const motion = await selectedVideo.evaluate(async (video) => {
+      if (!(video instanceof HTMLVideoElement)) return { changed: 0, advanced: false };
+      const canvas = document.createElement("canvas");
+      canvas.width = 160;
+      canvas.height = 284;
+      const ctx = canvas.getContext("2d")!;
+      const grab = () => {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      };
+      const before = grab();
+      const startTime = video.currentTime;
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      const after = grab();
+      let changed = 0;
+      for (let i = 0; i < before.length; i += 4) {
+        if (
+          Math.abs(before[i] - after[i]) +
+            Math.abs(before[i + 1] - after[i + 1]) +
+            Math.abs(before[i + 2] - after[i + 2]) >
+          12
+        ) {
+          changed += 1;
+        }
+      }
+      return {
+        changed: (changed / (before.length / 4)) * 100,
+        advanced: video.currentTime > startTime,
+      };
+    });
+    expect(motion.advanced).toBe(true);
+    expect(motion.changed).toBeGreaterThan(5);
     await expect(page.getByLabel(copy.email)).toBeVisible();
     await expectConfiguredOAuthProviders(page, "candidate", "signin");
     const signInPassword = page.getByLabel(copy.password, { exact: true });
