@@ -268,61 +268,6 @@ export async function searchPublicJobPreviews(input: unknown) {
   }
 }
 
-const defaultJobPackages = [
-  {
-    id: "pkg-single",
-    code: "single-listing",
-    display_name: "Tek İlan Paketi",
-    description: "Bireysel ve acil pozisyonlar için ideal başlangıç paketi.",
-    max_active_jobs: 1,
-    job_duration_days: 30,
-  },
-  {
-    id: "pkg-growth",
-    code: "growth",
-    display_name: "Büyüme Paketi",
-    description: "Aynı anda birden fazla departmana istihdam sağlayan KOBİ'ler için.",
-    max_active_jobs: 3,
-    job_duration_days: 30,
-  },
-  {
-    id: "pkg-pro",
-    code: "professional",
-    display_name: "Profesyonel Paket",
-    description: "Sürekli işe alım yapan ve geniş aday havuzuna ihtiyaç duyan kurumsal şirketler için.",
-    max_active_jobs: 5,
-    job_duration_days: 30,
-  },
-  {
-    id: "pkg-enterprise",
-    code: "enterprise",
-    display_name: "Kurumsal Çözüm",
-    description: "Holdingler, otel zincirleri ve büyük ölçekli işletmelere özel sınırsız esneklik.",
-    max_active_jobs: 20,
-    job_duration_days: 60,
-  },
-];
-
-export async function getActiveJobPackages() {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase
-      .from("job_packages")
-      .select("id, code, display_name, description, max_active_jobs, job_duration_days")
-      .order("max_active_jobs", { ascending: true })
-      .order("code", { ascending: true });
-
-    if (error || !data || data.length === 0) {
-      return defaultJobPackages;
-    }
-
-    return data;
-  } catch (err) {
-    console.warn("Aktif iş paketleri veritabanından çekilemedi; varsayılan paketler kullanılıyor.", err);
-    return defaultJobPackages;
-  }
-}
-
 type PublicJobCompany = z.infer<typeof publicJobCompanySchema>;
 
 function mergeJobCompaniesByName(

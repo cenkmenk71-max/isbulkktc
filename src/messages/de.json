@@ -183,22 +183,13 @@
     "heroLink": "Paketrechte ansehen",
     "locationLine": "NORDZYPERN · DE / TR",
     "catalog": {
-      "eyebrow": "AKTIVE PAKETE",
-      "title": "Rechte für Stellenanzeigen",
-      "description": "Hier werden nur aktive Pakete angezeigt. Die Rechte werden bei der Zuweisung für das Unternehmen festgehalten.",
-      "activeJobs": "Gleichzeitig aktive Anzeigen",
-      "duration": "Anzeigendauer",
-      "days": "{count} Tage",
-      "empty": "Es sind noch keine aktiven Pakete eingerichtet.",
-      "noDescription": "Keine zusätzliche Paketbeschreibung verfügbar."
+      "eyebrow": "AKTIVE PAKETE"
     },
     "showcase": {
       "eyebrow": "ARBEITGEBERPAKETE",
       "title": "Wählen Sie ein Stellenpaket passend zu Ihrem Bedarf.",
       "instruction": "Legen Sie die Anzahl der Anzeigen fest und wählen Sie je Anzeige 1, 7 oder 30 Tage.",
       "brand": "İşBul KKTC · Arbeitgeberpakete",
-      "platformLabel": "KARRIEREPLATTFORM",
-      "status": "Unverbindliche Preisangaben · Zahlungen erfolgen nicht auf der Website; IBAN und Zahlungsanweisungen werden nach Besprechung des Pakets privat mitgeteilt.",
       "back": "Zurück zur Paketauswahl",
       "selectPackage": "Arbeitgeberpaket auswählen",
       "sceneFallback": "Die 3D-Szene ist nicht verfügbar. Paketauswahl und Details funktionieren weiterhin.",
@@ -224,7 +215,6 @@
         "thirtyDays": "30 Tage",
         "priceSummary": "Gesamtpreis des Pakets",
         "customPrice": "Individueller Umfang · schriftliches Angebot",
-        "disclaimer": "Diese Empfehlungen beruhen auf den bereitgestellten Marktvergleichen; Anzahl und Laufzeit sind klar angegeben. Es handelt sich weder um freigegebene Tarife noch um ein Kaufangebot.",
         "quoteAction": "Angebot mit unserem Team besprechen",
         "quoteTitle": "Lassen Sie uns den Personalbedarf Ihrer Organisation abstimmen.",
         "quoteInstructions": "Ein E-Mail-Entwurf wird geöffnet. Ergänzen Sie vor dem Versand Ihr Unternehmen, die gewünschte Anzeigenzahl und Ihre Kontaktdaten.",
@@ -549,6 +539,11 @@
       "digital": "Digitale und kreative Berufsfelder, flexible Arbeitsformen",
       "services": "Menschen und Dienstleistungen",
       "industry": "Industrie und Infrastruktur"
+    },
+    "sectorCategoryBadges": {
+      "digital": "Digital & kreativ",
+      "services": "Menschen & Services",
+      "industry": "Industrie & Infrastruktur"
     },
     "sectors": {
       "technology": {

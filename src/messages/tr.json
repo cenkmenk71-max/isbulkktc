@@ -116,22 +116,13 @@
     "heroLink": "Paket haklarını inceleyin",
     "locationLine": "KUZEY KIBRIS · TR / EN",
     "catalog": {
-      "eyebrow": "ETKİN PAKETLER",
-      "title": "İlan yayınlama hakları",
-      "description": "Aşağıdaki katalog yalnız etkin paketleri gösterir. Haklar, atandıkları anda şirket için sabitlenir.",
-      "activeJobs": "Aynı anda yayındaki ilan",
-      "duration": "İlan yayın süresi",
-      "days": "{count} gün",
-      "empty": "Henüz etkin paket tanımlanmadı.",
-      "noDescription": "Paket için ek açıklama bulunmuyor."
+      "eyebrow": "ETKİN PAKETLER"
     },
     "showcase": {
       "eyebrow": "İŞVEREN PAKETLERİ",
       "title": "İşe alımınıza uygun ilan paketini seçin.",
       "instruction": "İlan adedini belirleyin; her ilan için 1, 7 veya 30 gün seçin.",
       "brand": "İşBul KKTC · İşveren paketleri",
-      "platformLabel": "KARİYER PLATFORMU",
-      "status": "Bilgilendirme amaçlı fiyat · Ödeme sitede alınmaz; IBAN talimatı paket görüşmesi sonrası özel kanaldan iletilir.",
       "back": "Paket seçimine dön",
       "selectPackage": "İşveren paketi seçin",
       "sceneFallback": "3D sahne kullanılamıyor. Paket seçimi ve ayrıntılar kullanılabilir.",
@@ -157,7 +148,6 @@
         "thirtyDays": "30 gün",
         "priceSummary": "Paket toplamı",
         "customPrice": "Özel kapsam · yazılı teklifle",
-        "disclaimer": "Tutarlar bilgilendirme amaçlıdır; kesin paket koşulları ve IBAN ile ödeme talimatı ekip tarafından özel iletişim kanallarından iletilir. Web sitesinde ödeme alınmaz.",
         "quoteAction": "Ekiple görüşün, teklif alın",
         "quoteTitle": "Kurumsal işe alım ihtiyacınızı birlikte netleştirelim.",
         "quoteInstructions": "E-posta taslağınız açılır. Göndermeden önce şirket adınızı, istediğiniz ilan adedini ve iletişim bilgilerinizi ekleyin.",
@@ -547,6 +537,11 @@
     "sectorClearFilters": "Tüm filtreleri temizle",
     "sectorCategories": {
       "digital": "Dijital, yaratıcı ve esnek çalışma",
+      "services": "Hizmetler & yaşam",
+      "industry": "Üretim & altyapı"
+    },
+    "sectorCategoryBadges": {
+      "digital": "Dijital & yaratıcı",
       "services": "Hizmetler & yaşam",
       "industry": "Üretim & altyapı"
     },

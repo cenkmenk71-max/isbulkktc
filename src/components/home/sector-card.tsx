@@ -48,6 +48,7 @@ export type SectorCardData = {
   title: string;
   description: string;
   category: string;
+  categoryBadge: string;
   categoryKey: SectorCategory;
   searchTerms: string[];
   featuredLabel: string;
@@ -78,11 +79,11 @@ export function SectorCard({
           alt=""
           fill
           sizes="(max-width: 1100px) 50vw, 25vw"
-          quality={100}
+          quality={90}
           className="sector-photo"
         />
         {showCategory && (
-          <span className="sector-image-category">{sector.category}</span>
+          <span className="sector-image-category">{sector.categoryBadge}</span>
         )}
       </div>
       <span className="sector-icon" aria-hidden="true">

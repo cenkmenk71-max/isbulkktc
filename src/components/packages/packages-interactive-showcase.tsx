@@ -30,9 +30,7 @@ type PackagesInteractiveShowcaseProps = {
   title: string;
   instruction: string;
   brand: string;
-  platformLabel: string;
   labelCopy: SceneLabels;
-  packageStatus: string;
   selectLabel: string;
   packageContentsLabel: string;
   durationLabel: string;
@@ -40,7 +38,6 @@ type PackagesInteractiveShowcaseProps = {
   durationOptions: { days: ListingDuration; label: string }[];
   priceSummary: string;
   customPriceLabel: string;
-  priceDisclaimer: string;
   quoteAction: string;
   quoteTitle: string;
   quoteInstructions: string;
@@ -60,9 +57,7 @@ export function PackagesInteractiveShowcase({
   title,
   instruction,
   brand,
-  platformLabel,
   labelCopy,
-  packageStatus,
   selectLabel,
   packageContentsLabel,
   durationLabel,
@@ -70,7 +65,6 @@ export function PackagesInteractiveShowcase({
   durationOptions,
   priceSummary,
   customPriceLabel,
-  priceDisclaimer,
   quoteAction,
   quoteTitle,
   quoteInstructions,
@@ -318,7 +312,6 @@ export function PackagesInteractiveShowcase({
           durationOptions={durationOptions}
           priceSummary={priceSummary}
           customPriceLabel={customPriceLabel}
-          priceDisclaimer={priceDisclaimer}
           quoteAction={quoteAction}
           quoteTitle={quoteTitle}
           quoteInstructions={quoteInstructions}
@@ -328,7 +321,6 @@ export function PackagesInteractiveShowcase({
           salesContactEmail={salesContactEmail}
           selectedDuration={selectedDuration}
           onDurationChange={setSelectedDuration}
-          packageStatus={packageStatus}
           plan={plans[selectedIndex]}
           quiet={!panelOpen}
         />
@@ -375,10 +367,6 @@ export function PackagesInteractiveShowcase({
             ))}
           </div>
         )}
-        <p className="packages-vend-mark" aria-hidden="true">
-          <span>İşBul KKTC</span>
-          <span>{platformLabel}</span>
-        </p>
       </div>
     </div>
   );

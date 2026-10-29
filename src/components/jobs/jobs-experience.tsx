@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { ArrowUpRight, BriefcaseBusiness, MapPin, Search } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
@@ -56,6 +57,16 @@ export async function JobsExperience({
   return (
     <div className="jobs-page">
       <header className="jobs-hero">
+        <Image
+          src="/images/jobs-hero.webp"
+          alt=""
+          fill
+          preload
+          sizes="100vw"
+          quality={85}
+          className="jobs-hero-image"
+        />
+        <div className="jobs-hero-shade" aria-hidden="true" />
         <div className="page-container jobs-hero-inner">
           <p className="jobs-eyebrow">
             <span aria-hidden="true" />

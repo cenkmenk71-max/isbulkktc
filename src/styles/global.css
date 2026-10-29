@@ -719,7 +719,7 @@ a {
 .section-index {
   color: var(--ink-4);
   font:
-    500 9px var(--font-geist-mono),
+    500 10px var(--font-geist-mono),
     monospace;
   letter-spacing: 0.08em;
   white-space: nowrap;
@@ -766,7 +766,7 @@ a {
   border-radius: 4px;
   background: var(--color-status-success-bg);
   color: var(--color-status-success);
-  font-size: 7px;
+  font-size: 10px;
   white-space: nowrap;
 }
 .step-status-dot.new {
@@ -811,7 +811,7 @@ a {
   align-items: center;
   gap: 8px;
   color: var(--color-vanadium-400);
-  font-size: 9px;
+  font-size: 10px;
 }
 .footer-links {
   display: grid;
@@ -828,7 +828,7 @@ a {
   margin-bottom: 6px;
   color: var(--color-shade-green-400);
   font:
-    600 9px var(--font-geist-mono),
+    600 10px var(--font-geist-mono),
     monospace;
   letter-spacing: 0.12em;
 }
@@ -852,7 +852,7 @@ a {
   gap: 18px;
   border-top: 1px solid rgba(209, 213, 208, 0.14);
   color: var(--color-vanadium-400);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 /* Modal flows: details, local-only application preview, and account notice */
@@ -1090,7 +1090,7 @@ a {
   }
   .eyebrow {
     gap: 8px;
-    font-size: 8px;
+    font-size: 10px;
     letter-spacing: 0.1em;
   }
   .eyebrow-rule {
@@ -1159,7 +1159,7 @@ a {
     min-height: 350px;
   }
   .section-index {
-    font-size: 8px;
+    font-size: 10px;
   }
   .employer-copy .button {
     margin-top: 21px;
@@ -1192,10 +1192,10 @@ a {
     gap: 11px;
   }
   .footer-label {
-    font-size: 8px;
+    font-size: 10px;
   }
   .footer-links a {
-    font-size: 9px;
+    font-size: 10px;
   }
   .footer-bottom {
     min-height: 65px;
@@ -1204,7 +1204,7 @@ a {
     flex-direction: column;
     gap: 5px;
     padding-block: 13px;
-    font-size: 8px;
+    font-size: 10px;
   }
   .modal-actions .button {
     min-height: 42px;
@@ -1249,22 +1249,22 @@ a {
 
 @media (max-width: 740px) {
   .hero-copy .eyebrow.hero-eyebrow {
-    font-size: 9px;
+    font-size: 10px;
   }
   .sector-kicker {
-    font-size: 9px;
+    font-size: 10px;
   }
   .section-index {
-    font-size: 9px;
+    font-size: 10px;
   }
   .workspace-status {
-    font-size: 9px;
+    font-size: 10px;
   }
   .footer-label {
-    font-size: 9px;
+    font-size: 10px;
   }
   .footer-bottom {
-    font-size: 9px;
+    font-size: 10px;
   }
 }
 
@@ -1300,7 +1300,6 @@ a {
   display: flex;
   align-items: center;
   gap: clamp(18px, 3vw, 44px);
-  padding-top: 12px;
 }
 .header-brand {
   position: relative;
@@ -1367,7 +1366,7 @@ a {
   display: block;
   color: currentColor;
   font:
-    550 8px/1 var(--font-geist-mono),
+    550 10px/1 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.37em;
   padding-left: 2px;
@@ -1456,7 +1455,6 @@ a {
 }
 .header-post {
   min-height: 36px;
-  margin-top: 12px;
   padding-inline: 18px;
   gap: 9px;
   border-radius: 999px;
@@ -1580,7 +1578,7 @@ a {
   background: rgba(13, 33, 27, 0.48);
   color: var(--surface-raised);
   font:
-    550 8px/1.25 var(--font-geist-mono),
+    550 10px/1.25 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.08em;
   backdrop-filter: blur(9px);
@@ -1748,7 +1746,7 @@ a {
   margin-bottom: 4px;
   color: var(--ink-3);
   font:
-    620 9px/1.35 var(--font-geist-mono),
+    620 10px/1.35 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.12em;
 }
@@ -1877,7 +1875,7 @@ a {
   margin-bottom: 7px;
   color: var(--ink-3);
   font:
-    620 9px/1.4 var(--font-geist-mono),
+    620 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1918,7 +1916,7 @@ a {
 .sector-explorer-total span {
   margin-top: 5px;
   color: var(--ink-3);
-  font-size: 9px;
+  font-size: 10px;
 }
 .sector-explorer-tools {
   display: grid;
@@ -2014,7 +2012,7 @@ a {
   background: var(--color-vanadium-100);
   color: var(--ink-3);
   font:
-    600 9px/1 var(--font-geist-mono),
+    600 10px/1 var(--font-geist-mono),
     monospace;
   font-variant-numeric: tabular-nums;
 }
@@ -2083,7 +2081,7 @@ a {
   border-radius: 99px;
   background: var(--color-shade-green-50);
   color: var(--green);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 650;
   line-height: 1;
 }
@@ -2099,9 +2097,10 @@ a {
   border-radius: 99px;
   background: rgba(18, 49, 40, 0.78);
   color: var(--surface-raised);
-  font-size: 8px;
+  font-size: var(--type-caption);
   font-weight: 590;
   line-height: 1;
+  letter-spacing: 0.01em;
   text-overflow: ellipsis;
   white-space: nowrap;
   backdrop-filter: blur(8px);
@@ -2609,7 +2608,6 @@ a {
 }
 @media (max-width: 740px) {
   .hero-photo-image {
-    object-position: 64% center;
     transform: none;
   }
   :root {
@@ -2628,7 +2626,7 @@ a {
     font-size: 24px;
   }
   .brand-wordmark small {
-    font-size: 7px;
+    font-size: 10px;
     letter-spacing: 0.34em;
   }
   .language-switch {
@@ -2658,9 +2656,6 @@ a {
     height: auto;
     padding: 101px 0 22px;
   }
-  .hero-photo-image {
-    object-position: 64% center;
-  }
   .hero-layout {
     flex: initial;
     height: auto;
@@ -2673,7 +2668,7 @@ a {
   }
   .hero-copy .eyebrow.hero-eyebrow {
     padding: 7px 11px;
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.09em;
   }
   .hero-copy h1 {
@@ -2719,7 +2714,7 @@ a {
   }
   .sector-kicker {
     margin-bottom: 6px;
-    font-size: 9px;
+    font-size: 10px;
   }
   .sector-heading h2 {
     max-width: 340px;
@@ -2783,7 +2778,7 @@ a {
   }
   .sector-filter-chip {
     min-height: 33px;
-    font-size: 9px;
+    font-size: 10px;
   }
   .sector-explorer-results {
     margin-top: 16px;
@@ -2805,13 +2800,13 @@ a {
     font-size: 11px;
   }
   .sector-explorer-grid .sector-card-copy small {
-    font-size: 9px;
+    font-size: 10px;
   }
   .sector-image-category {
     top: 8px;
     right: 8px;
     padding: 5px 7px;
-    font-size: 7px;
+    font-size: 10px;
   }
   .sector-explorer-empty {
     min-height: 198px;
@@ -2855,7 +2850,7 @@ a {
     flex-wrap: wrap;
     justify-content: flex-start;
     padding-block: 15px;
-    font-size: 9px;
+    font-size: 10px;
   }
   .footer-bottom > span:nth-child(2) {
     width: 100%;
@@ -2883,7 +2878,7 @@ a {
     font-size: 11px;
   }
   .sector-card-copy small {
-    font-size: 9px;
+    font-size: 10px;
   }
 }
 /* Language picker: seven planned locales, only the two shipped dictionaries are selectable. */
@@ -2985,7 +2980,7 @@ a {
   background: var(--color-crayon-50);
   color: var(--color-vanadium-700);
   font:
-    650 9px/1 var(--font-geist-mono),
+    650 10px/1 var(--font-geist-mono),
     monospace;
 }
 .language-name {
@@ -3011,7 +3006,7 @@ a {
 }
 .language-option.is-planned small {
   color: var(--color-vanadium-600);
-  font-size: 9px;
+  font-size: 10px;
 }
 .language-menu-note {
   margin: 8px 7px 3px;
@@ -3504,7 +3499,7 @@ a {
 }
 .account-audience-copy small {
   color: var(--ink-3);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.45;
 }
 .account-audience-selection {
@@ -3540,7 +3535,7 @@ a {
   align-items: center;
   gap: 7px;
   color: var(--green);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.12em;
 }
@@ -3900,7 +3895,7 @@ a {
   gap: 12px;
   color: rgba(255, 253, 248, 0.83);
   font:
-    600 9px/1.4 var(--font-geist-mono),
+    600 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.12em;
 }
@@ -3930,7 +3925,7 @@ a {
 .editorial-page-scene-copy > span {
   color: var(--color-shade-green-300);
   font:
-    600 9px/1.4 var(--font-geist-mono),
+    600 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.16em;
 }
@@ -3962,7 +3957,7 @@ a {
   bottom: 27px;
   color: rgba(255, 253, 248, 0.76);
   font:
-    550 8px/1.3 var(--font-geist-mono),
+    550 10px/1.3 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.14em;
 }
@@ -4041,7 +4036,7 @@ a {
   background: rgba(7, 19, 15, 0.48);
   color: var(--surface-raised);
   cursor: pointer;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 620;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -4177,7 +4172,7 @@ a {
   margin-bottom: 24px;
   color: var(--ink-4);
   font:
-    550 9px/1.4 var(--font-geist-mono),
+    550 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.12em;
 }
@@ -4202,7 +4197,7 @@ a {
   gap: 9px;
   color: var(--ink-4);
   font:
-    600 9px/1.4 var(--font-geist-mono),
+    600 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.11em;
 }
@@ -4448,7 +4443,7 @@ a {
   .editorial-page-scene-index {
     right: 22px;
     bottom: 18px;
-    font-size: 7px;
+    font-size: 10px;
   }
   .editorial-page-scene-video-controls {
     inset-inline: 22px;
@@ -4459,14 +4454,14 @@ a {
     min-height: 31px;
     gap: 5px;
     padding-inline: 8px;
-    font-size: 8px;
+    font-size: 10px;
   }
   .editorial-page-scene-video-error {
     inset-inline: 22px;
     bottom: 86px;
   }
   .editorial-page-scene-index {
-    font-size: 7px;
+    font-size: 10px;
   }
   .editorial-page-alert {
     margin-top: 22px;
@@ -4746,7 +4741,30 @@ a {
 }
 .home-page .hero-photo-image {
   transform: none;
-  object-position: center 50%;
+  object-position: 50% 50%;
+}
+/* Per-district focal points measured from each source's gradient-energy
+   profile (scripts/measure-hero-crops.mjs). The hero box is ~1.11:1 on phones
+   and 2.3-3.0:1 on desktop, so a landscape source is cropped on X on phones and
+   a portrait source is cropped on Y on desktop; one pair covers every breakpoint
+   and replaces the previous per-slide hand-tuned overrides. */
+.home-page .hero-photo-image[data-home-hero-photo="girne"] {
+  object-position: 53% 57%;
+}
+.home-page .hero-photo-image[data-home-hero-photo="gazimagusa"] {
+  object-position: 50% 78%;
+}
+.home-page .hero-photo-image[data-home-hero-photo="guzelyurt"] {
+  object-position: 49% 55%;
+}
+.home-page .hero-photo-image[data-home-hero-photo="iskele"] {
+  object-position: 50% 52%;
+}
+.home-page .hero-photo-image[data-home-hero-photo="lefkosa"] {
+  object-position: 50% 83%;
+}
+.home-page .hero-photo-image[data-home-hero-photo="lefke"] {
+  object-position: 50% 79%;
 }
 .home-page .hero-photo-image.home-hero-slide {
   opacity: 0;
@@ -4769,12 +4787,6 @@ a {
 }
 .home-page .hero-photo-image.home-hero-slide:nth-of-type(6) {
   animation-delay: 39.5s;
-}
-.home-page .hero-photo-image[data-home-hero-photo="guzelyurt"] {
-  object-position: right bottom;
-}
-.home-page .hero-photo-image[data-home-hero-photo="iskele"] {
-  object-position: center 78%;
 }
 .home-page .home-hero-rays {
   position: absolute;
@@ -6370,9 +6382,6 @@ html:dir(rtl) .company-workspace-action-link:hover > svg {
   min-height: 630px;
   padding: 0;
 }
-.home-page .hero-photo-image {
-  object-position: center 50%;
-}
 .home-page .hero-layout {
   position: relative;
   display: grid;
@@ -7062,7 +7071,7 @@ main :where(p) {
 .home-page .hero-copy .hero-eyebrow {
   gap: 11px;
   padding: 7px 12px;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.1em;
 }
 .home-page .hero-copy h1 {
@@ -7110,9 +7119,6 @@ main :where(p) {
   .home-page .hero-section {
     height: auto;
     min-height: 0;
-  }
-  .home-page .hero-photo-image {
-    object-position: 64% center;
   }
   .home-page .hero-layout {
     width: min(calc(100% - 2 * var(--page-gutter)), var(--page-max));
@@ -7280,7 +7286,7 @@ main :where(p) {
   gap: 16px;
   color: rgba(240, 241, 237, 0.64);
   font:
-    500 8px/1.4 var(--font-geist-mono),
+    500 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.13em;
 }
@@ -7386,13 +7392,6 @@ main :where(p) {
   font-size: 12px;
   line-height: 1.55;
 }
-.package-proposal-status {
-  margin: 16px 0 0;
-  color: var(--color-shade-green-700);
-  font-size: 10px;
-  font-weight: 650;
-  line-height: 1.55;
-}
 .package-catalog-card .package-proposal-prices {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: clamp(4px, 0.8vw, 8px);
@@ -7443,17 +7442,6 @@ main :where(p) {
   font-size: 18px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
-}
-.package-catalog-empty {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 30px 24px;
-  border: 1px solid rgba(21, 47, 36, 0.12);
-  border-radius: 16px;
-  background: rgba(255, 253, 248, 0.78);
-  color: var(--color-vanadium-700);
-  text-align: center;
-  line-height: 1.7;
 }
 .admin-packages-page {
   display: grid;
@@ -7643,7 +7631,7 @@ main :where(p) {
 .admin-package-code {
   color: var(--ink-4);
   font:
-    600 9px/1.4 var(--font-geist-mono),
+    600 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -8007,17 +7995,6 @@ main :where(p) {
   font-size: 15px;
   line-height: 1.68;
 }
-.vend-panel-status {
-  width: fit-content;
-  margin: 16px 0 0;
-  padding: 8px 11px;
-  border: 1px solid rgba(225, 182, 109, 0.28);
-  border-radius: 999px;
-  background: rgba(225, 182, 109, 0.08);
-  color: #e1c184;
-  font-size: 11px;
-  line-height: 1.5;
-}
 .vend-panel-scope {
   margin-top: 24px;
   padding-top: 18px;
@@ -8119,12 +8096,6 @@ main :where(p) {
   color: rgba(240, 241, 237, 0.67);
   font-size: 11px;
   text-align: right;
-}
-.vend-panel-price-disclaimer {
-  margin: 9px 0 0;
-  color: rgba(240, 241, 237, 0.58);
-  font-size: 10px;
-  line-height: 1.55;
 }
 .vend-panel-action {
   margin-top: auto;
@@ -8261,7 +8232,7 @@ main :where(p) {
   background: rgba(7, 8, 12, 0.82);
   color: #c6d8cb;
   font:
-    550 9px/1 var(--font-geist-mono),
+    550 10px/1 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.08em;
   cursor: pointer;
@@ -8271,20 +8242,6 @@ main :where(p) {
 .packages-vend-sound:hover {
   border-color: rgba(156, 187, 167, 0.55);
   color: #fffdf8;
-}
-.packages-vend-mark {
-  position: absolute;
-  z-index: 2;
-  top: 30px;
-  right: 34px;
-  display: flex;
-  gap: 20px;
-  margin: 0;
-  color: rgba(240, 241, 237, 0.66);
-  font:
-    550 10px/1.5 var(--font-geist-mono),
-    monospace;
-  letter-spacing: 0.1em;
 }
 .packages-vend-fallback {
   position: absolute;
@@ -8318,10 +8275,6 @@ main :where(p) {
   }
   .packages-vend-stage {
     min-height: max(720px, 88svh);
-  }
-  .packages-vend-mark {
-    top: 25px;
-    right: 25px;
   }
   .packages-vend-sound {
     top: 22px;
@@ -8366,7 +8319,7 @@ main :where(p) {
     bottom: 18px;
     left: 24px;
     gap: 8px;
-    font-size: 8px;
+    font-size: 10px;
   }
   .packages-hero-bottom span:nth-child(2) {
     display: none;
@@ -8385,7 +8338,7 @@ main :where(p) {
     width: min(300px, calc(100% - 40px));
   }
   .packages-vend-brand {
-    font-size: 9px;
+    font-size: 10px;
   }
   .packages-vend-copy h2 {
     max-width: 320px;
@@ -8396,15 +8349,6 @@ main :where(p) {
     max-width: 285px;
     margin-top: 12px;
     font-size: 13px;
-  }
-  .packages-vend-mark {
-    top: auto;
-    right: 20px;
-    bottom: 84px;
-    left: 20px;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 8px;
   }
   .packages-vend-fallback {
     right: 16px;
@@ -8451,9 +8395,6 @@ main :where(p) {
   }
   .vend-panel-link {
     width: 100%;
-  }
-  .packages-vend-stage[data-open] .packages-vend-mark {
-    opacity: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -8887,6 +8828,9 @@ main :where(p) {
   line-height: 1.7;
 }
 .company-directory-toolbar {
+  position: sticky;
+  top: 12px;
+  z-index: 20;
   display: grid;
   grid-template-columns: minmax(240px, 1.45fr) repeat(3, minmax(150px, 0.62fr));
   gap: 14px;
@@ -9585,7 +9529,7 @@ main :where(p) {
   margin-top: 15px;
   color: rgba(255, 253, 248, 0.65);
   font:
-    600 9px/1.5 var(--font-geist-mono),
+    600 10px/1.5 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.1em;
 }
@@ -9722,7 +9666,7 @@ main :where(p) {
   margin: 0;
   color: var(--green-mid);
   font:
-    650 9px/1.5 var(--font-geist-mono),
+    650 10px/1.5 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.13em;
 }
@@ -9897,7 +9841,7 @@ main :where(p) {
   margin-top: 18px;
   color: var(--ink-4);
   font:
-    600 9px/1.4 var(--font-geist-mono),
+    600 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -10090,12 +10034,12 @@ main :where(p) {
   gap: 12px;
   margin-top: 10px;
   color: var(--ink-4);
-  font-size: 9px;
+  font-size: 10px;
 }
 .blog-article-meta time {
   flex: 0 0 auto;
   color: var(--ink-3);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
 }
 .blog-article-card h3 {
@@ -10392,6 +10336,7 @@ main :where(p) {
 
 @media (max-width: 980px) {
   .company-directory-toolbar {
+    position: static;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .company-directory-input {
@@ -10982,6 +10927,17 @@ html[dir="rtl"] input[name="slug"] {
   overflow: hidden;
   padding: clamp(128px, 14vw, 188px) 0 clamp(64px, 7vw, 92px);
   color: var(--surface-raised);
+  background: var(--color-shade-green-950);
+}
+.jobs-hero-image {
+  z-index: -2;
+  object-fit: cover;
+  object-position: center 46%;
+}
+.jobs-hero-shade {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
   background:
     linear-gradient(
       100deg,
@@ -10989,8 +10945,8 @@ html[dir="rtl"] input[name="slug"] {
       rgba(18, 49, 40, 0.87) 49%,
       rgba(18, 49, 40, 0.62) 100%
     ),
-    url("/images/career-search.webp") center 46% / cover,
-    var(--color-shade-green-950);
+    linear-gradient(0deg, rgba(13, 25, 21, 0.44), transparent 62%);
+  pointer-events: none;
 }
 .jobs-hero::after {
   position: absolute;
@@ -11081,7 +11037,7 @@ html[dir="rtl"] input[name="slug"] {
 .jobs-section-kicker {
   margin: 0 0 8px;
   color: var(--brand-green-vivid);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -11685,7 +11641,7 @@ html[dir="rtl"] input[name="slug"] {
 }
 .job-detail-company-card > span:first-child {
   color: var(--ink-4);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.14em;
 }
@@ -11730,10 +11686,9 @@ html[dir="rtl"] input[name="slug"] {
 @media (max-width: 740px) {
   .jobs-hero {
     padding: 112px 0 82px;
-    background-position:
-      center,
-      58% center,
-      center;
+  }
+  .jobs-hero-image {
+    object-position: 58% center;
   }
   .jobs-hero h1 {
     margin-top: 16px;

@@ -109,3 +109,17 @@ export function getDistrictMessageKey(value: string): DistrictMessageKey {
       throw new Error("A published job has an unsupported district.");
   }
 }
+
+// Source listings reuse the first sentences of the description as the summary.
+// Rendering both the header summary and the description then repeats the same
+// paragraph, so callers hide the summary when the description already opens with it.
+export function isRedundantJobSummary(
+  summary: string | null | undefined,
+  description: string | null | undefined,
+): boolean {
+  if (!summary || !description) return false;
+  const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
+  const stem = normalize(summary).replace(/[\s.…]+$/, "");
+  if (!stem) return false;
+  return normalize(description).startsWith(stem);
+}

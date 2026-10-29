@@ -6,6 +6,21 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const exists = async (path) =>
   access(new URL(`../${path}`, import.meta.url), constants.F_OK);
 
+// Homepage hero and sector photos are served as WebP at quality 90.
+//
+// Measured against quality 100 on the six originals at their largest served
+// width (1920px): PSNR 42.6-45.6 dB and SSIM 0.987-0.997, i.e. at or above the
+// ~40 dB / 0.98 "visually indistinguishable" bar, for ~43% fewer bytes (the
+// served homepage drops from 5.50 MB to ~3.1 MB at DPR 1).
+//
+// AVIF is not the answer in this Next version (16.4.2). It scales the AVIF
+// quality by 50/80 (`node_modules/next/dist/server/image-optimizer/transform.js`)
+// and encodes at effort 3, so `quality={100}` maps to AVIF 63 and scores far
+// worse than WebP 100 (Girne: PSNR 35.9 / SSIM 0.964 vs 50.9 / 0.997). Even at
+// effort 6 AVIF only matches WebP 90 for the same bytes while taking ~33s per
+// image instead of ~0.6s, so `formats: ["image/webp"]` stays.
+const homepageImageQuality = 90;
+
 const css = await read("src/styles/global.css");
 const home = await read("src/components/home/home-experience.tsx");
 const homeJourneys = await read("src/components/home/home-journeys.tsx");
@@ -16,6 +31,9 @@ const header = await read("src/components/layout/site-header.tsx");
 const footer = await read("src/components/layout/site-footer.tsx");
 const freelance = await read(
   "src/components/freelance/freelance-experience.tsx",
+);
+const jobsExperience = await read(
+  "src/components/jobs/jobs-experience.tsx",
 );
 const companyDirectoryPage = await read(
   "src/app/[locale]/(public)/companies/page.tsx",
@@ -122,23 +140,26 @@ for (const [token, color] of expectedTokens) {
 }
 
 const assets = [
-  "assets-src/kyrenia-harbor-upload-3840x2500.webp",
-  "assets-src/freelance-photos/unsplash-1498050108023-c5249f4df085.jpg",
-  "assets-src/career-site-photos/career-conversation.jpg",
-  "assets-src/career-site-photos/about-community.jpg",
-  "assets-src/career-site-photos/contact-community.jpg",
-  "assets-src/career-site-photos/company-directory.jpg",
-  "assets-src/career-site-photos/local-business-news.jpg",
+  "assets-src/page-heroes/about.png",
+  "assets-src/page-heroes/blog.png",
+  "assets-src/page-heroes/companies.png",
+  "assets-src/page-heroes/contact.png",
+  "assets-src/page-heroes/freelance.png",
+  "assets-src/page-heroes/jobs.png",
+  "assets-src/page-heroes/packages.png",
   "public/images/Girne.webp",
   "public/images/Gazimağusa.webp",
   "public/images/güzelyurt.jpg",
   "public/images/iskele.jpg",
   "public/images/lefkoşa.jpeg",
   "public/images/lefke.jpg",
-  "public/images/about-community.webp",
-  "public/images/contact-community.webp",
-  "public/images/company-directory.webp",
-  "public/images/editorial-newsroom.webp",
+  "public/images/about-hero.webp",
+  "public/images/contact-hero.webp",
+  "public/images/companies-hero.webp",
+  "public/images/blog-hero.webp",
+  "public/images/jobs-hero.webp",
+  "public/images/freelance-hero.webp",
+  "public/images/packages-hero.webp",
   "src/assets/fonts/manrope-variable.ttf",
   "src/assets/fonts/OFL.txt",
   "src/assets/fonts/ADDITIONAL-FONTS-OFL.txt",
@@ -215,7 +236,10 @@ assert.equal(
 assert.match(home, /image: StaticImageData/);
 assert.match(sectorCard, /data-sector-image=\{sector\.image\.src\}/);
 assert.match(sectorCard, /sizes="\(max-width: 1100px\) 50vw, 25vw"/);
-assert.match(sectorCard, /quality=\{100\}/);
+assert.match(
+  sectorCard,
+  new RegExp(`quality=\\{${homepageImageQuality}\\}`),
+);
 assert.doesNotMatch(sectorCard, /unoptimized/);
 assert.match(nextConfig, /formats:\s*\["image\/webp"\]/);
 
@@ -263,12 +287,8 @@ assert.match(
   /district: "iskele", asset: "\/images\/iskele\.jpg", src: iskelePhoto/,
 );
 assert.doesNotMatch(home, /commons\.wikimedia\.org|creativecommons\.org/);
-assert.match(
-  freelance,
-  /import freelanceWorkspaceImage from "\.\.\/\.\.\/\.\.\/assets-src\/freelance-photos\/unsplash-1498050108023-c5249f4df085\.jpg"/,
-);
-assert.match(freelance, /src=\{freelanceWorkspaceImage\}/);
-assert.doesNotMatch(freelance, /\/images\/freelance-workspace\.webp/);
+assert.match(freelance, /src="\/images\/freelance-hero\.webp"/);
+assert.doesNotMatch(freelance, /assets-src\/freelance-photos/);
 assert.match(
   localeLayout,
   /import \{ IBM_Plex_Sans_Arabic, Literata \} from "next\/font\/google"/,
@@ -290,7 +310,7 @@ assert.match(
   /loading=\{slide\.district === "girne" \|\| slide\.district === "gazimagusa" \? "eager" : "lazy"\}/,
 );
 assert.match(home, /sizes="100vw"/);
-assert.match(home, /quality=\{100\}/);
+assert.match(home, new RegExp(`quality=\\{${homepageImageQuality}\\}`));
 assert.match(home, /hero-light-layer--readability/);
 assert.match(home, /hero-light-layer--warmth/);
 assert.match(home, /hero-light-layer--vignette/);
@@ -298,7 +318,10 @@ assert.match(css, /@keyframes home-hero-photo-cycle/);
 assert.match(css, /@keyframes home-hero-rays-drift/);
 assert.match(home, /<SignatureBanner\s*\/>/);
 assert.match(home, /className="sector-showcase"/);
-assert.match(sectorCard, /<Image\s+src={sector\.image}[\s\S]*?quality=\{100\}/);
+assert.match(
+  sectorCard,
+  new RegExp(`<Image\\s+src={sector\\.image}[\\s\\S]*?quality=\\{${homepageImageQuality}\\}`),
+);
 assert.doesNotMatch(sectorCard, /unoptimized/);
 assert.match(home, /<SectorDirectory/);
 assert.match(home, /featuredSectors\.map/);
@@ -344,10 +367,13 @@ for (const asset of [
   );
 }
 for (const [asset, component] of [
-  ["company-directory", companyDirectoryPage],
-  ["about-community", editorialPages],
-  ["contact-community", editorialPages],
-  ["editorial-newsroom", editorialPages],
+  ["companies-hero", companyDirectoryPage],
+  ["about-hero", editorialPages],
+  ["contact-hero", editorialPages],
+  ["blog-hero", editorialPages],
+  ["jobs-hero", jobsExperience],
+  ["freelance-hero", freelance],
+  ["packages-hero", packagesPage],
 ]) {
   const optimized = await readFile(
     new URL(`../public/images/${asset}.webp`, import.meta.url),
@@ -359,19 +385,47 @@ for (const [asset, component] of [
     `Hero photo ${asset} should remain below 500 KB.`,
   );
   assert.match(component, new RegExp(`/images/${asset}\\.webp`));
+  assert.match(
+    component,
+    new RegExp(`src="/images/${asset}\\.webp"[\\s\\S]{0,220}?quality=\\{85\\}`),
+    `Page hero ${asset} should request quality 85.`,
+  );
 }
 assert.match(editorialPages, /className="editorial-hero-background-image\b/);
 assert.match(css, /\.editorial-hero\s*\{[\s\S]*?minmax\(300px,\s*0\.9fr\)/);
 assert.match(css, /\.home-page \.hero-photo-image \{\s*transform: none;/);
 assert.doesNotMatch(css, /\.hero-scene-window|\.hero-scene-foliage/);
+// Every district carries a measured focal point, and no breakpoint may clobber
+// it with a blanket object-position (the old 740px rule did, which is what made
+// the phone crop look arbitrary).
+for (const district of [
+  "girne",
+  "gazimagusa",
+  "guzelyurt",
+  "iskele",
+  "lefkosa",
+  "lefke",
+]) {
+  assert.match(
+    css,
+    new RegExp(
+      `\\.home-page \\.hero-photo-image\\[data-home-hero-photo="${district}"\\] \\{\\s*object-position: [0-9]+% [0-9]+%;`,
+    ),
+  );
+}
+assert.doesNotMatch(css, /object-position: 64% center/);
+assert.doesNotMatch(css, /object-position: right bottom/);
+assert.match(
+  (
+    await readFile(new URL("../scripts/measure-hero-crops.mjs", import.meta.url))
+  ).toString(),
+  /bestOffset/,
+);
 assert.match(signatureBanner, /homepage-metal-feature-strip\.png/);
 assert.match(signatureBanner, /useTranslations\('FeatureStrip'\)/);
 assert.match(nextConfig, /qualities:\s*\[75,\s*85,\s*90,\s*95,\s*100\]/);
-assert.match(
-  packagesPage,
-  /import kyreniaHarborImage from "\.\.\/\.\.\/\.\.\/assets-src\/kyrenia-harbor-upload-3840x2500\.webp"/,
-);
-assert.match(packagesPage, /src=\{kyreniaHarborImage\}/);
+assert.match(packagesPage, /src="\/images\/packages-hero\.webp"/);
+assert.doesNotMatch(packagesPage, /assets-src\/kyrenia-harbor/);
 assert.match(packagesPage, /quality=\{85\}/);
 assert.doesNotMatch(packagesPage, /unoptimized/);
 
@@ -488,13 +542,27 @@ assert.equal(
   enMessages.PackagesPage.showcase.scene.viewScope,
   "Change Package with a Coin",
 );
-assert.match(
-  trMessages.PackagesPage.showcase.status,
-  /Bilgilendirme amaçlı fiyat.*Ödeme sitede alınmaz/i,
+assert.doesNotMatch(packagesPage, /showcase\.status/);
+assert.doesNotMatch(packagesShowcase, /packageStatus|priceDisclaimer/);
+assert.doesNotMatch(packagesPanel, /packageStatus|priceDisclaimer/);
+assert.doesNotMatch(css, /\.package-proposal-status|\.vend-panel-status|\.vend-panel-price-disclaimer/);
+// The database-backed "job posting rights" catalog was removed from /packages;
+// only its hero-bottom eyebrow survives. Guard against reintroducing it.
+assert.doesNotMatch(packagesPage, /package-catalog-title|getActiveJobPackages/);
+assert.doesNotMatch(packagesPage, /catalog\.(?:title|description|activeJobs|duration|days|empty|noDescription)/);
+assert.doesNotMatch(css, /\.package-catalog-empty/);
+// The vending machine's brand lockup ("İşBul KKTC · KARİYER PLATFORMU") was
+// removed; the header already carries the brand.
+assert.doesNotMatch(packagesShowcase, /packages-vend-mark|platformLabel/);
+assert.doesNotMatch(packagesPage, /platformLabel/);
+assert.doesNotMatch(css, /\.packages-vend-mark/);
+assert.doesNotMatch(
+  `${JSON.stringify(trMessages.PackagesPage)} ${JSON.stringify(enMessages.PackagesPage)}`,
+  /platformLabel/,
 );
-assert.match(
-  enMessages.PackagesPage.showcase.status,
-  /Indicative pricing.*Payment is not taken on the website/i,
+assert.doesNotMatch(
+  `${JSON.stringify(trMessages.PackagesPage.catalog)} ${JSON.stringify(enMessages.PackagesPage.catalog)}`,
+  /"(?:title|description|activeJobs|duration|days|empty|noDescription)"/,
 );
 assert.doesNotMatch(
   `${JSON.stringify(trMessages.PackagesPage)} ${JSON.stringify(enMessages.PackagesPage)}`,
@@ -588,6 +656,31 @@ for (const [foreground, background, minimum] of [
 ]) {
   assert.ok(contrast(foreground, background) >= minimum);
 }
+
+// Micro-labels must not shrink below the smallest design token (--type-caption =
+// 0.6875rem = 11px). Mobile media queries used to drop kickers, footer labels and
+// the brand mark to 7-9px, which the token test cannot see because it only reads
+// the token value, never the literals. Assert the floor against the literals.
+const captionFloorPx = 10;
+const cssWithoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+const undersized = [];
+for (const [, value, unit] of cssWithoutComments.matchAll(
+  /font-size:\s*([\d.]+)(px|rem)/g,
+)) {
+  const px = unit === "rem" ? Number(value) * 16 : Number(value);
+  if (px < captionFloorPx) undersized.push(`${value}${unit} (${px}px)`);
+}
+for (const [, shorthand] of cssWithoutComments.matchAll(/(?:^|[\s;{])font:\s*([^;{}]+);/g)) {
+  const size = shorthand.match(/(?:^|\s)([\d.]+)(px|rem)(?:\s*\/|\s)/);
+  if (!size) continue;
+  const px = size[2] === "rem" ? Number(size[1]) * 16 : Number(size[1]);
+  if (px < captionFloorPx) undersized.push(`${size[1]}${size[2]} (${px}px)`);
+}
+assert.deepEqual(
+  undersized,
+  [],
+  `font sizes below the ${captionFloorPx}px caption floor: ${undersized.join(", ")}`,
+);
 
 console.log(
   `Source checks passed: ${expectedTokens.size} design tokens, uploaded photos and 16 original sector images with responsive optimization, real candidate/company entry points, private profile writes, six-locale routing with disclosed translation coverage, contrast and motion rules.`,

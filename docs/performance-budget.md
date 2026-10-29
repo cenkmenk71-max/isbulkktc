@@ -14,6 +14,23 @@ Bunlar **hedeftir, ölçüm sonucu değildir**. Başlangıç build'i, ziyaretçi
 telemetrisi ve hedef cihaz profili ölçülmeden kesin JavaScript, görsel veya
 shader KB/sınırı iddia edilmez; kararlaştırılmış sınır ADR'de saklanır.
 
+## Ana sayfa görsel yükü (ölçüldü)
+
+Ana sayfanın ilk yüklemesinde indirilen görseller, 10 görsel (6 şehir slaytı +
+4 öne çıkan sektör kartı):
+
+| Kalite | DPR 1 | DPR 2 |
+|---|---:|---:|
+| `quality={100}` (eski) | 5,50 MB | 7,25 MB |
+| `quality={90}` (yeni) | ~3,1 MB | ~4,1 MB |
+
+Kalite 90, 1920px'te altı orijinal üzerinde ölçüldü: PSNR 42,6-45,6 dB,
+SSIM 0,987-0,997 (görsel olarak ayırt edilemez eşiği ~40 dB / 0,98), bayt
+~%43 daha az. AVIF bu Next sürümünde (16.4.2) kaliteyi 50/80 ile ölçekleyip
+effort 3'te kodladığı için WebP'nin gerisinde kalır; `formats: ["image/webp"]`
+korunur. Ayrıntılı tablo ve gerekçe: `docs/design/frontend-design-review.md`
+ve `scripts/check-frontend-source.mjs` içindeki `homepageImageQuality`.
+
 ## Temel işlevler için kurallar
 
 - Semantik HTML, sunucuda üretilmiş temel içerik ve kullanıcıya göre yetkili

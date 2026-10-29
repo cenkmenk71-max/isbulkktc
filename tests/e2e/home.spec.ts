@@ -125,7 +125,7 @@ test("homepage cycles through local district photos with an animated light-ray l
   expect(girnePhoto).toMatchObject({
     loaded: true,
     source: expect.stringMatching(/^\/_next\/static\/media\/.+\.webp$/),
-    quality: "100",
+    quality: "90",
     loading: "eager",
     fetchPriority: "high",
     animationDelay: "-0.5s",
@@ -171,9 +171,9 @@ test("homepage cycles through local district photos with an animated light-ray l
       asset: "/images/Girne.webp",
       loaded: true,
       optimized: true,
-      quality: "100",
+      quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.webp$/),
-      objectPosition: "50% 50%",
+      objectPosition: "53% 57%",
       loading: "eager",
       fetchPriority: "high",
       animationDelay: "-0.5s",
@@ -184,9 +184,9 @@ test("homepage cycles through local district photos with an animated light-ray l
       asset: "/images/Gazimağusa.webp",
       loaded: true,
       optimized: true,
-      quality: "100",
+      quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.webp$/),
-      objectPosition: "50% 50%",
+      objectPosition: "50% 78%",
       loading: "eager",
       fetchPriority: "low",
       animationDelay: "7.5s",
@@ -197,9 +197,9 @@ test("homepage cycles through local district photos with an animated light-ray l
       asset: "/images/güzelyurt.jpg",
       loaded: true,
       optimized: true,
-      quality: "100",
+      quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.jpg$/),
-      objectPosition: "100% 100%",
+      objectPosition: "49% 55%",
       loading: "lazy",
       fetchPriority: "low",
       animationDelay: "15.5s",
@@ -210,9 +210,9 @@ test("homepage cycles through local district photos with an animated light-ray l
       asset: "/images/iskele.jpg",
       loaded: true,
       optimized: true,
-      quality: "100",
+      quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.jpg$/),
-      objectPosition: "50% 78%",
+      objectPosition: "50% 52%",
       loading: "lazy",
       fetchPriority: "low",
       animationDelay: "23.5s",
@@ -223,9 +223,9 @@ test("homepage cycles through local district photos with an animated light-ray l
       asset: "/images/lefkoşa.jpeg",
       loaded: true,
       optimized: true,
-      quality: "100",
+      quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.jpeg$/),
-      objectPosition: "50% 50%",
+      objectPosition: "50% 83%",
       loading: "lazy",
       fetchPriority: "low",
       animationDelay: "31.5s",
@@ -236,9 +236,9 @@ test("homepage cycles through local district photos with an animated light-ray l
       asset: "/images/lefke.jpg",
       loaded: true,
       optimized: true,
-      quality: "100",
+      quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.jpg$/),
-      objectPosition: "50% 50%",
+      objectPosition: "50% 79%",
       loading: "lazy",
       fetchPriority: "low",
       animationDelay: "39.5s",
@@ -308,7 +308,7 @@ test("homepage requests hero image variants for high-density screens", async ({
     );
 
     for (const variant of requestedVariants) {
-      expect(variant.quality).toBe("100");
+      expect(variant.quality).toBe("90");
       expect(variant.source).toBeTruthy();
       expect(variant.requestedWidth).toBeGreaterThanOrEqual(
         variant.renderedWidth * 2,
@@ -610,22 +610,19 @@ test("sector cards animate on hover only when motion is allowed", async ({
   await expect(photo).toHaveCSS("transform", "none");
 });
 
-test("company, about and contact heroes use distinct local photos", async ({
-  page,
-}) => {
+test("every page hero uses its own uploaded photo", async ({ page }) => {
   const heroImages = [
     [
       "/companies",
       ".company-directory-hero-image",
-      "/images/company-directory.webp",
+      "/images/companies-hero.webp",
     ],
-    ["/about", ".editorial-hero-aside-image", "/images/about-community.webp"],
-    [
-      "/contact",
-      ".editorial-hero-aside-image",
-      "/images/contact-community.webp",
-    ],
-    ["/blog", ".editorial-hero-aside-image", "/images/editorial-newsroom.webp"],
+    ["/about", ".editorial-hero-aside-image", "/images/about-hero.webp"],
+    ["/contact", ".editorial-hero-aside-image", "/images/contact-hero.webp"],
+    ["/blog", ".editorial-hero-aside-image", "/images/blog-hero.webp"],
+    ["/jobs", ".jobs-hero-image", "/images/jobs-hero.webp"],
+    ["/freelance", ".freelance-hero-image", "/images/freelance-hero.webp"],
+    ["/packages", ".packages-hero-image", "/images/packages-hero.webp"],
   ] as const;
 
   for (const [route, selector, expectedPath] of heroImages) {
@@ -735,7 +732,7 @@ test("sector cards use the matching optimized photos in both locales", async ({
       expect(optimizedUrl.searchParams.get("url")).toMatch(
         originalAssetPattern,
       );
-      expect(optimizedUrl.searchParams.get("q")).toBe("100");
+      expect(optimizedUrl.searchParams.get("q")).toBe("90");
       const response = await page.request.get(currentSrc, {
         headers: { Accept: "image/avif,image/webp,*/*" },
       });
@@ -861,6 +858,47 @@ test("the sector directory searches and filters all sectors", async ({
   await expect(industryFilter).toHaveAttribute("aria-pressed", "false");
 });
 
+test("sector category badges stay legible and unclipped", async ({ page }) => {
+  const measureBadges = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll(".sector-image-category")]
+        .map((el) => {
+          const rect = el.getBoundingClientRect();
+          if (rect.width < 1) return null;
+          return {
+            fontSize: parseFloat(getComputedStyle(el).fontSize),
+            clipped: el.scrollWidth > el.clientWidth + 1,
+            text: el.textContent?.trim() ?? "",
+          };
+        })
+        .filter((badge) => badge !== null),
+    );
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const locale of ["/tr", "/de"]) {
+    await page.goto(locale);
+    await page.locator("button.sector-directory-trigger").click();
+    const badges = await measureBadges();
+    expect(badges.length).toBeGreaterThan(0);
+    for (const badge of badges) {
+      expect(
+        badge.fontSize,
+        `${locale} "${badge.text}" font-size`,
+      ).toBeGreaterThanOrEqual(10);
+      expect(badge.clipped, `${locale} "${badge.text}" must not clip`).toBe(
+        false,
+      );
+    }
+  }
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const desktopBadges = await measureBadges();
+  for (const badge of desktopBadges) {
+    expect(badge.fontSize).toBeGreaterThanOrEqual(11);
+    expect(badge.clipped).toBe(false);
+  }
+});
+
 test("freelance career page links to the real candidate profile flow", async ({
   page,
 }) => {
@@ -897,7 +935,7 @@ test("freelance career page links to the real candidate profile flow", async ({
       ).searchParams.get("url");
       return decoded ?? image.currentSrc;
     });
-  expect(heroImageSource).toMatch(/unsplash-1498050108023-c5249f4df085/);
+  expect(heroImageSource).toMatch(/freelance-hero\.webp/);
   const desktopHero = await page.evaluate(() => {
     const hero = document
       .querySelector(".freelance-hero")!

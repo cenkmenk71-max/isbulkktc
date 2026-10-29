@@ -5,14 +5,12 @@ import type { ListingDuration, Plan } from "../lib/plans";
 
 type Props = {
   plan: Plan;
-  packageStatus: string;
   packageContentsLabel: string;
   durationLabel: string;
   durationGroupLabel: string;
   durationOptions: { days: ListingDuration; label: string }[];
   priceSummary: string;
   customPriceLabel: string;
-  priceDisclaimer: string;
   quoteAction: string;
   quoteTitle: string;
   quoteInstructions: string;
@@ -32,14 +30,12 @@ type Props = {
 
 export function Panel({
   plan,
-  packageStatus,
   packageContentsLabel,
   durationLabel,
   durationGroupLabel,
   durationOptions,
   priceSummary,
   customPriceLabel,
-  priceDisclaimer,
   quoteAction,
   quoteTitle,
   quoteInstructions,
@@ -75,7 +71,6 @@ export function Panel({
         {plan.name}
       </h2>
       <p className="vend-panel-summary">{plan.blurb}</p>
-      <p className="vend-panel-status">{packageStatus}</p>
 
       <div className="vend-panel-scope">
         <p>{packageContentsLabel}</p>
@@ -115,7 +110,6 @@ export function Panel({
             </>
           )}
         </p>
-        <p className="vend-panel-price-disclaimer">{priceDisclaimer}</p>
       </section>
 
       <div className="vend-panel-action">

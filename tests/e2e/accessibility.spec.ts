@@ -65,7 +65,10 @@ for (const locale of locales) {
         await page.waitForTimeout(600);
 
         const results = await new AxeBuilder({ page })
-          .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+          // wcag22aa adds the 2.2 success criteria axe can automate, notably
+          // target-size (2.5.8): a control must be at least 24x24 CSS px or
+          // spaced so an undersized one is not the only target.
+          .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
           .analyze();
 
         for (const violation of results.violations) {

@@ -61,7 +61,7 @@ export function CompanyDirectory({
       category,
       location: district,
     });
-    return sortCompanyDirectory(results, sortDirection);
+    return sortCompanyDirectory(results, sortDirection, query);
   }, [companies, query, category, district, sortDirection]);
   const unclassifiedLocationCount = useMemo(
     () =>

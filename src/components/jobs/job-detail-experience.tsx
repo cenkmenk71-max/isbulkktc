@@ -7,6 +7,7 @@ import {
   getDistrictMessageKey,
   getJobTypeMessageKey,
   getWorkplaceModeMessageKey,
+  isRedundantJobSummary,
 } from "@/features/jobs/presentation";
 import type { AppLocale } from "@/i18n/routing";
 import type { PublicJobListing } from "@/server/dal/jobs";
@@ -22,6 +23,8 @@ export async function JobDetailExperience({
     getTranslations({ locale, namespace: "JobDetail" }),
     getTranslations({ locale, namespace: "HomeJobSearch" }),
   ]);
+
+  const summaryIsRedundant = isRedundantJobSummary(job.summary, job.description);
 
   return (
     <div className="job-detail-page">
@@ -80,7 +83,7 @@ export async function JobDetailExperience({
                 </span>
               ) : null}
             </div>
-            {job.summary ? (
+            {job.summary && !summaryIsRedundant ? (
               <p className="job-detail-summary">{job.summary}</p>
             ) : null}
           </header>
