@@ -306,7 +306,6 @@ export function searchCompanyDirectory(
     location?: string;
   },
 ): CompanyDirectoryEntry[] {
-  const normalizedQuery = normalizeCompanySearchText(query);
   const normalizedCategory = normalizeCompanySearchText(category ?? "");
   const selectedDistrict = location
     ? resolveNorthernCyprusDistrict(location)
@@ -333,16 +332,35 @@ export function searchCompanyDirectory(
       : entry.locations;
     if (selectedDistrict && locations.length === 0) return [];
 
-    return !normalizedQuery ||
-      normalizeCompanySearchText(entry.name).includes(normalizedQuery)
+    return companyDirectoryMatchScore(entry.name, query) >= 0
       ? [{ ...entry, locations }]
       : [];
   });
 }
 
+// Scores a company name against the query for both filtering and ordering.
+// Every whitespace-separated query token must appear somewhere in the name
+// (so "ada market" matches "Ada Market Ltd."), and the score is the sum of the
+// earliest match offsets: the smaller the score, the earlier the name matches,
+// which floats prefix hits ("Ada…") above names that merely contain the token.
+export function companyDirectoryMatchScore(name: string, query: string): number {
+  const normalizedName = normalizeCompanySearchText(name);
+  const tokens = normalizeCompanySearchText(query).split(" ").filter(Boolean);
+  if (tokens.length === 0) return 0;
+
+  let score = 0;
+  for (const token of tokens) {
+    const index = normalizedName.indexOf(token);
+    if (index === -1) return -1;
+    score += index;
+  }
+  return score;
+}
+
 export function sortCompanyDirectory(
   entries: readonly CompanyDirectoryEntry[],
   direction: "ascending" | "descending" = "ascending",
+  query = "",
 ): CompanyDirectoryEntry[] {
   const collator = new Intl.Collator("tr", {
     sensitivity: "base",
@@ -350,8 +368,17 @@ export function sortCompanyDirectory(
     ignorePunctuation: true,
   });
   const multiplier = direction === "ascending" ? 1 : -1;
+  const normalizedQuery = normalizeCompanySearchText(query);
 
-  return [...entries].sort(
-    (left, right) => multiplier * collator.compare(left.name, right.name),
-  );
+  return [...entries].sort((left, right) => {
+    // While searching, names that match earliest (prefix hits) come first; the
+    // selected A-Z / Z-A direction stays meaningful as the tie-breaker.
+    if (normalizedQuery) {
+      const scoreDifference =
+        companyDirectoryMatchScore(left.name, normalizedQuery) -
+        companyDirectoryMatchScore(right.name, normalizedQuery);
+      if (scoreDifference !== 0) return scoreDifference;
+    }
+    return multiplier * collator.compare(left.name, right.name);
+  });
 }

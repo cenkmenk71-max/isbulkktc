@@ -373,6 +373,58 @@ test("sorts company names by the Turkish alphabet and supports reverse order", (
   );
 });
 
+test("ranks prefix matches ahead of names that only contain the query", () => {
+  const entries = [
+    { ...sampleCompanies[0], id: "kale", name: "Kale Alışveriş" },
+    { ...sampleCompanies[0], id: "market", name: "Market Kale" },
+    { ...sampleCompanies[0], id: "ada", name: "Ada Market" },
+  ];
+
+  assert.deepEqual(
+    sortCompanyDirectory(
+      searchCompanyDirectory(entries, { query: "ka" }),
+      "ascending",
+      "ka",
+    ).map((company) => company.id),
+    ["kale", "market"],
+  );
+});
+
+test("requires every query token to appear, matching word order loosely", () => {
+  const entries = [
+    { ...sampleCompanies[0], id: "ada", name: "Ada Market" },
+    { ...sampleCompanies[0], id: "market", name: "Market Ada" },
+    { ...sampleCompanies[0], id: "ada-only", name: "Ada Eğitim" },
+  ];
+
+  assert.deepEqual(
+    searchCompanyDirectory(entries, { query: "ada market" }).map(
+      (company) => company.id,
+    ),
+    ["ada", "market"],
+  );
+});
+
+test("keeps the A-Z direction as the tie-breaker within equal relevance", () => {
+  const entries = [
+    { ...sampleCompanies[0], id: "b", name: "Beta Market" },
+    { ...sampleCompanies[0], id: "a", name: "Alfa Market" },
+  ];
+
+  assert.deepEqual(
+    sortCompanyDirectory(entries, "ascending", "market").map(
+      (company) => company.id,
+    ),
+    ["a", "b"],
+  );
+  assert.deepEqual(
+    sortCompanyDirectory(entries, "descending", "market").map(
+      (company) => company.id,
+    ),
+    ["b", "a"],
+  );
+});
+
 test("merges repeated listings but preserves distinct branches", () => {
   const repeated = {
     ...sampleCompanies[0],
