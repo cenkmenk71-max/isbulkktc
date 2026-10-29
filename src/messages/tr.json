@@ -459,6 +459,7 @@
       "invalid": "Bilgileri kontrol edip tekrar deneyin.",
       "signInFailed": "Giriş yapılamadı. E-posta adresinizi ve şifrenizi kontrol edin.",
       "emailNotConfirmed": "Giriş yapmadan önce e-posta adresinizi doğrulamanız gerekiyor. Gelen kutunuza gönderdiğimiz bağlantıyı açın.",
+      "captchaFailed": "Bot koruması doğrulanamadı. Sayfayı yenileyip tekrar deneyin.",
       "signUpFailed": "Kayıt tamamlanamadı. Bilgileri kontrol edip tekrar deneyin.",
       "verificationSent": "Devam etmek için e-posta adresinize gönderilen doğrulama bağlantısını kullanın.",
       "oauthUnavailable": "Bu giriş seçeneği henüz etkin değil. E-posta ve şifrenizi kullanın.",

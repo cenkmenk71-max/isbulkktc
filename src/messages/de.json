@@ -479,6 +479,7 @@
       "invalid": "Prüfen Sie Ihre Angaben und versuchen Sie es erneut.",
       "signInFailed": "Anmeldung nicht möglich. Prüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.",
       "emailNotConfirmed": "Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie sich anmelden. Öffnen Sie den Link in Ihrem Postfach.",
+      "captchaFailed": "Der Bot-Schutz konnte nicht bestätigt werden. Laden Sie die Seite neu und versuchen Sie es erneut.",
       "signUpFailed": "Konto konnte nicht erstellt werden. Prüfen Sie Ihre Angaben und versuchen Sie es erneut.",
       "verificationSent": "Verwenden Sie den Bestätigungslink aus Ihrer E-Mail, um fortzufahren.",
       "oauthUnavailable": "Diese Anmeldeoption ist noch nicht aktiviert. Verwenden Sie stattdessen E-Mail und Passwort.",

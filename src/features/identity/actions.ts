@@ -134,6 +134,15 @@ export async function signIn(
       };
     }
 
+    // Supabase answers `captcha_failed` when Turnstile rejects or expires the
+    // token; the generic copy would tell the user to check a correct password.
+    if (error.code === "captcha_failed") {
+      return {
+        status: "error",
+        message: "captchaFailed",
+      };
+    }
+
     return {
       status: "error",
       message: "signInFailed",
@@ -187,6 +196,9 @@ export async function signUp(
 
   if (error) {
     console.error("Supabase sign-up failed.", { code: error.code });
+    if (error.code === "captcha_failed") {
+      return { status: "error", message: "captchaFailed" };
+    }
     return {
       status: "error",
       message: "signUpFailed",
@@ -239,6 +251,9 @@ export async function requestPasswordReset(
     console.error("Supabase password reset request failed.", {
       code: error.code,
     });
+    if (error.code === "captcha_failed") {
+      return { status: "error", message: "captchaFailed" };
+    }
     return { status: "error", message: "resetRequestFailed" };
   }
 

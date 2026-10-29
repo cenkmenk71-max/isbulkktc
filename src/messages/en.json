@@ -459,6 +459,7 @@
       "invalid": "Check your details and try again.",
       "signInFailed": "Could not sign in. Check your email address and password.",
       "emailNotConfirmed": "You must verify your email address before signing in. Open the link we sent to your inbox.",
+      "captchaFailed": "We could not verify the bot protection. Refresh the page and try again.",
       "signUpFailed": "Your account could not be created. Check your details and try again.",
       "verificationSent": "Use the verification link sent to your email address to continue.",
       "oauthUnavailable": "This sign-in option is not enabled yet. Use your email and password instead.",
