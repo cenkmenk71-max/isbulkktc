@@ -610,6 +610,31 @@ for (const [foreground, background, minimum] of [
   assert.ok(contrast(foreground, background) >= minimum);
 }
 
+// Micro-labels must not shrink below the smallest design token (--type-caption =
+// 0.6875rem = 11px). Mobile media queries used to drop kickers, footer labels and
+// the brand mark to 7-9px, which the token test cannot see because it only reads
+// the token value, never the literals. Assert the floor against the literals.
+const captionFloorPx = 10;
+const cssWithoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+const undersized = [];
+for (const [, value, unit] of cssWithoutComments.matchAll(
+  /font-size:\s*([\d.]+)(px|rem)/g,
+)) {
+  const px = unit === "rem" ? Number(value) * 16 : Number(value);
+  if (px < captionFloorPx) undersized.push(`${value}${unit} (${px}px)`);
+}
+for (const [, shorthand] of cssWithoutComments.matchAll(/(?:^|[\s;{])font:\s*([^;{}]+);/g)) {
+  const size = shorthand.match(/(?:^|\s)([\d.]+)(px|rem)(?:\s*\/|\s)/);
+  if (!size) continue;
+  const px = size[2] === "rem" ? Number(size[1]) * 16 : Number(size[1]);
+  if (px < captionFloorPx) undersized.push(`${size[1]}${size[2]} (${px}px)`);
+}
+assert.deepEqual(
+  undersized,
+  [],
+  `font sizes below the ${captionFloorPx}px caption floor: ${undersized.join(", ")}`,
+);
+
 console.log(
   `Source checks passed: ${expectedTokens.size} design tokens, uploaded photos and 16 original sector images with responsive optimization, real candidate/company entry points, private profile writes, six-locale routing with disclosed translation coverage, contrast and motion rules.`,
 );

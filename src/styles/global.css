@@ -719,7 +719,7 @@ a {
 .section-index {
   color: var(--ink-4);
   font:
-    500 9px var(--font-geist-mono),
+    500 10px var(--font-geist-mono),
     monospace;
   letter-spacing: 0.08em;
   white-space: nowrap;
@@ -766,7 +766,7 @@ a {
   border-radius: 4px;
   background: var(--color-status-success-bg);
   color: var(--color-status-success);
-  font-size: 7px;
+  font-size: 10px;
   white-space: nowrap;
 }
 .step-status-dot.new {
@@ -811,7 +811,7 @@ a {
   align-items: center;
   gap: 8px;
   color: var(--color-vanadium-400);
-  font-size: 9px;
+  font-size: 10px;
 }
 .footer-links {
   display: grid;
@@ -828,7 +828,7 @@ a {
   margin-bottom: 6px;
   color: var(--color-shade-green-400);
   font:
-    600 9px var(--font-geist-mono),
+    600 10px var(--font-geist-mono),
     monospace;
   letter-spacing: 0.12em;
 }
@@ -852,7 +852,7 @@ a {
   gap: 18px;
   border-top: 1px solid rgba(209, 213, 208, 0.14);
   color: var(--color-vanadium-400);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 /* Modal flows: details, local-only application preview, and account notice */
@@ -1090,7 +1090,7 @@ a {
   }
   .eyebrow {
     gap: 8px;
-    font-size: 8px;
+    font-size: 10px;
     letter-spacing: 0.1em;
   }
   .eyebrow-rule {
@@ -1159,7 +1159,7 @@ a {
     min-height: 350px;
   }
   .section-index {
-    font-size: 8px;
+    font-size: 10px;
   }
   .employer-copy .button {
     margin-top: 21px;
@@ -1192,10 +1192,10 @@ a {
     gap: 11px;
   }
   .footer-label {
-    font-size: 8px;
+    font-size: 10px;
   }
   .footer-links a {
-    font-size: 9px;
+    font-size: 10px;
   }
   .footer-bottom {
     min-height: 65px;
@@ -1204,7 +1204,7 @@ a {
     flex-direction: column;
     gap: 5px;
     padding-block: 13px;
-    font-size: 8px;
+    font-size: 10px;
   }
   .modal-actions .button {
     min-height: 42px;
@@ -1249,22 +1249,22 @@ a {
 
 @media (max-width: 740px) {
   .hero-copy .eyebrow.hero-eyebrow {
-    font-size: 9px;
+    font-size: 10px;
   }
   .sector-kicker {
-    font-size: 9px;
+    font-size: 10px;
   }
   .section-index {
-    font-size: 9px;
+    font-size: 10px;
   }
   .workspace-status {
-    font-size: 9px;
+    font-size: 10px;
   }
   .footer-label {
-    font-size: 9px;
+    font-size: 10px;
   }
   .footer-bottom {
-    font-size: 9px;
+    font-size: 10px;
   }
 }
 
@@ -1366,7 +1366,7 @@ a {
   display: block;
   color: currentColor;
   font:
-    550 8px/1 var(--font-geist-mono),
+    550 10px/1 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.37em;
   padding-left: 2px;
@@ -1578,7 +1578,7 @@ a {
   background: rgba(13, 33, 27, 0.48);
   color: var(--surface-raised);
   font:
-    550 8px/1.25 var(--font-geist-mono),
+    550 10px/1.25 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.08em;
   backdrop-filter: blur(9px);
@@ -1746,7 +1746,7 @@ a {
   margin-bottom: 4px;
   color: var(--ink-3);
   font:
-    620 9px/1.35 var(--font-geist-mono),
+    620 10px/1.35 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.12em;
 }
@@ -1875,7 +1875,7 @@ a {
   margin-bottom: 7px;
   color: var(--ink-3);
   font:
-    620 9px/1.4 var(--font-geist-mono),
+    620 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1916,7 +1916,7 @@ a {
 .sector-explorer-total span {
   margin-top: 5px;
   color: var(--ink-3);
-  font-size: 9px;
+  font-size: 10px;
 }
 .sector-explorer-tools {
   display: grid;
@@ -2012,7 +2012,7 @@ a {
   background: var(--color-vanadium-100);
   color: var(--ink-3);
   font:
-    600 9px/1 var(--font-geist-mono),
+    600 10px/1 var(--font-geist-mono),
     monospace;
   font-variant-numeric: tabular-nums;
 }
@@ -2081,7 +2081,7 @@ a {
   border-radius: 99px;
   background: var(--color-shade-green-50);
   color: var(--green);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 650;
   line-height: 1;
 }
@@ -2627,7 +2627,7 @@ a {
     font-size: 24px;
   }
   .brand-wordmark small {
-    font-size: 7px;
+    font-size: 10px;
     letter-spacing: 0.34em;
   }
   .language-switch {
@@ -2672,7 +2672,7 @@ a {
   }
   .hero-copy .eyebrow.hero-eyebrow {
     padding: 7px 11px;
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.09em;
   }
   .hero-copy h1 {
@@ -2718,7 +2718,7 @@ a {
   }
   .sector-kicker {
     margin-bottom: 6px;
-    font-size: 9px;
+    font-size: 10px;
   }
   .sector-heading h2 {
     max-width: 340px;
@@ -2782,7 +2782,7 @@ a {
   }
   .sector-filter-chip {
     min-height: 33px;
-    font-size: 9px;
+    font-size: 10px;
   }
   .sector-explorer-results {
     margin-top: 16px;
@@ -2804,7 +2804,7 @@ a {
     font-size: 11px;
   }
   .sector-explorer-grid .sector-card-copy small {
-    font-size: 9px;
+    font-size: 10px;
   }
   .sector-image-category {
     top: 8px;
@@ -2854,7 +2854,7 @@ a {
     flex-wrap: wrap;
     justify-content: flex-start;
     padding-block: 15px;
-    font-size: 9px;
+    font-size: 10px;
   }
   .footer-bottom > span:nth-child(2) {
     width: 100%;
@@ -2882,7 +2882,7 @@ a {
     font-size: 11px;
   }
   .sector-card-copy small {
-    font-size: 9px;
+    font-size: 10px;
   }
 }
 /* Language picker: seven planned locales, only the two shipped dictionaries are selectable. */
@@ -2984,7 +2984,7 @@ a {
   background: var(--color-crayon-50);
   color: var(--color-vanadium-700);
   font:
-    650 9px/1 var(--font-geist-mono),
+    650 10px/1 var(--font-geist-mono),
     monospace;
 }
 .language-name {
@@ -3010,7 +3010,7 @@ a {
 }
 .language-option.is-planned small {
   color: var(--color-vanadium-600);
-  font-size: 9px;
+  font-size: 10px;
 }
 .language-menu-note {
   margin: 8px 7px 3px;
@@ -3503,7 +3503,7 @@ a {
 }
 .account-audience-copy small {
   color: var(--ink-3);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.45;
 }
 .account-audience-selection {
@@ -3539,7 +3539,7 @@ a {
   align-items: center;
   gap: 7px;
   color: var(--green);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.12em;
 }
@@ -3899,7 +3899,7 @@ a {
   gap: 12px;
   color: rgba(255, 253, 248, 0.83);
   font:
-    600 9px/1.4 var(--font-geist-mono),
+    600 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.12em;
 }
@@ -3929,7 +3929,7 @@ a {
 .editorial-page-scene-copy > span {
   color: var(--color-shade-green-300);
   font:
-    600 9px/1.4 var(--font-geist-mono),
+    600 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.16em;
 }
@@ -3961,7 +3961,7 @@ a {
   bottom: 27px;
   color: rgba(255, 253, 248, 0.76);
   font:
-    550 8px/1.3 var(--font-geist-mono),
+    550 10px/1.3 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.14em;
 }
@@ -4040,7 +4040,7 @@ a {
   background: rgba(7, 19, 15, 0.48);
   color: var(--surface-raised);
   cursor: pointer;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 620;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -4176,7 +4176,7 @@ a {
   margin-bottom: 24px;
   color: var(--ink-4);
   font:
-    550 9px/1.4 var(--font-geist-mono),
+    550 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.12em;
 }
@@ -4201,7 +4201,7 @@ a {
   gap: 9px;
   color: var(--ink-4);
   font:
-    600 9px/1.4 var(--font-geist-mono),
+    600 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.11em;
 }
@@ -4447,7 +4447,7 @@ a {
   .editorial-page-scene-index {
     right: 22px;
     bottom: 18px;
-    font-size: 7px;
+    font-size: 10px;
   }
   .editorial-page-scene-video-controls {
     inset-inline: 22px;
@@ -4458,14 +4458,14 @@ a {
     min-height: 31px;
     gap: 5px;
     padding-inline: 8px;
-    font-size: 8px;
+    font-size: 10px;
   }
   .editorial-page-scene-video-error {
     inset-inline: 22px;
     bottom: 86px;
   }
   .editorial-page-scene-index {
-    font-size: 7px;
+    font-size: 10px;
   }
   .editorial-page-alert {
     margin-top: 22px;
@@ -7061,7 +7061,7 @@ main :where(p) {
 .home-page .hero-copy .hero-eyebrow {
   gap: 11px;
   padding: 7px 12px;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.1em;
 }
 .home-page .hero-copy h1 {
@@ -7279,7 +7279,7 @@ main :where(p) {
   gap: 16px;
   color: rgba(240, 241, 237, 0.64);
   font:
-    500 8px/1.4 var(--font-geist-mono),
+    500 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.13em;
 }
@@ -7642,7 +7642,7 @@ main :where(p) {
 .admin-package-code {
   color: var(--ink-4);
   font:
-    600 9px/1.4 var(--font-geist-mono),
+    600 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -8260,7 +8260,7 @@ main :where(p) {
   background: rgba(7, 8, 12, 0.82);
   color: #c6d8cb;
   font:
-    550 9px/1 var(--font-geist-mono),
+    550 10px/1 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.08em;
   cursor: pointer;
@@ -8365,7 +8365,7 @@ main :where(p) {
     bottom: 18px;
     left: 24px;
     gap: 8px;
-    font-size: 8px;
+    font-size: 10px;
   }
   .packages-hero-bottom span:nth-child(2) {
     display: none;
@@ -8384,7 +8384,7 @@ main :where(p) {
     width: min(300px, calc(100% - 40px));
   }
   .packages-vend-brand {
-    font-size: 9px;
+    font-size: 10px;
   }
   .packages-vend-copy h2 {
     max-width: 320px;
@@ -8403,7 +8403,7 @@ main :where(p) {
     left: 20px;
     justify-content: space-between;
     gap: 8px;
-    font-size: 8px;
+    font-size: 10px;
   }
   .packages-vend-fallback {
     right: 16px;
@@ -9584,7 +9584,7 @@ main :where(p) {
   margin-top: 15px;
   color: rgba(255, 253, 248, 0.65);
   font:
-    600 9px/1.5 var(--font-geist-mono),
+    600 10px/1.5 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.1em;
 }
@@ -9721,7 +9721,7 @@ main :where(p) {
   margin: 0;
   color: var(--green-mid);
   font:
-    650 9px/1.5 var(--font-geist-mono),
+    650 10px/1.5 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.13em;
 }
@@ -9896,7 +9896,7 @@ main :where(p) {
   margin-top: 18px;
   color: var(--ink-4);
   font:
-    600 9px/1.4 var(--font-geist-mono),
+    600 10px/1.4 var(--font-geist-mono),
     monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -10089,12 +10089,12 @@ main :where(p) {
   gap: 12px;
   margin-top: 10px;
   color: var(--ink-4);
-  font-size: 9px;
+  font-size: 10px;
 }
 .blog-article-meta time {
   flex: 0 0 auto;
   color: var(--ink-3);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
 }
 .blog-article-card h3 {
@@ -11080,7 +11080,7 @@ html[dir="rtl"] input[name="slug"] {
 .jobs-section-kicker {
   margin: 0 0 8px;
   color: var(--brand-green-vivid);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -11684,7 +11684,7 @@ html[dir="rtl"] input[name="slug"] {
 }
 .job-detail-company-card > span:first-child {
   color: var(--ink-4);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.14em;
 }
