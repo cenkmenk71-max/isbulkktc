@@ -436,7 +436,7 @@
     "emailLabel": "نشانی ایمیل",
     "accountEmailLabel": "ایمیل حساب",
     "passwordLabel": "گذرواژه",
-    "passwordHint": "حداقل ۸ نویسه.",
+    "passwordHint": "حداقل ۱۰ نویسه.",
     "showPassword": "نمایش گذرواژه",
     "hidePassword": "پنهان کردن گذرواژه",
     "createCandidateAccount": "ساخت حساب متقاضی",

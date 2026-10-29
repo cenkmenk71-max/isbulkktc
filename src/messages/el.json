@@ -436,7 +436,7 @@
     "emailLabel": "Διεύθυνση email",
     "accountEmailLabel": "Email λογαριασμού",
     "passwordLabel": "Κωδικός πρόσβασης",
-    "passwordHint": "Τουλάχιστον 8 χαρακτήρες.",
+    "passwordHint": "Τουλάχιστον 10 χαρακτήρες.",
     "showPassword": "Εμφάνιση κωδικού",
     "hidePassword": "Απόκρυψη κωδικού",
     "createCandidateAccount": "Δημιουργία λογαριασμού υποψηφίου",

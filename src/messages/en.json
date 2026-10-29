@@ -415,7 +415,7 @@
     "emailLabel": "Email address",
     "accountEmailLabel": "Account email address",
     "passwordLabel": "Password",
-    "passwordHint": "At least 8 characters.",
+    "passwordHint": "At least 10 characters.",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "createCandidateAccount": "Create candidate account",

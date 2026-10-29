@@ -415,7 +415,7 @@
     "emailLabel": "E-posta adresi",
     "accountEmailLabel": "Hesap e-posta adresi",
     "passwordLabel": "Şifre",
-    "passwordHint": "En az 8 karakter.",
+    "passwordHint": "En az 10 karakter.",
     "showPassword": "Şifreyi göster",
     "hidePassword": "Şifreyi gizle",
     "createCandidateAccount": "Aday hesabı oluştur",

@@ -66,7 +66,7 @@ export function SignUpForm({
               id="register-password"
               autoComplete="new-password"
               maxLength={128}
-              minLength={8}
+              minLength={10}
               name="password"
               required
               type={passwordVisible ? "text" : "password"}

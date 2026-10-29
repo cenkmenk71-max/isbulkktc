@@ -27,7 +27,7 @@ export const signInSchema = z.object({
 
 export const signUpSchema = signInSchema.extend({
   displayName: z.string().trim().min(2).max(80),
-  password: z.string().min(8).max(128),
+  password: z.string().min(10).max(128),
 });
 
 export const requestPasswordResetSchema = z.object({
@@ -37,7 +37,7 @@ export const requestPasswordResetSchema = z.object({
 });
 
 export const updatePasswordSchema = z.object({
-  password: z.string().min(8).max(128),
+  password: z.string().min(10).max(128),
   locale: z.enum(routing.locales),
 });
 

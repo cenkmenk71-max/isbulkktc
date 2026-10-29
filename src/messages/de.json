@@ -436,7 +436,7 @@
     "emailLabel": "E-Mail-Adresse",
     "accountEmailLabel": "E-Mail-Adresse des Kontos",
     "passwordLabel": "Passwort",
-    "passwordHint": "Mindestens 8 Zeichen.",
+    "passwordHint": "Mindestens 10 Zeichen.",
     "showPassword": "Passwort anzeigen",
     "hidePassword": "Passwort ausblenden",
     "createCandidateAccount": "Bewerberkonto erstellen",

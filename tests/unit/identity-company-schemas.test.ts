@@ -293,14 +293,14 @@ test("password reset requests canonicalize the email and reject bad locales", ()
   );
 });
 
-test("password updates enforce the shared eight-character minimum", () => {
+test("password updates enforce the shared ten-character minimum", () => {
   assert.equal(
-    updatePasswordSchema.safeParse({ password: "a".repeat(8), locale: "en" })
+    updatePasswordSchema.safeParse({ password: "a".repeat(10), locale: "en" })
       .success,
     true,
   );
   assert.equal(
-    updatePasswordSchema.safeParse({ password: "a".repeat(7), locale: "en" })
+    updatePasswordSchema.safeParse({ password: "a".repeat(9), locale: "en" })
       .success,
     false,
   );

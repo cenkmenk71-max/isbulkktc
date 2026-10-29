@@ -427,7 +427,7 @@
     "emailLabel": "Адрес электронной почты",
     "accountEmailLabel": "Электронная почта аккаунта",
     "passwordLabel": "Пароль",
-    "passwordHint": "Не менее 8 символов.",
+    "passwordHint": "Не менее 10 символов.",
     "showPassword": "Показать пароль",
     "hidePassword": "Скрыть пароль",
     "createCandidateAccount": "Создать аккаунт кандидата",

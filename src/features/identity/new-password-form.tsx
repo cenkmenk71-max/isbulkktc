@@ -31,7 +31,7 @@ export function NewPasswordForm() {
             aria-describedby="reset-password-hint"
             autoComplete="new-password"
             maxLength={128}
-            minLength={8}
+            minLength={10}
             name="password"
             onChange={(event) => setPassword(event.target.value)}
             required
@@ -60,7 +60,7 @@ export function NewPasswordForm() {
             aria-describedby="reset-confirm-hint"
             autoComplete="new-password"
             maxLength={128}
-            minLength={8}
+            minLength={10}
             name="confirmPassword"
             onChange={(event) => setConfirmation(event.target.value)}
             required
