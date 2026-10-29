@@ -11,14 +11,55 @@ const photos = [
   "/images/account-gallery/maras-coast.webp",
 ];
 
-const videos = [
+type SceneVideo = {
+  title: string;
+  poster: string;
+  /** Ordered by efficiency: AV1 first, H.264 as the universal fallback. */
+  sources: { src: string; type: string }[];
+};
+
+const videos: SceneVideo[] = [
   {
-    src: "/videos/account-gallery/othello-kalesi.mp4",
     title: "Othello Kalesi",
+    poster: "/videos/account-gallery/othello-kalesi-poster.webp",
+    sources: [
+      {
+        src: "/videos/account-gallery/othello-kalesi.av1.mp4",
+        type: 'video/mp4; codecs="av01.0.04M.08"',
+      },
+      {
+        src: "/videos/account-gallery/othello-kalesi.mp4",
+        type: 'video/mp4; codecs="avc1.640028"',
+      },
+    ],
   },
   {
-    src: "/videos/account-gallery/st-hilarion-kalesi.mp4",
     title: "St. Hilarion Kalesi",
+    poster: "/videos/account-gallery/st-hilarion-kalesi-poster.webp",
+    sources: [
+      {
+        src: "/videos/account-gallery/st-hilarion-kalesi.av1.mp4",
+        type: 'video/mp4; codecs="av01.0.04M.08"',
+      },
+      {
+        src: "/videos/account-gallery/st-hilarion-kalesi.mp4",
+        type: 'video/mp4; codecs="avc1.640028"',
+      },
+    ],
+  },
+  {
+    title: "Mavi Köşk",
+    poster: "/videos/account-gallery/mavi-kosk-poster.webp",
+    sources: [
+      {
+        src: "/videos/account-gallery/mavi-kosk.av1.mp4",
+        type: 'video/mp4; codecs="av01.0.04M.08"',
+      },
+      {
+        src: "/videos/account-gallery/mavi-kosk.mp4",
+        type: 'video/mp4; codecs="avc1.640028"',
+      },
+    ],
   },
 ];
 
@@ -83,6 +124,7 @@ export function AccountSceneMedia({
           muted
           playsInline
           preload="auto"
+          poster={videos[activeVideoIndex].poster}
           onCanPlay={(e) => {
             void e.currentTarget.play().catch(() => {});
           }}
@@ -93,7 +135,9 @@ export function AccountSceneMedia({
           onPause={() => setIsPlaying(false)}
           onPlay={() => setIsPlaying(true)}
         >
-          <source src={videos[activeVideoIndex].src} type="video/mp4" />
+          {videos[activeVideoIndex].sources.map((source) => (
+            <source key={source.src} src={source.src} type={source.type} />
+          ))}
         </video>
       ) : null}
       <div className="editorial-page-scene-video-controls" role="group" aria-label={label}>
@@ -103,7 +147,7 @@ export function AccountSceneMedia({
 
           return (
             <button
-              key={video.src}
+              key={video.title}
               type="button"
               aria-label={video.title}
               aria-pressed={isActive && isPlaying}

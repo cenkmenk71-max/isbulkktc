@@ -21,6 +21,9 @@ const companyDirectoryPage = await read(
   "src/app/[locale]/(public)/companies/page.tsx",
 );
 const editorialPages = await read("src/features/editorial/brand-pages.tsx");
+const accountSceneMedia = await read(
+  "src/components/layout/account-scene-media.tsx",
+);
 const localeLayout = await read("src/app/[locale]/layout.tsx");
 const packagesPage = await read(
   "src/components/packages/packages-experience.tsx",
@@ -361,6 +364,63 @@ for (const [asset, component] of [
   assert.match(component, new RegExp(`/images/${asset}\\.webp`));
 }
 assert.match(editorialPages, /className="editorial-hero-background-image\b/);
+assert.match(css, /\.editorial-hero\s*\{[\s\S]*?minmax\(300px,\s*0\.9fr\)/);
+
+// Account scene videos must be real footage, not 6 KB placeholder stubs, and
+// must ship the modern codec ladder (AV1 primary + H.264 fallback) with a poster.
+const sceneVideos = ["othello-kalesi", "st-hilarion-kalesi", "mavi-kosk"];
+function isFastStart(buffer) {
+  let offset = 0;
+  while (offset + 8 <= buffer.length) {
+    const size = buffer.readUInt32BE(offset);
+    if (size < 8) break;
+    const type = buffer.toString("latin1", offset + 4, offset + 8);
+    if (type === "moov") return true;
+    if (type === "mdat") return false;
+    offset += size;
+  }
+  return false;
+}
+for (const name of sceneVideos) {
+  const av1 = await readFile(
+    new URL(`../public/videos/account-gallery/${name}.av1.mp4`, import.meta.url),
+  );
+  const h264 = await readFile(
+    new URL(`../public/videos/account-gallery/${name}.mp4`, import.meta.url),
+  );
+  const poster = await readFile(
+    new URL(
+      `../public/videos/account-gallery/${name}-poster.webp`,
+      import.meta.url,
+    ),
+  );
+  assert.ok(
+    av1.length > 400_000 && h264.length > 400_000,
+    `Account scene video ${name} looks like a placeholder stub (av1 ${av1.length}B, h264 ${h264.length}B).`,
+  );
+  assert.ok(
+    av1.length < 12_000_000 && h264.length < 12_000_000,
+    `Account scene video ${name} exceeds the 12 MB budget per file.`,
+  );
+  assert.equal(av1.toString("latin1", 4, 8), "ftyp");
+  assert.equal(h264.toString("latin1", 4, 8), "ftyp");
+  assert.ok(isFastStart(av1), `${name}.av1.mp4 must be faststart (moov first).`);
+  assert.ok(isFastStart(h264), `${name}.mp4 must be faststart (moov first).`);
+  assert.equal(poster.toString("ascii", 0, 4), "RIFF");
+  assert.equal(poster.toString("ascii", 8, 12), "WEBP");
+  assert.match(
+    accountSceneMedia,
+    new RegExp(`/videos/account-gallery/${name}\\.av1\\.mp4`),
+  );
+  assert.match(
+    accountSceneMedia,
+    new RegExp(`/videos/account-gallery/${name}-poster\\.webp`),
+  );
+}
+assert.match(accountSceneMedia, /av01\.0\.04M\.08/);
+assert.match(accountSceneMedia, /avc1\.640028/);
+assert.match(accountSceneMedia, /sources\.map/);
+assert.match(accountSceneMedia, /poster=\{videos\[activeVideoIndex\]\.poster\}/);
 assert.match(css, /\.editorial-hero\s*\{[\s\S]*?minmax\(300px,\s*0\.9fr\)/);
 assert.match(css, /\.home-page \.hero-photo-image \{\s*transform: none;/);
 assert.doesNotMatch(css, /\.hero-scene-window|\.hero-scene-foliage/);
