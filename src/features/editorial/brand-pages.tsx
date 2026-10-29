@@ -73,7 +73,7 @@ export async function AboutPageContent({ locale }: { locale: AppLocale }) {
       <div className="page-container">
         <section className="editorial-hero about-hero" aria-labelledby="about-title">
           <Image
-            src="/images/about-community.webp"
+            src="/images/about-hero.webp"
             alt=""
             fill
             preload
@@ -191,7 +191,7 @@ export async function ContactPageContent({ locale }: { locale: AppLocale }) {
       <div className="page-container">
         <section className="editorial-hero contact-hero" aria-labelledby="contact-title">
           <Image
-            src="/images/contact-community.webp"
+            src="/images/contact-hero.webp"
             alt=""
             fill
             preload
@@ -301,7 +301,7 @@ export async function BlogPageContent({ locale }: { locale: AppLocale }) {
       <div className="page-container">
         <section className="editorial-hero blog-hero" aria-labelledby="blog-title">
           <Image
-            src="/images/editorial-newsroom.webp"
+            src="/images/blog-hero.webp"
             alt=""
             fill
             preload

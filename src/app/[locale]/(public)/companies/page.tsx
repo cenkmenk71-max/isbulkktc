@@ -62,7 +62,7 @@ export default async function CompaniesPage({ params }: CompaniesPageProps) {
       <div className="page-container">
         <header className="company-directory-hero">
           <Image
-            src="/images/company-directory.webp"
+            src="/images/companies-hero.webp"
             alt=""
             fill
             preload

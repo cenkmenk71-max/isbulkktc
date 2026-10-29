@@ -173,7 +173,7 @@ test("homepage cycles through local district photos with an animated light-ray l
       optimized: true,
       quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.webp$/),
-      objectPosition: "50% 50%",
+      objectPosition: "53% 57%",
       loading: "eager",
       fetchPriority: "high",
       animationDelay: "-0.5s",
@@ -186,7 +186,7 @@ test("homepage cycles through local district photos with an animated light-ray l
       optimized: true,
       quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.webp$/),
-      objectPosition: "50% 50%",
+      objectPosition: "50% 78%",
       loading: "eager",
       fetchPriority: "low",
       animationDelay: "7.5s",
@@ -199,7 +199,7 @@ test("homepage cycles through local district photos with an animated light-ray l
       optimized: true,
       quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.jpg$/),
-      objectPosition: "100% 100%",
+      objectPosition: "49% 55%",
       loading: "lazy",
       fetchPriority: "low",
       animationDelay: "15.5s",
@@ -212,7 +212,7 @@ test("homepage cycles through local district photos with an animated light-ray l
       optimized: true,
       quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.jpg$/),
-      objectPosition: "50% 78%",
+      objectPosition: "50% 52%",
       loading: "lazy",
       fetchPriority: "low",
       animationDelay: "23.5s",
@@ -225,7 +225,7 @@ test("homepage cycles through local district photos with an animated light-ray l
       optimized: true,
       quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.jpeg$/),
-      objectPosition: "50% 50%",
+      objectPosition: "50% 83%",
       loading: "lazy",
       fetchPriority: "low",
       animationDelay: "31.5s",
@@ -238,7 +238,7 @@ test("homepage cycles through local district photos with an animated light-ray l
       optimized: true,
       quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.jpg$/),
-      objectPosition: "50% 50%",
+      objectPosition: "50% 79%",
       loading: "lazy",
       fetchPriority: "low",
       animationDelay: "39.5s",
@@ -610,22 +610,19 @@ test("sector cards animate on hover only when motion is allowed", async ({
   await expect(photo).toHaveCSS("transform", "none");
 });
 
-test("company, about and contact heroes use distinct local photos", async ({
-  page,
-}) => {
+test("every page hero uses its own uploaded photo", async ({ page }) => {
   const heroImages = [
     [
       "/companies",
       ".company-directory-hero-image",
-      "/images/company-directory.webp",
+      "/images/companies-hero.webp",
     ],
-    ["/about", ".editorial-hero-aside-image", "/images/about-community.webp"],
-    [
-      "/contact",
-      ".editorial-hero-aside-image",
-      "/images/contact-community.webp",
-    ],
-    ["/blog", ".editorial-hero-aside-image", "/images/editorial-newsroom.webp"],
+    ["/about", ".editorial-hero-aside-image", "/images/about-hero.webp"],
+    ["/contact", ".editorial-hero-aside-image", "/images/contact-hero.webp"],
+    ["/blog", ".editorial-hero-aside-image", "/images/blog-hero.webp"],
+    ["/jobs", ".jobs-hero-image", "/images/jobs-hero.webp"],
+    ["/freelance", ".freelance-hero-image", "/images/freelance-hero.webp"],
+    ["/packages", ".packages-hero-image", "/images/packages-hero.webp"],
   ] as const;
 
   for (const [route, selector, expectedPath] of heroImages) {
@@ -938,7 +935,7 @@ test("freelance career page links to the real candidate profile flow", async ({
       ).searchParams.get("url");
       return decoded ?? image.currentSrc;
     });
-  expect(heroImageSource).toMatch(/unsplash-1498050108023-c5249f4df085/);
+  expect(heroImageSource).toMatch(/freelance-hero\.webp/);
   const desktopHero = await page.evaluate(() => {
     const hero = document
       .querySelector(".freelance-hero")!

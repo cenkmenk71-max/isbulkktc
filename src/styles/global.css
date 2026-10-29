@@ -2608,7 +2608,6 @@ a {
 }
 @media (max-width: 740px) {
   .hero-photo-image {
-    object-position: 64% center;
     transform: none;
   }
   :root {
@@ -2656,9 +2655,6 @@ a {
     min-height: 0;
     height: auto;
     padding: 101px 0 22px;
-  }
-  .hero-photo-image {
-    object-position: 64% center;
   }
   .hero-layout {
     flex: initial;
@@ -4745,7 +4741,30 @@ a {
 }
 .home-page .hero-photo-image {
   transform: none;
-  object-position: center 50%;
+  object-position: 50% 50%;
+}
+/* Per-district focal points measured from each source's gradient-energy
+   profile (scripts/measure-hero-crops.mjs). The hero box is ~1.11:1 on phones
+   and 2.3-3.0:1 on desktop, so a landscape source is cropped on X on phones and
+   a portrait source is cropped on Y on desktop; one pair covers every breakpoint
+   and replaces the previous per-slide hand-tuned overrides. */
+.home-page .hero-photo-image[data-home-hero-photo="girne"] {
+  object-position: 53% 57%;
+}
+.home-page .hero-photo-image[data-home-hero-photo="gazimagusa"] {
+  object-position: 50% 78%;
+}
+.home-page .hero-photo-image[data-home-hero-photo="guzelyurt"] {
+  object-position: 49% 55%;
+}
+.home-page .hero-photo-image[data-home-hero-photo="iskele"] {
+  object-position: 50% 52%;
+}
+.home-page .hero-photo-image[data-home-hero-photo="lefkosa"] {
+  object-position: 50% 83%;
+}
+.home-page .hero-photo-image[data-home-hero-photo="lefke"] {
+  object-position: 50% 79%;
 }
 .home-page .hero-photo-image.home-hero-slide {
   opacity: 0;
@@ -4768,12 +4787,6 @@ a {
 }
 .home-page .hero-photo-image.home-hero-slide:nth-of-type(6) {
   animation-delay: 39.5s;
-}
-.home-page .hero-photo-image[data-home-hero-photo="guzelyurt"] {
-  object-position: right bottom;
-}
-.home-page .hero-photo-image[data-home-hero-photo="iskele"] {
-  object-position: center 78%;
 }
 .home-page .home-hero-rays {
   position: absolute;
@@ -6369,9 +6382,6 @@ html:dir(rtl) .company-workspace-action-link:hover > svg {
   min-height: 630px;
   padding: 0;
 }
-.home-page .hero-photo-image {
-  object-position: center 50%;
-}
 .home-page .hero-layout {
   position: relative;
   display: grid;
@@ -7109,9 +7119,6 @@ main :where(p) {
   .home-page .hero-section {
     height: auto;
     min-height: 0;
-  }
-  .home-page .hero-photo-image {
-    object-position: 64% center;
   }
   .home-page .hero-layout {
     width: min(calc(100% - 2 * var(--page-gutter)), var(--page-max));
@@ -10920,6 +10927,17 @@ html[dir="rtl"] input[name="slug"] {
   overflow: hidden;
   padding: clamp(128px, 14vw, 188px) 0 clamp(64px, 7vw, 92px);
   color: var(--surface-raised);
+  background: var(--color-shade-green-950);
+}
+.jobs-hero-image {
+  z-index: -2;
+  object-fit: cover;
+  object-position: center 46%;
+}
+.jobs-hero-shade {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
   background:
     linear-gradient(
       100deg,
@@ -10927,8 +10945,8 @@ html[dir="rtl"] input[name="slug"] {
       rgba(18, 49, 40, 0.87) 49%,
       rgba(18, 49, 40, 0.62) 100%
     ),
-    url("/images/career-search.webp") center 46% / cover,
-    var(--color-shade-green-950);
+    linear-gradient(0deg, rgba(13, 25, 21, 0.44), transparent 62%);
+  pointer-events: none;
 }
 .jobs-hero::after {
   position: absolute;
@@ -11668,10 +11686,9 @@ html[dir="rtl"] input[name="slug"] {
 @media (max-width: 740px) {
   .jobs-hero {
     padding: 112px 0 82px;
-    background-position:
-      center,
-      58% center,
-      center;
+  }
+  .jobs-hero-image {
+    object-position: 58% center;
   }
   .jobs-hero h1 {
     margin-top: 16px;

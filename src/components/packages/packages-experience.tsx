@@ -5,7 +5,6 @@ import { Link } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
 import { PackagesInteractiveShowcase } from "@/components/packages/packages-interactive-showcase";
 import type { ListingDuration } from "@/experience/scenes/vend-pricing/lib/plans";
-import kyreniaHarborImage from "../../../assets-src/kyrenia-harbor-upload-3840x2500.webp";
 
 const packageTiers = [
   {
@@ -70,7 +69,7 @@ export async function PackagesExperience({ locale }: { locale: AppLocale }) {
     <div className="packages-page">
       <section className="packages-hero" aria-labelledby="packages-title">
         <Image
-          src={kyreniaHarborImage}
+          src="/images/packages-hero.webp"
           alt=""
           fill
           preload

@@ -3,7 +3,6 @@ import Image from "next/image";
 import { ArrowRight, ArrowUpRight, Check } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
-import freelanceWorkspaceImage from "../../../assets-src/freelance-photos/unsplash-1498050108023-c5249f4df085.jpg";
 
 export async function FreelanceExperience({ locale }: { locale: AppLocale }) {
   const copy = await getTranslations({ locale, namespace: "Freelance" });
@@ -33,7 +32,7 @@ export async function FreelanceExperience({ locale }: { locale: AppLocale }) {
           </div>
           <div className="freelance-hero-media" aria-hidden="true">
             <Image
-              src={freelanceWorkspaceImage}
+              src="/images/freelance-hero.webp"
               alt=""
               fill
               preload
