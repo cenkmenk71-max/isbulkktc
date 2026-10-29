@@ -13,3 +13,6 @@ test-results/
 .aistudio/
 supabase/.temp/
 supabase/.branches/
+
+# Local agent memory (not part of the product)
+.openhands/
