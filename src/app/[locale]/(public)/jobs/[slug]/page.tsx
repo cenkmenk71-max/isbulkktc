@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { JobDetailExperience } from "@/components/jobs/job-detail-experience";
+import { buildJobPostingStructuredData } from "@/features/jobs/job-posting-structured-data";
 import { publicJobSlugSchema } from "@/features/jobs/schemas";
 import { routing } from "@/i18n/routing";
 import { createLocalizedPageMetadata } from "@/lib/seo";
+import { getAppBaseUrl } from "@/server/config/app-url";
 import { getPublicJobBySlug } from "@/server/dal/jobs";
 
 type JobDetailPageProps = {
@@ -44,5 +46,24 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
   const job = await getPublicJobBySlug(validSlug.data);
   if (!job) notFound();
 
-  return <JobDetailExperience locale={locale} job={job} />;
+  const jobPostingStructuredData = buildJobPostingStructuredData({
+    job,
+    locale,
+    baseUrl: getAppBaseUrl(),
+  });
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jobPostingStructuredData).replace(
+            /</g,
+            "\\u003c",
+          ),
+        }}
+      />
+      <JobDetailExperience locale={locale} job={job} />
+    </>
+  );
 }

@@ -3680,6 +3680,14 @@ a {
   display: grid;
   gap: 8px;
 }
+.editorial-turnstile {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0;
+}
+.editorial-turnstile:empty {
+  display: none;
+}
 .editorial-field > label {
   color: var(--ink-2);
   font-size: 12px;

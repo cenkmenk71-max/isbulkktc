@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { signIn } from "./actions";
+import { TurnstileField } from "./turnstile-field";
 import { OAuthProviderForm } from "./oauth-provider-form";
 import type {
   AccountAudience,
@@ -36,6 +37,7 @@ export function SignInForm({
       <form className="editorial-form" action={action}>
         <input name="audience" type="hidden" value={audience} />
         <input name="locale" type="hidden" value={locale} />
+        <TurnstileField />
         <label htmlFor="login-email">
           {copy(audience === "employer" ? "accountEmailLabel" : "emailLabel")}
           <input

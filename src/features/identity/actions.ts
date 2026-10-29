@@ -26,6 +26,13 @@ const invalidForm: SignInFormState = {
   message: "invalid",
 };
 
+// Turnstile renders its widget inside the form and writes the token into this
+// field. Absent when the widget is not configured, so the value stays optional.
+function readCaptchaToken(formData: FormData): string | undefined {
+  const value = formData.get("cf-turnstile-response");
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
 export async function startOAuthSignIn(
   _previousState: SignInFormState,
   formData: FormData,
@@ -101,6 +108,7 @@ export async function signIn(
     password: formData.get("password"),
     audience: formData.get("audience"),
     locale: formData.get("locale"),
+    captchaToken: readCaptchaToken(formData),
   });
 
   if (!result.success) return invalidForm;
@@ -111,6 +119,7 @@ export async function signIn(
   const { error } = await supabase.auth.signInWithPassword({
     email: result.data.email,
     password: result.data.password,
+    options: { captchaToken: result.data.captchaToken },
   });
 
   if (error) {
@@ -150,6 +159,7 @@ export async function signUp(
     password: formData.get("password"),
     audience: formData.get("audience"),
     locale: formData.get("locale"),
+    captchaToken: readCaptchaToken(formData),
   });
 
   if (!result.success) return invalidForm;
@@ -171,6 +181,7 @@ export async function signUp(
         }`,
         getAppBaseUrl(),
       ).toString(),
+      captchaToken: result.data.captchaToken,
     },
   });
 
@@ -205,6 +216,7 @@ export async function requestPasswordReset(
   const result = requestPasswordResetSchema.safeParse({
     email: formData.get("email"),
     locale: formData.get("locale"),
+    captchaToken: readCaptchaToken(formData),
   });
 
   if (!result.success) return invalidForm;
@@ -219,6 +231,7 @@ export async function requestPasswordReset(
         `${getLocalePrefix(result.data.locale)}/auth/callback?flow=reset`,
         getAppBaseUrl(),
       ).toString(),
+      captchaToken: result.data.captchaToken,
     },
   );
 

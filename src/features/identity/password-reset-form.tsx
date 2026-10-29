@@ -4,6 +4,7 @@ import { MailCheck } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { requestPasswordReset } from "./actions";
+import { TurnstileField } from "./turnstile-field";
 import type { SignInFormState } from "./schemas";
 
 const initialState: SignInFormState = { status: "idle", message: "idle" };
@@ -19,6 +20,7 @@ export function PasswordResetForm() {
   return (
     <form className="editorial-form" action={action}>
       <input name="locale" type="hidden" value={locale} />
+      <TurnstileField />
       <label htmlFor="reset-email">
         {copy("emailLabel")}
         <input

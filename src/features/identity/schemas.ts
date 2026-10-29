@@ -20,6 +20,9 @@ export const signInSchema = z.object({
   password: z.string().min(1).max(128),
   audience: accountAudienceSchema,
   locale: z.enum(routing.locales),
+  // Present only when Turnstile is configured; Supabase verifies it when
+  // captcha protection is enabled on the project.
+  captchaToken: z.string().trim().min(1).max(4096).optional(),
 });
 
 export const signUpSchema = signInSchema.extend({
@@ -30,6 +33,7 @@ export const signUpSchema = signInSchema.extend({
 export const requestPasswordResetSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email()),
   locale: z.enum(routing.locales),
+  captchaToken: z.string().trim().min(1).max(4096).optional(),
 });
 
 export const updatePasswordSchema = z.object({
