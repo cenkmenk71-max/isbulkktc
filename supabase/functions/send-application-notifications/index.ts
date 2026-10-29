@@ -236,10 +236,19 @@ Deno.serve(async (request) => {
   }
 
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  // The inbound bearer is a dedicated token, not the auto-injected service key:
+  // Supabase's injected SUPABASE_SERVICE_ROLE_KEY value is not readable through
+  // the Management API, so it cannot be stored in Vault for the cron to send.
+  // Fall back to it when no dedicated token is configured.
+  const workerToken =
+    Deno.env.get("NOTIFICATION_WORKER_TOKEN") ?? serviceKey;
   // Authenticate before any configuration check: an unauthenticated caller must
   // never learn whether delivery is configured, and the guard must not be
   // skipped when a secret is absent.
-  if (!serviceKey || request.headers.get("authorization") !== `Bearer ${serviceKey}`) {
+  if (
+    !workerToken ||
+    request.headers.get("authorization") !== `Bearer ${workerToken}`
+  ) {
     return response(401, "Unauthorized");
   }
 
