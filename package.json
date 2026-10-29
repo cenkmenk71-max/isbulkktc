@@ -35,7 +35,8 @@
     "security:audit": "bun audit --prod --audit-level=moderate",
     "optimize:assets": "tsx scripts/optimize-assets.ts",
     "logos:fetch": "node scripts/fetch-company-logos.mjs",
-    "shot": "tsx scripts/shot.ts"
+    "shot": "tsx scripts/shot.ts",
+    "optimize:district-photos": "node scripts/optimize-district-photos.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
