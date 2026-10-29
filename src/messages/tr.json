@@ -116,14 +116,7 @@
     "heroLink": "Paket haklarını inceleyin",
     "locationLine": "KUZEY KIBRIS · TR / EN",
     "catalog": {
-      "eyebrow": "ETKİN PAKETLER",
-      "title": "İlan yayınlama hakları",
-      "description": "Aşağıdaki katalog yalnız etkin paketleri gösterir. Haklar, atandıkları anda şirket için sabitlenir.",
-      "activeJobs": "Aynı anda yayındaki ilan",
-      "duration": "İlan yayın süresi",
-      "days": "{count} gün",
-      "empty": "Henüz etkin paket tanımlanmadı.",
-      "noDescription": "Paket için ek açıklama bulunmuyor."
+      "eyebrow": "ETKİN PAKETLER"
     },
     "showcase": {
       "eyebrow": "İŞVEREN PAKETLERİ",

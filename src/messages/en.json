@@ -116,14 +116,7 @@
     "heroLink": "Review package rights",
     "locationLine": "NORTHERN CYPRUS · EN / TR",
     "catalog": {
-      "eyebrow": "ACTIVE PACKAGES",
-      "title": "Job posting rights",
-      "description": "Only active packages appear here. Rights are snapshotted for a company when assigned.",
-      "activeJobs": "Concurrent active listings",
-      "duration": "Listing duration",
-      "days": "{count} days",
-      "empty": "No active packages are configured yet.",
-      "noDescription": "No additional package description is available."
+      "eyebrow": "ACTIVE PACKAGES"
     },
     "showcase": {
       "eyebrow": "EMPLOYER PACKAGES",

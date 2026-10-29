@@ -5,7 +5,6 @@ import { Link } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
 import { PackagesInteractiveShowcase } from "@/components/packages/packages-interactive-showcase";
 import type { ListingDuration } from "@/experience/scenes/vend-pricing/lib/plans";
-import { getActiveJobPackages } from "@/server/dal/jobs";
 import kyreniaHarborImage from "../../../assets-src/kyrenia-harbor-upload-3840x2500.webp";
 
 const packageTiers = [
@@ -50,10 +49,7 @@ const durationLabelKeys = {
 } as const;
 
 export async function PackagesExperience({ locale }: { locale: AppLocale }) {
-  const [copy, packages] = await Promise.all([
-    getTranslations({ locale, namespace: "PackagesPage" }),
-    getActiveJobPackages(),
-  ]);
+  const copy = await getTranslations({ locale, namespace: "PackagesPage" });
   const profiles = packageTiers.map((tier) => ({
     ...tier,
     title: copy(`showcase.cards.${tier.id}.title`),
@@ -205,62 +201,6 @@ export async function PackagesExperience({ locale }: { locale: AppLocale }) {
               off: copy("showcase.sound.off"),
             }}
           />
-        </div>
-      </section>
-
-      <section
-        className="packages-vend-section"
-        aria-labelledby="package-catalog-title"
-      >
-        <div className="packages-vend-page package-catalog">
-          <header className="package-catalog-heading">
-            <p className="eyebrow">
-              <span className="eyebrow-rule" />
-              {copy("catalog.eyebrow")}
-            </p>
-            <h2 id="package-catalog-title">{copy("catalog.title")}</h2>
-            <p>{copy("catalog.description")}</p>
-          </header>
-
-          {packages.length > 0 ? (
-            <ul className="package-catalog-grid">
-              {packages.map((jobPackage) => (
-                <li key={jobPackage.id}>
-                  <article className="package-catalog-card">
-                    <p className="package-catalog-code">{jobPackage.code}</p>
-                    <h3>{jobPackage.display_name}</h3>
-                    <p className="package-catalog-description">
-                      {jobPackage.description || copy("catalog.noDescription")}
-                    </p>
-                    <dl>
-                      <div>
-                        <dt>{copy("catalog.activeJobs")}</dt>
-                        <dd>
-                          {new Intl.NumberFormat(locale).format(
-                            jobPackage.max_active_jobs,
-                          )}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>{copy("catalog.duration")}</dt>
-                        <dd>
-                          {copy("catalog.days", {
-                            count: new Intl.NumberFormat(locale).format(
-                              jobPackage.job_duration_days,
-                            ),
-                          })}
-                        </dd>
-                      </div>
-                    </dl>
-                  </article>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="package-catalog-empty" role="status">
-              {copy("catalog.empty")}
-            </p>
-          )}
         </div>
       </section>
     </div>

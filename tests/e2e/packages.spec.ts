@@ -5,43 +5,37 @@ const locales = [
     path: "/tr/packages",
     locale: "tr",
     title: "İşe alım hakları, açık ve anlaşılır.",
-    catalog: "İlan yayınlama hakları",
-    empty: "Henüz etkin paket tanımlanmadı.",
+    removedCatalog: "İlan yayınlama hakları",
   },
   {
     path: "/en/packages",
     locale: "en",
     title: "Hiring rights, clearly defined.",
-    catalog: "Job posting rights",
-    empty: "No active packages are configured yet.",
+    removedCatalog: "Job posting rights",
   },
   {
     path: "/ru/packages",
     locale: "ru",
     title: "Права на найм — чётко и прозрачно.",
-    catalog: "Права на публикацию вакансий",
-    empty: "Активные пакеты ещё не настроены.",
+    removedCatalog: "Права на публикацию вакансий",
   },
   {
     path: "/el/packages",
     locale: "el",
     title: "Σαφή δικαιώματα για τις προσλήψεις σας.",
-    catalog: "Δικαιώματα δημοσίευσης θέσεων",
-    empty: "Δεν έχουν ρυθμιστεί ακόμη ενεργά πακέτα.",
+    removedCatalog: "Δικαιώματα δημοσίευσης θέσεων",
   },
   {
     path: "/fa/packages",
     locale: "fa",
     title: "حقوق استخدام، روشن و مشخص.",
-    catalog: "حقوق انتشار آگهی شغلی",
-    empty: "هنوز بسته فعالی تنظیم نشده است.",
+    removedCatalog: "حقوق انتشار آگهی شغلی",
   },
   {
     path: "/de/packages",
     locale: "de",
     title: "Klare Rechte für Ihre Personalsuche.",
-    catalog: "Rechte für Stellenanzeigen",
-    empty: "Es sind noch keine aktiven Pakete eingerichtet.",
+    removedCatalog: "Rechte für Stellenanzeigen",
   },
 ];
 
@@ -57,28 +51,20 @@ test("package proposals and the interactive vending machine are public", async (
     await expect(
       page.getByRole("heading", { level: 1, name: copy.title }),
     ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { level: 2, name: copy.catalog }),
-    ).toBeVisible();
     await expect(page.locator(".packages-vend-copy h2")).toBeVisible();
     await expect(page.locator(".package-proposal-status")).toHaveCount(0);
     await expect(page.locator(".package-proposal-prices")).toHaveCount(3);
     await expect(page.locator(".packages-vend-stage")).toBeVisible();
 
-    const cards = page.locator(
-      'section[aria-labelledby="package-catalog-title"] .package-catalog-card',
-    );
-    if ((await cards.count()) === 0) {
-      await expect(page.locator(".package-catalog-empty")).toHaveText(
-        copy.empty,
-      );
-    } else {
-      for (const card of await cards.all()) {
-        await expect(card.locator("h3")).toBeVisible();
-        await expect(card.locator("dl dt")).toHaveCount(2);
-        await expect(card.locator("dl dd")).toHaveCount(2);
-      }
-    }
+    // The database-backed "job posting rights" catalog was removed; only the
+    // static proposal grid and the interactive machine remain.
+    await expect(
+      page.locator('section[aria-labelledby="package-catalog-title"]'),
+    ).toHaveCount(0);
+    await expect(page.locator(".package-catalog-empty")).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { level: 2, name: copy.removedCatalog }),
+    ).toHaveCount(0);
   }
 
   await page.goto("/packages");

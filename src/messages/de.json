@@ -183,14 +183,7 @@
     "heroLink": "Paketrechte ansehen",
     "locationLine": "NORDZYPERN · DE / TR",
     "catalog": {
-      "eyebrow": "AKTIVE PAKETE",
-      "title": "Rechte für Stellenanzeigen",
-      "description": "Hier werden nur aktive Pakete angezeigt. Die Rechte werden bei der Zuweisung für das Unternehmen festgehalten.",
-      "activeJobs": "Gleichzeitig aktive Anzeigen",
-      "duration": "Anzeigendauer",
-      "days": "{count} Tage",
-      "empty": "Es sind noch keine aktiven Pakete eingerichtet.",
-      "noDescription": "Keine zusätzliche Paketbeschreibung verfügbar."
+      "eyebrow": "AKTIVE PAKETE"
     },
     "showcase": {
       "eyebrow": "ARBEITGEBERPAKETE",

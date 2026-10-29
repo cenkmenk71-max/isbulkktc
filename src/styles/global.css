@@ -7436,17 +7436,6 @@ main :where(p) {
   font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
-.package-catalog-empty {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 30px 24px;
-  border: 1px solid rgba(21, 47, 36, 0.12);
-  border-radius: 16px;
-  background: rgba(255, 253, 248, 0.78);
-  color: var(--color-vanadium-700);
-  text-align: center;
-  line-height: 1.7;
-}
 .admin-packages-page {
   display: grid;
   gap: clamp(38px, 6vw, 70px);

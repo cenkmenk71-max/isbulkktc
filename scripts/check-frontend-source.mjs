@@ -513,6 +513,15 @@ assert.doesNotMatch(packagesPage, /showcase\.status/);
 assert.doesNotMatch(packagesShowcase, /packageStatus|priceDisclaimer/);
 assert.doesNotMatch(packagesPanel, /packageStatus|priceDisclaimer/);
 assert.doesNotMatch(css, /\.package-proposal-status|\.vend-panel-status|\.vend-panel-price-disclaimer/);
+// The database-backed "job posting rights" catalog was removed from /packages;
+// only its hero-bottom eyebrow survives. Guard against reintroducing it.
+assert.doesNotMatch(packagesPage, /package-catalog-title|getActiveJobPackages/);
+assert.doesNotMatch(packagesPage, /catalog\.(?:title|description|activeJobs|duration|days|empty|noDescription)/);
+assert.doesNotMatch(css, /\.package-catalog-empty/);
+assert.doesNotMatch(
+  `${JSON.stringify(trMessages.PackagesPage.catalog)} ${JSON.stringify(enMessages.PackagesPage.catalog)}`,
+  /"(?:title|description|activeJobs|duration|days|empty|noDescription)"/,
+);
 assert.doesNotMatch(
   `${JSON.stringify(trMessages.PackagesPage)} ${JSON.stringify(enMessages.PackagesPage)}`,
   /\b\d[\d,.]*\s*(?:TL|TRY|GBP|EUR|₺|£|€)/,
