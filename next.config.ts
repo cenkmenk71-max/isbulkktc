@@ -11,15 +11,15 @@ const contentSecurityPolicy = [
   "object-src 'none'",
   "frame-ancestors 'self'",
   "form-action 'self'",
-  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com",
+  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://*.challenges.cloudflare.com https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "media-src 'self' blob: https:",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://region1.google-analytics.com https://challenges.cloudflare.com",
-  "frame-src https://challenges.cloudflare.com",
+  "connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://region1.google-analytics.com https://cloudflareinsights.com https://challenges.cloudflare.com https://*.challenges.cloudflare.com",
+  "frame-src https://challenges.cloudflare.com https://*.challenges.cloudflare.com",
   "upgrade-insecure-requests",
 ].join("; ");
 
