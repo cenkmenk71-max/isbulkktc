@@ -162,10 +162,11 @@
   },
   "Analytics": {
     "regionLabel": "Analyse-Einstellungen",
-    "description": "Google-Analytics-Cookies zur Verbesserung der Website werden nur mit Ihrer Zustimmung verwendet.",
+    "description": "Wir verwenden Cookies, um die Website sicher zu betreiben und Ihr Erlebnis zu verbessern. Notwendige Cookies sind immer aktiv, Analyse-Cookies nur mit Ihrer Einwilligung.",
     "accept": "Akzeptieren",
     "reject": "Ablehnen",
-    "settings": "Analyse-Einstellungen"
+    "settings": "Analyse-Einstellungen",
+    "policyLink": "Cookie-Richtlinie"
   },
   "NotFound": {
     "title": "Seite nicht gefunden",

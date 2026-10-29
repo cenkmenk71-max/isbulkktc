@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { usePathname } from "@/i18n/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
@@ -107,6 +107,9 @@ export function GoogleAnalyticsConsent() {
           aria-live="polite"
         >
           <p>{t("description")}</p>
+          <Link className="analytics-consent-policy" href="/cookies">
+            {t("policyLink")}
+          </Link>
           <div>
             <button type="button" onClick={() => saveConsent("granted")}>
               {t("accept")}

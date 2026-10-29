@@ -512,10 +512,11 @@
   },
   "Analytics": {
     "regionLabel": "Analytics preferences",
-    "description": "Google Analytics cookies that help us improve the site are used only with your consent.",
+    "description": "We use cookies to keep the site secure and to improve your experience. Essential cookies always run; analytics cookies load only with your consent.",
     "accept": "Accept",
     "reject": "Reject",
-    "settings": "Analytics preferences"
+    "settings": "Analytics preferences",
+    "policyLink": "Cookie policy"
   },
   "HomePage": {
     "eyebrow": "NORTHERN CYPRUS EMPLOYMENT NETWORK",

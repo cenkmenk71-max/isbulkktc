@@ -512,10 +512,11 @@
   },
   "Analytics": {
     "regionLabel": "Analitik tercihleri",
-    "description": "Site kullanımını ölçerek deneyimi geliştirmemize yardımcı olan Google Analytics çerezleri yalnızca izninizle kullanılır.",
+    "description": "Deneyiminizi geliştirmek ve siteyi güvenli biçimde çalıştırmak için çerezler kullanıyoruz. Zorunlu çerezler her zaman etkindir; analitik çerezleri yalnızca izninizle kullanırız.",
     "accept": "Kabul et",
     "reject": "Reddet",
-    "settings": "Analitik tercihleri"
+    "settings": "Analitik tercihleri",
+    "policyLink": "Çerez politikası"
   },
   "HomePage": {
     "eyebrow": "KUZEY KIBRIS İSTİHDAM AĞI",
