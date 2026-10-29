@@ -242,7 +242,7 @@ export async function HomeExperience({
               loading={slide.district === "girne" || slide.district === "gazimagusa" ? "eager" : "lazy"}
               fetchPriority={slide.district === "girne" ? "high" : "low"}
               sizes="100vw"
-              quality={100}
+              quality={90}
               className="hero-photo-image home-hero-slide"
               data-home-hero-photo={slide.district}
               data-home-hero-source={slide.asset}

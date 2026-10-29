@@ -79,7 +79,7 @@ export function SectorCard({
           alt=""
           fill
           sizes="(max-width: 1100px) 50vw, 25vw"
-          quality={100}
+          quality={90}
           className="sector-photo"
         />
         {showCategory && (

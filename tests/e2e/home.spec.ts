@@ -125,7 +125,7 @@ test("homepage cycles through local district photos with an animated light-ray l
   expect(girnePhoto).toMatchObject({
     loaded: true,
     source: expect.stringMatching(/^\/_next\/static\/media\/.+\.webp$/),
-    quality: "100",
+    quality: "90",
     loading: "eager",
     fetchPriority: "high",
     animationDelay: "-0.5s",
@@ -171,7 +171,7 @@ test("homepage cycles through local district photos with an animated light-ray l
       asset: "/images/Girne.webp",
       loaded: true,
       optimized: true,
-      quality: "100",
+      quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.webp$/),
       objectPosition: "50% 50%",
       loading: "eager",
@@ -184,7 +184,7 @@ test("homepage cycles through local district photos with an animated light-ray l
       asset: "/images/Gazimağusa.webp",
       loaded: true,
       optimized: true,
-      quality: "100",
+      quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.webp$/),
       objectPosition: "50% 50%",
       loading: "eager",
@@ -197,7 +197,7 @@ test("homepage cycles through local district photos with an animated light-ray l
       asset: "/images/güzelyurt.jpg",
       loaded: true,
       optimized: true,
-      quality: "100",
+      quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.jpg$/),
       objectPosition: "100% 100%",
       loading: "lazy",
@@ -210,7 +210,7 @@ test("homepage cycles through local district photos with an animated light-ray l
       asset: "/images/iskele.jpg",
       loaded: true,
       optimized: true,
-      quality: "100",
+      quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.jpg$/),
       objectPosition: "50% 78%",
       loading: "lazy",
@@ -223,7 +223,7 @@ test("homepage cycles through local district photos with an animated light-ray l
       asset: "/images/lefkoşa.jpeg",
       loaded: true,
       optimized: true,
-      quality: "100",
+      quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.jpeg$/),
       objectPosition: "50% 50%",
       loading: "lazy",
@@ -236,7 +236,7 @@ test("homepage cycles through local district photos with an animated light-ray l
       asset: "/images/lefke.jpg",
       loaded: true,
       optimized: true,
-      quality: "100",
+      quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.jpg$/),
       objectPosition: "50% 50%",
       loading: "lazy",
@@ -308,7 +308,7 @@ test("homepage requests hero image variants for high-density screens", async ({
     );
 
     for (const variant of requestedVariants) {
-      expect(variant.quality).toBe("100");
+      expect(variant.quality).toBe("90");
       expect(variant.source).toBeTruthy();
       expect(variant.requestedWidth).toBeGreaterThanOrEqual(
         variant.renderedWidth * 2,
@@ -735,7 +735,7 @@ test("sector cards use the matching optimized photos in both locales", async ({
       expect(optimizedUrl.searchParams.get("url")).toMatch(
         originalAssetPattern,
       );
-      expect(optimizedUrl.searchParams.get("q")).toBe("100");
+      expect(optimizedUrl.searchParams.get("q")).toBe("90");
       const response = await page.request.get(currentSrc, {
         headers: { Accept: "image/avif,image/webp,*/*" },
       });

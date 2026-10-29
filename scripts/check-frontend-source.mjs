@@ -6,6 +6,21 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const exists = async (path) =>
   access(new URL(`../${path}`, import.meta.url), constants.F_OK);
 
+// Homepage hero and sector photos are served as WebP at quality 90.
+//
+// Measured against quality 100 on the six originals at their largest served
+// width (1920px): PSNR 42.6-45.6 dB and SSIM 0.987-0.997, i.e. at or above the
+// ~40 dB / 0.98 "visually indistinguishable" bar, for ~43% fewer bytes (the
+// served homepage drops from 5.50 MB to ~3.1 MB at DPR 1).
+//
+// AVIF is not the answer in this Next version (16.4.2). It scales the AVIF
+// quality by 50/80 (`node_modules/next/dist/server/image-optimizer/transform.js`)
+// and encodes at effort 3, so `quality={100}` maps to AVIF 63 and scores far
+// worse than WebP 100 (Girne: PSNR 35.9 / SSIM 0.964 vs 50.9 / 0.997). Even at
+// effort 6 AVIF only matches WebP 90 for the same bytes while taking ~33s per
+// image instead of ~0.6s, so `formats: ["image/webp"]` stays.
+const homepageImageQuality = 90;
+
 const css = await read("src/styles/global.css");
 const home = await read("src/components/home/home-experience.tsx");
 const homeJourneys = await read("src/components/home/home-journeys.tsx");
@@ -215,7 +230,10 @@ assert.equal(
 assert.match(home, /image: StaticImageData/);
 assert.match(sectorCard, /data-sector-image=\{sector\.image\.src\}/);
 assert.match(sectorCard, /sizes="\(max-width: 1100px\) 50vw, 25vw"/);
-assert.match(sectorCard, /quality=\{100\}/);
+assert.match(
+  sectorCard,
+  new RegExp(`quality=\\{${homepageImageQuality}\\}`),
+);
 assert.doesNotMatch(sectorCard, /unoptimized/);
 assert.match(nextConfig, /formats:\s*\["image\/webp"\]/);
 
@@ -290,7 +308,7 @@ assert.match(
   /loading=\{slide\.district === "girne" \|\| slide\.district === "gazimagusa" \? "eager" : "lazy"\}/,
 );
 assert.match(home, /sizes="100vw"/);
-assert.match(home, /quality=\{100\}/);
+assert.match(home, new RegExp(`quality=\\{${homepageImageQuality}\\}`));
 assert.match(home, /hero-light-layer--readability/);
 assert.match(home, /hero-light-layer--warmth/);
 assert.match(home, /hero-light-layer--vignette/);
@@ -298,7 +316,10 @@ assert.match(css, /@keyframes home-hero-photo-cycle/);
 assert.match(css, /@keyframes home-hero-rays-drift/);
 assert.match(home, /<SignatureBanner\s*\/>/);
 assert.match(home, /className="sector-showcase"/);
-assert.match(sectorCard, /<Image\s+src={sector\.image}[\s\S]*?quality=\{100\}/);
+assert.match(
+  sectorCard,
+  new RegExp(`<Image\\s+src={sector\\.image}[\\s\\S]*?quality=\\{${homepageImageQuality}\\}`),
+);
 assert.doesNotMatch(sectorCard, /unoptimized/);
 assert.match(home, /<SectorDirectory/);
 assert.match(home, /featuredSectors\.map/);
