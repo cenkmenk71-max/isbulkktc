@@ -236,16 +236,19 @@ Deno.serve(async (request) => {
   }
 
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  // Authenticate before any configuration check: an unauthenticated caller must
+  // never learn whether delivery is configured, and the guard must not be
+  // skipped when a secret is absent.
+  if (!serviceKey || request.headers.get("authorization") !== `Bearer ${serviceKey}`) {
+    return response(401, "Unauthorized");
+  }
+
   const supabaseUrlValue = Deno.env.get("SUPABASE_URL");
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   const emailFrom = Deno.env.get("RESEND_FROM_EMAIL");
   const appUrlValue = Deno.env.get("APP_URL");
-  if (!serviceKey || !supabaseUrlValue || !resendApiKey || !emailFrom || !appUrlValue) {
+  if (!supabaseUrlValue || !resendApiKey || !emailFrom || !appUrlValue) {
     return response(503, "Notification delivery is not configured");
-  }
-
-  if (request.headers.get("authorization") !== `Bearer ${serviceKey}`) {
-    return response(401, "Unauthorized");
   }
 
   let supabaseUrl: URL;
