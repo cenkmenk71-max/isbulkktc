@@ -385,6 +385,11 @@ for (const [asset, component] of [
     `Hero photo ${asset} should remain below 500 KB.`,
   );
   assert.match(component, new RegExp(`/images/${asset}\\.webp`));
+  assert.match(
+    component,
+    new RegExp(`src="/images/${asset}\\.webp"[\\s\\S]{0,220}?quality=\\{85\\}`),
+    `Page hero ${asset} should request quality 85.`,
+  );
 }
 assert.match(editorialPages, /className="editorial-hero-background-image\b/);
 assert.match(css, /\.editorial-hero\s*\{[\s\S]*?minmax\(300px,\s*0\.9fr\)/);

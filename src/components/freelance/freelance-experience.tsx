@@ -37,6 +37,7 @@ export async function FreelanceExperience({ locale }: { locale: AppLocale }) {
               fill
               preload
               sizes="100vw"
+              quality={85}
               className="freelance-hero-image"
             />
           </div>
