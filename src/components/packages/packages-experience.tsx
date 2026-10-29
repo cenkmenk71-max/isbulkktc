@@ -129,9 +129,6 @@ export async function PackagesExperience({ locale }: { locale: AppLocale }) {
                       <li key={term}>{term}</li>
                     ))}
                   </ul>
-                  <p className="package-proposal-status">
-                    {copy("showcase.status")}
-                  </p>
                   {profile.prices ? (
                     <dl className="package-proposal-prices">
                       {durations.map((days) => (
@@ -183,7 +180,6 @@ export async function PackagesExperience({ locale }: { locale: AppLocale }) {
               listing: copy("showcase.scene.listing"),
               quote: copy("showcase.scene.quote"),
             }}
-            packageStatus={copy("showcase.status")}
             selectLabel={copy("showcase.selectPackage")}
             packageContentsLabel={copy("showcase.packageContents")}
             durationLabel={copy("showcase.pricing.durationLabel")}
@@ -191,7 +187,6 @@ export async function PackagesExperience({ locale }: { locale: AppLocale }) {
             durationOptions={durationOptions}
             priceSummary={copy("showcase.pricing.priceSummary")}
             customPriceLabel={copy("showcase.pricing.customPrice")}
-            priceDisclaimer={copy("showcase.pricing.disclaimer")}
             quoteAction={copy("showcase.pricing.quoteAction")}
             quoteTitle={copy("showcase.pricing.quoteTitle")}
             quoteInstructions={copy("showcase.pricing.quoteInstructions")}

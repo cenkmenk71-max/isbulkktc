@@ -7,7 +7,6 @@ const locales = [
     title: "İşe alım hakları, açık ve anlaşılır.",
     catalog: "İlan yayınlama hakları",
     empty: "Henüz etkin paket tanımlanmadı.",
-    status: "Bilgilendirme amaçlı fiyat · Ödeme sitede alınmaz; IBAN talimatı paket görüşmesi sonrası özel kanaldan iletilir.",
   },
   {
     path: "/en/packages",
@@ -15,7 +14,6 @@ const locales = [
     title: "Hiring rights, clearly defined.",
     catalog: "Job posting rights",
     empty: "No active packages are configured yet.",
-    status: "Indicative pricing · Payment is not taken on the website; IBAN instructions are shared privately after discussing the package.",
   },
   {
     path: "/ru/packages",
@@ -23,7 +21,6 @@ const locales = [
     title: "Права на найм — чётко и прозрачно.",
     catalog: "Права на публикацию вакансий",
     empty: "Активные пакеты ещё не настроены.",
-    status: "Ориентировочные цены · Оплата на сайте не принимается; реквизиты IBAN и инструкции сообщаются лично после обсуждения пакета.",
   },
   {
     path: "/el/packages",
@@ -31,7 +28,6 @@ const locales = [
     title: "Σαφή δικαιώματα για τις προσλήψεις σας.",
     catalog: "Δικαιώματα δημοσίευσης θέσεων",
     empty: "Δεν έχουν ρυθμιστεί ακόμη ενεργά πακέτα.",
-    status: "Ενδεικτικές τιμές · Η πληρωμή δεν γίνεται στον ιστότοπο· τα στοιχεία IBAN και οι οδηγίες αποστέλλονται ιδιωτικά μετά τη συζήτηση του πακέτου.",
   },
   {
     path: "/fa/packages",
@@ -39,7 +35,6 @@ const locales = [
     title: "حقوق استخدام، روشن و مشخص.",
     catalog: "حقوق انتشار آگهی شغلی",
     empty: "هنوز بسته فعالی تنظیم نشده است.",
-    status: "قیمت‌ها صرفاً برای اطلاع‌رسانی هستند · پرداخت در وب‌سایت انجام نمی‌شود؛ اطلاعات IBAN و دستورالعمل پرداخت پس از گفتگو درباره بسته، خصوصی ارسال می‌شود.",
   },
   {
     path: "/de/packages",
@@ -47,7 +42,6 @@ const locales = [
     title: "Klare Rechte für Ihre Personalsuche.",
     catalog: "Rechte für Stellenanzeigen",
     empty: "Es sind noch keine aktiven Pakete eingerichtet.",
-    status: "Unverbindliche Preisangaben · Zahlungen erfolgen nicht auf der Website; IBAN und Zahlungsanweisungen werden nach Besprechung des Pakets privat mitgeteilt.",
   },
 ];
 
@@ -67,10 +61,7 @@ test("package proposals and the interactive vending machine are public", async (
       page.getByRole("heading", { level: 2, name: copy.catalog }),
     ).toBeVisible();
     await expect(page.locator(".packages-vend-copy h2")).toBeVisible();
-    await expect(page.locator(".package-proposal-status")).toHaveCount(4);
-    await expect(page.locator(".package-proposal-status").first()).toHaveText(
-      copy.status,
-    );
+    await expect(page.locator(".package-proposal-status")).toHaveCount(0);
     await expect(page.locator(".package-proposal-prices")).toHaveCount(3);
     await expect(page.locator(".packages-vend-stage")).toBeVisible();
 

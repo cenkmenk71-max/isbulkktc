@@ -509,14 +509,10 @@ assert.equal(
   enMessages.PackagesPage.showcase.scene.viewScope,
   "Change Package with a Coin",
 );
-assert.match(
-  trMessages.PackagesPage.showcase.status,
-  /Bilgilendirme amaçlı fiyat.*Ödeme sitede alınmaz/i,
-);
-assert.match(
-  enMessages.PackagesPage.showcase.status,
-  /Indicative pricing.*Payment is not taken on the website/i,
-);
+assert.doesNotMatch(packagesPage, /showcase\.status/);
+assert.doesNotMatch(packagesShowcase, /packageStatus|priceDisclaimer/);
+assert.doesNotMatch(packagesPanel, /packageStatus|priceDisclaimer/);
+assert.doesNotMatch(css, /\.package-proposal-status|\.vend-panel-status|\.vend-panel-price-disclaimer/);
 assert.doesNotMatch(
   `${JSON.stringify(trMessages.PackagesPage)} ${JSON.stringify(enMessages.PackagesPage)}`,
   /\b\d[\d,.]*\s*(?:TL|TRY|GBP|EUR|₺|£|€)/,

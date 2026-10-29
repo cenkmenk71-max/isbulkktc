@@ -7385,13 +7385,6 @@ main :where(p) {
   font-size: 12px;
   line-height: 1.55;
 }
-.package-proposal-status {
-  margin: 16px 0 0;
-  color: var(--color-shade-green-700);
-  font-size: 10px;
-  font-weight: 650;
-  line-height: 1.55;
-}
 .package-catalog-card .package-proposal-prices {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: clamp(4px, 0.8vw, 8px);
@@ -8006,17 +7999,6 @@ main :where(p) {
   font-size: 15px;
   line-height: 1.68;
 }
-.vend-panel-status {
-  width: fit-content;
-  margin: 16px 0 0;
-  padding: 8px 11px;
-  border: 1px solid rgba(225, 182, 109, 0.28);
-  border-radius: 999px;
-  background: rgba(225, 182, 109, 0.08);
-  color: #e1c184;
-  font-size: 11px;
-  line-height: 1.5;
-}
 .vend-panel-scope {
   margin-top: 24px;
   padding-top: 18px;
@@ -8118,12 +8100,6 @@ main :where(p) {
   color: rgba(240, 241, 237, 0.67);
   font-size: 11px;
   text-align: right;
-}
-.vend-panel-price-disclaimer {
-  margin: 9px 0 0;
-  color: rgba(240, 241, 237, 0.58);
-  font-size: 10px;
-  line-height: 1.55;
 }
 .vend-panel-action {
   margin-top: auto;
