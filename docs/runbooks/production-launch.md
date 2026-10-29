@@ -97,6 +97,12 @@ environment variables.
    - `RESEND_API_KEY`
    - `RESEND_FROM_EMAIL`
    - `APP_URL` (the canonical HTTPS app origin)
+   - `NOTIFICATION_WORKER_TOKEN`: a dedicated random value (e.g.
+     `openssl rand -hex 32`). The worker compares the inbound bearer against it.
+     Do **not** rely on `SUPABASE_SERVICE_ROLE_KEY` for this comparison: Supabase
+     injects that value and the Management API will not return it, so it cannot
+     be stored in Vault for the cron job to send. The worker falls back to it only
+     when `NOTIFICATION_WORKER_TOKEN` is unset.
    Supabase supplies `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Edge
    Functions. Never put the service-role key in Vercel or a `NEXT_PUBLIC_*`
    variable.
@@ -113,8 +119,8 @@ environment variables.
    they are not already enabled. In Vault, store:
    - `application_notification_function_url`: the project's Edge Function URL
    - `application_notification_apikey`: the project's publishable key
-   - `application_notification_worker_token`: the service-role key used only
-     as the function's bearer token
+   - `application_notification_worker_token`: the same value as
+     `NOTIFICATION_WORKER_TOKEN`, used only as the function's bearer token
 5. In the SQL Editor, schedule the worker once per minute. This SQL contains
    only Vault lookups, not secret values:
 
