@@ -1,0 +1,45 @@
+name: Refresh source jobs
+
+# Keeps the public job catalogue in step with the upstream listings. The import
+# script is the same one run by hand (`bun run import:source-jobs`), so there is
+# a single code path for fetching, sanitising and writing source jobs.
+on:
+  schedule:
+    # Twice a day; source sites publish on no fixed schedule, and the importer
+    # is idempotent because it purges and re-inserts source rows.
+    - cron: "17 4,16 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-source-jobs
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Import upstream job listings
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4
+
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Import source jobs
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+            echo "::error::Missing repository secrets NEXT_PUBLIC_SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY. Add them in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          bun run import:source-jobs
