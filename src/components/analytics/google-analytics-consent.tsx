@@ -59,7 +59,11 @@ export function GoogleAnalyticsConsent() {
     });
   }, [storedConsent, pathname, scriptReady]);
 
-  if (!measurementId || !/^G-[A-Z0-9]+$/.test(measurementId)) return null;
+  // The banner is a general cookie notice, so it must appear even when the
+  // analytics property is not configured. Only the GA scripts depend on a
+  // valid measurement id.
+  const analyticsConfigured =
+    Boolean(measurementId) && /^G-[A-Z0-9]+$/.test(measurementId ?? "");
 
   function saveConsent(value: "granted" | "denied") {
     window.localStorage.setItem(consentStorageKey, value);
@@ -79,7 +83,7 @@ export function GoogleAnalyticsConsent() {
 
   return (
     <>
-      {storedConsent === "granted" && (
+      {analyticsConfigured && storedConsent === "granted" && (
         <>
           <Script
             id="google-analytics-init"

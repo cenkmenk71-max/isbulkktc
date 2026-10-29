@@ -41,6 +41,11 @@ export async function SiteFooter() {
       </div>
       <div className="page-container footer-bottom">
         <span>{t('rights', { year: new Date().getFullYear() })}</span>
+        <nav className="footer-legal" aria-label={t('legalNavigation')}>
+          <Link href="/privacy">{t('links.privacy')}</Link>
+          <Link href="/cookies">{t('links.cookies')}</Link>
+          <Link href="/terms">{t('links.terms')}</Link>
+        </nav>
         <span>{t('madeIn')}</span>
       </div>
     </footer>

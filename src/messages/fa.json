@@ -143,14 +143,18 @@
       "profile": "پروفایل متقاضی من",
       "about": "درباره ما",
       "blog": "اخبار کسب‌وکار",
-      "contact": "تماس"
+      "contact": "تماس",
+      "privacy": "حریم خصوصی",
+      "cookies": "کوکی‌ها",
+      "terms": "شرایط استفاده"
     },
     "rights": "© {year} İşBul KKTC. تمامی حقوق محفوظ است.",
     "madeIn": "قبرس شمالی",
     "footerNavigation": "پیمایش پایین صفحه",
     "siteFooterLabel": "پاورقی سایت",
     "homeLinkLabel": "صفحه اصلی İşBul KKTC",
-    "location": "آلسانجاک، قبرس شمالی"
+    "location": "آلسانجاک، قبرس شمالی",
+    "legalNavigation": "پیوندهای حقوقی"
   },
   "LanguageMenu": {
     "title": "زبان رابط کاربری",
@@ -934,7 +938,7 @@
   "CompanyManagement": {
     "eyebrow": "فضای کارفرما",
     "title": "{name}، پروفایل شرکت خود را مدیریت کنید.",
-    "description": "اطلاعات شرکت را به‌روز نگه دارید. تغییرات پیش از نمایش در فهرست عمومی بررسی می‌شوند.",
+    "description": "توضیحات شرکت",
     "applicationsTitle": "درخواست‌های شغلی",
     "applicationsDescription": "درخواست‌ها، وضعیت و اطلاعات تماسی را که نامزدها برای اشتراک‌گذاری انتخاب کرده‌اند بررسی کنید.",
     "noApplications": "هنوز درخواستی برای آگهی‌های شرکت شما ثبت نشده است.",
@@ -1016,7 +1020,6 @@
       "rejected": "پروفایل تأیید نشد. اطلاعات را به‌روزرسانی و دوباره ارسال کنید."
     },
     "companyName": "نام شرکت",
-    "description": "توضیحات شرکت",
     "categories": "حوزه‌ها یا خدمات",
     "categoriesHint": "حداکثر ۱۲ مورد را با ویرگول جدا کنید.",
     "website": "وب‌سایت",
@@ -1126,5 +1129,89 @@
     },
     "ctaEyebrow": "همین امروز شروع کنید",
     "ctaTitle": "پروفایل خود را بسازید و اطلاعاتتان را در اختیار خود نگه دارید."
+  },
+  "Legal": {
+    "eyebrow": "Yasal bilgilendirme",
+    "backLabel": "Geri dön",
+    "backToHome": "Ana sayfaya dön",
+    "lastUpdated": "Son güncelleme: {date}",
+    "contactNote": "Bu metinlerle ilgili sorularınız için bize ulaşabilirsiniz.",
+    "contactEmail": "info@isbulkktc.com",
+    "relatedLabel": "Diğer yasal metinler",
+    "privacy": {
+      "title": "Gizlilik Politikası",
+      "intro": "İşBul KKTC olarak kişisel verilerinizi KVKK ve GDPR ilkelerine uygun şekilde, yalnızca hizmeti sunmak için gerekli olduğu ölçüde işliyoruz.",
+      "updated": "29 Ekim 2026",
+      "sections": {
+        "s1": {
+          "title": "Topladığımız veriler",
+          "p1": "Hesap oluşturduğunuzda ad, e-posta adresi, hesap türü ve tercih ettiğiniz arayüz dili gibi bilgileri toplarız. Aday profili oluşturduğunuzda deneyim, eğitim ve beceri bilgileri de saklanır.",
+          "p2": "Platformu kullanırken oluşan oturum ve güvenlik kayıtları, hizmetin kötüye kullanımını engellemek amacıyla tutulur."
+        },
+        "s2": {
+          "title": "Verileri neden işliyoruz",
+          "p1": "Verileriniz; hesabınızı oluşturmak ve doğrulamak, giriş yapmanızı sağlamak, iş başvurularınızı işverene iletmek ve platformun güvenliğini sağlamak için işlenir.",
+          "p2": "Onayınız olduğunda, site deneyimini ölçmek için analitik çerezler kullanırız. Bu çerezleri her zaman reddedebilir veya tercihinizi sonradan değiştirebilirsiniz."
+        },
+        "s3": {
+          "title": "Paylaşım ve saklama",
+          "p1": "Başvurduğunuz işverenler, başvuru kapsamında paylaştığınız profil bilgilerini görür. Verilerinizi reklam amacıyla üçüncü taraflara satmayız.",
+          "p2": "Verilerinizi, hizmetin gerektirdiği süre boyunca ve yasal yükümlülüklerimiz kadar saklarız; hesabınızı sildiğinizde kişisel verileriniz silinir veya anonim hale getirilir."
+        },
+        "s4": {
+          "title": "Haklarınız",
+          "p1": "KVKK kapsamında verilerinize erişme, düzeltme, silme ve işlemeye itiraz etme hakkınız vardır. Talepleriniz için bizimle iletişime geçebilirsiniz.",
+          "p2": "Talebinizi en geç 30 gün içinde yanıtlarız. Başvurudan önce kimliğinizi doğrulamamız gerekebilir."
+        }
+      }
+    },
+    "cookies": {
+      "title": "Çerez Politikası",
+      "intro": "Çerezler, siteyi düzgün çalıştırmak ve tercihlerinizi hatırlamak için tarayıcınıza kaydedilen küçük metin dosyalarıdır.",
+      "updated": "29 Ekim 2026",
+      "sections": {
+        "s1": {
+          "title": "Zorunlu çerezler",
+          "p1": "Oturumunuzu açık tutmak, güvenliği sağlamak ve dil tercihinizi hatırlamak için kullanılan çerezler zorunludur; bunlar olmadan site çalışmaz."
+        },
+        "s2": {
+          "title": "Analitik çerezler",
+          "p1": "Google Analytics çerezleri yalnızca onayınızı verdiğinizde yüklenir. Bu çerezler ziyaret edilen sayfaları anonim olarak ölçmemize yardımcı olur.",
+          "p2": "Onay vermezseniz hiçbir analitik betiği yüklenmez. Tercihinizi site üzerindeki çerez ayarlarından dilediğiniz zaman değiştirebilirsiniz."
+        },
+        "s3": {
+          "title": "Tercihleri yönetme",
+          "p1": "Çerez tercihleriniz tarayıcınızda saklanır ve yalnızca bu siteyi etkiler. Tarayıcı ayarlarınızdan çerezleri tamamen silebilir veya engelleyebilirsiniz.",
+          "p2": "Çerezleri engellemeniz durumunda giriş ve profil işlemleri gibi bazı işlevler çalışmayabilir."
+        }
+      }
+    },
+    "terms": {
+      "title": "Kullanım Koşulları",
+      "intro": "İşBul KKTC’yi kullanarak bu koşulları kabul etmiş olursunuz. Platformu yalnızca yasal amaçlarla ve doğru bilgilerle kullanmanız beklenir.",
+      "updated": "29 Ekim 2026",
+      "sections": {
+        "s1": {
+          "title": "Hesap sorumluluğu",
+          "p1": "Hesabınızın güvenliğinden ve paylaştığınız bilgilerin doğruluğundan siz sorumlusunuz. Şifrenizi kimseyle paylaşmamalısınız.",
+          "p2": "Hesabınızda yetkisiz bir kullanım fark ederseniz derhal bize bildirmelisiniz."
+        },
+        "s2": {
+          "title": "Kabul edilebilir kullanım",
+          "p1": "Yanıltıcı ilanlar, spam başvurular veya başkalarının verilerini izinsiz toplama gibi davranışlar yasaktır.",
+          "p2": "Bu koşulları ihlal eden hesapları askıya alma veya kapatma hakkımızı saklı tutarız."
+        },
+        "s3": {
+          "title": "İçerik ve fikri mülkiyet",
+          "p1": "Yüklediğiniz içerik size ait kalır; ancak bu içeriği platform üzerinden göstermemize izin vermiş olursunuz.",
+          "p2": "İşBul KKTC markası, tasarımı ve yazılımı bize aittir ve izinsiz kullanılamaz."
+        },
+        "s4": {
+          "title": "Sorumluluğun sınırı",
+          "p1": "Platformu kesintisiz veya hatasız sunmayı garanti etmeyiz. İşveren ile aday arasındaki anlaşmalardan taraf değiliz.",
+          "p2": "Koşullar güncellenebilir; önemli değişiklikleri site üzerinden duyururuz."
+        }
+      }
+    }
   }
 }
