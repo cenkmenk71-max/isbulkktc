@@ -9,7 +9,6 @@ import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { GoogleAnalyticsConsent } from "@/components/analytics/google-analytics-consent";
-import { ComponentInspectorLoader } from "@/features/devtools/component-inspector-loader";
 import { isRightToLeftLocale, routing } from "@/i18n/routing";
 import { getLocalizedSocialImageAlt } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
@@ -195,7 +194,6 @@ export default async function LocaleLayout({
           </main>
           <SiteFooter />
           <GoogleAnalyticsConsent />
-          <ComponentInspectorLoader />
         </NextIntlClientProvider>
       </body>
     </html>
