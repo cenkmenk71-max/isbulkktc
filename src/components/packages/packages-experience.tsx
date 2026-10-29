@@ -164,7 +164,6 @@ export async function PackagesExperience({ locale }: { locale: AppLocale }) {
             title={copy("showcase.title")}
             instruction={copy("showcase.instruction")}
             brand={copy("showcase.brand")}
-            platformLabel={copy("showcase.platformLabel")}
             labelCopy={{
               locale,
               package: copy("showcase.scene.package"),

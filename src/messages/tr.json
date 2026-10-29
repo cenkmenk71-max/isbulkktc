@@ -123,7 +123,6 @@
       "title": "İşe alımınıza uygun ilan paketini seçin.",
       "instruction": "İlan adedini belirleyin; her ilan için 1, 7 veya 30 gün seçin.",
       "brand": "İşBul KKTC · İşveren paketleri",
-      "platformLabel": "KARİYER PLATFORMU",
       "back": "Paket seçimine dön",
       "selectPackage": "İşveren paketi seçin",
       "sceneFallback": "3D sahne kullanılamıyor. Paket seçimi ve ayrıntılar kullanılabilir.",

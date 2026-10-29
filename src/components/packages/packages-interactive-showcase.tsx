@@ -30,7 +30,6 @@ type PackagesInteractiveShowcaseProps = {
   title: string;
   instruction: string;
   brand: string;
-  platformLabel: string;
   labelCopy: SceneLabels;
   selectLabel: string;
   packageContentsLabel: string;
@@ -58,7 +57,6 @@ export function PackagesInteractiveShowcase({
   title,
   instruction,
   brand,
-  platformLabel,
   labelCopy,
   selectLabel,
   packageContentsLabel,
@@ -369,10 +367,6 @@ export function PackagesInteractiveShowcase({
             ))}
           </div>
         )}
-        <p className="packages-vend-mark" aria-hidden="true">
-          <span>İşBul KKTC</span>
-          <span>{platformLabel}</span>
-        </p>
       </div>
     </div>
   );

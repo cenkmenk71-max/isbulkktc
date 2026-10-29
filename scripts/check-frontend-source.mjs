@@ -518,6 +518,15 @@ assert.doesNotMatch(css, /\.package-proposal-status|\.vend-panel-status|\.vend-p
 assert.doesNotMatch(packagesPage, /package-catalog-title|getActiveJobPackages/);
 assert.doesNotMatch(packagesPage, /catalog\.(?:title|description|activeJobs|duration|days|empty|noDescription)/);
 assert.doesNotMatch(css, /\.package-catalog-empty/);
+// The vending machine's brand lockup ("İşBul KKTC · KARİYER PLATFORMU") was
+// removed; the header already carries the brand.
+assert.doesNotMatch(packagesShowcase, /packages-vend-mark|platformLabel/);
+assert.doesNotMatch(packagesPage, /platformLabel/);
+assert.doesNotMatch(css, /\.packages-vend-mark/);
+assert.doesNotMatch(
+  `${JSON.stringify(trMessages.PackagesPage)} ${JSON.stringify(enMessages.PackagesPage)}`,
+  /platformLabel/,
+);
 assert.doesNotMatch(
   `${JSON.stringify(trMessages.PackagesPage.catalog)} ${JSON.stringify(enMessages.PackagesPage.catalog)}`,
   /"(?:title|description|activeJobs|duration|days|empty|noDescription)"/,

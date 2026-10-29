@@ -123,7 +123,6 @@
       "title": "Choose a job package that fits your hiring.",
       "instruction": "Choose your listing allowance, then select 1, 7 or 30 days per listing.",
       "brand": "İşBul KKTC · Employer packages",
-      "platformLabel": "CAREER PLATFORM",
       "back": "Back to package selection",
       "selectPackage": "Select an employer package",
       "sceneFallback": "The 3D scene is unavailable, but package selection and details remain available.",
