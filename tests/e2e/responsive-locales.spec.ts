@@ -12,6 +12,36 @@ const publicRoutes = [
 ] as const;
 const viewportWidths = [320, 390, 768, 1024, 1280, 1440] as const;
 
+/**
+ * An unprefixed `next/navigation` redirect drops a localized visitor onto the
+ * default-locale page. `/fa/reset-password` used to land on the Turkish
+ * `/forgot-password`, and every guarded dashboard bounced to `/login`. Guard the
+ * locale prefix on each redirect an unauthenticated visitor can trigger.
+ */
+const localePreservingRedirects = [
+  { path: "/profile/dashboard", landsOn: "/login" },
+  { path: "/company/dashboard", landsOn: "/login?audience=employer" },
+  { path: "/company/new", landsOn: "/login?audience=employer" },
+  { path: "/reset-password", landsOn: "/forgot-password?error=expired" },
+] as const;
+
+test("guarded redirects keep the visitor in their locale", async ({ page }) => {
+  for (const locale of locales) {
+    const prefix = locale === "tr" ? "" : `/${locale}`;
+    for (const { path, landsOn } of localePreservingRedirects) {
+      const response = await page.request.get(`${prefix}${path}`, {
+        maxRedirects: 0,
+      });
+      expect([302, 303, 307, 308]).toContain(response.status());
+      const location = response.headers()["location"] ?? "";
+      expect(
+        new URL(location, "http://localhost").pathname,
+        `${prefix}${path} must redirect inside ${locale}`,
+      ).toBe(`${prefix}${landsOn.split("?")[0]}`);
+    }
+  }
+});
+
 test("public routes stay within mobile, tablet, and desktop viewports in every locale", async ({
   page,
 }) => {

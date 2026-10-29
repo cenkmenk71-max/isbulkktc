@@ -4,6 +4,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { PlatformRole } from "@/types/database";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
+import { redirectLocalized } from "@/i18n/redirect";
 import { getLocalePrefix, isAppLocale, type AppLocale } from "@/i18n/routing";
 import { isCorruptedSupabaseAuthError } from "@/server/auth/supabase-guards";
 import {
@@ -125,8 +126,10 @@ export const requireAuthenticatedUser = cache(
   async (): Promise<CurrentUserDTO> => {
     const user = await getCurrentUser();
 
-    if (!user) redirect("/login");
-    if (user.status !== "active") redirect("/login?error=account");
+    if (!user) return redirectLocalized("/login");
+    if (user.status !== "active") {
+      redirect(`${getLocalePrefix(user.locale)}/login?error=account`);
+    }
 
     return user;
   },
@@ -186,7 +189,7 @@ export async function requirePlatformRole(
   role: PlatformRole,
 ): Promise<CurrentUserDTO> {
   const user = await requireAuthenticatedUser();
-  if (!(await hasAssignedPlatformRole(role))) redirect("/");
+  if (!(await hasAssignedPlatformRole(role))) return redirectLocalized("/");
 
   const supabase = await createSupabaseServerClient();
   const { data: hasRole, error } = await supabase.rpc("has_platform_role", {
@@ -234,7 +237,7 @@ export async function getPlatformAdminMfaStatus(): Promise<{
   verifiedTotpFactorId: string | null;
 }> {
   const user = await requireAuthenticatedUser();
-  if (!(await hasAssignedPlatformRole("platform_admin"))) redirect("/");
+  if (!(await hasAssignedPlatformRole("platform_admin"))) return redirectLocalized("/");
 
   const supabase = await createSupabaseServerClient();
   const [

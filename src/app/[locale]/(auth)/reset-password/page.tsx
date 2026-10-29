@@ -1,8 +1,8 @@
 import { getTranslations } from "next-intl/server";
-import { redirect } from "next/navigation";
 import { EditorialFormPage } from "@/components/layout/editorial-form-page";
 import { NewPasswordForm } from "@/features/identity/new-password-form";
 import { getCurrentUser } from "@/server/dal/user";
+import { redirectLocalized } from "@/i18n/redirect";
 import { noIndexMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export default async function ResetPasswordPage() {
     getTranslations("AccountPages.resetPassword"),
   ]);
 
-  if (!user) redirect("/forgot-password?error=expired");
+  if (!user) return redirectLocalized("/forgot-password?error=expired");
 
   return (
     <EditorialFormPage

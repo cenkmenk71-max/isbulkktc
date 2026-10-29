@@ -1,6 +1,7 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
+import { redirectLocalized } from "@/i18n/redirect";
 import { getLocalePrefix } from "@/i18n/routing";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { getCurrentUser, requirePlatformRole } from "./user";
@@ -57,7 +58,7 @@ export async function getEmployerWorkspace(requestedCompanyId?: string): Promise
   latestSubmission: CompanyProfileSubmission | null;
 }> {
   const user = await getCurrentUser();
-  if (!user) redirect("/login?audience=employer");
+  if (!user) return redirectLocalized("/login?audience=employer");
   if (user.status !== "active") {
     redirect(`${getLocalePrefix(user.locale)}/login?audience=employer&error=account`);
   }
