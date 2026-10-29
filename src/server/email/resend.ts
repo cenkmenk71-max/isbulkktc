@@ -21,7 +21,6 @@ export type SendEmailResult = {
   success: boolean;
   messageId?: string;
   error?: string;
-  mocked?: boolean;
 };
 
 /**
@@ -36,15 +35,16 @@ export async function sendTransactionalEmail(options: {
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
 
   if (!resendClient || !resendApiKey) {
-    console.info(
-      `[Resend Email Mock] RESEND_API_KEY tanımlanmamış. Simüle edilen e-posta:\n` +
-      `Alıcı: ${recipients.join(", ")}\n` +
-      `Konu: ${options.subject}`,
+    // Fail closed. Returning success here marked the outbox row as delivered
+    // while no email left the system, so a missing key silently dropped every
+    // notification. The worker's retry/backoff handles the failure honestly.
+    console.error(
+      "[Resend] RESEND_API_KEY is not configured; refusing to send.",
+      { subject: options.subject, recipients },
     );
     return {
-      success: true,
-      mocked: true,
-      messageId: `mock_${Date.now()}`,
+      success: false,
+      error: "RESEND_API_KEY_MISSING",
     };
   }
 

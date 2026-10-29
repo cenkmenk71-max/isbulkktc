@@ -11,18 +11,21 @@ import {
   notifyEmployerNewApplication,
 } from "@/server/email/resend";
 import { getAppBaseUrl } from "@/server/config/app-url";
+import { isAuthorizedCronRequest } from "@/server/auth/cron-auth";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Vercel Cron / Scheduled Worker for processing outbox emails
- * Verilen CRON_SECRET veya Authorization Bearer token ile korunur.
+ * Vercel Cron / Scheduled Worker for processing outbox emails.
+ * Requires `Authorization: Bearer <CRON_SECRET>`; a missing secret denies all.
  */
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (
+    !isAuthorizedCronRequest(
+      req.headers.get("authorization"),
+      process.env.CRON_SECRET,
+    )
+  ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -107,10 +110,16 @@ export async function GET(req: NextRequest) {
           });
           successCount++;
         } else {
+          // The DB constrains error codes to `^[A-Za-z0-9_-]+$`, max 80 chars,
+          // and rejects an empty string, so fall back after sanitizing.
+          const errorCode =
+            (sendResult.error ?? "")
+              .replace(/[^A-Za-z0-9_-]/g, "_")
+              .slice(0, 80) || "SEND_FAILED";
           await supabase.rpc("finish_notification_email", {
             _outbox_id: item.outbox_id,
             _provider_message_id: null,
-            _error_code: "SEND_FAILED",
+            _error_code: errorCode,
           });
           failCount++;
         }
