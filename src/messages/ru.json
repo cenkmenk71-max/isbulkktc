@@ -154,7 +154,13 @@
     "siteFooterLabel": "Нижняя часть сайта",
     "homeLinkLabel": "Главная İşBul KKTC",
     "location": "Алсанджак, Северный Кипр",
-    "legalNavigation": "Правовая информация"
+    "legalNavigation": "Правовая информация",
+    "supportNavigation": "Каналы поддержки",
+    "supportEmailLabel": "Поддержка по e-mail",
+    "supportEmailSubject": "Запрос в поддержку İşBul KKTC",
+    "supportWhatsAppLabel": "WhatsApp",
+    "supportPhoneLabel": "Телефон",
+    "socialNavigation": "Соцсети"
   },
   "LanguageMenu": {
     "title": "Язык интерфейса",
@@ -162,11 +168,25 @@
   },
   "Analytics": {
     "regionLabel": "Настройки аналитики",
-    "description": "Мы используем файлы cookie, чтобы обеспечить безопасную работу сайта и улучшить ваш опыт. Обязательные cookie работают всегда, аналитические — только с вашего согласия.",
+    "description": "Мы используем файлы cookie, чтобы улучшить ваш опыт и обеспечить безопасность сайта. Вы можете изменить свой выбор в любое время.",
     "accept": "Разрешить",
     "reject": "Отклонить",
     "settings": "Настройки аналитики",
-    "policyLink": "Политика cookie"
+    "policyLink": "Политика cookie",
+    "title": "Настройки файлов cookie",
+    "necessaryLabel": "Обязательные файлы cookie",
+    "necessaryDescription": "Необходимы для входа и безопасности; их нельзя отключить.",
+    "alwaysOn": "Всегда включены",
+    "analyticsLabel": "Аналитика",
+    "analyticsDescription": "Помогает нам понять, как вы используете сайт.",
+    "marketingLabel": "Маркетинг",
+    "marketingDescription": "Используется для показа релевантного контента и рекламы.",
+    "stateOn": "Вкл",
+    "stateOff": "Выкл",
+    "rejectAll": "Отклонить все",
+    "savePreferences": "Сохранить настройки",
+    "acceptAll": "Принять все",
+    "close": "Закрыть"
   },
   "NotFound": {
     "title": "Страница не найдена",

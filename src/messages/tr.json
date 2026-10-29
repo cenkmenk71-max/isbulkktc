@@ -240,7 +240,13 @@
     "siteFooterLabel": "Alt bilgi",
     "homeLinkLabel": "İşBul KKTC ana sayfa",
     "location": "Alsancak, KKTC",
-    "legalNavigation": "Yasal bağlantılar"
+    "legalNavigation": "Yasal bağlantılar",
+    "supportNavigation": "Destek kanalları",
+    "supportEmailLabel": "E-posta desteği",
+    "supportEmailSubject": "İşBul KKTC destek talebi",
+    "supportWhatsAppLabel": "WhatsApp",
+    "supportPhoneLabel": "Telefon",
+    "socialNavigation": "Sosyal medya"
   },
   "AboutPage": {
     "eyebrow": "İŞBUL KKTC · YAKLAŞIMIMIZ",
@@ -512,11 +518,25 @@
   },
   "Analytics": {
     "regionLabel": "Analitik tercihleri",
-    "description": "Deneyiminizi geliştirmek ve siteyi güvenli biçimde çalıştırmak için çerezler kullanıyoruz. Zorunlu çerezler her zaman etkindir; analitik çerezleri yalnızca izninizle kullanırız.",
+    "description": "Deneyiminizi geliştirmek ve siteyi güvenli çalıştırmak için çerezler kullanıyoruz. Tercihlerinizi dilediğiniz zaman değiştirebilirsiniz.",
     "accept": "Kabul et",
     "reject": "Reddet",
     "settings": "Analitik tercihleri",
-    "policyLink": "Çerez politikası"
+    "policyLink": "Çerez politikası",
+    "title": "Çerez tercihleri",
+    "necessaryLabel": "Zorunlu çerezler",
+    "necessaryDescription": "Oturum açma ve güvenlik için gereklidir; kapatılamaz.",
+    "alwaysOn": "Her zaman açık",
+    "analyticsLabel": "Analitik",
+    "analyticsDescription": "Siteyi nasıl kullandığınızı anlamamıza yardımcı olur.",
+    "marketingLabel": "Pazarlama",
+    "marketingDescription": "İlgi alanınıza uygun içerik ve reklam için kullanılır.",
+    "stateOn": "Açık",
+    "stateOff": "Kapalı",
+    "rejectAll": "Tümünü reddet",
+    "savePreferences": "Tercihleri kaydet",
+    "acceptAll": "Tümünü kabul et",
+    "close": "Kapat"
   },
   "HomePage": {
     "eyebrow": "KUZEY KIBRIS İSTİHDAM AĞI",

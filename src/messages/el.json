@@ -154,7 +154,13 @@
     "siteFooterLabel": "Υποσέλιδο",
     "homeLinkLabel": "Αρχική σελίδα İşBul KKTC",
     "location": "Alsancak, Βόρεια Κύπρος",
-    "legalNavigation": "Νομικοί σύνδεσμοι"
+    "legalNavigation": "Νομικοί σύνδεσμοι",
+    "supportNavigation": "Κανάλια υποστήριξης",
+    "supportEmailLabel": "Υποστήριξη email",
+    "supportEmailSubject": "Αίτημα υποστήριξης İşBul KKTC",
+    "supportWhatsAppLabel": "WhatsApp",
+    "supportPhoneLabel": "Τηλέφωνο",
+    "socialNavigation": "Κοινωνικά δίκτυα"
   },
   "LanguageMenu": {
     "title": "Γλώσσα διεπαφής",
@@ -162,11 +168,25 @@
   },
   "Analytics": {
     "regionLabel": "Προτιμήσεις αναλυτικών στοιχείων",
-    "description": "Χρησιμοποιούμε cookies για την ασφάλεια του ιστότοπου και τη βελτίωση της εμπειρίας σας. Τα απαραίτητα cookies είναι πάντα ενεργά, τα cookies ανάλυσης μόνο με τη συγκατάθεσή σας.",
+    "description": "Χρησιμοποιούμε cookies για να βελτιώσουμε την εμπειρία σας και να διατηρήσουμε τον ιστότοπο ασφαλή. Μπορείτε να αλλάξετε τις επιλογές σας ανά πάσα στιγμή.",
     "accept": "Αποδοχή",
     "reject": "Απόρριψη",
     "settings": "Προτιμήσεις αναλυτικών στοιχείων",
-    "policyLink": "Πολιτική cookies"
+    "policyLink": "Πολιτική cookies",
+    "title": "Ρυθμίσεις cookies",
+    "necessaryLabel": "Απαραίτητα cookies",
+    "necessaryDescription": "Απαιτούνται για σύνδεση και ασφάλεια· δεν μπορούν να απενεργοποιηθούν.",
+    "alwaysOn": "Πάντα ενεργά",
+    "analyticsLabel": "Ανάλυση",
+    "analyticsDescription": "Μας βοηθά να κατανοήσουμε πώς χρησιμοποιείτε τον ιστότοπο.",
+    "marketingLabel": "Μάρκετινγκ",
+    "marketingDescription": "Χρησιμοποιείται για σχετικό περιεχόμενο και διαφημίσεις.",
+    "stateOn": "Ενεργό",
+    "stateOff": "Ανενεργό",
+    "rejectAll": "Απόρριψη όλων",
+    "savePreferences": "Αποθήκευση",
+    "acceptAll": "Αποδοχή όλων",
+    "close": "Κλείσιμο"
   },
   "NotFound": {
     "title": "Η σελίδα δεν βρέθηκε",

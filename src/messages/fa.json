@@ -154,7 +154,13 @@
     "siteFooterLabel": "پاورقی سایت",
     "homeLinkLabel": "صفحه اصلی İşBul KKTC",
     "location": "آلسانجاک، قبرس شمالی",
-    "legalNavigation": "پیوندهای حقوقی"
+    "legalNavigation": "پیوندهای حقوقی",
+    "supportNavigation": "کانال‌های پشتیبانی",
+    "supportEmailLabel": "پشتیبانی ایمیلی",
+    "supportEmailSubject": "درخواست پشتیبانی İşBul KKTC",
+    "supportWhatsAppLabel": "واتس‌اپ",
+    "supportPhoneLabel": "تلفن",
+    "socialNavigation": "شبکه‌های اجتماعی"
   },
   "LanguageMenu": {
     "title": "زبان رابط کاربری",
@@ -162,11 +168,25 @@
   },
   "Analytics": {
     "regionLabel": "تنظیمات تحلیل بازدید",
-    "description": "ما از کوکی‌ها برای امن نگه داشتن سایت و بهبود تجربه شما استفاده می‌کنیم. کوکی‌های ضروری همیشه فعال‌اند و کوکی‌های تحلیلی فقط با رضایت شما بارگذاری می‌شوند.",
+    "description": "ما از کوکی‌ها برای بهبود تجربه شما و امن نگه داشتن سایت استفاده می‌کنیم. می‌توانید انتخاب خود را هر زمان تغییر دهید.",
     "accept": "پذیرفتن",
     "reject": "رد کردن",
     "settings": "تنظیمات تحلیل بازدید",
-    "policyLink": "سیاست کوکی"
+    "policyLink": "سیاست کوکی",
+    "title": "تنظیمات کوکی",
+    "necessaryLabel": "کوکی‌های ضروری",
+    "necessaryDescription": "برای ورود و امنیت لازم است؛ قابل خاموش کردن نیست.",
+    "alwaysOn": "همیشه روشن",
+    "analyticsLabel": "تحلیل",
+    "analyticsDescription": "به ما کمک می‌کند بفهمیم چگونه از سایت استفاده می‌کنید.",
+    "marketingLabel": "بازاریابی",
+    "marketingDescription": "برای محتوا و تبلیغات مرتبط با علایق شما استفاده می‌شود.",
+    "stateOn": "روشن",
+    "stateOff": "خاموش",
+    "rejectAll": "رد همه",
+    "savePreferences": "ذخیره تنظیمات",
+    "acceptAll": "پذیرش همه",
+    "close": "بستن"
   },
   "NotFound": {
     "title": "صفحه پیدا نشد",

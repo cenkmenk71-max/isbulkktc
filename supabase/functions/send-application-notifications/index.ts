@@ -1,3 +1,9 @@
+import {
+  BRAND,
+  escapeHtml,
+  renderBrandedEmail,
+} from "../_shared/notification-email.ts";
+
 type Locale = "tr" | "en" | "ru" | "el" | "fa" | "de";
 type EventType = "submitted" | "viewed" | "status_changed";
 
@@ -27,6 +33,7 @@ const messages: Record<
     statusChanged: string;
     statuses: Record<string, string>;
     openDashboard: string;
+    footerNote: string;
   }
 > = {
   tr: {
@@ -47,6 +54,8 @@ const messages: Record<
       withdrawn: "Geri çekildi",
     },
     openDashboard: "Hesabınızdan başvuruyu takip edebilirsiniz:",
+    footerNote:
+      "Bu bildirim, İşBul KKTC hesabınızdaki bir başvuru hareketi nedeniyle gönderildi.",
   },
   en: {
     candidateAppliedSubject: "Your application was sent",
@@ -66,6 +75,8 @@ const messages: Record<
       withdrawn: "Withdrawn",
     },
     openDashboard: "Track this application from your account:",
+    footerNote:
+      "This notification was sent because of activity on your İşBul KKTC account.",
   },
   ru: {
     candidateAppliedSubject: "Отклик передан работодателю",
@@ -85,6 +96,8 @@ const messages: Record<
       withdrawn: "Отозван",
     },
     openDashboard: "Отслеживайте отклик в аккаунте:",
+    footerNote:
+      "Это уведомление отправлено в связи с действием в вашем аккаунте İşBul KKTC.",
   },
   el: {
     candidateAppliedSubject: "Η αίτησή σας παραδόθηκε",
@@ -104,6 +117,8 @@ const messages: Record<
       withdrawn: "Αποσύρθηκε",
     },
     openDashboard: "Παρακολουθήστε την αίτηση από τον λογαριασμό σας:",
+    footerNote:
+      "Αυτή η ειδοποίηση στάλθηκε λόγω δραστηριότητας στον λογαριασμό σας İşBul KKTC.",
   },
   fa: {
     candidateAppliedSubject: "درخواست شما به کارفرما تحویل شد",
@@ -123,6 +138,8 @@ const messages: Record<
       withdrawn: "پس گرفته شد",
     },
     openDashboard: "وضعیت درخواست را در حساب خود پیگیری کنید:",
+    footerNote:
+      "این اطلاع‌رسانی به دلیل فعالیتی در حساب İşBul KKTC شما ارسال شد.",
   },
   de: {
     candidateAppliedSubject: "Ihre Bewerbung wurde übermittelt",
@@ -142,6 +159,8 @@ const messages: Record<
       withdrawn: "Zurückgezogen",
     },
     openDashboard: "Verfolgen Sie die Bewerbung in Ihrem Konto:",
+    footerNote:
+      "Diese Benachrichtigung wurde aufgrund einer Aktivität in Ihrem İşBul KKTC-Konto gesendet.",
   },
 };
 
@@ -199,32 +218,34 @@ function getEmailContent(item: OutboxItem, appUrl: URL) {
   const dashboardUrl = new URL(`${localePrefix}${dashboardPath}`, appUrl).toString();
   const status = copy.statuses[item.application_status];
 
+  const build = (subject: string, lead: string) => ({
+    subject,
+    text: `${lead}\n\n${item.job_title}\n${copy.openDashboard}\n${dashboardUrl}`,
+    html: renderBrandedEmail({
+      preheader: lead,
+      heading: subject,
+      body: `<p style="margin:0 0 12px;">${escapeHtml(lead)}</p><p style="margin:0;font-size:15px;font-weight:600;color:${BRAND.ink};">${escapeHtml(item.job_title)}</p>`,
+      ctaLabel: copy.openDashboard,
+      ctaUrl: dashboardUrl,
+      footerNote: copy.footerNote,
+      siteUrl: new URL(localePrefix || "/", appUrl).toString(),
+    }),
+  });
+
   if (item.event_type === "viewed" && item.recipient_is_candidate) {
-    return {
-      subject: copy.viewedSubject,
-      text: `${copy.viewed}\n\n${item.job_title}\n${copy.openDashboard}\n${dashboardUrl}`,
-    };
+    return build(copy.viewedSubject, copy.viewed);
   }
 
   if (item.event_type === "status_changed" && status) {
-    return {
-      subject: copy.statusSubject,
-      text: `${copy.statusChanged.replace("{status}", status)}\n\n${item.job_title}\n${copy.openDashboard}\n${dashboardUrl}`,
-    };
+    return build(copy.statusSubject, copy.statusChanged.replace("{status}", status));
   }
 
   if (item.event_type === "submitted" && item.recipient_is_candidate) {
-    return {
-      subject: copy.candidateAppliedSubject,
-      text: `${copy.candidateApplied}\n\n${item.job_title}\n${copy.openDashboard}\n${dashboardUrl}`,
-    };
+    return build(copy.candidateAppliedSubject, copy.candidateApplied);
   }
 
   if (item.event_type === "submitted") {
-    return {
-      subject: copy.employerAppliedSubject,
-      text: `${copy.employerApplied}\n\n${item.job_title}\n${copy.openDashboard}\n${dashboardUrl}`,
-    };
+    return build(copy.employerAppliedSubject, copy.employerApplied);
   }
 
   throw new Error("unsupported_notification_event");
@@ -324,6 +345,7 @@ Deno.serve(async (request) => {
           to: [item.recipient_email],
           subject: email.subject,
           text: email.text,
+          html: email.html,
         }),
       });
       const resendResult = await resendResponse.json();

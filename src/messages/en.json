@@ -240,7 +240,13 @@
     "siteFooterLabel": "Footer",
     "homeLinkLabel": "İşBul KKTC home",
     "location": "Alsancak, Northern Cyprus",
-    "legalNavigation": "Legal links"
+    "legalNavigation": "Legal links",
+    "supportNavigation": "Support channels",
+    "supportEmailLabel": "Email support",
+    "supportEmailSubject": "İşBul KKTC support request",
+    "supportWhatsAppLabel": "WhatsApp",
+    "supportPhoneLabel": "Phone",
+    "socialNavigation": "Social media"
   },
   "AboutPage": {
     "eyebrow": "İŞBUL KKTC · OUR APPROACH",
@@ -512,11 +518,25 @@
   },
   "Analytics": {
     "regionLabel": "Analytics preferences",
-    "description": "We use cookies to keep the site secure and to improve your experience. Essential cookies always run; analytics cookies load only with your consent.",
+    "description": "We use cookies to improve your experience and keep the site secure. You can change your choices at any time.",
     "accept": "Accept",
     "reject": "Reject",
     "settings": "Analytics preferences",
-    "policyLink": "Cookie policy"
+    "policyLink": "Cookie policy",
+    "title": "Cookie preferences",
+    "necessaryLabel": "Essential cookies",
+    "necessaryDescription": "Required for sign-in and security; these cannot be turned off.",
+    "alwaysOn": "Always on",
+    "analyticsLabel": "Analytics",
+    "analyticsDescription": "Helps us understand how you use the site.",
+    "marketingLabel": "Marketing",
+    "marketingDescription": "Used for content and ads relevant to your interests.",
+    "stateOn": "On",
+    "stateOff": "Off",
+    "rejectAll": "Reject all",
+    "savePreferences": "Save preferences",
+    "acceptAll": "Accept all",
+    "close": "Close"
   },
   "HomePage": {
     "eyebrow": "NORTHERN CYPRUS EMPLOYMENT NETWORK",

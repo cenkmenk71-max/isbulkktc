@@ -154,7 +154,13 @@
     "siteFooterLabel": "Fußbereich",
     "homeLinkLabel": "İşBul KKTC Startseite",
     "location": "Alsancak, Nordzypern",
-    "legalNavigation": "Rechtliches"
+    "legalNavigation": "Rechtliches",
+    "supportNavigation": "Support-Kanäle",
+    "supportEmailLabel": "E-Mail-Support",
+    "supportEmailSubject": "İşBul KKTC Support-Anfrage",
+    "supportWhatsAppLabel": "WhatsApp",
+    "supportPhoneLabel": "Telefon",
+    "socialNavigation": "Soziale Medien"
   },
   "LanguageMenu": {
     "title": "Sprache der Benutzeroberfläche",
@@ -162,11 +168,25 @@
   },
   "Analytics": {
     "regionLabel": "Analyse-Einstellungen",
-    "description": "Wir verwenden Cookies, um die Website sicher zu betreiben und Ihr Erlebnis zu verbessern. Notwendige Cookies sind immer aktiv, Analyse-Cookies nur mit Ihrer Einwilligung.",
+    "description": "Wir verwenden Cookies, um Ihr Erlebnis zu verbessern und die Website sicher zu betreiben. Sie können Ihre Auswahl jederzeit ändern.",
     "accept": "Akzeptieren",
     "reject": "Ablehnen",
     "settings": "Analyse-Einstellungen",
-    "policyLink": "Cookie-Richtlinie"
+    "policyLink": "Cookie-Richtlinie",
+    "title": "Cookie-Einstellungen",
+    "necessaryLabel": "Notwendige Cookies",
+    "necessaryDescription": "Erforderlich für Anmeldung und Sicherheit; nicht abschaltbar.",
+    "alwaysOn": "Immer aktiv",
+    "analyticsLabel": "Analyse",
+    "analyticsDescription": "Hilft uns zu verstehen, wie Sie die Website nutzen.",
+    "marketingLabel": "Marketing",
+    "marketingDescription": "Wird für relevante Inhalte und Werbung verwendet.",
+    "stateOn": "Ein",
+    "stateOff": "Aus",
+    "rejectAll": "Alle ablehnen",
+    "savePreferences": "Einstellungen speichern",
+    "acceptAll": "Alle akzeptieren",
+    "close": "Schließen"
   },
   "NotFound": {
     "title": "Seite nicht gefunden",
