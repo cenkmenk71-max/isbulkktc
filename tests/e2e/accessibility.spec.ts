@@ -22,6 +22,9 @@ const publicRoutes = [
   { path: "/contact", name: "contact" },
   { path: "/login", name: "login" },
   { path: "/register", name: "register" },
+  { path: "/privacy", name: "privacy" },
+  { path: "/cookies", name: "cookies" },
+  { path: "/terms", name: "terms" },
 ] as const;
 
 const viewports = [
