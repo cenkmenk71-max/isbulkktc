@@ -194,6 +194,8 @@
     "account": "Mein Konto",
     "signOut": "Sicher abmelden",
     "register": "Kostenloses Konto erstellen",
+    "account": "Mein Konto",
+    "signOut": "Sicher abmelden",
     "homeLabel": "İşBul KKTC Startseite",
     "currentLanguage": "Aktuelle Sprache"
   },
@@ -428,7 +430,10 @@
     "nextKicker": "MEHR ENTDECKEN",
     "nextTitle": "Unternehmensverzeichnis entdecken.",
     "nextBody": "Durchsuchen Sie Unternehmenseinträge in Nordzypern nach Name, Branche und Standort. Die Einträge stammen aus Quelldaten und sind keine geprüften Unternehmensprofile.",
-    "directoryLink": "Zum Unternehmensverzeichnis"
+    "directoryLink": "Zum Unternehmensverzeichnis",
+    "feedbackKicker": "FEEDBACK",
+    "feedbackTitle": "Teilen Sie Ihre Meinung",
+    "feedbackBody": "Bewerten Sie Ihre Erfahrung, melden Sie einen Fehler oder schlagen Sie eine Funktion vor. Wir lesen jede Nachricht."
   },
   "FeatureStrip": {
     "ariaLabel": "Funktionen von İşBul KKTC",
@@ -1311,6 +1316,55 @@
           "p2": "Koşullar güncellenebilir; önemli değişiklikleri site üzerinden duyururuz."
         }
       }
+    }
+  },
+  "FeedbackForm": {
+    "categoryLabel": "Thema",
+    "ratingLabel": "Bewerten Sie Ihre Erfahrung",
+    "ratingValue": "{value} Sterne",
+    "nameLabel": "Ihr Name (optional)",
+    "emailLabel": "Ihre E-Mail (optional)",
+    "messageLabel": "Ihre Nachricht",
+    "submit": "Feedback senden",
+    "sending": "Wird gesendet…",
+    "privacyNote": "Ihre Nachricht wird nur vom İşBul KKTC-Team geprüft und nicht an Dritte weitergegeben.",
+    "categories": {
+      "general": "Allgemeines Feedback",
+      "bug": "Fehlerbericht",
+      "feature": "Vorschlag / neue Funktion",
+      "employer": "Arbeitgeber-Erfahrung",
+      "candidate": "Kandidaten-Erfahrung",
+      "other": "Sonstiges"
+    },
+    "messages": {
+      "invalid": "Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "submitted": "Danke für Ihr Feedback! Ihre Nachricht ist bei uns eingegangen.",
+      "failed": "Feedback konnte gerade nicht gesendet werden. Bitte später erneut versuchen."
+    }
+  },
+  "SalesLeadForm": {
+    "eyebrow": "Firmen-Angebot",
+    "title": "Holen Sie ein schriftliches Angebot ein",
+    "description": "Nennen Sie Anzeigenzahl und Dauer; wir klären den Umfang und erstellen ein passendes Angebot.",
+    "companyLabel": "Firmenname",
+    "contactLabel": "Name des Ansprechpartners",
+    "emailLabel": "Ihre E-Mail-Adresse",
+    "phoneLabel": "Telefon (optional)",
+    "durationLabel": "Gewünschte Anzeigendauer",
+    "durationPlaceholder": "Auswählen",
+    "noteLabel": "Beschreiben Sie kurz Ihren Bedarf",
+    "submit": "Angebotsanfrage senden",
+    "sending": "Wird gesendet…",
+    "privacyNote": "Ihre Angaben werden nur für den Angebotsprozess genutzt und nicht an Dritte weitergegeben.",
+    "durations": {
+      "oneDay": "1 Tag",
+      "sevenDays": "7 Tage",
+      "thirtyDays": "30 Tage"
+    },
+    "messages": {
+      "invalid": "Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "submitted": "Ihre Anfrage ist eingegangen! Wir melden uns in Kürze.",
+      "failed": "Die Anfrage konnte gerade nicht gesendet werden. Bitte später erneut versuchen."
     }
   }
 }

@@ -95,6 +95,44 @@ export async function getJobCompanyId(jobId: string): Promise<string | null> {
   return data?.company_id ?? null;
 }
 
+/**
+ * Minimal job details needed to announce a publication: title, slug and the
+ * owning company's display name. Read under the caller's RLS, so it only
+ * returns rows the signed-in employer is allowed to see.
+ */
+export async function getJobPublishAnnouncement(jobId: string): Promise<{
+  title: string;
+  slug: string;
+  companyName: string;
+} | null> {
+  if (!z.string().uuid().safeParse(jobId).success) return null;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("title, slug, company_id")
+    .eq("id", jobId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("The job publication details could not be loaded.", {
+      cause: error,
+    });
+  }
+  if (!data) return null;
+
+  let companyName = "";
+  if (data.company_id) {
+    const { data: company } = await supabase
+      .from("companies")
+      .select("name")
+      .eq("id", data.company_id)
+      .maybeSingle();
+    companyName = company?.name ?? "";
+  }
+
+  return { title: data.title, slug: data.slug, companyName };
+}
+
 export async function getApplicationForActor(applicationId: string) {
   if (!z.string().uuid().safeParse(applicationId).success) return null;
   const supabase = await createSupabaseServerClient();

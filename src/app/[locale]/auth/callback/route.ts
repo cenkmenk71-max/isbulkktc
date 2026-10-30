@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
-import { getLocalePrefix, routing } from "@/i18n/routing";
+import { getLocalePrefix, routing, type AppLocale } from "@/i18n/routing";
+import { sendWelcomeEmail } from "@/server/email/mailer";
+import type { WelcomeAudience } from "../../../../../supabase/functions/_shared/email-render.ts";
 import {
   audienceFromCallbackParam,
   parseAuthFlow,
@@ -14,6 +16,45 @@ import {
   oauthSignupIntentCookieName,
   parseOAuthSignupIntent,
 } from "@/features/identity/oauth-signup-intent";
+
+// An account is greeted only if it was created moments before this callback
+// resolves, which keeps the welcome email to genuinely new sign-ups.
+const WELCOME_WINDOW_MS = 5 * 60 * 1000;
+
+function isFreshAccount(createdAt: string | undefined): boolean {
+  if (!createdAt) return false;
+  const created = Date.parse(createdAt);
+  return Number.isFinite(created) && Date.now() - created < WELCOME_WINDOW_MS;
+}
+
+/**
+ * Greeting a new account is best-effort: the session is already established, so
+ * a mail problem (or a misconfigured app URL) must never break the callback and
+ * strand the user without a redirect.
+ */
+async function greetNewAccount(input: {
+  email: string;
+  audience: WelcomeAudience;
+  locale: AppLocale;
+  user: { id: string; user_metadata?: Record<string, unknown> | null };
+}): Promise<void> {
+  try {
+    await sendWelcomeEmail({
+      to: input.email,
+      audience: input.audience,
+      locale: input.locale,
+      name:
+        (input.user.user_metadata?.display_name as string | undefined) ??
+        (input.user.user_metadata?.full_name as string | undefined) ??
+        null,
+      userId: input.user.id,
+    });
+  } catch (mailError) {
+    console.error("Welcome email could not be sent.", {
+      error: mailError instanceof Error ? mailError.message : "unknown_error",
+    });
+  }
+}
 
 function redirectAndClearOAuthIntent(url: URL): NextResponse {
   const response = NextResponse.redirect(url);
@@ -55,6 +96,22 @@ export async function GET(request: NextRequest) {
     return redirectAndClearOAuthIntent(
       new URL(`${getLocalePrefix(locale)}/reset-password`, appBaseUrl),
     );
+  }
+
+  // Greet a brand-new account exactly once, on the first callback that resolves
+  // its session. The freshness window keeps this to genuine sign-ups.
+  if (!isOAuthFlow) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user?.email && isFreshAccount(user.created_at)) {
+      await greetNewAccount({
+        email: user.email,
+        audience,
+        locale,
+        user,
+      });
+    }
   }
 
   if (isOAuthFlow) {
@@ -106,6 +163,15 @@ export async function GET(request: NextRequest) {
             code: profileError?.code,
           });
           return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
+        }
+
+        if (user.email) {
+          await greetNewAccount({
+            email: user.email,
+            audience,
+            locale,
+            user,
+          });
         }
       }
     }

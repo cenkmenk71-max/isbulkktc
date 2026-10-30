@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
 import { PackagesInteractiveShowcase } from "@/components/packages/packages-interactive-showcase";
+import { SalesLeadForm } from "@/features/sales/sales-lead-form";
 import { packageTierColors, packageTierPlanCodes } from "@/components/packages/package-tiers";
 import type { ListingDuration } from "@/experience/scenes/vend-pricing/lib/plans";
 
@@ -68,6 +69,7 @@ export async function PackagesExperience({
   planPriceOverrides?: PlanPriceOverrides;
 }) {
   const copy = await getTranslations({ locale, namespace: "PackagesPage" });
+  const leadCopy = await getTranslations({ locale, namespace: "SalesLeadForm" });
   const profiles = packageTiers.map((tier) => {
     const override = planPriceOverrides?.[tier.code];
     return {
@@ -228,6 +230,20 @@ export async function PackagesExperience({
               off: copy("showcase.sound.off"),
             }}
           />
+        </div>
+      </section>
+
+      <section className="packages-lead-section" aria-labelledby="packages-lead-title">
+        <div className="page-container packages-lead-layout">
+          <div className="packages-lead-copy">
+            <p className="eyebrow">
+              <span className="eyebrow-rule" />
+              {leadCopy("eyebrow")}
+            </p>
+            <h2 id="packages-lead-title">{leadCopy("title")}</h2>
+            <p>{leadCopy("description")}</p>
+          </div>
+          <SalesLeadForm />
         </div>
       </section>
     </div>

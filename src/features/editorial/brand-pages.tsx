@@ -17,6 +17,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
 import { getLatestNews } from "@/features/blog/news-feed";
+import { FeedbackForm } from "@/features/feedback/feedback-form";
 import { FaqSection } from "@/content/ai-visibility/faq-section";
 import type { FaqEntry } from "@/content/ai-visibility/faq";
 
@@ -279,6 +280,17 @@ export async function ContactPageContent({ locale }: { locale: AppLocale }) {
             <Mail size={18} aria-hidden="true" />
             <p>{t("messageGuidance")}</p>
           </div>
+        </section>
+
+        <section className="contact-feedback" aria-labelledby="contact-feedback-title">
+          <div className="contact-panel-heading">
+            <div>
+              <p className="editorial-kicker">{t("feedbackKicker")}</p>
+              <h2 id="contact-feedback-title">{t("feedbackTitle")}</h2>
+            </div>
+          </div>
+          <p className="contact-panel-intro">{t("feedbackBody")}</p>
+          <FeedbackForm />
         </section>
 
         <section className="contact-next-step">

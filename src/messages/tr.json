@@ -280,6 +280,8 @@
     "account": "Hesabım",
     "signOut": "Güvenli çıkış",
     "register": "Ücretsiz Kayıt Ol",
+    "account": "Hesabım",
+    "signOut": "Güvenli çıkış",
     "homeLabel": "İşBul KKTC ana sayfa",
     "currentLanguage": "Seçili dil"
   },
@@ -387,7 +389,10 @@
     "nextKicker": "DAHA FAZLASINI KEŞFEDİN",
     "nextTitle": "Şirket rehberini inceleyin.",
     "nextBody": "Kuzey Kıbrıs şirket rehberinde kayıtları şirket adına, faaliyet alanına ve konuma göre arayabilirsiniz. Rehber kayıtlarının kaynak veriden geldiğini ve doğrulanmış şirket profili olmadığını unutmayın.",
-    "directoryLink": "Şirket rehberine gidin"
+    "directoryLink": "Şirket rehberine gidin",
+    "feedbackKicker": "GERİ BİLDİRİM",
+    "feedbackTitle": "Görüşünüzü paylaşın",
+    "feedbackBody": "Deneyiminizi değerlendirin, hata bildirin veya yeni bir özellik önerin. Her mesajı okuyoruz."
   },
   "NotFound": {
     "title": "Sayfa bulunamadı",
@@ -1311,6 +1316,55 @@
           "p2": "Koşullar güncellenebilir; önemli değişiklikleri site üzerinden duyururuz."
         }
       }
+    }
+  },
+  "FeedbackForm": {
+    "categoryLabel": "Konu",
+    "ratingLabel": "Deneyiminizi değerlendirin",
+    "ratingValue": "{value} yıldız",
+    "nameLabel": "Adınız (isteğe bağlı)",
+    "emailLabel": "E-posta adresiniz (isteğe bağlı)",
+    "messageLabel": "Mesajınız",
+    "submit": "Geri bildirimi gönder",
+    "sending": "Gönderiliyor…",
+    "privacyNote": "Mesajınız yalnızca İşBul KKTC ekibi tarafından incelenir; üçüncü taraflarla paylaşılmaz.",
+    "categories": {
+      "general": "Genel geri bildirim",
+      "bug": "Hata bildirimi",
+      "feature": "Öneri / yeni özellik",
+      "employer": "İşveren deneyimi",
+      "candidate": "Aday deneyimi",
+      "other": "Diğer"
+    },
+    "messages": {
+      "invalid": "Lütfen formu kontrol edip tekrar deneyin.",
+      "submitted": "Geri bildiriminiz için teşekkürler! Mesajınız ekibimize ulaştı.",
+      "failed": "Geri bildirim şu anda gönderilemedi. Lütfen daha sonra tekrar deneyin."
+    }
+  },
+  "SalesLeadForm": {
+    "eyebrow": "Kurumsal teklif",
+    "title": "Ekibimizden yazılı teklif alın",
+    "description": "İlan adedinizi ve sürenizi paylaşın; kapsamı netleştirip size özel bir teklif hazırlayalım.",
+    "companyLabel": "Şirket adı",
+    "contactLabel": "Yetkili adı",
+    "emailLabel": "E-posta adresiniz",
+    "phoneLabel": "Telefon (isteğe bağlı)",
+    "durationLabel": "Tercih ettiğiniz ilan süresi",
+    "durationPlaceholder": "Seçiniz",
+    "noteLabel": "İhtiyacınızı kısaca anlatın",
+    "submit": "Teklif talebini gönder",
+    "sending": "Gönderiliyor…",
+    "privacyNote": "Bilgileriniz yalnızca teklif süreci için kullanılır; üçüncü taraflarla paylaşılmaz.",
+    "durations": {
+      "oneDay": "1 gün",
+      "sevenDays": "7 gün",
+      "thirtyDays": "30 gün"
+    },
+    "messages": {
+      "invalid": "Lütfen formu kontrol edip tekrar deneyin.",
+      "submitted": "Talebiniz bize ulaştı! Ekibimiz en kısa sürede dönecek.",
+      "failed": "Talep şu anda gönderilemedi. Lütfen daha sonra tekrar deneyin."
     }
   }
 }

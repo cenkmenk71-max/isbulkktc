@@ -82,6 +82,44 @@ function dedupeRecords(records: SourceJobRecord[]): SourceJobRecord[] {
   return unique;
 }
 
+/**
+ * A stored logo URL is not proof the image loads: the source can rotate an S3
+ * object away and leave a 403 behind (that is how `Kıbet`'s logo broke). Probe
+ * each one and blank the ones that do not answer, so the card falls back to its
+ * monogram instead of a broken image. Failures are logged, never fatal.
+ */
+async function dropUnreachableLogos(
+  employers: Map<string, SourceEmployerRecord>,
+): Promise<number> {
+  const withLogo = [...employers.values()].filter((employer) => employer.logoUrl);
+  let dropped = 0;
+  await Promise.all(
+    withLogo.map(async (employer) => {
+      const logoUrl = employer.logoUrl;
+      if (!logoUrl) return;
+      try {
+        const response = await fetch(logoUrl, {
+          method: "HEAD",
+          signal: AbortSignal.timeout(10_000),
+        });
+        // The employer API answers 302 to its S3 object, which `fetch` follows;
+        // the final response is what decides whether the image is served.
+        if (response.ok) return;
+        employer.logoUrl = null;
+        dropped += 1;
+        console.warn(`  · Logo erişilemedi (${response.status}): ${logoUrl}`);
+      } catch (error) {
+        employer.logoUrl = null;
+        dropped += 1;
+        console.warn(
+          `  · Logo doğrulanamadı (${error instanceof Error ? error.message : "bilinmeyen hata"}): ${logoUrl}`,
+        );
+      }
+    }),
+  );
+  return dropped;
+}
+
 function collectEmployers(records: SourceJobRecord[]): Map<string, SourceEmployerRecord> {
   const employers = new Map<string, SourceEmployerRecord>();
   for (const record of records) {
@@ -465,6 +503,10 @@ async function main(): Promise<void> {
   const modifiedAtByKey = await syncSourceSnapshots(client, selected);
 
   console.info("İşverenler yazılıyor…");
+  const droppedLogos = await dropUnreachableLogos(employers);
+  if (droppedLogos > 0) {
+    console.info(`  · ${droppedLogos} erişilemeyen logo monograma düşürüldü.`);
+  }
   const companyIdBySlug = await upsertEmployers(client, employers);
 
   console.info("İlanlar yazılıyor…");

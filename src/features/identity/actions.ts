@@ -18,6 +18,7 @@ import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import { redirectLocalized } from "@/i18n/redirect";
 import { getLocalePrefix } from "@/i18n/routing";
+import { sendWelcomeEmail } from "@/server/email/mailer";
 import {
   createOAuthSignupIntent,
   oauthSignupIntentCookieName,
@@ -188,6 +189,23 @@ export async function signUp(
   }
 
   if (data.session) {
+    if (data.user) {
+      // Best-effort: the account already exists, so a mail problem must never
+      // stop the post-signup redirect or surface as a sign-up failure.
+      try {
+        await sendWelcomeEmail({
+          to: result.data.email,
+          audience: result.data.audience,
+          locale: result.data.locale,
+          name: result.data.displayName,
+          userId: data.user.id,
+        });
+      } catch (mailError) {
+        console.error("Welcome email could not be sent.", {
+          error: mailError instanceof Error ? mailError.message : "unknown_error",
+        });
+      }
+    }
     redirect(resolveAuthDestination(result.data.audience, result.data.locale));
   }
 

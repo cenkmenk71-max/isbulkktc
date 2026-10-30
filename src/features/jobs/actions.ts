@@ -9,9 +9,11 @@ import { getLocalePrefix } from "@/i18n/routing";
 import {
   getApplicationForActor,
   getJobCompanyId,
+  getJobPublishAnnouncement,
   hasPlatformRole,
   isJobCompanyMember,
 } from "@/server/dal/jobs";
+import { sendJobPublishedEmail } from "@/server/email/mailer";
 import {
   applicationIdSchema,
   applicationTransitionSchema,
@@ -215,6 +217,27 @@ export async function publishApprovedJob(
     }
     console.error("Approved job publication failed.", { code: error.code });
     return { ...initialJobFormState, status: "error", message: "publishFailed" };
+  }
+
+  // Best-effort: the employer is told the listing is live, but a mail failure
+  // must not turn a successful publication into an error state.
+  if (user.email) {
+    try {
+      const announcement = await getJobPublishAnnouncement(result.data.jobId);
+      if (announcement) {
+        await sendJobPublishedEmail({
+          to: user.email,
+          locale: user.locale,
+          jobTitle: announcement.title,
+          jobSlug: announcement.slug,
+          jobId: result.data.jobId,
+        });
+      }
+    } catch (mailError) {
+      console.error("Job published email could not be sent.", {
+        error: mailError instanceof Error ? mailError.message : "unknown_error",
+      });
+    }
   }
 
   return { status: "success", message: "published", jobId: result.data.jobId };
