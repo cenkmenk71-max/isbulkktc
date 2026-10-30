@@ -3,6 +3,10 @@ name: Refresh source jobs
 # Keeps the public job catalogue in step with the upstream listings. The import
 # script is the same one run by hand (`bun run import:source-jobs`), so there is
 # a single code path for fetching, sanitising and writing source jobs.
+#
+# The job needs two repository secrets. Until they are configured it stays
+# green and emits a warning annotation instead of failing twice a day, so the
+# Actions tab only shows red for genuine breakage.
 on:
   schedule:
     # Twice a day; source sites publish on no fixed schedule, and the importer
@@ -22,24 +26,36 @@ jobs:
     name: Import upstream job listings
     runs-on: ubuntu-latest
     steps:
+      - name: Check configuration
+        id: config
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -n "${SUPABASE_URL:-}" ] && [ -n "${SERVICE_KEY:-}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Source job refresh not configured::Add the NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY repository secrets (Settings > Secrets and variables > Actions) to enable the scheduled import. Skipping this run."
+          fi
+
       - name: Check out source
+        if: steps.config.outputs.configured == 'true'
         uses: actions/checkout@v7
 
       - name: Set up Bun
+        if: steps.config.outputs.configured == 'true'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4
 
       - name: Install locked dependencies
+        if: steps.config.outputs.configured == 'true'
         run: bun install --frozen-lockfile
 
       - name: Import source jobs
+        if: steps.config.outputs.configured == 'true'
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          if [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
-            echo "::error::Missing repository secrets NEXT_PUBLIC_SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY. Add them in Settings > Secrets and variables > Actions."
-            exit 1
-          fi
-          bun run import:source-jobs
+        run: bun run import:source-jobs
