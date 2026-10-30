@@ -212,12 +212,16 @@ test("account scene and secondary section headings stay subordinate", async ({
     .toBeLessThanOrEqual(42);
 
   await page.goto("/contact");
-  const sectionHeading = page.locator(".contact-panel-heading h2");
-  await expect(sectionHeading).toBeVisible();
+  const sectionHeadings = page.locator(".contact-panel-heading h2");
+  await expect(sectionHeadings.first()).toBeVisible();
   await expect
-    .poll(() =>
-      sectionHeading.evaluate((heading) =>
-        Number.parseFloat(getComputedStyle(heading).fontSize),
+    .poll(async () =>
+      Math.max(
+        ...(await sectionHeadings.evaluateAll((headings) =>
+          headings.map((heading) =>
+            Number.parseFloat(getComputedStyle(heading).fontSize),
+          ),
+        )),
       ),
     )
     .toBeLessThanOrEqual(32);
