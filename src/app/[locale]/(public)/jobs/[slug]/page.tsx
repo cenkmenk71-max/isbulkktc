@@ -31,6 +31,10 @@ export async function generateMetadata({
     pathname: `/jobs/${job.slug}`,
     title: job.title,
     description: job.summary,
+    // Imported listings carry Turkish text in every locale, so each localized
+    // URL canonicalises to the default-locale page rather than publishing six
+    // copies of the same vacancy.
+    contentLocale: routing.defaultLocale,
   });
 }
 
@@ -48,7 +52,6 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
 
   const jobPostingStructuredData = buildJobPostingStructuredData({
     job,
-    locale,
     baseUrl: getAppBaseUrl(),
   });
 

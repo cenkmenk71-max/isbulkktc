@@ -1,4 +1,4 @@
-import type { AppLocale } from "@/i18n/routing";
+import { routing } from "@/i18n/routing";
 import { getLocalizedPageUrl } from "@/lib/seo";
 import type { PublicJobListing } from "@/server/dal/jobs";
 
@@ -39,16 +39,18 @@ function buildPostalAddress(district: string | null) {
  */
 export function buildJobPostingStructuredData({
   job,
-  locale,
   baseUrl,
 }: {
   job: PublicJobListing;
-  locale: AppLocale;
   baseUrl: URL;
 }) {
   const description = job.description.trim() || job.summary.trim();
+  // Listings are stored in Turkish and served identically under every locale
+  // prefix, so the JobPosting URL must be the default-locale canonical the page
+  // itself declares; a per-locale URL here would point Google Jobs at a copy
+  // that canonicalises elsewhere.
   const canonicalUrl = getLocalizedPageUrl(
-    locale,
+    routing.defaultLocale,
     `/jobs/${job.slug}`,
     baseUrl,
   ).toString();

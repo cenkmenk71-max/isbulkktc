@@ -309,4 +309,63 @@ test("account pages are excluded from indexing without blocking crawlers", async
   }
   expect(sitemap).toContain('hreflang="x-default"');
   expect(sitemap).not.toMatch(/<loc>[^<]*(login|register|forgot-password|dashboard|company\/new)/);
+
+  // Vacancy detail pages are the bulk of the indexable surface, so the sitemap
+  // must advertise them — each once, at its Turkish canonical URL — instead of
+  // stopping at the eleven static routes.
+  await page.goto("/jobs", { waitUntil: "domcontentloaded" });
+  const jobPaths = [
+    ...new Set(
+      await page
+        .locator('a[href^="/jobs/"]')
+        .evaluateAll((nodes) =>
+          nodes.map((node) => node.getAttribute("href") ?? ""),
+        ),
+    ),
+  ].filter((href) => /^\/jobs\/[a-z0-9-]+$/.test(href));
+
+  if (jobPaths.length > 0) {
+    for (const path of jobPaths) {
+      expect(sitemap).toContain(`<loc>${siteOrigin}${path}</loc>`);
+    }
+    expect(sitemap).toMatch(/<lastmod>/);
+    // Six prefixes over one Turkish text is duplicate content, not coverage.
+    expect(sitemap).not.toMatch(
+      new RegExp(`<loc>${siteOrigin}/(en|ru|el|fa|de)/jobs/`),
+    );
+  }
+});
+
+test("localized vacancy URLs canonicalise to the Turkish listing", async ({
+  page,
+}) => {
+  const slug = "source-iskibris-garson";
+
+  await page.goto(`/en/jobs/${slug}`, { waitUntil: "domcontentloaded" });
+  const siteOrigin = new URL(page.url()).origin;
+  const canonicalUrl = `${siteOrigin}/jobs/${slug}`;
+
+  // The page text is Turkish under every prefix, so only the default-locale URL
+  // may claim the content; the others point their canonical at it.
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    canonicalUrl,
+  );
+  // Advertised alternates would offer Google six identical pages to choose from.
+  await expect(page.locator('link[rel="alternate"][hreflang]')).toHaveCount(0);
+
+  const structuredData = await page
+    .locator('script[type="application/ld+json"]')
+    .evaluateAll((nodes) =>
+      nodes.map((node) => node.textContent ?? "").join("\n"),
+    );
+  expect(structuredData).toContain('"@type":"JobPosting"');
+  // Google Jobs must be pointed at the same URL the page declares canonical.
+  expect(structuredData).toContain(`"url":"${canonicalUrl}"`);
+
+  await page.goto(`/jobs/${slug}`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    canonicalUrl,
+  );
 });
