@@ -62,4 +62,7 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || vars.NEXT_PUBLIC_SUPABASE_URL || 'https://uwmhquvzbilbfzdrlxmb.supabase.co' }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.supabase }}
+          # Publish only the newest N upstream listings, spread across employers
+          # and sectors. Override N with the SOURCE_JOB_LIMIT repository variable.
+          SOURCE_JOB_LIMIT: ${{ vars.SOURCE_JOB_LIMIT || '21' }}
         run: bun run import:source-jobs

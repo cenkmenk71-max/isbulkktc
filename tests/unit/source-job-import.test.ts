@@ -10,8 +10,10 @@ import {
   normalizeSourceJobType,
   normalizeSourceWorkplaceMode,
   resolveEmployerLogoUrl,
+  selectDiverseSourceJobs,
   slugifySourceText,
   summarizeSourceText,
+  type SourceJobRecord,
 } from "../../src/features/jobs/source-job-import";
 
 test("slugifySourceText transliterates Turkish characters", () => {
@@ -140,4 +142,76 @@ test("isWithinSourceWindow enforces the live visibility window", () => {
   assert.ok(
     !isWithinSourceWindow("2026-12-01T07:53:41.947Z", "2026-12-31T07:53:41.947Z", now),
   );
+});
+
+function sourceJob(overrides: {
+  title: string;
+  publishedAt: string;
+  company: string;
+  sector: string | null;
+  jobType?: string;
+}): SourceJobRecord {
+  return {
+    source: "iskibris",
+    sourceJobId: overrides.title,
+    title: overrides.title,
+    slug: overrides.title,
+    summary: "",
+    description: "",
+    requirements: "",
+    responsibilities: "",
+    jobType: (overrides.jobType ?? "full_time") as SourceJobRecord["jobType"],
+    workplaceMode: "on_site",
+    district: null,
+    publishedAt: overrides.publishedAt,
+    expiresAt: "2026-12-31T00:00:00.000Z",
+    employer: {
+      name: overrides.company,
+      slug: overrides.company,
+      profileDescription: "",
+      categories: overrides.sector ? [overrides.sector] : [],
+      website: null,
+      municipality: null,
+      sourceProfileUrl: null,
+      logoUrl: null,
+    },
+  };
+}
+
+test("selectDiverseSourceJobs keeps the newest listings up to the limit", () => {
+  const jobs = [
+    sourceJob({ title: "A", publishedAt: "2026-10-01T00:00:00.000Z", company: "c1", sector: "s1" }),
+    sourceJob({ title: "B", publishedAt: "2026-10-03T00:00:00.000Z", company: "c2", sector: "s2" }),
+    sourceJob({ title: "C", publishedAt: "2026-10-02T00:00:00.000Z", company: "c3", sector: "s3" }),
+  ];
+  const picked = selectDiverseSourceJobs(jobs, 2);
+  assert.deepEqual(
+    picked.map((job) => job.title),
+    ["B", "C"],
+  );
+});
+
+test("selectDiverseSourceJobs spreads listings across employers, sectors and types", () => {
+  const jobs = [
+    // Newest, but all the same employer/sector/type — only one should win.
+    sourceJob({ title: "n1", publishedAt: "2026-10-05T00:00:00.000Z", company: "big", sector: "perakende" }),
+    sourceJob({ title: "n2", publishedAt: "2026-10-04T00:00:00.000Z", company: "big", sector: "perakende" }),
+    sourceJob({ title: "n3", publishedAt: "2026-10-03T00:00:00.000Z", company: "big", sector: "perakende" }),
+    sourceJob({ title: "d1", publishedAt: "2026-10-02T00:00:00.000Z", company: "other", sector: "bilişim", jobType: "part_time" }),
+    sourceJob({ title: "d2", publishedAt: "2026-10-01T00:00:00.000Z", company: "third", sector: "sağlık", jobType: "internship" }),
+  ];
+  const picked = selectDiverseSourceJobs(jobs, 3);
+  const companies = picked.map((job) => job.employer.slug);
+  assert.equal(new Set(companies).size, 3, "each listing should come from a distinct employer");
+  assert.ok(picked.some((job) => job.title === "n1"), "the newest listing must be kept");
+  assert.equal(picked.length, 3);
+});
+
+test("selectDiverseSourceJobs returns everything when the limit exceeds the catalogue", () => {
+  const jobs = [
+    sourceJob({ title: "A", publishedAt: "2026-10-01T00:00:00.000Z", company: "c1", sector: "s1" }),
+    sourceJob({ title: "B", publishedAt: "2026-10-02T00:00:00.000Z", company: "c2", sector: "s2" }),
+  ];
+  assert.equal(selectDiverseSourceJobs(jobs, 21).length, 2);
+  assert.equal(selectDiverseSourceJobs(jobs, 0).length, 0);
 });
