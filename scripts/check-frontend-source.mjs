@@ -318,6 +318,16 @@ assert.match(home, /hero-light-layer--readability/);
 assert.match(home, /hero-light-layer--warmth/);
 assert.match(home, /hero-light-layer--vignette/);
 assert.match(css, /@keyframes home-hero-photo-cycle/);
+assert.match(
+  css,
+  /@keyframes hero-copy-enter/,
+  "the hero copy intro must be a CSS animation so it plays before JavaScript loads",
+);
+assert.match(
+  css,
+  /animation:\s*hero-copy-enter[^;]*backwards/,
+  "the hero intro must use `backwards` fill so each line is hidden during its delay",
+);
 assert.match(css, /@keyframes home-hero-rays-drift/);
 assert.match(home, /<SignatureBanner\s*\/>/);
 assert.match(home, /className="sector-showcase"/);
@@ -740,6 +750,60 @@ assert.deepEqual(
   undersized,
   [],
   `font sizes below the ${captionFloorPx}px caption floor: ${undersized.join(", ")}`,
+);
+
+// Motion layer contract. The site ships a GSAP + Lenis layer that must stay
+// (a) lazy, so it cannot delay first paint, (b) opt-in per element, so a
+// component without `data-reveal` is never hidden, and (c) fully disabled under
+// `prefers-reduced-motion: reduce`. Each assertion below pins one of those
+// properties; removing the feature must fail the gate, not silently pass.
+const motionController = await read("src/components/motion/motion-controller.tsx");
+const packageJson = JSON.parse(await read("package.json"));
+assert.match(
+  packageJson.dependencies.gsap ?? "",
+  /^\^?3\./,
+  "gsap must stay a runtime dependency of the motion layer",
+);
+assert.match(
+  packageJson.dependencies.lenis ?? "",
+  /^\^?1\./,
+  "lenis must stay a runtime dependency of the motion layer",
+);
+assert.match(
+  motionController,
+  /import\("gsap"\)/,
+  "GSAP must be loaded through a dynamic import so it stays out of the first paint",
+);
+assert.match(
+  motionController,
+  /prefers-reduced-motion:\s*reduce/,
+  "the motion layer must opt out under prefers-reduced-motion",
+);
+assert.match(
+  motionController,
+  /REVEAL_SELECTOR\s*=\s*"\[data-reveal\]"/,
+  "reveals must be opt-in via [data-reveal]",
+);
+assert.doesNotMatch(
+  motionController,
+  /autoAlpha/,
+  "autoAlpha sets visibility:hidden, which would hide revealed content from the axe audit",
+);
+assert.match(localeLayout, /<MotionController\s*\/>/);
+assert.match(localeLayout, /import \{ MotionController \}/);
+assert.match(sectorCard, /data-reveal/);
+assert.match(homeJourneys, /data-reveal/);
+assert.match(signatureBanner, /data-reveal/);
+assert.match(css, /@keyframes home-hero-photo-cycle/);
+assert.match(
+  css,
+  /@keyframes hero-copy-enter/,
+  "the hero copy intro must be a CSS animation so it plays before JavaScript loads",
+);
+assert.match(
+  css,
+  /animation:\s*hero-copy-enter[^;]*backwards/,
+  "the hero intro must use `backwards` fill so each line is hidden during its delay",
 );
 
 console.log(
