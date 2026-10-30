@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
 import { getLocalePrefix } from "@/i18n/routing";
+import { mergeLocaleIntoUserMetadata } from "@/features/identity/oauth-signup-intent";
 
 import { messageForAuthErrorCode } from "@/features/identity/auth-errors";
 import {
@@ -715,6 +716,26 @@ test("locale prefixes match the next-intl as-needed policy", () => {
   for (const locale of ["en", "ru", "el", "fa", "de"] as const) {
     assert.equal(getLocalePrefix(locale), `/${locale}`);
   }
+});
+
+test("an OAuth account keeps the provider claims while gaining the locale", () => {
+  // The email templates read `.Data.locale` and cannot reach `profiles`, so an
+  // OAuth account that never had this written would be mailed in Turkish.
+  const merged = mergeLocaleIntoUserMetadata(
+    { avatar_url: "https://lh3.googleusercontent.com/a/x", full_name: "Ayşe" },
+    "fa",
+  );
+
+  assert.equal(merged.locale, "fa");
+  assert.equal(merged.avatar_url, "https://lh3.googleusercontent.com/a/x");
+  assert.equal(merged.full_name, "Ayşe");
+
+  // A fresh OAuth account has no metadata yet; the merge must still work.
+  assert.deepEqual(mergeLocaleIntoUserMetadata(null, "de"), { locale: "de" });
+  assert.deepEqual(mergeLocaleIntoUserMetadata(undefined, "ru"), { locale: "ru" });
+
+  // An existing (possibly wrong) locale is replaced, not preserved.
+  assert.equal(mergeLocaleIntoUserMetadata({ locale: "tr" }, "el").locale, "el");
 });
 
 // ---------------------------------------------------------------------------
