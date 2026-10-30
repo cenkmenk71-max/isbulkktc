@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import type { Ref } from "react";
+import { accentInk } from "@/components/packages/package-tiers";
 import type { ListingDuration, Plan } from "../lib/plans";
 
 type Props = {
@@ -64,7 +65,7 @@ export function Panel({
       aria-label={plan.name}
       className="vend-panel"
     >
-      <p className="vend-panel-audience" style={{ color: plan.color }}>
+      <p className="vend-panel-audience" style={{ color: accentInk(plan.color) }}>
         {plan.audience}
       </p>
       <h2 ref={heading} tabIndex={-1} className="vend-panel-title">
