@@ -1,6 +1,6 @@
 begin;
 
-select plan(23);
+select plan(25);
 
 insert into auth.users (
   id, email, email_confirmed_at, raw_user_meta_data
@@ -297,6 +297,41 @@ select is(
      and o.claimed_at is null),
   1,
   'unverified recipients do not consume retries or become stuck as claimed'
+);
+
+-- A permanently failing row must eventually be abandoned. The three earlier
+-- versions of claim_notification_email_outbox all carried `attempt_count < 10`;
+-- 20261022134000 dropped it, letting a dead letter be claimed and retried (one
+-- billed Resend call each time) forever.
+reset role;
+update public.notification_email_outbox
+set attempt_count = 10,
+    next_attempt_at = pg_catalog.now(),
+    claimed_at = null,
+    sent_at = null;
+set local "request.jwt.claims" = '{"role":"service_role","iss":"supabase"}';
+set local role service_role;
+
+select is(
+  (select count(*)::integer
+   from public.claim_notification_email_outbox(20)),
+  0,
+  'a row at the retry ceiling is not claimed again'
+);
+
+reset role;
+update public.notification_email_outbox
+set attempt_count = 9,
+    next_attempt_at = pg_catalog.now(),
+    claimed_at = null,
+    sent_at = null;
+set local "request.jwt.claims" = '{"role":"service_role","iss":"supabase"}';
+set local role service_role;
+
+select ok(
+  (select count(*)::integer
+   from public.claim_notification_email_outbox(20)) > 0,
+  'a row below the retry ceiling is still claimed'
 );
 
 reset role;
