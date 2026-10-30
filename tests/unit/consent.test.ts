@@ -5,13 +5,12 @@ import {
   consentCookieMaxAgeSeconds,
   consentCookieName,
   consentMaxAgeMs,
+  consentStateFromCookie,
   consentStorageKey,
   consentVersion,
-  decodeConsentCookie,
   defaultDecision,
   encodeConsentCookie,
   isConsentCategory,
-  isConsentCookieName,
   parseConsent,
   parseConsentCookie,
   serializeConsent,
@@ -155,13 +154,29 @@ test("isConsentCategory only accepts the known categories", () => {
   assert.equal(isConsentCategory(""), false);
 });
 
-test("isConsentCookieName recognises chunked Supabase-style suffixes", () => {
-  assert.equal(isConsentCookieName(consentCookieName), true);
-  assert.equal(isConsentCookieName(`${consentCookieName}.0`), true);
-  assert.equal(isConsentCookieName("sb-auth-token"), false);
+test("a decision recovered from the cookie is decided and undated", () => {
+  // The cookie is the fallback when localStorage was cleared or is unavailable;
+  // it carries no timestamp, so it must not be treated as expired.
+  assert.deepEqual(consentStateFromCookie("1:0"), {
+    decided: true,
+    analytics: true,
+    marketing: false,
+    updatedAt: null,
+  });
+  assert.deepEqual(consentStateFromCookie("0:1"), {
+    decided: true,
+    analytics: false,
+    marketing: true,
+    updatedAt: null,
+  });
 });
 
-test("decodeConsentCookie tolerates a missing cookie", () => {
-  assert.equal(decodeConsentCookie(undefined), null);
-  assert.deepEqual(decodeConsentCookie("0:1"), { analytics: false, marketing: true });
+test("a missing or malformed cookie yields no state rather than a decision", () => {
+  assert.equal(consentStateFromCookie(undefined), null);
+  assert.equal(consentStateFromCookie(null), null);
+  assert.equal(consentStateFromCookie(""), null);
+  assert.equal(consentStateFromCookie("1"), null);
+  assert.equal(consentStateFromCookie("true:false"), null);
+  // An all-denied cookie is still an explicit decision, not "undecided".
+  assert.equal(consentStateFromCookie("0:0")?.decided, true);
 });

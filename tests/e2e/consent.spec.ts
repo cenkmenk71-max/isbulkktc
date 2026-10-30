@@ -92,6 +92,9 @@ test("a decision survives a reload without the notice flashing back", async ({ p
   // Re-navigate: the server render must not emit the notice before hydration
   // reads storage, otherwise it reappears for a visitor who already decided.
   await page.goto("/tr", { waitUntil: "domcontentloaded" });
+  // Assert the absence *after* the client has read storage. Checking only at
+  // `domcontentloaded` would pass before anything mounted, which proves nothing.
+  await page.waitForSelector(".consent-settings-trigger", { state: "attached" });
   await expect(consentCard(page)).toHaveCount(0);
   await expect(settingsTrigger(page)).toBeVisible();
 });
@@ -134,4 +137,26 @@ test("the decision is shared across locales", async ({ page }) => {
   await page.goto("/de");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect((await readConsentState(page)).cookie).toBe("0:0");
+});
+
+test("the cookie alone keeps the decision when localStorage is cleared", async ({ page }) => {
+  await page.goto("/tr");
+  await consentCard(page).getByRole("button", { name: "Tümünü kabul et" }).click();
+  await expect(consentCard(page)).toHaveCount(0);
+
+  // Simulate a visitor whose localStorage was cleared (or is unavailable in
+  // private mode) while the cookie survives: the second channel must carry the
+  // decision, otherwise they are asked again despite having chosen.
+  await page.evaluate(() => window.localStorage.clear());
+  await page.goto("/tr", { waitUntil: "domcontentloaded" });
+
+  // Wait for hydration first. `toHaveCount(0)` would pass *before* the client
+  // reads storage, so asserting it immediately proves nothing — the notice has
+  // simply not mounted yet.
+  await page.waitForSelector(".consent-settings-trigger", { state: "attached" });
+  await expect(consentCard(page)).toHaveCount(0);
+
+  const state = await readConsentState(page);
+  expect(state.raw).toBeNull();
+  expect(state.cookie).toBe("1:1");
 });

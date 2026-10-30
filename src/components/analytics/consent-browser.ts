@@ -10,6 +10,7 @@ import {
   parseConsent,
   serializeConsent,
   encodeConsentCookie,
+  consentStateFromCookie,
   undecidedConsent,
   type ConsentDecision,
   type ConsentState,
@@ -19,10 +20,10 @@ import {
  * Browser-side persistence for the consent decision.
  *
  * `useSyncExternalStore` compares snapshots by reference, so the parsed object
- * is cached and only rebuilt when the underlying string changes. Without the
+ * is cached and only rebuilt when the underlying value changes. Without the
  * cache React would see a new object on every read and loop forever.
  */
-let cachedRaw: string | null = null;
+let cachedKey: string | null = null;
 let cachedState: ConsentState | null = null;
 
 function readRaw(): string | null {
@@ -45,11 +46,28 @@ function readRaw(): string | null {
   }
 }
 
+/** The compact `ib_consent` cookie, if the visitor has one. */
+function readCookie(): string | null {
+  const prefix = `${consentCookieName}=`;
+  const match = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith(prefix));
+  return match ? match.slice(prefix.length) : null;
+}
+
 export function getConsentSnapshot(): ConsentState {
   const raw = readRaw();
-  if (cachedState === null || raw !== cachedRaw) {
-    cachedRaw = raw;
-    cachedState = parseConsent(raw);
+  const cookie = readCookie();
+  const key = `${raw ?? "\u0000"}|${cookie ?? "\u0000"}`;
+  if (cachedState === null || cachedKey !== key) {
+    cachedKey = key;
+    const fromStorage = parseConsent(raw);
+    // The cookie is a second, independent channel: a visitor whose
+    // localStorage was cleared (or is unavailable in private mode) still keeps
+    // their decision instead of being asked again.
+    cachedState = fromStorage.decided
+      ? fromStorage
+      : (consentStateFromCookie(cookie) ?? fromStorage);
   }
   return cachedState;
 }
@@ -90,10 +108,11 @@ export function persistConsent(decision: ConsentDecision): ConsentState {
     // A storage failure must not block the cookie/event path below.
   }
   writeCookie(encodeConsentCookie(decision));
-  cachedRaw = raw;
-  cachedState = parseConsent(raw);
+  cachedKey = null;
+  cachedState = null;
+  const next = getConsentSnapshot();
   window.dispatchEvent(new Event(consentChangedEvent));
-  return cachedState;
+  return next;
 }
 
 /** Withdraws consent entirely: clears both channels and re-asks on next load. */
@@ -105,10 +124,11 @@ export function resetConsent(): ConsentState {
     // ignore
   }
   clearCookie();
-  cachedRaw = null;
-  cachedState = getServerConsentSnapshot();
+  cachedKey = null;
+  cachedState = null;
+  const next = getServerConsentSnapshot();
   window.dispatchEvent(new Event(consentChangedEvent));
-  return cachedState;
+  return next;
 }
 
 /** Opens the banner from anywhere (e.g. the `/cookies` manage button). */

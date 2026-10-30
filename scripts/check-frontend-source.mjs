@@ -894,6 +894,18 @@ assert.match(
   /removeItem\(consentStorageKey\)/,
   "withdrawing consent must clear the stored decision",
 );
+// The cookie is a second channel, not write-only. Writing it without reading it
+// back would ask a visitor whose localStorage was cleared to decide again.
+assert.match(
+  consentBrowser,
+  /consentStateFromCookie\(/,
+  "the consent cookie must be read back, not only written",
+);
+assert.doesNotMatch(
+  consentBrowser,
+  /future\s+server-side\s+gating/,
+  "the cookie must not be documented as an unused future channel",
+);
 assert.match(
   cookieConsent,
   /role="dialog"/,

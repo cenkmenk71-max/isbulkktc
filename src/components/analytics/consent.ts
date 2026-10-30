@@ -3,10 +3,12 @@
  * cookie-encoding rules can be pinned by `node:test` and reused by both the
  * banner and the `/cookies` page.
  *
- * Two storage channels are written for one decision:
- *  - `localStorage` is the fast, cross-tab source of truth the banner renders.
- *  - the `ib_consent` cookie is the compact, server-readable copy (any future
- *    server-side gating reads it without a round trip).
+ * Two storage channels are written for one decision and both are read back:
+ *  - `localStorage` carries the versioned record (including `updatedAt`, so the
+ *    180-day window can be enforced).
+ *  - the `ib_consent` cookie is the compact copy. It has no timestamp, but it
+ *    survives a localStorage clear (or private mode) and is available to the
+ *    server on the next request without a round trip.
  *
  * The cookie is deliberately NOT `httpOnly`: the banner must be able to clear
  * it when the visitor withdraws consent, and it holds no secret — only the two
@@ -46,16 +48,6 @@ function decisionFrom(analytics: boolean, marketing: boolean): ConsentDecision {
 
 export function isConsentCategory(value: string): value is ConsentCategory {
   return (consentCategories as readonly string[]).includes(value);
-}
-
-/** Matches the consent cookie plus any chunked `…​.0`, `…​.1` variants. */
-export function isConsentCookieName(name: string): boolean {
-  return name === consentCookieName || name.startsWith(`${consentCookieName}.`);
-}
-
-/** Alias kept so callers can express "the stored cookie, if any". */
-export function decodeConsentCookie(value: string | undefined | null): ConsentDecision | null {
-  return parseConsentCookie(value);
 }
 
 /**
@@ -121,7 +113,7 @@ export function serializeConsent(
   });
 }
 
-/** Compact server-readable cookie value: `analytics:marketing` as `1:0`. */
+/** Compact cookie value: `analytics:marketing` as `1:0`. */
 export function encodeConsentCookie(decision: ConsentDecision): string {
   return `${decision.analytics ? "1" : "0"}:${decision.marketing ? "1" : "0"}`;
 }
@@ -134,6 +126,18 @@ export function parseConsentCookie(value: string | undefined | null): ConsentDec
   if (analytics !== "0" && analytics !== "1") return null;
   if (marketing !== "0" && marketing !== "1") return null;
   return decisionFrom(analytics === "1", marketing === "1");
+}
+
+/**
+ * Rebuilds a decided state from the cookie alone. The cookie carries no
+ * timestamp, so it yields `updatedAt: null` — the same "undated record" rule
+ * the legacy v1/v2 values follow, rather than expiring a choice we cannot date.
+ */
+export function consentStateFromCookie(
+  value: string | undefined | null,
+): ConsentState | null {
+  const decision = parseConsentCookie(value);
+  return decision === null ? null : { decided: true, ...decision, updatedAt: null };
 }
 
 /**
