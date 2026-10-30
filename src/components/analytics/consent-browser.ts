@@ -48,6 +48,7 @@ function readRaw(): string | null {
 
 /** The compact `ib_consent` cookie, if the visitor has one. */
 function readCookie(): string | null {
+  if (typeof document === "undefined") return null;
   const prefix = `${consentCookieName}=`;
   const match = document.cookie
     .split("; ")
