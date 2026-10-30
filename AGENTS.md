@@ -112,6 +112,15 @@ branch by itself starts nothing — open a PR to get a run.
   accessibility fixes above measured `0/343040` pixels changed on the header,
   which is what made "the design is untouched" a fact rather than a hope.
 
+- **Do not judge a client-rendered widget from the SSR HTML.** The Turnstile
+  field (`src/features/identity/turnstile-field.tsx`) renders in an effect, so
+  the server HTML only ever contains the empty
+  `<div class="editorial-turnstile"><div></div></div>` container — even when the
+  widget is live. Grepping the response for `challenges.cloudflare.com` or the
+  site key therefore reports "captcha is off" while production is protecting
+  every auth form. Confirm with a real browser (the Turnstile iframe and its
+  `turnstile`/`Privacy`/`Help` links appear) before drawing a conclusion.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know
