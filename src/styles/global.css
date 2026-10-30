@@ -1695,6 +1695,35 @@ a {
   font-weight: 700;
   letter-spacing: -0.025em;
 }
+/* Hero intro as a pure-CSS entrance, so it runs before any JavaScript arrives:
+   a GSAP-driven version paints the copy at full opacity, then pulls it back to
+   0 once the module loads, which reads as a flash. `backwards` keeps each line
+   invisible during its own delay, and the global reduced-motion rule collapses
+   the whole thing straight to its end state. */
+@keyframes hero-copy-enter {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.hero-copy .eyebrow.hero-eyebrow,
+.hero-copy h1 .hero-title-line,
+.hero-copy h1 .hero-title-accent {
+  animation: hero-copy-enter 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.hero-copy .eyebrow.hero-eyebrow {
+  animation-delay: 0.05s;
+}
+.hero-copy h1 .hero-title-line {
+  animation-delay: 0.16s;
+}
+.hero-copy h1 .hero-title-accent {
+  animation-delay: 0.28s;
+}
 .hero-description {
   max-width: 470px;
   margin: 0;
@@ -10646,8 +10675,12 @@ main :where(p) {
   animation: consent-card-in 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 @keyframes consent-card-in {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  /* Deliberately no opacity fade: a partly transparent card measures its text
+     against the page behind it, which drops the labels below the contrast floor
+     for the length of the animation (and made the axe audit timing-dependent).
+     The card slides in fully opaque instead. */
+  from { transform: translateY(12px); }
+  to { transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
   .consent-card { animation: none; }

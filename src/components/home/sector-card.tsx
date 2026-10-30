@@ -72,6 +72,8 @@ export function SectorCard({
       data-sector={sector.key}
       data-sector-image={sector.image.src}
       data-sector-category={sector.category}
+      data-reveal
+      data-tilt
     >
       <div className="sector-image">
         <Image

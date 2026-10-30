@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 type SectorDirectoryProps = {
   children: ReactNode;
@@ -19,6 +19,17 @@ export function SectorDirectory({
   closeLabel,
 }: SectorDirectoryProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  // The explorer panel mounts hidden, so its cards were never measured by the
+  // motion layer. Announce the new layout once it is in the DOM so GSAP can
+  // pick up any `[data-reveal]` elements that just became visible.
+  useEffect(() => {
+    if (!isOpen) return;
+    const frame = requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("isbulkktc:motion-refresh"));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isOpen]);
 
   return (
     <div className="sector-directory">

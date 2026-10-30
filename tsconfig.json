@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,7 +23,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     }
   },
   "include": [
@@ -39,7 +45,13 @@
     ".next-home-preview/types/**/*.ts",
     ".next-home-preview/dev/types/**/*.ts",
     ".next-image-quality/types/**/*.ts",
-    ".next-image-quality/dev/types/**/*.ts"
+    ".next-image-quality/dev/types/**/*.ts",
+    ".next-audit/types/**/*.ts",
+    ".next-audit/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "assets-src", "supabase/functions"]
+  "exclude": [
+    "node_modules",
+    "assets-src",
+    "supabase/functions"
+  ]
 }

@@ -15,7 +15,7 @@ export async function HomeJourneys({ locale }: { locale: AppLocale }) {
   return (
     <section className="home-journeys" aria-labelledby="home-journeys-title">
       <div className="page-container home-journeys-inner">
-        <header className="home-journeys-heading">
+        <header className="home-journeys-heading" data-reveal>
           <span className="sector-kicker">{copy("eyebrow")}</span>
           <h2 id="home-journeys-title">{copy("title")}</h2>
           <p>{copy("description")}</p>
@@ -24,6 +24,7 @@ export async function HomeJourneys({ locale }: { locale: AppLocale }) {
         <div className="home-journey-grid">
           <article
             className="home-journey-card home-journey-card--candidate"
+            data-reveal
             aria-labelledby="home-candidate-journey-title"
           >
             <div className="home-journey-card-top">

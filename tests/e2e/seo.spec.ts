@@ -271,7 +271,24 @@ test("account pages are excluded from indexing without blocking crawlers", async
   const robots = await robotsResponse.text();
   expect(robots).toContain("Allow: /");
   expect(robots).toContain(`Sitemap: ${siteOrigin}/sitemap.xml`);
-  expect(robots).not.toContain("Disallow:");
+  // Account pages must rely on their `noindex` meta tag, not a Disallow: a
+  // disallowed URL is never fetched, so the tag is never seen and the URL can
+  // still be indexed from inbound links. Only non-HTML infrastructure (route
+  // handlers that cannot carry a meta tag) may be disallowed.
+  for (const pagePath of [
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/reset-password",
+    "/admin",
+    "/profile",
+    "/company/dashboard",
+    "/company/new",
+  ]) {
+    expect(robots).not.toContain(`Disallow: ${pagePath}`);
+  }
+  expect(robots).toContain("Disallow: /api/");
+  expect(robots).toContain("Disallow: /auth/");
 
   const sitemapResponse = await page.request.get("/sitemap.xml");
   expect(sitemapResponse.ok()).toBe(true);

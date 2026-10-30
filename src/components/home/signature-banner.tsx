@@ -18,7 +18,7 @@ export function SignatureBanner() {
         loading="eager"
         className="signature-banner-image"
       />
-      <ul className="signature-banner-inner">
+      <ul className="signature-banner-inner" data-reveal>
         <li className="signature-feature">
           <ShieldCheck aria-hidden="true" />
           <span>

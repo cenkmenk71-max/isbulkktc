@@ -8,20 +8,14 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // Authenticated areas are already noindex and behind auth, but keeping
-      // them out of robots.txt stops crawlers from probing the login redirects.
-      disallow: [
-        "/api/",
-        "/admin",
-        "/profile",
-        "/company/dashboard",
-        "/company/new",
-        "/auth/",
-        "/login",
-        "/register",
-        "/reset-password",
-        "/forgot-password",
-      ],
+      // Only non-HTML infrastructure belongs here. Account pages (/login,
+      // /register, /admin, /profile, ...) are deliberately *not* disallowed:
+      // they already serve a `noindex` robots meta tag, and a Disallow would
+      // stop crawlers from ever fetching the page and seeing that tag, which is
+      // how a disallowed URL still ends up indexed (snippet-less) from inbound
+      // links. Route handlers like the OAuth callback cannot carry a meta tag,
+      // so those stay disallowed.
+      disallow: ["/api/", "/auth/"],
     },
     sitemap: new URL("/sitemap.xml", siteUrl).toString(),
     host: siteUrl.origin,

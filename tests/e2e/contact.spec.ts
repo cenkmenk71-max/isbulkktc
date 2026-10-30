@@ -5,7 +5,12 @@ test("contact page publishes the provided email, phone, WhatsApp and location", 
 }) => {
   await page.goto("/tr/contact");
 
-  const email = page.getByRole("link", { name: "info@isbulkktc.com" });
+  // Scope to the contact page's own channel grid. The global footer also
+  // publishes the support email and phone, so an unscoped role query matches
+  // both and fails strict mode.
+  const channels = page.locator(".contact-channel-grid");
+
+  const email = channels.getByRole("link", { name: "info@isbulkktc.com" });
   const emailHref = await email.getAttribute("href");
   expect(emailHref).toBeTruthy();
   const [emailAddress, emailQuery] = emailHref!.split("?");
@@ -16,10 +21,10 @@ test("contact page publishes the provided email, phone, WhatsApp and location", 
   expect(emailDraft.get("body")).toContain("Mesajınızı buraya yazın.");
   expect(emailDraft.get("body")).toContain("Adınız:");
 
-  const phone = page.getByRole("link", { name: "0539 131 64 21" });
+  const phone = channels.getByRole("link", { name: "0539 131 64 21" });
   await expect(phone).toHaveAttribute("href", "tel:+905391316421");
 
-  const whatsapp = page.getByRole("link", { name: "WhatsApp’tan yazın" });
+  const whatsapp = channels.getByRole("link", { name: "WhatsApp’tan yazın" });
   await expect(whatsapp).toHaveAttribute(
     "href",
     "https://wa.me/905391316421",
