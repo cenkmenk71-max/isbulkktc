@@ -32,6 +32,14 @@ jobs:
         with:
           node-version: 22
 
+      - name: Diag egress
+        run: |
+          for u in "https://isbulkktc.com/sitemap.xml" "https://isbulkktc.com/" "https://isbulkktc-amber.vercel.app/sitemap.xml"; do
+            echo "===== $u"
+            curl -sS -o /dev/null -D - --max-time 25 "$u" 2>&1 | grep -iE "^HTTP/|^location:|^server:|^cf-|^x-vercel|^x-robots-tag|^content-type:|^retry-after:" | sed "s/^/  /"
+          done
+          echo "===== trace"
+          curl -sS --max-time 25 https://isbulkktc.com/cdn-cgi/trace | grep -E "^(ip|loc|colo|warp)="
       - name: Submit the live sitemap
         # Read the sitemap from the canonical origin. Cloudflare's custom WAF
         # exempts /sitemap.xml and /robots.txt from bot and security-level
