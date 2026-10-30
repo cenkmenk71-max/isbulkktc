@@ -16,6 +16,7 @@ import { signOut } from "@/features/identity/actions";
 import { CompanyProfileForm } from "@/features/companies/company-profile-form";
 import { markApplicationViewed } from "@/features/jobs/actions";
 import { companyDirectory } from "@/features/companies/directory-data";
+import { getManagedDirectoryEntries } from "@/server/dal/content";
 import { getCompanyProfileCompletion } from "@/features/companies/profile-completion";
 import { getCompanyApplications, isJobCompanyMember } from "@/server/dal/jobs";
 import { getApplicationStatusMessageKey } from "@/features/jobs/presentation";
@@ -50,11 +51,13 @@ export default async function CompanyDashboardPage({
   if (!locale) notFound();
 
   setRequestLocale(locale);
-  const [{ user, companies, company, latestSubmission }, copy] =
+  const [{ user, companies, company, latestSubmission }, copy, managedDirectory] =
     await Promise.all([
       getEmployerWorkspace(query.company),
       getTranslations("CompanyManagement"),
+      getManagedDirectoryEntries(),
     ]);
+  const directoryEntries = managedDirectory ?? companyDirectory;
   const submittedProfile =
     latestSubmission && latestSubmission.status !== "approved"
       ? latestSubmission
@@ -80,7 +83,7 @@ export default async function CompanyDashboardPage({
   const submittedDistrictLabel = submittedDistrict
     ? districtLabels.get(submittedDistrict)
     : null;
-  const directoryTargetRows = companyDirectory.flatMap((entry) =>
+  const directoryTargetRows = directoryEntries.flatMap((entry) =>
     entry.locations.map((location, index) => {
       const district = getNorthernCyprusDistrictForLocation(location);
       return {

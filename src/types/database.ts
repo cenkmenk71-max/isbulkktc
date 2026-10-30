@@ -579,6 +579,143 @@ export type Database = {
         Args: { _slug: string };
         Returns: Json;
       };
+      get_public_site_content: {
+        Args: { _locale: string; _keys?: string[] | null };
+        Returns: {
+          content_key: string;
+          locale: string;
+          document: Json;
+          updated_at: string;
+        }[];
+      };
+      get_public_faq: {
+        Args: { _locale: string };
+        Returns: {
+          id: string;
+          question: string;
+          answer: string;
+          sort_order: number;
+        }[];
+      };
+      get_public_listing_plans: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          code: string;
+          audience: string;
+          name: string;
+          blurb: string;
+          features: string[];
+          color: string;
+          listing_count: number | null;
+          price_1: number;
+          price_7: number;
+          price_30: number;
+          sort_order: number;
+        }[];
+      };
+      get_public_directory: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          directory_entry_id: string;
+          name: string;
+          categories: string[];
+          logo_file: string | null;
+          logo_width: number | null;
+          logo_height: number | null;
+          locations: Json;
+        }[];
+      };
+      admin_list_faq_entries: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          locale: string;
+          question: string;
+          answer: string;
+          sort_order: number;
+          is_published: boolean;
+        }[];
+      };
+      admin_list_site_content: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          content_key: string;
+          locale: string;
+          document: Json;
+          updated_at: string;
+        }[];
+      };
+      admin_list_listing_plans: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          code: string;
+          audience: string;
+          name: string;
+          blurb: string;
+          features: string[];
+          color: string;
+          listing_count: number | null;
+          price_1: number;
+          price_7: number;
+          price_30: number;
+          is_active: boolean;
+          sort_order: number;
+          updated_at: string;
+        }[];
+      };
+      admin_upsert_site_content: {
+        Args: { _content_key: string; _locale: string; _document: Json };
+        Returns: undefined;
+      };
+      admin_upsert_faq_entry: {
+        Args: {
+          _id: string | null;
+          _locale: string;
+          _question: string;
+          _answer: string;
+          _sort_order: number;
+          _is_published: boolean;
+        };
+        Returns: string;
+      };
+      admin_delete_faq_entry: {
+        Args: { _id: string };
+        Returns: undefined;
+      };
+      admin_upsert_listing_plan: {
+        Args: {
+          _code: string;
+          _audience: string;
+          _name: string;
+          _blurb: string;
+          _features: string[];
+          _color: string;
+          _listing_count: number | null;
+          _price_1: number;
+          _price_7: number;
+          _price_30: number;
+          _is_active: boolean;
+          _sort_order: number;
+        };
+        Returns: undefined;
+      };
+      admin_upsert_directory_company: {
+        Args: {
+          _directory_entry_id: string;
+          _name: string;
+          _categories: string[];
+          _logo_file: string | null;
+          _logo_domain: string | null;
+          _logo_width: number | null;
+          _logo_height: number | null;
+          _locations: Json;
+        };
+        Returns: undefined;
+      };
+      admin_delete_directory_company: {
+        Args: { _directory_entry_id: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       platform_role: PlatformRole;
