@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { AboutPageContent } from "@/features/editorial/brand-pages";
+import { buildFaqPageStructuredData } from "@/content/ai-visibility/structured-data";
+import { JsonLd } from "@/content/ai-visibility/json-ld";
 import { routing } from "@/i18n/routing";
 import { createLocalizedPageMetadata } from "@/lib/seo";
+import { getAppBaseUrl } from "@/server/config/app-url";
 
 type AboutRouteProps = {
   params: Promise<{ locale: string }>;
@@ -35,5 +38,15 @@ export default async function AboutRoute({ params }: AboutRouteProps) {
   if (!locale) notFound();
 
   setRequestLocale(locale);
-  return <AboutPageContent locale={locale} />;
+  const faqStructuredData = buildFaqPageStructuredData({
+    locale,
+    baseUrl: getAppBaseUrl(),
+    pathname: "/about",
+  });
+  return (
+    <>
+      <JsonLd data={faqStructuredData} />
+      <AboutPageContent locale={locale} />
+    </>
+  );
 }
