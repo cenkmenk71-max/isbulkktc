@@ -4,10 +4,10 @@
  *
  * These are the palette's shade-green ramp, not free-floating values: the
  * 10px audience label is rendered in the tier accent on the dark vending
- * panel, where the raw ramp values (`#4b8066` at 3.7:1, `#326c54` at 2.8:1)
- * fall below the WCAG AA floor. `accentInk` lifts any tier accent toward white
- * until it clears 4.5:1 on the panel's darkest gradient stop, so a new tier
- * cannot reintroduce the failure.
+ * panel, where the raw ramp values fall below the WCAG AA floor — `#4b8066`
+ * measures 3.23:1 and `#326c54` 2.40:1 on the panel gradient. `accentInk` lifts
+ * any tier accent toward white until it clears 4.5:1 on the panel's darkest
+ * gradient stop, so a new tier cannot reintroduce the failure.
  */
 
 export const packageTierColors = {
