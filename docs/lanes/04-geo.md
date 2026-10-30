@@ -30,3 +30,46 @@ JSON-LD'nin *şeklini* sen üretirsin; route'a *mount* etmek SEO'nun işidir (is
 
 ## Raporla
 Eklenen/değişen içerik + yapısal veri örnekleri (JSON-LD parçaları) + hangi AI sorgularında görünürlük beklediğin. Branch + PR, CI yeşil.
+
+---
+
+## Rapor — `dateModified` (lane/geo-date-modified)
+
+**Durum:** PR açık, CI bekliyor.
+
+### Ne yapıldı
+`JobPosting`'in `dateModified` alanı artık gerçek bir değişiklik anını taşıyor;
+sitemap `lastmod` da aynı değeri kullanıyor (eskiden ikisi de `datePosted`'ı
+tekrarlıyordu).
+
+| Kaynak türü | `modified_at` türevi |
+|---|---|
+| `platform` | `jobs.updated_at` (mevcut `jobs_set_updated_at` trigger'ı) |
+| `source_site` | `coalesce(source_updated_at, source_published_at, published_at)` |
+
+- **iskibris** gerçek upstream `updated_at` yayınlıyor → doğrudan güveniliyor.
+- **isbulkibris** hiç yayınlamıyor → yeni `job_source_snapshots` içerik-hash
+  defteri, `last_changed_at`'i yalnızca görünür içerik gerçekten değişince
+  ilerletiyor; dokunulmamış ilan tarihini koruyor (her import'ta yeniden
+  damgalanmıyor).
+- Her iki yolda da değer `datePosted`'dan önce olamaz (DB constraint + TS
+  `resolveJobDateModified`).
+
+### Sahiplik sınırı (dikkat)
+Bu iş doğası gereği katmanlar arası olduğu için üç lane'in yoluna dokundu.
+Kural 3'e göre bunları **sahibinin onayına** sunuyorum:
+
+- `supabase/**` (migration + pgTAP) → **LANE-SUPABASE**. Canlı DB'ye
+  **uygulanmadı**; yalnızca branch'te migration olarak duruyor. Uygulama
+  LANE-SUPABASE'in kararı.
+- `src/app/sitemap.ts` → **LANE-SEO** (tek satır: `lastModified: job.modifiedAt`).
+- `src/features/jobs/job-posting-structured-data.ts` → GEO (bu lane, sahibi).
+
+### TODO (sahiplerine)
+- [ ] **LANE-SUPABASE:** `20261024100000_v4_job_modified_at.sql` canlıya
+      uygulanmalı. Not: migration `search_public_jobs` / `get_public_job_details`
+      gövdelerini **20261021120000** (en güncel tanım) üzerinden yeniden
+      kuruyor; 20261021110000 üzerinden kurmak `source_listing_url` ve işveren
+      profil alanlarını sessizce düşürür (bu hata bir kez yaşandı, pgTAP
+      `jobs_applications_rls` 55-57 yakaladı).
+- [ ] **LANE-SEO:** `src/app/sitemap.ts` değişikliği (GEO'dan bağımsızsa) — onay/ret.

@@ -445,6 +445,19 @@ test("localized vacancy URLs canonicalise to the Turkish listing", async ({
   // Google Jobs must be pointed at the same URL the page declares canonical.
   expect(structuredData).toContain(`"url":"${canonicalUrl}"`);
 
+  // `dateModified` must be present and never precede `datePosted`, which Google
+  // Jobs rejects. The listing is an imported one, so its value comes from the
+  // provenance row rather than the platform trigger.
+  const posting = JSON.parse(
+    structuredData
+      .split("\n")
+      .find((line) => line.includes('"@type":"JobPosting"')) ?? "{}",
+  ) as { datePosted?: string; dateModified?: string };
+  expect(posting.dateModified).toBeTruthy();
+  expect(Date.parse(posting.dateModified as string)).toBeGreaterThanOrEqual(
+    Date.parse(posting.datePosted as string),
+  );
+
   await page.goto(`/jobs/${slug}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",

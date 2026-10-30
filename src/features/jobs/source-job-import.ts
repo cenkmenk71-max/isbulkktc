@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { northernCyprusDistrictValues } from "@/features/locations/northern-cyprus-districts";
 
 export const sourceJobSites = ["iskibris", "isbulkibris"] as const;
@@ -43,6 +45,12 @@ export type SourceJobRecord = {
   district: SourceDistrict | null;
   publishedAt: string;
   expiresAt: string;
+  /**
+   * The upstream modification instant when the source publishes one (iskibris
+   * does; isbulkibris does not). `null` means "unknown" and lets the importer
+   * fall back to content-hash change detection instead of inventing a date.
+   */
+  sourceUpdatedAt: string | null;
   employer: SourceEmployerRecord;
 };
 
@@ -275,6 +283,59 @@ export function isWithinSourceWindow(
     published <= now + 5 * 60 * 1000 &&
     expires > now
   );
+}
+
+/**
+ * Normalises an upstream modification timestamp. Returns `null` when the source
+ * omits it or sends something unparseable, and clamps a value that precedes the
+ * publication (a source clock skew or a republished listing) up to
+ * `publishedAt`, so the result never violates the
+ * `source_updated_at >= source_published_at` constraint or makes a listing look
+ * modified before it was posted.
+ */
+export function resolveSourceModifiedAt(
+  updatedAtRaw: unknown,
+  publishedAt: string,
+): string | null {
+  if (typeof updatedAtRaw !== "string" || !updatedAtRaw.trim()) return null;
+  const updated = Date.parse(updatedAtRaw);
+  if (!Number.isFinite(updated)) return null;
+  const published = Date.parse(publishedAt);
+  if (!Number.isFinite(published)) return publishedAt;
+  return new Date(Math.max(updated, published)).toISOString();
+}
+
+/**
+ * Stable fingerprint of a listing's user-visible content, used to detect a real
+ * change when the source publishes no modification date. Only fields a reader
+ * would notice are hashed: a reordering of internal metadata must not move the
+ * date.
+ */
+export function sourceJobContentHash(record: {
+  title: string;
+  summary: string;
+  description: string;
+  requirements: string;
+  responsibilities: string;
+  jobType: string;
+  workplaceMode: string;
+  district: string | null;
+  expiresAt: string;
+  employerName: string;
+}): string {
+  const canonical = JSON.stringify([
+    record.title,
+    record.summary,
+    record.description,
+    record.requirements,
+    record.responsibilities,
+    record.jobType,
+    record.workplaceMode,
+    record.district,
+    record.expiresAt,
+    record.employerName,
+  ]);
+  return createHash("sha256").update(canonical, "utf8").digest("hex");
 }
 
 function clampText(value: string, minimum: number, maximum: number): string {
