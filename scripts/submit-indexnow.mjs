@@ -12,7 +12,14 @@ import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-const INDEXNOW_ENDPOINT = "https://api.indexnow.org/indexnow";
+// The generic endpoint shares a submission with every IndexNow participant, but
+// it refuses hosts whose key it has not finished validating. Bing's own endpoint
+// accepts the same payload, so try both and treat the run as successful if either
+// takes it.
+const INDEXNOW_ENDPOINTS = [
+  "https://api.indexnow.org/indexnow",
+  "https://www.bing.com/indexnow",
+];
 const projectRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -54,23 +61,28 @@ async function main() {
     urlList,
   };
 
-  const response = await fetch(INDEXNOW_ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json; charset=utf-8" },
-    body: JSON.stringify(body),
-  });
+  const failures = [];
 
-  // IndexNow answers 200 (accepted) or 202 (accepted, key pending validation);
-  // anything else means the submission was rejected outright.
-  if (response.status !== 200 && response.status !== 202) {
-    throw new Error(
-      `IndexNow rejected the submission: ${response.status} ${await response.text()}`,
-    );
+  for (const endpoint of INDEXNOW_ENDPOINTS) {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+      body: JSON.stringify(body),
+    });
+
+    // IndexNow answers 200 (accepted) or 202 (accepted, key pending validation);
+    // anything else means the submission was rejected outright.
+    if (response.status === 200 || response.status === 202) {
+      console.log(
+        `Submitted ${urlList.length} URLs to ${endpoint} (HTTP ${response.status}).`,
+      );
+      return;
+    }
+
+    failures.push(`${endpoint} -> ${response.status} ${await response.text()}`);
   }
 
-  console.log(
-    `Submitted ${urlList.length} URLs to IndexNow (HTTP ${response.status}).`,
-  );
+  throw new Error(`IndexNow rejected every endpoint:\n${failures.join("\n")}`);
 }
 
 main().catch((error) => {
