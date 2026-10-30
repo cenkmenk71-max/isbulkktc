@@ -20,6 +20,19 @@ export const packageTierColors = {
 export type PackageTierId = keyof typeof packageTierColors;
 
 /**
+ * The `listing_plans.code` each tier reads its managed prices from. The codes
+ * are kebab-case because the database constrains them that way, while the tier
+ * ids stay camelCase because the message catalog and the design gate address
+ * them that way. This map is the only place the two spellings meet.
+ */
+export const packageTierPlanCodes = {
+  singleListing: "tek-ilan",
+  growth: "buyume",
+  professional: "profesyonel",
+  enterprise: "kurumsal",
+} as const satisfies Record<PackageTierId, string>;
+
+/**
  * Percentage of the tier accent kept when mixing with white. At 65% every
  * current tier clears 5.07:1 against both ends of the panel gradient, even
  * composited over the brightest pixel the panel can sit on; the value is
