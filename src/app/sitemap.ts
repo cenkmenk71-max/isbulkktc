@@ -2,6 +2,11 @@ import type { MetadataRoute } from "next";
 import { routing } from "@/i18n/routing";
 import { getLocalizedPageUrl } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
+import { listPublicJobSitemapEntries } from "@/server/dal/jobs";
+
+// Regenerate at most once an hour; the search RPC fans out over every published
+// listing and the sitemap is not latency-sensitive.
+export const revalidate = 3600;
 
 const publicPages = [
   { pathname: "/", changeFrequency: "weekly", priority: 1 },
@@ -17,29 +22,49 @@ const publicPages = [
   { pathname: "/terms", changeFrequency: "yearly", priority: 0.3 },
 ] as const;
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getAppBaseUrl();
 
-  return publicPages.flatMap(({ pathname, changeFrequency, priority }) => {
-    const languages = {
-      ...Object.fromEntries(
-        routing.locales.map((locale) => [
-          locale,
-          getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
-        ]),
-      ),
-      "x-default": getLocalizedPageUrl(
-        routing.defaultLocale,
-        pathname,
-        baseUrl,
-      ).toString(),
-    };
+  const staticEntries: MetadataRoute.Sitemap = publicPages.flatMap(
+    ({ pathname, changeFrequency, priority }) => {
+      const languages = {
+        ...Object.fromEntries(
+          routing.locales.map((locale) => [
+            locale,
+            getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
+          ]),
+        ),
+        "x-default": getLocalizedPageUrl(
+          routing.defaultLocale,
+          pathname,
+          baseUrl,
+        ).toString(),
+      };
 
-    return routing.locales.map((locale) => ({
-      url: getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
-      alternates: { languages },
-      changeFrequency,
-      priority,
-    }));
-  });
+      return routing.locales.map((locale) => ({
+        url: getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
+        alternates: { languages },
+        changeFrequency,
+        priority,
+      }));
+    },
+  );
+
+  // Vacancies are stored in Turkish and served identically under every locale
+  // prefix, so each is advertised once, at its default-locale canonical URL.
+  // Listing all six prefixes would ask Google to crawl six copies of one text.
+  const jobEntries: MetadataRoute.Sitemap = (
+    await listPublicJobSitemapEntries()
+  ).map((job) => ({
+    url: getLocalizedPageUrl(
+      routing.defaultLocale,
+      `/jobs/${job.slug}`,
+      baseUrl,
+    ).toString(),
+    lastModified: job.publishedAt,
+    changeFrequency: "daily" as const,
+    priority: 0.8,
+  }));
+
+  return [...staticEntries, ...jobEntries];
 }

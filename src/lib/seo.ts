@@ -37,18 +37,32 @@ export function createLocalizedPageMetadata({
   pathname,
   title,
   description,
+  contentLocale,
 }: {
   locale: AppLocale;
   pathname: string;
   title: string;
   description: string;
+  /**
+   * Locale that actually owns the page text. Imported source listings are
+   * Turkish whichever URL prefix serves them, so those pages pass the default
+   * locale here: every locale then canonicalises to the single URL that owns
+   * the content and the hreflang alternates are dropped, because they would
+   * otherwise advertise six URLs carrying identical text.
+   */
+  contentLocale?: AppLocale;
 }): Metadata {
   const baseUrl = getAppBaseUrl();
   // Next.js treats a `URL` instance passed as `alternates.canonical` as a base and
   // re-resolves it against the current request pathname, which prefixes the default
   // locale onto already-canonical URLs (e.g. /freelance -> /tr/freelance). Pass an
   // absolute string so the value is emitted verbatim.
-  const canonicalUrl = getLocalizedPageUrl(locale, pathname, baseUrl).toString();
+  const canonicalLocale = contentLocale ?? locale;
+  const canonicalUrl = getLocalizedPageUrl(
+    canonicalLocale,
+    pathname,
+    baseUrl,
+  ).toString();
   const defaultLocaleUrl = getLocalizedPageUrl(
     routing.defaultLocale,
     pathname,
@@ -69,15 +83,23 @@ export function createLocalizedPageMetadata({
     description,
     alternates: {
       canonical: canonicalUrl,
-      languages: {
-        ...Object.fromEntries(
-          routing.locales.map((supportedLocale) => [
-            supportedLocale,
-            getLocalizedPageUrl(supportedLocale, pathname, baseUrl).toString(),
-          ]),
-        ),
-        "x-default": defaultLocaleUrl.toString(),
-      },
+      ...(contentLocale
+        ? {}
+        : {
+            languages: {
+              ...Object.fromEntries(
+                routing.locales.map((supportedLocale) => [
+                  supportedLocale,
+                  getLocalizedPageUrl(
+                    supportedLocale,
+                    pathname,
+                    baseUrl,
+                  ).toString(),
+                ]),
+              ),
+              "x-default": defaultLocaleUrl.toString(),
+            },
+          }),
     },
     openGraph: {
       title,

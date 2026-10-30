@@ -2,7 +2,10 @@ import "server-only";
 
 import { z } from "zod";
 import { requirePlatformRole, getCurrentUser } from "@/server/dal/user";
-import { createSupabaseServerClient } from "@/server/db/supabase-server";
+import {
+  createSupabasePublicClient,
+  createSupabaseServerClient,
+} from "@/server/db/supabase-server";
 import {
   publicJobCompanySchema,
   publicJobListingSchema,
@@ -188,6 +191,69 @@ export async function getPublicJobBySlug(input: unknown) {
     const match = jobs.find((job) => job.slug === slug);
     if (!match) return null;
     return match as PublicJobListing;
+  }
+}
+
+export type PublicJobSitemapEntry = {
+  slug: string;
+  publishedAt: string;
+  expiresAt: string;
+};
+
+const SITEMAP_JOBS_PAGE_SIZE = 20;
+const SITEMAP_JOBS_MAX_PAGES = 60;
+
+/**
+ * Slugs of every currently published, indexable vacancy, for the sitemap.
+ * Reuses the public search RPC rather than reading `public.jobs` directly: the
+ * table is RLS-protected and only the `search_public_*` RPCs are granted to the
+ * publishable key, so this keeps the same visibility rules the site itself uses.
+ * Paging is capped so a pathological row count cannot turn the sitemap into an
+ * unbounded loop.
+ */
+export async function listPublicJobSitemapEntries(): Promise<
+  PublicJobSitemapEntry[]
+> {
+  try {
+    const supabase = createSupabasePublicClient();
+    const entries: PublicJobSitemapEntry[] = [];
+
+    for (let page = 1; page <= SITEMAP_JOBS_MAX_PAGES; page += 1) {
+      const { data, error } = await supabase.rpc("search_public_jobs", {
+        _query: "",
+        _district: null,
+        _job_type: null,
+        _workplace_mode: null,
+        _page: page,
+      });
+
+      if (error) throw new Error("Sitemap jobs could not be searched.", { cause: error });
+
+      const results = publicJobSearchResultsSchema.safeParse(data);
+      if (!results.success) {
+        throw new Error("The sitemap job search returned invalid result data.", {
+          cause: results.error,
+        });
+      }
+
+      for (const job of results.data.jobs) {
+        entries.push({
+          slug: job.slug,
+          publishedAt: job.published_at,
+          expiresAt: job.expires_at,
+        });
+      }
+
+      const lastPage = Math.max(
+        1,
+        Math.ceil(results.data.total / SITEMAP_JOBS_PAGE_SIZE),
+      );
+      if (page >= lastPage) break;
+    }
+
+    return entries;
+  } catch {
+    return [];
   }
 }
 

@@ -64,10 +64,33 @@ export async function generateMetadata({
     de: "de_DE",
   } satisfies Record<(typeof routing.locales)[number], string>;
 
+  // Ownership proofs for the search consoles. Values come from the environment
+  // so the tokens live in Vercel, not in the repository; a blank value omits its
+  // tag instead of emitting an empty one.
+  const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim();
+  const otherVerification = {
+    ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION?.trim()
+      ? { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION.trim() }
+      : {}),
+    ...(process.env.NEXT_PUBLIC_YANDEX_SITE_VERIFICATION?.trim()
+      ? { "yandex-verification": process.env.NEXT_PUBLIC_YANDEX_SITE_VERIFICATION.trim() }
+      : {}),
+  };
+
   return {
     metadataBase: siteUrl,
     title: { default: t("title"), template: "%s · İşBul KKTC" },
     description: t("description"),
+    ...(googleVerification || Object.keys(otherVerification).length > 0
+      ? {
+          verification: {
+            ...(googleVerification ? { google: googleVerification } : {}),
+            ...(Object.keys(otherVerification).length > 0
+              ? { other: otherVerification }
+              : {}),
+          },
+        }
+      : {}),
     robots: {
       index: true,
       follow: true,

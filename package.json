@@ -36,7 +36,8 @@
     "optimize:assets": "tsx scripts/optimize-assets.ts",
     "logos:fetch": "node scripts/fetch-company-logos.mjs",
     "shot": "tsx scripts/shot.ts",
-    "optimize:district-photos": "node scripts/optimize-district-photos.mjs"
+    "optimize:district-photos": "node scripts/optimize-district-photos.mjs",
+    "seo:submit": "node scripts/submit-indexnow.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
