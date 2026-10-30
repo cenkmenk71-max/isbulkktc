@@ -6,11 +6,30 @@ import {
   classifyHttpStatus,
   decideVerification,
   evaluateRouteResponse,
+  isSuperseded,
   normalizeCommit,
   summarizeSmokeResults,
 } from "../../scripts/verify-production-deployment.mjs";
 
 const COMMIT = "9e007100aeff4f4d8fda1c9cdb4244b54d75c1a6";
+const NEWER = "b76d5fb4065a0c6a4e5555add6de7bcbe2ba3e2e";
+
+test("a run is superseded only when a newer commit owns the tip", () => {
+  // Back-to-back pushes: the older run can never see its commit on production,
+  // so it must skip rather than fail.
+  assert.equal(isSuperseded(COMMIT, NEWER), true);
+  // The run's commit is still the tip — verify it.
+  assert.equal(isSuperseded(COMMIT, COMMIT), false);
+  assert.equal(isSuperseded("9e00710", COMMIT), false);
+});
+
+test("an unknown tip never skips verification", () => {
+  // A missing/blank tip means we cannot tell; the safe default is to verify.
+  assert.equal(isSuperseded(COMMIT, ""), false);
+  assert.equal(isSuperseded(COMMIT, undefined), false);
+  assert.equal(isSuperseded(COMMIT, "not-a-sha"), false);
+  assert.equal(isSuperseded("", COMMIT), false);
+});
 
 test("normalizes a commit and rejects values that cannot be a SHA", () => {
   assert.equal(normalizeCommit("  9E00710  "), "9e00710");

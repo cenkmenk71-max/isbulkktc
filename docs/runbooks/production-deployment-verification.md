@@ -47,6 +47,21 @@ The default locale (`tr`) is unprefixed under `localePrefix: "as-needed"`, so
 A failure here is a real outage signal: the push landed in `main`, but production
 is not serving it.
 
+### Superseded pushes are skipped
+
+Two merges landing back-to-back (a merge on top of a merge) is normal here. The
+older run can never see *its* commit on production — the alias moves to the newer
+one — so polling would end in a red check on a perfectly healthy site. That is
+exactly what happened on the first production runs (`8eda6beb` failed while
+`b76d5fb4` superseded it).
+
+So on a push the workflow resolves the live `main` tip (`git ls-remote`) and the
+script **skips** — green — when a newer commit already owns the branch. A manual
+`workflow_dispatch` passes no tip: naming a commit explicitly means you want it
+verified even if it is no longer the tip. The job group also runs with
+`cancel-in-progress: true`, so a superseded run is cancelled instead of waiting
+out the 15-minute timeout.
+
 ## Secrets and variables
 
 The HTTP channel needs **no secret**. A `VERCEL_TOKEN` is strongly recommended:

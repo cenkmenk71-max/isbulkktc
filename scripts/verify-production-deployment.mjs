@@ -48,6 +48,19 @@ export function normalizeCommit(value) {
   return /^[0-9a-f]{7,40}$/.test(trimmed) ? trimmed : "";
 }
 
+/**
+ * A run is superseded when a newer commit has landed on the branch tip: the
+ * production alias will move to that newer commit, so this run would poll for a
+ * commit that is never promoted and fail on a healthy site. Two pushes landing
+ * back-to-back is enough to hit this, so it must be skipped, not failed.
+ */
+export function isSuperseded(expectedCommit, tipCommit) {
+  const expected = normalizeCommit(expectedCommit);
+  const tip = normalizeCommit(tipCommit);
+  if (!expected || !tip) return false; // cannot tell — verify rather than skip
+  return !(tip.startsWith(expected) || expected.startsWith(tip));
+}
+
 /** The build identity a deployment reports through `/api/build-info`. */
 export function buildInfoMatches(expectedCommit, body) {
   const expected = normalizeCommit(expectedCommit);
@@ -264,6 +277,7 @@ function argValue(flag) {
 
 async function main() {
   const expectedCommit = argValue("--expect") ?? process.env.GITHUB_SHA;
+  const tipCommit = argValue("--tip") ?? process.env.BRANCH_TIP_SHA;
   const origin = (
     argValue("--url") ??
     process.env.PRODUCTION_URL ??
@@ -275,6 +289,23 @@ async function main() {
 
   if (!normalizeCommit(expectedCommit)) {
     throw new Error("No commit to verify. Pass --expect <sha> or set GITHUB_SHA.");
+  }
+
+  // A newer commit already owns the branch tip, so production is heading there
+  // and this run would wait for a commit that is never promoted. Skipping keeps
+  // back-to-back pushes from painting a healthy site red.
+  if (isSuperseded(expectedCommit, tipCommit)) {
+    const message = [
+      "## Production deploy verification",
+      "",
+      `- skipped: \`${expectedCommit.slice(0, 8)}\` was superseded by \`${normalizeCommit(tipCommit).slice(0, 8)}\``,
+      "- the newer push verifies production instead",
+    ].join("\n");
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      await appendFile(process.env.GITHUB_STEP_SUMMARY, `${message}\n`);
+    }
+    console.log(message);
+    return;
   }
 
   let context = null;
