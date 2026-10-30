@@ -531,7 +531,7 @@
     "nameLabel": "Unternehmensname",
     "namePlaceholder": "Name Ihres Unternehmens",
     "slugLabel": "Unternehmensname für die URL",
-    "slugHint": "Verwenden Sie kleine englische Buchstaben, Ziffern und einzelne Bindestriche.",
+    "slugHint": "Der Kurzname, den Ihr Unternehmen auf der Plattform verwendet.",
     "saving": "Wird gespeichert…",
     "submit": "Zur Prüfung einreichen",
     "storyEyebrow": "UNTERNEHMENSREGISTRIERUNG",
@@ -543,7 +543,9 @@
       "unauthorized": "Ihre Sitzung ist möglicherweise abgelaufen. Melden Sie sich erneut an und versuchen Sie es noch einmal.",
       "failed": "Die Unternehmensregistrierung konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
       "saved": "Ihr Unternehmen wurde zur Prüfung eingereicht. Anzeigen können erst nach abgeschlossener Bestätigung veröffentlicht werden."
-    }
+    },
+    "slugPurpose": "Dies ist der kurze, eindeutige Name Ihres Unternehmens auf der Plattform. Er wird automatisch aus dem Unternehmensnamen erzeugt und Sie können ihn ändern.",
+    "slugPreviewLabel": "Kurzname:"
   },
   "HomePage": {
     "eyebrow": "ARBEITSNETZWERK NORDZYPERN",

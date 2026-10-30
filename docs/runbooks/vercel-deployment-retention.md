@@ -31,10 +31,10 @@ The job needs one repository secret:
 
 | Secret | Purpose |
 |---|---|
-| `VERCEL_TOKEN` | A Vercel token that can read the team and delete deployments. Create one at <https://vercel.com/account/tokens>; a team-scoped token is preferred. |
+| `VERCEL_TOKEN` (or `VERCEL`) | A Vercel token that can read the team and delete deployments. Create one at <https://vercel.com/account/tokens>; a team-scoped token is preferred. Either name works — the workflow reads `secrets.VERCEL_TOKEN || secrets.VERCEL`. |
 
 Until the secret exists the job stays **green** and prints a warning annotation
-instead of failing every night (the same fail-safe pattern as
+instead of failing every six hours (the same fail-safe pattern as
 `refresh-source-jobs.yml`).
 
 Optional repository **variables** override the defaults:
@@ -53,10 +53,10 @@ Optional repository **variables** override the defaults:
 
 ```bash
 # Dry-run: shows what would be deleted, deletes nothing.
-VERCEL_TOKEN=... bun run vercel:prune
+VERCEL_TOKEN=... npm run vercel:prune
 
 # Delete for real.
-VERCEL_TOKEN=... bun run vercel:prune:apply
+VERCEL_TOKEN=... npm run vercel:prune:apply
 ```
 
 The dry-run prints the project, the number kept/pruned, and the 25 oldest
@@ -75,7 +75,7 @@ deletion fails.
 Run the prune by hand with a lower keep count to free space immediately:
 
 ```bash
-VERCEL_KEEP_PRODUCTION=2 VERCEL_KEEP_PREVIEW=2 VERCEL_TOKEN=... bun run vercel:prune:apply
+VERCEL_KEEP_PRODUCTION=2 VERCEL_KEEP_PREVIEW=2 VERCEL_TOKEN=... npm run vercel:prune:apply
 ```
 
 Deleting a deployment is irreversible, but only preview/branch builds and
