@@ -81,6 +81,7 @@ export function NewPasswordForm() {
         </span>
         <small
           id="reset-confirm-hint"
+          aria-live="polite"
           data-state={
             hasConfirmation ? (passwordsMatch ? "match" : "mismatch") : "idle"
           }

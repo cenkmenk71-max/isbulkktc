@@ -23,6 +23,22 @@ export function getLocalizedSocialImageAlt(locale: AppLocale): string {
   return socialImageAlts[locale];
 }
 
+/**
+ * Default social card for routes that carry no page-level metadata of their own
+ * (auth pages, the 404 page). Those routes inherit the locale layout's
+ * `generateMetadata`, so the layout must advertise the same light 1200x630 card
+ * as `createLocalizedPageMetadata`; pointing it at the full-resolution hero
+ * would put a ~1.9 MB image behind every unfurl on those routes.
+ */
+export function getDefaultSocialImage(locale: AppLocale, baseUrl: URL) {
+  return {
+    url: new URL(socialImagePath, baseUrl).toString(),
+    width: socialImageWidth,
+    height: socialImageHeight,
+    alt: getLocalizedSocialImageAlt(locale),
+  };
+}
+
 export function getLocalizedPageUrl(
   locale: AppLocale,
   pathname: string,

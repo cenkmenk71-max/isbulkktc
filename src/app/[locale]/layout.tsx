@@ -10,8 +10,10 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { GoogleAnalyticsConsent } from "@/components/analytics/google-analytics-consent";
 import { MotionController } from "@/components/motion/motion-controller";
+import { buildOrganizationGraph } from "@/content/ai-visibility/structured-data";
+import { JsonLd } from "@/content/ai-visibility/json-ld";
 import { isRightToLeftLocale, routing } from "@/i18n/routing";
-import { getLocalizedSocialImageAlt } from "@/lib/seo";
+import { getDefaultSocialImage } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import "@/styles/global.css";
 
@@ -54,7 +56,7 @@ export async function generateMetadata({
   }
   const t = await getTranslations({ locale, namespace: "Meta" });
   const siteUrl = getAppBaseUrl();
-  const socialImage = new URL("/images/Girne.webp", siteUrl);
+  const socialImage = getDefaultSocialImage(locale, siteUrl);
   const openGraphLocales = {
     tr: "tr_TR",
     en: "en_GB",
@@ -91,9 +93,13 @@ export async function generateMetadata({
           },
         }
       : {}),
+    // Only the Googlebot directives are declared here. Asserting the generic
+    // `index, follow` in a layout that also wraps the 404 route produced two
+    // conflicting `<meta name="robots">` tags on 404 responses (Next injects
+    // `noindex` for a 404 automatically). Omitting the top-level fields leaves
+    // normal pages on Next's implicit index,follow default and lets the injected
+    // `noindex` stand alone on 404s.
     robots: {
-      index: true,
-      follow: true,
       googleBot: {
         index: true,
         follow: true,
@@ -111,20 +117,13 @@ export async function generateMetadata({
       alternateLocale: routing.locales
         .filter((otherLocale) => otherLocale !== locale)
         .map((otherLocale) => openGraphLocales[otherLocale]),
-      images: [
-        {
-          url: socialImage,
-          width: 3840,
-          height: 2500,
-          alt: getLocalizedSocialImageAlt(locale),
-        },
-      ],
+      images: [socialImage],
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: [socialImage],
+      images: [socialImage.url],
     },
     icons: {
       icon: [
@@ -163,39 +162,7 @@ export default async function LocaleLayout({
     getMessages(),
   ]);
   const siteUrl = getAppBaseUrl();
-  const websiteStructuredData = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebSite",
-        "@id": new URL("#website", siteUrl).toString(),
-        name: "İşBul KKTC",
-        url: siteUrl.toString(),
-        description: "Kuzey Kıbrıs Türk Cumhuriyeti'nin güvenilir kariyer, istihdam ve iş ilanı platformu.",
-        inLanguage: routing.locales,
-        potentialAction: {
-          "@type": "SearchAction",
-          target: {
-            "@type": "EntryPoint",
-            urlTemplate: `${siteUrl.origin}/jobs?q={search_term_string}`,
-          },
-          "query-input": "required name=search_term_string",
-        },
-      },
-      {
-        "@type": "EmploymentAgency",
-        "@id": new URL("#organization", siteUrl).toString(),
-        name: "İşBul KKTC",
-        url: siteUrl.toString(),
-        logo: new URL("/icon-dark-32x32.png", siteUrl).toString(),
-        description: "Kuzey Kıbrıs genelinde iş arayanlar ve işverenleri bir araya getiren istihdam platformu.",
-        areaServed: {
-          "@type": "AdministrativeArea",
-          name: "Kuzey Kıbrıs Türk Cumhuriyeti",
-        },
-      },
-    ],
-  };
+  const organizationGraph = buildOrganizationGraph(siteUrl);
 
   return (
     <html
@@ -206,12 +173,7 @@ export default async function LocaleLayout({
     >
       <body className="flex min-h-svh flex-col">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify(websiteStructuredData).replace(/</g, "\\u003c"),
-            }}
-          />
+          <JsonLd data={organizationGraph} />
           <SiteHeader />
           <main id="main" className="flex-1">
             {children}

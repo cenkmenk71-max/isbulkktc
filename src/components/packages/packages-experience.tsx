@@ -5,30 +5,31 @@ import { Link } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
 import { PackagesInteractiveShowcase } from "@/components/packages/packages-interactive-showcase";
 import { SalesLeadForm } from "@/features/sales/sales-lead-form";
+import { packageTierColors } from "@/components/packages/package-tiers";
 import type { ListingDuration } from "@/experience/scenes/vend-pricing/lib/plans";
 
 const packageTiers = [
   {
     id: "singleListing",
-    color: "#4b8066",
+    color: packageTierColors.singleListing,
     listingCount: 1,
     prices: { 1: 290, 7: 690, 30: 1290 },
   },
   {
     id: "growth",
-    color: "#c6a46a",
+    color: packageTierColors.growth,
     listingCount: 3,
     prices: { 1: 590, 7: 1390, 30: 2790 },
   },
   {
     id: "professional",
-    color: "#326c54",
+    color: packageTierColors.professional,
     listingCount: 5,
     prices: { 1: 890, 7: 2090, 30: 3990 },
   },
   {
     id: "enterprise",
-    color: "#9cbba7",
+    color: packageTierColors.enterprise,
     listingCount: null,
     prices: null,
   },

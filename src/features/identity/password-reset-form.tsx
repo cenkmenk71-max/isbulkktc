@@ -25,6 +25,10 @@ export function PasswordResetForm() {
         {copy("emailLabel")}
         <input
           id="reset-email"
+          aria-describedby={
+            state.message !== "idle" ? "reset-form-message" : undefined
+          }
+          aria-invalid={state.status === "error"}
           autoComplete="email"
           name="email"
           required
@@ -44,6 +48,7 @@ export function PasswordResetForm() {
           aria-live="polite"
           className="editorial-form-message"
           data-status={state.status}
+          id="reset-form-message"
           role={state.status === "error" ? "alert" : "status"}
         >
           {copy(`messages.${state.message}`)}

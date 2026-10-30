@@ -1,11 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
-import { routing, type AppLocale } from "@/i18n/routing";
+import { getLocalePrefix, routing, type AppLocale } from "@/i18n/routing";
 import { sendWelcomeEmail } from "@/server/email/mailer";
 import type { WelcomeAudience } from "../../../../../supabase/functions/_shared/email-render.ts";
 import {
+  audienceFromCallbackParam,
+  parseAuthFlow,
+  resolveAuthDestination,
+  resolveAuthFailurePath,
+} from "@/features/identity/auth-routing";
+import {
   isNewOAuthAccount,
+  mergeLocaleIntoUserMetadata,
   oauthSignupIntentCookieName,
   parseOAuthSignupIntent,
 } from "@/features/identity/oauth-signup-intent";
@@ -62,20 +69,14 @@ export async function GET(request: NextRequest) {
     routing.locales.find(
       (supportedLocale) => supportedLocale === requestedLocale,
     ) ?? routing.defaultLocale;
-  const audience =
-    request.nextUrl.searchParams.get("next") === "company"
-      ? "employer"
-      : "candidate";
-  const flow = request.nextUrl.searchParams.get("flow");
+  const audience = audienceFromCallbackParam(
+    request.nextUrl.searchParams.get("next"),
+  );
+  const flow = parseAuthFlow(request.nextUrl.searchParams.get("flow"));
   const isOAuthFlow = flow === "oauth";
   const isResetFlow = flow === "reset";
   const code = request.nextUrl.searchParams.get("code");
-  const localePrefix = locale === routing.defaultLocale ? "" : `/${locale}`;
-  const failurePath = isResetFlow
-    ? `${localePrefix}/forgot-password?error=expired`
-    : `${localePrefix}/login?error=${
-        isOAuthFlow ? "oauth" : "verification"
-      }&audience=${audience}`;
+  const failurePath = resolveAuthFailurePath(flow, locale, audience);
 
   if (!code || request.nextUrl.searchParams.has("error")) {
     return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
 
   if (isResetFlow) {
     return redirectAndClearOAuthIntent(
-      new URL(`${localePrefix}/reset-password`, appBaseUrl),
+      new URL(`${getLocalePrefix(locale)}/reset-password`, appBaseUrl),
     );
   }
 
@@ -131,6 +132,24 @@ export async function GET(request: NextRequest) {
         return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
       }
 
+      // The email templates can only read `auth.users.user_metadata.locale`
+      // (`.Data.locale`), which only the password sign-up path sets. Without
+      // this an OAuth account is mailed in Turkish whatever language it used.
+      // A failure here only costs the email language, so it is logged rather
+      // than turned into a failed sign-in.
+      if (user.user_metadata?.locale !== intent.locale) {
+        const { error: metadataError } = await supabase.auth.updateUser({
+          data: mergeLocaleIntoUserMetadata(user.user_metadata, intent.locale),
+        });
+
+        if (metadataError) {
+          console.error(
+            "OAuth profile locale could not be stored in user metadata.",
+            { code: metadataError.code },
+          );
+        }
+      }
+
       if (isNewOAuthAccount(user.created_at, intent)) {
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
@@ -158,9 +177,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const destination =
-    audience === "employer" ? "/company/dashboard" : "/profile/dashboard";
-  const localizedDestination = `${localePrefix}${destination}`;
-
-  return redirectAndClearOAuthIntent(new URL(localizedDestination, appBaseUrl));
+  return redirectAndClearOAuthIntent(
+    new URL(resolveAuthDestination(audience, locale), appBaseUrl),
+  );
 }

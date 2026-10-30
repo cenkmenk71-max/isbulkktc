@@ -4,18 +4,15 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { ArrowRight, BookOpenText, BriefcaseBusiness, Building2, ChevronDown, Compass, Globe, LogOut, Mail, Menu, Package, UserRound, X } from 'lucide-react'
 import { Logo } from '@/components/brand/logo'
-import { signOut } from '@/features/identity/actions'
 import { Link, usePathname } from '@/i18n/navigation'
 import { localeNames, routing } from '@/i18n/routing'
-import { getSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { signOut } from '@/features/identity/actions'
+import { getHeaderSession } from '@/features/identity/header-session-actions'
+import type { HeaderSessionState } from '@/features/identity/header-session'
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false)
-  // The root layout is statically generated, so the session is read in the
-  // browser after hydration: the guest actions render first (matching the static
-  // shell) and are replaced once the session is known. `null` means "not yet
-  // resolved" and is treated as guest so the server and first client render agree.
-  const [signedIn, setSignedIn] = useState<boolean | null>(null)
+  const [session, setSession] = useState<HeaderSessionState>({ signedIn: false })
   const menuButtonRef = useRef<HTMLButtonElement | null>(null)
   const locale = useLocale()
   const pathname = usePathname()
@@ -23,34 +20,6 @@ export function SiteHeader() {
   const languageCopy = useTranslations('LanguageMenu')
 
   function closeMenu() { setOpen(false) }
-
-  useEffect(() => {
-    const supabase = getSupabaseBrowserClient()
-    if (!supabase) return
-
-    let active = true
-    // Re-read on every route change: sign-in and sign-out are server actions, so
-    // the browser client never sees an auth event for them and the header would
-    // keep the guest actions after the redirect that follows.
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
-        if (active) setSignedIn(Boolean(data.session))
-      })
-      .catch(() => {
-        if (active) setSignedIn(false)
-      })
-
-    // Cross-tab sign-in/out still arrives as an auth event.
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (active) setSignedIn(Boolean(session))
-    })
-
-    return () => {
-      active = false
-      subscription.subscription.unsubscribe()
-    }
-  }, [pathname])
 
   useEffect(() => {
     if (!open) return
@@ -63,6 +32,17 @@ export function SiteHeader() {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [open])
+
+  // The layout is shared with statically prerendered public routes, so the
+  // session is fetched here (after hydration) instead of read during render.
+  // Re-runs on navigation so the variant follows a sign-in/sign-out.
+  useEffect(() => {
+    let active = true
+    getHeaderSession()
+      .then((next) => { if (active) setSession(next) })
+      .catch(() => { if (active) setSession({ signedIn: false }) })
+    return () => { active = false }
+  }, [pathname])
 
   function isCurrentNavigationItem(href: string) {
     return pathname === href || pathname.startsWith(`${href}/`)
@@ -115,16 +95,12 @@ export function SiteHeader() {
                 <p className="language-menu-note">{languageCopy('notice')}</p>
               </div>
             </details>
-            {signedIn ? (
+            {session.signedIn ? (
               <>
-                <Link href="/profile/dashboard" className="header-login">
-                  <UserRound size={15} aria-hidden="true" />
-                  {navCopy('account')}
-                </Link>
+                <Link href={session.dashboardHref} className="header-login">{navCopy('account')}</Link>
                 <form action={signOut} className="header-signout">
                   <button className="button button-dark header-post" type="submit">
-                    <LogOut size={16} aria-hidden="true" />
-                    <span>{navCopy('signOut')}</span>
+                    <LogOut size={16} aria-hidden="true"/><span>{navCopy('signOut')}</span>
                   </button>
                 </form>
               </>
@@ -165,13 +141,11 @@ export function SiteHeader() {
                 aria-current={active ? 'page' : undefined}
               ><span><Icon size={17} aria-hidden="true"/>{label}</span><ArrowRight size={15} aria-hidden="true"/></Link>
             })}
-            {signedIn ? (
+            {session.signedIn ? (
               <>
-                <Link href="/profile/dashboard" onClick={closeMenu}>{navCopy('account')}<ArrowRight size={15} aria-hidden="true"/></Link>
-                <form action={signOut} className="mobile-nav-signout">
-                  <button type="submit" className="mobile-nav-primary" onClick={closeMenu}>
-                    {navCopy('signOut')}<LogOut size={15} aria-hidden="true"/>
-                  </button>
+                <Link href={session.dashboardHref} onClick={closeMenu}>{navCopy('account')}<ArrowRight size={15} aria-hidden="true"/></Link>
+                <form action={signOut} className="mobile-nav-primary-form">
+                  <button className="mobile-nav-primary" type="submit"><LogOut size={17} aria-hidden="true"/>{navCopy('signOut')}</button>
                 </form>
               </>
             ) : (

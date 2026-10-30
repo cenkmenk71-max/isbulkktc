@@ -1,6 +1,6 @@
 begin;
 
-select plan(44);
+select plan(53);
 
 insert into auth.users (id, email, raw_user_meta_data)
 values
@@ -174,6 +174,40 @@ select lives_ok(
   'candidate can save the structured sections of their own profile'
 );
 
+-- PostgREST turns `upsert(..., { onConflict: 'user_id' })` into an INSERT with
+-- `ON CONFLICT (user_id) DO UPDATE SET "user_id" = excluded."user_id"`, so the
+-- update path needs UPDATE on user_id. 20261023120000 adds that grant.
+select lives_ok(
+  $$insert into public.candidate_profiles (user_id, headline, location, skills)
+    values ((select auth.uid()), 'Upsert headline', 'Girne', array['sql']::text[])
+    on conflict (user_id) do update
+      set "user_id" = excluded."user_id",
+          "headline" = excluded."headline",
+          "location" = excluded."location",
+          "skills" = excluded."skills"$$,
+  'a candidate can upsert their own profile with the PostgREST conflict target'
+);
+
+select throws_ok(
+  $$insert into public.candidate_profiles (user_id, headline)
+    values ('00000000-0000-4000-8000-00000000000b', 'Written by someone else')
+    on conflict (user_id) do update
+      set "user_id" = excluded."user_id",
+          "headline" = excluded."headline"$$,
+  '42501',
+  null,
+  'the upsert grant does not let a candidate write another candidate profile'
+);
+
+select throws_ok(
+  $$update public.candidate_profiles
+    set user_id = '00000000-0000-4000-8000-00000000000b'
+    where user_id = (select auth.uid())$$,
+  '42501',
+  null,
+  'the upsert grant does not let a candidate hand their profile to another user'
+);
+
 select throws_ok(
   $$update public.candidate_profiles
     set location = 'Gazimağusa'
@@ -302,6 +336,86 @@ select throws_ok(
   '42501',
   null,
   'company owners cannot approve their own profile submissions'
+);
+
+-- 20261014120000 granted INSERT/UPDATE at the table level, which covered the review
+-- columns too and made its own column list inert; 20261023130000 narrows it. The
+-- pending-only update policy never guarded INSERT, so this is the only thing that
+-- stops an owner inserting an already-approved row.
+select throws_ok(
+  $$insert into public.company_profile_submissions (
+      company_id, submitted_by, company_name, status, review_note, reviewed_by
+    )
+    values (
+      (select id from public.companies where slug = 'v4-candidate-a-company'),
+      (select auth.uid()),
+      'Self approved company',
+      'approved',
+      'reviewed internally',
+      (select auth.uid())
+    )$$,
+  '42501',
+  null,
+  'company owners cannot insert an already-approved profile submission'
+);
+
+select throws_ok(
+  $$insert into public.company_profile_submissions (
+      company_id, submitted_by, company_name, reviewed_at
+    )
+    values (
+      (select id from public.companies where slug = 'v4-candidate-a-company'),
+      (select auth.uid()),
+      'Backdated company',
+      pg_catalog.now()
+    )$$,
+  '42501',
+  null,
+  'company owners cannot set the review columns when creating a submission'
+);
+
+select is(
+  pg_catalog.has_column_privilege(
+    'authenticated',
+    'public.company_profile_submissions',
+    'status',
+    'INSERT'
+  ),
+  false,
+  'the status column is not insertable by authenticated'
+);
+
+select is(
+  pg_catalog.has_column_privilege(
+    'authenticated',
+    'public.company_profile_submissions',
+    'reviewed_by',
+    'INSERT'
+  ),
+  false,
+  'the reviewed_by column is not insertable by authenticated'
+);
+
+select is(
+  pg_catalog.has_column_privilege(
+    'authenticated',
+    'public.company_profile_submissions',
+    'status',
+    'UPDATE'
+  ),
+  false,
+  'the status column is not updatable by authenticated'
+);
+
+select is(
+  pg_catalog.has_column_privilege(
+    'authenticated',
+    'public.company_profile_submissions',
+    'company_name',
+    'UPDATE'
+  ),
+  true,
+  'the profile columns stay updatable by authenticated'
 );
 
 select throws_ok(

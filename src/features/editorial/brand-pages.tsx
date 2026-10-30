@@ -18,6 +18,7 @@ import { Link } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
 import { getLatestNews } from "@/features/blog/news-feed";
 import { FeedbackForm } from "@/features/feedback/feedback-form";
+import { FaqSection } from "@/content/ai-visibility/faq-section";
 
 function getArticleImage(title: string): string {
   const normalized = title.toLocaleLowerCase("tr");
@@ -147,6 +148,8 @@ export async function AboutPageContent({ locale }: { locale: AppLocale }) {
             </Link>
           </div>
         </section>
+
+        <FaqSection locale={locale} />
 
         <section className="editorial-bottom-cta">
           <div>
