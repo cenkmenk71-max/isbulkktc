@@ -10675,8 +10675,12 @@ main :where(p) {
   animation: consent-card-in 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 @keyframes consent-card-in {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  /* Deliberately no opacity fade: a partly transparent card measures its text
+     against the page behind it, which drops the labels below the contrast floor
+     for the length of the animation (and made the axe audit timing-dependent).
+     The card slides in fully opaque instead. */
+  from { transform: translateY(12px); }
+  to { transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
   .consent-card { animation: none; }

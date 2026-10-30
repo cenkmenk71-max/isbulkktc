@@ -66,6 +66,26 @@ for (const locale of locales) {
         // Animated hero scenes settle late; auditing mid-animation produces
         // transient contrast findings that are not real.
         await page.waitForTimeout(600);
+        // The consent card is a client component, so it mounts only after
+        // hydration and then plays a short entrance animation. If that animation
+        // is still running, axe measures the card's text at partial opacity and
+        // reports a color-contrast violation that no settled user ever sees.
+        // Wait for finite animations to finish (bounded, and ignoring looping
+        // ones such as the hero rays) so the audit reflects the resting state.
+        await page
+          .waitForFunction(
+            () =>
+              document
+                .getAnimations()
+                .filter((animation) => animation.playState === "running")
+                .every((animation) => {
+                  const timing = animation.effect?.getComputedTiming?.();
+                  return timing?.iterations === Infinity;
+                }),
+            undefined,
+            { timeout: 3000 },
+          )
+          .catch(() => {});
 
         const results = await new AxeBuilder({ page })
           // wcag22aa adds the 2.2 success criteria axe can automate, notably

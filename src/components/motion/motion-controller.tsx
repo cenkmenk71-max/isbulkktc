@@ -45,6 +45,12 @@ export function MotionController() {
     let cleanup: (() => void) | undefined;
     let cancelled = false;
 
+    // The OS setting can change while the page is open (and the accessibility
+    // suite toggles it mid-test). Watch the query so the layer tears itself down
+    // the moment motion is disallowed, instead of leaving the tilt's inline
+    // transform on the cards.
+    const reduceQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
     // Loaded lazily so GSAP/Lenis never enter the initial JS graph and cannot
     // delay first paint on a route that only needs a static document.
     (async () => {
@@ -84,8 +90,8 @@ export function MotionController() {
         const context = gsap.context(() => {
           revealOnScroll(gsap, ScrollTrigger);
           animateHero(gsap);
-          addCardTilt(gsap);
         });
+        const removeTilt = addCardTilt(gsap);
 
         // A disclosure that mounts new `[data-reveal]` elements after load (the
         // sector explorer panel) announces itself; re-scan and animate whatever
@@ -97,12 +103,31 @@ export function MotionController() {
 
         cleanup = () => {
           window.removeEventListener("isbulkktc:motion-refresh", onRefresh);
+          removeTilt();
           context.revert();
           gsap.ticker.remove(raf);
           lenis.destroy();
           ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
           document.documentElement.classList.remove("motion-ready");
         };
+
+        const onReduceChange = () => {
+          if (!reduceQuery.matches) return;
+          cleanup?.();
+          cleanup = undefined;
+        };
+        reduceQuery.addEventListener("change", onReduceChange);
+        const removeReduceListener = () =>
+          reduceQuery.removeEventListener("change", onReduceChange);
+
+        const teardown = cleanup;
+        cleanup = () => {
+          removeReduceListener();
+          teardown?.();
+        };
+
+        // The query may have flipped to `reduce` while the modules were loading.
+        onReduceChange();
       } catch {
         document.documentElement.classList.remove("motion-ready");
       }
@@ -241,16 +266,25 @@ function animateHero(gsap: Gsap) {
 }
 
 /** Subtle pointer-tracked lift on cards, the React-Bits style "tilt". */
-function addCardTilt(gsap: Gsap) {
+function addCardTilt(gsap: Gsap): () => void {
   const cards = gsap.utils.toArray<HTMLElement>("[data-tilt]");
-  if (cards.length === 0) return;
-  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+  if (cards.length === 0) return () => {};
+  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    return () => {};
+  }
+
+  const teardowns: Array<() => void> = [];
 
   for (const card of cards) {
     const setX = gsap.quickTo(card, "rotateY", { duration: 0.4, ease: "power2.out" });
     const setY = gsap.quickTo(card, "rotateX", { duration: 0.4, ease: "power2.out" });
-    gsap.set(card, { transformPerspective: 900 });
 
+    const onEnter = () => {
+      // Perspective is only applied while the pointer is over the card. Writing
+      // it up front would leave an inline transform on every tilt target, which
+      // creates a stacking context and a compositor layer for each one.
+      gsap.set(card, { transformPerspective: 900 });
+    };
     const onMove = (event: PointerEvent) => {
       const rect = card.getBoundingClientRect();
       const px = (event.clientX - rect.left) / rect.width - 0.5;
@@ -261,9 +295,22 @@ function addCardTilt(gsap: Gsap) {
     const onLeave = () => {
       setX(0);
       setY(0);
+      gsap.set(card, { clearProps: "transform" });
     };
 
+    card.addEventListener("pointerenter", onEnter);
     card.addEventListener("pointermove", onMove);
     card.addEventListener("pointerleave", onLeave);
+    teardowns.push(() => {
+      card.removeEventListener("pointerenter", onEnter);
+      card.removeEventListener("pointermove", onMove);
+      card.removeEventListener("pointerleave", onLeave);
+      gsap.set(card, { clearProps: "transform" });
+    });
   }
+
+  // The listeners are plain DOM handlers, so `gsap.context.revert()` cannot undo
+  // them; the caller must invoke this on teardown or a later hover would write
+  // the transform straight back after the layer was supposed to be off.
+  return () => teardowns.forEach((fn) => fn());
 }

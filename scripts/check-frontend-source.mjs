@@ -779,6 +779,34 @@ assert.match(
   /prefers-reduced-motion:\s*reduce/,
   "the motion layer must opt out under prefers-reduced-motion",
 );
+// The preference can flip while the page is open. If the layer only checks it
+// at mount, a later switch to `reduce` leaves the tilt's inline transform on
+// the cards, which is both an a11y regression and what broke home.spec.ts.
+assert.match(
+  motionController,
+  /addEventListener\("change",\s*onReduceChange\)/,
+  "the motion layer must react to a runtime prefers-reduced-motion change",
+);
+assert.match(
+  motionController,
+  /clearProps:\s*"transform"/,
+  "the tilt must clear its inline transform on pointerleave/teardown",
+);
+// A partially transparent card measures its text against the page behind it,
+// which drops the consent labels below the contrast floor for the length of the
+// entrance animation. The slide-in must not animate opacity.
+const consentEntrance = css.match(
+  /@keyframes consent-card-in\s*\{[^}]*\}[^}]*\}/,
+)?.[0] ?? "";
+assert.ok(
+  consentEntrance,
+  "the consent card must keep a `consent-card-in` entrance animation",
+);
+assert.doesNotMatch(
+  consentEntrance,
+  /opacity\s*:/,
+  "the consent card entrance must not fade opacity: partial transparency breaks text contrast mid-animation",
+);
 assert.match(
   motionController,
   /REVEAL_SELECTOR\s*=\s*"\[data-reveal\]"/,
