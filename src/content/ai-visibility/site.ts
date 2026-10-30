@@ -33,17 +33,91 @@ export const regionNames: Record<AppLocale, string> = {
 };
 
 /**
- * The six districts the platform serves, in Turkish (the canonical values the
- * job data stores) plus the English names the district data already maps. Used
- * for `areaServed` so an answer engine can name a district, not just a country.
+ * The six districts the platform serves. `tr` is the canonical value the job
+ * data stores (the `northern_cyprus_district` enum and `JobPosting.jobLocation`
+ * both use it), so the organization graph names the same district the vacancy
+ * does — "Mağusa", never "Gazimağusa". `names` holds the label the interface
+ * shows in each language (the `HomeJobSearch.districts` catalog entries);
+ * `alternates` holds the other forms people search for, so an answer engine can
+ * match "Gazimağusa" or "Famagusta" without the canonical name drifting.
  */
-export const servedDistricts: ReadonlyArray<{ tr: string; en: string }> = [
-  { tr: "Lefkoşa", en: "Nicosia" },
-  { tr: "Gazimağusa", en: "Famagusta" },
-  { tr: "Girne", en: "Kyrenia" },
-  { tr: "Güzelyurt", en: "Morphou" },
-  { tr: "İskele", en: "Trikomo" },
-  { tr: "Lefke", en: "Lefka" },
+export const servedDistricts: ReadonlyArray<{
+  tr: string;
+  names: Record<AppLocale, string>;
+  alternates: readonly string[];
+}> = [
+  {
+    tr: "Lefkoşa",
+    names: {
+      tr: "Lefkoşa",
+      en: "Nicosia",
+      de: "Nikosia",
+      ru: "Никосия",
+      el: "Λευκωσία",
+      fa: "نیکوزیا",
+    },
+    alternates: ["Lefkosia", "Nicosia"],
+  },
+  {
+    tr: "Mağusa",
+    names: {
+      tr: "Mağusa",
+      en: "Famagusta",
+      de: "Famagusta",
+      ru: "Фамагуста",
+      el: "Αμμόχωστος",
+      fa: "فاماگوستا",
+    },
+    alternates: ["Gazimağusa", "Famagusta", "Ammochostos"],
+  },
+  {
+    tr: "Girne",
+    names: {
+      tr: "Girne",
+      en: "Kyrenia",
+      de: "Kyrenia",
+      ru: "Кирения",
+      el: "Κερύνεια",
+      fa: "گیرنه",
+    },
+    alternates: ["Kyrenia", "Keryneia"],
+  },
+  {
+    tr: "Güzelyurt",
+    names: {
+      tr: "Güzelyurt",
+      en: "Morphou",
+      de: "Morphou",
+      ru: "Морфу",
+      el: "Μόρφου",
+      fa: "مورفو",
+    },
+    alternates: ["Morphou", "Morfou"],
+  },
+  {
+    tr: "İskele",
+    names: {
+      tr: "İskele",
+      en: "Trikomo",
+      de: "Trikomo",
+      ru: "Трикомо",
+      el: "Τρίκωμο",
+      fa: "ترکومو",
+    },
+    alternates: ["Trikomo"],
+  },
+  {
+    tr: "Lefke",
+    names: {
+      tr: "Lefke",
+      en: "Lefka",
+      de: "Lefke",
+      ru: "Лефке",
+      el: "Λεύκα",
+      fa: "لفکه",
+    },
+    alternates: ["Lefka"],
+  },
 ];
 
 function socialUrl(value: string | undefined): string | null {

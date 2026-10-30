@@ -1,6 +1,6 @@
 import type { AppLocale } from "@/i18n/routing";
 import { routing } from "@/i18n/routing";
-import { faqByLocale } from "@/content/ai-visibility/faq";
+import { AI_VISIBILITY_UPDATED, faqByLocale } from "@/content/ai-visibility/faq";
 import {
   buildPostalAddress,
   getConfiguredSocialProfiles,
@@ -80,7 +80,7 @@ export function buildOrganizationGraph(baseUrl: URL) {
           ...servedDistricts.map((district) => ({
             "@type": "AdministrativeArea",
             name: district.tr,
-            alternateName: district.en,
+            alternateName: district.alternates,
             containedInPlace: {
               "@type": "Country",
               name: regionNames.tr,
@@ -105,6 +105,12 @@ export function buildOrganizationGraph(baseUrl: URL) {
  * The FAQ page graph for one locale. The questions and answers are authored per
  * language (see `faq.ts`), so each localized URL declares its own `inLanguage`
  * rather than reusing one language's text under six prefixes.
+ *
+ * `dateModified` is the FAQ copy's own authored date (`AI_VISIBILITY_UPDATED`),
+ * not the request time: these nodes are statically rendered and carry no
+ * per-listing data, so a build timestamp would claim an edit that never
+ * happened. `datePublished` is intentionally omitted — the copy was authored in
+ * one pass and the site does not record a separate first-publication date.
  */
 export function buildFaqPageStructuredData({
   locale,
@@ -127,6 +133,7 @@ export function buildFaqPageStructuredData({
     "@id": `${pageUrl}#faq`,
     url: pageUrl,
     inLanguage: locale,
+    dateModified: AI_VISIBILITY_UPDATED,
     mainEntity: faqByLocale[locale].map((entry) => ({
       "@type": "Question",
       name: entry.question,
