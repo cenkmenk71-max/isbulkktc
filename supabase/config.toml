@@ -14,7 +14,7 @@ major_version = 17
 
 [db.seed]
 enabled = true
-sql_paths = ["./seed.sql", "./seed-source-jobs.sql"]
+sql_paths = ["./seed.sql", "./seed-source-jobs.sql", "./seed-managed-content.sql"]
 
 [studio]
 enabled = true
@@ -34,6 +34,23 @@ jwt_expiry = 3600
 # rules, which the hosted project enables in the Auth dashboard.
 minimum_password_length = 8
 password_requirements = ""
+
+[auth.mfa]
+# The platform-admin console is gated on `aal2` (`has_platform_role` reads the
+# `aal` claim), so TOTP must be enrollable or the gate can never be satisfied.
+# The hosted project already runs with `mfa_totp_enroll_enabled = true`; without
+# this block the local stack and CI default to `false`, which made every admin
+# MFA flow — and therefore the whole console — untestable outside production.
+max_enrolled_factors = 10
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+[auth.mfa.phone]
+enroll_enabled = false
+verify_enabled = false
+[auth.mfa.web_authn]
+enroll_enabled = false
+verify_enabled = false
 
 [auth.rate_limit]
 # Bounds password-reset and signup-confirmation mail so the local stack mirrors

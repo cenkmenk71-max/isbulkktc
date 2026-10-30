@@ -91,11 +91,15 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+          # Throwaway id so tests/e2e/analytics.spec.ts exercises the consent
+          # gate in CI instead of skipping. Not a real property.
+          NEXT_PUBLIC_GA_MEASUREMENT_ID: "G-CITEST0000"
 
       - name: End-to-end tests against seeded Supabase
         run: bun run test:e2e
         env:
           NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_GA_MEASUREMENT_ID: "G-CITEST0000"
 
       - name: Stop local Supabase stack
         if: always() && steps.supabase_cli.outcome == 'success' && steps.supabase_start.outcome != 'skipped'

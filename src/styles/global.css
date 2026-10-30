@@ -7831,6 +7831,46 @@ main :where(p) {
   font-size: 12px;
   line-height: 1.7;
 }
+.admin-content-form textarea {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.admin-content-form input[name="sections"],
+.admin-content-form input[name="features"] {
+  display: none;
+}
+.admin-content-hint {
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 450;
+  line-height: 1.6;
+}
+.admin-content-empty {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px dashed var(--color-vanadium-300);
+  border-radius: 12px;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.admin-content-delete {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.admin-content-footnote {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 .admin-mfa-gate {
   width: min(100%, 700px);
   justify-self: center;

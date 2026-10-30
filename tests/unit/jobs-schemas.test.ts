@@ -300,6 +300,7 @@ test("public job RPC results are validated as narrow listing DTOs", () => {
     district: "Lefkoşa",
     published_at: "2026-10-20T12:00:00+00:00",
     expires_at: "2026-11-20T12:00:00+00:00",
+    modified_at: "2026-10-22T09:30:00+00:00",
     publication_source: "platform",
     source_site: null,
     source_listing_url: null,

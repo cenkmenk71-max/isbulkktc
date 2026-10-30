@@ -61,7 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       `/jobs/${job.slug}`,
       baseUrl,
     ).toString(),
-    lastModified: job.publishedAt,
+    lastModified: job.modifiedAt,
     changeFrequency: "daily" as const,
     priority: 0.8,
   }));

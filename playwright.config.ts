@@ -1,4 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
+import nextEnv from "@next/env";
+
+// The test process reads the app's env files itself: `npm run test:e2e` does not
+// export them, so `SUPABASE_SERVICE_ROLE_KEY` stayed empty and the console spec
+// skipped itself locally. CI already exports the values, and loadEnvConfig never
+// overrides a variable that is already set.
+nextEnv.loadEnvConfig(process.cwd(), process.env.NODE_ENV !== "production", {
+  info: () => {},
+  error: () => {},
+});
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 const port = new URL(baseURL).port || "3000";

@@ -70,6 +70,24 @@ belirler; dağıtım URL'si kaynak koda sabitlenmez. E-posta doğrulama bağlant
 ödeme, AI, Bakanlık API'si, sosyal giriş ve CV/dekont upload/indirme, işletme
 politikaları ve güvenli operasyon onaylanana kadar devre dışıdır.
 
+## Analitik (Google Analytics)
+
+GA4 ölçümü kod tarafında hazırdır (`GoogleAnalyticsConsent`) ve yalnızca
+`NEXT_PUBLIC_GA_MEASUREMENT_ID` ortam değişkeni tanımlıysa **ve** ziyaretçi çerez
+onayını verdiyse yüklenir. Üretimde etiket görünmüyorsa değişken tanımlı
+değildir; ekleyip **yeniden dağıtmanız** gerekir (`NEXT_PUBLIC_*` derleme anında
+koda gömülür). Adım adım kurulum, doğrulama ve sorun giderme:
+[analitik runbook'u](docs/runbooks/analytics.md).
+
+## Kaynak ilan kataloğu ve sitemap
+
+Zamanlanmış `refresh-source-jobs` workflow'u kaynak ilanları çeker ama varsayılan
+olarak **en yeni 21 ilanı** yayınlar (`SOURCE_JOB_LIMIT`, repo değişkeni). Sitemap
+yayınlanan kataloğu listeler; sayı düşükse bu bir hata değildir. Limiti
+yükseltmek için kod değişikliği gerekmez: GitHub → Settings → Variables →
+`SOURCE_JOB_LIMIT`. Ayrıntı ve indeksleme kontrol listesi:
+[kaynak ilan kataloğu runbook'u](docs/runbooks/source-job-catalogue.md).
+
 VS Code/Copilot workspace talimatları, beceriler, Context7 MCP, önerilen
 eklentiler ve proje kapsamındaki D: araç kurulumu için
 [geliştirici araçları rehberine](docs/developer-tooling.md) bakın.

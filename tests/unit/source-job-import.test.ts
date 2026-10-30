@@ -10,8 +10,10 @@ import {
   normalizeSourceJobType,
   normalizeSourceWorkplaceMode,
   resolveEmployerLogoUrl,
+  resolveSourceModifiedAt,
   selectDiverseSourceJobs,
   slugifySourceText,
+  sourceJobContentHash,
   summarizeSourceText,
   type SourceJobRecord,
 } from "../../src/features/jobs/source-job-import";
@@ -185,6 +187,7 @@ function sourceJob(overrides: {
   company: string;
   sector: string | null;
   jobType?: string;
+  sourceUpdatedAt?: string | null;
 }): SourceJobRecord {
   return {
     source: "iskibris",
@@ -200,6 +203,7 @@ function sourceJob(overrides: {
     district: null,
     publishedAt: overrides.publishedAt,
     expiresAt: "2026-12-31T00:00:00.000Z",
+    sourceUpdatedAt: overrides.sourceUpdatedAt ?? null,
     employer: {
       name: overrides.company,
       slug: overrides.company,
@@ -249,4 +253,68 @@ test("selectDiverseSourceJobs returns everything when the limit exceeds the cata
   ];
   assert.equal(selectDiverseSourceJobs(jobs, 21).length, 2);
   assert.equal(selectDiverseSourceJobs(jobs, 0).length, 0);
+});
+
+test("resolveSourceModifiedAt clamps a modification that precedes publication", () => {
+  const published = "2026-10-20T12:00:00.000Z";
+  // The source clock can lag its own publication instant; the result must never
+  // look like the listing changed before it was posted.
+  assert.equal(
+    resolveSourceModifiedAt("2026-10-19T08:00:00.000Z", published),
+    published,
+  );
+  assert.equal(
+    resolveSourceModifiedAt("2026-10-22T09:30:00.000Z", published),
+    "2026-10-22T09:30:00.000Z",
+  );
+});
+
+test("resolveSourceModifiedAt reports unknown instead of inventing a date", () => {
+  const published = "2026-10-20T12:00:00.000Z";
+  assert.equal(resolveSourceModifiedAt(null, published), null);
+  assert.equal(resolveSourceModifiedAt(undefined, published), null);
+  assert.equal(resolveSourceModifiedAt("", published), null);
+  assert.equal(resolveSourceModifiedAt("   ", published), null);
+  assert.equal(resolveSourceModifiedAt("not-a-date", published), null);
+  // A non-string payload must not be coerced into a bogus timestamp.
+  assert.equal(resolveSourceModifiedAt(1_760_000_000_000, published), null);
+});
+
+test("sourceJobContentHash is stable and change-sensitive", () => {
+  const base = {
+    title: "Garson",
+    summary: "Restoranımızda görev alacak takım arkadaşı arıyoruz.",
+    description: "Ayrıntılar kaynak ilanda listelenmektedir.",
+    requirements: "",
+    responsibilities: "",
+    jobType: "full_time",
+    workplaceMode: "on_site",
+    district: "Girne" as string | null,
+    expiresAt: "2026-12-31T00:00:00.000Z",
+    employerName: "Örnek Restoran",
+  };
+
+  const hash = sourceJobContentHash(base);
+  // A stable, 64-char sha256 so it fits the column's check constraint.
+  assert.match(hash, /^[0-9a-f]{64}$/);
+  assert.equal(sourceJobContentHash({ ...base }), hash, "same content -> same hash");
+
+  // Every reader-visible field must move the hash, otherwise a real edit would
+  // go unnoticed and the listing's date would never advance.
+  for (const patch of [
+    { title: "Garson (gece)" },
+    { summary: "Yeni özet" },
+    { description: "Yeni açıklama" },
+    { jobType: "part_time" },
+    { workplaceMode: "hybrid" },
+    { district: "Mağusa" },
+    { expiresAt: "2027-01-31T00:00:00.000Z" },
+    { employerName: "Başka Restoran" },
+  ]) {
+    assert.notEqual(
+      sourceJobContentHash({ ...base, ...patch }),
+      hash,
+      `changing ${Object.keys(patch)[0]} must change the hash`,
+    );
+  }
 });

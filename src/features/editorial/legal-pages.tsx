@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
 import { ManageConsentButton } from "./manage-consent-button";
+import { getManagedLegalDocument } from "@/server/dal/content";
 
 export type LegalPageKey = "privacy" | "cookies" | "terms";
 
@@ -99,11 +100,31 @@ export async function LegalPageContent({
 }) {
   const t = await getTranslations({ locale, namespace: "Legal" });
   const Icon = legalIcons[page];
-  const document: Document = {
-    title: t(`${page}.title` as never),
-    intro: t(`${page}.intro` as never),
-    updated: t(`${page}.updated` as never),
-  };
+  const managed = await getManagedLegalDocument(locale, page);
+  const document: Document = managed
+    ? {
+        title: managed.title,
+        intro: managed.intro,
+        updated: managed.updated,
+      }
+    : {
+        title: t(`${page}.title` as never),
+        intro: t(`${page}.intro` as never),
+        updated: t(`${page}.updated` as never),
+      };
+  const sections = managed
+    ? managed.sections.map((section, index) => ({
+        key: `${page}.managed.${index}`,
+        title: section.title,
+        paragraphs: section.paragraphs,
+      }))
+    : documentSections[page].map((section) => ({
+        key: section.key,
+        title: t(section.title as never),
+        paragraphs: section.paragraphs.map((paragraph) =>
+          t(paragraph as never),
+        ),
+      }));
 
   return (
     <div className="editorial-page legal-page">
@@ -128,16 +149,16 @@ export async function LegalPageContent({
         </header>
 
         <div className="editorial-page-content legal-page-content">
-          {documentSections[page].map((section, index) => (
+          {sections.map((section, index) => (
             <section className="legal-section" key={section.key}>
               <h2>
                 <span aria-hidden="true">
                   {String(index + 1).padStart(2, "0")}
                 </span>
-                {t(section.title as never)}
+                {section.title}
               </h2>
               {section.paragraphs.map((paragraph) => (
-                <p key={paragraph}>{t(paragraph as never)}</p>
+                <p key={paragraph}>{paragraph}</p>
               ))}
             </section>
           ))}
