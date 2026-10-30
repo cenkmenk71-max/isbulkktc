@@ -552,6 +552,45 @@ test("templates keep the GoTrue variables GoTrue substitutes", () => {
   }
 });
 
+test("every actionable template builds its link from .ConfirmationURL", () => {
+  // `.ConfirmationURL` is the only variable that carries the request's
+  // `redirect_to`. A hand-built `{{ .SiteURL }}/auth/callback?token_hash=...`
+  // looks equivalent but drops `redirect_to`, and the callback then falls back
+  // to the default destination — so a password reset would land on the home
+  // page instead of the new-password form. Nothing else asserts this.
+  const actionable = [
+    "confirmation.html",
+    "recovery.html",
+    "invite.html",
+    "magic_link.html",
+    "email_change.html",
+  ];
+
+  for (const file of actionable) {
+    const source = readTemplate(file);
+    const hrefs = [...source.matchAll(/href="([^"]*)"/g)].map((match) => match[1]);
+    const actionHrefs = hrefs.filter((href) => href !== "{{ .SiteURL }}");
+
+    assert.ok(actionHrefs.length > 0, `${file} has no action link`);
+    for (const href of actionHrefs) {
+      assert.equal(
+        href,
+        "{{ .ConfirmationURL }}",
+        `${file} builds an action link from "${href}"; use {{ .ConfirmationURL }} ` +
+          "so the request's redirect_to survives",
+      );
+    }
+
+    // A raw token is never put in a URL by hand — GoTrue's verify endpoint owns
+    // that, and doing it here is how redirect_to gets lost.
+    assert.doesNotMatch(
+      source,
+      /token_hash=|\{\{\s*\.TokenHash\s*\}\}/,
+      `${file} hand-builds a verify URL instead of using {{ .ConfirmationURL }}`,
+    );
+  }
+});
+
 test("every link in a rendered email is an absolute https URL", () => {
   for (const file of templateFiles) {
     for (const locale of locales) {
