@@ -124,6 +124,121 @@ function truthy(value: Value): boolean {
   return Object.keys(value).length > 0;
 }
 
+/** WCAG 2.x relative-luminance contrast ratio between two `#rrggbb` colours. */
+function contrastRatio(foreground: string, background: string): number {
+  const luminance = (colour: string): number => {
+    const channels = [1, 3, 5].map((offset) => {
+      const value = parseInt(colour.slice(offset, offset + 2), 16) / 255;
+      return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  };
+
+  const first = luminance(foreground);
+  const second = luminance(background);
+  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+}
+
+/** First `#rrggbb` in a CSS value, so `background: #fff url(...)` still resolves. */
+function hexOf(value: string): string | null {
+  return /#[0-9a-f]{6}\b/i.exec(value.toLowerCase())?.[0] ?? null;
+}
+
+function styleRules(html: string): Map<string, Record<string, string>> {
+  const block = /<style>([\s\S]*?)<\/style>/.exec(html)?.[1] ?? "";
+  const rules = new Map<string, Record<string, string>>();
+
+  for (const [, selector, body] of block.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const declarations: Record<string, string> = {};
+    for (const declaration of body.split(";")) {
+      const colon = declaration.indexOf(":");
+      if (colon < 0) continue;
+      const property = declaration.slice(0, colon).trim().toLowerCase();
+      declarations[property] = declaration
+        .slice(colon + 1)
+        .replace(/!important/gi, "")
+        .trim();
+    }
+    rules.set(selector.trim(), declarations);
+  }
+
+  return rules;
+}
+
+interface StyledNode {
+  tag: string;
+  classes: string[];
+  ancestors: string[];
+  parent: number;
+  background: string | null;
+  colour: string | null;
+}
+
+const voidTags = new Set([
+  "area", "base", "br", "col", "embed", "hr", "img", "input",
+  "link", "meta", "source", "track", "wbr",
+]);
+
+/**
+ * Flattens the rendered markup into nodes that remember their ancestor classes,
+ * which is enough to resolve the single-level descendant selectors the templates
+ * use. The cascade is then applied by document order, so a parent's colour or
+ * background is inherited exactly as a mail client would.
+ */
+function styledNodes(html: string): StyledNode[] {
+  const rules = styleRules(html);
+  const nodes: StyledNode[] = [];
+  const open: number[] = [];
+  const classRe = /class\s*=\s*"([^"]*)"/;
+  const tagRe = /<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g;
+
+  const ruleValue = (node: StyledNode, property: string): string | null => {
+    let match: { depth: number; value: string } | null = null;
+    for (const [selector, declarations] of rules) {
+      const value = declarations[property];
+      if (!value) continue;
+      const parts = selector.split(/\s+/);
+      const target = parts[parts.length - 1];
+      if (!target.startsWith(".") || !node.classes.includes(target.slice(1))) continue;
+      const required = parts.slice(0, -1).map((part) => part.replace(/^\./, ""));
+      if (!required.every((name) => node.ancestors.includes(name))) continue;
+      if (!match || parts.length >= match.depth) match = { depth: parts.length, value };
+    }
+    return match?.value ?? null;
+  };
+
+  let tag: RegExpExecArray | null;
+  while ((tag = tagRe.exec(html))) {
+    const [, closing, name, attributes] = tag;
+    if (closing) {
+      open.pop();
+      continue;
+    }
+
+    const parent = open.length > 0 ? open[open.length - 1] : -1;
+    const node: StyledNode = {
+      tag: name.toLowerCase(),
+      classes: (classRe.exec(attributes)?.[1] ?? "").split(/\s+/).filter(Boolean),
+      ancestors: parent < 0 ? [] : [...nodes[parent].ancestors, ...nodes[parent].classes],
+      parent,
+      background: null,
+      colour: null,
+    };
+
+    const inherited = parent < 0 ? null : nodes[parent];
+    const declared =
+      hexOf(ruleValue(node, "background-color") ?? "") ??
+      hexOf(ruleValue(node, "background") ?? "");
+    node.background = declared ?? inherited?.background ?? null;
+    node.colour = hexOf(ruleValue(node, "color") ?? "") ?? inherited?.colour ?? null;
+
+    nodes.push(node);
+    if (!voidTags.has(node.tag)) open.push(nodes.length - 1);
+  }
+
+  return nodes;
+}
+
 const fixedArity: Record<string, number> = { eq: 2, ne: 2, not: 1 };
 const variadic = new Set(["and", "or"]);
 
@@ -485,6 +600,62 @@ test("the verification-code email labels the code for screen readers", () => {
   assert.match(html, /class="code-label"/);
   assert.match(html, /482913/);
   assert.doesNotMatch(html, /\{\{\s*\.Token\s*\}\}/);
+});
+
+test("every template shares one stylesheet", () => {
+  const stylesheets = new Map<string, string>();
+  for (const name of readdirSync(templateDirectory)) {
+    const html = readTemplate(name);
+    const style = /<style>([\s\S]*?)<\/style>/.exec(html)?.[1];
+    assert.ok(style, `${name} has no <style> block`);
+    stylesheets.set(
+      name,
+      style
+        .split("\n")
+        .map((line) => line.trim())
+        .join("\n"),
+    );
+  }
+
+  const [first, ...rest] = [...stylesheets];
+  for (const [name, style] of rest) {
+    assert.equal(
+      style,
+      first[1],
+      `${name} has drifted from ${first[0]}; keep one stylesheet so the palette and ` +
+        "the contrast floors stay true for every email",
+    );
+  }
+});
+
+test("every text node in a rendered email clears the WCAG contrast floor", () => {
+  // 3.0 for the 22px header and the 14px semibold button (large text), the 4.5
+  // floor for everything else. Measuring the rendered tree means the assertion
+  // tracks the template's own stylesheet instead of a copy of the palette.
+  const large = new Set(["h1", "button"]);
+
+  for (const name of readdirSync(templateDirectory)) {
+    const html = renderFor(readTemplate(name), "en");
+    const nodes = styledNodes(html);
+
+    const textNodes = nodes.filter(
+      (node) =>
+        !["style", "title", "script", "head", "meta", "link"].includes(node.tag) &&
+        node.colour &&
+        node.background,
+    );
+    assert.ok(textNodes.length > 0, `${name} produced no measurable text nodes`);
+
+    for (const node of textNodes) {
+      const floor = large.has(node.tag) ? 3.0 : 4.5;
+      const ratio = contrastRatio(node.colour!, node.background!);
+      assert.ok(
+        ratio >= floor,
+        `${name}: <${node.tag} class="${node.classes.join(" ")}"> has ${node.colour} on ` +
+          `${node.background} = ${ratio.toFixed(2)}, below the ${floor} floor`,
+      );
+    }
+  }
 });
 
 // ---------------------------------------------------------------------------
