@@ -122,6 +122,41 @@ test("resolveEmployerLogoUrl only allows approved hosts", () => {
   assert.equal(resolveEmployerLogoUrl(null, "https://www.iskibris.com"), null);
 });
 
+test("resolveEmployerLogoUrl mirrors the companies.logo_url check constraint", () => {
+  // Query strings and hashes are rejected by the constraint, so they must be
+  // stripped rather than passed through.
+  assert.equal(
+    resolveEmployerLogoUrl(
+      "/api/employer/logo/2fbccd9f-9949-4297-bdcc-a951f0a759a3?w=100#x",
+      "https://api.isbulkibris.com",
+    ),
+    "https://api.isbulkibris.com/api/employer/logo/2fbccd9f-9949-4297-bdcc-a951f0a759a3",
+  );
+  assert.equal(
+    resolveEmployerLogoUrl(
+      "https://innovia-iskibris.s3.eu-west-2.amazonaws.com/49419_635fd4d64828e-thumb@2.png?v=3",
+      "https://www.iskibris.com",
+    ),
+    "https://innovia-iskibris.s3.eu-west-2.amazonaws.com/49419_635fd4d64828e.png",
+  );
+  // Paths outside the two accepted shapes would fail the constraint.
+  assert.equal(
+    resolveEmployerLogoUrl("/api/employer/logo/not-a-uuid", "https://api.isbulkibris.com"),
+    null,
+  );
+  assert.equal(
+    resolveEmployerLogoUrl("/branding/logo.svg", "https://www.iskibris.com"),
+    null,
+  );
+  assert.equal(
+    resolveEmployerLogoUrl(
+      "https://innovia-iskibris.s3.eu-west-2.amazonaws.com/49419_635fd4d64828e.gif",
+      "https://www.iskibris.com",
+    ),
+    null,
+  );
+});
+
 test("normalizeHttpsUrl rejects masked and insecure URLs", () => {
   assert.equal(normalizeHttpsUrl("https://www.fikrico.com"), "https://www.fikrico.com/");
   assert.equal(normalizeHttpsUrl("ww*******************om"), null);

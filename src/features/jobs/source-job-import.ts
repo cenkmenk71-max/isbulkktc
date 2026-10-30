@@ -223,6 +223,11 @@ export function normalizeHttpsUrl(value: unknown): string | null {
   }
 }
 
+const isbulkibrisLogoPattern =
+  /^\/api\/employer\/logo\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const iskibrisLogoPattern =
+  /^\/[0-9]+_[0-9a-f]+(?:-thumb@[0-9]+)?\.(?:png|jpg|webp)$/i;
+
 export function resolveEmployerLogoUrl(
   value: unknown,
   origin: string,
@@ -236,6 +241,16 @@ export function resolveEmployerLogoUrl(
       url.hostname === "innovia-iskibris.s3.eu-west-2.amazonaws.com";
     if (!supportedHost) return null;
     url.pathname = url.pathname.replace(/-thumb(?:@\d+)?(?=\.[^.]+$)/i, "");
+    // The companies.logo_url check constraint rejects query strings and paths
+    // outside the two source CDNs, so mirror it here and drop anything else
+    // rather than letting a whole import batch fail on one bad logo.
+    const pattern =
+      url.hostname === "api.isbulkibris.com"
+        ? isbulkibrisLogoPattern
+        : iskibrisLogoPattern;
+    if (!pattern.test(url.pathname)) return null;
+    url.search = "";
+    url.hash = "";
     return url.toString();
   } catch {
     return null;
