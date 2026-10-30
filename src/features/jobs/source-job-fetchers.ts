@@ -233,7 +233,8 @@ function toIskibrisRecord(
   const title = detail.title?.trim() ?? "";
   const companyName = (detail.company?.name ?? detail.company_name ?? "").trim();
   const jobType = normalizeSourceJobType(detail.employment_name);
-  if (!title || !companyName || !jobType) return null;
+  const companyId = detail.company_id ?? detail.company?.id ?? null;
+  if (!title || !companyName || !jobType || companyId === null) return null;
 
   const record = {
     publishedAt: publishedAt.toISOString(),
@@ -265,7 +266,7 @@ function toIskibrisRecord(
     municipality: normalizeSourceDistrict(
       detail.company?.headquarter_place_name ?? detail.place_name ?? detail.city_name,
     ),
-    sourceProfileUrl: `https://www.iskibris.com/companies/${detail.company_id ?? detail.company?.id ?? ""}`,
+    sourceProfileUrl: `https://www.iskibris.com/companies/${companyId}`,
     logoUrl: resolveEmployerLogoUrl(
       detail.company?.logo ?? detail.company_logo,
       "https://www.iskibris.com",
