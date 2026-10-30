@@ -36,10 +36,10 @@ async function readKey() {
   return key;
 }
 
-async function readSitemapUrls(origin) {
-  const response = await fetch(new URL("/sitemap.xml", origin));
+async function readSitemapUrls(sourceOrigin) {
+  const response = await fetch(new URL("/sitemap.xml", sourceOrigin));
   if (!response.ok) {
-    throw new Error(`Sitemap responded ${response.status}.`);
+    throw new Error(`Sitemap responded ${response.status} from ${sourceOrigin}.`);
   }
   const xml = await response.text();
   return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
@@ -47,8 +47,16 @@ async function readSitemapUrls(origin) {
 
 async function main() {
   const origin = new URL(process.argv[2] ?? "https://isbulkktc.com");
+  // The public hostname sits behind Cloudflare, whose bot protection answers a
+  // managed challenge to datacenter egress such as GitHub's runners. The Vercel
+  // deployment alias serves the same build — and therefore the same sitemap and
+  // key file — without that challenge, so a scheduler can read them from there
+  // while the submitted URLs stay on the canonical host.
+  const sourceOrigin = new URL(
+    process.env.INDEXNOW_SITEMAP_ORIGIN ?? origin,
+  );
   const key = await readKey();
-  const urlList = await readSitemapUrls(origin);
+  const urlList = await readSitemapUrls(sourceOrigin);
 
   if (urlList.length === 0) {
     throw new Error("The sitemap advertised no URLs.");

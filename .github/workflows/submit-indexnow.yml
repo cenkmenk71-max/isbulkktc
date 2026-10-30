@@ -33,4 +33,10 @@ jobs:
           node-version: 22
 
       - name: Submit the live sitemap
+        env:
+          # Read the sitemap from the Vercel deployment alias: the canonical host
+          # is behind Cloudflare, whose bot protection challenges datacenter
+          # egress (including GitHub runners). The submitted URLs remain on
+          # isbulkktc.com because the sitemap advertises the canonical origin.
+          INDEXNOW_SITEMAP_ORIGIN: https://isbulkktc-amber.vercel.app
         run: node scripts/submit-indexnow.mjs https://isbulkktc.com
