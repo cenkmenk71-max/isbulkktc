@@ -6,9 +6,12 @@ name: Prune Vercel deployments
 # always preserving the live production deployment, recent rollback history and
 # recent preview builds.
 #
-# It needs one repository secret, VERCEL_TOKEN (a token that can read the team
-# and delete deployments). Until that secret exists the job stays green and
-# emits a warning annotation instead of failing every night.
+# It needs one repository secret holding a token that can read the team and
+# delete deployments. Both the descriptive name VERCEL_TOKEN and the short
+# VERCEL alias are accepted, so it works whichever name the secret was created
+# under (the same pattern refresh-source-jobs.yml uses for the Supabase key).
+# Until the secret exists the job stays green and emits a warning annotation
+# instead of failing every six hours.
 on:
   schedule:
     # Every six hours. A single daily run is not enough: active branches can
@@ -49,13 +52,13 @@ jobs:
       - name: Check configuration
         id: config
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || secrets.VERCEL }}
         run: |
           if [ -n "${VERCEL_TOKEN:-}" ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=Vercel prune not configured::Add the VERCEL_TOKEN repository secret (Settings > Secrets and variables > Actions > Secrets) to enable scheduled deployment cleanup. Skipping this run."
+            echo "::warning title=Vercel prune not configured::Add a VERCEL_TOKEN repository secret (Settings > Secrets and variables > Actions > Secrets) to enable scheduled deployment cleanup. Skipping this run."
           fi
 
       - name: Check out source
@@ -72,7 +75,7 @@ jobs:
       - name: Prune deployments
         if: steps.config.outputs.configured == 'true'
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || secrets.VERCEL }}
           VERCEL_TEAM_SLUG: ${{ vars.VERCEL_TEAM_SLUG || 'orijin1' }}
           VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
           VERCEL_PROJECT: ${{ vars.VERCEL_PROJECT || 'isbulkktc' }}
