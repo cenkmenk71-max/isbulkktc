@@ -814,3 +814,70 @@ test("the templates the app relies on are all wired in config.toml", () => {
     assert.ok(wired.has(name), `auth.email.template.${name} is missing from config.toml`);
   }
 });
+
+// ---------------------------------------------------------------------------
+// Subjects are Go templates too: GoTrue renders the subject through the same
+// engine, with the same `.Data`. A Turkish-only subject undoes the localized
+// body, so pin the same six-locale contract here.
+// ---------------------------------------------------------------------------
+
+/** Reads the `subject = "…"` value of a `[section]`, TOML-unescaping `\"`. */
+function subjectFor(config: string, section: string): string | null {
+  const escaped = section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `^\\[${escaped}\\]\\s*\\n(?:[^\\n]*\\n)*?subject\\s*=\\s*"((?:[^"\\\\]|\\\\.)*)"`,
+    "m",
+  );
+  const match = config.match(pattern);
+  return match ? match[1].replace(/\\"/g, '"') : null;
+}
+
+test("every auth mail subject is localized, never left Turkish-only", () => {
+  const config = readConfig();
+  const sections = [
+    ...sectionNames(config, "auth.email.template.").map((name) => [
+      `auth.email.template.${name}`,
+      name,
+    ]),
+    ...sectionNames(config, "auth.email.notification.").map((name) => [
+      `auth.email.notification.${name}`,
+      name,
+    ]),
+  ];
+
+  assert.ok(sections.length >= 6, "expected the auth mail sections to be present");
+
+  for (const [section] of sections) {
+    const subject = subjectFor(config, section);
+    assert.ok(subject, `${section} has no subject`);
+
+    const rendered: Record<string, string> = {};
+    for (const locale of locales) {
+      const value = renderFor(subject, locale);
+      assert.ok(
+        value.length > 0 && !value.includes("{{"),
+        `${section} subject did not render for ${locale}: ${value}`,
+      );
+      assert.ok(
+        value.includes("İşBul KKTC"),
+        `${section} subject for ${locale} lost the brand: ${value}`,
+      );
+      rendered[locale] = value;
+    }
+
+    // A subject that never changes is the Turkish string under every locale.
+    assert.ok(
+      new Set(locales.map((l) => rendered[l])).size >= 4,
+      `${section} subject is not localized: ${JSON.stringify(rendered)}`,
+    );
+
+    // Unknown or absent locale falls back to Turkish.
+    const fallback = renderFor(subject, "tr", { Data: {} });
+    assert.equal(
+      fallback,
+      rendered.tr,
+      `${section} subject must fall back to Turkish`,
+    );
+  }
+});
+
