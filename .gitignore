@@ -10,6 +10,10 @@ test-results/
 *.tsbuildinfo
 .env.local
 .vscode/
+# AI Studio exports the workspace into an `aistudio/` folder wherever it runs.
+# The bare name (not the root-anchored `.aistudio/`) also catches the copies
+# that land under `public/`, where they would otherwise be served as site assets.
+aistudio/
 .aistudio/
 supabase/.temp/
 supabase/.branches/

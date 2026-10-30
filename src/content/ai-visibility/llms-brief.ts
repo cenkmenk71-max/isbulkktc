@@ -42,13 +42,20 @@ function primaryPageLines(baseUrl: URL, locale: AppLocale): string {
     .join("\n");
 }
 
-function districtLine(): string {
+/**
+ * The district list for the brief. Every district is written with its Turkish
+ * canonical form (the value the job data stores) plus a second form an answer
+ * engine can match: the English name in the default-locale brief, or the
+ * brief's own language label in a localized section. Dropping the second form
+ * would leave an English "Famagusta" query with no string to match.
+ */
+function districtLine(locale: AppLocale): string {
+  const localized = locale !== routing.defaultLocale;
   return servedDistricts
-    .map((district) =>
-      district.en === district.tr
-        ? district.tr
-        : `${district.tr} (${district.en})`,
-    )
+    .map((district) => {
+      const label = localized ? district.names[locale] : district.names.en;
+      return label === district.tr ? district.tr : `${district.tr} (${label})`;
+    })
     .join(", ");
 }
 
@@ -64,6 +71,8 @@ function localeSection(baseUrl: URL, locale: AppLocale): string {
     `## ${locale} — ${name}`,
     "",
     siteSummaryByLocale[locale],
+    "",
+    `- Hizmet verilen ilçeler: ${districtLine(locale)}`,
     "",
     primaryPageLines(baseUrl, locale),
     "",
@@ -91,7 +100,7 @@ export function buildLlmsBrief(baseUrl: URL): string {
 ## Site özeti
 
 - Bölge: ${regionNames.tr} (KKTC)
-- Hizmet verilen ilçeler: ${districtLine()}
+- Hizmet verilen ilçeler: ${districtLine(routing.defaultLocale)}
 - Arayüz dilleri: ${localeNames} (varsayılan: ${routing.defaultLocale})
 - Para birimi: TRY (₺)
 - İlan verisi: platformun kendi ilanları ve kamuya açık kaynak işveren
@@ -146,7 +155,7 @@ export function buildLlmsFullBrief(baseUrl: URL): string {
 > yer alır. Bu dosya \`/llms.txt\` dosyasının tam sürümüdür.
 
 - Bölge: ${regionNames.tr} (KKTC)
-- Hizmet verilen ilçeler: ${districtLine()}
+- Hizmet verilen ilçeler: ${districtLine(routing.defaultLocale)}
 - Arayüz dilleri: ${routing.locales.join(", ")}
 - Son güncelleme: ${AI_VISIBILITY_UPDATED}
 - Site haritası: ${origin}/sitemap.xml
