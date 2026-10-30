@@ -28,7 +28,7 @@ dosya baytları ve adı/MIME alanı, dış API cevabı ve AI üretimi. Sahiplik,
 | Şirket ID'si ile IDOR | Şirket kaydı yalnız verified/aktif üye/özel admin kapsamıyla okunur | Başka şirket için sıfır sonuç veren RLS testi |
 | Başka şirket adına owner/member ekleme | Doğrudan SQL grant yok; owner ilk kez yalnız `create_company` transaction'ında kurulur | Hem tablo yazımı hem rol yükseltme testi |
 | Sahte şirket doğrulaması | Client `INSERT/UPDATE` grant'i yok; RPC yalnız pending şirket oluşturur | Doğrudan insert testte reddedilir |
-| Sahte profil rolü/durum değişikliği | Yalnız display_name/locale sütunlarına update grant'i | Rol/durum yazımı veritabanında izinli değil |
+| Sahte profil rolü/durum değişikliği | Yalnız display_name/locale sütunlarına update grant'i; `locale` kontrolü uygulamanın gerçekten yayımladığı altı dille sınırlı (`profiles_locale_check`) | Rol/durum yazımı veritabanında izinli değil; allowlist dışı locale reddi pgTAP |
 | OAuth sağlayıcı metadata'sıyla profil adı manipülasyonu | Auth trigger yalnızca doğrulanmış metadata alan adlarını seçer, kontrol karakterlerini temizler ve 80 karakterle sınırlar | Yeni kullanıcı metadata'sı için pozitif ve sınır testi pgTAP |
 | İstemcide secret/service-role sızıntısı | Yalnız public Supabase publishable anahtarı örneklenir | Dağıtım öncesi secret tarama kabul kapısı |
 | Kişisel dosya/izinsiz yükleme | Özel CV kovasında upload/download RLS politikası **yok** (varsayılan deny) | Negatif Storage testi; akış onaylanmadan açılmaz |

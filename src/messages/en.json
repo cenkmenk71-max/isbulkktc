@@ -593,10 +593,7 @@
     "notice": "Turkish, English, Russian, Greek, Persian and German interface translations are available."
   },
   "Analytics": {
-    "regionLabel": "Analytics preferences",
     "description": "We use cookies to improve your experience and keep the site secure. You can change your choices at any time.",
-    "accept": "Accept",
-    "reject": "Reject",
     "settings": "Analytics preferences",
     "policyLink": "Cookie policy",
     "title": "Cookie preferences",
@@ -613,7 +610,11 @@
     "savePreferences": "Save preferences",
     "acceptAll": "Accept all",
     "close": "Close",
-    "backToPreferences": "Back to preferences"
+    "backToPreferences": "Back to preferences",
+    "privacyLink": "Privacy policy",
+    "withdraw": "Withdraw consent",
+    "openFullPolicy": "Open the full policy",
+    "managePreferences": "Manage cookie preferences"
   },
   "HomePage": {
     "eyebrow": "NORTHERN CYPRUS EMPLOYMENT NETWORK",

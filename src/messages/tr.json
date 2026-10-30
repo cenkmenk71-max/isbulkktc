@@ -593,10 +593,7 @@
     "notice": "Türkçe, İngilizce, Rusça, Yunanca, Farsça ve Almanca arayüz çevirileri kullanılabilir."
   },
   "Analytics": {
-    "regionLabel": "Analitik tercihleri",
     "description": "Deneyiminizi geliştirmek ve siteyi güvenli çalıştırmak için çerezler kullanıyoruz. Tercihlerinizi dilediğiniz zaman değiştirebilirsiniz.",
-    "accept": "Kabul et",
-    "reject": "Reddet",
     "settings": "Analitik tercihleri",
     "policyLink": "Çerez politikası",
     "title": "Çerez tercihleri",
@@ -613,7 +610,11 @@
     "savePreferences": "Tercihleri kaydet",
     "acceptAll": "Tümünü kabul et",
     "close": "Kapat",
-    "backToPreferences": "Tercihlere dön"
+    "backToPreferences": "Tercihlere dön",
+    "privacyLink": "Gizlilik politikası",
+    "withdraw": "Onayı geri çek",
+    "openFullPolicy": "Tam politikayı aç",
+    "managePreferences": "Çerez tercihlerini yönet"
   },
   "HomePage": {
     "eyebrow": "KUZEY KIBRIS İSTİHDAM AĞI",

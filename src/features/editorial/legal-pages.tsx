@@ -2,6 +2,7 @@ import { ArrowLeft, FileText, Mail, ShieldCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
+import { ManageConsentButton } from "./manage-consent-button";
 import { getManagedLegalDocument } from "@/server/dal/content";
 
 export type LegalPageKey = "privacy" | "cookies" | "terms";
@@ -167,6 +168,12 @@ export async function LegalPageContent({
             <p>{t("contactNote")}</p>
             <a href={`mailto:${t("contactEmail")}`}>{t("contactEmail")}</a>
           </aside>
+
+          {page === "cookies" && (
+            <div className="legal-page-consent">
+              <ManageConsentButton />
+            </div>
+          )}
 
           <nav className="legal-page-siblings" aria-label={t("relatedLabel")}>
             {(Object.keys(legalPaths) as LegalPageKey[])
