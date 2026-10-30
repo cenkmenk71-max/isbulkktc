@@ -76,6 +76,7 @@ jobs:
           {
             printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$API_URL"
             printf 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=%s\n' "$key"
+            printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
 
       - name: Apply migrations and run pgTAP tests
