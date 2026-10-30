@@ -8,7 +8,7 @@ delete from public.job_source_imports;
 delete from public.jobs where publication_source = 'source_site';
 delete from public.companies where slug like 'source-%';
 
-select plan(23);
+select plan(25);
 
 insert into auth.users (id, email, raw_user_meta_data)
 values ('91000000-0000-4000-8000-000000000001', 'integrity-owner@example.test',
@@ -239,6 +239,12 @@ select has_index(
 );
 
 select has_index(
+  'public', 'jobs', 'jobs_public_latest_idx',
+  array['published_at'],
+  'the unfiltered latest-jobs listing keeps its index'
+);
+
+select has_index(
   'public', 'jobs', 'jobs_company_status_idx',
   array['company_id', 'status', 'created_at'],
   'the company/status index survives'
@@ -271,6 +277,22 @@ select hasnt_index(
 select has_index(
   'public', 'jobs', 'jobs_public_search_idx',
   'the full-text search index survives'
+);
+
+-- A NOT VALID check constraint still guards new writes but silently skips every
+-- pre-existing row, so a constraint left NOT VALID is weaker than it looks.
+-- The district constraints were declared NOT VALID for the Gazimağusa -> Mağusa
+-- rewrite and then validated in 20261023110000; keep them validated.
+select is(
+  (
+    select count(*)::integer
+    from pg_constraint
+    where connamespace = 'public'::regnamespace
+      and contype = 'c'
+      and not convalidated
+  ),
+  0,
+  'no public check constraint is left NOT VALID'
 );
 
 select ok(
