@@ -9,6 +9,7 @@ import {
   normalizeSourceJobType,
   normalizeSourceWorkplaceMode,
   resolveEmployerLogoUrl,
+  resolveSourceModifiedAt,
   summarizeSourceText,
   type SourceEmployerRecord,
   type SourceJobRecord,
@@ -127,6 +128,8 @@ type IskibrisDetail = {
   is_published?: number | boolean;
   deleted_at?: string | null;
   published_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   metadata?: string | null;
@@ -290,6 +293,7 @@ function toIskibrisRecord(
     district: normalizeSourceDistrict(detail.place_name ?? detail.city_name),
     publishedAt: record.publishedAt,
     expiresAt: record.expiresAt,
+    sourceUpdatedAt: resolveSourceModifiedAt(detail.updated_at, record.publishedAt),
     employer,
   };
 }
@@ -366,6 +370,9 @@ function toIsbulkibrisRecord(
     district: normalizeSourceDistrict(detail.locationName),
     publishedAt: new Date(publishedAtRaw).toISOString(),
     expiresAt: new Date(expiresAtRaw).toISOString(),
+    // isbulkibris publishes no modification date; the importer falls back to
+    // content-hash change detection rather than inventing one.
+    sourceUpdatedAt: null,
     employer,
   };
 }
