@@ -3925,6 +3925,12 @@ a {
   outline: 3px solid color-mix(in srgb, #2876bf 35%, white);
   outline-offset: 3px;
 }
+.editorial-form-resend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
 .editorial-form-message {
   margin: 0;
   padding: 11px 13px;
