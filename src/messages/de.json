@@ -169,10 +169,7 @@
     "notice": "Türkische, englische, russische, griechische, persische und deutsche Übersetzungen sind verfügbar."
   },
   "Analytics": {
-    "regionLabel": "Analyse-Einstellungen",
     "description": "Wir verwenden Cookies, um Ihr Erlebnis zu verbessern und die Website sicher zu betreiben. Sie können Ihre Auswahl jederzeit ändern.",
-    "accept": "Akzeptieren",
-    "reject": "Ablehnen",
     "settings": "Analyse-Einstellungen",
     "policyLink": "Cookie-Richtlinie",
     "title": "Cookie-Einstellungen",
@@ -189,7 +186,11 @@
     "savePreferences": "Einstellungen speichern",
     "acceptAll": "Alle akzeptieren",
     "close": "Schließen",
-    "backToPreferences": "Zurück zu den Einstellungen"
+    "backToPreferences": "Zurück zu den Einstellungen",
+    "privacyLink": "Datenschutzerklärung",
+    "withdraw": "Einwilligung widerrufen",
+    "openFullPolicy": "Vollständige Richtlinie öffnen",
+    "managePreferences": "Cookie-Einstellungen verwalten"
   },
   "NotFound": {
     "title": "Seite nicht gefunden",

@@ -8,7 +8,9 @@ import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
-import { GoogleAnalyticsConsent } from "@/components/analytics/google-analytics-consent";
+import { ConsentProvider } from "@/components/analytics/consent-context";
+import { CookieConsent } from "@/components/analytics/cookie-consent";
+import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { MotionController } from "@/components/motion/motion-controller";
 import { buildOrganizationGraph } from "@/content/ai-visibility/structured-data";
 import { JsonLd } from "@/content/ai-visibility/json-ld";
@@ -174,12 +176,15 @@ export default async function LocaleLayout({
       <body className="flex min-h-svh flex-col">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <JsonLd data={organizationGraph} />
-          <SiteHeader />
-          <main id="main" className="flex-1">
-            {children}
-          </main>
-          <SiteFooter />
-          <GoogleAnalyticsConsent />
+          <ConsentProvider>
+            <SiteHeader />
+            <main id="main" className="flex-1">
+              {children}
+            </main>
+            <SiteFooter />
+            <CookieConsent />
+            <GoogleAnalytics />
+          </ConsentProvider>
           <MotionController />
         </NextIntlClientProvider>
       </body>

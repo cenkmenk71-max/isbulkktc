@@ -7,6 +7,10 @@ export default defineConfig([
   ...nextTypeScript,
   globalIgnores([
     ".next/**",
+    // Any throwaway dist directory the documented `NEXT_DIST_DIR=.next-<name>`
+    // build flow produces; without this, linting a built tree reports tens of
+    // thousands of errors from the copied standalone `node_modules`.
+    ".next-*/**",
     ".next-playwright/**",
     ".next-home-preview/**",
     ".next-validation/**",

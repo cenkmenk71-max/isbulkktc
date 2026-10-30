@@ -88,6 +88,10 @@ const candidateProfileSectionsMigration = await read(
 const nextConfig = await read("next.config.ts");
 const trMessages = JSON.parse(await read("src/messages/tr.json"));
 const enMessages = JSON.parse(await read("src/messages/en.json"));
+const consentModel = await read("src/components/analytics/consent.ts");
+const consentBrowser = await read("src/components/analytics/consent-browser.ts");
+const cookieConsent = await read("src/components/analytics/cookie-consent.tsx");
+const googleAnalytics = await read("src/components/analytics/google-analytics.tsx");
 
 const expectedTokens = new Map([
   ["--color-vanadium-50", "#f0f1ed"],
@@ -834,6 +838,100 @@ assert.match(
   /animation:\s*hero-copy-enter[^;]*backwards/,
   "the hero intro must use `backwards` fill so each line is hidden during its delay",
 );
+
+// --- Consent layer -------------------------------------------------------
+// A tracker that loads before a choice is made is the single highest-cost
+// consent bug: it cannot be undone for the visitors already tracked. These
+// assertions keep the "denied until told otherwise" invariant in the source,
+// not only in a runtime test that a future edit could delete.
+assert.match(
+  consentModel,
+  /consentCookieName\s*=\s*"ib_consent"/,
+  "the server-readable consent cookie must keep its stable name",
+);
+assert.match(
+  consentModel,
+  /consentStorageKey\s*=\s*"isbulkkktc-cookie-consent-v3"/,
+  "the consent storage key must be the v3 key",
+);
+assert.match(
+  consentModel,
+  /analytics:\s*false,\s*\n\s*marketing:\s*false/,
+  "the undecided consent state must deny both optional categories",
+);
+assert.match(
+  googleAnalytics,
+  /analytics_storage:'denied'/,
+  "Google consent mode must default analytics_storage to denied",
+);
+assert.doesNotMatch(
+  googleAnalytics,
+  /analytics_storage:'granted'/,
+  "analytics_storage must never be granted before the visitor chooses",
+);
+assert.match(
+  googleAnalytics,
+  /if \(!enabled\) return null;/,
+  "the GA loader must render nothing until analytics consent exists",
+);
+assert.match(
+  googleAnalytics,
+  /send_page_view:false/,
+  "GA must not send the first page_view implicitly; the loader sends it after consent",
+);
+assert.match(
+  googleAnalytics,
+  /gtag\("event", "page_view"/,
+  "the loader must send a page_view for each client-side navigation",
+);
+assert.match(
+  consentBrowser,
+  /SameSite=Lax/,
+  "the consent cookie must be SameSite=Lax",
+);
+assert.match(
+  consentBrowser,
+  /removeItem\(consentStorageKey\)/,
+  "withdrawing consent must clear the stored decision",
+);
+assert.match(
+  cookieConsent,
+  /role="dialog"/,
+  "the consent card must remain a labelled dialog for assistive tech",
+);
+// Accept, reject and save must be the same control. A filled "accept" next to a
+// plain "reject" link is the classic dark pattern and is not valid consent.
+assert.doesNotMatch(
+  css,
+  /\.consent-btn-primary/,
+  "no consent button may be visually promoted over the others",
+);
+assert.doesNotMatch(
+  css,
+  /\.consent-btn-ghost/,
+  "reject must not be styled as a secondary, de-emphasised control",
+);
+assert.match(
+  cookieConsent,
+  /legal\("cookies\.title"\)/,
+  "the inline policy must read the same catalogue as the /cookies page",
+);
+for (const key of ["privacyLink", "withdraw", "openFullPolicy", "managePreferences"]) {
+  assert.ok(
+    typeof trMessages.Analytics[key] === "string",
+    `the Turkish catalogue must define Analytics.${key}`,
+  );
+  assert.ok(
+    typeof enMessages.Analytics[key] === "string",
+    `the English catalogue must define Analytics.${key}`,
+  );
+}
+for (const dead of ["regionLabel", "accept", "reject"]) {
+  assert.ok(
+    !(dead in trMessages.Analytics),
+    `the unused Analytics.${dead} key should be removed, not left to drift`,
+  );
+}
 
 console.log(
   `Source checks passed: ${expectedTokens.size} design tokens, uploaded photos and 16 original sector images with responsive optimization, real candidate/company entry points, private profile writes, six-locale routing with disclosed translation coverage, contrast and motion rules.`,
