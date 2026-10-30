@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
+import { getLocalePrefix } from "@/i18n/routing";
+
 import { messageForAuthErrorCode } from "@/features/identity/auth-errors";
 import {
   audienceFromCallbackParam,
-  localePrefixFor,
   parseAuthFlow,
   resolveAuthDestination,
   resolveAuthFailurePath,
@@ -539,9 +540,9 @@ test("auth destinations and failure paths are locale-prefixed and never absolute
 });
 
 test("locale prefixes match the next-intl as-needed policy", () => {
-  assert.equal(localePrefixFor("tr"), "");
+  assert.equal(getLocalePrefix("tr"), "");
   for (const locale of ["en", "ru", "el", "fa", "de"] as const) {
-    assert.equal(localePrefixFor(locale), `/${locale}`);
+    assert.equal(getLocalePrefix(locale), `/${locale}`);
   }
 });
 

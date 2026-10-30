@@ -30,14 +30,6 @@ export function parseAuthFlow(value: string | null | undefined): AuthFlow {
   return "email";
 }
 
-/**
- * A bare locale prefix for building paths, without next-intl's request scope so
- * the callback (a Route Handler, not a page) can use it.
- */
-export function localePrefixFor(locale: AppLocale): string {
-  return getLocalePrefix(locale);
-}
-
 export function resolveAuthDestination(
   audience: AccountAudience,
   locale: AppLocale,

@@ -1,10 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
-import { routing } from "@/i18n/routing";
+import { getLocalePrefix, routing } from "@/i18n/routing";
 import {
   audienceFromCallbackParam,
-  localePrefixFor,
   parseAuthFlow,
   resolveAuthDestination,
   resolveAuthFailurePath,
@@ -53,7 +52,7 @@ export async function GET(request: NextRequest) {
 
   if (isResetFlow) {
     return redirectAndClearOAuthIntent(
-      new URL(`${localePrefixFor(locale)}/reset-password`, appBaseUrl),
+      new URL(`${getLocalePrefix(locale)}/reset-password`, appBaseUrl),
     );
   }
 
