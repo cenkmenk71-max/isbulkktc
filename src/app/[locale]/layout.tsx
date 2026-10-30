@@ -11,7 +11,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { GoogleAnalyticsConsent } from "@/components/analytics/google-analytics-consent";
 import { MotionController } from "@/components/motion/motion-controller";
 import { isRightToLeftLocale, routing } from "@/i18n/routing";
-import { getLocalizedSocialImageAlt } from "@/lib/seo";
+import { getDefaultSocialImage } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import "@/styles/global.css";
 
@@ -54,7 +54,7 @@ export async function generateMetadata({
   }
   const t = await getTranslations({ locale, namespace: "Meta" });
   const siteUrl = getAppBaseUrl();
-  const socialImage = new URL("/images/Girne.webp", siteUrl);
+  const socialImage = getDefaultSocialImage(locale, siteUrl);
   const openGraphLocales = {
     tr: "tr_TR",
     en: "en_GB",
@@ -91,9 +91,13 @@ export async function generateMetadata({
           },
         }
       : {}),
+    // Only the Googlebot directives are declared here. Asserting the generic
+    // `index, follow` in a layout that also wraps the 404 route produced two
+    // conflicting `<meta name="robots">` tags on 404 responses (Next injects
+    // `noindex` for a 404 automatically). Omitting the top-level fields leaves
+    // normal pages on Next's implicit index,follow default and lets the injected
+    // `noindex` stand alone on 404s.
     robots: {
-      index: true,
-      follow: true,
       googleBot: {
         index: true,
         follow: true,
@@ -111,20 +115,13 @@ export async function generateMetadata({
       alternateLocale: routing.locales
         .filter((otherLocale) => otherLocale !== locale)
         .map((otherLocale) => openGraphLocales[otherLocale]),
-      images: [
-        {
-          url: socialImage,
-          width: 3840,
-          height: 2500,
-          alt: getLocalizedSocialImageAlt(locale),
-        },
-      ],
+      images: [socialImage],
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: [socialImage],
+      images: [socialImage.url],
     },
     icons: {
       icon: [
@@ -177,7 +174,10 @@ export default async function LocaleLayout({
           "@type": "SearchAction",
           target: {
             "@type": "EntryPoint",
-            urlTemplate: `${siteUrl.origin}/jobs?q={search_term_string}`,
+            // Must match the parameter the jobs page actually reads
+            // (`publicJobSearchSchema.query`); the previous `?q=` was ignored,
+            // so the sitelinks search box landed on the unfiltered listing.
+            urlTemplate: `${siteUrl.origin}/jobs?query={search_term_string}`,
           },
           "query-input": "required name=search_term_string",
         },

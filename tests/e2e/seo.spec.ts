@@ -358,6 +358,54 @@ test("account pages are excluded from indexing without blocking crawlers", async
   }
 });
 
+test("the 404 page serves one noindex tag and the light social card", async ({
+  page,
+}) => {
+  await page.goto("/this-page-does-not-exist", { waitUntil: "domcontentloaded" });
+
+  // Next injects its own `noindex` for a 404; a layout that also asserts
+  // `index, follow` leaves the response with two contradictory robots metas.
+  await expect(page.locator('meta[name="robots"]')).toHaveCount(1);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    "content",
+    /noindex/,
+  );
+
+  // The 404 inherits the locale layout's social card, so it must advertise the
+  // same 1200x630 og-cover.webp as every other page instead of the ~1.9 MB hero.
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+    "content",
+    `${new URL(page.url()).origin}/images/og-cover.webp`,
+  );
+  await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute(
+    "content",
+    "1200",
+  );
+  await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute(
+    "content",
+    "630",
+  );
+});
+
+test("the sitelinks search box targets the parameter the jobs page reads", async ({
+  page,
+}) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+
+  const structuredData = await page
+    .locator('script[type="application/ld+json"]')
+    .evaluateAll((nodes) =>
+      nodes.map((node) => node.textContent ?? "").join("\n"),
+    );
+  expect(structuredData).toContain('"@type":"SearchAction"');
+  // The jobs page parses `?query=`, so a `?q=` template lands on the
+  // unfiltered listing and the search box never works.
+  expect(structuredData).toContain(
+    `${new URL(page.url()).origin}/jobs?query={search_term_string}`,
+  );
+  expect(structuredData).not.toContain("/jobs?q=");
+});
+
 test("localized vacancy URLs canonicalise to the Turkish listing", async ({
   page,
 }) => {
