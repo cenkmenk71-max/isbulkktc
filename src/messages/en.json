@@ -491,7 +491,7 @@
     "nameLabel": "Company name",
     "namePlaceholder": "Your company name",
     "slugLabel": "Company URL name",
-    "slugHint": "Use lowercase English letters, numbers, and single hyphens.",
+    "slugHint": "The short name your company will use on the platform.",
     "saving": "Saving…",
     "submit": "Submit for review",
     "storyEyebrow": "COMPANY REGISTRATION",
@@ -503,7 +503,9 @@
       "unauthorized": "Your session may have expired. Sign in again and retry.",
       "failed": "The company registration could not be created. Please try again.",
       "saved": "Your company has been submitted for review. Listings cannot be published until verification is complete."
-    }
+    },
+    "slugPurpose": "This is your company's short, unique name on the platform. It is generated automatically from the company name, and you can change it.",
+    "slugPreviewLabel": "Short name:"
   },
   "FeatureStrip": {
     "ariaLabel": "İşBul KKTC features",
