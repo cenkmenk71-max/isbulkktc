@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import {
   oauthSignInSchema,
   requestPasswordResetSchema,
+  resendConfirmationSchema,
   signInSchema,
   signUpSchema,
   updatePasswordSchema,
@@ -129,9 +130,13 @@ export async function signIn(
 
     // Supabase returns `email_not_confirmed` when confirmations are enabled and
     // the address has not been verified yet; the generic message would mislead.
+    // Echo the submitted address back so the form can offer a one-click resend
+    // without persisting it client-side.
     return {
       status: "error",
       message: messageForAuthErrorCode(error.code, "signInFailed"),
+      email:
+        error.code === "email_not_confirmed" ? result.data.email : undefined,
     };
   }
 
@@ -190,6 +195,54 @@ export async function signUp(
     status: "success",
     message: "verificationSent",
   };
+}
+
+/**
+ * Re-sends the sign-up confirmation mail. `supabase.auth.resend` is the only
+ * supported path here because `signUp` on an existing, unconfirmed address
+ * answers with an obfuscated user and no fresh mail. The response is always
+ * reported as sent to avoid disclosing whether an address is registered.
+ */
+export async function resendConfirmation(
+  _previousState: SignInFormState,
+  formData: FormData,
+): Promise<SignInFormState> {
+  const result = resendConfirmationSchema.safeParse({
+    email: formData.get("email"),
+    locale: formData.get("locale"),
+    captchaToken: readCaptchaToken(formData),
+  });
+
+  if (!result.success) return invalidForm;
+
+  const supabase = await createSupabaseServerClient({
+    allowCookieWrites: true,
+  });
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: result.data.email,
+    options: {
+      emailRedirectTo: new URL(
+        `${getLocalePrefix(result.data.locale)}/auth/callback?next=candidate`,
+        getAppBaseUrl(),
+      ).toString(),
+      captchaToken: result.data.captchaToken,
+    },
+  });
+
+  if (error) {
+    console.error("Supabase confirmation resend failed.", { code: error.code });
+
+    if (error.code === "captcha_failed") {
+      return { status: "error", message: "captchaFailed" };
+    }
+
+    // `over_email_send_rate_limit` and friends: surface a distinct, actionable
+    // message rather than claiming the mail went out.
+    return { status: "error", message: "resendFailed" };
+  }
+
+  return { status: "success", message: "verificationResent" };
 }
 
 export async function requestPasswordReset(
