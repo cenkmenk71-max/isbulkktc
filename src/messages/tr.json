@@ -495,7 +495,7 @@
     "nameLabel": "Şirket adı",
     "namePlaceholder": "Şirketinizin adı",
     "slugLabel": "Şirket bağlantı adı",
-    "slugHint": "Kısa ad; İngilizce harf, rakam ve tek tire kullanın.",
+    "slugHint": "Şirketinizin platformda görünecek kısa adı.",
     "saving": "Kaydediliyor…",
     "submit": "İncelemeye gönder",
     "storyEyebrow": "ŞİRKET KAYIT AKIŞI",
@@ -507,7 +507,9 @@
       "unauthorized": "Oturumunuz sona ermiş olabilir. Yeniden giriş yapıp deneyin.",
       "failed": "Şirket kaydı oluşturulamadı. Lütfen tekrar deneyin.",
       "saved": "Şirketiniz inceleme için kaydedildi. Doğrulama tamamlanana kadar ilan yayımlanamaz."
-    }
+    },
+    "slugPurpose": "Bu, şirketinizin platformdaki kısa ve benzersiz adıdır. Şirket adınızdan otomatik oluşturulur; isterseniz değiştirebilirsiniz.",
+    "slugPreviewLabel": "Kısa ad:"
   },
   "FeatureStrip": {
     "ariaLabel": "İşBul KKTC özellikleri",
