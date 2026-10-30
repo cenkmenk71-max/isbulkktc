@@ -11,6 +11,8 @@ import {
   type SignInFormState,
 } from "./schemas";
 import { parseEnabledOAuthProviders } from "./oauth-providers";
+import { messageForAuthErrorCode } from "./auth-errors";
+import { resolveAuthDestination } from "./auth-routing";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import { redirectLocalized } from "@/i18n/redirect";
@@ -125,37 +127,15 @@ export async function signIn(
   if (error) {
     console.error("Supabase sign-in failed.", { code: error.code });
 
-    // Supabase returns this when email confirmations are enabled and the
-    // address has not been verified yet; the generic message would mislead.
-    if (error.code === "email_not_confirmed") {
-      return {
-        status: "error",
-        message: "emailNotConfirmed",
-      };
-    }
-
-    // Supabase answers `captcha_failed` when Turnstile rejects or expires the
-    // token; the generic copy would tell the user to check a correct password.
-    if (error.code === "captcha_failed") {
-      return {
-        status: "error",
-        message: "captchaFailed",
-      };
-    }
-
+    // Supabase returns `email_not_confirmed` when confirmations are enabled and
+    // the address has not been verified yet; the generic message would mislead.
     return {
       status: "error",
-      message: "signInFailed",
+      message: messageForAuthErrorCode(error.code, "signInFailed"),
     };
   }
 
-  redirect(
-    `${getLocalePrefix(result.data.locale)}${
-      result.data.audience === "employer"
-        ? "/company/dashboard"
-        : "/profile/dashboard"
-    }`,
-  );
+  redirect(resolveAuthDestination(result.data.audience, result.data.locale));
 }
 
 export async function signUp(
@@ -196,23 +176,14 @@ export async function signUp(
 
   if (error) {
     console.error("Supabase sign-up failed.", { code: error.code });
-    if (error.code === "captcha_failed") {
-      return { status: "error", message: "captchaFailed" };
-    }
     return {
       status: "error",
-      message: "signUpFailed",
+      message: messageForAuthErrorCode(error.code, "signUpFailed"),
     };
   }
 
   if (data.session) {
-    redirect(
-      `${getLocalePrefix(result.data.locale)}${
-        result.data.audience === "employer"
-          ? "/company/dashboard"
-          : "/profile/dashboard"
-      }`,
-    );
+    redirect(resolveAuthDestination(result.data.audience, result.data.locale));
   }
 
   return {
@@ -251,10 +222,10 @@ export async function requestPasswordReset(
     console.error("Supabase password reset request failed.", {
       code: error.code,
     });
-    if (error.code === "captcha_failed") {
-      return { status: "error", message: "captchaFailed" };
-    }
-    return { status: "error", message: "resetRequestFailed" };
+    return {
+      status: "error",
+      message: messageForAuthErrorCode(error.code, "resetRequestFailed"),
+    };
   }
 
   return { status: "success", message: "resetRequestSent" };
