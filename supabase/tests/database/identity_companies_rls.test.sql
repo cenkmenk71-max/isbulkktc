@@ -1,6 +1,6 @@
 begin;
 
-select plan(47);
+select plan(53);
 
 insert into auth.users (id, email, raw_user_meta_data)
 values
@@ -336,6 +336,86 @@ select throws_ok(
   '42501',
   null,
   'company owners cannot approve their own profile submissions'
+);
+
+-- 20261014120000 granted INSERT/UPDATE at the table level, which covered the review
+-- columns too and made its own column list inert; 20261023130000 narrows it. The
+-- pending-only update policy never guarded INSERT, so this is the only thing that
+-- stops an owner inserting an already-approved row.
+select throws_ok(
+  $$insert into public.company_profile_submissions (
+      company_id, submitted_by, company_name, status, review_note, reviewed_by
+    )
+    values (
+      (select id from public.companies where slug = 'v4-candidate-a-company'),
+      (select auth.uid()),
+      'Self approved company',
+      'approved',
+      'reviewed internally',
+      (select auth.uid())
+    )$$,
+  '42501',
+  null,
+  'company owners cannot insert an already-approved profile submission'
+);
+
+select throws_ok(
+  $$insert into public.company_profile_submissions (
+      company_id, submitted_by, company_name, reviewed_at
+    )
+    values (
+      (select id from public.companies where slug = 'v4-candidate-a-company'),
+      (select auth.uid()),
+      'Backdated company',
+      pg_catalog.now()
+    )$$,
+  '42501',
+  null,
+  'company owners cannot set the review columns when creating a submission'
+);
+
+select is(
+  pg_catalog.has_column_privilege(
+    'authenticated',
+    'public.company_profile_submissions',
+    'status',
+    'INSERT'
+  ),
+  false,
+  'the status column is not insertable by authenticated'
+);
+
+select is(
+  pg_catalog.has_column_privilege(
+    'authenticated',
+    'public.company_profile_submissions',
+    'reviewed_by',
+    'INSERT'
+  ),
+  false,
+  'the reviewed_by column is not insertable by authenticated'
+);
+
+select is(
+  pg_catalog.has_column_privilege(
+    'authenticated',
+    'public.company_profile_submissions',
+    'status',
+    'UPDATE'
+  ),
+  false,
+  'the status column is not updatable by authenticated'
+);
+
+select is(
+  pg_catalog.has_column_privilege(
+    'authenticated',
+    'public.company_profile_submissions',
+    'company_name',
+    'UPDATE'
+  ),
+  true,
+  'the profile columns stay updatable by authenticated'
 );
 
 select throws_ok(
