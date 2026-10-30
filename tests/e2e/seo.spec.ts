@@ -107,13 +107,35 @@ test("public routes expose localized canonical and social metadata", async ({
     );
     await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
       "content",
-      `${siteOrigin}/images/Girne.webp`,
+      `${siteOrigin}/images/og-cover.webp`,
+    );
+    await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute(
+      "content",
+      "1200",
+    );
+    await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute(
+      "content",
+      "630",
     );
     await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
       "content",
       "summary_large_image",
     );
   }
+});
+
+test("the social card stays inside the WhatsApp preview budget", async ({
+  request,
+  baseURL,
+}) => {
+  // WhatsApp drops an og:image larger than ~300 KB, so the card is a separate,
+  // lighter asset rather than the 1.9 MB hero. Guard the size at the source.
+  const response = await request.get(
+    new URL("/images/og-cover.webp", baseURL).toString(),
+  );
+  expect(response.ok()).toBe(true);
+  expect(response.headers()["content-type"]).toContain("image/webp");
+  expect((await response.body()).length).toBeLessThan(300_000);
 });
 
 test("all advertised locales render with correct direction and complete SEO alternates", async ({

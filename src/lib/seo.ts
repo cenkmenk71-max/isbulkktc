@@ -2,7 +2,13 @@ import type { Metadata } from "next";
 import { routing, type AppLocale } from "@/i18n/routing";
 import { getAppBaseUrl } from "@/server/config/app-url";
 
-const socialImagePath = "/images/Girne.webp";
+// 1200x630 social card derived from the Girne harbour photo at its hero focal
+// point. The 3840x2500 hero itself is ~1.9 MB, which exceeds WhatsApp's ~300 KB
+// preview budget and makes link unfurls slow on every platform, so the card is
+// a separate, lighter asset.
+const socialImagePath = "/images/og-cover.webp";
+const socialImageWidth = 1200;
+const socialImageHeight = 630;
 
 const socialImageAlts: Record<AppLocale, string> = {
   tr: "Girne Limanı ve Kuzey Kıbrıs kıyı şeridi",
@@ -114,8 +120,8 @@ export function createLocalizedPageMetadata({
       images: [
         {
           url: imageUrl,
-          width: 3840,
-          height: 2500,
+          width: socialImageWidth,
+          height: socialImageHeight,
           alt: getLocalizedSocialImageAlt(locale),
         },
       ],

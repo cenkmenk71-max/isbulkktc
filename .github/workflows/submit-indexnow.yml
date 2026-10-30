@@ -1,0 +1,36 @@
+name: Submit sitemap to IndexNow
+
+# Pings Bing and Yandex (via IndexNow) with every URL in the live sitemap so new
+# vacancies are discovered within hours instead of waiting for the next crawl.
+# Google ignores IndexNow and is handled by Search Console, so this is additive.
+#
+# The job is a no-op until the site is reachable, and it reads the key file from
+# the deployed host, so it needs no repository secrets.
+on:
+  schedule:
+    # Once a day, shortly after the source-job refresh windows (04:17 / 16:17 UTC).
+    - cron: "37 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: submit-indexnow
+  cancel-in-progress: false
+
+jobs:
+  submit:
+    name: Submit sitemap URLs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Submit the live sitemap
+        run: node scripts/submit-indexnow.mjs https://isbulkktc.com
