@@ -223,6 +223,11 @@ export function normalizeHttpsUrl(value: unknown): string | null {
   }
 }
 
+const isbulkibrisLogoPattern =
+  /^\/api\/employer\/logo\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const iskibrisLogoPattern =
+  /^\/[0-9]+_[0-9a-f]+(?:-thumb@[0-9]+)?\.(?:png|jpg|webp)$/i;
+
 export function resolveEmployerLogoUrl(
   value: unknown,
   origin: string,
@@ -236,6 +241,16 @@ export function resolveEmployerLogoUrl(
       url.hostname === "innovia-iskibris.s3.eu-west-2.amazonaws.com";
     if (!supportedHost) return null;
     url.pathname = url.pathname.replace(/-thumb(?:@\d+)?(?=\.[^.]+$)/i, "");
+    // The companies.logo_url check constraint rejects query strings and paths
+    // outside the two source CDNs, so mirror it here and drop anything else
+    // rather than letting a whole import batch fail on one bad logo.
+    const pattern =
+      url.hostname === "api.isbulkibris.com"
+        ? isbulkibrisLogoPattern
+        : iskibrisLogoPattern;
+    if (!pattern.test(url.pathname)) return null;
+    url.search = "";
+    url.hash = "";
     return url.toString();
   } catch {
     return null;
@@ -312,5 +327,59 @@ export function sanitizeSourceJobRecord(record: SourceJobRecord): SourceJobRecor
           : null,
     },
   };
+}
+
+/**
+ * Narrows a large upstream catalogue to the newest `limit` listings while
+ * spreading them across employers, sectors and job types, so a small public
+ * board stays varied instead of showing one company's hiring spree. Diversity is
+ * filled first (rarest combinations win), then the remaining slots go to the
+ * newest listings overall.
+ */
+export function selectDiverseSourceJobs(
+  records: readonly SourceJobRecord[],
+  limit: number,
+): SourceJobRecord[] {
+  if (limit <= 0) return [];
+  const newestFirst = [...records].sort(
+    (a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt),
+  );
+  const selected: SourceJobRecord[] = [];
+  const chosen = new Set<SourceJobRecord>();
+  const usedCompanies = new Set<string>();
+  const usedSectors = new Set<string>();
+  const usedTypes = new Set<string>();
+
+  const sectorOf = (record: SourceJobRecord): string =>
+    (record.employer.categories[0] ?? "diger").trim().toLocaleLowerCase("tr-TR");
+
+  const add = (record: SourceJobRecord): void => {
+    chosen.add(record);
+    selected.push(record);
+    usedCompanies.add(record.employer.slug);
+    usedSectors.add(sectorOf(record));
+    usedTypes.add(record.jobType);
+  };
+
+  for (const record of newestFirst) {
+    if (selected.length >= limit) break;
+    if (chosen.has(record) || usedCompanies.has(record.employer.slug)) continue;
+    if (usedSectors.has(sectorOf(record)) || usedTypes.has(record.jobType)) continue;
+    add(record);
+  }
+
+  for (const record of newestFirst) {
+    if (selected.length >= limit) break;
+    if (chosen.has(record) || usedCompanies.has(record.employer.slug)) continue;
+    add(record);
+  }
+
+  for (const record of newestFirst) {
+    if (selected.length >= limit) break;
+    if (chosen.has(record)) continue;
+    add(record);
+  }
+
+  return selected.slice(0, limit);
 }
 

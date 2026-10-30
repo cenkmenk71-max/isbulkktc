@@ -13,7 +13,7 @@ import { MotionController } from "@/components/motion/motion-controller";
 import { buildOrganizationGraph } from "@/content/ai-visibility/structured-data";
 import { JsonLd } from "@/content/ai-visibility/json-ld";
 import { isRightToLeftLocale, routing } from "@/i18n/routing";
-import { getLocalizedSocialImageAlt } from "@/lib/seo";
+import { getDefaultSocialImage } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import "@/styles/global.css";
 
@@ -56,7 +56,7 @@ export async function generateMetadata({
   }
   const t = await getTranslations({ locale, namespace: "Meta" });
   const siteUrl = getAppBaseUrl();
-  const socialImage = new URL("/images/Girne.webp", siteUrl);
+  const socialImage = getDefaultSocialImage(locale, siteUrl);
   const openGraphLocales = {
     tr: "tr_TR",
     en: "en_GB",
@@ -93,9 +93,13 @@ export async function generateMetadata({
           },
         }
       : {}),
+    // Only the Googlebot directives are declared here. Asserting the generic
+    // `index, follow` in a layout that also wraps the 404 route produced two
+    // conflicting `<meta name="robots">` tags on 404 responses (Next injects
+    // `noindex` for a 404 automatically). Omitting the top-level fields leaves
+    // normal pages on Next's implicit index,follow default and lets the injected
+    // `noindex` stand alone on 404s.
     robots: {
-      index: true,
-      follow: true,
       googleBot: {
         index: true,
         follow: true,
@@ -113,20 +117,13 @@ export async function generateMetadata({
       alternateLocale: routing.locales
         .filter((otherLocale) => otherLocale !== locale)
         .map((otherLocale) => openGraphLocales[otherLocale]),
-      images: [
-        {
-          url: socialImage,
-          width: 3840,
-          height: 2500,
-          alt: getLocalizedSocialImageAlt(locale),
-        },
-      ],
+      images: [socialImage],
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: [socialImage],
+      images: [socialImage.url],
     },
     icons: {
       icon: [

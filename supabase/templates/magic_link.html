@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+{{- $locale := "tr" -}}
+{{- with .Data -}}{{- if and .locale (or (eq .locale "tr") (eq .locale "en") (eq .locale "ru") (eq .locale "el") (eq .locale "fa") (eq .locale "de")) -}}{{- $locale = .locale -}}{{- end -}}{{- end -}}
+{{- $rtl := eq $locale "fa" -}}
+<html lang="{{ $locale }}" dir="{{ if $rtl }}rtl{{ else }}ltr{{ end }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
+    <title>{{ if eq $locale "tr" }}Giriş bağlantınız{{ else if eq $locale "en" }}Your sign-in link{{ else if eq $locale "ru" }}Ваша ссылка для входа{{ else if eq $locale "el" }}Ο σύνδεσμος σύνδεσής σας{{ else if eq $locale "fa" }}پیوند ورود شما{{ else if eq $locale "de" }}Ihr Anmeldelink{{ else }}Giriş bağlantınız{{ end }}</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F5F2EB; margin: 0; padding: 0; color: #1A1A1A; }
+      .preheader { display: none; max-height: 0; overflow: hidden; mso-hide: all; }
+      .container { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+      .header { background: #0D5C3A; padding: 28px 32px; }
+      .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+      .header p { margin: 4px 0 0; color: #EAF3EE; font-size: 13px; }
+      .body { padding: 32px; }
+      .body h2 { margin: 0 0 12px; font-size: 18px; }
+      .body p { margin: 0 0 16px; font-size: 15px; line-height: 1.6; }
+      .btn { display: inline-block; background-color: #0D5C3A; color: #ffffff !important; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; }
+      .fallback { margin-top: 24px; font-size: 13px; color: #57534E; word-break: break-all; }
+      .fallback a { color: #0D5C3A; }
+      .note { background-color: #F5F2EB; border-radius: 8px; padding: 16px; font-size: 13px; color: #57534E; border: 1px solid rgba(0,0,0,0.06); }
+      .code { font-size: 32px; font-weight: 700; letter-spacing: 6px; background-color: #F5F2EB; border-radius: 8px; padding: 18px; text-align: center; border: 1px solid rgba(0,0,0,0.06); }
+      .code-label { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: #57534E; }
+      .footer { padding: 24px 32px; background: #fbfbfa; border-top: 1px solid #eeeeee; text-align: center; font-size: 12px; color: #57534E; }
+      .footer a { color: #0D5C3A; text-decoration: underline; }
+    </style>
+  </head>
+  <body>
+    <div class="preheader">{{ if eq $locale "tr" }}Giriş bağlantınız{{ else if eq $locale "en" }}Your sign-in link{{ else if eq $locale "ru" }}Ваша ссылка для входа{{ else if eq $locale "el" }}Ο σύνδεσμος σύνδεσής σας{{ else if eq $locale "fa" }}پیوند ورود شما{{ else if eq $locale "de" }}Ihr Anmeldelink{{ else }}Giriş bağlantınız{{ end }}</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td align="center">
+          <div class="container">
+            <div class="header">
+              <h1>İşBul KKTC</h1>
+              <p>{{ if eq $locale "tr" }}Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı{{ else if eq $locale "en" }}Northern Cyprus' trusted career and employment network{{ else if eq $locale "ru" }}Надёжная сеть карьеры и занятости Северного Кипра{{ else if eq $locale "el" }}Το αξιόπιστο δίκτυο καριέρας και απασχόλησης της Βόρειας Κύπρου{{ else if eq $locale "fa" }}شبکه معتبر شغلی و کاریابی قبرس شمالی{{ else if eq $locale "de" }}Das verlässliche Karriere- und Beschäftigungsnetzwerk Nordzyperns{{ else }}Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı{{ end }}</p>
+            </div>
+            <div class="body">
+      <h2>{{ if eq $locale "tr" }}Giriş bağlantınız{{ else if eq $locale "en" }}Your sign-in link{{ else if eq $locale "ru" }}Ваша ссылка для входа{{ else if eq $locale "el" }}Ο σύνδεσμος σύνδεσής σας{{ else if eq $locale "fa" }}پیوند ورود شما{{ else if eq $locale "de" }}Ihr Anmeldelink{{ else }}Giriş bağlantınız{{ end }}</h2>
+      <p>{{ if eq $locale "tr" }}Aşağıdaki bağlantıyla <strong>{{ .Email }}</strong> adresine bağlı İşBul KKTC hesabınıza giriş yapabilirsiniz.{{ else if eq $locale "en" }}Use the link below to sign in to the İşBul KKTC account linked to <strong>{{ .Email }}</strong>.{{ else if eq $locale "ru" }}По ссылке ниже вы войдёте в аккаунт İşBul KKTC, привязанный к <strong>{{ .Email }}</strong>.{{ else if eq $locale "el" }}Χρησιμοποιήστε τον παρακάτω σύνδεσμο για να συνδεθείτε στον λογαριασμό İşBul KKTC που συνδέεται με το <strong>{{ .Email }}</strong>.{{ else if eq $locale "fa" }}با پیوند زیر به حساب İşBul KKTC مرتبط با <strong>{{ .Email }}</strong> وارد شوید.{{ else if eq $locale "de" }}Melden Sie sich über den Link unten beim İşBul KKTC-Konto von <strong>{{ .Email }}</strong> an.{{ else }}Aşağıdaki bağlantıyla <strong>{{ .Email }}</strong> adresine bağlı İşBul KKTC hesabınıza giriş yapabilirsiniz.{{ end }}</p>
+      <p><a class="btn" href="{{ .ConfirmationURL }}">{{ if eq $locale "tr" }}Giriş yap{{ else if eq $locale "en" }}Sign in{{ else if eq $locale "ru" }}Войти{{ else if eq $locale "el" }}Σύνδεση{{ else if eq $locale "fa" }}ورود{{ else if eq $locale "de" }}Anmelden{{ else }}Giriş yap{{ end }}</a></p>
+      <p class="note">{{ if eq $locale "tr" }}Bağlantı kısa süre geçerlidir ve yalnızca bir kez kullanılabilir.{{ else if eq $locale "en" }}The link expires shortly and can be used only once.{{ else if eq $locale "ru" }}Ссылка действует недолго и может быть использована только один раз.{{ else if eq $locale "el" }}Ο σύνδεσμος λήγει σύντομα και μπορεί να χρησιμοποιηθεί μόνο μία φορά.{{ else if eq $locale "fa" }}این پیوند به‌زودی منقضی می‌شود و فقط یک بار قابل استفاده است.{{ else if eq $locale "de" }}Der Link läuft bald ab und kann nur einmal verwendet werden.{{ else }}Bağlantı kısa süre geçerlidir ve yalnızca bir kez kullanılabilir.{{ end }}</p>
+      <p class="fallback">{{ if eq $locale "tr" }}Düğme çalışmazsa bu bağlantıyı tarayıcınıza kopyalayın:{{ else if eq $locale "en" }}If the button does not work, copy this link into your browser:{{ else if eq $locale "ru" }}Если кнопка не работает, скопируйте эту ссылку в браузер:{{ else if eq $locale "el" }}Αν το κουμπί δεν λειτουργεί, αντιγράψτε αυτόν τον σύνδεσμο στον περιηγητή σας:{{ else if eq $locale "fa" }}اگر دکمه کار نکرد، این پیوند را در مرورگر خود بچسبانید:{{ else if eq $locale "de" }}Falls die Schaltfläche nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:{{ else }}Düğme çalışmazsa bu bağlantıyı tarayıcınıza kopyalayın:{{ end }}<br><a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a></p>
+            </div>
+            <div class="footer">
+        <p>{{ if eq $locale "tr" }}Kuzey Kıbrıs Türk Cumhuriyeti{{ else if eq $locale "en" }}Turkish Republic of Northern Cyprus{{ else if eq $locale "ru" }}Турецкая Республика Северного Кипра{{ else if eq $locale "el" }}Τουρκική Δημοκρατία της Βόρειας Κύπρου{{ else if eq $locale "fa" }}جمهوری ترک قبرس شمالی{{ else if eq $locale "de" }}Türkische Republik Nordzypern{{ else }}Kuzey Kıbrıs Türk Cumhuriyeti{{ end }} · <a href="{{ .SiteURL }}">isbulkktc.com</a></p>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

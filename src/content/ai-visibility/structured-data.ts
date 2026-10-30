@@ -51,7 +51,7 @@ export function buildOrganizationGraph(baseUrl: URL) {
           "@type": "SearchAction",
           target: {
             "@type": "EntryPoint",
-            urlTemplate: `${siteUrl}/jobs?q={search_term_string}`,
+            urlTemplate: `${siteUrl}/jobs?query={search_term_string}`,
           },
           "query-input": "required name=search_term_string",
         },

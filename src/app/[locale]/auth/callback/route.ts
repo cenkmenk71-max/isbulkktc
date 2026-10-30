@@ -1,7 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
-import { routing } from "@/i18n/routing";
+import { getLocalePrefix, routing } from "@/i18n/routing";
+import {
+  audienceFromCallbackParam,
+  parseAuthFlow,
+  resolveAuthDestination,
+  resolveAuthFailurePath,
+} from "@/features/identity/auth-routing";
 import {
   isNewOAuthAccount,
   oauthSignupIntentCookieName,
@@ -21,20 +27,14 @@ export async function GET(request: NextRequest) {
     routing.locales.find(
       (supportedLocale) => supportedLocale === requestedLocale,
     ) ?? routing.defaultLocale;
-  const audience =
-    request.nextUrl.searchParams.get("next") === "company"
-      ? "employer"
-      : "candidate";
-  const flow = request.nextUrl.searchParams.get("flow");
+  const audience = audienceFromCallbackParam(
+    request.nextUrl.searchParams.get("next"),
+  );
+  const flow = parseAuthFlow(request.nextUrl.searchParams.get("flow"));
   const isOAuthFlow = flow === "oauth";
   const isResetFlow = flow === "reset";
   const code = request.nextUrl.searchParams.get("code");
-  const localePrefix = locale === routing.defaultLocale ? "" : `/${locale}`;
-  const failurePath = isResetFlow
-    ? `${localePrefix}/forgot-password?error=expired`
-    : `${localePrefix}/login?error=${
-        isOAuthFlow ? "oauth" : "verification"
-      }&audience=${audience}`;
+  const failurePath = resolveAuthFailurePath(flow, locale, audience);
 
   if (!code || request.nextUrl.searchParams.has("error")) {
     return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
   if (isResetFlow) {
     return redirectAndClearOAuthIntent(
-      new URL(`${localePrefix}/reset-password`, appBaseUrl),
+      new URL(`${getLocalePrefix(locale)}/reset-password`, appBaseUrl),
     );
   }
 
@@ -92,9 +92,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const destination =
-    audience === "employer" ? "/company/dashboard" : "/profile/dashboard";
-  const localizedDestination = `${localePrefix}${destination}`;
-
-  return redirectAndClearOAuthIntent(new URL(localizedDestination, appBaseUrl));
+  return redirectAndClearOAuthIntent(
+    new URL(resolveAuthDestination(audience, locale), appBaseUrl),
+  );
 }
