@@ -47,11 +47,11 @@ async function readSitemapUrls(sourceOrigin) {
 
 async function main() {
   const origin = new URL(process.argv[2] ?? "https://isbulkktc.com");
-  // The public hostname sits behind Cloudflare, whose bot protection answers a
-  // managed challenge to datacenter egress such as GitHub's runners. The Vercel
-  // deployment alias serves the same build — and therefore the same sitemap and
-  // key file — without that challenge, so a scheduler can read them from there
-  // while the submitted URLs stay on the canonical host.
+  // Cloudflare's custom WAF exempts /sitemap.xml and /robots.txt from bot and
+  // security-level challenges, so the canonical origin is readable from
+  // datacenter egress such as GitHub's runners. `INDEXNOW_SITEMAP_ORIGIN` stays
+  // as an escape hatch for reading the sitemap somewhere else (for example a
+  // preview deployment) while the submitted URLs stay on the canonical host.
   const sourceOrigin = new URL(
     process.env.INDEXNOW_SITEMAP_ORIGIN ?? origin,
   );
