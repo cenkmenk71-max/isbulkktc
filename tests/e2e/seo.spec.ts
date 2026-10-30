@@ -312,6 +312,18 @@ test("account pages are excluded from indexing without blocking crawlers", async
   expect(robots).toContain("Disallow: /api/");
   expect(robots).toContain("Disallow: /auth/");
 
+  // RFC 9116 security.txt must be reachable at the well-known location, carry a
+  // machine-readable contact, and not have an `Expires` in the past.
+  const securityResponse = await page.request.get("/.well-known/security.txt");
+  expect(securityResponse.ok()).toBe(true);
+  expect(securityResponse.headers()["content-type"]).toContain("text/plain");
+  const securityTxt = await securityResponse.text();
+  expect(securityTxt).toMatch(/^Contact: mailto:\S+@\S+$/m);
+  expect(securityTxt).toContain(`Canonical: ${siteOrigin}/.well-known/security.txt`);
+  const expiresMatch = securityTxt.match(/^Expires: (.+)$/m);
+  expect(expiresMatch).not.toBeNull();
+  expect(new Date(expiresMatch![1]).getTime()).toBeGreaterThan(Date.now());
+
   const sitemapResponse = await page.request.get("/sitemap.xml");
   expect(sitemapResponse.ok()).toBe(true);
   const sitemap = await sitemapResponse.text();
