@@ -1,6 +1,6 @@
 begin;
 
-select plan(44);
+select plan(47);
 
 insert into auth.users (id, email, raw_user_meta_data)
 values
@@ -172,6 +172,40 @@ select lives_ok(
         certifications = '[{"name":"Erişilebilir tasarım","issuer":"Örnek kurum","issueDate":"2024","expiryDate":""}]'::jsonb
     where user_id = (select auth.uid())$$,
   'candidate can save the structured sections of their own profile'
+);
+
+-- PostgREST turns `upsert(..., { onConflict: 'user_id' })` into an INSERT with
+-- `ON CONFLICT (user_id) DO UPDATE SET "user_id" = excluded."user_id"`, so the
+-- update path needs UPDATE on user_id. 20261023120000 adds that grant.
+select lives_ok(
+  $$insert into public.candidate_profiles (user_id, headline, location, skills)
+    values ((select auth.uid()), 'Upsert headline', 'Girne', array['sql']::text[])
+    on conflict (user_id) do update
+      set "user_id" = excluded."user_id",
+          "headline" = excluded."headline",
+          "location" = excluded."location",
+          "skills" = excluded."skills"$$,
+  'a candidate can upsert their own profile with the PostgREST conflict target'
+);
+
+select throws_ok(
+  $$insert into public.candidate_profiles (user_id, headline)
+    values ('00000000-0000-4000-8000-00000000000b', 'Written by someone else')
+    on conflict (user_id) do update
+      set "user_id" = excluded."user_id",
+          "headline" = excluded."headline"$$,
+  '42501',
+  null,
+  'the upsert grant does not let a candidate write another candidate profile'
+);
+
+select throws_ok(
+  $$update public.candidate_profiles
+    set user_id = '00000000-0000-4000-8000-00000000000b'
+    where user_id = (select auth.uid())$$,
+  '42501',
+  null,
+  'the upsert grant does not let a candidate hand their profile to another user'
 );
 
 select throws_ok(
