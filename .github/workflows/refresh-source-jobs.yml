@@ -29,14 +29,18 @@ jobs:
       - name: Check configuration
         id: config
         env:
-          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # The project URL is public (it ships in the client bundle), so it has a
+          # built-in default; only the service-role key must be a secret. Both the
+          # canonical name and the short `supabase` alias are accepted so the job
+          # works whichever name the secret was created under.
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || vars.NEXT_PUBLIC_SUPABASE_URL || 'https://uwmhquvzbilbfzdrlxmb.supabase.co' }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.supabase }}
         run: |
           if [ -n "${SUPABASE_URL:-}" ] && [ -n "${SERVICE_KEY:-}" ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=Source job refresh not configured::Add the NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY repository secrets (Settings > Secrets and variables > Actions) to enable the scheduled import. Skipping this run."
+            echo "::warning title=Source job refresh not configured::Add the SUPABASE_SERVICE_ROLE_KEY repository secret (Settings > Secrets and variables > Actions > Secrets) to enable the scheduled import. Skipping this run."
           fi
 
       - name: Check out source
@@ -56,6 +60,6 @@ jobs:
       - name: Import source jobs
         if: steps.config.outputs.configured == 'true'
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || vars.NEXT_PUBLIC_SUPABASE_URL || 'https://uwmhquvzbilbfzdrlxmb.supabase.co' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.supabase }}
         run: bun run import:source-jobs
