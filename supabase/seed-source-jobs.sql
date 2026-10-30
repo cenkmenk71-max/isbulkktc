@@ -100,7 +100,7 @@ values
     '40000000-0000-4000-8000-000000000015', 'Kıbet', 'source-iskibris-kibet', 'pending',
     '', array['Yiyecek, İçecek'],
     null, 'Girne',
-    'https://www.iskibris.com/companies/171', 'https://innovia-iskibris.s3.eu-west-2.amazonaws.com/1_5d2329d2518e5.png'
+    'https://www.iskibris.com/companies/171', null
   ),
   (
     '40000000-0000-4000-8000-000000000016', 'Döveç Group', 'source-iskibris-dovec-group', 'pending',

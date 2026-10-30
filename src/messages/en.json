@@ -210,6 +210,8 @@
     "blog": "Business News",
     "contact": "Contact",
     "register": "Create a free account",
+    "account": "My account",
+    "signOut": "Sign out securely",
     "homeLabel": "İşBul KKTC home",
     "currentLanguage": "Current language"
   },
@@ -317,7 +319,10 @@
     "nextKicker": "EXPLORE MORE",
     "nextTitle": "Explore the company directory.",
     "nextBody": "Search Northern Cyprus company records by name, business type and location. Directory entries come from source data and are not verified company profiles.",
-    "directoryLink": "Visit the company directory"
+    "directoryLink": "Visit the company directory",
+    "feedbackKicker": "FEEDBACK",
+    "feedbackTitle": "Share your thoughts",
+    "feedbackBody": "Rate your experience, report a bug or suggest a new feature. We read every message."
   },
   "NotFound": {
     "title": "Page not found",
@@ -1234,6 +1239,55 @@
           "p2": "Koşullar güncellenebilir; önemli değişiklikleri site üzerinden duyururuz."
         }
       }
+    }
+  },
+  "FeedbackForm": {
+    "categoryLabel": "Topic",
+    "ratingLabel": "Rate your experience",
+    "ratingValue": "{value} stars",
+    "nameLabel": "Your name (optional)",
+    "emailLabel": "Your email (optional)",
+    "messageLabel": "Your message",
+    "submit": "Send feedback",
+    "sending": "Sending…",
+    "privacyNote": "Your message is reviewed only by the İşBul KKTC team and is never shared with third parties.",
+    "categories": {
+      "general": "General feedback",
+      "bug": "Bug report",
+      "feature": "Suggestion / new feature",
+      "employer": "Employer experience",
+      "candidate": "Candidate experience",
+      "other": "Other"
+    },
+    "messages": {
+      "invalid": "Please check the form and try again.",
+      "submitted": "Thanks for your feedback! Your message reached our team.",
+      "failed": "Feedback could not be sent right now. Please try again later."
+    }
+  },
+  "SalesLeadForm": {
+    "eyebrow": "Corporate quote",
+    "title": "Get a written quote from our team",
+    "description": "Share your listing count and duration; we will confirm the scope and prepare a tailored quote.",
+    "companyLabel": "Company name",
+    "contactLabel": "Contact name",
+    "emailLabel": "Your email address",
+    "phoneLabel": "Phone (optional)",
+    "durationLabel": "Preferred listing duration",
+    "durationPlaceholder": "Choose",
+    "noteLabel": "Briefly describe what you need",
+    "submit": "Send quote request",
+    "sending": "Sending…",
+    "privacyNote": "Your details are used only for the quote process and never shared with third parties.",
+    "durations": {
+      "oneDay": "1 day",
+      "sevenDays": "7 days",
+      "thirtyDays": "30 days"
+    },
+    "messages": {
+      "invalid": "Please check the form and try again.",
+      "submitted": "Your request reached us! Our team will get back to you shortly.",
+      "failed": "The request could not be sent right now. Please try again later."
     }
   }
 }

@@ -129,6 +129,7 @@ export function CandidateProfileForm({
     | "unreadable"
   >("idle");
   const [importSkipped, setImportSkipped] = useState(0);
+  const [resumeImported, setResumeImported] = useState(false);
   const [additionalSectionsOpen, setAdditionalSectionsOpen] = useState(
     Boolean(
       profile.experience.length ||
@@ -252,6 +253,7 @@ export function CandidateProfileForm({
       setImportStatus(
         result.skipped > 0 ? "importedWithSkipped" : "imported",
       );
+      setResumeImported(true);
     } catch (error) {
       const code =
         error instanceof ResumeImportError ? error.code : "unreadable";
@@ -362,6 +364,11 @@ export function CandidateProfileForm({
             name="certifications"
             type="hidden"
             value={JSON.stringify(certifications)}
+          />
+          <input
+            name="resumeImported"
+            type="hidden"
+            value={resumeImported ? "1" : ""}
           />
 
           <ProfileEntry

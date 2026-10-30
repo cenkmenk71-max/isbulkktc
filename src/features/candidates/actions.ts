@@ -3,6 +3,7 @@
 import { candidateProfileSchema, type CandidateProfileFormState } from "./schemas";
 import { getCurrentUser } from "@/server/dal/user";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
+import { sendResumeReceivedEmail } from "@/server/email/mailer";
 
 export async function saveCandidateProfile(
   _previousState: CandidateProfileFormState,
@@ -61,6 +62,23 @@ export async function saveCandidateProfile(
   if (error) {
     console.error("Candidate profile save failed.", { code: error.code });
     return { status: "error", message: "saveFailed" };
+  }
+
+  // A CV import runs entirely in the browser, so the profile save is the first
+  // server-side moment that proves the résumé actually reached us.
+  if (formData.get("resumeImported") === "1" && user.email) {
+    try {
+      await sendResumeReceivedEmail({
+        to: user.email,
+        locale: user.locale,
+        name: user.displayName,
+        userId: user.id,
+      });
+    } catch (mailError) {
+      console.error("Resume received email could not be sent.", {
+        error: mailError instanceof Error ? mailError.message : "unknown_error",
+      });
+    }
   }
 
   return { status: "success", message: "saved" };

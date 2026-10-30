@@ -1,10 +1,5 @@
-import {
-  BRAND,
-  escapeHtml,
-  renderBrandedEmail,
-} from "../_shared/notification-email.ts";
+import { renderNotificationEmail } from "../_shared/email-render.ts";
 
-type Locale = "tr" | "en" | "ru" | "el" | "fa" | "de";
 type EventType = "submitted" | "viewed" | "status_changed";
 
 type OutboxItem = {
@@ -18,150 +13,6 @@ type OutboxItem = {
   job_title: string;
   application_status: string;
   application_id: string;
-};
-
-const messages: Record<
-  Locale,
-  {
-    candidateAppliedSubject: string;
-    candidateApplied: string;
-    employerAppliedSubject: string;
-    employerApplied: string;
-    viewedSubject: string;
-    viewed: string;
-    statusSubject: string;
-    statusChanged: string;
-    statuses: Record<string, string>;
-    openDashboard: string;
-    footerNote: string;
-  }
-> = {
-  tr: {
-    candidateAppliedSubject: "Başvurunuz işverene iletildi",
-    candidateApplied: "Başvurunuz kaydedildi ve işverenin hesabına iletildi.",
-    employerAppliedSubject: "Yeni iş ilanı başvurusu",
-    employerApplied: "Şirket ilanınıza yeni bir aday başvurdu.",
-    viewedSubject: "İşveren başvurunuzu görüntüledi",
-    viewed: "İşveren başvurunuzu ilk kez görüntüledi.",
-    statusSubject: "Başvuru durumunuz güncellendi",
-    statusChanged: "Başvurunuzun yeni durumu: {status}.",
-    statuses: {
-      submitted: "İşverene iletildi",
-      reviewing: "İnceleniyor",
-      shortlisted: "Ön değerlendirmeyi geçti",
-      rejected: "Olumsuz sonuçlandı",
-      hired: "İşe alım tamamlandı",
-      withdrawn: "Geri çekildi",
-    },
-    openDashboard: "Hesabınızdan başvuruyu takip edebilirsiniz:",
-    footerNote:
-      "Bu bildirim, İşBul KKTC hesabınızdaki bir başvuru hareketi nedeniyle gönderildi.",
-  },
-  en: {
-    candidateAppliedSubject: "Your application was sent",
-    candidateApplied: "Your application was saved and sent to the employer's account.",
-    employerAppliedSubject: "New job application",
-    employerApplied: "A candidate applied to your company's job listing.",
-    viewedSubject: "The employer viewed your application",
-    viewed: "The employer viewed your application for the first time.",
-    statusSubject: "Your application status changed",
-    statusChanged: "Your new application status: {status}.",
-    statuses: {
-      submitted: "Sent to employer",
-      reviewing: "Under review",
-      shortlisted: "Shortlisted",
-      rejected: "Not selected",
-      hired: "Hired",
-      withdrawn: "Withdrawn",
-    },
-    openDashboard: "Track this application from your account:",
-    footerNote:
-      "This notification was sent because of activity on your İşBul KKTC account.",
-  },
-  ru: {
-    candidateAppliedSubject: "Отклик передан работодателю",
-    candidateApplied: "Отклик сохранён и передан в кабинет работодателя.",
-    employerAppliedSubject: "Новый отклик на вакансию",
-    employerApplied: "Кандидат откликнулся на вакансию вашей компании.",
-    viewedSubject: "Работодатель просмотрел ваш отклик",
-    viewed: "Работодатель впервые просмотрел ваш отклик.",
-    statusSubject: "Статус отклика изменён",
-    statusChanged: "Новый статус отклика: {status}.",
-    statuses: {
-      submitted: "Передан работодателю",
-      reviewing: "На рассмотрении",
-      shortlisted: "В коротком списке",
-      rejected: "Не выбрано",
-      hired: "Принят на работу",
-      withdrawn: "Отозван",
-    },
-    openDashboard: "Отслеживайте отклик в аккаунте:",
-    footerNote:
-      "Это уведомление отправлено в связи с действием в вашем аккаунте İşBul KKTC.",
-  },
-  el: {
-    candidateAppliedSubject: "Η αίτησή σας παραδόθηκε",
-    candidateApplied: "Η αίτησή σας αποθηκεύτηκε και παραδόθηκε στον λογαριασμό του εργοδότη.",
-    employerAppliedSubject: "Νέα αίτηση εργασίας",
-    employerApplied: "Ένας υποψήφιος υπέβαλε αίτηση για αγγελία της εταιρείας σας.",
-    viewedSubject: "Ο εργοδότης είδε την αίτησή σας",
-    viewed: "Ο εργοδότης είδε την αίτησή σας για πρώτη φορά.",
-    statusSubject: "Η κατάσταση της αίτησής σας άλλαξε",
-    statusChanged: "Νέα κατάσταση αίτησης: {status}.",
-    statuses: {
-      submitted: "Παραδόθηκε στον εργοδότη",
-      reviewing: "Υπό εξέταση",
-      shortlisted: "Στη βραχεία λίστα",
-      rejected: "Δεν επιλέχθηκε",
-      hired: "Προσλήφθηκε",
-      withdrawn: "Αποσύρθηκε",
-    },
-    openDashboard: "Παρακολουθήστε την αίτηση από τον λογαριασμό σας:",
-    footerNote:
-      "Αυτή η ειδοποίηση στάλθηκε λόγω δραστηριότητας στον λογαριασμό σας İşBul KKTC.",
-  },
-  fa: {
-    candidateAppliedSubject: "درخواست شما به کارفرما تحویل شد",
-    candidateApplied: "درخواست شما ثبت و به حساب کارفرما ارسال شد.",
-    employerAppliedSubject: "درخواست شغلی جدید",
-    employerApplied: "یک نامزد برای آگهی شرکت شما درخواست داده است.",
-    viewedSubject: "کارفرما درخواست شما را مشاهده کرد",
-    viewed: "کارفرما برای نخستین بار درخواست شما را مشاهده کرد.",
-    statusSubject: "وضعیت درخواست شما تغییر کرد",
-    statusChanged: "وضعیت جدید درخواست: {status}.",
-    statuses: {
-      submitted: "به کارفرما ارسال شد",
-      reviewing: "در حال بررسی",
-      shortlisted: "در فهرست نهایی",
-      rejected: "انتخاب نشد",
-      hired: "استخدام شد",
-      withdrawn: "پس گرفته شد",
-    },
-    openDashboard: "وضعیت درخواست را در حساب خود پیگیری کنید:",
-    footerNote:
-      "این اطلاع‌رسانی به دلیل فعالیتی در حساب İşBul KKTC شما ارسال شد.",
-  },
-  de: {
-    candidateAppliedSubject: "Ihre Bewerbung wurde übermittelt",
-    candidateApplied: "Ihre Bewerbung wurde gespeichert und an das Arbeitgeberkonto übermittelt.",
-    employerAppliedSubject: "Neue Bewerbung",
-    employerApplied: "Ein Kandidat hat sich auf eine Stelle Ihres Unternehmens beworben.",
-    viewedSubject: "Der Arbeitgeber hat Ihre Bewerbung angesehen",
-    viewed: "Der Arbeitgeber hat Ihre Bewerbung erstmals angesehen.",
-    statusSubject: "Ihr Bewerbungsstatus hat sich geändert",
-    statusChanged: "Ihr neuer Bewerbungsstatus: {status}.",
-    statuses: {
-      submitted: "An Arbeitgeber übermittelt",
-      reviewing: "Wird geprüft",
-      shortlisted: "In der engeren Auswahl",
-      rejected: "Nicht ausgewählt",
-      hired: "Eingestellt",
-      withdrawn: "Zurückgezogen",
-    },
-    openDashboard: "Verfolgen Sie die Bewerbung in Ihrem Konto:",
-    footerNote:
-      "Diese Benachrichtigung wurde aufgrund einer Aktivität in Ihrem İşBul KKTC-Konto gesendet.",
-  },
 };
 
 function response(status: number, message: string) {
@@ -207,48 +58,23 @@ async function rpc<T>(
 }
 
 function getEmailContent(item: OutboxItem, appUrl: URL) {
-  const locale = (item.recipient_locale in messages
-    ? item.recipient_locale
-    : "tr") as Locale;
-  const copy = messages[locale];
+  const locale = item.recipient_locale;
   const dashboardPath = item.recipient_is_candidate
     ? "/profile/dashboard#my-applications"
     : `/company/dashboard/applications/${item.application_id}`;
   const localePrefix = locale === "tr" ? "" : `/${locale}`;
   const dashboardUrl = new URL(`${localePrefix}${dashboardPath}`, appUrl).toString();
-  const status = copy.statuses[item.application_status];
+  const siteUrl = new URL(localePrefix || "/", appUrl).toString();
 
-  const build = (subject: string, lead: string) => ({
-    subject,
-    text: `${lead}\n\n${item.job_title}\n${copy.openDashboard}\n${dashboardUrl}`,
-    html: renderBrandedEmail({
-      preheader: lead,
-      heading: subject,
-      body: `<p style="margin:0 0 12px;">${escapeHtml(lead)}</p><p style="margin:0;font-size:15px;font-weight:600;color:${BRAND.ink};">${escapeHtml(item.job_title)}</p>`,
-      ctaLabel: copy.openDashboard,
-      ctaUrl: dashboardUrl,
-      footerNote: copy.footerNote,
-      siteUrl: new URL(localePrefix || "/", appUrl).toString(),
-    }),
+  return renderNotificationEmail({
+    locale,
+    siteUrl,
+    eventType: item.event_type,
+    isCandidate: item.recipient_is_candidate,
+    jobTitle: item.job_title,
+    status: item.application_status,
+    dashboardUrl,
   });
-
-  if (item.event_type === "viewed" && item.recipient_is_candidate) {
-    return build(copy.viewedSubject, copy.viewed);
-  }
-
-  if (item.event_type === "status_changed" && status) {
-    return build(copy.statusSubject, copy.statusChanged.replace("{status}", status));
-  }
-
-  if (item.event_type === "submitted" && item.recipient_is_candidate) {
-    return build(copy.candidateAppliedSubject, copy.candidateApplied);
-  }
-
-  if (item.event_type === "submitted") {
-    return build(copy.employerAppliedSubject, copy.employerApplied);
-  }
-
-  throw new Error("unsupported_notification_event");
 }
 
 Deno.serve(async (request) => {

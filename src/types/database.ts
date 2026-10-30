@@ -579,6 +579,43 @@ export type Database = {
         Args: { _slug: string };
         Returns: Json;
       };
+      submit_feedback: {
+        Args: {
+          _name: string | null;
+          _email: string | null;
+          _category: string;
+          _rating: number | null;
+          _message: string;
+          _locale: string;
+        };
+        Returns: string;
+      };
+      submit_sales_lead: {
+        Args: {
+          _company_name: string | null;
+          _contact_name: string | null;
+          _email: string;
+          _phone: string | null;
+          _plan: string | null;
+          _duration_days: number | null;
+          _note: string | null;
+          _locale: string;
+        };
+        Returns: string;
+      };
+      opt_out_engagement: {
+        Args: { _email: string; _reason: string | null };
+        Returns: undefined;
+      };
+      list_engagement_recipients: {
+        Args: { _after: string | null; _batch_size: number };
+        Returns: {
+          user_id: string;
+          email: string;
+          display_name: string | null;
+          locale: string | null;
+        }[];
+      };
     };
     Enums: {
       platform_role: PlatformRole;
