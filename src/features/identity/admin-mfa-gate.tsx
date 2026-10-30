@@ -63,7 +63,10 @@ export function AdminMfaGate({
               <Image
                 alt={copy("qrAlt")}
                 height={220}
-                src={beginState.qrCode}
+                // GoTrue returns the QR as an SVG data URI that can carry a
+                // trailing control character; next/image rejects such a src and
+                // would 500 the whole enrollment screen.
+                src={beginState.qrCode.trimEnd()}
                 unoptimized
                 width={220}
               />

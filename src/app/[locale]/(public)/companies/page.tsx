@@ -10,6 +10,7 @@ import { withCompanyLogos } from "@/features/companies/company-logos";
 import { companyDirectory } from "@/features/companies/directory-data";
 import { applyCompanyDirectoryOverrides, deduplicateCompanyDirectory } from "@/features/companies/directory";
 import { getPublicCompanyDirectoryOverrides } from "@/server/dal/companies";
+import { getManagedDirectoryEntries } from "@/server/dal/content";
 import { getPublicJobCompanies } from "@/server/dal/jobs";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
@@ -46,16 +47,23 @@ export default async function CompaniesPage({ params }: CompaniesPageProps) {
 
   setRequestLocale(locale);
   await connection();
-  const [t, overrides, jobCompanies] = await Promise.all([
+  const [t, overrides, jobCompanies, managedDirectory] = await Promise.all([
     getTranslations("CompanyDirectory"),
     getPublicCompanyDirectoryOverrides(),
     getPublicJobCompanies(),
+    getManagedDirectoryEntries(),
   ]);
-  const publishedCompanies = withCompanyLogos(
-    deduplicateCompanyDirectory(
-      applyCompanyDirectoryOverrides(companyDirectory, overrides),
-    ),
-  );
+  // The managed directory already carries its logos; the bundled bundle is only
+  // merged with the logo manifest on the fallback path.
+  const publishedCompanies = managedDirectory
+    ? deduplicateCompanyDirectory(
+        applyCompanyDirectoryOverrides(managedDirectory, overrides),
+      )
+    : withCompanyLogos(
+        deduplicateCompanyDirectory(
+          applyCompanyDirectoryOverrides(companyDirectory, overrides),
+        ),
+      );
 
   return (
     <div className="company-directory-page">

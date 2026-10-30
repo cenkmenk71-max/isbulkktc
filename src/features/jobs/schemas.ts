@@ -177,6 +177,7 @@ export const publicJobListingSchema = z.object({
   district: z.enum(northernCyprusDistrictValues).nullable(),
   published_at: z.string().min(1),
   expires_at: z.string().min(1),
+  modified_at: z.string().min(1),
   publication_source: z.enum(["platform", "source_site"]),
   source_site: z.enum(["iskibris", "isbulkibris"]).nullable(),
   source_listing_url: nullableSourceListingUrlSchema,
