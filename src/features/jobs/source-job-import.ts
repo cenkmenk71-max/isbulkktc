@@ -314,3 +314,57 @@ export function sanitizeSourceJobRecord(record: SourceJobRecord): SourceJobRecor
   };
 }
 
+/**
+ * Narrows a large upstream catalogue to the newest `limit` listings while
+ * spreading them across employers, sectors and job types, so a small public
+ * board stays varied instead of showing one company's hiring spree. Diversity is
+ * filled first (rarest combinations win), then the remaining slots go to the
+ * newest listings overall.
+ */
+export function selectDiverseSourceJobs(
+  records: readonly SourceJobRecord[],
+  limit: number,
+): SourceJobRecord[] {
+  if (limit <= 0) return [];
+  const newestFirst = [...records].sort(
+    (a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt),
+  );
+  const selected: SourceJobRecord[] = [];
+  const chosen = new Set<SourceJobRecord>();
+  const usedCompanies = new Set<string>();
+  const usedSectors = new Set<string>();
+  const usedTypes = new Set<string>();
+
+  const sectorOf = (record: SourceJobRecord): string =>
+    (record.employer.categories[0] ?? "diger").trim().toLocaleLowerCase("tr-TR");
+
+  const add = (record: SourceJobRecord): void => {
+    chosen.add(record);
+    selected.push(record);
+    usedCompanies.add(record.employer.slug);
+    usedSectors.add(sectorOf(record));
+    usedTypes.add(record.jobType);
+  };
+
+  for (const record of newestFirst) {
+    if (selected.length >= limit) break;
+    if (chosen.has(record) || usedCompanies.has(record.employer.slug)) continue;
+    if (usedSectors.has(sectorOf(record)) || usedTypes.has(record.jobType)) continue;
+    add(record);
+  }
+
+  for (const record of newestFirst) {
+    if (selected.length >= limit) break;
+    if (chosen.has(record) || usedCompanies.has(record.employer.slug)) continue;
+    add(record);
+  }
+
+  for (const record of newestFirst) {
+    if (selected.length >= limit) break;
+    if (chosen.has(record)) continue;
+    add(record);
+  }
+
+  return selected.slice(0, limit);
+}
+

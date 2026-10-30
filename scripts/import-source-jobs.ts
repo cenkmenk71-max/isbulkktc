@@ -8,6 +8,7 @@ import {
 import {
   buildSourceJobSlug,
   sanitizeSourceJobRecord,
+  selectDiverseSourceJobs,
   type SourceEmployerRecord,
   type SourceJobRecord,
 } from "../src/features/jobs/source-job-import";
@@ -24,12 +25,25 @@ function loadLocalEnv(): void {
 type ImportOptions = {
   dryRun: boolean;
   purge: boolean;
+  limit: number | null;
 };
+
+function parseLimit(argv: string[]): number | null {
+  const inline = argv.find((arg) => arg.startsWith("--limit="));
+  const spaced = argv.indexOf("--limit");
+  const raw =
+    (inline ? inline.slice("--limit=".length) : undefined) ??
+    (spaced >= 0 ? argv[spaced + 1] : undefined) ??
+    process.env.SOURCE_JOB_LIMIT;
+  const parsed = raw === undefined ? Number.NaN : Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
 
 function parseOptions(argv: string[]): ImportOptions {
   return {
     dryRun: argv.includes("--dry-run"),
     purge: !argv.includes("--keep-existing"),
+    limit: parseLimit(argv),
   };
 }
 
@@ -104,12 +118,22 @@ function assert(
 }
 
 async function purgeSourceData(client: SupabaseClient): Promise<void> {
-  const { data: importedJobs, error: selectError } = await client
+  // Delete every imported listing, not only the ones currently mapped in
+  // job_source_imports: a row can lose its mapping (or predate the mapping
+  // table) and would otherwise survive every refresh forever.
+  const { error: importsDeleteError } = await client
     .from("job_source_imports")
-    .select("job_id");
-  assert(selectError, "Kaynak ilanlar okunamadı");
+    .delete()
+    .not("job_id", "is", null);
+  assert(importsDeleteError, "Eski kaynak eşlemeleri silinemedi");
 
-  const jobIds = (importedJobs ?? []).map((row) => row.job_id as string);
+  const { data: sourceJobs, error: jobsSelectError } = await client
+    .from("jobs")
+    .select("id")
+    .eq("publication_source", "source_site");
+  assert(jobsSelectError, "Eski kaynak ilanlar okunamadı");
+
+  const jobIds = (sourceJobs ?? []).map((row) => row.id as string);
   if (jobIds.length > 0) {
     const { error: deleteError } = await client.from("jobs").delete().in("id", jobIds);
     assert(deleteError, "Eski kaynak ilanlar silinemedi");
@@ -254,24 +278,41 @@ async function main(): Promise<void> {
   const records = dedupeRecords([...iskibrisJobs, ...isbulkibrisJobs])
     .map(sanitizeSourceJobRecord)
     .filter((record) => record.title.length >= 5);
-  assignUniqueSlugs(records);
-  const employers = collectEmployers(records);
+
+  // The upstream catalogue is far larger than the board we want to publish.
+  // Keep the newest listings, but spread them across employers and sectors so
+  // the public catalogue stays varied rather than one company's hiring spree.
+  const selected =
+    options.limit === null ? records : selectDiverseSourceJobs(records, options.limit);
+
+  assignUniqueSlugs(selected);
+  const employers = collectEmployers(selected);
 
   console.info(
-    `  · Toplam ${records.length} ilan ve ${employers.size} işveren hazır ` +
-      `(iskibris: ${iskibrisJobs.length}, isbulkibris: ${isbulkibrisJobs.length}).`,
+    `  · ${records.length} kaynak ilan bulundu; ${selected.length} ilan yayınlanacak ` +
+      `(iskibris: ${iskibrisJobs.length}, isbulkibris: ${isbulkibrisJobs.length}` +
+      `${options.limit === null ? "" : `, limit: ${options.limit}`}).`,
   );
+  console.info(`  · ${employers.size} işveren hazırlanacak.`);
 
   if (options.dryRun) {
+    selected.forEach((record, index) => {
+      console.info(
+        `    ${String(index + 1).padStart(2, " ")}. [${record.source}] ${record.title} ` +
+          `— ${record.employer.name} (${record.employer.categories[0] ?? "sektör yok"}, ${record.jobType})`,
+      );
+    });
     console.info("Kuru çalıştırma tamamlandı; veritabanına yazılmadı.");
     return;
   }
 
-  // Never let a transient source outage wipe the live catalogue.
-  const minimumExpectedJobs = 10;
-  if (records.length < minimumExpectedJobs) {
+  // Never let a transient source outage wipe the live catalogue. With a limit we
+  // expect exactly that many listings, so an under-filled selection signals a
+  // source failure rather than a legitimately small board.
+  const minimumExpectedJobs = options.limit ?? 10;
+  if (selected.length < minimumExpectedJobs) {
     throw new Error(
-      `Yalnızca ${records.length} ilan bulundu; beklenen en az ${minimumExpectedJobs}. ` +
+      `Yalnızca ${selected.length} ilan bulundu; beklenen en az ${minimumExpectedJobs}. ` +
         "Kaynak siteler geçici olarak yanıt vermiyor olabilir, bu yüzden canlı veri korunuyor.",
     );
   }
@@ -289,10 +330,10 @@ async function main(): Promise<void> {
   const companyIdBySlug = await upsertEmployers(client, employers);
 
   console.info("İlanlar yazılıyor…");
-  await insertJobs(client, records, companyIdBySlug);
+  await insertJobs(client, selected, companyIdBySlug);
 
   console.info(
-    `Tamamlandı: ${records.length} ilan canlı Supabase veritabanına yazıldı.`,
+    `Tamamlandı: ${selected.length} ilan canlı Supabase veritabanına yazıldı.`,
   );
 }
 
