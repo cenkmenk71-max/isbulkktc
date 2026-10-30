@@ -32,7 +32,10 @@ permissions:
 
 concurrency:
   group: verify-production-deployment
-  cancel-in-progress: false
+  # Back-to-back pushes to main are common (a merge lands on top of a merge). The
+  # older run cannot ever see its commit on production, so cancel it instead of
+  # letting it poll for 15 minutes and then paint a healthy site red.
+  cancel-in-progress: true
 
 jobs:
   verify:
@@ -61,6 +64,17 @@ jobs:
           echo "sha=$expected" >> "$GITHUB_OUTPUT"
           echo "Verifying production serves $expected"
 
+      - name: Resolve the branch tip
+        id: tip
+        if: github.event_name == 'push'
+        run: |
+          # `git ls-remote` reads the live remote ref without needing history, so
+          # it reports the current head of main even if a newer merge landed
+          # while this run was queued.
+          tip="$(git ls-remote origin refs/heads/main | cut -f1)"
+          echo "sha=$tip" >> "$GITHUB_OUTPUT"
+          echo "Current main tip is $tip"
+
       - name: Verify the deployment
         env:
           PRODUCTION_URL: ${{ vars.PRODUCTION_URL || 'https://isbulkktc.com' }}
@@ -69,4 +83,7 @@ jobs:
           VERCEL_PROJECT: ${{ vars.VERCEL_PROJECT || 'isbulkktc' }}
           DEPLOY_TIMEOUT_SEC: ${{ vars.DEPLOY_TIMEOUT_SEC || '900' }}
           DEPLOY_POLL_SEC: ${{ vars.DEPLOY_POLL_SEC || '20' }}
-        run: node scripts/verify-production-deployment.mjs --expect "${{ steps.expect.outputs.sha }}"
+        # On a push, `--tip` lets the script skip when a newer commit already owns
+        # main. A manual run passes no tip: the caller named the commit explicitly
+        # and means to verify it even if it is no longer the tip.
+        run: node scripts/verify-production-deployment.mjs --expect "${{ steps.expect.outputs.sha }}" --tip "${{ steps.tip.outputs.sha }}"
