@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+{{- $locale := "tr" -}}
+{{- with .Data -}}{{- if and .locale (or (eq .locale "tr") (eq .locale "en") (eq .locale "ru") (eq .locale "el") (eq .locale "fa") (eq .locale "de")) -}}{{- $locale = .locale -}}{{- end -}}{{- end -}}
+{{- $rtl := eq $locale "fa" -}}
+<html lang="{{ $locale }}" dir="{{ if $rtl }}rtl{{ else }}ltr{{ end }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
+    <title>{{ if eq $locale "tr" }}Yeni e-posta adresinizi doğrulayın{{ else if eq $locale "en" }}Confirm your new email address{{ else if eq $locale "ru" }}Подтвердите новый адрес электронной почты{{ else if eq $locale "el" }}Επιβεβαιώστε τη νέα διεύθυνση email σας{{ else if eq $locale "fa" }}نشانی ایمیل جدید خود را تأیید کنید{{ else if eq $locale "de" }}Bestätigen Sie Ihre neue E-Mail-Adresse{{ else }}Yeni e-posta adresinizi doğrulayın{{ end }}</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F5F2EB; margin: 0; padding: 0; color: #1A1A1A; }
+      .preheader { display: none; max-height: 0; overflow: hidden; mso-hide: all; }
+      .container { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+      .header { background: #0D5C3A; padding: 28px 32px; }
+      .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+      .header p { margin: 4px 0 0; color: #EAF3EE; font-size: 13px; }
+      .body { padding: 32px; }
+      .body h2 { margin: 0 0 12px; font-size: 18px; }
+      .body p { margin: 0 0 16px; font-size: 15px; line-height: 1.6; }
+      .btn { display: inline-block; background-color: #0D5C3A; color: #ffffff !important; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; }
+      .fallback { margin-top: 24px; font-size: 13px; color: #57534E; word-break: break-all; }
+      .fallback a { color: #0D5C3A; }
+      .note { background-color: #F5F2EB; border-radius: 8px; padding: 16px; font-size: 13px; color: #57534E; border: 1px solid rgba(0,0,0,0.06); }
+      .code { font-size: 32px; font-weight: 700; letter-spacing: 6px; background-color: #F5F2EB; border-radius: 8px; padding: 18px; text-align: center; border: 1px solid rgba(0,0,0,0.06); }
+      .code-label { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: #57534E; }
+      .footer { padding: 24px 32px; background: #fbfbfa; border-top: 1px solid #eeeeee; text-align: center; font-size: 12px; color: #57534E; }
+      .footer a { color: #0D5C3A; text-decoration: underline; }
+    </style>
+  </head>
+  <body>
+    <div class="preheader">{{ if eq $locale "tr" }}Yeni e-posta adresinizi doğrulayın{{ else if eq $locale "en" }}Confirm your new email address{{ else if eq $locale "ru" }}Подтвердите новый адрес электронной почты{{ else if eq $locale "el" }}Επιβεβαιώστε τη νέα διεύθυνση email σας{{ else if eq $locale "fa" }}نشانی ایمیل جدید خود را تأیید کنید{{ else if eq $locale "de" }}Bestätigen Sie Ihre neue E-Mail-Adresse{{ else }}Yeni e-posta adresinizi doğrulayın{{ end }}</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td align="center">
+          <div class="container">
+            <div class="header">
+              <h1>İşBul KKTC</h1>
+              <p>{{ if eq $locale "tr" }}Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı{{ else if eq $locale "en" }}Northern Cyprus' trusted career and employment network{{ else if eq $locale "ru" }}Надёжная сеть карьеры и занятости Северного Кипра{{ else if eq $locale "el" }}Το αξιόπιστο δίκτυο καριέρας και απασχόλησης της Βόρειας Κύπρου{{ else if eq $locale "fa" }}شبکه معتبر شغلی و کاریابی قبرس شمالی{{ else if eq $locale "de" }}Das verlässliche Karriere- und Beschäftigungsnetzwerk Nordzyperns{{ else }}Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı{{ end }}</p>
+            </div>
+            <div class="body">
+      <h2>{{ if eq $locale "tr" }}Yeni e-posta adresinizi doğrulayın{{ else if eq $locale "en" }}Confirm your new email address{{ else if eq $locale "ru" }}Подтвердите новый адрес электронной почты{{ else if eq $locale "el" }}Επιβεβαιώστε τη νέα διεύθυνση email σας{{ else if eq $locale "fa" }}نشانی ایمیل جدید خود را تأیید کنید{{ else if eq $locale "de" }}Bestätigen Sie Ihre neue E-Mail-Adresse{{ else }}Yeni e-posta adresinizi doğrulayın{{ end }}</h2>
+      <p>{{ if eq $locale "tr" }}Hesabınızın e-posta adresini <strong>{{ .NewEmail }}</strong> olarak doğrulamak için düğmeyi kullanın.{{ else if eq $locale "en" }}Use the button to confirm <strong>{{ .NewEmail }}</strong> as the email address for your account.{{ else if eq $locale "ru" }}Нажмите кнопку, чтобы подтвердить <strong>{{ .NewEmail }}</strong> как адрес электронной почты вашего аккаунта.{{ else if eq $locale "el" }}Πατήστε το κουμπί για να επιβεβαιώσετε το <strong>{{ .NewEmail }}</strong> ως διεύθυνση email του λογαριασμού σας.{{ else if eq $locale "fa" }}برای تأیید <strong>{{ .NewEmail }}</strong> به‌عنوان نشانی ایمیل حساب خود، دکمه را بزنید.{{ else if eq $locale "de" }}Bestätigen Sie mit der Schaltfläche <strong>{{ .NewEmail }}</strong> als E-Mail-Adresse Ihres Kontos.{{ else }}Hesabınızın e-posta adresini <strong>{{ .NewEmail }}</strong> olarak doğrulamak için düğmeyi kullanın.{{ end }}</p>
+      <p><a class="btn" href="{{ .ConfirmationURL }}">{{ if eq $locale "tr" }}Yeni adresi doğrula{{ else if eq $locale "en" }}Confirm the new address{{ else if eq $locale "ru" }}Подтвердить новый адрес{{ else if eq $locale "el" }}Επιβεβαίωση νέας διεύθυνσης{{ else if eq $locale "fa" }}تأیید نشانی جدید{{ else if eq $locale "de" }}Neue Adresse bestätigen{{ else }}Yeni adresi doğrula{{ end }}</a></p>
+      <p class="note">{{ if eq $locale "tr" }}Bu değişikliği siz yapmadıysanız bu e-postayı yok sayın ve hesap güvenliğiniz için şifrenizi yenileyin.{{ else if eq $locale "en" }}If you did not request this change, ignore this email and reset your password for account security.{{ else if eq $locale "ru" }}Если вы не запрашивали это изменение, проигнорируйте письмо и смените пароль для безопасности аккаунта.{{ else if eq $locale "el" }}Αν δεν ζητήσατε αυτή την αλλαγή, αγνοήστε το email και επαναφέρετε τον κωδικό σας για την ασφάλεια του λογαριασμού.{{ else if eq $locale "fa" }}اگر این تغییر را درخواست نکرده‌اید، این ایمیل را نادیده بگیرید و برای امنیت حساب گذرواژه خود را بازنشانی کنید.{{ else if eq $locale "de" }}Wenn Sie diese Änderung nicht angefordert haben, ignorieren Sie diese E-Mail und setzen Sie Ihr Passwort zur Kontosicherheit zurück.{{ else }}Bu değişikliği siz yapmadıysanız bu e-postayı yok sayın ve hesap güvenliğiniz için şifrenizi yenileyin.{{ end }}</p>
+      <p class="fallback">{{ if eq $locale "tr" }}Düğme çalışmazsa bu bağlantıyı tarayıcınıza kopyalayın:{{ else if eq $locale "en" }}If the button does not work, copy this link into your browser:{{ else if eq $locale "ru" }}Если кнопка не работает, скопируйте эту ссылку в браузер:{{ else if eq $locale "el" }}Αν το κουμπί δεν λειτουργεί, αντιγράψτε αυτόν τον σύνδεσμο στον περιηγητή σας:{{ else if eq $locale "fa" }}اگر دکمه کار نکرد، این پیوند را در مرورگر خود بچسبانید:{{ else if eq $locale "de" }}Falls die Schaltfläche nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:{{ else }}Düğme çalışmazsa bu bağlantıyı tarayıcınıza kopyalayın:{{ end }}<br><a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a></p>
+            </div>
+            <div class="footer">
+        <p>{{ if eq $locale "tr" }}Kuzey Kıbrıs Türk Cumhuriyeti{{ else if eq $locale "en" }}Turkish Republic of Northern Cyprus{{ else if eq $locale "ru" }}Турецкая Республика Северного Кипра{{ else if eq $locale "el" }}Τουρκική Δημοκρατία της Βόρειας Κύπρου{{ else if eq $locale "fa" }}جمهوری ترک قبرس شمالی{{ else if eq $locale "de" }}Türkische Republik Nordzypern{{ else }}Kuzey Kıbrıs Türk Cumhuriyeti{{ end }} · <a href="{{ .SiteURL }}">isbulkktc.com</a></p>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

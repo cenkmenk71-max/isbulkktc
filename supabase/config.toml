@@ -70,6 +70,18 @@ content_path = "./supabase/templates/confirmation.html"
 subject = "İşBul KKTC şifre yenileme bağlantınız"
 content_path = "./supabase/templates/recovery.html"
 
+[auth.email.template.invite]
+subject = "İşBul KKTC davetiniz"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.magic_link]
+subject = "İşBul KKTC giriş bağlantınız"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.email_change]
+subject = "İşBul KKTC yeni e-posta adresinizi doğrulayın"
+content_path = "./supabase/templates/email_change.html"
+
 [auth.email.template.reauthentication]
 subject = "İşBul KKTC doğrulama kodunuz"
 content_path = "./supabase/templates/reauthentication.html"
