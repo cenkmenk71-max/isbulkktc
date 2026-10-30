@@ -2,13 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { ArrowRight, BookOpenText, BriefcaseBusiness, Building2, ChevronDown, Compass, Globe, Mail, Menu, Package, UserRound, X } from 'lucide-react'
+import { ArrowRight, BookOpenText, BriefcaseBusiness, Building2, ChevronDown, Compass, Globe, LogOut, Mail, Menu, Package, UserRound, X } from 'lucide-react'
 import { Logo } from '@/components/brand/logo'
 import { Link, usePathname } from '@/i18n/navigation'
 import { localeNames, routing } from '@/i18n/routing'
+import { signOut } from '@/features/identity/actions'
+import { getHeaderSession } from '@/features/identity/header-session-actions'
+import type { HeaderSessionState } from '@/features/identity/header-session'
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false)
+  const [session, setSession] = useState<HeaderSessionState>({ signedIn: false })
   const menuButtonRef = useRef<HTMLButtonElement | null>(null)
   const locale = useLocale()
   const pathname = usePathname()
@@ -28,6 +32,17 @@ export function SiteHeader() {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [open])
+
+  // The layout is shared with statically prerendered public routes, so the
+  // session is fetched here (after hydration) instead of read during render.
+  // Re-runs on navigation so the variant follows a sign-in/sign-out.
+  useEffect(() => {
+    let active = true
+    getHeaderSession()
+      .then((next) => { if (active) setSession(next) })
+      .catch(() => { if (active) setSession({ signedIn: false }) })
+    return () => { active = false }
+  }, [pathname])
 
   function isCurrentNavigationItem(href: string) {
     return pathname === href || pathname.startsWith(`${href}/`)
@@ -80,10 +95,23 @@ export function SiteHeader() {
                 <p className="language-menu-note">{languageCopy('notice')}</p>
               </div>
             </details>
-            <Link href="/login" className="header-login">{navCopy('login')}</Link>
-            <Link href="/register" className="button button-dark header-post">
-              <UserRound size={16} aria-hidden="true"/><span>{navCopy('register')}</span>
-            </Link>
+            {session.signedIn ? (
+              <>
+                <Link href={session.dashboardHref} className="header-login">{navCopy('account')}</Link>
+                <form action={signOut} className="header-signout">
+                  <button className="button button-dark header-post" type="submit">
+                    <LogOut size={16} aria-hidden="true"/><span>{navCopy('signOut')}</span>
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="header-login">{navCopy('login')}</Link>
+                <Link href="/register" className="button button-dark header-post">
+                  <UserRound size={16} aria-hidden="true"/><span>{navCopy('register')}</span>
+                </Link>
+              </>
+            )}
             <button
               ref={menuButtonRef}
               className="mobile-menu-button"
@@ -113,8 +141,19 @@ export function SiteHeader() {
                 aria-current={active ? 'page' : undefined}
               ><span><Icon size={17} aria-hidden="true"/>{label}</span><ArrowRight size={15} aria-hidden="true"/></Link>
             })}
-            <Link href="/login" onClick={closeMenu}>{navCopy('login')}<ArrowRight size={15} aria-hidden="true"/></Link>
-            <Link href="/register" className="mobile-nav-primary" onClick={closeMenu}>{navCopy('register')}<ArrowRight size={15} aria-hidden="true"/></Link>
+            {session.signedIn ? (
+              <>
+                <Link href={session.dashboardHref} onClick={closeMenu}>{navCopy('account')}<ArrowRight size={15} aria-hidden="true"/></Link>
+                <form action={signOut} className="mobile-nav-primary-form">
+                  <button className="mobile-nav-primary" type="submit"><LogOut size={17} aria-hidden="true"/>{navCopy('signOut')}</button>
+                </form>
+              </>
+            ) : (
+              <>
+                <Link href="/login" onClick={closeMenu}>{navCopy('login')}<ArrowRight size={15} aria-hidden="true"/></Link>
+                <Link href="/register" className="mobile-nav-primary" onClick={closeMenu}>{navCopy('register')}<ArrowRight size={15} aria-hidden="true"/></Link>
+              </>
+            )}
         </nav>
       </header>
     </>
