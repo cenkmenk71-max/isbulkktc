@@ -1,0 +1,175 @@
+{{- $lang := "tr" -}}
+{{- if .Data.locale }}{{ $lang = .Data.locale }}{{ end -}}
+<!DOCTYPE html>
+<html lang="{{ $lang }}" dir="{{ if eq $lang "fa" }}rtl{{ else }}ltr{{ end }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>
+{{ if eq $lang "en" }}
+  Your İşBul KKTC invitation
+{{ else if eq $lang "ru" }}
+  Ваше приглашение в İşBul KKTC
+{{ else if eq $lang "el" }}
+  Η πρόσκλησή σας στο İşBul KKTC
+{{ else if eq $lang "fa" }}
+  دعوت‌نامه İşBul KKTC شما
+{{ else if eq $lang "de" }}
+  Ihre İşBul KKTC-Einladung
+{{ else }}
+  İşBul KKTC davetiniz
+{{ end }}
+  </title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #F5F2EB; color: #1A1A1A; -webkit-text-size-adjust: 100%; }
+    .preheader { display: none; max-height: 0; overflow: hidden; color: #F5F2EB; font-size: 1px; line-height: 1px; }
+    .container { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #E5E1D8; }
+    .header { background: #0D5C3A; padding: 28px 32px; }
+    .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    .header p { margin: 4px 0 0; color: #DCEBE3; font-size: 13px; }
+    .body { padding: 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    .body h2 { margin: 0 0 12px; font-size: 18px; color: #14211B; }
+    .body p { margin: 0 0 16px; font-size: 15px; line-height: 1.6; }
+    .btn { display: inline-block; background-color: #0D5C3A; color: #ffffff !important; padding: 13px 26px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; }
+    .code { display: block; font-size: 30px; font-weight: 700; letter-spacing: 6px; background-color: #F5F2EB; border-radius: 8px; padding: 18px; text-align: center; border: 1px solid #E5E1D8; color: #14211B; }
+    .note { background-color: #F5F2EB; border-radius: 8px; padding: 16px; font-size: 13px; color: #4B5563; border: 1px solid #E5E1D8; }
+    .fallback { margin-top: 24px; font-size: 13px; color: #4B5563; word-break: break-all; }
+    .fallback a { color: #0D5C3A; }
+    .footer { padding: 24px 32px; background: #FBFAF7; border-top: 1px solid #E5E1D8; text-align: center; font-size: 12px; color: #4B5563; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    .footer a { color: #0D5C3A; text-decoration: none; }
+    .footer p { margin: 0 0 8px; }
+  </style>
+</head>
+<body>
+  <span class="preheader">
+{{ if eq $lang "en" }}
+      Your İşBul KKTC invitation
+{{ else if eq $lang "ru" }}
+      Ваше приглашение в İşBul KKTC
+{{ else if eq $lang "el" }}
+      Η πρόσκλησή σας στο İşBul KKTC
+{{ else if eq $lang "fa" }}
+      دعوت‌نامه İşBul KKTC شما
+{{ else if eq $lang "de" }}
+      Ihre İşBul KKTC-Einladung
+{{ else }}
+      İşBul KKTC davetiniz
+{{ end }}
+  </span>
+  <div class="container">
+    <div class="header">
+      <h1>İşBul KKTC</h1>
+      <p>
+{{ if eq $lang "en" }}Northern Cyprus' trusted career and employment network
+{{ else if eq $lang "ru" }}Надёжная сеть карьеры и трудоустройства Северного Кипра
+{{ else if eq $lang "el" }}Το αξιόπιστο δίκτυο καριέρας και απασχόλησης της Βόρειας Κύπρου
+{{ else if eq $lang "fa" }}شبکه معتبر شغلی و استخدامی قبرس شمالی
+{{ else if eq $lang "de" }}Das zuverlässige Karriere- und Beschäftigungsnetzwerk Nordzyperns
+{{ else }}Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı
+{{ end }}
+      </p>
+    </div>
+    <div class="body">
+      <h2>
+{{ if eq $lang "en" }}
+      Accept your invitation
+{{ else if eq $lang "ru" }}
+      Примите приглашение
+{{ else if eq $lang "el" }}
+      Αποδεχτείτε την πρόσκλησή σας
+{{ else if eq $lang "fa" }}
+      دعوت خود را بپذیرید
+{{ else if eq $lang "de" }}
+      Einladung annehmen
+{{ else }}
+      Davetinizi kabul edin
+{{ end }}
+      </h2>
+      <p>
+{{ if eq $lang "en" }}
+      <strong>{{ .Email }}</strong> has been invited to İşBul KKTC. Use the button below to create your account.
+{{ else if eq $lang "ru" }}
+      <strong>{{ .Email }}</strong> приглашён в İşBul KKTC. Нажмите кнопку ниже, чтобы создать аккаунт.
+{{ else if eq $lang "el" }}
+      Η διεύθυνση <strong>{{ .Email }}</strong> προσκλήθηκε στο İşBul KKTC. Χρησιμοποιήστε το κουμπί παρακάτω για να δημιουργήσετε τον λογαριασμό σας.
+{{ else if eq $lang "fa" }}
+      <strong>{{ .Email }}</strong> به İşBul KKTC دعوت شده است. برای ایجاد حساب خود از دکمه زیر استفاده کنید.
+{{ else if eq $lang "de" }}
+      <strong>{{ .Email }}</strong> wurde zu İşBul KKTC eingeladen. Verwenden Sie die Schaltfläche unten, um Ihr Konto zu erstellen.
+{{ else }}
+      <strong>{{ .Email }}</strong> adresi İşBul KKTC'ye davet edildi. Hesabınızı oluşturmak için aşağıdaki düğmeyi kullanın.
+{{ end }}
+      </p>
+      <p style="margin: 24px 0;">
+{{ if eq $lang "en" }}<a class="btn" href="{{ .ConfirmationURL }}">Accept invitation</a>
+{{ else if eq $lang "ru" }}<a class="btn" href="{{ .ConfirmationURL }}">Принять приглашение</a>
+{{ else if eq $lang "el" }}<a class="btn" href="{{ .ConfirmationURL }}">Αποδοχή πρόσκλησης</a>
+{{ else if eq $lang "fa" }}<a class="btn" href="{{ .ConfirmationURL }}">پذیرش دعوت</a>
+{{ else if eq $lang "de" }}<a class="btn" href="{{ .ConfirmationURL }}">Einladung annehmen</a>
+{{ else }}<a class="btn" href="{{ .ConfirmationURL }}">Daveti kabul et</a>
+{{ end }}
+      </p>
+      <p class="note">
+{{ if eq $lang "en" }}
+      If you were not expecting this invitation, you can ignore it; the link expires shortly.
+{{ else if eq $lang "ru" }}
+      Если вы не ожидали это приглашение, проигнорируйте его; срок действия ссылки ограничен.
+{{ else if eq $lang "el" }}
+      Αν δεν περιμένατε αυτή την πρόσκληση, μπορείτε να την αγνοήσετε· ο σύνδεσμος λήγει σύντομα.
+{{ else if eq $lang "fa" }}
+      اگر انتظار این دعوت را نداشتید، می‌توانید آن را نادیده بگیرید؛ پیوند مدت کوتاهی معتبر است.
+{{ else if eq $lang "de" }}
+      Wenn Sie diese Einladung nicht erwartet haben, können Sie sie ignorieren; der Link ist nur kurze Zeit gültig.
+{{ else }}
+      Bu daveti beklemiyorduysanız yok sayabilirsiniz; bağlantı kısa süre geçerlidir.
+{{ end }}
+      </p>
+      <p class="fallback">
+{{ if eq $lang "en" }}
+      If the button does not work, copy this link into your browser:
+{{ else if eq $lang "ru" }}
+      Если кнопка не работает, скопируйте эту ссылку в браузер:
+{{ else if eq $lang "el" }}
+      Αν το κουμπί δεν λειτουργεί, αντιγράψτε αυτόν τον σύνδεσμο στον περιηγητή σας:
+{{ else if eq $lang "fa" }}
+      اگر دکمه کار نکرد، این پیوند را در مرورگر خود بچسبانید:
+{{ else if eq $lang "de" }}
+      Wenn die Schaltfläche nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:
+{{ else }}
+      Düğme çalışmazsa bu bağlantıyı tarayıcınıza kopyalayın:
+{{ end }}
+        <br>
+        <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
+      </p>
+    </div>
+    <div class="footer">
+      <p>
+{{ if eq $lang "en" }}
+      If you were not expecting this invitation, you can ignore it; the link expires shortly.
+{{ else if eq $lang "ru" }}
+      Если вы не ожидали это приглашение, проигнорируйте его; срок действия ссылки ограничен.
+{{ else if eq $lang "el" }}
+      Αν δεν περιμένατε αυτή την πρόσκληση, μπορείτε να την αγνοήσετε· ο σύνδεσμος λήγει σύντομα.
+{{ else if eq $lang "fa" }}
+      اگر انتظار این دعوت را نداشتید، می‌توانید آن را نادیده بگیرید؛ پیوند مدت کوتاهی معتبر است.
+{{ else if eq $lang "de" }}
+      Wenn Sie diese Einladung nicht erwartet haben, können Sie sie ignorieren; der Link ist nur kurze Zeit gültig.
+{{ else }}
+      Bu daveti beklemiyorduysanız yok sayabilirsiniz; bağlantı kısa süre geçerlidir.
+{{ end }}
+      </p>
+      <p>
+{{ if eq $lang "en" }}Turkish Republic of Northern Cyprus
+{{ else if eq $lang "ru" }}Турецкая Республика Северного Кипра
+{{ else if eq $lang "el" }}Τουρκική Δημοκρατία της Βόρειας Κύπρου
+{{ else if eq $lang "fa" }}جمهوری ترک قبرس شمالی
+{{ else if eq $lang "de" }}Türkische Republik Nordzypern
+{{ else }}Kuzey Kıbrıs Türk Cumhuriyeti
+{{ end }}
+, <a href="{{ .SiteURL }}">isbulkktc.com</a></p>
+    </div>
+  </div>
+</body>
+</html>

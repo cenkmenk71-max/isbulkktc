@@ -53,6 +53,10 @@ export function SignUpForm({
           {copy(audience === "employer" ? "accountEmailLabel" : "emailLabel")}
           <input
             id="register-email"
+            aria-describedby={
+              state.message !== "idle" ? "register-form-message" : undefined
+            }
+            aria-invalid={state.status === "error"}
             autoComplete="email"
             name="email"
             required
@@ -103,6 +107,7 @@ export function SignUpForm({
             aria-live="polite"
             className="editorial-form-message"
             data-status={state.status}
+            id="register-form-message"
             role={state.status === "error" ? "alert" : "status"}
           >
             {copy(`messages.${state.message}`)}

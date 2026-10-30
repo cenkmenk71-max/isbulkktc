@@ -1,39 +1,149 @@
+{{- $lang := "tr" -}}
+{{- if .Data.locale }}{{ $lang = .Data.locale }}{{ end -}}
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="{{ $lang }}" dir="{{ if eq $lang "fa" }}rtl{{ else }}ltr{{ end }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
   <meta name="supported-color-schemes" content="light dark">
-  <title>Doğrulama kodunuz</title>
+  <title>
+{{ if eq $lang "en" }}
+  Your verification code
+{{ else if eq $lang "ru" }}
+  Ваш код подтверждения
+{{ else if eq $lang "el" }}
+  Ο κωδικός επαλήθευσής σας
+{{ else if eq $lang "fa" }}
+  کد تأیید شما
+{{ else if eq $lang "de" }}
+  Ihr Bestätigungscode
+{{ else }}
+  Doğrulama kodunuz
+{{ end }}
+  </title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F5F2EB; margin: 0; padding: 0; color: #1A1A1A; }
-    .container { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+    body { margin: 0; padding: 0; background-color: #F5F2EB; color: #1A1A1A; -webkit-text-size-adjust: 100%; }
+    .preheader { display: none; max-height: 0; overflow: hidden; color: #F5F2EB; font-size: 1px; line-height: 1px; }
+    .container { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #E5E1D8; }
     .header { background: #0D5C3A; padding: 28px 32px; }
     .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
-    .header p { margin: 4px 0 0; color: rgba(255,255,255,0.85); font-size: 13px; }
-    .body { padding: 32px; }
-    .body h2 { margin: 0 0 12px; font-size: 18px; }
+    .header p { margin: 4px 0 0; color: #DCEBE3; font-size: 13px; }
+    .body { padding: 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    .body h2 { margin: 0 0 12px; font-size: 18px; color: #14211B; }
     .body p { margin: 0 0 16px; font-size: 15px; line-height: 1.6; }
-    .code { font-size: 32px; font-weight: 700; letter-spacing: 6px; background-color: #F5F2EB; border-radius: 8px; padding: 18px; text-align: center; border: 1px solid rgba(0,0,0,0.06); }
-    .footer { padding: 24px 32px; background: #fbfbfa; border-top: 1px solid #eeeeee; text-align: center; font-size: 12px; color: #6B7280; }
+    .btn { display: inline-block; background-color: #0D5C3A; color: #ffffff !important; padding: 13px 26px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; }
+    .code { display: block; font-size: 30px; font-weight: 700; letter-spacing: 6px; background-color: #F5F2EB; border-radius: 8px; padding: 18px; text-align: center; border: 1px solid #E5E1D8; color: #14211B; }
+    .note { background-color: #F5F2EB; border-radius: 8px; padding: 16px; font-size: 13px; color: #4B5563; border: 1px solid #E5E1D8; }
+    .fallback { margin-top: 24px; font-size: 13px; color: #4B5563; word-break: break-all; }
+    .fallback a { color: #0D5C3A; }
+    .footer { padding: 24px 32px; background: #FBFAF7; border-top: 1px solid #E5E1D8; text-align: center; font-size: 12px; color: #4B5563; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
     .footer a { color: #0D5C3A; text-decoration: none; }
+    .footer p { margin: 0 0 8px; }
   </style>
 </head>
 <body>
+  <span class="preheader">
+{{ if eq $lang "en" }}
+      Your verification code
+{{ else if eq $lang "ru" }}
+      Ваш код подтверждения
+{{ else if eq $lang "el" }}
+      Ο κωδικός επαλήθευσής σας
+{{ else if eq $lang "fa" }}
+      کد تأیید شما
+{{ else if eq $lang "de" }}
+      Ihr Bestätigungscode
+{{ else }}
+      Doğrulama kodunuz
+{{ end }}
+  </span>
   <div class="container">
     <div class="header">
       <h1>İşBul KKTC</h1>
-      <p>Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı</p>
+      <p>
+{{ if eq $lang "en" }}Northern Cyprus' trusted career and employment network
+{{ else if eq $lang "ru" }}Надёжная сеть карьеры и трудоустройства Северного Кипра
+{{ else if eq $lang "el" }}Το αξιόπιστο δίκτυο καριέρας και απασχόλησης της Βόρειας Κύπρου
+{{ else if eq $lang "fa" }}شبکه معتبر شغلی و استخدامی قبرس شمالی
+{{ else if eq $lang "de" }}Das zuverlässige Karriere- und Beschäftigungsnetzwerk Nordzyperns
+{{ else }}Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı
+{{ end }}
+      </p>
     </div>
     <div class="body">
-      <h2>Doğrulama kodunuz</h2>
-      <p>Devam etmek için aşağıdaki tek kullanımlık kodu girin. Kodu kimseyle paylaşmayın.</p>
+      <h2>
+{{ if eq $lang "en" }}
+      Your verification code
+{{ else if eq $lang "ru" }}
+      Ваш код подтверждения
+{{ else if eq $lang "el" }}
+      Ο κωδικός επαλήθευσής σας
+{{ else if eq $lang "fa" }}
+      کد تأیید شما
+{{ else if eq $lang "de" }}
+      Ihr Bestätigungscode
+{{ else }}
+      Doğrulama kodunuz
+{{ end }}
+      </h2>
+      <p>
+{{ if eq $lang "en" }}
+      Enter the one-time code below to continue. Do not share it with anyone.
+{{ else if eq $lang "ru" }}
+      Введите приведённый ниже одноразовый код, чтобы продолжить. Никому его не сообщайте.
+{{ else if eq $lang "el" }}
+      Εισαγάγετε τον παρακάτω κωδικό μίας χρήσης για να συνεχίσετε. Μην τον κοινοποιήσετε σε κανέναν.
+{{ else if eq $lang "fa" }}
+      برای ادامه، کد یک‌بارمصرف زیر را وارد کنید. آن را با کسی به اشتراک نگذارید.
+{{ else if eq $lang "de" }}
+      Geben Sie den unten stehenden Einmalcode ein, um fortzufahren. Teilen Sie ihn mit niemandem.
+{{ else }}
+      Devam etmek için aşağıdaki tek kullanımlık kodu girin. Kodu kimseyle paylaşmayın.
+{{ end }}
+      </p>
       <p class="code">{{ .Token }}</p>
+      <p class="note">
+{{ if eq $lang "en" }}
+      If you did not request this code, you can ignore it.
+{{ else if eq $lang "ru" }}
+      Если вы не запрашивали этот код, просто проигнорируйте письмо.
+{{ else if eq $lang "el" }}
+      Αν δεν ζητήσατε αυτόν τον κωδικό, μπορείτε να το αγνοήσετε.
+{{ else if eq $lang "fa" }}
+      اگر این کد را درخواست نکرده‌اید، می‌توانید آن را نادیده بگیرید.
+{{ else if eq $lang "de" }}
+      Wenn Sie diesen Code nicht angefordert haben, können Sie die E-Mail ignorieren.
+{{ else }}
+      Bu kodu siz istemediyseniz yok sayabilirsiniz.
+{{ end }}
+      </p>
     </div>
     <div class="footer">
-      <p>Bu kodu siz istemediyseniz yok sayabilirsiniz.</p>
-      <p>Kuzey Kıbrıs Türk Cumhuriyeti · <a href="{{ .SiteURL }}">isbulkktc.com</a></p>
+      <p>
+{{ if eq $lang "en" }}
+      If you did not request this code, you can ignore it.
+{{ else if eq $lang "ru" }}
+      Если вы не запрашивали этот код, просто проигнорируйте письмо.
+{{ else if eq $lang "el" }}
+      Αν δεν ζητήσατε αυτόν τον κωδικό, μπορείτε να το αγνοήσετε.
+{{ else if eq $lang "fa" }}
+      اگر این کد را درخواست نکرده‌اید، می‌توانید آن را نادیده بگیرید.
+{{ else if eq $lang "de" }}
+      Wenn Sie diesen Code nicht angefordert haben, können Sie die E-Mail ignorieren.
+{{ else }}
+      Bu kodu siz istemediyseniz yok sayabilirsiniz.
+{{ end }}
+      </p>
+      <p>
+{{ if eq $lang "en" }}Turkish Republic of Northern Cyprus
+{{ else if eq $lang "ru" }}Турецкая Республика Северного Кипра
+{{ else if eq $lang "el" }}Τουρκική Δημοκρατία της Βόρειας Κύπρου
+{{ else if eq $lang "fa" }}جمهوری ترک قبرس شمالی
+{{ else if eq $lang "de" }}Türkische Republik Nordzypern
+{{ else }}Kuzey Kıbrıs Türk Cumhuriyeti
+{{ end }}
+, <a href="{{ .SiteURL }}">isbulkktc.com</a></p>
     </div>
   </div>
 </body>

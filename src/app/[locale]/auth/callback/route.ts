@@ -7,6 +7,10 @@ import {
   oauthSignupIntentCookieName,
   parseOAuthSignupIntent,
 } from "@/features/identity/oauth-signup-intent";
+import {
+  getPostAuthDestinationPath,
+  toPostAuthDestinationKey,
+} from "@/features/identity/safe-redirect";
 
 function redirectAndClearOAuthIntent(url: URL): NextResponse {
   const response = NextResponse.redirect(url);
@@ -21,10 +25,10 @@ export async function GET(request: NextRequest) {
     routing.locales.find(
       (supportedLocale) => supportedLocale === requestedLocale,
     ) ?? routing.defaultLocale;
-  const audience =
-    request.nextUrl.searchParams.get("next") === "company"
-      ? "employer"
-      : "candidate";
+  const postAuthKey = toPostAuthDestinationKey(
+    request.nextUrl.searchParams.get("next"),
+  );
+  const audience = postAuthKey === "company" ? "employer" : "candidate";
   const flow = request.nextUrl.searchParams.get("flow");
   const isOAuthFlow = flow === "oauth";
   const isResetFlow = flow === "reset";
@@ -92,8 +96,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const destination =
-    audience === "employer" ? "/company/dashboard" : "/profile/dashboard";
+  const destination = getPostAuthDestinationPath(postAuthKey);
   const localizedDestination = `${localePrefix}${destination}`;
 
   return redirectAndClearOAuthIntent(new URL(localizedDestination, appBaseUrl));

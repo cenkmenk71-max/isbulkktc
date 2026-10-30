@@ -62,21 +62,29 @@ max_frequency = "60s"
 otp_length = 6
 otp_expiry = 3600
 
+# Subjects are Go templates too: GoTrue parses and executes them with the same
+# data map as the body, so the subject line follows the recipient's `locale`
+# metadata. The locale comparisons use backtick raw strings (Go template raw
+# string literals) to keep every subject on a single TOML line.
 [auth.email.template.confirmation]
-subject = "İşBul KKTC e-posta adresinizi doğrulayın"
+subject = "{{- $lang := \"tr\" -}}{{- if .Data.locale }}{{ $lang = .Data.locale }}{{ end -}}{{ if eq $lang `en` }}İşBul KKTC — verify your email address{{ else if eq $lang `ru` }}İşBul KKTC — подтвердите адрес электронной почты{{ else if eq $lang `el` }}İşBul KKTC — επιβεβαιώστε τη διεύθυνση email σας{{ else if eq $lang `fa` }}İşBul KKTC — نشانی ایمیل خود را تأیید کنید{{ else if eq $lang `de` }}İşBul KKTC — E-Mail-Adresse bestätigen{{ else }}İşBul KKTC e-posta adresinizi doğrulayın{{ end }}"
 content_path = "./supabase/templates/confirmation.html"
 
 [auth.email.template.recovery]
-subject = "İşBul KKTC şifre yenileme bağlantınız"
+subject = "{{- $lang := \"tr\" -}}{{- if .Data.locale }}{{ $lang = .Data.locale }}{{ end -}}{{ if eq $lang `en` }}İşBul KKTC — reset your password{{ else if eq $lang `ru` }}İşBul KKTC — сброс пароля{{ else if eq $lang `el` }}İşBul KKTC — επαναφορά κωδικού πρόσβασης{{ else if eq $lang `fa` }}İşBul KKTC — بازنشانی رمز عبور{{ else if eq $lang `de` }}İşBul KKTC — Passwort zurücksetzen{{ else }}İşBul KKTC şifre yenileme bağlantınız{{ end }}"
 content_path = "./supabase/templates/recovery.html"
 
 [auth.email.template.reauthentication]
-subject = "İşBul KKTC doğrulama kodunuz"
+subject = "{{- $lang := \"tr\" -}}{{- if .Data.locale }}{{ $lang = .Data.locale }}{{ end -}}{{ if eq $lang `en` }}İşBul KKTC — your verification code{{ else if eq $lang `ru` }}İşBul KKTC — ваш код подтверждения{{ else if eq $lang `el` }}İşBul KKTC — ο κωδικός επαλήθευσής σας{{ else if eq $lang `fa` }}İşBul KKTC — کد تأیید شما{{ else if eq $lang `de` }}İşBul KKTC — Ihr Bestätigungscode{{ else }}İşBul KKTC doğrulama kodunuz{{ end }}"
 content_path = "./supabase/templates/reauthentication.html"
+
+[auth.email.template.invite]
+subject = "{{- $lang := \"tr\" -}}{{- if .Data.locale }}{{ $lang = .Data.locale }}{{ end -}}{{ if eq $lang `en` }}İşBul KKTC — your invitation{{ else if eq $lang `ru` }}İşBul KKTC — ваше приглашение{{ else if eq $lang `el` }}İşBul KKTC — η πρόσκλησή σας{{ else if eq $lang `fa` }}İşBul KKTC — دعوت‌نامه شما{{ else if eq $lang `de` }}İşBul KKTC — Ihre Einladung{{ else }}İşBul KKTC davetiniz{{ end }}"
+content_path = "./supabase/templates/invite.html"
 
 [auth.email.notification.password_changed]
 enabled = true
-subject = "İşBul KKTC şifreniz güncellendi"
+subject = "{{- $lang := \"tr\" -}}{{- if .Data.locale }}{{ $lang = .Data.locale }}{{ end -}}{{ if eq $lang `en` }}İşBul KKTC — your password was changed{{ else if eq $lang `ru` }}İşBul KKTC — пароль изменён{{ else if eq $lang `el` }}İşBul KKTC — ο κωδικός άλλαξε{{ else if eq $lang `fa` }}İşBul KKTC — رمز عبور شما تغییر کرد{{ else if eq $lang `de` }}İşBul KKTC — Passwort geändert{{ else }}İşBul KKTC şifreniz güncellendi{{ end }}"
 content_path = "./supabase/templates/password-changed.html"
 
 [analytics]

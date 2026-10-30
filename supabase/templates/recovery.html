@@ -1,44 +1,174 @@
+{{- $lang := "tr" -}}
+{{- if .Data.locale }}{{ $lang = .Data.locale }}{{ end -}}
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="{{ $lang }}" dir="{{ if eq $lang "fa" }}rtl{{ else }}ltr{{ end }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
   <meta name="supported-color-schemes" content="light dark">
-  <title>Şifre yenileme bağlantınız</title>
+  <title>
+{{ if eq $lang "en" }}
+  Your password reset link
+{{ else if eq $lang "ru" }}
+  Ссылка для сброса пароля
+{{ else if eq $lang "el" }}
+  Ο σύνδεσμος επαναφοράς κωδικού σας
+{{ else if eq $lang "fa" }}
+  پیوند بازنشانی رمز عبور شما
+{{ else if eq $lang "de" }}
+  Ihr Link zum Zurücksetzen des Passworts
+{{ else }}
+  Şifre yenileme bağlantınız
+{{ end }}
+  </title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F5F2EB; margin: 0; padding: 0; color: #1A1A1A; }
-    .container { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+    body { margin: 0; padding: 0; background-color: #F5F2EB; color: #1A1A1A; -webkit-text-size-adjust: 100%; }
+    .preheader { display: none; max-height: 0; overflow: hidden; color: #F5F2EB; font-size: 1px; line-height: 1px; }
+    .container { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #E5E1D8; }
     .header { background: #0D5C3A; padding: 28px 32px; }
     .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
-    .header p { margin: 4px 0 0; color: rgba(255,255,255,0.85); font-size: 13px; }
-    .body { padding: 32px; }
-    .body h2 { margin: 0 0 12px; font-size: 18px; }
+    .header p { margin: 4px 0 0; color: #DCEBE3; font-size: 13px; }
+    .body { padding: 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    .body h2 { margin: 0 0 12px; font-size: 18px; color: #14211B; }
     .body p { margin: 0 0 16px; font-size: 15px; line-height: 1.6; }
-    .btn { display: inline-block; background-color: #0D5C3A; color: #ffffff !important; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; }
-    .fallback { margin-top: 24px; font-size: 13px; color: #6B7280; word-break: break-all; }
+    .btn { display: inline-block; background-color: #0D5C3A; color: #ffffff !important; padding: 13px 26px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; }
+    .code { display: block; font-size: 30px; font-weight: 700; letter-spacing: 6px; background-color: #F5F2EB; border-radius: 8px; padding: 18px; text-align: center; border: 1px solid #E5E1D8; color: #14211B; }
+    .note { background-color: #F5F2EB; border-radius: 8px; padding: 16px; font-size: 13px; color: #4B5563; border: 1px solid #E5E1D8; }
+    .fallback { margin-top: 24px; font-size: 13px; color: #4B5563; word-break: break-all; }
     .fallback a { color: #0D5C3A; }
-    .note { background-color: #F5F2EB; border-radius: 8px; padding: 16px; font-size: 13px; color: #6B7280; border: 1px solid rgba(0,0,0,0.06); }
-    .footer { padding: 24px 32px; background: #fbfbfa; border-top: 1px solid #eeeeee; text-align: center; font-size: 12px; color: #6B7280; }
+    .footer { padding: 24px 32px; background: #FBFAF7; border-top: 1px solid #E5E1D8; text-align: center; font-size: 12px; color: #4B5563; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
     .footer a { color: #0D5C3A; text-decoration: none; }
+    .footer p { margin: 0 0 8px; }
   </style>
 </head>
 <body>
+  <span class="preheader">
+{{ if eq $lang "en" }}
+      Your password reset link
+{{ else if eq $lang "ru" }}
+      Ссылка для сброса пароля
+{{ else if eq $lang "el" }}
+      Ο σύνδεσμος επαναφοράς κωδικού σας
+{{ else if eq $lang "fa" }}
+      پیوند بازنشانی رمز عبور شما
+{{ else if eq $lang "de" }}
+      Ihr Link zum Zurücksetzen des Passworts
+{{ else }}
+      Şifre yenileme bağlantınız
+{{ end }}
+  </span>
   <div class="container">
     <div class="header">
       <h1>İşBul KKTC</h1>
-      <p>Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı</p>
+      <p>
+{{ if eq $lang "en" }}Northern Cyprus' trusted career and employment network
+{{ else if eq $lang "ru" }}Надёжная сеть карьеры и трудоустройства Северного Кипра
+{{ else if eq $lang "el" }}Το αξιόπιστο δίκτυο καριέρας και απασχόλησης της Βόρειας Κύπρου
+{{ else if eq $lang "fa" }}شبکه معتبر شغلی و استخدامی قبرس شمالی
+{{ else if eq $lang "de" }}Das zuverlässige Karriere- und Beschäftigungsnetzwerk Nordzyperns
+{{ else }}Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı
+{{ end }}
+      </p>
     </div>
     <div class="body">
-      <h2>Şifrenizi yenileyin</h2>
-      <p>Merhaba, <strong>{{ .Email }}</strong> adresine bağlı İşBul KKTC hesabınız için şifre yenileme talebi aldık. Yeni şifrenizi belirlemek için aşağıdaki düğmeyi kullanın.</p>
-      <p><a class="btn" href="{{ .ConfirmationURL }}">Yeni şifre belirle</a></p>
-      <p class="note">Bu talebi siz yapmadıysanız hiçbir işlem gerekmez; şifreniz değişmez. Bağlantı kısa süre geçerlidir.</p>
-      <p class="fallback">Düğme çalışmazsa bu bağlantıyı tarayıcınıza kopyalayın:<br><a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a></p>
+      <h2>
+{{ if eq $lang "en" }}
+      Reset your password
+{{ else if eq $lang "ru" }}
+      Сброс пароля
+{{ else if eq $lang "el" }}
+      Επαναφορά κωδικού πρόσβασης
+{{ else if eq $lang "fa" }}
+      رمز عبور خود را بازنشانی کنید
+{{ else if eq $lang "de" }}
+      Passwort zurücksetzen
+{{ else }}
+      Şifrenizi yenileyin
+{{ end }}
+      </h2>
+      <p>
+{{ if eq $lang "en" }}
+      Hello, we received a request to reset the password for the İşBul KKTC account linked to <strong>{{ .Email }}</strong>. Use the button below to set a new password.
+{{ else if eq $lang "ru" }}
+      Здравствуйте! Мы получили запрос на сброс пароля для аккаунта İşBul KKTC, привязанного к <strong>{{ .Email }}</strong>. Нажмите кнопку ниже, чтобы задать новый пароль.
+{{ else if eq $lang "el" }}
+      Γεια σας, λάβαμε αίτημα επαναφοράς του κωδικού για τον λογαριασμό İşBul KKTC που συνδέεται με το <strong>{{ .Email }}</strong>. Χρησιμοποιήστε το κουμπί παρακάτω για να ορίσετε νέο κωδικό.
+{{ else if eq $lang "fa" }}
+      سلام، درخواست بازنشانی رمز عبور برای حساب İşBul KKTC مرتبط با <strong>{{ .Email }}</strong> دریافت شد. برای تعیین رمز عبور جدید از دکمه زیر استفاده کنید.
+{{ else if eq $lang "de" }}
+      Hallo, wir haben eine Anfrage zum Zurücksetzen des Passworts für das mit <strong>{{ .Email }}</strong> verknüpfte İşBul KKTC-Konto erhalten. Verwenden Sie die Schaltfläche unten, um ein neues Passwort festzulegen.
+{{ else }}
+      Merhaba, <strong>{{ .Email }}</strong> adresine bağlı İşBul KKTC hesabınız için şifre yenileme talebi aldık. Yeni şifrenizi belirlemek için aşağıdaki düğmeyi kullanın.
+{{ end }}
+      </p>
+      <p style="margin: 24px 0;">
+{{ if eq $lang "en" }}<a class="btn" href="{{ .ConfirmationURL }}">Set a new password</a>
+{{ else if eq $lang "ru" }}<a class="btn" href="{{ .ConfirmationURL }}">Задать новый пароль</a>
+{{ else if eq $lang "el" }}<a class="btn" href="{{ .ConfirmationURL }}">Ορισμός νέου κωδικού</a>
+{{ else if eq $lang "fa" }}<a class="btn" href="{{ .ConfirmationURL }}">تعیین رمز عبور جدید</a>
+{{ else if eq $lang "de" }}<a class="btn" href="{{ .ConfirmationURL }}">Neues Passwort festlegen</a>
+{{ else }}<a class="btn" href="{{ .ConfirmationURL }}">Yeni şifre belirle</a>
+{{ end }}
+      </p>
+      <p class="note">
+{{ if eq $lang "en" }}
+      If you did not make this request, no action is needed; your password will not change. The link expires shortly.
+{{ else if eq $lang "ru" }}
+      Если вы не отправляли этот запрос, ничего делать не нужно; пароль не изменится. Срок действия ссылки ограничен.
+{{ else if eq $lang "el" }}
+      Αν δεν κάνατε αυτό το αίτημα, δεν απαιτείται καμία ενέργεια· ο κωδικός σας δεν αλλάζει. Ο σύνδεσμος λήγει σύντομα.
+{{ else if eq $lang "fa" }}
+      اگر این درخواست را شما نداده‌اید، هیچ اقدامی لازم نیست؛ رمز عبور شما تغییر نمی‌کند. پیوند مدت کوتاهی معتبر است.
+{{ else if eq $lang "de" }}
+      Wenn Sie diese Anfrage nicht gestellt haben, ist keine Aktion erforderlich; Ihr Passwort bleibt unverändert. Der Link ist nur kurze Zeit gültig.
+{{ else }}
+      Bu talebi siz yapmadıysanız hiçbir işlem gerekmez; şifreniz değişmez. Bağlantı kısa süre geçerlidir.
+{{ end }}
+      </p>
+      <p class="fallback">
+{{ if eq $lang "en" }}
+      If the button does not work, copy this link into your browser:
+{{ else if eq $lang "ru" }}
+      Если кнопка не работает, скопируйте эту ссылку в браузер:
+{{ else if eq $lang "el" }}
+      Αν το κουμπί δεν λειτουργεί, αντιγράψτε αυτόν τον σύνδεσμο στον περιηγητή σας:
+{{ else if eq $lang "fa" }}
+      اگر دکمه کار نکرد، این پیوند را در مرورگر خود بچسبانید:
+{{ else if eq $lang "de" }}
+      Wenn die Schaltfläche nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:
+{{ else }}
+      Düğme çalışmazsa bu bağlantıyı tarayıcınıza kopyalayın:
+{{ end }}
+        <br>
+        <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
+      </p>
     </div>
     <div class="footer">
-      <p>Bu e-posta İşBul KKTC platformu üzerinden güvenli bir şekilde gönderilmiştir.</p>
-      <p>Kuzey Kıbrıs Türk Cumhuriyeti · <a href="{{ .SiteURL }}">isbulkktc.com</a></p>
+      <p>
+{{ if eq $lang "en" }}
+      This email was sent securely through the İşBul KKTC platform.
+{{ else if eq $lang "ru" }}
+      Это письмо отправлено безопасно через платформу İşBul KKTC.
+{{ else if eq $lang "el" }}
+      Αυτό το email στάλθηκε με ασφάλεια μέσω της πλατφόρμας İşBul KKTC.
+{{ else if eq $lang "fa" }}
+      این ایمیل به‌صورت امن از طریق پلتفرم İşBul KKTC ارسال شده است.
+{{ else if eq $lang "de" }}
+      Diese E-Mail wurde sicher über die İşBul KKTC-Plattform gesendet.
+{{ else }}
+      Bu e-posta İşBul KKTC platformu üzerinden güvenli bir şekilde gönderilmiştir.
+{{ end }}
+      </p>
+      <p>
+{{ if eq $lang "en" }}Turkish Republic of Northern Cyprus
+{{ else if eq $lang "ru" }}Турецкая Республика Северного Кипра
+{{ else if eq $lang "el" }}Τουρκική Δημοκρατία της Βόρειας Κύπρου
+{{ else if eq $lang "fa" }}جمهوری ترک قبرس شمالی
+{{ else if eq $lang "de" }}Türkische Republik Nordzypern
+{{ else }}Kuzey Kıbrıs Türk Cumhuriyeti
+{{ end }}
+, <a href="{{ .SiteURL }}">isbulkktc.com</a></p>
     </div>
   </div>
 </body>
