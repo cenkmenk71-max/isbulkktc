@@ -20,12 +20,15 @@ import { resolveEmailLocale } from "../../../supabase/functions/_shared/email-co
 
 /**
  * Node-side transactional mailer for emails that originate in a Next.js server
- * action (welcome, feedback) rather than the Supabase notification worker.
+ * action (welcome, feedback, sales, job published, résumé received) rather than
+ * the Supabase notification worker.
  *
- * Delivery is best-effort and never blocks the caller's primary action: a
- * missing key or a provider error is logged and swallowed so registration or
- * feedback submission still succeeds. The worker-owned application
- * notifications keep their own queue and are not sent from here.
+ * A provider error or a missing RESEND_API_KEY is swallowed inside `deliver`, so
+ * a delivery problem never fails the caller's primary action. Resolving the app
+ * base URL can still throw on misconfiguration, so callers must wrap the send in
+ * a try/catch and treat a failure as non-fatal (see `submitFeedback`). The
+ * worker-owned application notifications keep their own queue and are not sent
+ * from here.
  */
 
 const DEFAULT_FROM = "İşBul KKTC <no-reply@isbulkktc.com>";

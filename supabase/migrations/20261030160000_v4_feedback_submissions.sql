@@ -48,7 +48,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_actor uuid := (select auth.uid());
+  v_actor uuid;
   v_name text;
   v_email text;
   v_message text;
@@ -57,6 +57,11 @@ declare
   v_rating integer;
   v_id uuid;
 begin
+  -- Attribute the row only to a profile that still exists. A stale session
+  -- (deleted account) resolves auth.uid() to a uuid with no profiles row, and
+  -- writing it would fail the whole submission with a foreign-key error.
+  select id into v_actor from public.profiles where id = (select auth.uid());
+
   v_message := pg_catalog.btrim(coalesce(_message, ''));
   if pg_catalog.char_length(v_message) < 3
      or pg_catalog.char_length(v_message) > 4000 then
