@@ -151,6 +151,7 @@ const assets = [
   "assets-src/page-heroes/jobs.png",
   "assets-src/page-heroes/packages.png",
   "public/images/Girne.webp",
+  "public/images/og-cover.webp",
   "public/images/Gazimağusa.webp",
   "public/images/güzelyurt.jpg",
   "public/images/iskele.jpg",
