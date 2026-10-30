@@ -7,6 +7,8 @@ import { getCurrentUser } from "@/server/dal/user";
 import { getOwnedCompany } from "@/server/dal/companies";
 import { getLocalePrefix } from "@/i18n/routing";
 import { companyDirectory } from "./directory-data";
+import type { CompanyDirectoryEntry } from "./directory";
+import { getManagedDirectoryEntries } from "@/server/dal/content";
 import {
   companyProfileSchema,
   createCompanySchema,
@@ -73,7 +75,19 @@ export async function createCompany(
   );
 }
 
-function getDirectoryTarget(value: string) {
+/**
+ * Directory entries for branch validation. The managed table is authoritative;
+ * the bundled bundle is the offline fallback. Logos are irrelevant here, so the
+ * rows are used as-is.
+ */
+async function getDirectoryEntries(): Promise<readonly CompanyDirectoryEntry[]> {
+  return (await getManagedDirectoryEntries()) ?? companyDirectory;
+}
+
+function getDirectoryTarget(
+  value: string,
+  entries: readonly CompanyDirectoryEntry[],
+) {
   if (!value) return null;
   const [entryId, rawLocationIndex, extra] = value.split(":");
   const locationIndex = Number(rawLocationIndex);
@@ -86,7 +100,7 @@ function getDirectoryTarget(value: string) {
     return null;
   }
 
-  const entry = companyDirectory.find(({ id }) => id === entryId);
+  const entry = entries.find(({ id }) => id === entryId);
   if (!entry || !entry.locations[locationIndex]) return null;
   return { directoryEntryId: entryId, directoryLocationIndex: locationIndex };
 }
@@ -116,7 +130,10 @@ export async function submitCompanyProfile(
   const company = await getOwnedCompany(user.id, result.data.companyId);
   if (!company) return { status: "error", message: "unauthorized" };
 
-  const directoryTarget = getDirectoryTarget(result.data.directoryTarget);
+  const directoryTarget = getDirectoryTarget(
+    result.data.directoryTarget,
+    await getDirectoryEntries(),
+  );
   if (result.data.directoryTarget && !directoryTarget) {
     return { status: "error", message: "invalid" };
   }
@@ -212,7 +229,8 @@ export async function reviewCompanyProfile(
   if (!submission) return { status: "error", message: "failed" };
 
   if (submission.directory_entry_id !== null) {
-    const entry = companyDirectory.find(
+    const entries = await getDirectoryEntries();
+    const entry = entries.find(
       ({ id }) => id === submission.directory_entry_id,
     );
     if (

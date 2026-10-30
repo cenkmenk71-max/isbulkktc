@@ -5,30 +5,34 @@ import { Link } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
 import { PackagesInteractiveShowcase } from "@/components/packages/packages-interactive-showcase";
 import { SalesLeadForm } from "@/features/sales/sales-lead-form";
-import { packageTierColors } from "@/components/packages/package-tiers";
+import { packageTierColors, packageTierPlanCodes } from "@/components/packages/package-tiers";
 import type { ListingDuration } from "@/experience/scenes/vend-pricing/lib/plans";
 
 const packageTiers = [
   {
     id: "singleListing",
+    code: packageTierPlanCodes.singleListing,
     color: packageTierColors.singleListing,
     listingCount: 1,
     prices: { 1: 290, 7: 690, 30: 1290 },
   },
   {
     id: "growth",
+    code: packageTierPlanCodes.growth,
     color: packageTierColors.growth,
     listingCount: 3,
     prices: { 1: 590, 7: 1390, 30: 2790 },
   },
   {
     id: "professional",
+    code: packageTierPlanCodes.professional,
     color: packageTierColors.professional,
     listingCount: 5,
     prices: { 1: 890, 7: 2090, 30: 3990 },
   },
   {
     id: "enterprise",
+    code: packageTierPlanCodes.enterprise,
     color: packageTierColors.enterprise,
     listingCount: null,
     prices: null,
@@ -49,18 +53,39 @@ const durationLabelKeys = {
   30: "thirtyDays",
 } as const;
 
-export async function PackagesExperience({ locale }: { locale: AppLocale }) {
+export type PlanPriceOverrides = Record<
+  string,
+  {
+    prices: Record<ListingDuration, number> | null;
+    listingCount: number | null;
+  }
+>;
+
+export async function PackagesExperience({
+  locale,
+  planPriceOverrides,
+}: {
+  locale: AppLocale;
+  planPriceOverrides?: PlanPriceOverrides;
+}) {
   const copy = await getTranslations({ locale, namespace: "PackagesPage" });
   const leadCopy = await getTranslations({ locale, namespace: "SalesLeadForm" });
-  const profiles = packageTiers.map((tier) => ({
-    ...tier,
-    title: copy(`showcase.cards.${tier.id}.title`),
-    audience: copy(`showcase.cards.${tier.id}.audience`),
-    summary: copy(`showcase.cards.${tier.id}.summary`),
-    terms: packageTerms[tier.id].map((term) =>
-      copy(`showcase.terms.${term}`),
-    ),
-  }));
+  const profiles = packageTiers.map((tier) => {
+    const override = planPriceOverrides?.[tier.code];
+    return {
+      ...tier,
+      // An override row is authoritative even when it clears a field: a null
+      // `prices` is "quote on request", not "keep the bundled numbers".
+      listingCount: override ? override.listingCount : tier.listingCount,
+      prices: override ? override.prices : tier.prices,
+      title: copy(`showcase.cards.${tier.id}.title`),
+      audience: copy(`showcase.cards.${tier.id}.audience`),
+      summary: copy(`showcase.cards.${tier.id}.summary`),
+      terms: packageTerms[tier.id].map((term) =>
+        copy(`showcase.terms.${term}`),
+      ),
+    };
+  });
   const getDurationLabel = (days: ListingDuration) =>
     copy(`showcase.pricing.${durationLabelKeys[days]}`);
   const durationOptions = durations.map((days) => ({
@@ -114,42 +139,45 @@ export async function PackagesExperience({ locale }: { locale: AppLocale }) {
           </header>
 
           <ul className="package-catalog-grid">
-            {profiles.map((profile) => (
-              <li key={profile.id}>
-                <article className="package-catalog-card">
-                  <p className="package-catalog-code">{profile.audience}</p>
-                  <h3>{profile.title}</h3>
-                  <p className="package-catalog-description">
-                    {profile.summary}
-                  </p>
-                  <ul className="package-proposal-terms">
-                    {profile.terms.map((term) => (
-                      <li key={term}>{term}</li>
-                    ))}
-                  </ul>
-                  {profile.prices ? (
-                    <dl className="package-proposal-prices">
-                      {durations.map((days) => (
-                        <div key={days}>
-                          <dt>{getDurationLabel(days)}</dt>
-                          <dd>
-                            {new Intl.NumberFormat(locale, {
-                              style: "currency",
-                              currency: "TRY",
-                              maximumFractionDigits: 0,
-                            }).format(profile.prices[days])}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  ) : (
-                    <p className="package-proposal-custom-price">
-                      {copy("showcase.pricing.customPrice")}
+            {profiles.map((profile) => {
+              const prices = profile.prices;
+              return (
+                <li key={profile.id}>
+                  <article className="package-catalog-card">
+                    <p className="package-catalog-code">{profile.audience}</p>
+                    <h3>{profile.title}</h3>
+                    <p className="package-catalog-description">
+                      {profile.summary}
                     </p>
-                  )}
-                </article>
-              </li>
-            ))}
+                    <ul className="package-proposal-terms">
+                      {profile.terms.map((term) => (
+                        <li key={term}>{term}</li>
+                      ))}
+                    </ul>
+                    {prices ? (
+                      <dl className="package-proposal-prices">
+                        {durations.map((days) => (
+                          <div key={days}>
+                            <dt>{getDurationLabel(days)}</dt>
+                            <dd>
+                              {new Intl.NumberFormat(locale, {
+                                style: "currency",
+                                currency: "TRY",
+                                maximumFractionDigits: 0,
+                              }).format(prices[days])}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : (
+                      <p className="package-proposal-custom-price">
+                        {copy("showcase.pricing.customPrice")}
+                      </p>
+                    )}
+                  </article>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </section>

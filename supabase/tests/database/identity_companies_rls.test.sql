@@ -1,6 +1,6 @@
 begin;
 
-select plan(53);
+select plan(55);
 
 insert into auth.users (id, email, raw_user_meta_data)
 values
@@ -586,6 +586,26 @@ select throws_ok(
   '42501',
   null,
   'anonymous visitors cannot read private company profile submissions'
+);
+
+-- The product ships six locales; `'he'` was accepted by the original check even
+-- though no catalogue or template covers it, and the owner can write the column.
+set local role authenticated;
+set local "request.jwt.claims" =
+  '{"sub":"00000000-0000-4000-8000-00000000000a","role":"authenticated"}';
+
+select throws_ok(
+  $$update public.profiles set locale = 'he'
+    where id = (select auth.uid())$$,
+  '23514',
+  null,
+  'a locale outside the six shipped languages is rejected by the check constraint'
+);
+
+select lives_ok(
+  $$update public.profiles set locale = 'de'
+    where id = (select auth.uid())$$,
+  'an allowlisted locale can still be written by the profile owner'
 );
 
 select * from finish();

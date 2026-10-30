@@ -1,6 +1,7 @@
 import { routing } from "@/i18n/routing";
 import { getLocalizedPageUrl } from "@/lib/seo";
 import type { PublicJobListing } from "@/server/dal/jobs";
+import { resolveJobDateModified } from "./job-modified-at";
 
 const employmentTypeByJobType: Record<
   PublicJobListing["job_type"],
@@ -69,6 +70,7 @@ export function buildJobPostingStructuredData({
       value: job.id,
     },
     datePosted: job.published_at,
+    dateModified: resolveJobDateModified(job.modified_at, job.published_at),
     validThrough: job.expires_at,
     employmentType: employmentTypeByJobType[job.job_type],
     directApply: true,

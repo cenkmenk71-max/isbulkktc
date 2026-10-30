@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -9,13 +10,38 @@ if (args.length === 0) {
   throw new Error("Pass a Supabase CLI command, for example: start, status, or test db.");
 }
 
+/**
+ * The CLI ships as a project dependency, so prefer the pinned binary over
+ * whatever `supabase` happens to be on `PATH`. A globally installed CLI of a
+ * different version, or none at all, otherwise decides whether `db:start` and
+ * `test:db` work — which is exactly how a container without a global install
+ * ends up unable to run the database suite.
+ */
+function resolveLocalCli() {
+  const executable = process.platform === "win32" ? "supabase.exe" : "supabase";
+  const candidates = [
+    path.join(projectRoot, "node_modules", "@supabase", "cli-linux-x64", "bin", executable),
+    path.join(projectRoot, "node_modules", "@supabase", "cli-windows-x64", "bin", executable),
+    path.join(projectRoot, "node_modules", "@supabase", "cli-darwin-arm64", "bin", executable),
+    path.join(projectRoot, "node_modules", "@supabase", "cli-darwin-x64", "bin", executable),
+    path.join(projectRoot, "node_modules", ".bin", executable),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? null;
+}
+
 if (process.platform !== "win32") {
-  const result = spawnSync("supabase", args, {
+  const result = spawnSync(resolveLocalCli() ?? "supabase", args, {
     cwd: projectRoot,
     stdio: "inherit",
   });
 
-  if (result.error) throw result.error;
+  if (result.error) {
+    throw new Error(
+      "The Supabase CLI could not be started. Run `npm install` to restore the pinned dependency, " +
+        "or make `supabase` available on PATH.",
+      { cause: result.error },
+    );
+  }
   process.exit(result.status ?? 1);
 }
 

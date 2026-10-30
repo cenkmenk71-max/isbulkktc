@@ -7878,6 +7878,46 @@ main :where(p) {
   font-size: 12px;
   line-height: 1.7;
 }
+.admin-content-form textarea {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.admin-content-form input[name="sections"],
+.admin-content-form input[name="features"] {
+  display: none;
+}
+.admin-content-hint {
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 450;
+  line-height: 1.6;
+}
+.admin-content-empty {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px dashed var(--color-vanadium-300);
+  border-radius: 12px;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.admin-content-delete {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.admin-content-footnote {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 .admin-mfa-gate {
   width: min(100%, 700px);
   justify-self: center;
@@ -10874,20 +10914,18 @@ main :where(p) {
   font-size: 12px;
   font-weight: 650;
   cursor: pointer;
-  transition: background 150ms ease, border-color 150ms ease;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.consent-btn-ghost:hover {
+/* Accept, reject and save are deliberately styled identically: an interface
+   that makes "accept" a filled button and "reject" a plain link nudges the
+   visitor toward consent, which is not valid consent. */
+.consent-btn:hover {
   border-color: var(--green-mid);
   color: var(--green-deep);
 }
-.consent-btn-primary {
-  border-color: var(--green);
-  background: var(--green);
-  color: var(--surface-raised);
-}
-.consent-btn-primary:hover {
-  background: var(--green-hover);
-  border-color: var(--green-hover);
+.consent-btn:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
 }
 .consent-card-footer {
   display: flex;
@@ -10895,6 +10933,11 @@ main :where(p) {
   justify-content: space-between;
   gap: 12px;
   padding: 0 20px 18px;
+}
+.consent-card-footer-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
 }
 .consent-policy-link {
   padding: 0;
@@ -10940,6 +10983,17 @@ main :where(p) {
   color: var(--ink-3);
   font-size: 11.5px;
   line-height: 1.6;
+}
+.consent-policy-full-link {
+  justify-self: start;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.consent-card:focus {
+  outline: none;
 }
 .consent-close {
   padding: 0;
@@ -12556,6 +12610,14 @@ html[dir="rtl"] input[name="slug"] {
   color: var(--green);
   font-size: 13px;
   font-weight: 650;
+}
+.legal-page-consent {
+  margin-top: 16px;
+}
+.legal-consent-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 .legal-page-siblings {
   display: flex;

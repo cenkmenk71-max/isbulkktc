@@ -7,6 +7,7 @@ import { JsonLd } from "@/content/ai-visibility/json-ld";
 import { routing } from "@/i18n/routing";
 import { createLocalizedPageMetadata } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
+import { getManagedFaq } from "@/server/dal/content";
 
 type AboutRouteProps = {
   params: Promise<{ locale: string }>;
@@ -38,15 +39,17 @@ export default async function AboutRoute({ params }: AboutRouteProps) {
   if (!locale) notFound();
 
   setRequestLocale(locale);
+  const faqEntries = await getManagedFaq(locale);
   const faqStructuredData = buildFaqPageStructuredData({
     locale,
     baseUrl: getAppBaseUrl(),
     pathname: "/about",
+    entries: faqEntries,
   });
   return (
     <>
       <JsonLd data={faqStructuredData} />
-      <AboutPageContent locale={locale} />
+      <AboutPageContent locale={locale} faqEntries={faqEntries} />
     </>
   );
 }

@@ -4,14 +4,18 @@ name: Verify production deployment
 # code is *buildable* — not that the live site is actually serving it. A failed
 # Vercel build, an alias left pinned to the previous deployment, or an app that
 # boots and then errors at request time all keep the Actions tab green while the
-# site quietly serves stale code. This workflow closes that loop: after a push to
-# `main` it polls the production origin until it reports the new commit, then
-# smoke-tests the public routes and (when a Vercel token is present) confirms the
-# production alias points at a deployment built from that same commit.
+# site quietly serves stale code. This workflow closes that loop.
 #
-# It needs no secret to run the build-identity and smoke checks. The optional
-# VERCEL_TOKEN only adds the alias cross-check; without it the job still verifies
-# the live origin and stays green.
+# It confirms the deploy through two independent channels and passes if either
+# succeeds:
+#   1. the Vercel API (with VERCEL_TOKEN) — the commit behind the deployment the
+#      production alias points at;
+#   2. the live origin's `/api/build-info`.
+#
+# The HTTP channel is important to get right: `isbulkktc.com` is fronted by
+# Cloudflare, which answers GitHub runners' datacenter IPs with **403**. That is
+# not an outage, so a 403 there is classified as "blocked" and skipped — never a
+# failure. The Vercel API channel is what carries the verdict from CI.
 on:
   push:
     branches:
@@ -28,7 +32,10 @@ permissions:
 
 concurrency:
   group: verify-production-deployment
-  cancel-in-progress: false
+  # Back-to-back pushes to main are common (a merge lands on top of a merge). The
+  # older run cannot ever see its commit on production, so cancel it instead of
+  # letting it poll for 15 minutes and then paint a healthy site red.
+  cancel-in-progress: true
 
 jobs:
   verify:
@@ -57,6 +64,17 @@ jobs:
           echo "sha=$expected" >> "$GITHUB_OUTPUT"
           echo "Verifying production serves $expected"
 
+      - name: Resolve the branch tip
+        id: tip
+        if: github.event_name == 'push'
+        run: |
+          # `git ls-remote` reads the live remote ref without needing history, so
+          # it reports the current head of main even if a newer merge landed
+          # while this run was queued.
+          tip="$(git ls-remote origin refs/heads/main | cut -f1)"
+          echo "sha=$tip" >> "$GITHUB_OUTPUT"
+          echo "Current main tip is $tip"
+
       - name: Verify the deployment
         env:
           PRODUCTION_URL: ${{ vars.PRODUCTION_URL || 'https://isbulkktc.com' }}
@@ -65,4 +83,7 @@ jobs:
           VERCEL_PROJECT: ${{ vars.VERCEL_PROJECT || 'isbulkktc' }}
           DEPLOY_TIMEOUT_SEC: ${{ vars.DEPLOY_TIMEOUT_SEC || '900' }}
           DEPLOY_POLL_SEC: ${{ vars.DEPLOY_POLL_SEC || '20' }}
-        run: node scripts/verify-production-deployment.mjs --expect "${{ steps.expect.outputs.sha }}"
+        # On a push, `--tip` lets the script skip when a newer commit already owns
+        # main. A manual run passes no tip: the caller named the commit explicitly
+        # and means to verify it even if it is no longer the tip.
+        run: node scripts/verify-production-deployment.mjs --expect "${{ steps.expect.outputs.sha }}" --tip "${{ steps.tip.outputs.sha }}"

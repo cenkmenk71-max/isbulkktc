@@ -9,6 +9,7 @@ import {
   buildSourceJobSlug,
   sanitizeSourceJobRecord,
   selectDiverseSourceJobs,
+  sourceJobContentHash,
   type SourceEmployerRecord,
   type SourceJobRecord,
 } from "../src/features/jobs/source-job-import";
@@ -241,10 +242,142 @@ async function upsertEmployers(
   return idBySlug;
 }
 
+/**
+ * Records the change ledger for every imported listing and returns the
+ * modification instant to store per source/job id.
+ *
+ * iskibris publishes a real upstream `updated_at`, so its value is trusted
+ * directly. isbulkibris publishes none, so the listing's content hash is
+ * compared with the previous run: the stored `last_changed_at` only advances
+ * when the hash moves, which keeps an untouched listing's date stable instead of
+ * re-stamping it on every refresh. A first-seen listing starts at its
+ * publication date so it never looks modified before it was posted.
+ */
+async function syncSourceSnapshots(
+  client: SupabaseClient,
+  records: SourceJobRecord[],
+): Promise<Map<string, string | null>> {
+  const hashes = new Map<string, string>();
+  for (const record of records) {
+    hashes.set(
+      `${record.source}:${record.sourceJobId}`,
+      sourceJobContentHash({
+        title: record.title,
+        summary: record.summary,
+        description: record.description,
+        requirements: record.requirements,
+        responsibilities: record.responsibilities,
+        jobType: record.jobType,
+        workplaceMode: record.workplaceMode,
+        district: record.district,
+        expiresAt: record.expiresAt,
+        employerName: record.employer.name,
+      }),
+    );
+  }
+
+  const keys = [...hashes.keys()];
+  const previous = new Map<
+    string,
+    { content_hash: string; first_seen_at: string; last_changed_at: string }
+  >();
+  // `.in()` has a practical URL-length limit, so read the ledger in chunks.
+  for (let start = 0; start < keys.length; start += 200) {
+    const chunk = keys.slice(start, start + 200);
+    const { data, error } = await client
+      .from("job_source_snapshots")
+      .select("source, source_job_id, content_hash, first_seen_at, last_changed_at")
+      .in("source_job_id", chunk.map((key) => key.split(":")[1]));
+    assert(error, "Kaynak anlık görüntüleri okunamadı");
+    for (const row of data ?? []) {
+      previous.set(`${row.source as string}:${row.source_job_id as string}`, {
+        content_hash: row.content_hash as string,
+        first_seen_at: row.first_seen_at as string,
+        last_changed_at: row.last_changed_at as string,
+      });
+    }
+  }
+
+  const now = new Date().toISOString();
+  const snapshotRows: Array<{
+    source: string;
+    source_job_id: string;
+    content_hash: string;
+    first_seen_at: string;
+    last_changed_at: string;
+  }> = [];
+  const modifiedAtByKey = new Map<string, string | null>();
+
+  for (const record of records) {
+    const key = `${record.source}:${record.sourceJobId}`;
+    const hash = hashes.get(key) as string;
+    const prior = previous.get(key);
+    const publishedAt = new Date(record.publishedAt).toISOString();
+
+    if (record.sourceUpdatedAt) {
+      // A real upstream modification date always wins.
+      snapshotRows.push({
+        source: record.source,
+        source_job_id: record.sourceJobId,
+        content_hash: hash,
+        first_seen_at: prior?.first_seen_at ?? now,
+        last_changed_at: prior?.last_changed_at ?? now,
+      });
+      modifiedAtByKey.set(key, record.sourceUpdatedAt);
+      continue;
+    }
+
+    if (!prior) {
+      snapshotRows.push({
+        source: record.source,
+        source_job_id: record.sourceJobId,
+        content_hash: hash,
+        first_seen_at: now,
+        last_changed_at: now,
+      });
+      modifiedAtByKey.set(key, publishedAt);
+      continue;
+    }
+
+    if (prior.content_hash !== hash) {
+      snapshotRows.push({
+        source: record.source,
+        source_job_id: record.sourceJobId,
+        content_hash: hash,
+        first_seen_at: prior.first_seen_at,
+        last_changed_at: now,
+      });
+      modifiedAtByKey.set(key, now);
+      continue;
+    }
+
+    snapshotRows.push({
+      source: record.source,
+      source_job_id: record.sourceJobId,
+      content_hash: hash,
+      first_seen_at: prior.first_seen_at,
+      last_changed_at: prior.last_changed_at,
+    });
+    modifiedAtByKey.set(key, prior.last_changed_at);
+  }
+
+  for (let start = 0; start < snapshotRows.length; start += 200) {
+    const { error } = await client
+      .from("job_source_snapshots")
+      .upsert(snapshotRows.slice(start, start + 200), {
+        onConflict: "source,source_job_id",
+      });
+    assert(error, "Kaynak anlık görüntüleri yazılamadı");
+  }
+
+  return modifiedAtByKey;
+}
+
 async function insertJobs(
   client: SupabaseClient,
   records: SourceJobRecord[],
   companyIdBySlug: Map<string, string>,
+  modifiedAtByKey: Map<string, string | null>,
 ): Promise<void> {
   const jobRows = records.map((record) => {
     const companyId = companyIdBySlug.get(record.employer.slug);
@@ -292,6 +425,8 @@ async function insertJobs(
       source_job_id: record.sourceJobId,
       source_published_at: record.publishedAt,
       source_expires_at: record.expiresAt,
+      source_updated_at:
+        modifiedAtByKey.get(`${record.source}:${record.sourceJobId}`) ?? null,
     };
   });
 
@@ -364,6 +499,9 @@ async function main(): Promise<void> {
     await purgeSourceData(client);
   }
 
+  console.info("Değişiklik defteri güncelleniyor…");
+  const modifiedAtByKey = await syncSourceSnapshots(client, selected);
+
   console.info("İşverenler yazılıyor…");
   const droppedLogos = await dropUnreachableLogos(employers);
   if (droppedLogos > 0) {
@@ -372,7 +510,7 @@ async function main(): Promise<void> {
   const companyIdBySlug = await upsertEmployers(client, employers);
 
   console.info("İlanlar yazılıyor…");
-  await insertJobs(client, selected, companyIdBySlug);
+  await insertJobs(client, selected, companyIdBySlug, modifiedAtByKey);
 
   console.info(
     `Tamamlandı: ${selected.length} ilan canlı Supabase veritabanına yazıldı.`,

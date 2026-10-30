@@ -19,6 +19,7 @@ import type { AppLocale } from "@/i18n/routing";
 import { getLatestNews } from "@/features/blog/news-feed";
 import { FeedbackForm } from "@/features/feedback/feedback-form";
 import { FaqSection } from "@/content/ai-visibility/faq-section";
+import type { FaqEntry } from "@/content/ai-visibility/faq";
 
 function getArticleImage(title: string): string {
   const normalized = title.toLocaleLowerCase("tr");
@@ -50,7 +51,13 @@ function getArticleImage(title: string): string {
   return "/images/news-team.webp";
 }
 
-export async function AboutPageContent({ locale }: { locale: AppLocale }) {
+export async function AboutPageContent({
+  locale,
+  faqEntries,
+}: {
+  locale: AppLocale;
+  faqEntries?: readonly FaqEntry[];
+}) {
   const t = await getTranslations({ locale, namespace: "AboutPage" });
   const values = [
     {
@@ -149,7 +156,7 @@ export async function AboutPageContent({ locale }: { locale: AppLocale }) {
           </div>
         </section>
 
-        <FaqSection locale={locale} />
+        <FaqSection locale={locale} entries={faqEntries} />
 
         <section className="editorial-bottom-cta">
           <div>

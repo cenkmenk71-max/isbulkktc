@@ -40,7 +40,9 @@
     "seo:submit": "node scripts/submit-indexnow.mjs",
     "vercel:prune": "node scripts/prune-vercel-deployments.mjs",
     "vercel:prune:apply": "node scripts/prune-vercel-deployments.mjs --apply",
-    "vercel:verify": "node scripts/verify-production-deployment.mjs"
+    "vercel:verify": "node scripts/verify-production-deployment.mjs",
+    "seed:managed-content": "tsx scripts/generate-managed-content-seed.ts",
+    "db:verify": "node scripts/db-verify.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

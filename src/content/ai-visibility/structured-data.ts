@@ -1,6 +1,10 @@
 import type { AppLocale } from "@/i18n/routing";
 import { routing } from "@/i18n/routing";
-import { AI_VISIBILITY_UPDATED, faqByLocale } from "@/content/ai-visibility/faq";
+import {
+  AI_VISIBILITY_UPDATED,
+  faqByLocale,
+  type FaqEntry,
+} from "@/content/ai-visibility/faq";
 import {
   buildPostalAddress,
   getConfiguredSocialProfiles,
@@ -116,10 +120,12 @@ export function buildFaqPageStructuredData({
   locale,
   baseUrl,
   pathname,
+  entries,
 }: {
   locale: AppLocale;
   baseUrl: URL;
   pathname: string;
+  entries?: readonly FaqEntry[];
 }) {
   const siteUrl = baseUrl.origin;
   const pageUrl =
@@ -134,7 +140,7 @@ export function buildFaqPageStructuredData({
     url: pageUrl,
     inLanguage: locale,
     dateModified: AI_VISIBILITY_UPDATED,
-    mainEntity: faqByLocale[locale].map((entry) => ({
+    mainEntity: (entries ?? faqByLocale[locale]).map((entry) => ({
       "@type": "Question",
       name: entry.question,
       acceptedAnswer: {

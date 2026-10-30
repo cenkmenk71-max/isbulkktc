@@ -235,6 +235,7 @@ export async function getPublicJobBySlug(input: unknown) {
 export type PublicJobSitemapEntry = {
   slug: string;
   publishedAt: string;
+  modifiedAt: string;
 };
 
 const SITEMAP_JOBS_PAGE_SIZE = 20;
@@ -277,6 +278,7 @@ export async function listPublicJobSitemapEntries(): Promise<
         entries.push({
           slug: job.slug,
           publishedAt: job.published_at,
+          modifiedAt: job.modified_at,
         });
       }
 
