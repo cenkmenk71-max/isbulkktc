@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { signUp } from "./actions";
+import { ResendConfirmationForm } from "./resend-confirmation-form";
 import { TurnstileField } from "./turnstile-field";
 import { OAuthProviderForm } from "./oauth-provider-form";
 import type {
@@ -98,16 +99,6 @@ export function SignUpForm({
                   : "createCandidateAccount",
               )}
         </button>
-        {state.message !== "idle" && (
-          <p
-            aria-live="polite"
-            className="editorial-form-message"
-            data-status={state.status}
-            role={state.status === "error" ? "alert" : "status"}
-          >
-            {copy(`messages.${state.message}`)}
-          </p>
-        )}
         <p className="editorial-form-footnote">
           {copy("alreadyHaveAccount")}{" "}
           <Link href={{ pathname: "/login", query: { audience } }}>
@@ -122,6 +113,22 @@ export function SignUpForm({
           <p className="editorial-form-note">{copy("companyAccountNote")}</p>
         )}
       </form>
+      {state.message !== "idle" && (
+        <div className="editorial-form-status">
+          <p
+            aria-live="polite"
+            className="editorial-form-message"
+            data-status={state.status}
+            id="register-form-message"
+            role={state.status === "error" ? "alert" : "status"}
+          >
+            {copy(`messages.${state.message}`)}
+          </p>
+          {state.message === "verificationSent" && state.email ? (
+            <ResendConfirmationForm audience={audience} email={state.email} />
+          ) : null}
+        </div>
+      )}
     </>
   );
 }

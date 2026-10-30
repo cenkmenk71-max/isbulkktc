@@ -3943,6 +3943,20 @@ a {
   background: var(--color-status-error-bg);
   color: var(--color-status-error);
 }
+/* Wraps the form message and the optional "resend verification" affordance so
+   both stay aligned with the form column above them. */
+.editorial-form-status {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 480px);
+}
+.editorial-form-resend {
+  display: grid;
+  gap: 10px;
+}
+.editorial-form-resend .button {
+  width: 100%;
+}
 .editorial-form-footnote {
   margin: 2px 0 0;
   color: var(--ink-3);

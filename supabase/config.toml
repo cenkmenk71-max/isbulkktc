@@ -63,32 +63,32 @@ otp_length = 6
 otp_expiry = 3600
 
 [auth.email.template.confirmation]
-subject = "İşBul KKTC e-posta adresinizi doğrulayın"
+subject = "{{- $locale := \"tr\" -}}{{- with .Data -}}{{- if and .locale (or (eq .locale \"tr\") (eq .locale \"en\") (eq .locale \"ru\") (eq .locale \"el\") (eq .locale \"fa\") (eq .locale \"de\")) -}}{{- $locale = .locale -}}{{- end -}}{{- end -}}{{ if eq $locale \"tr\" }}İşBul KKTC e-posta adresinizi doğrulayın{{ else if eq $locale \"en\" }}İşBul KKTC — Confirm your email address{{ else if eq $locale \"ru\" }}İşBul KKTC — Подтвердите адрес электронной почты{{ else if eq $locale \"el\" }}İşBul KKTC — Επιβεβαιώστε τη διεύθυνση email σας{{ else if eq $locale \"fa\" }}İşBul KKTC — نشانی ایمیل خود را تأیید کنید{{ else if eq $locale \"de\" }}İşBul KKTC — Bestätigen Sie Ihre E-Mail-Adresse{{ end }}"
 content_path = "./supabase/templates/confirmation.html"
 
 [auth.email.template.recovery]
-subject = "İşBul KKTC şifre yenileme bağlantınız"
+subject = "{{- $locale := \"tr\" -}}{{- with .Data -}}{{- if and .locale (or (eq .locale \"tr\") (eq .locale \"en\") (eq .locale \"ru\") (eq .locale \"el\") (eq .locale \"fa\") (eq .locale \"de\")) -}}{{- $locale = .locale -}}{{- end -}}{{- end -}}{{ if eq $locale \"tr\" }}İşBul KKTC şifre yenileme bağlantınız{{ else if eq $locale \"en\" }}İşBul KKTC — Reset your password{{ else if eq $locale \"ru\" }}İşBul KKTC — Сбросьте пароль{{ else if eq $locale \"el\" }}İşBul KKTC — Επαναφέρετε τον κωδικό σας{{ else if eq $locale \"fa\" }}İşBul KKTC — گذرواژه خود را بازنشانی کنید{{ else if eq $locale \"de\" }}İşBul KKTC — Setzen Sie Ihr Passwort zurück{{ end }}"
 content_path = "./supabase/templates/recovery.html"
 
 [auth.email.template.invite]
-subject = "İşBul KKTC davetiniz"
+subject = "{{- $locale := \"tr\" -}}{{- with .Data -}}{{- if and .locale (or (eq .locale \"tr\") (eq .locale \"en\") (eq .locale \"ru\") (eq .locale \"el\") (eq .locale \"fa\") (eq .locale \"de\")) -}}{{- $locale = .locale -}}{{- end -}}{{- end -}}{{ if eq $locale \"tr\" }}İşBul KKTC davetiniz{{ else if eq $locale \"en\" }}İşBul KKTC — You have been invited to İşBul KKTC{{ else if eq $locale \"ru\" }}İşBul KKTC — Вас пригласили в İşBul KKTC{{ else if eq $locale \"el\" }}İşBul KKTC — Σας προσκάλεσαν στο İşBul KKTC{{ else if eq $locale \"fa\" }}İşBul KKTC — شما به İşBul KKTC دعوت شده‌اید{{ else if eq $locale \"de\" }}İşBul KKTC — Sie wurden zu İşBul KKTC eingeladen{{ end }}"
 content_path = "./supabase/templates/invite.html"
 
 [auth.email.template.magic_link]
-subject = "İşBul KKTC giriş bağlantınız"
+subject = "{{- $locale := \"tr\" -}}{{- with .Data -}}{{- if and .locale (or (eq .locale \"tr\") (eq .locale \"en\") (eq .locale \"ru\") (eq .locale \"el\") (eq .locale \"fa\") (eq .locale \"de\")) -}}{{- $locale = .locale -}}{{- end -}}{{- end -}}{{ if eq $locale \"tr\" }}İşBul KKTC giriş bağlantınız{{ else if eq $locale \"en\" }}İşBul KKTC — Your sign-in link{{ else if eq $locale \"ru\" }}İşBul KKTC — Ваша ссылка для входа{{ else if eq $locale \"el\" }}İşBul KKTC — Ο σύνδεσμος σύνδεσής σας{{ else if eq $locale \"fa\" }}İşBul KKTC — پیوند ورود شما{{ else if eq $locale \"de\" }}İşBul KKTC — Ihr Anmeldelink{{ end }}"
 content_path = "./supabase/templates/magic_link.html"
 
 [auth.email.template.email_change]
-subject = "İşBul KKTC yeni e-posta adresinizi doğrulayın"
+subject = "{{- $locale := \"tr\" -}}{{- with .Data -}}{{- if and .locale (or (eq .locale \"tr\") (eq .locale \"en\") (eq .locale \"ru\") (eq .locale \"el\") (eq .locale \"fa\") (eq .locale \"de\")) -}}{{- $locale = .locale -}}{{- end -}}{{- end -}}{{ if eq $locale \"tr\" }}İşBul KKTC yeni e-posta adresinizi doğrulayın{{ else if eq $locale \"en\" }}İşBul KKTC — Confirm your new email address{{ else if eq $locale \"ru\" }}İşBul KKTC — Подтвердите новый адрес электронной почты{{ else if eq $locale \"el\" }}İşBul KKTC — Επιβεβαιώστε τη νέα διεύθυνση email σας{{ else if eq $locale \"fa\" }}İşBul KKTC — نشانی ایمیل جدید خود را تأیید کنید{{ else if eq $locale \"de\" }}İşBul KKTC — Bestätigen Sie Ihre neue E-Mail-Adresse{{ end }}"
 content_path = "./supabase/templates/email_change.html"
 
 [auth.email.template.reauthentication]
-subject = "İşBul KKTC doğrulama kodunuz"
+subject = "{{- $locale := \"tr\" -}}{{- with .Data -}}{{- if and .locale (or (eq .locale \"tr\") (eq .locale \"en\") (eq .locale \"ru\") (eq .locale \"el\") (eq .locale \"fa\") (eq .locale \"de\")) -}}{{- $locale = .locale -}}{{- end -}}{{- end -}}{{ if eq $locale \"tr\" }}İşBul KKTC doğrulama kodunuz{{ else if eq $locale \"en\" }}İşBul KKTC — Your verification code{{ else if eq $locale \"ru\" }}İşBul KKTC — Ваш код подтверждения{{ else if eq $locale \"el\" }}İşBul KKTC — Ο κωδικός επαλήθευσής σας{{ else if eq $locale \"fa\" }}İşBul KKTC — کد تأیید شما{{ else if eq $locale \"de\" }}İşBul KKTC — Ihr Bestätigungscode{{ end }}"
 content_path = "./supabase/templates/reauthentication.html"
 
 [auth.email.notification.password_changed]
 enabled = true
-subject = "İşBul KKTC şifreniz güncellendi"
+subject = "{{- $locale := \"tr\" -}}{{- with .Data -}}{{- if and .locale (or (eq .locale \"tr\") (eq .locale \"en\") (eq .locale \"ru\") (eq .locale \"el\") (eq .locale \"fa\") (eq .locale \"de\")) -}}{{- $locale = .locale -}}{{- end -}}{{- end -}}{{ if eq $locale \"tr\" }}İşBul KKTC şifreniz güncellendi{{ else if eq $locale \"en\" }}İşBul KKTC — Your password was changed{{ else if eq $locale \"ru\" }}İşBul KKTC — Ваш пароль изменён{{ else if eq $locale \"el\" }}İşBul KKTC — Ο κωδικός σας άλλαξε{{ else if eq $locale \"fa\" }}İşBul KKTC — گذرواژه شما تغییر کرد{{ else if eq $locale \"de\" }}İşBul KKTC — Ihr Passwort wurde geändert{{ end }}"
 content_path = "./supabase/templates/password-changed.html"
 
 [analytics]

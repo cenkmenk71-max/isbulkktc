@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import {
   oauthSignInSchema,
   requestPasswordResetSchema,
+  resendConfirmationSchema,
   signInSchema,
   signUpSchema,
   updatePasswordSchema,
@@ -127,11 +128,18 @@ export async function signIn(
   if (error) {
     console.error("Supabase sign-in failed.", { code: error.code });
 
+    const message = messageForAuthErrorCode(error.code, "signInFailed");
+
     // Supabase returns `email_not_confirmed` when confirmations are enabled and
     // the address has not been verified yet; the generic message would mislead.
+    // The submitted address is echoed back so the form can offer a one-click
+    // resend without trusting client-side state.
     return {
       status: "error",
-      message: messageForAuthErrorCode(error.code, "signInFailed"),
+      message,
+      ...(message === "emailNotConfirmed"
+        ? { email: result.data.email }
+        : {}),
     };
   }
 
@@ -189,7 +197,55 @@ export async function signUp(
   return {
     status: "success",
     message: "verificationSent",
+    // Echoed back so the success screen can offer a resend without the client
+    // persisting the address itself.
+    email: result.data.email,
   };
+}
+
+export async function resendConfirmation(
+  _previousState: SignInFormState,
+  formData: FormData,
+): Promise<SignInFormState> {
+  const result = resendConfirmationSchema.safeParse({
+    email: formData.get("email"),
+    audience: formData.get("audience"),
+    locale: formData.get("locale"),
+    captchaToken: readCaptchaToken(formData),
+  });
+
+  if (!result.success) return invalidForm;
+
+  const supabase = await createSupabaseServerClient({
+    allowCookieWrites: true,
+  });
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: result.data.email,
+    options: {
+      emailRedirectTo: new URL(
+        `${getLocalePrefix(result.data.locale)}/auth/callback?next=${
+          result.data.audience === "employer" ? "company" : "candidate"
+        }`,
+        getAppBaseUrl(),
+      ).toString(),
+      captchaToken: result.data.captchaToken,
+    },
+  });
+
+  if (error) {
+    console.error("Supabase confirmation resend failed.", { code: error.code });
+
+    if (error.code === "captcha_failed") {
+      return { status: "error", message: "captchaFailed" };
+    }
+
+    // `over_email_send_rate_limit` and friends: surface a distinct, actionable
+    // message rather than claiming the mail went out.
+    return { status: "error", message: "resendFailed" };
+  }
+
+  return { status: "success", message: "verificationResent" };
 }
 
 export async function requestPasswordReset(

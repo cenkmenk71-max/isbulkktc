@@ -36,6 +36,13 @@ export const requestPasswordResetSchema = z.object({
   captchaToken: z.string().trim().min(1).max(4096).optional(),
 });
 
+export const resendConfirmationSchema = z.object({
+  email: z.string().trim().toLowerCase().pipe(z.email()),
+  audience: accountAudienceSchema,
+  locale: z.enum(routing.locales),
+  captchaToken: z.string().trim().min(1).max(4096).optional(),
+});
+
 export const updatePasswordSchema = z.object({
   password: z.string().min(10).max(128),
   locale: z.enum(routing.locales),
@@ -53,6 +60,8 @@ export type SignInFormState = {
     | "captchaFailed"
     | "signUpFailed"
     | "verificationSent"
+    | "verificationResent"
+    | "resendFailed"
     | "oauthUnavailable"
     | "oauthStartFailed"
     | "resetRequestSent"
@@ -60,4 +69,10 @@ export type SignInFormState = {
     | "passwordUpdateFailed"
     | "sessionExpired";
   status: "idle" | "error" | "success";
+  /**
+   * Echoed back only for flows that need a follow-up (e.g. resending the
+   * confirmation mail after `email_not_confirmed`) so the client never has to
+   * persist a submitted address itself.
+   */
+  email?: string;
 };

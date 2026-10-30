@@ -73,9 +73,15 @@ jobs:
           test -n "${API_URL:-}"
           key="${PUBLISHABLE_KEY:-${ANON_KEY:-}}"
           test -n "$key"
+          service_role="${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}"
+          test -n "$service_role"
           {
             printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$API_URL"
             printf 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=%s\n' "$key"
+            # The invite E2E drives the admin endpoint, which needs the
+            # service-role key; without it that test skips silently.
+            printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$service_role"
+            printf 'SUPABASE_MAILCATCHER_URL=%s\n' "${MAILPIT_URL:-${INBUCKET_URL:-}}"
           } >> "$GITHUB_ENV"
 
       - name: Apply migrations and run pgTAP tests

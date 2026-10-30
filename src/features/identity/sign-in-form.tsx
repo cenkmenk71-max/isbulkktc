@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { signIn } from "./actions";
+import { ResendConfirmationForm } from "./resend-confirmation-form";
 import { TurnstileField } from "./turnstile-field";
 import { OAuthProviderForm } from "./oauth-provider-form";
 import type {
@@ -42,6 +43,10 @@ export function SignInForm({
           {copy(audience === "employer" ? "accountEmailLabel" : "emailLabel")}
           <input
             id="login-email"
+            aria-describedby={
+              state.message !== "idle" ? "login-form-message" : undefined
+            }
+            aria-invalid={state.status === "error"}
             autoComplete="email"
             name="email"
             required
@@ -85,16 +90,6 @@ export function SignInForm({
                 audience === "employer" ? "employerSignIn" : "candidateSignIn",
               )}
         </button>
-        {state.message !== "idle" && (
-          <p
-            aria-live="polite"
-            className="editorial-form-message"
-            data-status={state.status}
-            role={state.status === "error" ? "alert" : "status"}
-          >
-            {copy(`messages.${state.message}`)}
-          </p>
-        )}
         <p className="editorial-form-footnote">
           {copy("noAccount")}{" "}
           <Link href={{ pathname: "/register", query: { audience } }}>
@@ -106,6 +101,22 @@ export function SignInForm({
           </Link>
         </p>
       </form>
+      {state.message !== "idle" && (
+        <div className="editorial-form-status">
+          <p
+            aria-live="polite"
+            className="editorial-form-message"
+            data-status={state.status}
+            id="login-form-message"
+            role={state.status === "error" ? "alert" : "status"}
+          >
+            {copy(`messages.${state.message}`)}
+          </p>
+          {state.message === "emailNotConfirmed" && state.email ? (
+            <ResendConfirmationForm audience={audience} email={state.email} />
+          ) : null}
+        </div>
+      )}
     </>
   );
 }
