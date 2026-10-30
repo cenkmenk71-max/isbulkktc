@@ -367,6 +367,48 @@ test("account pages are excluded from indexing without blocking crawlers", async
     expect(sitemap).not.toMatch(
       new RegExp(`<loc>${siteOrigin}/(en|ru|el|fa|de)/jobs/`),
     );
+
+    // `<lastmod>` is only useful while it stays verifiable against the page.
+    // A vacancy's date is; a build timestamp is not. So the two listing routes
+    // must carry the newest published vacancy date (proving it is derived from
+    // data, not from the build) and the pages with no such data must omit it.
+    const lastmodByLoc = new Map<string, string>();
+    for (const block of sitemap.matchAll(/<url>[\s\S]*?<\/url>/g)) {
+      const loc = block[0].match(/<loc>([^<]+)<\/loc>/)?.[1];
+      const lastmod = block[0].match(/<lastmod>([^<]+)<\/lastmod>/)?.[1];
+      if (loc && lastmod) lastmodByLoc.set(loc, lastmod);
+    }
+
+    const vacancyLocs = [...lastmodByLoc.keys()].filter((loc) =>
+      loc.includes("/jobs/"),
+    );
+    expect(vacancyLocs.length).toBeGreaterThan(0);
+
+    const newestVacancy = Math.max(
+      ...vacancyLocs.map((loc) => Date.parse(lastmodByLoc.get(loc)!)),
+    );
+
+    for (const path of ["/", "/en", "/de", "/jobs", "/en/jobs", "/de/jobs"]) {
+      const lastmod = lastmodByLoc.get(`${siteOrigin}${path}`);
+      expect(lastmod, `${path} renders listings and must carry <lastmod>`).toBeDefined();
+      expect(Date.parse(lastmod!)).toBe(newestVacancy);
+    }
+
+    for (const path of [
+      "/about",
+      "/contact",
+      "/privacy",
+      "/cookies",
+      "/terms",
+      "/freelance",
+      "/packages",
+      "/blog",
+    ]) {
+      expect(
+        lastmodByLoc.has(`${siteOrigin}${path}`),
+        `${path} has no verifiable modification date and must omit <lastmod>`,
+      ).toBe(false);
+    }
   }
 });
 
