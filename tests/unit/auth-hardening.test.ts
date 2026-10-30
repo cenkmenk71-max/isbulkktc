@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
 import { getLocalePrefix } from "@/i18n/routing";
+import { mergeLocaleIntoUserMetadata } from "@/features/identity/oauth-signup-intent";
 
 import { messageForAuthErrorCode } from "@/features/identity/auth-errors";
 import {
@@ -551,6 +552,45 @@ test("templates keep the GoTrue variables GoTrue substitutes", () => {
   }
 });
 
+test("every actionable template builds its link from .ConfirmationURL", () => {
+  // `.ConfirmationURL` is the only variable that carries the request's
+  // `redirect_to`. A hand-built `{{ .SiteURL }}/auth/callback?token_hash=...`
+  // looks equivalent but drops `redirect_to`, and the callback then falls back
+  // to the default destination — so a password reset would land on the home
+  // page instead of the new-password form. Nothing else asserts this.
+  const actionable = [
+    "confirmation.html",
+    "recovery.html",
+    "invite.html",
+    "magic_link.html",
+    "email_change.html",
+  ];
+
+  for (const file of actionable) {
+    const source = readTemplate(file);
+    const hrefs = [...source.matchAll(/href="([^"]*)"/g)].map((match) => match[1]);
+    const actionHrefs = hrefs.filter((href) => href !== "{{ .SiteURL }}");
+
+    assert.ok(actionHrefs.length > 0, `${file} has no action link`);
+    for (const href of actionHrefs) {
+      assert.equal(
+        href,
+        "{{ .ConfirmationURL }}",
+        `${file} builds an action link from "${href}"; use {{ .ConfirmationURL }} ` +
+          "so the request's redirect_to survives",
+      );
+    }
+
+    // A raw token is never put in a URL by hand — GoTrue's verify endpoint owns
+    // that, and doing it here is how redirect_to gets lost.
+    assert.doesNotMatch(
+      source,
+      /token_hash=|\{\{\s*\.TokenHash\s*\}\}/,
+      `${file} hand-builds a verify URL instead of using {{ .ConfirmationURL }}`,
+    );
+  }
+});
+
 test("every link in a rendered email is an absolute https URL", () => {
   for (const file of templateFiles) {
     for (const locale of locales) {
@@ -717,6 +757,26 @@ test("locale prefixes match the next-intl as-needed policy", () => {
   }
 });
 
+test("an OAuth account keeps the provider claims while gaining the locale", () => {
+  // The email templates read `.Data.locale` and cannot reach `profiles`, so an
+  // OAuth account that never had this written would be mailed in Turkish.
+  const merged = mergeLocaleIntoUserMetadata(
+    { avatar_url: "https://lh3.googleusercontent.com/a/x", full_name: "Ayşe" },
+    "fa",
+  );
+
+  assert.equal(merged.locale, "fa");
+  assert.equal(merged.avatar_url, "https://lh3.googleusercontent.com/a/x");
+  assert.equal(merged.full_name, "Ayşe");
+
+  // A fresh OAuth account has no metadata yet; the merge must still work.
+  assert.deepEqual(mergeLocaleIntoUserMetadata(null, "de"), { locale: "de" });
+  assert.deepEqual(mergeLocaleIntoUserMetadata(undefined, "ru"), { locale: "ru" });
+
+  // An existing (possibly wrong) locale is replaced, not preserved.
+  assert.equal(mergeLocaleIntoUserMetadata({ locale: "tr" }, "el").locale, "el");
+});
+
 // ---------------------------------------------------------------------------
 // config.toml wiring
 //
@@ -793,3 +853,70 @@ test("the templates the app relies on are all wired in config.toml", () => {
     assert.ok(wired.has(name), `auth.email.template.${name} is missing from config.toml`);
   }
 });
+
+// ---------------------------------------------------------------------------
+// Subjects are Go templates too: GoTrue renders the subject through the same
+// engine, with the same `.Data`. A Turkish-only subject undoes the localized
+// body, so pin the same six-locale contract here.
+// ---------------------------------------------------------------------------
+
+/** Reads the `subject = "…"` value of a `[section]`, TOML-unescaping `\"`. */
+function subjectFor(config: string, section: string): string | null {
+  const escaped = section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `^\\[${escaped}\\]\\s*\\n(?:[^\\n]*\\n)*?subject\\s*=\\s*"((?:[^"\\\\]|\\\\.)*)"`,
+    "m",
+  );
+  const match = config.match(pattern);
+  return match ? match[1].replace(/\\"/g, '"') : null;
+}
+
+test("every auth mail subject is localized, never left Turkish-only", () => {
+  const config = readConfig();
+  const sections = [
+    ...sectionNames(config, "auth.email.template.").map((name) => [
+      `auth.email.template.${name}`,
+      name,
+    ]),
+    ...sectionNames(config, "auth.email.notification.").map((name) => [
+      `auth.email.notification.${name}`,
+      name,
+    ]),
+  ];
+
+  assert.ok(sections.length >= 6, "expected the auth mail sections to be present");
+
+  for (const [section] of sections) {
+    const subject = subjectFor(config, section);
+    assert.ok(subject, `${section} has no subject`);
+
+    const rendered: Record<string, string> = {};
+    for (const locale of locales) {
+      const value = renderFor(subject, locale);
+      assert.ok(
+        value.length > 0 && !value.includes("{{"),
+        `${section} subject did not render for ${locale}: ${value}`,
+      );
+      assert.ok(
+        value.includes("İşBul KKTC"),
+        `${section} subject for ${locale} lost the brand: ${value}`,
+      );
+      rendered[locale] = value;
+    }
+
+    // A subject that never changes is the Turkish string under every locale.
+    assert.ok(
+      new Set(locales.map((l) => rendered[l])).size >= 4,
+      `${section} subject is not localized: ${JSON.stringify(rendered)}`,
+    );
+
+    // Unknown or absent locale falls back to Turkish.
+    const fallback = renderFor(subject, "tr", { Data: {} });
+    assert.equal(
+      fallback,
+      rendered.tr,
+      `${section} subject must fall back to Turkish`,
+    );
+  }
+});
+

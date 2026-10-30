@@ -10,6 +10,7 @@ import {
 } from "@/features/identity/auth-routing";
 import {
   isNewOAuthAccount,
+  mergeLocaleIntoUserMetadata,
   oauthSignupIntentCookieName,
   parseOAuthSignupIntent,
 } from "@/features/identity/oauth-signup-intent";
@@ -72,6 +73,24 @@ export async function GET(request: NextRequest) {
           code: userError?.code,
         });
         return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
+      }
+
+      // The email templates can only read `auth.users.user_metadata.locale`
+      // (`.Data.locale`), which only the password sign-up path sets. Without
+      // this an OAuth account is mailed in Turkish whatever language it used.
+      // A failure here only costs the email language, so it is logged rather
+      // than turned into a failed sign-in.
+      if (user.user_metadata?.locale !== intent.locale) {
+        const { error: metadataError } = await supabase.auth.updateUser({
+          data: mergeLocaleIntoUserMetadata(user.user_metadata, intent.locale),
+        });
+
+        if (metadataError) {
+          console.error(
+            "OAuth profile locale could not be stored in user metadata.",
+            { code: metadataError.code },
+          );
+        }
       }
 
       if (isNewOAuthAccount(user.created_at, intent)) {

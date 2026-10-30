@@ -41,6 +41,21 @@ export function parseOAuthSignupIntent(
   return { locale, initiatedAt };
 }
 
+/**
+ * `user_metadata` for an account that must be mailed in `locale`.
+ *
+ * The email templates read `.Data.locale`, i.e. `user_metadata.locale`, and
+ * nothing else — they cannot reach `profiles`. The password sign-up path sets
+ * it directly; an OAuth account arrives with only the provider's own claims, so
+ * the callback has to merge the locale in without dropping them.
+ */
+export function mergeLocaleIntoUserMetadata(
+  metadata: Record<string, unknown> | null | undefined,
+  locale: AppLocale,
+): Record<string, unknown> {
+  return { ...metadata, locale };
+}
+
 export function isNewOAuthAccount(
   createdAt: string,
   intent: OAuthSignupIntent,

@@ -423,6 +423,9 @@ a {
   white-space: nowrap;
   font-size: 11px;
 }
+.header-signout {
+  display: contents;
+}
 .mobile-menu-button {
   display: none;
   width: 40px;
@@ -2671,6 +2674,9 @@ a {
     background: var(--green);
     color: var(--surface-raised);
     font-weight: 650;
+  }
+  .mobile-nav-primary-form {
+    display: contents;
   }
   .hero-section {
     height: auto;
