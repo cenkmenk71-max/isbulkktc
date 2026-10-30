@@ -1,0 +1,68 @@
+name: Verify production deployment
+
+# The Vercel Git integration deploys `main` on every push, but CI only proves the
+# code is *buildable* — not that the live site is actually serving it. A failed
+# Vercel build, an alias left pinned to the previous deployment, or an app that
+# boots and then errors at request time all keep the Actions tab green while the
+# site quietly serves stale code. This workflow closes that loop: after a push to
+# `main` it polls the production origin until it reports the new commit, then
+# smoke-tests the public routes and (when a Vercel token is present) confirms the
+# production alias points at a deployment built from that same commit.
+#
+# It needs no secret to run the build-identity and smoke checks. The optional
+# VERCEL_TOKEN only adds the alias cross-check; without it the job still verifies
+# the live origin and stays green.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      expect:
+        description: "Commit SHA to expect on production (defaults to the checked-out HEAD)"
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-production-deployment
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify the live site serves the pushed commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      - name: Resolve the expected commit
+        id: expect
+        env:
+          INPUT_EXPECT: ${{ inputs.expect }}
+          PUSH_SHA: ${{ github.event_name == 'push' && github.sha || '' }}
+        run: |
+          expected="${INPUT_EXPECT:-$PUSH_SHA}"
+          if [ -z "$expected" ]; then
+            expected="$(git rev-parse HEAD)"
+          fi
+          echo "sha=$expected" >> "$GITHUB_OUTPUT"
+          echo "Verifying production serves $expected"
+
+      - name: Verify the deployment
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL || 'https://isbulkktc.com' }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || secrets.VERCEL }}
+          VERCEL_TEAM_SLUG: ${{ vars.VERCEL_TEAM_SLUG || 'orijin1' }}
+          VERCEL_PROJECT: ${{ vars.VERCEL_PROJECT || 'isbulkktc' }}
+          DEPLOY_TIMEOUT_SEC: ${{ vars.DEPLOY_TIMEOUT_SEC || '900' }}
+          DEPLOY_POLL_SEC: ${{ vars.DEPLOY_POLL_SEC || '20' }}
+        run: node scripts/verify-production-deployment.mjs --expect "${{ steps.expect.outputs.sha }}"
