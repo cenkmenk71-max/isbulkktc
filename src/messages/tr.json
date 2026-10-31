@@ -119,7 +119,6 @@
     "sectionsHelp": "Her bölüm bir başlık ve paragraf listesidir. Geçersiz JSON kaydedilmez.",
     "saveContent": "Metni kaydet",
     "savingContent": "Kaydediliyor…",
-    "savedContent": "Yasal metin kaydedildi.",
     "noContent": "Bu dil için henüz yönetilen bir belge yok; paket içindeki kopya gösteriliyor.",
     "questionLabel": "Soru",
     "answerLabel": "Yanıt",
@@ -131,10 +130,8 @@
     "createFaq": "Soruyu kaydet",
     "saveFaq": "Soruyu güncelle",
     "savingFaq": "Kaydediliyor…",
-    "savedFaq": "Soru kaydedildi.",
     "deleteFaq": "Sil",
     "deletingFaq": "Siliniyor…",
-    "deletedFaq": "Soru silindi.",
     "emptyFaq": "Bu dilde henüz soru yok.",
     "planCode": "Kod",
     "planName": "Paket adı",
@@ -147,14 +144,15 @@
     "planOrder": "Sıra",
     "savePlan": "Paketi kaydet",
     "savingPlan": "Kaydediliyor…",
-    "savedPlan": "Paket kaydedildi.",
     "emptyPlans": "Henüz paket tanımı yok.",
     "messages": {
       "idle": "",
       "invalid": "Girdileri kontrol edin; fiyatlar, limitler ve JSON alanları geçerli olmalıdır.",
       "unauthorized": "Bu yönetici işlemi için yetkiniz veya geçerli MFA doğrulamanız yok.",
       "saveFailed": "Kayıt tamamlanamadı. Lütfen tekrar deneyin.",
-      "deleteFailed": "Kayıt silinemedi. Lütfen tekrar deneyin."
+      "deleteFailed": "Kayıt silinemedi. Lütfen tekrar deneyin.",
+      "saved": "Kayıt kaydedildi.",
+      "deleted": "Kayıt silindi."
     }
   },
   "AboutMeta": {
