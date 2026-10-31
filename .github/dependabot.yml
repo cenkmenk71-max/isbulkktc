@@ -1,0 +1,32 @@
+version: 2
+
+# The repository already had Dependabot *security* updates enabled, but no
+# configuration file. Without one, the scheduled "Dependabot Updates" job fails
+# on every run whenever it finds an advisory it cannot act on, which is exactly
+# what happened for `minimatch`: GHSA-g3hv-75wg-m249 is patched only from
+# 11.0.1, while every consumer here pins the legacy line — `eslint-config-next`
+# pulls `eslint-plugin-import`/`-jsx-a11y`/`-react` (all `minimatch ^3.1.2`) and
+# `@gltf-transform/cli` pulls `glob@10` (`minimatch ^9`). There is no 3.x/9.x
+# patch, so Dependabot has no valid update path and the job errors out.
+#
+# `minimatch` is dev-only here: `npm ls minimatch --omit=dev` is empty, so it
+# never reaches the production bundle and the CI gate that matters
+# (`bun audit --prod --audit-level=moderate`) stays green. The ignore below
+# silences the un-actionable security job; it is scoped to the vulnerable range
+# rather than the package name so the alert returns automatically once a
+# resolvable patched version exists.
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      # Required by the schema. Version-update pull requests are switched off
+      # below, so this schedule never produces one; only the ignore rule (which
+      # applies to security updates too) takes effect.
+      interval: "monthly"
+    # Version updates stay off — this file exists to scope the security job, not
+    # to open a monthly upgrade stream. Security updates use a separate, fixed
+    # limit and are unaffected by this value.
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "minimatch"
+        versions: ["<11.0.1"]
