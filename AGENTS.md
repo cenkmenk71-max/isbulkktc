@@ -40,6 +40,21 @@ branch by itself starts nothing — open a PR to get a run.
   where slug like 'source-%';`). The transaction rolls back, so the seed survives
   for the E2E run that follows.
 
+- **`revoke ... from public` does not revoke `anon`/`authenticated`.** Supabase's
+  `pg_default_acl` grants EXECUTE on every new `public` function to `anon`,
+  `authenticated` and `service_role` explicitly. `revoke all on function … from
+  public` only removes the implicit PUBLIC grant, leaving those per-role entries
+  intact — which is how `list_engagement_recipients` (a full mailing-list dump:
+  `user_id`, `email`, `display_name`, `locale`) and `opt_out_engagement` shipped
+  callable with the publishable key. Always `revoke … from public, anon,
+  authenticated` and then grant back only the roles that need it. Note the two
+  exceptions that must keep their grants: `is_valid_company_categories` and
+  `is_valid_candidate_profile_section` are IMMUTABLE CHECK validators, and a
+  CHECK expression runs with the caller's privileges, so revoking them breaks
+  every INSERT with `42501`. `supabase/tests/database/function_privileges.test.sql`
+  now ratchets the whole set by full signature — add any deliberately
+  client-callable function there or CI fails.
+
 - **3D/WebGL E2E is load-sensitive.** The suite renders animated Three.js scenes
   with software WebGL (`--use-angle=swiftshader`). Give those specs generous
   per-test timeouts and rely on the CI retry budget for load-related flakes.
