@@ -7,8 +7,11 @@
 //      A mismatch makes every captcha-protected submit answer `captcha_failed`,
 //      which is exactly the failure this guard exists to surface.
 //   2. Supabase OAuth providers — every provider the app advertises in
-//      `AUTH_OAUTH_PROVIDERS` must be enabled in Supabase with a client id, or
-//      the login page renders a button that fails at the provider.
+//      `AUTH_OAUTH_PROVIDERS` must be enabled in Supabase with a client id *and*
+//      credentials that actually work. An enabled provider with a placeholder
+//      secret still answers the authorize redirect and then fails the token
+//      exchange with `invalid_client` at sign-in, so Google's stored pair is
+//      proven against its token endpoint.
 //   3. Redirect allowlist — the production callback must be allowed, or OAuth
 //      and email confirmation links land on a `redirect_to` error.
 //
@@ -117,6 +120,85 @@ export function evaluateOAuthProviders(providers, authConfig) {
     }
   }
   return problems;
+}
+
+/**
+ * Interprets a provider token-endpoint reply for deliberately invalid
+ * credentials. Google answers `invalid_client` / "The OAuth client was not
+ * found." when the client id is unknown and `invalid_client` / "The provided
+ * client secret is invalid." when the id exists but the secret does not match —
+ * both mean the stored pair cannot complete a sign-in. A *valid* pair answers
+ * `invalid_grant` for the bogus code, which is the pass signal. Any other
+ * outcome (rate limit, provider outage) is "unknown" so it never fails the gate.
+ */
+export function evaluateGoogleTokenReply(status, body) {
+  const error = typeof body?.error === "string" ? body.error : "";
+  const description =
+    typeof body?.error_description === "string" ? body.error_description : "";
+  if (error === "invalid_grant") {
+    return {
+      verdict: "pass",
+      reason: "Google accepts the stored client id and secret.",
+    };
+  }
+  if (error === "invalid_client") {
+    return {
+      verdict: "fail",
+      reason: `Google rejected the stored client id/secret: ${(description || "invalid_client").replace(/\.$/, "")}.`,
+    };
+  }
+  if (error === "invalid_request" && /redirect_uri/i.test(description)) {
+    return {
+      verdict: "fail",
+      reason: `Google rejected the callback as a registered redirect URI: ${description}.`,
+    };
+  }
+  if (error === "unauthorized_client") {
+    return {
+      verdict: "fail",
+      reason: `Google rejected the client for this grant type: ${description || error}.`,
+    };
+  }
+  // Rate limits and outages must not turn into a red gate.
+  return {
+    verdict: "unknown",
+    reason: `Google credentials could not be verified (HTTP ${status}): ${JSON.stringify(body)}`,
+  };
+}
+
+/**
+ * Proves the stored Google credentials by asking the token endpoint to redeem a
+ * code that cannot exist. The exchange is rejected either way, but the *reason*
+ * separates a valid client (invalid_grant) from a wrong secret (invalid_client)
+ * — the exact failure that let a placeholder secret pass every static check and
+ * then answer "Unable to exchange external code: invalid_client" at sign-in.
+ */
+export async function probeGoogleCredentials(projectRef, clientId, clientSecret) {
+  if (!clientId || !clientSecret) {
+    return { verdict: "unknown", reason: "google has no client id or secret to test." };
+  }
+  try {
+    const { status, body } = await fetchJson(
+      "https://oauth2.googleapis.com/token",
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code: "isbulkktc-credential-probe",
+          grant_type: "authorization_code",
+          redirect_uri: `https://${projectRef}.supabase.co/auth/v1/callback`,
+        }).toString(),
+      },
+    );
+    return evaluateGoogleTokenReply(status, body);
+  } catch {
+    return {
+      verdict: "unknown",
+      reason: "google credentials could not be probed (network error).",
+    };
+  }
 }
 
 /** True when the production callback is covered by the redirect allowlist. */
@@ -373,6 +455,21 @@ async function main() {
         const authorize = await probeOAuthAuthorize(token, projectRef, provider);
         if (authorize.ok) notes.push(authorize.reason);
         else failures.push(authorize.reason);
+      }
+
+      // An enabled provider with a client id can still hold a wrong secret, which
+      // only shows up as `invalid_client` during the token exchange. Google is the
+      // one provider whose token endpoint answers that deterministically, so its
+      // stored credentials are proven here rather than discovered at sign-in.
+      if (providers.includes("google")) {
+        const googleProbe = await probeGoogleCredentials(
+          projectRef,
+          body.external_google_client_id?.split(",")[0],
+          body.external_google_secret,
+        );
+        if (googleProbe.verdict === "pass") notes.push(googleProbe.reason);
+        else if (googleProbe.verdict === "fail") failures.push(googleProbe.reason);
+        else notes.push(googleProbe.reason);
       }
 
       if (!callbackIsAllowed(origin, body.uri_allow_list)) {

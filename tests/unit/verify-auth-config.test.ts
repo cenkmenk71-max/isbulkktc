@@ -4,10 +4,11 @@ import test from "node:test";
 import {
   callbackIsAllowed,
   evaluateCaptchaProbe,
+  evaluateGoogleTokenReply,
   evaluateOAuthAuthorize,
   evaluateOAuthProviders,
-  looksLikeOAuthClientId,
   evaluateTurnstileSecret,
+  looksLikeOAuthClientId,
   looksLikeTurnstileSiteKey,
   parseAdvertisedProviders,
 } from "../../scripts/verify-auth-config.mjs";
@@ -157,6 +158,37 @@ test("a fully configured provider set passes", () => {
     external_facebook_client_id: "1234567890123456",
   };
   assert.deepEqual(evaluateOAuthProviders(["google", "facebook"], config), []);
+});
+
+test("Google's token reply separates a wrong secret from a valid client", () => {
+  // Live answers: the stored secret produced the first, a good pair the second.
+  assert.equal(
+    evaluateGoogleTokenReply(401, {
+      error: "invalid_client",
+      error_description: "The provided client secret is invalid.",
+    }).verdict,
+    "fail",
+  );
+  assert.equal(
+    evaluateGoogleTokenReply(400, {
+      error: "invalid_client",
+      error_description: "The OAuth client was not found.",
+    }).verdict,
+    "fail",
+  );
+  assert.equal(
+    evaluateGoogleTokenReply(400, {
+      error: "invalid_grant",
+      error_description: "Malformed auth code.",
+    }).verdict,
+    "pass",
+  );
+  // A rate limit must not read as a credential failure.
+  assert.equal(
+    evaluateGoogleTokenReply(429, { error: "rate_limit_exceeded" }).verdict,
+    "unknown",
+  );
+  assert.equal(evaluateGoogleTokenReply(500, null).verdict, "unknown");
 });
 
 test("the production callback is recognized in the allowlist", () => {

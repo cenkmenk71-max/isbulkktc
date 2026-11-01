@@ -20,3 +20,5 @@ supabase/.branches/
 
 # Local agent memory (not part of the product)
 .openhands/
+# Vercel CLI project link (created by `vercel link`)
+.vercel
