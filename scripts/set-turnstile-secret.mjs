@@ -25,7 +25,7 @@
 //   SUPABASE_PROJECT_REF   default the project this repository targets.
 //   DRY_RUN=1              validate without writing.
 
-import { evaluateTurnstileSecret } from "./verify-auth-config.mjs";
+import { evaluateTurnstileSecret, verifyCaptchaLive } from "./verify-auth-config.mjs";
 
 const SUPABASE_API = "https://api.supabase.com/v1";
 const TURNSTILE_VERIFY =
@@ -99,7 +99,7 @@ async function main() {
       console.log("DRY_RUN=1 — captcha would be disabled.");
       return;
     }
-    const { status, body } = await patchAuthConfig(token, projectRef, {
+    const { status } = await patchAuthConfig(token, projectRef, {
       security_captcha_enabled: false,
     });
     if (status !== 200) {
@@ -107,11 +107,13 @@ async function main() {
       process.exitCode = 1;
       return;
     }
+    const probe = await verifyCaptchaLive(token, projectRef);
     console.log(
-      body?.security_captcha_enabled === false
+      probe.state === "disabled"
         ? "Captcha disabled. Auth works again; re-enable it once the correct secret is set."
-        : "Supabase answered 200 but captcha is still enabled — re-run npm run auth:verify.",
+        : `Supabase answered 200 but captcha is still ${probe.state} — re-run npm run auth:verify.`,
     );
+    if (probe.state !== "disabled") process.exitCode = 1;
     return;
   }
 
@@ -148,7 +150,7 @@ async function main() {
     return;
   }
 
-  const { status, body } = await patchAuthConfig(token, projectRef, {
+  const { status } = await patchAuthConfig(token, projectRef, {
     security_captcha_enabled: true,
     security_captcha_provider: "turnstile",
     security_captcha_secret: secret,
@@ -160,13 +162,16 @@ async function main() {
     return;
   }
 
-  const stored = body?.security_captcha_secret === secret;
-  console.log(
-    stored
-      ? "Supabase now stores the verified Turnstile secret."
-      : "Supabase answered 200 but the stored secret differs — re-run npm run auth:verify.",
-  );
-  if (!stored) process.exitCode = 1;
+  // The Management API's config read can lag a PATCH, so confirm the secret the
+  // way GoTrue actually sees it instead of trusting the echoed field.
+  const probe = await verifyCaptchaLive(token, projectRef);
+  if (probe.ok) {
+    console.log(`Captcha verified live: ${probe.reason}`);
+    return;
+  }
+  console.error(`The stored secret did not take effect: ${probe.reason}`);
+  console.error("Re-run npm run auth:verify; if it still fails, check the widget's domains.");
+  process.exitCode = 1;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

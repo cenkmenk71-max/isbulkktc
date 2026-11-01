@@ -51,11 +51,13 @@ SUPABASE_ACCESS_TOKEN=... NEXT_PUBLIC_TURNSTILE_SITE_KEY=... \
 AUTH_OAUTH_PROVIDERS=google,linkedin_oidc,facebook npm run auth:verify
 ```
 
-The check reads the hosted Auth configuration (read-only) and fails on a
-Turnstile secret Cloudflare rejects, an advertised-but-disabled provider, a
-provider without a client ID, or a production callback missing from the
-redirect allowlist. Run it after any auth-console change; it is the only check
-that can see these settings, because they live outside the repository.
+The check reads the hosted Auth configuration and then probes the live auth
+endpoint with an invalid captcha token, so it reports the secret GoTrue actually
+uses (the Management API read can lag a write). It fails on a captcha secret
+GoTrue rejects, an advertised-but-disabled provider, a provider without a client
+ID, or a production callback missing from the redirect allowlist. Run it after
+any auth-console change; it is the only check that can see these settings,
+because they live outside the repository.
 
 To fix a rejected Turnstile secret, copy the widget's Secret Key from the
 Cloudflare dashboard and let the script validate it before it is stored — it

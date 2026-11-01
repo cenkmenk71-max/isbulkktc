@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   callbackIsAllowed,
+  evaluateCaptchaProbe,
   evaluateOAuthProviders,
   evaluateTurnstileSecret,
   looksLikeTurnstileSiteKey,
@@ -59,6 +60,35 @@ test("Cloudflare's always-pass testing keys are accepted, not read as unexpected
 test("an unexpected Cloudflare reply is a failure, not a pass", () => {
   assert.equal(evaluateTurnstileSecret(null).ok, false);
   assert.equal(evaluateTurnstileSecret({ "error-codes": ["internal-error"] }).ok, false);
+});
+
+test("the live auth probe reads the secret GoTrue actually uses", () => {
+  const broken = evaluateCaptchaProbe(400, {
+    error_code: "captcha_failed",
+    msg: "captcha protection: request disallowed (invalid-input-secret)",
+  });
+  assert.equal(broken.state, "invalid-secret");
+  assert.equal(broken.ok, false);
+
+  const healthy = evaluateCaptchaProbe(400, {
+    error_code: "captcha_failed",
+    msg: "captcha protection: request disallowed (invalid-input-response)",
+  });
+  assert.equal(healthy.state, "valid");
+  assert.equal(healthy.ok, true);
+
+  const disabled = evaluateCaptchaProbe(400, {
+    error_code: "invalid_credentials",
+    msg: "Invalid login credentials",
+  });
+  assert.equal(disabled.state, "disabled");
+  assert.equal(disabled.ok, true);
+
+  const odd = evaluateCaptchaProbe(400, {
+    error_code: "captcha_failed",
+    msg: "captcha protection: request disallowed (something-else)",
+  });
+  assert.equal(odd.ok, false);
 });
 
 test("an advertised provider must be enabled with a client id", () => {

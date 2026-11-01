@@ -27,8 +27,6 @@
 // dependent checks with a warning, so the guard never blocks on absent secrets.
 
 const SUPABASE_API = "https://api.supabase.com/v1";
-const TURNSTILE_VERIFY =
-  "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 /** Providers Supabase exposes and this app is allowed to advertise. */
 export const SUPPORTED_OAUTH_PROVIDERS = ["google", "linkedin_oidc", "facebook"];
@@ -113,6 +111,60 @@ export function callbackIsAllowed(origin, allowList) {
     );
 }
 
+/**
+ * Reads the outcome of a live auth probe carrying a deliberately bogus captcha
+ * token. This is the authoritative check, because the Management API can return
+ * a *stale* `security_captcha_secret` after a PATCH — the config read then
+ * disagrees with the secret GoTrue actually uses. GoTrue's own answer cannot be
+ * stale:
+ *
+ *   invalid-input-secret    → the stored secret is wrong (auth is fully broken)
+ *   invalid-input-response  → the secret is valid; only our fake token was
+ *                             rejected, which is the healthy answer
+ *   no captcha_failed       → captcha is not enforced
+ */
+export function evaluateCaptchaProbe(status, body) {
+  const errorCode = body?.error_code;
+  const message = String(body?.msg ?? "");
+
+  if (errorCode === "captcha_failed") {
+    if (message.includes("invalid-input-secret")) {
+      return {
+        state: "invalid-secret",
+        ok: false,
+        reason:
+          "GoTrue rejected the stored captcha secret (invalid-input-secret) — every auth request fails.",
+      };
+    }
+    if (message.includes("invalid-input-response")) {
+      return {
+        state: "valid",
+        ok: true,
+        reason: "GoTrue accepts the stored captcha secret (only the probe token was rejected).",
+      };
+    }
+    return {
+      state: "unknown",
+      ok: false,
+      reason: `GoTrue answered an unrecognised captcha error: ${message}`,
+    };
+  }
+
+  if (typeof status === "number" && status >= 200 && status < 500) {
+    return {
+      state: "disabled",
+      ok: true,
+      reason: "Captcha is not enforced on auth requests.",
+    };
+  }
+
+  return {
+    state: "unreachable",
+    ok: false,
+    reason: `The auth probe could not be interpreted (HTTP ${status}).`,
+  };
+}
+
 async function fetchJson(url, init, timeoutMs = 15_000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -122,6 +174,62 @@ async function fetchJson(url, init, timeoutMs = 15_000) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** The publishable key the app itself uses, needed for the live auth probe. */
+async function fetchAnonKey(token, projectRef) {
+  const { status, body } = await fetchJson(
+    `${SUPABASE_API}/projects/${projectRef}/api-keys`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (status !== 200 || !Array.isArray(body)) return null;
+  return body.find((key) => key?.name === "anon")?.api_key ?? null;
+}
+
+/**
+ * Sends one auth request with an invalid captcha token and reports what GoTrue
+ * says. Network trouble is reported as `unreachable` so a flaky run is a note,
+ * not a false failure.
+ */
+export async function probeCaptchaSecret(projectRef, anonKey) {
+  try {
+    const { status, body } = await fetchJson(
+      `https://${projectRef}.supabase.co/auth/v1/token?grant_type=password`,
+      {
+        method: "POST",
+        headers: { apikey: anonKey, "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "captcha-config-probe@example.com",
+          password: "not-a-real-password",
+          gotrue_meta_security: { captcha_token: "probe" },
+        }),
+      },
+    );
+    return evaluateCaptchaProbe(status, body);
+  } catch {
+    return {
+      state: "unreachable",
+      ok: false,
+      reason: "The auth probe could not reach the project.",
+    };
+  }
+}
+
+/**
+ * The authoritative captcha check: fetch the publishable key, then ask GoTrue.
+ * Used both by this guard and by `set-turnstile-secret.mjs` after a write,
+ * because the Management API's config read can be stale.
+ */
+export async function verifyCaptchaLive(token, projectRef) {
+  const anonKey = await fetchAnonKey(token, projectRef);
+  if (!anonKey) {
+    return {
+      state: "unreachable",
+      ok: false,
+      reason: "The publishable (anon) key could not be read for the auth probe.",
+    };
+  }
+  return probeCaptchaSecret(projectRef, anonKey);
 }
 
 async function main() {
@@ -161,26 +269,12 @@ async function main() {
     if (status !== 200 || !body) {
       failures.push(`Supabase auth config could not be read (HTTP ${status}).`);
     } else {
-      if (body.security_captcha_enabled === true) {
-        const secret = body.security_captcha_secret;
-        if (typeof secret !== "string" || secret.trim() === "") {
-          failures.push("Captcha is enabled in Supabase but has no secret.");
-        } else {
-          const verify = await fetchJson(TURNSTILE_VERIFY, {
-            method: "POST",
-            headers: { "content-type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({
-              secret,
-              response: "guard-invalid-token",
-            }).toString(),
-          });
-          const verdict = evaluateTurnstileSecret(verify.body);
-          if (!verdict.ok) failures.push(verdict.reason);
-          else notes.push(verdict.reason);
-        }
-      } else {
-        notes.push("Captcha is disabled in Supabase.");
-      }
+      // The secret GoTrue actually uses is the source of truth, and the config
+      // read can be stale, so probe the live endpoint instead of trusting
+      // `security_captcha_secret` here.
+      const probe = await verifyCaptchaLive(token, projectRef);
+      if (probe.ok) notes.push(probe.reason);
+      else failures.push(probe.reason);
 
       failures.push(...evaluateOAuthProviders(providers, body));
 
