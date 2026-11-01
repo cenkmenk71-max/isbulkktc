@@ -8,6 +8,7 @@ import {
   looksLikeTurnstileSiteKey,
   parseAdvertisedProviders,
 } from "../../scripts/verify-auth-config.mjs";
+import { looksLikeTurnstileSecret } from "../../scripts/set-turnstile-secret.mjs";
 
 test("advertised providers are trimmed, de-duplicated and validated", () => {
   assert.deepEqual(parseAdvertisedProviders("google, linkedin_oidc ,facebook").providers, [
@@ -28,6 +29,14 @@ test("a Turnstile site key is distinguished from a placeholder", () => {
   assert.equal(looksLikeTurnstileSiteKey("your-site-key"), false);
 });
 
+test("a Turnstile secret key is distinguished from junk before any network call", () => {
+  assert.equal(looksLikeTurnstileSecret("1x0000000000000000000000000000000AA"), true);
+  assert.equal(looksLikeTurnstileSecret("80e57f1b1d0180592587b0624948ca639b36efa8ca0906fe554bfa3b5b48d70f"), true);
+  assert.equal(looksLikeTurnstileSecret("kisa"), false);
+  assert.equal(looksLikeTurnstileSecret(""), false);
+  assert.equal(looksLikeTurnstileSecret("has space in the middle of it here"), false);
+});
+
 test("a valid secret answers invalid-input-response, an unknown one invalid-input-secret", () => {
   assert.equal(
     evaluateTurnstileSecret({ success: false, "error-codes": ["invalid-input-response"] }).ok,
@@ -39,6 +48,12 @@ test("a valid secret answers invalid-input-response, an unknown one invalid-inpu
   });
   assert.equal(rejected.ok, false);
   assert.match(rejected.reason, /invalid-input-secret/);
+});
+
+test("Cloudflare's always-pass testing keys are accepted, not read as unexpected", () => {
+  const testing = evaluateTurnstileSecret({ success: true, "error-codes": [] });
+  assert.equal(testing.ok, true);
+  assert.match(testing.reason, /accepted/);
 });
 
 test("an unexpected Cloudflare reply is a failure, not a pass", () => {

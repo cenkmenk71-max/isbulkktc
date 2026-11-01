@@ -58,9 +58,13 @@ export function looksLikeTurnstileSiteKey(value) {
 /**
  * Interprets a Cloudflare `siteverify` reply for a deliberately invalid token.
  * A *valid* secret answers `invalid-input-response`; an unknown secret answers
- * `invalid-input-secret`. Anything else means the check could not be trusted.
+ * `invalid-input-secret`. Cloudflare's always-pass testing keys answer
+ * `success: true` outright. Anything else means the check could not be trusted.
  */
 export function evaluateTurnstileSecret(reply) {
+  if (reply?.success === true) {
+    return { ok: true, reason: "Cloudflare accepted the secret." };
+  }
   const codes = Array.isArray(reply?.["error-codes"]) ? reply["error-codes"] : [];
   if (codes.includes("invalid-input-secret")) {
     return {

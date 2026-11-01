@@ -119,8 +119,23 @@ non-empty.
 
 ### The bot check fails with "we could not verify the bot protection"
 
-Supabase verifies the Turnstile token server-side. The usual causes are:
+Supabase verifies the Turnstile token server-side. Run `npm run auth:verify`
+first — it calls Cloudflare's `siteverify` with the stored secret and reports a
+rejected one directly. If it reports `invalid-input-secret`, the secret is wrong
+(or from another widget) and **every** auth request fails, so no user can sign in
+at all. The usual causes are:
 
+- **The stored secret is not valid.** Confirm it with Cloudflare and store it
+  only through the validating script, which refuses a secret Cloudflare rejects:
+
+  ```bash
+  TURNSTILE_SECRET=<the widget's Secret Key> SUPABASE_ACCESS_TOKEN=<sbp_…> \
+    npm run auth:set-turnstile-secret
+  ```
+
+  While the secret is wrong, captcha protects nothing yet blocks everyone. If the
+  correct secret is not at hand, disable it first so sign-in works again:
+  `node scripts/set-turnstile-secret.mjs --disable`.
 - **The site key and the Supabase secret are not from the same Turnstile
   widget.** Check that `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in the deployment belongs
   to the widget whose secret is stored under Supabase → Authentication → Attack

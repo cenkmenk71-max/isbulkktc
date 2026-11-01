@@ -57,6 +57,25 @@ provider without a client ID, or a production callback missing from the
 redirect allowlist. Run it after any auth-console change; it is the only check
 that can see these settings, because they live outside the repository.
 
+To fix a rejected Turnstile secret, copy the widget's Secret Key from the
+Cloudflare dashboard and let the script validate it before it is stored — it
+refuses a secret Cloudflare does not recognise, so a broken widget cannot be
+configured silently:
+
+```bash
+TURNSTILE_SECRET=... SUPABASE_ACCESS_TOKEN=... npm run auth:set-turnstile-secret
+npm run auth:verify   # expect no ❌
+```
+
+While the secret is wrong, captcha blocks **every** auth request
+(`captcha_failed`, `invalid-input-secret`), so nobody can sign in. Bot
+protection that rejects everyone protects nothing; if the correct secret is not
+at hand, take the service back up first and re-enable captcha afterwards:
+
+```bash
+SUPABASE_ACCESS_TOKEN=... node scripts/set-turnstile-secret.mjs --disable
+```
+
 ## 2. Apply database migrations safely
 
 Use the project-pinned Supabase CLI from a developer terminal where credentials
