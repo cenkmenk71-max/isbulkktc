@@ -8,10 +8,11 @@
 //      which is exactly the failure this guard exists to surface.
 //   2. Supabase OAuth providers — every provider the app advertises in
 //      `AUTH_OAUTH_PROVIDERS` must be enabled in Supabase with a client id *and*
-//      credentials that actually work. An enabled provider with a placeholder
-//      secret still answers the authorize redirect and then fails the token
-//      exchange with `invalid_client` at sign-in, so Google's stored pair is
-//      proven against its token endpoint.
+//      a secret that belongs to it. An enabled provider with a wrong secret still
+//      answers the authorize redirect and then fails the token exchange with
+//      `invalid_client` at sign-in, so the recent auth logs are checked for that
+//      signature (the Management API only ever returns a *hash* of a secret, so
+//      it cannot prove one).
 //   3. Redirect allowlist — the production callback must be allowed, or OAuth
 //      and email confirmation links land on a `redirect_to` error.
 //
@@ -123,80 +124,85 @@ export function evaluateOAuthProviders(providers, authConfig) {
 }
 
 /**
- * Interprets a provider token-endpoint reply for deliberately invalid
- * credentials. Google answers `invalid_client` / "The OAuth client was not
- * found." when the client id is unknown and `invalid_client` / "The provided
- * client secret is invalid." when the id exists but the secret does not match —
- * both mean the stored pair cannot complete a sign-in. A *valid* pair answers
- * `invalid_grant` for the bogus code, which is the pass signal. Any other
- * outcome (rate limit, provider outage) is "unknown" so it never fails the gate.
+ * Reads recent production auth logs for the signature of a failed OAuth token
+ * exchange.
+ *
+ * The Management API cannot validate a provider secret: it returns a
+ * deterministic *hash* of the stored value, never the value itself, so no probe
+ * can send it to a provider and learn whether it matches. (Verified: writing
+ * `PLAINTEXT-PROBE-12345` and reading it back yields a 64-hex digest, stable for
+ * the same input.) GoTrue, however, logs the real outcome of every exchange. A
+ * secret that does not belong to the client id produces exactly:
+ *
+ *   error: oauth2: "invalid_client" "The provided client secret is invalid."
+ *   msg:   500: Unable to exchange external code: <code>
+ *   path:  /callback
+ *
+ * Surfacing that in the deploy report turns "social sign-in is broken" from a
+ * user report into a finding. A quiet window means the last exchange succeeded —
+ * or that nobody tried — so it is a note, never a hard pass on credentials.
  */
-export function evaluateGoogleTokenReply(status, body) {
-  const error = typeof body?.error === "string" ? body.error : "";
-  const description =
-    typeof body?.error_description === "string" ? body.error_description : "";
-  if (error === "invalid_grant") {
+export function evaluateRecentOAuthErrors(rows) {
+  if (!Array.isArray(rows)) {
     return {
-      verdict: "pass",
-      reason: "Google accepts the stored client id and secret.",
+      state: "unknown",
+      ok: false,
+      reason: "Recent auth logs could not be interpreted.",
     };
   }
-  if (error === "invalid_client") {
+  const matches = rows.filter((row) => {
+    const message = String(row?.event_message ?? "");
+    return (
+      message.includes('"path":"/callback"') &&
+      (message.includes("invalid_client") ||
+        message.includes("Unable to exchange external code"))
+    );
+  });
+  if (matches.length === 0) {
     return {
-      verdict: "fail",
-      reason: `Google rejected the stored client id/secret: ${(description || "invalid_client").replace(/\.$/, "")}.`,
+      state: "clean",
+      ok: true,
+      reason: "No failed OAuth token exchange in the recent auth logs.",
     };
   }
-  if (error === "invalid_request" && /redirect_uri/i.test(description)) {
-    return {
-      verdict: "fail",
-      reason: `Google rejected the callback as a registered redirect URI: ${description}.`,
-    };
-  }
-  if (error === "unauthorized_client") {
-    return {
-      verdict: "fail",
-      reason: `Google rejected the client for this grant type: ${description || error}.`,
-    };
-  }
-  // Rate limits and outages must not turn into a red gate.
+  const latest = matches[0]?.timestamp ?? "";
   return {
-    verdict: "unknown",
-    reason: `Google credentials could not be verified (HTTP ${status}): ${JSON.stringify(body)}`,
+    state: "failing",
+    ok: false,
+    reason:
+      `${matches.length} failed OAuth token exchange(s) in the recent auth logs` +
+      `${latest ? ` (latest ${latest})` : ""} — the stored provider secret does not ` +
+      `match its client id.`,
   };
 }
 
-/**
- * Proves the stored Google credentials by asking the token endpoint to redeem a
- * code that cannot exist. The exchange is rejected either way, but the *reason*
- * separates a valid client (invalid_grant) from a wrong secret (invalid_client)
- * — the exact failure that let a placeholder secret pass every static check and
- * then answer "Unable to exchange external code: invalid_client" at sign-in.
- */
-export async function probeGoogleCredentials(projectRef, clientId, clientSecret) {
-  if (!clientId || !clientSecret) {
-    return { verdict: "unknown", reason: "google has no client id or secret to test." };
-  }
+/** Fetches the recent auth log window and looks for failed token exchanges. */
+export async function probeRecentOAuthErrors(token, projectRef, windowMinutes = 60) {
+  const end = new Date();
+  const start = new Date(end.getTime() - windowMinutes * 60_000);
+  const params = new URLSearchParams({
+    sql: "select timestamp, event_message from logs order by timestamp desc limit 1000",
+    iso_timestamp_start: start.toISOString(),
+    iso_timestamp_end: end.toISOString(),
+  });
   try {
     const { status, body } = await fetchJson(
-      "https://oauth2.googleapis.com/token",
-      {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id: clientId,
-          client_secret: clientSecret,
-          code: "isbulkktc-credential-probe",
-          grant_type: "authorization_code",
-          redirect_uri: `https://${projectRef}.supabase.co/auth/v1/callback`,
-        }).toString(),
-      },
+      `${SUPABASE_API}/projects/${projectRef}/analytics/endpoints/logs?${params}`,
+      { headers: { Authorization: `Bearer ${token}` } },
     );
-    return evaluateGoogleTokenReply(status, body);
+    if (status !== 200 || !Array.isArray(body?.result)) {
+      return {
+        state: "unknown",
+        ok: false,
+        reason: `Recent auth logs could not be read (HTTP ${status}).`,
+      };
+    }
+    return evaluateRecentOAuthErrors(body.result);
   } catch {
     return {
-      verdict: "unknown",
-      reason: "google credentials could not be probed (network error).",
+      state: "unknown",
+      ok: false,
+      reason: "Recent auth logs could not be reached.",
     };
   }
 }
@@ -457,20 +463,15 @@ async function main() {
         else failures.push(authorize.reason);
       }
 
-      // An enabled provider with a client id can still hold a wrong secret, which
-      // only shows up as `invalid_client` during the token exchange. Google is the
-      // one provider whose token endpoint answers that deterministically, so its
-      // stored credentials are proven here rather than discovered at sign-in.
-      if (providers.includes("google")) {
-        const googleProbe = await probeGoogleCredentials(
-          projectRef,
-          body.external_google_client_id?.split(",")[0],
-          body.external_google_secret,
-        );
-        if (googleProbe.verdict === "pass") notes.push(googleProbe.reason);
-        else if (googleProbe.verdict === "fail") failures.push(googleProbe.reason);
-        else notes.push(googleProbe.reason);
-      }
+      // A provider can be enabled, hold a well-formed client id, answer the
+      // authorize redirect — and still fail the token exchange because the
+      // stored secret does not belong to that client id. The Management API
+      // cannot prove a secret (it returns a hash, never the value), so the
+      // authoritative signal is GoTrue's own log of the failed exchange.
+      const oauthErrors = await probeRecentOAuthErrors(token, projectRef);
+      if (oauthErrors.ok) notes.push(oauthErrors.reason);
+      else if (oauthErrors.state === "failing") failures.push(oauthErrors.reason);
+      else notes.push(oauthErrors.reason);
 
       if (!callbackIsAllowed(origin, body.uri_allow_list)) {
         failures.push(`${origin}/auth/callback is not in the redirect allowlist.`);

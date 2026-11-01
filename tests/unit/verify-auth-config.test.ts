@@ -4,9 +4,9 @@ import test from "node:test";
 import {
   callbackIsAllowed,
   evaluateCaptchaProbe,
-  evaluateGoogleTokenReply,
   evaluateOAuthAuthorize,
   evaluateOAuthProviders,
+  evaluateRecentOAuthErrors,
   evaluateTurnstileSecret,
   looksLikeOAuthClientId,
   looksLikeTurnstileSiteKey,
@@ -160,35 +160,37 @@ test("a fully configured provider set passes", () => {
   assert.deepEqual(evaluateOAuthProviders(["google", "facebook"], config), []);
 });
 
-test("Google's token reply separates a wrong secret from a valid client", () => {
-  // Live answers: the stored secret produced the first, a good pair the second.
-  assert.equal(
-    evaluateGoogleTokenReply(401, {
-      error: "invalid_client",
-      error_description: "The provided client secret is invalid.",
-    }).verdict,
-    "fail",
-  );
-  assert.equal(
-    evaluateGoogleTokenReply(400, {
-      error: "invalid_client",
-      error_description: "The OAuth client was not found.",
-    }).verdict,
-    "fail",
-  );
-  assert.equal(
-    evaluateGoogleTokenReply(400, {
-      error: "invalid_grant",
-      error_description: "Malformed auth code.",
-    }).verdict,
-    "pass",
-  );
-  // A rate limit must not read as a credential failure.
-  assert.equal(
-    evaluateGoogleTokenReply(429, { error: "rate_limit_exceeded" }).verdict,
-    "unknown",
-  );
-  assert.equal(evaluateGoogleTokenReply(500, null).verdict, "unknown");
+test("recent auth logs expose a failed OAuth token exchange", () => {
+  // The exact line production logged while the secret was a placeholder.
+  const failing = [
+    {
+      timestamp: "2026-11-01T09:35:07Z",
+      event_message:
+        '{"component":"api","error":"oauth2: \\"invalid_client\\" \\"The provided client secret is invalid.\\"","level":"error","msg":"500: Unable to exchange external code: 4/0A","path":"/callback"}',
+    },
+  ];
+  assert.equal(evaluateRecentOAuthErrors(failing).state, "failing");
+  assert.equal(evaluateRecentOAuthErrors(failing).ok, false);
+
+  // A healthy window: authorize redirects and successful callbacks only.
+  const clean = [
+    {
+      timestamp: "2026-11-01T11:31:01Z",
+      event_message:
+        '{"component":"api","level":"info","msg":"Redirecting to external provider","path":"/authorize","provider":"google"}',
+    },
+    {
+      timestamp: "2026-11-01T11:31:02Z",
+      event_message:
+        '{"component":"api","duration":123,"level":"info","msg":"request completed","path":"/callback","status":302}',
+    },
+  ];
+  assert.equal(evaluateRecentOAuthErrors(clean).state, "clean");
+  assert.equal(evaluateRecentOAuthErrors(clean).ok, true);
+
+  // A malformed payload must not be mistaken for a healthy one.
+  assert.equal(evaluateRecentOAuthErrors(null).state, "unknown");
+  assert.equal(evaluateRecentOAuthErrors("nope").state, "unknown");
 });
 
 test("the production callback is recognized in the allowlist", () => {
