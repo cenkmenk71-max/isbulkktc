@@ -45,6 +45,7 @@ export async function startOAuthSignIn(
     provider: formData.get("provider"),
     audience: formData.get("audience"),
     locale: formData.get("locale"),
+    intent: formData.get("intent"),
   });
 
   if (!result.success) return invalidForm;

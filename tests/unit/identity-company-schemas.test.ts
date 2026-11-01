@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import {
   companyProfileSchema,
   createCompanySchema,
@@ -309,4 +310,27 @@ test("password updates enforce the shared ten-character minimum", () => {
       .success,
     false,
   );
+});
+
+// `startOAuthSignIn` used to build its schema input from provider/audience/locale
+// only, while `oauthSignInSchema` requires `intent`. Every social button then
+// failed validation and returned `invalid` before Supabase was called — invisible
+// while the providers were disabled, and the reason sign-in never redirected.
+// This reads the action source so the two stay in step.
+test("the OAuth action passes every field its schema requires", () => {
+  const source = readFileSync(
+    new URL("../../src/features/identity/actions.ts", import.meta.url),
+    "utf8",
+  );
+  const parseCall = source.slice(
+    source.indexOf("oauthSignInSchema.safeParse"),
+    source.indexOf("if (!result.success) return invalidForm"),
+  );
+  for (const field of Object.keys(oauthSignInSchema.shape)) {
+    assert.match(
+      parseCall,
+      new RegExp(`formData\\.get\\("${field}"\\)`),
+      `startOAuthSignIn must read "${field}" from the form`,
+    );
+  }
 });
