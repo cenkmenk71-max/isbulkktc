@@ -64,15 +64,106 @@ test("all supported locales include every English message key and placeholder", 
   }
 });
 
-test("locale catalogs do not define duplicate root sections", () => {
+// `JSON.parse` silently keeps the last of two identical keys, so a duplicated
+// key hides whichever copy lost — a translator's edit can vanish with no error.
+// The old root-section check missed this because the duplicates lived one level
+// down (`Header.account`/`Header.signOut` were defined twice in all six
+// catalogs). Scanning the parsed object cannot find them either, since parsing
+// already collapsed them, so this walks the raw text.
+function duplicateKeyPaths(locale: string): string[] {
+  const raw = readRawMessages(locale);
+  const duplicates: string[] = [];
+  let index = 0;
+
+  const skipWhitespace = () => {
+    while (index < raw.length && /\s/.test(raw[index])) index += 1;
+  };
+
+  const readString = (): string => {
+    const start = index;
+    index += 1;
+    while (index < raw.length) {
+      if (raw[index] === "\\") {
+        index += 2;
+        continue;
+      }
+      if (raw[index] === '"') {
+        index += 1;
+        break;
+      }
+      index += 1;
+    }
+    return JSON.parse(raw.slice(start, index)) as string;
+  };
+
+  const parseValue = (path: string): void => {
+    skipWhitespace();
+    const character = raw[index];
+
+    if (character === "{") {
+      index += 1;
+      const seen = new Set<string>();
+      skipWhitespace();
+      while (raw[index] !== "}") {
+        skipWhitespace();
+        const key = readString();
+        const childPath = path ? `${path}.${key}` : key;
+        if (seen.has(key)) duplicates.push(childPath);
+        seen.add(key);
+        skipWhitespace();
+        index += 1; // ':'
+        parseValue(childPath);
+        skipWhitespace();
+        if (raw[index] === ",") {
+          index += 1;
+          skipWhitespace();
+        }
+      }
+      index += 1; // '}'
+      return;
+    }
+
+    if (character === "[") {
+      index += 1;
+      let item = 0;
+      skipWhitespace();
+      while (raw[index] !== "]") {
+        parseValue(`${path}[${item}]`);
+        item += 1;
+        skipWhitespace();
+        if (raw[index] === ",") {
+          index += 1;
+          skipWhitespace();
+        }
+      }
+      index += 1; // ']'
+      return;
+    }
+
+    if (character === '"') {
+      readString();
+      return;
+    }
+
+    while (
+      index < raw.length &&
+      !",}]".includes(raw[index]) &&
+      !/\s/.test(raw[index])
+    ) {
+      index += 1;
+    }
+  };
+
+  parseValue("");
+  return duplicates;
+}
+
+test("locale catalogs define every message key exactly once at any depth", () => {
   for (const locale of locales) {
-    const sections = [...readRawMessages(locale).matchAll(/^  "([^"]+)":/gm)].map(
-      ([, key]) => key,
-    );
-    assert.equal(
-      new Set(sections).size,
-      sections.length,
-      `${locale} must define each root message section exactly once`,
+    assert.deepEqual(
+      duplicateKeyPaths(locale),
+      [],
+      `${locale} must not define a message key twice`,
     );
   }
 });

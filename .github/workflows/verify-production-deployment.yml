@@ -87,3 +87,17 @@ jobs:
         # main. A manual run passes no tip: the caller named the commit explicitly
         # and means to verify it even if it is no longer the tip.
         run: node scripts/verify-production-deployment.mjs --expect "${{ steps.expect.outputs.sha }}" --tip "${{ steps.tip.outputs.sha }}"
+
+      # Advisory only. These settings live in the Supabase and Cloudflare
+      # consoles, not in the repository, so nothing else can see them — but a
+      # missing management token must not fail a deploy. A red ❌ in the run
+      # summary is the signal; `continue-on-error` keeps the job green.
+      - name: Report auth configuration drift
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          AUTH_OAUTH_PROVIDERS: ${{ vars.AUTH_OAUTH_PROVIDERS }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          APP_ORIGIN: ${{ vars.PRODUCTION_URL || 'https://isbulkktc.com' }}
+        run: node scripts/verify-auth-config.mjs

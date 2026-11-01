@@ -32,7 +32,6 @@ async function expectConfiguredOAuthProviders(
     .evaluate((button) => Number.parseFloat(getComputedStyle(button).minHeight));
   expect(providerButtonMinHeight).toBeGreaterThanOrEqual(56);
   await expect(buttons.first()).toHaveCSS("border-radius", "999px");
-  await expect(page.locator(".editorial-oauth-status")).toHaveCount(0);
   for (const provider of ["google", "linkedin_oidc", "facebook"] as const) {
     const button = page.getByRole("button", {
       name: new RegExp(oauthProviderNames[provider]),
@@ -51,7 +50,6 @@ async function expectConfiguredOAuthProviders(
   await expect(
     page.getByRole("button", { name: /Instagram|WhatsApp/i }),
   ).toHaveCount(0);
-  await expect(page.locator(".editorial-oauth-status")).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: /Hesabınızla devam edin|Continue with your account/ }),
   ).toBeVisible();

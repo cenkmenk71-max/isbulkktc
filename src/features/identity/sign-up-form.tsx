@@ -2,10 +2,11 @@
 
 import { Eye, EyeOff, UserRound } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useActionState, useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { signUp } from "./actions";
-import { TurnstileField } from "./turnstile-field";
+import { CaptchaNotice, TurnstileField } from "./turnstile-field";
+import { useCaptchaAction } from "./use-captcha-action";
 import { OAuthProviderForm } from "./oauth-provider-form";
 import type {
   AccountAudience,
@@ -24,7 +25,9 @@ export function SignUpForm({
 }) {
   const copy = useTranslations("AuthForms");
   const locale = useLocale();
-  const [state, action, pending] = useActionState(signUp, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
+  const { state, action, pending, resetSignal, captchaBlocked } =
+    useCaptchaAction(signUp, initialState, formRef);
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   return (
@@ -34,10 +37,10 @@ export function SignUpForm({
         intent="signup"
         providers={providers}
       />
-      <form className="editorial-form" action={action}>
+      <form ref={formRef} className="editorial-form" action={action}>
         <input name="audience" type="hidden" value={audience} />
         <input name="locale" type="hidden" value={locale} />
-        <TurnstileField />
+        <TurnstileField resetSignal={resetSignal} />
         <label htmlFor="register-display-name">
           {copy(audience === "employer" ? "contactNameLabel" : "nameLabel")}
           <input
@@ -102,16 +105,20 @@ export function SignUpForm({
                   : "createCandidateAccount",
               )}
         </button>
-        {state.message !== "idle" && (
-          <p
-            aria-live="polite"
-            className="editorial-form-message"
-            data-status={state.status}
-            id="register-form-message"
-            role={state.status === "error" ? "alert" : "status"}
-          >
-            {copy(`messages.${state.message}`)}
-          </p>
+        {captchaBlocked ? (
+          <CaptchaNotice />
+        ) : (
+          state.message !== "idle" && (
+            <p
+              aria-live="polite"
+              className="editorial-form-message"
+              data-status={state.status}
+              id="register-form-message"
+              role={state.status === "error" ? "alert" : "status"}
+            >
+              {copy(`messages.${state.message}`)}
+            </p>
+          )
         )}
         <p className="editorial-form-footnote">
           {copy("alreadyHaveAccount")}{" "}

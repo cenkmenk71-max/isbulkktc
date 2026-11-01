@@ -278,8 +278,6 @@
     "account": "Hesabım",
     "signOut": "Güvenli çıkış",
     "register": "Ücretsiz Kayıt Ol",
-    "account": "Hesabım",
-    "signOut": "Güvenli çıkış",
     "homeLabel": "İşBul KKTC ana sayfa",
     "currentLanguage": "Seçili dil"
   },
@@ -526,25 +524,15 @@
       "continueWith": "{provider} ile devam et",
       "eyebrow": "GÜVENLİ HESAP GİRİŞİ",
       "title": "Hesabınızla devam edin",
-      "description": "Aday veya işveren hesabınız için kullanmak istediğiniz yöntemi seçin.",
-      "enabled": "Hazır",
-      "providers": {
-        "google": "Google hesabınız",
-        "linkedin_oidc": "Profesyonel ağ hesabınız",
-        "facebook": "Facebook hesabınız",
-        "instagram": "Instagram, İşBul KKTC’ye giriş yöntemi olarak desteklenmiyor."
-      },
       "orEmail": "veya e-posta ile devam edin",
-      "pending": "Etkin değil",
-      "setupPending": "Bazı sosyal giriş sağlayıcıları yapılandırılmamış. E-posta ile devam edebilirsiniz.",
-      "instagramUnavailable": "Desteklenmiyor",
-      "whatsappNote": "WhatsApp, İşBul KKTC hesabına giriş yöntemi olarak desteklenmiyor."
+      "setupPending": "Bazı sosyal giriş sağlayıcıları yapılandırılmamış. E-posta ile devam edebilirsiniz."
     },
     "messages": {
       "invalid": "Bilgileri kontrol edip tekrar deneyin.",
       "signInFailed": "Giriş yapılamadı. E-posta adresinizi ve şifrenizi kontrol edin.",
       "emailNotConfirmed": "Giriş yapmadan önce e-posta adresinizi doğrulamanız gerekiyor. Gelen kutunuza gönderdiğimiz bağlantıyı açın.",
       "captchaFailed": "Bot koruması doğrulanamadı. Sayfayı yenileyip tekrar deneyin.",
+      "captchaRequired": "Devam etmeden önce güvenlik doğrulamasını tamamlayın.",
       "signUpFailed": "Kayıt tamamlanamadı. Bilgileri kontrol edip tekrar deneyin.",
       "verificationSent": "Devam etmek için e-posta adresinize gönderilen doğrulama bağlantısını kullanın.",
       "verificationResent": "Doğrulama bağlantısı yeniden gönderildi. Gelen kutunuzu ve spam klasörünüzü kontrol edin.",

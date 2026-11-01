@@ -28,12 +28,25 @@ additional_redirect_urls = [
   "http://127.0.0.1:3000/**"
 ]
 jwt_expiry = 3600
-# Aligns with the application's zod schema and the on-screen password hint.
+# Aligns with the application's zod schema (signUpSchema/updatePasswordSchema
+# require 10) and the on-screen password hint.
 # No composition rules are enforced on purpose: current guidance (NIST SP
 # 800-63B) prefers length plus breached-password screening over character-class
 # rules, which the hosted project enables in the Auth dashboard.
-minimum_password_length = 8
+minimum_password_length = 10
 password_requirements = ""
+
+# Cloudflare Turnstile protects the auth forms on the hosted project
+# (security_captcha_enabled = true, provider = turnstile). The local stack and CI
+# keep it off so the E2E suite can drive the forms without solving a challenge.
+# The `NEXT_PUBLIC_TURNSTILE_SITE_KEY` deployed with the app must pair with the
+# hosted secret; a site key from another Turnstile widget makes every
+# captcha-protected submit answer `captcha_failed`. Enable locally only when
+# testing the captcha path:
+# [auth.captcha]
+# enabled = true
+# provider = "turnstile"
+# secret = "env(SUPABASE_AUTH_CAPTCHA_SECRET)"
 
 [auth.mfa]
 # The platform-admin console is gated on `aal2` (`has_platform_role` reads the

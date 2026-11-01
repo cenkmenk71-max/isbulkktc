@@ -278,8 +278,6 @@
     "account": "My account",
     "signOut": "Sign out securely",
     "register": "Create a free account",
-    "account": "My account",
-    "signOut": "Sign out securely",
     "homeLabel": "İşBul KKTC home",
     "currentLanguage": "Current language"
   },
@@ -526,25 +524,15 @@
       "continueWith": "Continue with {provider}",
       "eyebrow": "SECURE ACCOUNT ACCESS",
       "title": "Continue with your account",
-      "description": "Choose how you want to access your candidate or employer account.",
-      "enabled": "Ready",
-      "providers": {
-        "google": "Your Google account",
-        "linkedin_oidc": "Your professional network account",
-        "facebook": "Your Facebook account",
-        "instagram": "Instagram sign-in is not supported on İşBul KKTC."
-      },
       "orEmail": "or continue with email",
-      "pending": "Not enabled",
-      "setupPending": "Some social sign-in providers are not configured. You can continue with email.",
-      "instagramUnavailable": "Not supported",
-      "whatsappNote": "WhatsApp is not supported as a way to sign in to İşBul KKTC."
+      "setupPending": "Some social sign-in providers are not configured. You can continue with email."
     },
     "messages": {
       "invalid": "Check your details and try again.",
       "signInFailed": "Could not sign in. Check your email address and password.",
       "emailNotConfirmed": "You must verify your email address before signing in. Open the link we sent to your inbox.",
       "captchaFailed": "We could not verify the bot protection. Refresh the page and try again.",
+      "captchaRequired": "Complete the security check before continuing.",
       "signUpFailed": "Your account could not be created. Check your details and try again.",
       "verificationSent": "Use the verification link sent to your email address to continue.",
       "verificationResent": "A new verification link has been sent. Check your inbox and spam folder.",

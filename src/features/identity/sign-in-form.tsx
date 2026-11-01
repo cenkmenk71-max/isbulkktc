@@ -2,10 +2,11 @@
 
 import { Eye, EyeOff, LogIn, Send } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useActionState, useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { resendConfirmation, signIn } from "./actions";
-import { TurnstileField } from "./turnstile-field";
+import { CaptchaNotice, TurnstileField } from "./turnstile-field";
+import { useCaptchaAction } from "./use-captcha-action";
 import { OAuthProviderForm } from "./oauth-provider-form";
 import type {
   AccountAudience,
@@ -23,16 +24,15 @@ const initialState: SignInFormState = { status: "idle", message: "idle" };
 function ResendConfirmationForm({ email }: { email: string }) {
   const copy = useTranslations("AuthForms");
   const locale = useLocale();
-  const [state, action, pending] = useActionState(
-    resendConfirmation,
-    initialState,
-  );
+  const formRef = useRef<HTMLFormElement>(null);
+  const { state, action, pending, resetSignal, captchaBlocked } =
+    useCaptchaAction(resendConfirmation, initialState, formRef);
 
   return (
-    <form action={action} className="editorial-form-resend">
+    <form ref={formRef} action={action} className="editorial-form-resend">
       <input name="email" type="hidden" value={email} />
       <input name="locale" type="hidden" value={locale} />
-      <TurnstileField />
+      <TurnstileField resetSignal={resetSignal} />
       <button
         className="button button-outline"
         disabled={pending}
@@ -41,15 +41,19 @@ function ResendConfirmationForm({ email }: { email: string }) {
         <Send size={17} aria-hidden="true" />
         {pending ? copy("resendingVerification") : copy("resendVerification")}
       </button>
-      {state.message !== "idle" && (
-        <p
-          aria-live="polite"
-          className="editorial-form-message"
-          data-status={state.status}
-          role={state.status === "error" ? "alert" : "status"}
-        >
-          {copy(`messages.${state.message}`)}
-        </p>
+      {captchaBlocked ? (
+        <CaptchaNotice />
+      ) : (
+        state.message !== "idle" && (
+          <p
+            aria-live="polite"
+            className="editorial-form-message"
+            data-status={state.status}
+            role={state.status === "error" ? "alert" : "status"}
+          >
+            {copy(`messages.${state.message}`)}
+          </p>
+        )
       )}
     </form>
   );
@@ -64,7 +68,9 @@ export function SignInForm({
 }) {
   const copy = useTranslations("AuthForms");
   const locale = useLocale();
-  const [state, action, pending] = useActionState(signIn, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
+  const { state, action, pending, resetSignal, captchaBlocked } =
+    useCaptchaAction(signIn, initialState, formRef);
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   return (
@@ -74,10 +80,10 @@ export function SignInForm({
         intent="signin"
         providers={providers}
       />
-      <form className="editorial-form" action={action}>
+      <form ref={formRef} className="editorial-form" action={action}>
         <input name="audience" type="hidden" value={audience} />
         <input name="locale" type="hidden" value={locale} />
-        <TurnstileField />
+        <TurnstileField resetSignal={resetSignal} />
         <label htmlFor="login-email">
           {copy(audience === "employer" ? "accountEmailLabel" : "emailLabel")}
           <input
@@ -140,21 +146,25 @@ export function SignInForm({
           </Link>
         </p>
       </form>
-      {state.message !== "idle" && (
-        <div className="editorial-form-status">
-          <p
-            aria-live="polite"
-            className="editorial-form-message"
-            data-status={state.status}
-            id="login-form-message"
-            role={state.status === "error" ? "alert" : "status"}
-          >
-            {copy(`messages.${state.message}`)}
-          </p>
-          {state.message === "emailNotConfirmed" && state.email ? (
-            <ResendConfirmationForm email={state.email} />
-          ) : null}
-        </div>
+      {captchaBlocked ? (
+        <CaptchaNotice />
+      ) : (
+        state.message !== "idle" && (
+          <div className="editorial-form-status">
+            <p
+              aria-live="polite"
+              className="editorial-form-message"
+              data-status={state.status}
+              id="login-form-message"
+              role={state.status === "error" ? "alert" : "status"}
+            >
+              {copy(`messages.${state.message}`)}
+            </p>
+            {state.message === "emailNotConfirmed" && state.email ? (
+              <ResendConfirmationForm email={state.email} />
+            ) : null}
+          </div>
+        )
       )}
     </>
   );

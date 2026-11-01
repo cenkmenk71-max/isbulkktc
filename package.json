@@ -41,6 +41,7 @@
     "vercel:prune": "node scripts/prune-vercel-deployments.mjs",
     "vercel:prune:apply": "node scripts/prune-vercel-deployments.mjs --apply",
     "vercel:verify": "node scripts/verify-production-deployment.mjs",
+    "auth:verify": "node scripts/verify-auth-config.mjs",
     "seed:managed-content": "tsx scripts/generate-managed-content-seed.ts",
     "db:verify": "node scripts/db-verify.mjs"
   },

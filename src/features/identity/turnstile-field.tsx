@@ -1,70 +1,47 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-
-export const turnstileSiteKey =
-  process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
-
-declare global {
-  interface Window {
-    turnstile?: {
-      render: (target: HTMLElement, options: Record<string, unknown>) => string;
-    };
-  }
-}
-
-const scriptId = "cf-turnstile-script";
-const scriptSrc =
-  "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+import { useEffect } from "react";
+import { useTranslations } from "next-intl";
+import { turnstileSiteKey, useTurnstileWidget } from "./turnstile";
 
 /**
- * Renders a Cloudflare Turnstile widget and injects a hidden `captchaToken`
- * field into the surrounding form. Renders nothing when the site key is not
- * configured, so the auth forms keep working without captcha in development.
+ * Shown when a submit is intercepted because Turnstile has not produced a token
+ * yet (widget still solving, or the ~5 minute token expired). Keeps the user
+ * from spending a round trip on a submit that cannot succeed.
  */
-export function TurnstileField() {
-  const containerRef = useRef<HTMLDivElement>(null);
+export function CaptchaNotice() {
+  const copy = useTranslations("AuthForms");
+  return (
+    <p
+      aria-live="polite"
+      className="editorial-form-message"
+      data-status="error"
+      role="alert"
+    >
+      {copy("messages.captchaRequired")}
+    </p>
+  );
+}
+
+/**
+ * Renders a Cloudflare Turnstile widget and lets it inject its hidden
+ * `cf-turnstile-response` field into the surrounding form. Renders nothing when
+ * the site key is not configured, so the auth forms keep working without captcha
+ * in development.
+ *
+ * `resetSignal` is bumped by `useCaptchaAction` after every settled submission;
+ * resetting a spent token is what keeps a second attempt from being rejected as
+ * `captcha_failed`.
+ */
+export function TurnstileField({ resetSignal = 0 }: { resetSignal?: number }) {
+  const { containerRef, reset } = useTurnstileWidget();
 
   useEffect(() => {
-    if (!turnstileSiteKey) return;
-    const container = containerRef.current;
-    if (!container) return;
-    let cancelled = false;
-
-    const render = () => {
-      if (cancelled || !window.turnstile) return;
-      if (container.dataset.rendered === "true") return;
-      container.dataset.rendered = "true";
-      window.turnstile.render(container, { sitekey: turnstileSiteKey });
-    };
-
-    if (window.turnstile) {
-      render();
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
-    if (!script) {
-      script = document.createElement("script");
-      script.id = scriptId;
-      script.src = scriptSrc;
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
-    }
-    script.addEventListener("load", render);
-    return () => {
-      cancelled = true;
-      script?.removeEventListener("load", render);
-    };
-  }, []);
+    if (resetSignal > 0) reset();
+  }, [resetSignal, reset]);
 
   if (!turnstileSiteKey) return null;
 
-  // Turnstile injects its own hidden `cf-turnstile-response` field into the
-  // container, which the enclosing form submits.
   return (
     <div className="editorial-turnstile">
       <div ref={containerRef} />
