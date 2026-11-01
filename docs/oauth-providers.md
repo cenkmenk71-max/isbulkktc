@@ -40,6 +40,25 @@ review requirements still apply.
    approval requirements. When empty, the provider cards remain visible but
    disabled, and email/password remains available.
 
+   Steps 3 and 4 can be done from a terminal instead of the Supabase dashboard,
+   with the provider's client id and secret passed as environment variables so
+   they never land in shell history:
+
+   ```bash
+   OAUTH_CLIENT_ID=... OAUTH_CLIENT_SECRET=... SUPABASE_ACCESS_TOKEN=... \
+     npm run auth:enable-provider -- google
+   ```
+
+   The script confirms the write the only way that cannot be stale: it calls
+   `GET /auth/v1/authorize?provider=google` and requires a redirect to the
+   provider's login host. A provider that is enabled in the config but still
+   answers `provider is not enabled` fails the command, which is the signal that
+   the provider console is missing Supabase's callback URI.
+
+   Remember the provider console's own publishing state: a Google consent screen
+   left in "Testing" only admits addresses on its test-user list, and its refresh
+   tokens expire after seven days. Publish the app before going live.
+
 ## Provider-specific requirements
 
 - **Google:** configure the OAuth consent screen and web client in Google Cloud.

@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   callbackIsAllowed,
   evaluateCaptchaProbe,
+  evaluateOAuthAuthorize,
   evaluateOAuthProviders,
   evaluateTurnstileSecret,
   looksLikeTurnstileSiteKey,
@@ -89,6 +90,21 @@ test("the live auth probe reads the secret GoTrue actually uses", () => {
     msg: "captcha protection: request disallowed (something-else)",
   });
   assert.equal(odd.ok, false);
+});
+
+test("the live OAuth probe reads the authorize redirect", () => {
+  assert.equal(
+    evaluateOAuthAuthorize("google", 302, "https://accounts.google.com/o/oauth2/v2/auth?x=1").ok,
+    true,
+  );
+  assert.equal(
+    evaluateOAuthAuthorize("linkedin_oidc", 302, "https://www.linkedin.com/oauth/v2/authorization").ok,
+    true,
+  );
+  // A redirect to an unexpected host is not proof of a working provider.
+  assert.equal(evaluateOAuthAuthorize("google", 302, "https://evil.example/auth").ok, false);
+  // An unconfigured provider answers 400.
+  assert.equal(evaluateOAuthAuthorize("google", 400, null).ok, false);
 });
 
 test("an advertised provider must be enabled with a client id", () => {

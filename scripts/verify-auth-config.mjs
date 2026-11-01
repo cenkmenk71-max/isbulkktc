@@ -232,6 +232,72 @@ export async function verifyCaptchaLive(token, projectRef) {
   return probeCaptchaSecret(projectRef, anonKey);
 }
 
+/** Hosts a provider's authorize redirect may land on. */
+const OAUTH_AUTHORIZE_HOSTS = {
+  google: ["accounts.google.com"],
+  linkedin_oidc: ["www.linkedin.com", "linkedin.com"],
+  facebook: ["www.facebook.com", "facebook.com", "m.facebook.com"],
+};
+
+/**
+ * Reads the outcome of `GET /auth/v1/authorize?provider=…`. A configured
+ * provider answers 302 towards its own login host; an unconfigured one answers
+ * 400 `provider is not enabled`. This reflects what GoTrue does, so it is
+ * immune to the stale config read noted above.
+ */
+export function evaluateOAuthAuthorize(provider, status, location) {
+  if (
+    typeof status === "number" &&
+    status >= 300 &&
+    status < 400 &&
+    typeof location === "string"
+  ) {
+    let host = null;
+    try {
+      host = new URL(location).host;
+    } catch {
+      host = null;
+    }
+    const expected = OAUTH_AUTHORIZE_HOSTS[provider] ?? [];
+    if (host && expected.includes(host)) {
+      return { ok: true, reason: `${provider} is enabled (authorize redirects to ${host}).` };
+    }
+    return {
+      ok: false,
+      reason: `${provider} authorize redirected somewhere unexpected: ${location}`,
+    };
+  }
+  return { ok: false, reason: `${provider} is not enabled (HTTP ${status}).` };
+}
+
+/** Live check that a provider is enabled, via the authorize endpoint. */
+export async function probeOAuthAuthorize(token, projectRef, provider) {
+  const anonKey = await fetchAnonKey(token, projectRef);
+  if (!anonKey) {
+    return { ok: false, reason: "The publishable (anon) key could not be read." };
+  }
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+    try {
+      const response = await fetch(
+        `https://${projectRef}.supabase.co/auth/v1/authorize?provider=${provider}` +
+          `&redirect_to=${encodeURIComponent("https://isbulkktc.com/auth/callback")}`,
+        { headers: { apikey: anonKey }, redirect: "manual", signal: controller.signal },
+      );
+      return evaluateOAuthAuthorize(
+        provider,
+        response.status,
+        response.headers.get("location"),
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    return { ok: false, reason: `${provider} could not be probed (network error).` };
+  }
+}
+
 async function main() {
   const token = process.env.SUPABASE_ACCESS_TOKEN;
   const projectRef = process.env.SUPABASE_PROJECT_REF ?? "uwmhquvzbilbfzdrlxmb";
@@ -277,6 +343,14 @@ async function main() {
       else failures.push(probe.reason);
 
       failures.push(...evaluateOAuthProviders(providers, body));
+
+      // Same stale-read caveat for providers: an advertised provider is only
+      // really usable when GoTrue answers the authorize request.
+      for (const provider of providers) {
+        const authorize = await probeOAuthAuthorize(token, projectRef, provider);
+        if (authorize.ok) notes.push(authorize.reason);
+        else failures.push(authorize.reason);
+      }
 
       if (!callbackIsAllowed(origin, body.uri_allow_list)) {
         failures.push(`${origin}/auth/callback is not in the redirect allowlist.`);
