@@ -79,6 +79,23 @@ export function evaluateTurnstileSecret(reply) {
   };
 }
 
+/**
+ * True when a stored client id could plausibly be a real one. All three
+ * supported providers issue ids that contain digits (Google prefixes the project
+ * number, LinkedIn and Facebook ids are numeric), so a word like `ISBULKKTC` is a
+ * placeholder that GoTrue will happily forward to the provider and fail there.
+ * The emptiness check alone let exactly that through and reported "configured".
+ */
+export function looksLikeOAuthClientId(provider, value) {
+  if (typeof value !== "string") return false;
+  const id = value.trim();
+  if (id.length < 8) return false;
+  if (/\s/.test(id)) return false;
+  if (id.toLowerCase() === provider.toLowerCase()) return false;
+  if (id.toLowerCase() === `isbulkktc`) return false;
+  return /[0-9]/.test(id);
+}
+
 /** Checks each advertised provider against the Supabase auth config. */
 export function evaluateOAuthProviders(providers, authConfig) {
   const problems = [];
@@ -91,6 +108,12 @@ export function evaluateOAuthProviders(providers, authConfig) {
     }
     if (typeof clientId !== "string" || clientId.trim() === "") {
       problems.push(`${provider} is enabled but has no client id in Supabase.`);
+      continue;
+    }
+    if (!looksLikeOAuthClientId(provider, clientId)) {
+      problems.push(
+        `${provider} is enabled but its client id "${clientId}" looks like a placeholder.`,
+      );
     }
   }
   return problems;

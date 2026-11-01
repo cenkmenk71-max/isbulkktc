@@ -6,6 +6,7 @@ import {
   evaluateCaptchaProbe,
   evaluateOAuthAuthorize,
   evaluateOAuthProviders,
+  looksLikeOAuthClientId,
   evaluateTurnstileSecret,
   looksLikeTurnstileSiteKey,
   parseAdvertisedProviders,
@@ -110,7 +111,7 @@ test("the live OAuth probe reads the authorize redirect", () => {
 test("an advertised provider must be enabled with a client id", () => {
   const config = {
     external_google_enabled: true,
-    external_google_client_id: "google-client",
+    external_google_client_id: "1021802173200-3atqa9tdtsqjppm0j9uqjc9gnrrjls4i.apps.googleusercontent.com",
     external_linkedin_oidc_enabled: false,
     external_linkedin_oidc_client_id: null,
     external_facebook_enabled: true,
@@ -126,12 +127,34 @@ test("an advertised provider must be enabled with a client id", () => {
   assert.match(problems.join(" "), /facebook is enabled but has no client id/);
 });
 
+test("a placeholder client id is reported instead of passing as configured", () => {
+  // LinkedIn and Facebook were stored as "ISBULKKTC" — enabled, non-empty, and
+  // therefore green under the emptiness check, while the live authorize endpoint
+  // forwarded that literal to the provider.
+  const config = {
+    external_linkedin_oidc_enabled: true,
+    external_linkedin_oidc_client_id: "ISBULKKTC",
+    external_facebook_enabled: true,
+    external_facebook_client_id: "ISBULKKTC",
+  };
+  const problems = evaluateOAuthProviders(["linkedin_oidc", "facebook"], config);
+  assert.equal(problems.length, 2);
+  assert.match(problems.join(" "), /linkedin_oidc is enabled but its client id "ISBULKKTC" looks like a placeholder/);
+  assert.match(problems.join(" "), /facebook is enabled but its client id "ISBULKKTC" looks like a placeholder/);
+
+  assert.equal(looksLikeOAuthClientId("linkedin_oidc", "ISBULKKTC"), false);
+  assert.equal(looksLikeOAuthClientId("facebook", ""), false);
+  assert.equal(looksLikeOAuthClientId("facebook", "short"), false);
+  assert.equal(looksLikeOAuthClientId("linkedin_oidc", "78a1b2c3d4e5"), true);
+  assert.equal(looksLikeOAuthClientId("facebook", "1234567890123456"), true);
+});
+
 test("a fully configured provider set passes", () => {
   const config = {
     external_google_enabled: true,
-    external_google_client_id: "g",
+    external_google_client_id: "1021802173200-3atqa9tdtsqjppm0j9uqjc9gnrrjls4i.apps.googleusercontent.com",
     external_facebook_enabled: true,
-    external_facebook_client_id: "f",
+    external_facebook_client_id: "1234567890123456",
   };
   assert.deepEqual(evaluateOAuthProviders(["google", "facebook"], config), []);
 });
