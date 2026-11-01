@@ -103,6 +103,21 @@ test("the live OAuth probe reads the authorize redirect", () => {
     evaluateOAuthAuthorize("linkedin_oidc", 302, "https://www.linkedin.com/oauth/v2/authorization").ok,
     true,
   );
+  // GoTrue sends LinkedIn to api.linkedin.com, not www. An exact host list read
+  // that as "redirected somewhere unexpected" and failed a working provider.
+  assert.equal(
+    evaluateOAuthAuthorize("linkedin_oidc", 302, "https://api.linkedin.com/oauth/v2/authorization?client_id=x").ok,
+    true,
+  );
+  // A lookalike domain must not pass the suffix check.
+  assert.equal(
+    evaluateOAuthAuthorize("linkedin_oidc", 302, "https://evil-linkedin.com/oauth").ok,
+    false,
+  );
+  assert.equal(
+    evaluateOAuthAuthorize("linkedin_oidc", 302, "https://linkedin.com.evil.example/oauth").ok,
+    false,
+  );
   // A redirect to an unexpected host is not proof of a working provider.
   assert.equal(evaluateOAuthAuthorize("google", 302, "https://evil.example/auth").ok, false);
   // An unconfigured provider answers 400.

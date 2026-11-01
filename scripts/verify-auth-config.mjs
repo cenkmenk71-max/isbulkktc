@@ -343,11 +343,22 @@ export async function verifyCaptchaLive(token, projectRef) {
   return probeCaptchaSecret(projectRef, anonKey);
 }
 
-/** Hosts a provider's authorize redirect may land on. */
+/**
+ * Hosts a provider's authorize redirect may land on. An entry matches the host
+ * exactly or as a subdomain, so `linkedin.com` covers both `www.linkedin.com`
+ * and `api.linkedin.com` — GoTrue sends LinkedIn to the latter, which an exact
+ * host list missed and read as "redirected somewhere unexpected".
+ */
 const OAUTH_AUTHORIZE_HOSTS = {
   google: ["accounts.google.com"],
-  linkedin_oidc: ["www.linkedin.com", "linkedin.com"],
+  linkedin_oidc: ["linkedin.com"],
 };
+
+function hostIsAllowed(host, domains) {
+  return domains.some(
+    (domain) => host === domain || host.endsWith(`.${domain}`),
+  );
+}
 
 /**
  * Reads the outcome of `GET /auth/v1/authorize?provider=…`. A configured
@@ -369,7 +380,7 @@ export function evaluateOAuthAuthorize(provider, status, location) {
       host = null;
     }
     const expected = OAUTH_AUTHORIZE_HOSTS[provider] ?? [];
-    if (host && expected.includes(host)) {
+    if (host && hostIsAllowed(host, expected)) {
       return { ok: true, reason: `${provider} is enabled (authorize redirects to ${host}).` };
     }
     return {
