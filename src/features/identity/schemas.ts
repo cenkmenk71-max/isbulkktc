@@ -2,11 +2,7 @@ import { z } from "zod";
 import { routing } from "@/i18n/routing";
 
 export const accountAudienceSchema = z.enum(["candidate", "employer"]);
-export const oauthProviderSchema = z.enum([
-  "google",
-  "linkedin_oidc",
-  "facebook",
-]);
+export const oauthProviderSchema = z.enum(["google", "linkedin_oidc"]);
 
 export const oauthSignInSchema = z.object({
   provider: oauthProviderSchema,

@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { FaFacebook, FaGoogle, FaLinkedin } from "react-icons/fa6";
+import { FaGoogle, FaLinkedin } from "react-icons/fa6";
 import type { IconType } from "react-icons";
 import { startOAuthSignIn } from "./actions";
 import type {
@@ -19,13 +19,11 @@ const initialState: SignInFormState = {
 const providerLabels: Record<OAuthProvider, string> = {
   google: "Google",
   linkedin_oidc: "LinkedIn",
-  facebook: "Facebook",
 };
 
 const supportedProviders = [
   "google",
   "linkedin_oidc",
-  "facebook",
 ] as const satisfies readonly OAuthProvider[];
 
 const providerMarks: Record<
@@ -34,7 +32,6 @@ const providerMarks: Record<
 > = {
   google: { Icon: FaGoogle },
   linkedin_oidc: { Icon: FaLinkedin },
-  facebook: { Icon: FaFacebook },
 };
 
 function OAuthProviderMark({

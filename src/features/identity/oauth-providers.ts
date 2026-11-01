@@ -9,7 +9,7 @@ export function parseEnabledOAuthProviders(
   const result = oauthProviderSchema.array().safeParse(providers);
   if (!result.success) {
     throw new Error(
-      "AUTH_OAUTH_PROVIDERS must contain only google, linkedin_oidc, or facebook.",
+      "AUTH_OAUTH_PROVIDERS must contain only google or linkedin_oidc.",
     );
   }
 

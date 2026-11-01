@@ -11,13 +11,11 @@ const configuredOAuthProviders = parseEnabledOAuthProviders(
 const oauthProviderNames: Record<OAuthProvider, string> = {
   google: "Google",
   linkedin_oidc: "LinkedIn",
-  facebook: "Facebook",
 };
 
 const oauthProviderBackgrounds: Record<OAuthProvider, string> = {
   google: "rgb(66, 133, 244)",
   linkedin_oidc: "rgb(10, 145, 189)",
-  facebook: "rgb(66, 103, 178)",
 };
 
 async function expectConfiguredOAuthProviders(
@@ -26,13 +24,13 @@ async function expectConfiguredOAuthProviders(
   intent: "signin" | "signup",
 ) {
   const buttons = page.locator(".editorial-oauth-button");
-  await expect(buttons).toHaveCount(3);
+  await expect(buttons).toHaveCount(2);
   const providerButtonMinHeight = await buttons
     .first()
     .evaluate((button) => Number.parseFloat(getComputedStyle(button).minHeight));
   expect(providerButtonMinHeight).toBeGreaterThanOrEqual(56);
   await expect(buttons.first()).toHaveCSS("border-radius", "999px");
-  for (const provider of ["google", "linkedin_oidc", "facebook"] as const) {
+  for (const provider of ["google", "linkedin_oidc"] as const) {
     const button = page.getByRole("button", {
       name: new RegExp(oauthProviderNames[provider]),
     });
@@ -69,7 +67,7 @@ async function expectConfiguredOAuthProviders(
     ).toHaveCount(1);
     await expect(button).toBeEnabled();
   }
-  for (const provider of ["google", "linkedin_oidc", "facebook"] as const) {
+  for (const provider of ["google", "linkedin_oidc"] as const) {
     if (configuredOAuthProviders.includes(provider)) continue;
     const button = page.getByRole("button", {
       name: new RegExp(oauthProviderNames[provider]),
@@ -80,7 +78,7 @@ async function expectConfiguredOAuthProviders(
     ).toHaveCount(1);
     await expect(button).toBeDisabled();
   }
-  if (configuredOAuthProviders.length < 3) {
+  if (configuredOAuthProviders.length < 2) {
     await expect(page.locator("#oauth-provider-setup")).toBeVisible();
   }
 }

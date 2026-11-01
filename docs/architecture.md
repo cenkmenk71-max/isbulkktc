@@ -97,11 +97,11 @@ tekrarları ayıklanır. Bu yalnızca tarayıcıdaki düzenlenebilir form tasla�
 değiştirir; aday alanları kontrol edip profil formundaki açık kaydetme eylemini
 başlatana kadar hiçbir profil değişikliği kalıcı olmaz. Şema sınırına sığmayan
 kayıtların sayısı bildirilir. Taranmış PDF/OCR ve harici AI kullanılmaz.
-Google, LinkedIn OIDC ve Facebook OAuth girişleri yalnızca `AUTH_OAUTH_PROVIDERS`
+Google ve LinkedIn OIDC OAuth girişleri yalnızca `AUTH_OAUTH_PROVIDERS`
 ile açıkça etkinleştirilen ve Supabase Auth'ta ayrıca yapılandırılan sağlayıcılar
 için kullanılabilir. Yeni hesap profil adı, Auth metadata'sındaki güvenilmeyen
 `display_name`, `full_name` veya `name` alanlarından sınırlandırılarak alınır;
-CV, deneyim, beceri, Instagram/Facebook gönderileri veya şirket bilgileri dış
+CV, deneyim, beceri, sosyal medya gönderileri veya şirket bilgileri dış
 platformlardan içe aktarılmaz. Instagram ve WhatsApp oturum açma sağlayıcısı
 olarak sunulmaz. Canlı OAuth, sağlayıcı uygulama kimlik bilgileri ve Supabase
 callback/redirect yapılandırması eklenmeden etkin değildir. Kurulum adımları

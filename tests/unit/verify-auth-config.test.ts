@@ -15,13 +15,13 @@ import {
 import { looksLikeTurnstileSecret } from "../../scripts/set-turnstile-secret.mjs";
 
 test("advertised providers are trimmed, de-duplicated and validated", () => {
-  assert.deepEqual(parseAdvertisedProviders("google, linkedin_oidc ,facebook").providers, [
+  assert.deepEqual(parseAdvertisedProviders("google, linkedin_oidc ,google").providers, [
     "google",
     "linkedin_oidc",
-    "facebook",
   ]);
   assert.deepEqual(parseAdvertisedProviders("google,google").providers, ["google"]);
   assert.deepEqual(parseAdvertisedProviders("google,instagram").unknown, ["instagram"]);
+  assert.deepEqual(parseAdvertisedProviders("google,facebook").unknown, ["facebook"]);
   assert.deepEqual(parseAdvertisedProviders("").providers, []);
   assert.deepEqual(parseAdvertisedProviders(undefined).providers, []);
 });
@@ -113,51 +113,44 @@ test("an advertised provider must be enabled with a client id", () => {
   const config = {
     external_google_enabled: true,
     external_google_client_id: "1021802173200-3atqa9tdtsqjppm0j9uqjc9gnrrjls4i.apps.googleusercontent.com",
-    external_linkedin_oidc_enabled: false,
-    external_linkedin_oidc_client_id: null,
-    external_facebook_enabled: true,
-    external_facebook_client_id: "",
+    external_linkedin_oidc_enabled: true,
+    external_linkedin_oidc_client_id: "",
   };
 
   const problems = evaluateOAuthProviders(
-    ["google", "linkedin_oidc", "facebook"],
+    ["google", "linkedin_oidc"],
     config,
   );
-  assert.equal(problems.length, 2);
-  assert.match(problems.join(" "), /linkedin_oidc is advertised but disabled/);
-  assert.match(problems.join(" "), /facebook is enabled but has no client id/);
+  assert.equal(problems.length, 1);
+  assert.match(problems.join(" "), /linkedin_oidc is enabled but has no client id/);
 });
 
 test("a placeholder client id is reported instead of passing as configured", () => {
-  // LinkedIn and Facebook were stored as "ISBULKKTC" — enabled, non-empty, and
-  // therefore green under the emptiness check, while the live authorize endpoint
-  // forwarded that literal to the provider.
+  // LinkedIn was stored as "ISBULKKTC" — enabled, non-empty, and therefore green
+  // under the emptiness check, while the live authorize endpoint forwarded that
+  // literal to the provider.
   const config = {
     external_linkedin_oidc_enabled: true,
     external_linkedin_oidc_client_id: "ISBULKKTC",
-    external_facebook_enabled: true,
-    external_facebook_client_id: "ISBULKKTC",
   };
-  const problems = evaluateOAuthProviders(["linkedin_oidc", "facebook"], config);
-  assert.equal(problems.length, 2);
+  const problems = evaluateOAuthProviders(["linkedin_oidc"], config);
+  assert.equal(problems.length, 1);
   assert.match(problems.join(" "), /linkedin_oidc is enabled but its client id "ISBULKKTC" looks like a placeholder/);
-  assert.match(problems.join(" "), /facebook is enabled but its client id "ISBULKKTC" looks like a placeholder/);
 
   assert.equal(looksLikeOAuthClientId("linkedin_oidc", "ISBULKKTC"), false);
-  assert.equal(looksLikeOAuthClientId("facebook", ""), false);
-  assert.equal(looksLikeOAuthClientId("facebook", "short"), false);
+  assert.equal(looksLikeOAuthClientId("linkedin_oidc", ""), false);
+  assert.equal(looksLikeOAuthClientId("linkedin_oidc", "short"), false);
   assert.equal(looksLikeOAuthClientId("linkedin_oidc", "78a1b2c3d4e5"), true);
-  assert.equal(looksLikeOAuthClientId("facebook", "1234567890123456"), true);
 });
 
 test("a fully configured provider set passes", () => {
   const config = {
     external_google_enabled: true,
     external_google_client_id: "1021802173200-3atqa9tdtsqjppm0j9uqjc9gnrrjls4i.apps.googleusercontent.com",
-    external_facebook_enabled: true,
-    external_facebook_client_id: "1234567890123456",
+    external_linkedin_oidc_enabled: true,
+    external_linkedin_oidc_client_id: "78a1b2c3d4e5",
   };
-  assert.deepEqual(evaluateOAuthProviders(["google", "facebook"], config), []);
+  assert.deepEqual(evaluateOAuthProviders(["google", "linkedin_oidc"], config), []);
 });
 
 test("recent auth logs expose a failed OAuth token exchange", () => {

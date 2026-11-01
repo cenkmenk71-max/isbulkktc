@@ -1,7 +1,7 @@
 # Social sign-in provider setup
 
-The application supports Google, LinkedIn OpenID Connect, and Facebook through
-Supabase Auth. Providers are enabled only when their identifiers are explicitly listed in
+The application supports Google and LinkedIn OpenID Connect through Supabase
+Auth. Providers are enabled only when their identifiers are explicitly listed in
 the server-side `AUTH_OAUTH_PROVIDERS` environment variable. Login and
 registration show a status card for each supported provider; providers outside
 this allowlist are marked as awaiting setup and disabled. This switch is not
@@ -9,9 +9,8 @@ evidence that the provider is configured: complete every provider and redirect
 step below before enabling it.
 
 The login and registration forms use the same OAuth flow for candidate and
-employer audiences, with the Google, LinkedIn, Facebook, and Instagram brand
-marks rendered from Font Awesome 6's brand icon set via React Icons. Instagram
-is informational only and is not a sign-in option. The OAuth flow requests no
+employer audiences, with the Google and LinkedIn brand marks rendered from Font
+Awesome 6's brand icon set via React Icons. The OAuth flow requests no
 additional profile permissions. Supabase currently lists 50,000 monthly active users on
 its Free plan; this has plan limits and may change. Provider app access and
 review requirements still apply.
@@ -33,7 +32,7 @@ review requirements still apply.
    Supabase configuration is complete, for example:
 
    ```text
-   AUTH_OAUTH_PROVIDERS=google,linkedin_oidc,facebook
+   AUTH_OAUTH_PROVIDERS=google,linkedin_oidc
    ```
 
    Remove any provider that has not completed its own configuration and
@@ -68,10 +67,6 @@ review requirements still apply.
   credentials in the LinkedIn developer portal. The Supabase provider key is
   `linkedin_oidc`; required product access and review are controlled by
   LinkedIn.
-- **Facebook:** create a Meta app, configure Facebook Login and its valid
-  OAuth redirect settings, and supply the app ID/secret in Supabase. Meta may
-  require additional review or verification before production access.
-
 OAuth establishes an authenticated account; choosing the candidate or employer
 destination does not grant an application role. The current profile trigger may
 use a provider-supplied display name, full name, or name after bounding and
@@ -80,16 +75,10 @@ receive CVs, work history, skills, social posts, or company details through
 these login scopes. Review and explicitly save profile data imported from a CV
 or company document through their separate on-device flows.
 
-Instagram Login is not a general-purpose candidate/employer identity or CV
-import API, and WhatsApp Business is a messaging API rather than an account
-login provider; neither is presented as a sign-in option.
-
 For a basic social-login path that does not rely on paid SMS/WhatsApp messaging,
-the app's supported options are Google, LinkedIn OpenID Connect, and Facebook
-Login. The current Supabase Free plan includes up to 50,000 monthly active
-users, subject to plan limits; this does not waive provider approval or account
-requirements. Instagram's current Login API is aimed at professional accounts
-and account-management access rather than general consumer identity. WhatsApp
+the app's supported options are Google and LinkedIn OpenID Connect. The current
+Supabase Free plan includes up to 50,000 monthly active users, subject to plan
+limits; this does not waive provider approval or account requirements. WhatsApp
 OTP/messaging is a separate product and can incur messaging charges; it is not
 a free substitute for OAuth login. Check current provider terms and Supabase
 quotas before production use:
@@ -98,9 +87,6 @@ quotas before production use:
 - [Supabase pricing](https://supabase.com/pricing)
 - [Google OAuth 2.0](https://developers.google.com/identity/protocols/oauth2)
 - [LinkedIn OpenID Connect sign-in](https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2)
-- [Facebook Login](https://developers.facebook.com/documentation/facebook-login/overview)
-- [Instagram Login API](https://developers.facebook.com/documentation/instagram-platform/instagram-api-with-instagram-login)
-- [WhatsApp Business Platform](https://developers.facebook.com/documentation/business-messaging/whatsapp/about-the-platform)
 
 The Playwright configuration clears `AUTH_OAUTH_PROVIDERS` by default, so the
 regular E2E suite verifies the safe unconfigured state and does not contact
@@ -120,7 +106,7 @@ enabled only when both are true:
 1. Supabase → Authentication → Providers has the provider enabled with its
    client ID and secret (and its status is not "not configured").
 2. The deployed app lists it in `AUTH_OAUTH_PROVIDERS` (comma-separated, e.g.
-   `google,linkedin_oidc,facebook`).
+   `google,linkedin_oidc`).
 
 Listing a provider in `AUTH_OAUTH_PROVIDERS` before its Supabase configuration
 is complete only produces a button that fails at the provider — finish the

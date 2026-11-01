@@ -48,7 +48,7 @@ After the first deploy, confirm all of the above from the deployed project:
 
 ```bash
 SUPABASE_ACCESS_TOKEN=... NEXT_PUBLIC_TURNSTILE_SITE_KEY=... \
-AUTH_OAUTH_PROVIDERS=google,linkedin_oidc,facebook npm run auth:verify
+AUTH_OAUTH_PROVIDERS=google,linkedin_oidc npm run auth:verify
 ```
 
 The check reads the hosted Auth configuration and then probes the live auth

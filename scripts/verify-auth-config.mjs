@@ -33,7 +33,7 @@
 const SUPABASE_API = "https://api.supabase.com/v1";
 
 /** Providers Supabase exposes and this app is allowed to advertise. */
-export const SUPPORTED_OAUTH_PROVIDERS = ["google", "linkedin_oidc", "facebook"];
+export const SUPPORTED_OAUTH_PROVIDERS = ["google", "linkedin_oidc"];
 
 /** Parses `AUTH_OAUTH_PROVIDERS`, dropping blanks and unknown names. */
 export function parseAdvertisedProviders(raw) {
@@ -84,11 +84,11 @@ export function evaluateTurnstileSecret(reply) {
 }
 
 /**
- * True when a stored client id could plausibly be a real one. All three
- * supported providers issue ids that contain digits (Google prefixes the project
- * number, LinkedIn and Facebook ids are numeric), so a word like `ISBULKKTC` is a
- * placeholder that GoTrue will happily forward to the provider and fail there.
- * The emptiness check alone let exactly that through and reported "configured".
+ * True when a stored client id could plausibly be a real one. Both supported
+ * providers issue ids that contain digits (Google prefixes the project number,
+ * LinkedIn ids are numeric), so a word like `ISBULKKTC` is a placeholder that
+ * GoTrue will happily forward to the provider and fail there. The emptiness
+ * check alone let exactly that through and reported "configured".
  */
 export function looksLikeOAuthClientId(provider, value) {
   if (typeof value !== "string") return false;
@@ -347,7 +347,6 @@ export async function verifyCaptchaLive(token, projectRef) {
 const OAUTH_AUTHORIZE_HOSTS = {
   google: ["accounts.google.com"],
   linkedin_oidc: ["www.linkedin.com", "linkedin.com"],
-  facebook: ["www.facebook.com", "facebook.com", "m.facebook.com"],
 };
 
 /**

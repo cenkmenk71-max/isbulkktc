@@ -209,7 +209,7 @@ test("OAuth accepts only supported providers, audiences, and locales", () => {
   );
   assert.equal(
     oauthSignInSchema.safeParse({
-      provider: "facebook",
+      provider: "linkedin_oidc",
       audience: "candidate",
       locale: "xx",
       intent: "signin",

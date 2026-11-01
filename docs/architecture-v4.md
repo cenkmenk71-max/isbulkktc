@@ -53,7 +53,7 @@ Aşağıdaki özellikler orijinal spesifikasyondan gelir. Uygulama sırası V4't
 | KKTC'nin altı bölgesi için 3D tarihî düğümler | Korunur; bölge adları/içerikleri ürün sahibi tarafından doğrulanır | Görsel deneyim |
 | DOM ↔ 3D bridge/store | Yalnızca görsel durum ve navigasyon olayı taşır | Görsel deneyim |
 | Aday ve işveren kaydı/girişi | Korunur; ilk sürümde e-posta tabanlı temel akış önerilir | Temel |
-| Google/LinkedIn/Facebook/telefon girişi | Kapsam korunur; sağlayıcı ve maliyet doğrulanana kadar opsiyonel | Sonraki |
+| Google/LinkedIn/telefon girişi | Kapsam korunur; sağlayıcı ve maliyet doğrulanana kadar opsiyonel | Sonraki |
 | İş ilanı arama ve filtreleme | PostgreSQL full-text search ve indeksler | Temel |
 | Şirket dizini ve doğrulama | Korunur; doğrulama operasyonu gerekir | Temel |
 | Freelance alanı | Korunur; ilk sürümde ilan türü olarak modellenebilir | Temel veya sonraki karar |

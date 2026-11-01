@@ -3725,9 +3725,6 @@ a {
 .editorial-oauth-button[data-provider="google"] {
   --provider-background: #4285f4;
 }
-.editorial-oauth-button[data-provider="facebook"] {
-  --provider-background: #4267b2;
-}
 .editorial-oauth-button[data-provider="linkedin_oidc"] {
   --provider-background: #0a91bd;
 }
