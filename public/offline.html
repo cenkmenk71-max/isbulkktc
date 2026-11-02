@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>Bağlantı yok · İşBul KKTC</title>
+    <!--
+      Deliberately self-contained: no stylesheet, font, script or image request.
+      This document is the fallback the service worker serves when the network is
+      gone, so anything it fetched from the network would be unavailable exactly
+      when it is needed. Colours are the brand tokens inlined from
+      `src/styles/global.css` (crayon/vanadium), kept in sync by
+      `tests/unit/pwa-assets.test.ts`.
+    -->
+    <style>
+      :root {
+        color-scheme: light;
+        --canvas: #f5f2eb;
+        --surface: #faf8f3;
+        --ink: #222827;
+        --muted: #5a554d;
+        --brand: #245845;
+        --border: #e1dbd0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100svh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+      main {
+        width: min(100%, 34rem);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: clamp(24px, 5vw, 40px);
+        text-align: center;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: clamp(1.4rem, 4vw, 1.75rem);
+      }
+      p {
+        margin: 0 0 20px;
+        color: var(--muted);
+      }
+      ul {
+        list-style: none;
+        margin: 0 0 24px;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+        text-align: left;
+      }
+      li {
+        padding-left: 1.4rem;
+        position: relative;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      li::before {
+        content: "";
+        position: absolute;
+        left: 0.35rem;
+        top: 0.6em;
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--brand);
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+      }
+      a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 20px;
+        border-radius: 999px;
+        border: 1px solid var(--brand);
+        background: var(--brand);
+        color: #fffdf8;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      a.secondary {
+        background: transparent;
+        color: var(--brand);
+      }
+      a:focus-visible {
+        outline: 3px solid var(--brand);
+        outline-offset: 2px;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        main {
+          animation: settle 240ms ease-out;
+        }
+        @keyframes settle {
+          from {
+            opacity: 0;
+            transform: translateY(6px);
+          }
+          to {
+            opacity: 1;
+            transform: none;
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Şu anda çevrimdışısınız</h1>
+      <p>
+        İnternet bağlantısı kurulamadı. Kaydedilmiş sayfalar açılabilir; yeni
+        içerik için bağlantı gerekir.
+      </p>
+      <ul>
+        <li>Bağlantınızı kontrol edin.</li>
+        <li>Uçak modu açıksa kapatın.</li>
+        <li>Wi-Fi veya mobil veriye geçin.</li>
+      </ul>
+      <div class="actions">
+        <a href="/">Tekrar dene</a>
+        <a class="secondary" href="/jobs">İş ilanlarına git</a>
+      </div>
+    </main>
+  </body>
+</html>

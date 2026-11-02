@@ -7,6 +7,8 @@ import { Link } from "@/i18n/navigation";
 import { noIndexMetadata } from "@/lib/seo";
 import { getMyApplications } from "@/server/dal/jobs";
 import { getApplicationStatusMessageKey } from "@/features/jobs/presentation";
+import { PushPermissionControl } from "@/components/pwa/push-permission-control";
+import { getVapidPublicKey } from "@/server/push/vapid";
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
@@ -116,6 +118,14 @@ export default async function CandidateDashboardPage() {
         }}
         profile={profile}
       />
+      <section
+        aria-labelledby="candidate-notifications-title"
+        className="candidate-dashboard-notifications"
+      >
+        <h2 id="candidate-notifications-title">{copy("notificationsTitle")}</h2>
+        <p>{copy("notificationsDescription")}</p>
+        <PushPermissionControl vapidPublicKey={getVapidPublicKey()} />
+      </section>
     </div>
   );
 }

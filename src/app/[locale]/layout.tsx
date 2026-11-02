@@ -12,6 +12,7 @@ import { ConsentProvider } from "@/components/analytics/consent-context";
 import { CookieConsent } from "@/components/analytics/cookie-consent";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { MotionController } from "@/components/motion/motion-controller";
+import { PwaRuntime } from "@/components/pwa/pwa-runtime";
 import { buildOrganizationGraph } from "@/content/ai-visibility/structured-data";
 import { JsonLd } from "@/content/ai-visibility/json-ld";
 import { isRightToLeftLocale, routing } from "@/i18n/routing";
@@ -138,7 +139,7 @@ export async function generateMetadata({
           media: "(prefers-color-scheme: dark)",
         },
       ],
-      apple: "/apple-icon.png",
+      apple: "/icons/apple-touch-icon.png",
     },
   };
 }
@@ -146,6 +147,11 @@ export async function generateMetadata({
 export const viewport: Viewport = {
   colorScheme: "light",
   themeColor: "#F5F2EB",
+  // `cover` extends the layout under the notch and the home indicator so the
+  // installed app can paint its own safe-area padding instead of showing letter
+  // boxes. Every full-bleed surface then has to respect `env(safe-area-inset-*)`,
+  // which the PWA styles do.
+  viewportFit: "cover",
 };
 
 export default async function LocaleLayout({
@@ -184,6 +190,7 @@ export default async function LocaleLayout({
             <SiteFooter />
             <CookieConsent />
             <GoogleAnalytics />
+            <PwaRuntime />
           </ConsentProvider>
           <MotionController />
         </NextIntlClientProvider>

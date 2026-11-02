@@ -12838,3 +12838,394 @@ html[dir="rtl"] input[name="slug"] {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * Progressive web app surfaces
+ *
+ * These rules are shared by the installed app and the browser tab, so they use
+ * the same tokens as the rest of the site. Two details are PWA-specific:
+ * `env(safe-area-inset-*)` padding for the notch and home indicator (the
+ * viewport is `viewport-fit=cover`), and the offline/update affordances, which
+ * are fixed to the viewport because they must stay visible while the page
+ * scrolls.
+ * ------------------------------------------------------------------ */
+
+.pwa-offline-banner {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--color-vanadium-900);
+  color: var(--color-crayon-highlight);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.pwa-offline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-status-warning);
+  flex: none;
+}
+
+.pwa-update-toast {
+  position: fixed;
+  inset-inline: 12px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 61;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 520px;
+  margin-inline: auto;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+
+.pwa-update-copy {
+  margin: 0;
+  flex: 1 1 12rem;
+  font-size: var(--type-supporting);
+  color: var(--ink-2);
+}
+
+.pwa-update-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.pwa-update-primary,
+.pwa-update-secondary {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pwa-update-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.pwa-update-secondary {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink-2);
+}
+
+.pwa-update-primary:focus-visible,
+.pwa-update-secondary:focus-visible,
+.pwa-install-primary:focus-visible,
+.pwa-install-secondary:focus-visible,
+.pwa-push-button:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.pwa-install-page {
+  display: flex;
+  justify-content: center;
+  padding: clamp(24px, 6vw, 64px) var(--page-gutter)
+    calc(clamp(24px, 6vw, 64px) + env(safe-area-inset-bottom, 0px));
+}
+
+.pwa-install-card {
+  width: min(100%, 40rem);
+  padding: clamp(24px, 5vw, 44px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.pwa-install-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  color: var(--green);
+  font-size: var(--type-label);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pwa-install-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 4.6vw, 2.35rem);
+  line-height: 1.12;
+  letter-spacing: var(--tracking-display);
+  color: var(--ink);
+}
+
+.pwa-install-lede {
+  margin: 0 0 20px;
+  max-width: 46ch;
+  color: var(--ink-3);
+  line-height: var(--leading-copy);
+}
+
+.pwa-install-campaign {
+  margin: 0 0 18px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-size: var(--type-supporting);
+}
+
+.pwa-install-block {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.pwa-install-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--type-supporting);
+}
+
+.pwa-install-primary,
+.pwa-install-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  /* 48px clears the 44px minimum touch target with room for a line of text. */
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: var(--type-body);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.pwa-install-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: var(--shadow-green);
+}
+
+.pwa-install-primary:hover:not(:disabled) {
+  background: var(--green-hover);
+}
+
+.pwa-install-primary:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.pwa-install-secondary {
+  background: transparent;
+  border-color: var(--border-green);
+  color: var(--green);
+}
+
+.pwa-install-fallback {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+
+.pwa-install-fallback-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pwa-install-steps {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: pwa-step;
+}
+
+.pwa-install-steps > li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  color: var(--ink-2);
+  line-height: 1.6;
+  counter-increment: pwa-step;
+}
+
+.pwa-install-steps > li::before {
+  content: counter(pwa-step);
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green-deep);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pwa-install-step-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  color: var(--green);
+}
+
+.pwa-install-step-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.pwa-install-continue {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.pwa-install-continue-note,
+.pwa-install-footnote {
+  margin: 0;
+  color: var(--ink-4);
+  font-size: var(--type-caption);
+  line-height: 1.6;
+}
+
+.pwa-install-footnote {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.pwa-install-push {
+  margin-bottom: 22px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+
+.pwa-push {
+  display: grid;
+  gap: 12px;
+}
+
+.pwa-push-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.pwa-push-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pwa-push-body,
+.pwa-push-note,
+.pwa-push-error {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--type-supporting);
+  line-height: 1.6;
+}
+
+.pwa-push-error {
+  color: var(--destructive);
+}
+
+.pwa-push-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--border-green);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--green);
+  font-size: var(--type-supporting);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pwa-push-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.pwa-spin {
+  animation: pwa-spin 900ms linear infinite;
+}
+
+@keyframes pwa-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pwa-spin {
+    animation: none;
+  }
+}
+
+/* Notification settings panel on the authenticated dashboards. The install page
+   frames the same control inside `.pwa-install-push`; here it stands alone, so
+   it carries its own card treatment and a heading that matches the surrounding
+   dashboard sections. */
+.company-management-notifications,
+.candidate-dashboard-notifications {
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+
+.company-management-notifications h2,
+.candidate-dashboard-notifications h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.company-management-notifications > p,
+.candidate-dashboard-notifications > p {
+  margin: 0 0 14px;
+  color: var(--ink-3);
+  font-size: var(--type-supporting);
+  line-height: 1.6;
+}

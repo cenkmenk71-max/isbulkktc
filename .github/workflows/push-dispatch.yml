@@ -1,0 +1,60 @@
+name: Dispatch web push
+
+# Delivers the application-status notifications that the database has already
+# recorded. The route is idempotent — it claims a batch, sends, and marks each
+# row — so a missed or repeated run is safe.
+#
+# Requires two repository secrets: the production origin and the shared cron
+# secret the route checks. Until both exist the job stays green and warns, so
+# the Actions tab only shows red for genuine breakage (same contract as the
+# source-job refresh).
+on:
+  schedule:
+    # Every ten minutes. Application-status pushes are the only category wired
+    # to the outbox today, and a short interval keeps them feeling live without
+    # exceeding the free Actions minutes budget.
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: push-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Send pending push notifications
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check configuration
+        id: config
+        env:
+          APP_URL: ${{ secrets.APP_URL || vars.APP_URL || secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.PUSH_CRON_SECRET }}
+        run: |
+          if [ -n "${APP_URL:-}" ] && [ -n "${CRON_SECRET:-}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Push dispatch not configured::Add the PUSH_CRON_SECRET secret and the APP_URL variable to enable scheduled web push delivery. Skipping this run."
+          fi
+
+      - name: Dispatch pending notifications
+        if: steps.config.outputs.configured == 'true'
+        env:
+          APP_URL: ${{ secrets.APP_URL || vars.APP_URL || secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.PUSH_CRON_SECRET }}
+        run: |
+          set -o pipefail
+          status=$(curl -sS -o /tmp/push-response.txt -w '%{http_code}' \
+            -X POST -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${APP_URL%/}/api/push/dispatch")
+          echo "HTTP ${status}"
+          cat /tmp/push-response.txt
+          # 503 means push is not configured on the server, which is a valid
+          # deployment state (no VAPID keys) rather than a failure.
+          if [ "$status" != "200" ] && [ "$status" != "503" ]; then
+            exit 1
+          fi

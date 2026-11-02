@@ -382,6 +382,41 @@ export type Database = {
         never,
         never
       >;
+      // Web Push rows are capability storage, not user data: every read and
+      // write goes through a `security definer` RPC bound to `auth.uid()`, so
+      // there is no client-side INSERT/UPDATE shape to model here.
+      push_subscriptions: Table<
+        {
+          id: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth_key: string;
+          user_agent: string | null;
+          locale: string;
+          created_at: string;
+          updated_at: string;
+          last_success_at: string | null;
+          last_failure_at: string | null;
+          failure_count: number;
+          revoked_at: string | null;
+        },
+        never,
+        never
+      >;
+      push_notification_preferences: Table<
+        {
+          user_id: string;
+          application_updates: boolean;
+          job_alerts: boolean;
+          employer_applications: boolean;
+          messages: boolean;
+          marketing: boolean;
+          updated_at: string;
+        },
+        never,
+        never
+      >;
     };
     Views: Record<string, never>;
     Functions: {
@@ -628,6 +663,83 @@ export type Database = {
           display_name: string | null;
           locale: string | null;
         }[];
+      };
+      // ---- Web Push (client RPCs, bound to auth.uid() server-side) ----
+      register_push_subscription: {
+        Args: {
+          _endpoint: string;
+          _p256dh: string;
+          _auth_key: string;
+          _user_agent: string | null;
+        };
+        Returns: undefined;
+      };
+      revoke_push_subscription: {
+        Args: { _endpoint: string | null };
+        Returns: undefined;
+      };
+      list_my_push_subscriptions: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          endpoint: string;
+          user_agent: string | null;
+          created_at: string;
+          last_success_at: string | null;
+        }[];
+      };
+      get_my_push_preferences: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          application_updates: boolean;
+          job_alerts: boolean;
+          employer_applications: boolean;
+          messages: boolean;
+          marketing: boolean;
+        }[];
+      };
+      set_push_notification_preferences: {
+        Args: {
+          _application_updates: boolean;
+          _job_alerts: boolean;
+          _employer_applications: boolean;
+          _messages: boolean;
+          _marketing: boolean;
+        };
+        Returns: undefined;
+      };
+      // ---- Web Push (service_role-only delivery RPCs) ----
+      list_push_targets_for_notification: {
+        Args: { _user_id: string; _category: string };
+        Returns: {
+          subscription_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth_key: string;
+          locale: string;
+        }[];
+      };
+      claim_application_push_notifications: {
+        Args: { _batch_size?: number };
+        Returns: {
+          notification_id: string;
+          user_id: string;
+          event_type: string;
+          job_title: string;
+          application_status: string | null;
+          application_id: string;
+        }[];
+      };
+      finish_application_push_notification: {
+        Args: { _notification_id: string; _delivered: boolean };
+        Returns: undefined;
+      };
+      record_push_delivery_result: {
+        Args: {
+          _subscription_id: string;
+          _delivered: boolean;
+          _permanent_failure: boolean;
+        };
+        Returns: undefined;
       };
       get_public_site_content: {
         Args: { _locale: string; _keys?: string[] | null };

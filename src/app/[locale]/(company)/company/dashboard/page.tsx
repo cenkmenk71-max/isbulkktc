@@ -28,6 +28,8 @@ import {
 } from "@/features/locations/northern-cyprus-districts";
 import { getLocalePrefix, routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
+import { PushPermissionControl } from "@/components/pwa/push-permission-control";
+import { getVapidPublicKey } from "@/server/push/vapid";
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
@@ -191,6 +193,16 @@ export default async function CompanyDashboardPage({
             ))}
           </nav>
         ) : null}
+        <section
+          aria-labelledby="company-notifications-title"
+          className="company-management-notifications"
+        >
+          <h2 id="company-notifications-title">
+            {copy("notificationsTitle")}
+          </h2>
+          <p>{copy("notificationsDescription")}</p>
+          <PushPermissionControl vapidPublicKey={getVapidPublicKey()} />
+        </section>
       </header>
 
       <nav
