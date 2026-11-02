@@ -535,6 +535,7 @@
       "captchaRequired": "Complete the security check before continuing.",
       "signUpFailed": "Your account could not be created. Check your details and try again.",
       "verificationSent": "Use the verification link sent to your email address to continue.",
+      "emailAlreadyRegistered": "An account already exists for this email address. Sign in, or reset your password.",
       "verificationResent": "A new verification link has been sent. Check your inbox and spam folder.",
       "resendFailed": "The verification email could not be sent right now. Please try again in a few minutes.",
       "oauthUnavailable": "This sign-in option is not enabled yet. Use your email and password instead.",

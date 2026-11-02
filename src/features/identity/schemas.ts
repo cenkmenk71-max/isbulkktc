@@ -56,6 +56,7 @@ export type SignInFormState = {
     | "captchaFailed"
     | "signUpFailed"
     | "verificationSent"
+    | "emailAlreadyRegistered"
     | "verificationResent"
     | "resendFailed"
     | "oauthUnavailable"

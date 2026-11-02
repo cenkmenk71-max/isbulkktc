@@ -211,6 +211,24 @@ export async function signUp(
     redirect(resolveAuthDestination(result.data.audience, result.data.locale));
   }
 
+  // With confirmations on, `signUp` on an address that already has an account
+  // returns an obfuscated user with no session and sends nothing, so that a
+  // visitor cannot probe which addresses are registered. GoTrue signals that
+  // case with an empty `identities` array; a genuinely new signup carries the
+  // `email` identity it just created. Without this check the duplicate lands on
+  // "verification link sent" and the visitor waits for a mail that never comes.
+  //
+  // The same obfuscation means this cannot be used to *confirm* an address:
+  // nothing here distinguishes a registered address from a brand-new one to a
+  // caller who did not already know, which is the point.
+  if (data.user && (data.user.identities?.length ?? 0) === 0) {
+    return {
+      status: "error",
+      message: "emailAlreadyRegistered",
+      email: result.data.email,
+    };
+  }
+
   return {
     status: "success",
     message: "verificationSent",

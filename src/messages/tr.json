@@ -535,6 +535,7 @@
       "captchaRequired": "Devam etmeden önce güvenlik doğrulamasını tamamlayın.",
       "signUpFailed": "Kayıt tamamlanamadı. Bilgileri kontrol edip tekrar deneyin.",
       "verificationSent": "Devam etmek için e-posta adresinize gönderilen doğrulama bağlantısını kullanın.",
+      "emailAlreadyRegistered": "Bu e-posta adresiyle zaten bir hesap var. Giriş yapın ya da şifrenizi sıfırlayın.",
       "verificationResent": "Doğrulama bağlantısı yeniden gönderildi. Gelen kutunuzu ve spam klasörünüzü kontrol edin.",
       "resendFailed": "Doğrulama e-postası şu anda gönderilemedi. Lütfen birkaç dakika sonra tekrar deneyin.",
       "oauthUnavailable": "Bu giriş seçeneği henüz etkin değil. E-posta ve şifrenizi kullanın.",
