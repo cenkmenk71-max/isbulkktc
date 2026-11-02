@@ -4,6 +4,8 @@ const maxFileBytes = 5 * 1024 * 1024;
 const maxPdfPages = 25;
 const maxExtractedCharacters = 80_000;
 
+const textExtensions = new Set(["txt", "md", "markdown", "text"]);
+
 export type DocumentImportErrorCode =
   | "unsupported"
   | "tooLarge"
@@ -90,13 +92,37 @@ async function extractDocxText(file: File): Promise<string> {
   }
 }
 
+async function extractPlainText(file: File): Promise<string> {
+  let text: string;
+  try {
+    const data = await file.arrayBuffer();
+    // CVs exported from macOS/Windows editors are frequently UTF-16 or carry a
+    // BOM; decoding those as UTF-8 turns every character into a replacement
+    // glyph, which the parser then reads as one unbroken token.
+    const bytes = new Uint8Array(data);
+    const isUtf16 =
+      (bytes[0] === 0xff && bytes[1] === 0xfe) ||
+      (bytes[0] === 0xfe && bytes[1] === 0xff);
+    text = new TextDecoder(isUtf16 ? "utf-16" : "utf-8").decode(data);
+  } catch {
+    throw new DocumentImportError("unreadable");
+  }
+
+  text = text.replace(/^\uFEFF/, "").replace(/\u0000/g, "");
+  if (text.length > maxExtractedCharacters) {
+    throw new DocumentImportError("tooLarge");
+  }
+  if (!text.trim()) throw new DocumentImportError("empty");
+  return text;
+}
+
 export async function extractTextDocument(file: File): Promise<string> {
   if (file.size > maxFileBytes) throw new DocumentImportError("tooLarge");
 
   const extension = file.name.split(".").pop()?.toLocaleLowerCase();
-  if (extension !== "pdf" && extension !== "docx") {
-    throw new DocumentImportError("unsupported");
-  }
+  if (extension === "pdf") return extractPdfText(file);
+  if (extension === "docx") return extractDocxText(file);
+  if (extension && textExtensions.has(extension)) return extractPlainText(file);
 
-  return extension === "pdf" ? extractPdfText(file) : extractDocxText(file);
+  throw new DocumentImportError("unsupported");
 }
