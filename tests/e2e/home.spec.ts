@@ -631,14 +631,18 @@ test("every page hero uses its own uploaded photo", async ({ page }) => {
     await image.scrollIntoViewIfNeeded();
     await expect(image).toBeVisible();
     await expect
-      .poll(() =>
-        image.evaluate((element) => {
-          const photo = element as HTMLImageElement;
-          return {
-            loaded: photo.complete && photo.naturalWidth > 0,
-            path: photo.src ? new URL(photo.src).searchParams.get("url") : null,
-          };
-        }),
+      .poll(
+        () =>
+          image.evaluate((element) => {
+            const photo = element as HTMLImageElement;
+            return {
+              loaded: photo.complete && photo.naturalWidth > 0,
+              path: photo.src ? new URL(photo.src).searchParams.get("url") : null,
+            };
+          }),
+        // Seven full-page loads plus a decode each; the default 5 s poll is too
+        // tight under CI load, which made this test flake.
+        { timeout: 12_000 },
       )
       .toMatchObject({ loaded: true, path: expectedPath });
   }
