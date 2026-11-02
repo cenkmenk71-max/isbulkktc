@@ -17,8 +17,8 @@
 
 update public.profiles p
 set
-  given_name = pg_catalog.coalesce(p.given_name, c.given_name),
-  family_name = pg_catalog.coalesce(p.family_name, c.family_name)
+  given_name = coalesce(p.given_name, c.given_name),
+  family_name = coalesce(p.family_name, c.family_name)
 from auth.users u
 cross join lateral public.oauth_profile_claims(u.raw_user_meta_data) c
 where
