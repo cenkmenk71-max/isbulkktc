@@ -782,6 +782,120 @@ assert.deepEqual(
   `font sizes below the ${captionFloorPx}px caption floor: ${undersized.join(", ")}`,
 );
 
+// Interactive controls must keep the 44px touch-target floor at every viewport.
+// The header controls, sector chips and form fields once sat at 33-43px, which
+// no other check could see because the literal is valid CSS. Resolve the media
+// cascade for each target width and assert the *effective* value, so a later
+// breakpoint cannot quietly shrink a control back below the floor.
+function effectiveDeclarations(selector, width) {
+  const collected = {};
+  const visit = (text) => {
+    let index = 0;
+    while (index < text.length) {
+      const open = text.indexOf("{", index);
+      if (open === -1) break;
+      const head = text.slice(index, open).trim();
+      let depth = 1;
+      let end = open + 1;
+      while (end < text.length && depth > 0) {
+        if (text[end] === "{") depth += 1;
+        else if (text[end] === "}") depth -= 1;
+        end += 1;
+      }
+      const body = text.slice(open + 1, end - 1);
+      const max = head.match(/max-width:\s*(\d+)px/);
+      const min = head.match(/min-width:\s*(\d+)px/);
+      const applies =
+        head.startsWith("@media") &&
+        (!max || width <= Number(max[1])) &&
+        (!min || width >= Number(min[1]));
+      if (head.startsWith("@")) {
+        if (applies) visit(body);
+      } else {
+        for (const one of head.split(",").map((part) => part.trim())) {
+          if (one !== selector) continue;
+          for (const [, property, value] of body.matchAll(
+            /([\w-]+)\s*:\s*([^;]+);/g,
+          )) {
+            collected[property] = value.trim();
+          }
+        }
+      }
+      index = end;
+    }
+  };
+  visit(cssWithoutComments);
+  return collected;
+}
+const touchTargetSelectors = [
+  ".mobile-menu-button",
+  ".header-post",
+  ".header-login",
+  ".desktop-nav a",
+  ".language-picker .language-switch",
+  ".language-option",
+  ".sector-filter-chip",
+  ".sector-directory-trigger",
+  ".show-more-row .button",
+  ".modal-actions .button",
+  ".application-form input",
+  ".search-submit",
+];
+for (const width of [320, 390, 768, 1024, 1280]) {
+  for (const selector of touchTargetSelectors) {
+    const declarations = effectiveDeclarations(selector, width);
+    const size = declarations["min-height"] ?? declarations.height;
+    const pixels = size?.match(/^(\d+(?:\.\d+)?)px$/);
+    if (!pixels) continue;
+    assert.ok(
+      Number(pixels[1]) >= 44,
+      `${selector} must keep a 44px touch target at ${width}px, resolved ${size}`,
+    );
+  }
+}
+
+// The consent card is bottom-anchored and the header floats above the page, so
+// an unconstrained card grew upward over the header controls on landscape phones
+// and made them untappable. The mobile menu had the mirror problem: it ran past
+// the fold with no way to scroll to its trailing links. Pin the caps and scroll.
+for (const width of [320, 390, 1280]) {
+  const card = effectiveDeclarations(".consent-card", width);
+  assert.equal(card["overflow-y"], "auto");
+  assert.match(
+    card["max-height"] ?? "",
+    /dvh/,
+    `the consent card must cap its height against the viewport at ${width}px`,
+  );
+}
+for (const width of [320, 390, 768, 1060, 1200]) {
+  const nav = effectiveDeclarations(".mobile-nav", width);
+  assert.equal(
+    nav["overflow-y"],
+    "auto",
+    `the mobile menu must scroll at ${width}px`,
+  );
+  assert.match(nav["max-height"] ?? "", /dvh/);
+}
+
+// OAuth provider buttons: the brand blues (#4285f4, #0a91bd) leave the white
+// label at ~3.5:1, below AA. Keep the darkened, accessible pair.
+for (const [provider, background] of [
+  ["google", "#1765cc"],
+  ["linkedin_oidc", "#0b6a92"],
+]) {
+  assert.match(
+    css,
+    new RegExp(
+      `data-provider="${provider}"\\]\\s*\\{[^}]*--provider-background:\\s*${background}`,
+    ),
+  );
+  assert.ok(
+    contrast("#fffdf8", background) >= 4.5 &&
+      contrast("#ffffff", background) >= 4.5,
+    `${provider} OAuth label must meet AA on the provider background`,
+  );
+}
+
 // Motion layer contract. The site ships a GSAP + Lenis layer that must stay
 // (a) lazy, so it cannot delay first paint, (b) opt-in per element, so a
 // component without `data-reveal` is never hidden, and (c) fully disabled under

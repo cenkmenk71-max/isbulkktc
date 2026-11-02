@@ -284,7 +284,7 @@ a {
   position: relative;
   display: inline-flex;
   align-items: center;
-  min-height: 42px;
+  min-height: 44px;
   color: var(--ink-3);
   text-decoration: none;
   font-size: 12px;
@@ -431,7 +431,7 @@ a {
   border-color: var(--color-vanadium-600);
 }
 .header-post {
-  min-height: 41px;
+  min-height: 44px;
   padding-inline: 16px;
   border-radius: 7px;
   gap: 8px;
@@ -678,7 +678,7 @@ a {
 }
 /* Avatar tones describe palette families, not unrelated visual colour names. */
 .show-more-row .button {
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .companies-section {
@@ -946,7 +946,7 @@ a {
 
 /* Modal flows: details, local-only application preview, and account notice */
 .modal-actions .button {
-  min-height: 43px;
+  min-height: 44px;
 }
 .application-form {
   display: flex;
@@ -970,7 +970,7 @@ a {
 .application-form input,
 .application-form textarea {
   width: 100%;
-  min-height: 43px;
+  min-height: 44px;
   padding: 11px 12px;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -1130,7 +1130,7 @@ a {
     gap: 9px;
   }
   .header-post {
-    min-height: 38px;
+    min-height: 44px;
     padding-inline: 12px;
     font-size: 10px;
   }
@@ -1140,8 +1140,8 @@ a {
   }
   .mobile-menu-button {
     display: grid;
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
   }
   .mobile-nav {
     display: grid;
@@ -1152,7 +1152,7 @@ a {
   }
   .mobile-nav a,
   .mobile-nav button {
-    min-height: 43px;
+    min-height: 44px;
     display: flex;
     align-items: center;
     padding: 0 8px;
@@ -1207,7 +1207,7 @@ a {
   }
   .search-submit {
     align-self: center;
-    min-height: 39px;
+    min-height: 44px;
     padding-inline: 12px;
     font-size: 10px;
   }
@@ -1266,7 +1266,7 @@ a {
     grid-column: 2;
     justify-self: start;
     min-width: 0;
-    min-height: 43px;
+    min-height: 44px;
     margin-top: 2px;
   }
   .footer-main {
@@ -1296,7 +1296,7 @@ a {
     font-size: 10px;
   }
   .modal-actions .button {
-    min-height: 42px;
+    min-height: 44px;
     padding-inline: 12px;
     font-size: 10px;
   }
@@ -1530,6 +1530,9 @@ a {
   color: var(--surface-raised);
 }
 .header-login {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
   padding: 9px 0;
   border: 0;
   background: transparent;
@@ -1543,7 +1546,7 @@ a {
   color: var(--green-pale);
 }
 .header-post {
-  min-height: 36px;
+  min-height: 44px;
   padding-inline: 18px;
   gap: 9px;
   border-radius: 999px;
@@ -1561,8 +1564,8 @@ a {
 }
 .mobile-menu-button {
   display: none;
-  width: 41px;
-  height: 41px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   border: 1px solid rgba(255, 253, 248, 0.36);
   border-radius: 12px;
@@ -1921,7 +1924,7 @@ a {
 .sector-directory-trigger {
   display: flex;
   width: fit-content;
-  min-height: 40px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 9px;
@@ -2104,7 +2107,7 @@ a {
 }
 .sector-filter-chip {
   display: inline-flex;
-  min-height: 34px;
+  min-height: 44px;
   align-items: center;
   gap: 8px;
   padding: 5px 10px;
@@ -2632,6 +2635,11 @@ a {
     display: flex;
     flex-direction: column;
     gap: 0;
+    /* Keep the whole menu reachable on short viewports: without a cap the list
+       runs past the fold with no way to scroll to the account/register links. */
+    max-height: calc(100dvh - 90px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 8px 22px 17px;
     border: 1px solid rgba(255, 253, 248, 0.2);
     border-top: 0;
@@ -2755,7 +2763,7 @@ a {
     height: 32px;
   }
   .header-post {
-    min-height: 39px;
+    min-height: 44px;
     padding-inline: 11px;
     gap: 6px;
     font-size: 10px;
@@ -2765,8 +2773,8 @@ a {
     display: none;
   }
   .mobile-menu-button {
-    width: 39px;
-    height: 39px;
+    width: 44px;
+    height: 44px;
   }
   .mobile-nav {
     top: 72px;
@@ -2861,7 +2869,7 @@ a {
     margin-top: 12px;
   }
   .sector-directory-trigger {
-    min-height: 42px;
+    min-height: 44px;
     padding-inline: 14px;
     font-size: 11px;
   }
@@ -2898,7 +2906,7 @@ a {
     gap: 6px;
   }
   .sector-filter-chip {
-    min-height: 33px;
+    min-height: 44px;
     font-size: 10px;
   }
   .sector-explorer-results {
@@ -3021,7 +3029,7 @@ a {
   gap: 7px;
   width: auto;
   min-width: 68px;
-  height: 36px;
+  min-height: 44px;
   padding: 0 9px;
   border: 1px solid rgba(255, 253, 248, 0.33);
   border-radius: 999px;
@@ -3076,7 +3084,7 @@ a {
 }
 .language-option {
   display: flex;
-  min-height: 39px;
+  min-height: 44px;
   align-items: center;
   gap: 10px;
   padding: 7px 8px;
@@ -3143,7 +3151,7 @@ a {
 @media (max-width: 740px) {
   .language-picker .language-switch {
     min-width: 58px;
-    height: 34px;
+    min-height: 44px;
     padding-inline: 7px;
     gap: 5px;
   }
@@ -3723,10 +3731,13 @@ a {
   cursor: not-allowed;
 }
 .editorial-oauth-button[data-provider="google"] {
-  --provider-background: #4285f4;
+  /* Google's brand blue leaves white label text at 3.51:1, below the 4.5:1 AA
+     floor. Darken to the nearest accessible blue. */
+  --provider-background: #1765cc;
 }
 .editorial-oauth-button[data-provider="linkedin_oidc"] {
-  --provider-background: #0a91bd;
+  /* LinkedIn's brand blue is 3.56:1 against white; use the darker accessible blue. */
+  --provider-background: #0b6a92;
 }
 .editorial-oauth-mark {
   display: grid;
@@ -10902,7 +10913,12 @@ main :where(p) {
   display: grid;
   gap: 0;
   width: min(440px, calc(100vw - 32px));
-  max-height: min(88vh, 720px);
+  /* The card is bottom-anchored while the header is absolutely positioned over
+     the page, so an unconstrained card grows upward over the header controls on
+     short viewports (landscape phones, small laptops) and makes them untappable.
+     Cap the height so the card always starts below the header and let the body
+     scroll instead. */
+  max-height: min(88vh, 720px, calc(100dvh - 96px));
   overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
@@ -11154,8 +11170,8 @@ main :where(p) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
-  padding: 7px 12px;
+  min-height: 44px;
+  padding: 7px 14px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--surface-raised);
@@ -11191,7 +11207,7 @@ html[dir="rtl"] .consent-switch[aria-checked="true"] .consent-switch-thumb {
     left: 0;
     bottom: 0;
     width: 100vw;
-    max-height: 92vh;
+    max-height: min(92vh, calc(100dvh - 88px));
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     border-left: 0;
     border-right: 0;
@@ -12521,6 +12537,11 @@ html[dir="rtl"] input[name="slug"] {
     display: flex;
     flex-direction: column;
     gap: 0;
+    /* See the 1060px block: a short landscape viewport must be able to scroll
+       the menu instead of clipping the trailing links. */
+    max-height: calc(100dvh - 84px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 8px var(--page-gutter) 17px;
     border: 1px solid rgba(255, 253, 248, 0.2);
     border-top: 0;
