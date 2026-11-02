@@ -673,6 +673,27 @@ assert.match(profileSchema, /\.max\(120\)/);
 assert.match(profileSchema, /\.max\(40\)/);
 assert.doesNotMatch(profileForm, /name="user_id"|name="userId"/);
 
+// The candidate profile card is a single column: the intro stacks above the
+// form. A stale two-column rule (0.8fr/1.2fr) once survived in the sheet and won
+// on desktop, squeezing the form to ~292px and collapsing the CV-import text
+// column into a 76px vertical tower. Pin the resolved layout so it cannot
+// regress without a failing gate.
+assert.match(
+  css,
+  /\.candidate-profile-card\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/,
+  "the candidate profile card must resolve to a single column",
+);
+assert.doesNotMatch(
+  css,
+  /\.candidate-profile-card\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*0\.8fr\)/,
+  "the stale two-column candidate profile card rule must stay removed",
+);
+// The dashboard renders the applications section; it must carry its own styles
+// rather than falling back to unstyled markup.
+assert.match(css, /\.candidate-applications\s*\{/);
+assert.match(css, /\.candidate-application-list\s*\{/);
+assert.match(css, /\.candidate-application-card\s*\{/);
+
 const trCopy = JSON.stringify(trMessages);
 const enCopy = JSON.stringify(enMessages);
 for (const copy of [trCopy, enCopy]) {
