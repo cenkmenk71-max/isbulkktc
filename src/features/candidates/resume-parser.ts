@@ -261,13 +261,6 @@ function cleanLine(line: string): string {
   return line.replace(/^\s*(?:[•●▪◦*-]|\d+[.)])\s*/, "").trim();
 }
 
-function splitEntry(line: string): string[] {
-  return line
-    .split(/\s+(?:\||·|—|–|•)\s+/u)
-    .map(cleanLine)
-    .filter(Boolean);
-}
-
 function uniqueValues(values: string[], maximum: number): string[] {
   const unique = new Map<string, string>();
   for (const value of values) {
@@ -384,6 +377,270 @@ function splitEntryParts(line: string): string[] {
     .filter(Boolean);
 }
 
+const allDatePattern = new RegExp(dateToken, "gi");
+
+/** Every date token on a line, in order ("PMP | PMI | 2019 | 2024" → [2019, 2024]). */
+function extractDates(line: string): string[] {
+  return (line.match(allDatePattern) ?? []).map((value) => value.trim());
+}
+
+function stripDates(line: string): string {
+  return line
+    .replace(new RegExp(dateToken, "gi"), " ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[\s\-–—|·,]+|[\s\-–—|·,]+$/g, "")
+    .trim();
+}
+
+/** A line that is nothing but a date range, e.g. "2019 - 2023" or "2016". */
+function isPureDateLine(line: string, range: DateRange | null): boolean {
+  if (!range) return false;
+  return stripDateRange(line, range).replace(/[()\s\-–—|·,]+/g, "").length === 0;
+}
+
+/**
+ * A short, unpunctuated line — the shape of a role or an employer name.
+ *
+ * This is what separates the *header* of the next entry from the *prose* of the
+ * current one in the two-column CV layout where role, employer and dates sit on
+ * three separate lines: "Software Engineer" is a header, "Led the platform
+ * team." is prose.
+ */
+function looksLikeRoleOrCompany(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.length > 90) return false;
+  if (/[.!?]$/.test(trimmed)) return false;
+  return trimmed.split(/\s+/).length <= 8;
+}
+
+/**
+ * True when a new entry begins within the next few lines.
+ *
+ * After a complete entry, a role line is only distinguishable from a prose line
+ * by what follows it: an entry's header is one or two short lines followed by a
+ * date range. Looking ahead for that date is what stops "Software Engineer" from
+ * being appended to the previous job's description.
+ */
+function nextEntryStartsAt(records: string[], index: number): boolean {
+  for (let look = index + 1; look <= index + 3 && look < records.length; look += 1) {
+    if (extractDateRange(records[look])) return true;
+  }
+  return false;
+}
+
+type ResumeBlock = {
+  headerLines: string[];
+  dates: DateRange | null;
+  descriptionLines: string[];
+};
+
+/**
+ * Groups a section's lines into one block per entry.
+ *
+ * The previous implementation treated every line as a complete entry, so the
+ * very common "role / employer / dates on three separate lines" layout lost the
+ * role and the employer entirely — they were concatenated into the description —
+ * and attached each date range to whichever line happened to carry it. Grouping
+ * first, then reading each block, keeps the fields and their dates together.
+ */
+function buildBlocks(records: string[]): ResumeBlock[] {
+  const blocks: ResumeBlock[] = [];
+  let current: ResumeBlock | null = null;
+
+  const flush = () => {
+    if (current && (current.headerLines.length || current.descriptionLines.length)) {
+      blocks.push(current);
+    }
+    current = null;
+  };
+
+  const blank = (): ResumeBlock => ({
+    headerLines: [],
+    dates: null,
+    descriptionLines: [],
+  });
+
+  for (let index = 0; index < records.length; index += 1) {
+    const line = records[index];
+    const dates = extractDateRange(line);
+    const headText = stripDateRange(line, dates);
+    const parts = splitEntryParts(headText).filter(Boolean);
+    const structured =
+      dates !== null ||
+      (parts.length >= 2 && parts.every((part) => part.length <= 90));
+    const pureDate = isPureDateLine(line, dates);
+
+    if (structured) {
+      const startsNew =
+        current !== null &&
+        ((current.dates !== null && current.headerLines.length > 0) ||
+          (current.headerLines.length >= 2 && !pureDate));
+      if (startsNew) flush();
+      if (!current) current = blank();
+      if (!pureDate && headText) current.headerLines.push(headText);
+      if (dates) current.dates = dates;
+      continue;
+    }
+
+    if (!current) current = blank();
+
+    const complete = current.dates !== null && current.headerLines.length > 0;
+    if (complete) {
+      if (looksLikeRoleOrCompany(line) && nextEntryStartsAt(records, index)) {
+        flush();
+        current = blank();
+        current.headerLines.push(line);
+      } else {
+        current.descriptionLines.push(line);
+      }
+    } else if (current.headerLines.length < 2) {
+      current.headerLines.push(line);
+    } else {
+      current.descriptionLines.push(line);
+    }
+  }
+
+  flush();
+  return blocks;
+}
+
+function orderRoleAndOrganization(
+  first: string,
+  second: string,
+): { role: string; organization: string } {
+  if (!second) return { role: first, organization: "" };
+  if (looksLikeOrganization(first) && !looksLikeOrganization(second)) {
+    return { role: second, organization: first };
+  }
+  return { role: first, organization: second };
+}
+
+function parseExperience(lines: string[]): CandidateExperience[] {
+  const records = lines.map(cleanLine).filter(Boolean);
+  if (records.length === 0) return [];
+
+  return buildBlocks(records)
+    .map((block) => {
+      const parts = splitEntryParts(block.headerLines[0] ?? "").filter(Boolean);
+      const hasDates = block.dates !== null;
+      let role = "";
+      let organization = "";
+      let location = "";
+      let leftover: string[] = [];
+
+      if (hasDates && parts.length < 2) {
+        // Header is one short line per row: role, then employer. The order can
+        // still be reversed, so the same corporate-marker check applies.
+        const ordered = orderRoleAndOrganization(
+          block.headerLines[0] ?? "",
+          block.headerLines[1] ?? "",
+        );
+        role = ordered.role;
+        organization = ordered.organization;
+        leftover = block.headerLines.slice(2);
+      } else if (parts.length >= 2) {
+        const ordered = orderRoleAndOrganization(parts[0] ?? "", parts[1] ?? "");
+        role = ordered.role;
+        organization = ordered.organization;
+        if (parts[2] && parts[2].length <= 60) location = parts[2];
+        leftover = parts.slice(3);
+        if (!hasDates) leftover = [...leftover, ...block.headerLines.slice(1)];
+      } else {
+        // No date and no separator: the section carried prose, not an entry.
+        leftover = [...block.headerLines];
+      }
+
+      const description = [...leftover, ...block.descriptionLines]
+        .join("\n")
+        .slice(0, 1_800);
+
+      return {
+        role: role.slice(0, 140),
+        organization: organization.slice(0, 160),
+        location: location.slice(0, 120),
+        startDate: block.dates?.startDate ?? "",
+        endDate: block.dates?.endDate ?? "",
+        description,
+      };
+    })
+    .filter((entry) => Object.values(entry).some(Boolean))
+    .slice(0, 12);
+}
+
+function parseEducation(lines: string[]): CandidateEducation[] {
+  const records = lines.map(cleanLine).filter(Boolean);
+  if (records.length === 0) return [];
+
+  return buildBlocks(records)
+    .map((block) => {
+      const parts = splitEntryParts(block.headerLines[0] ?? "").filter(Boolean);
+      let institution = "";
+      let qualification = "";
+      let field = "";
+      let leftover: string[] = [];
+
+      if (parts.length >= 2) {
+        institution = parts[0] ?? "";
+        qualification = parts[1] ?? "";
+        field = parts[2] ?? "";
+        leftover = parts.slice(3);
+        if (!block.dates) leftover = [...leftover, ...block.headerLines.slice(1)];
+      } else {
+        // One short line per row: institution, then qualification, then field.
+        institution = parts[0] ?? "";
+        qualification = block.headerLines[1] ?? "";
+        field = block.headerLines[2] ?? "";
+        leftover = block.headerLines.slice(3);
+      }
+
+      const description = [...leftover, ...block.descriptionLines]
+        .join("\n")
+        .slice(0, 1_200);
+
+      return {
+        institution: institution.slice(0, 160),
+        qualification: qualification.slice(0, 140),
+        field: field.slice(0, 140),
+        startDate: block.dates?.startDate ?? "",
+        endDate: block.dates?.endDate ?? "",
+        description,
+      };
+    })
+    .filter((entry) => Object.values(entry).some(Boolean))
+    .slice(0, 12);
+}
+
+function parseLanguages(lines: string[]): CandidateLanguage[] {
+  const values = uniqueValues(
+    lines.flatMap((line) =>
+      line
+        .split(/[,;،؛]+/)
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+    12,
+  );
+
+  return values.map((name) => ({ name: name.slice(0, 80), proficiency: "" }));
+}
+
+function parseCertifications(lines: string[]): CandidateCertification[] {
+  return lines
+    .map(cleanLine)
+    .filter(Boolean)
+    .slice(0, 12)
+    .map((line) => {
+      const dates = extractDates(line);
+      const [name = "", issuer = ""] = splitEntryParts(stripDates(line));
+      return {
+        name: (issuer ? name : stripDates(line) || line).slice(0, 160),
+        issuer: issuer.slice(0, 160),
+        issueDate: (dates[0] ?? "").slice(0, 32),
+        expiryDate: (dates[1] ?? "").slice(0, 32),
+      };
+    });
+}
+
 // CVs list either "Role – Company" or "Company – Role". When the first part
 // carries a corporate marker it is the employer, so the two are swapped.
 const organizationMarkers = [
@@ -437,150 +694,6 @@ function looksLikeOrganization(value: string): boolean {
   );
 }
 
-function orderRoleAndOrganization(
-  first: string,
-  second: string,
-): { role: string; organization: string } {
-  if (!second) return { role: first, organization: "" };
-  if (looksLikeOrganization(first) && !looksLikeOrganization(second)) {
-    return { role: second, organization: first };
-  }
-  return { role: first, organization: second };
-}
-
-function parseExperience(lines: string[]): CandidateExperience[] {
-  if (lines.length === 0) return [];
-  const records = lines.map(cleanLine).filter(Boolean);
-  const entries: CandidateExperience[] = [];
-  let pendingDescription: string[] = [];
-
-  const flushDescription = () => {
-    if (pendingDescription.length === 0) return;
-    const description = pendingDescription.join("\n").slice(0, 1_800);
-    const last = entries.at(-1);
-    if (last && !last.description) {
-      last.description = description;
-    } else {
-      entries.push({
-        role: "",
-        organization: "",
-        location: "",
-        startDate: "",
-        endDate: "",
-        description,
-      });
-    }
-    pendingDescription = [];
-  };
-
-  for (const record of records) {
-    const dates = extractDateRange(record);
-    const withoutDates = stripDateRange(record, dates);
-    const parts = splitEntryParts(withoutDates).filter(Boolean);
-    const structured =
-      dates !== null ||
-      (parts.length >= 2 && parts.every((part) => part.length <= 90));
-
-    if (!structured) {
-      pendingDescription.push(record);
-      continue;
-    }
-
-    flushDescription();
-    const { role, organization } = orderRoleAndOrganization(
-      parts[0] ?? "",
-      parts[1] ?? "",
-    );
-    entries.push({
-      role: role.slice(0, 140),
-      organization: organization.slice(0, 160),
-      location: (parts[2] && parts[2].length <= 60 ? parts[2] : "").slice(
-        0,
-        120,
-      ),
-      startDate: dates?.startDate ?? "",
-      endDate: dates?.endDate ?? "",
-      description: parts.slice(2).join(" · ").slice(0, 1_800),
-    });
-  }
-
-  flushDescription();
-
-  return entries.slice(0, 12);
-}
-
-function parseEducation(lines: string[]): CandidateEducation[] {
-  if (lines.length === 0) return [];
-  const records = lines.map(cleanLine).filter(Boolean);
-  const entries: CandidateEducation[] = [];
-
-  for (const record of records) {
-    const dates = extractDateRange(record);
-    const withoutDates = stripDateRange(record, dates);
-    const parts = splitEntryParts(withoutDates).filter(Boolean);
-    const structured = dates !== null || parts.length >= 2;
-
-    if (!structured) {
-      const last = entries.at(-1);
-      if (last && !last.qualification) {
-        last.qualification = record.slice(0, 140);
-      } else if (last && !last.description) {
-        last.description = record.slice(0, 1_200);
-      } else {
-        entries.push({
-          institution: record.slice(0, 160),
-          qualification: "",
-          field: "",
-          startDate: "",
-          endDate: "",
-          description: "",
-        });
-      }
-      continue;
-    }
-
-    entries.push({
-      institution: (parts[0] ?? "").slice(0, 160),
-      qualification: (parts[1] ?? "").slice(0, 140),
-      field: (parts[2] ?? "").slice(0, 140),
-      startDate: dates?.startDate ?? "",
-      endDate: dates?.endDate ?? "",
-      description: parts.slice(3).join(" · ").slice(0, 1_200),
-    });
-  }
-
-  return entries.slice(0, 12);
-}
-
-function parseLanguages(lines: string[]): CandidateLanguage[] {
-  const values = uniqueValues(
-    lines.flatMap((line) =>
-      line
-        .split(/[,;،؛]+/)
-        .map((item) => item.trim())
-        .filter(Boolean),
-    ),
-    12,
-  );
-
-  return values.map((name) => ({ name: name.slice(0, 80), proficiency: "" }));
-}
-
-function parseCertifications(lines: string[]): CandidateCertification[] {
-  return lines
-    .map(cleanLine)
-    .filter(Boolean)
-    .slice(0, 12)
-    .map((line) => {
-      const [name = "", issuer = ""] = splitEntry(line);
-      return {
-        name: (issuer ? name : line).slice(0, 160),
-        issuer: issuer.slice(0, 160),
-        issueDate: "",
-        expiryDate: "",
-      };
-    });
-}
 
 const educationKeywords = [
   "universite",

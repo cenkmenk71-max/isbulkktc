@@ -656,8 +656,12 @@ assert.match(dashboard, /getCandidateWorkspace/);
 assert.match(companyDirectoryPage, /await connection\(\)/);
 assert.match(profileForm, /saveCandidateProfile/);
 assert.match(profileAction, /getCurrentUser/);
-assert.match(profileAction, /candidateProfileSchema\.safeParse/);
+assert.match(profileAction, /candidateProfileUpdateSchema\.safeParse/);
 assert.match(profileAction, /from\("candidate_profiles"\)\.upsert/);
+// The name is not a `candidate_profiles` column; it must be written to
+// `profiles.display_name`, the only column the `authenticated` UPDATE grant
+// exposes besides `locale`.
+assert.match(profileAction, /from\("profiles"\)\s*\n?\s*\.update\(\{ display_name:/);
 assert.doesNotMatch(profileAction, /visibility\s*:/);
 assert.match(
   candidateProfileBaseMigration,

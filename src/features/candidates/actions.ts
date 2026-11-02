@@ -1,6 +1,6 @@
 "use server";
 
-import { candidateProfileSchema, type CandidateProfileFormState } from "./schemas";
+import { candidateProfileUpdateSchema, type CandidateProfileFormState } from "./schemas";
 import { getCurrentUser } from "@/server/dal/user";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { sendResumeReceivedEmail } from "@/server/email/mailer";
@@ -30,7 +30,8 @@ export async function saveCandidateProfile(
     }
   };
 
-  const result = candidateProfileSchema.safeParse({
+  const result = candidateProfileUpdateSchema.safeParse({
+    fullName: formData.get("fullName"),
     headline: formData.get("headline"),
     location: formData.get("location"),
     skillsText: formData.get("skillsText"),
@@ -62,6 +63,24 @@ export async function saveCandidateProfile(
   if (error) {
     console.error("Candidate profile save failed.", { code: error.code });
     return { status: "error", message: "saveFailed" };
+  }
+
+  // The name lives on `public.profiles.display_name` (it is the column the auth
+  // trigger auto-fills from the provider), not on `candidate_profiles`, so it is
+  // written separately. Only `display_name` and `locale` are in the
+  // `authenticated` UPDATE grant, which is exactly this column.
+  if (result.data.fullName !== user.displayName) {
+    const { error: nameError } = await supabase
+      .from("profiles")
+      .update({ display_name: result.data.fullName })
+      .eq("id", user.id);
+
+    if (nameError) {
+      console.error("Candidate display name save failed.", {
+        code: nameError.code,
+      });
+      return { status: "error", message: "saveFailed" };
+    }
   }
 
   // A CV import runs entirely in the browser, so the profile save is the first

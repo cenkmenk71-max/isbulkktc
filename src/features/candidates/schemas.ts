@@ -118,6 +118,24 @@ export type CandidateProfileValues = {
   certifications: CandidateCertification[];
 };
 
+/**
+ * The write shape for the profile form. `fullName` is not part of
+ * `candidateProfileSchema` because that schema also validates what is *read*
+ * back from `candidate_profiles`, which has no name column — the name lives on
+ * `public.profiles.display_name`. Keeping it in a separate write-only schema
+ * means the read path cannot start failing on a value it never selects.
+ *
+ * The bounds mirror the `display_name` CHECK (`char_length between 2 and 80`
+ * and `display_name = btrim(display_name)`).
+ */
+export const candidateProfileUpdateSchema = candidateProfileSchema.extend({
+  fullName: z.string().trim().min(2).max(80),
+});
+
+export type CandidateProfileUpdate = z.infer<
+  typeof candidateProfileUpdateSchema
+>;
+
 export type CandidateProfileFormState = {
   status: "idle" | "error" | "success";
   message:

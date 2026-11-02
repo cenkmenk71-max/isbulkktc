@@ -107,26 +107,19 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Greet a brand-new account exactly once, on the first callback that resolves
-  // its session. The freshness window keeps this to genuine sign-ups.
-  if (!isOAuthFlow) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (user?.email && isFreshAccount(user.created_at)) {
-      await greetNewAccount({
-        email: user.email,
-        audience,
-        locale,
-        user,
-      });
-    }
-  }
+  // Past this point the session is already established — the exchange above
+  // wrote the auth cookies. Everything that follows only *decorates* that
+  // session (provider claims, e-mail language, the welcome mail), so a failure
+  // in any of it must never send the user to the failure page: that would
+  // report a broken sign-in for a sign-in that in fact succeeded, and strand
+  // them on the login screen without the account they just created.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (isOAuthFlow) {
     // Pull the provider's own claims (avatar, given/family name) onto the
-    // profile. Best-effort: the session is already established, so a failure
-    // here must not turn a successful sign-in into an error page.
+    // profile.
     const { error: syncError } = await supabase.rpc("sync_oauth_profile");
 
     if (syncError) {
@@ -139,24 +132,10 @@ export async function GET(request: NextRequest) {
       request.cookies.get(oauthSignupIntentCookieName)?.value,
     );
 
-    if (intent?.locale === locale) {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        console.error("Supabase OAuth callback user could not be verified.", {
-          code: userError?.code,
-        });
-        return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
-      }
-
+    if (user && intent?.locale === locale) {
       // The email templates can only read `auth.users.user_metadata.locale`
       // (`.Data.locale`), which only the password sign-up path sets. Without
       // this an OAuth account is mailed in Turkish whatever language it used.
-      // A failure here only costs the email language, so it is logged rather
-      // than turned into a failed sign-in.
       if (user.user_metadata?.locale !== intent.locale) {
         const { error: metadataError } = await supabase.auth.updateUser({
           data: mergeLocaleIntoUserMetadata(user.user_metadata, intent.locale),
@@ -171,18 +150,15 @@ export async function GET(request: NextRequest) {
       }
 
       if (isNewOAuthAccount(user.created_at, intent)) {
-        const { data: profile, error: profileError } = await supabase
+        const { error: profileError } = await supabase
           .from("profiles")
           .update({ locale: intent.locale })
-          .eq("id", user.id)
-          .select("id")
-          .maybeSingle();
+          .eq("id", user.id);
 
-        if (profileError || !profile) {
+        if (profileError) {
           console.error("New OAuth profile locale could not be stored.", {
-            code: profileError?.code,
+            code: profileError.code,
           });
-          return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
         }
 
         if (user.email) {
@@ -195,6 +171,16 @@ export async function GET(request: NextRequest) {
         }
       }
     }
+  } else if (user?.email && isFreshAccount(user.created_at)) {
+    // Greet a brand-new account exactly once, on the first callback that
+    // resolves its session. The freshness window keeps this to genuine
+    // sign-ups.
+    await greetNewAccount({
+      email: user.email,
+      audience,
+      locale,
+      user,
+    });
   }
 
   return redirectAndClearOAuthIntent(

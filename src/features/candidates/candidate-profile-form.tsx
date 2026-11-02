@@ -98,14 +98,23 @@ function ProfileSection({
 
 export function CandidateProfileForm({
   profile,
+  account,
 }: {
   profile: CandidateProfileValues;
+  account: {
+    displayName: string;
+    email: string | null;
+    avatarUrl: string | null;
+    givenName: string | null;
+    familyName: string | null;
+  };
 }) {
   const copy = useTranslations("CandidateDashboard");
   const [state, action, pending] = useActionState(
     saveCandidateProfile,
     initialState,
   );
+  const [fullName, setFullName] = useState(account.displayName);
   const [headline, setHeadline] = useState(profile.headline ?? "");
   const [location, setLocation] = useState(
     resolveNorthernCyprusDistrict(profile.location) ?? "",
@@ -371,6 +380,15 @@ export function CandidateProfileForm({
             value={resumeImported ? "1" : ""}
           />
 
+          <ProfileEntry
+            label={copy("fullNameLabel")}
+            maxLength={80}
+            name="fullName"
+            onChange={setFullName}
+            hint={copy("fullNameHint")}
+            placeholder={copy("fullNamePlaceholder")}
+            value={fullName}
+          />
           <ProfileEntry
             label={copy("headlineLabel")}
             maxLength={140}
@@ -753,6 +771,56 @@ export function CandidateProfileForm({
         </form>
       </section>
       <aside className="candidate-profile-aside">
+        <section className="candidate-account-card" aria-labelledby="account-title">
+          <h2 id="account-title">{copy("accountTitle")}</h2>
+          <div className="candidate-account-identity">
+            {account.avatarUrl ? (
+              // The provider avatar is a remote URL the user did not upload, so
+              // it is rendered as a plain <img> (the CSP already allows https
+              // images) rather than routed through the image optimizer, which
+              // would need every provider host in `images.remotePatterns`.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt=""
+                aria-hidden="true"
+                className="candidate-account-avatar"
+                height={48}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                src={account.avatarUrl}
+                width={48}
+              />
+            ) : (
+              <span
+                aria-hidden="true"
+                className="candidate-account-avatar candidate-account-avatar--monogram"
+              >
+                {account.displayName.slice(0, 1).toLocaleUpperCase()}
+              </span>
+            )}
+            <div>
+              <p className="candidate-account-name">{account.displayName}</p>
+              {account.email ? (
+                <p className="candidate-account-email">{account.email}</p>
+              ) : null}
+            </div>
+          </div>
+          {account.givenName || account.familyName ? (
+            <dl className="candidate-account-details">
+              <div>
+                <dt>{copy("givenNameLabel")}</dt>
+                <dd>{account.givenName ?? copy("accountValueMissing")}</dd>
+              </div>
+              <div>
+                <dt>{copy("familyNameLabel")}</dt>
+                <dd>{account.familyName ?? copy("accountValueMissing")}</dd>
+              </div>
+            </dl>
+          ) : null}
+          {account.avatarUrl ? (
+            <p className="candidate-account-note">{copy("accountSyncedNote")}</p>
+          ) : null}
+        </section>
         <section className="candidate-completion-card" aria-labelledby="completion-title">
           <div className="candidate-aside-heading">
             <span className="candidate-aside-icon" aria-hidden="true">

@@ -4428,12 +4428,74 @@ a {
   gap: 14px;
 }
 .candidate-completion-card,
+.candidate-account-card,
 .candidate-privacy-card {
   padding: clamp(20px, 2.5vw, 28px);
   border: 1px solid var(--color-crayon-200);
   border-radius: 14px;
   background: var(--surface);
   box-shadow: var(--shadow-xs);
+}
+.candidate-account-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 0;
+}
+.candidate-account-avatar {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--green-soft);
+}
+.candidate-account-avatar--monogram {
+  display: grid;
+  place-items: center;
+  color: var(--green);
+  font-size: 20px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.candidate-account-name {
+  margin: 0;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 590;
+  letter-spacing: -0.02em;
+}
+.candidate-account-email {
+  margin: 2px 0 0;
+  color: var(--ink-4);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.candidate-account-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0 0;
+}
+.candidate-account-details dt {
+  color: var(--ink-4);
+  font:
+    600 10px/1.4 var(--font-geist-mono),
+    monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.candidate-account-details dd {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.candidate-account-note {
+  margin: 14px 0 0;
+  color: var(--ink-4);
+  font-size: 12.5px;
+  line-height: 1.5;
 }
 .candidate-aside-heading {
   display: flex;

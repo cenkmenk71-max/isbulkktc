@@ -106,7 +106,16 @@ export default async function CandidateDashboardPage() {
           <p role="status">{copy("noApplications")}</p>
         )}
       </section>
-      <CandidateProfileForm profile={profile} />
+      <CandidateProfileForm
+        account={{
+          displayName: user.displayName,
+          email: user.email,
+          avatarUrl: user.avatarUrl,
+          givenName: user.givenName,
+          familyName: user.familyName,
+        }}
+        profile={profile}
+      />
     </div>
   );
 }
