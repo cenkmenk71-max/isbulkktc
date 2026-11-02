@@ -14,8 +14,10 @@ const oauthProviderNames: Record<OAuthProvider, string> = {
 };
 
 const oauthProviderBackgrounds: Record<OAuthProvider, string> = {
-  google: "rgb(66, 133, 244)",
-  linkedin_oidc: "rgb(10, 145, 189)",
+  // Brand blues leave the white label below AA (Google 3.51:1, LinkedIn
+  // 3.56:1); these darkened values clear the 4.5:1 floor.
+  google: "rgb(23, 101, 204)",
+  linkedin_oidc: "rgb(11, 106, 146)",
 };
 
 async function expectConfiguredOAuthProviders(
