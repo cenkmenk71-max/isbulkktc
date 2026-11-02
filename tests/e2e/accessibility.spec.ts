@@ -22,6 +22,9 @@ const publicRoutes = [
   { path: "/contact", name: "contact" },
   { path: "/login", name: "login" },
   { path: "/register", name: "register" },
+  // The PWA install landing page is a real public route reached by scanning a
+  // QR code, so it is held to the same standard as the rest of the site.
+  { path: "/install", name: "install" },
   { path: "/privacy", name: "privacy" },
   { path: "/cookies", name: "cookies" },
   { path: "/terms", name: "terms" },
