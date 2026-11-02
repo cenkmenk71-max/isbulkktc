@@ -69,6 +69,7 @@ export async function startOAuthSignIn(
   ).toString();
   const supabase = await createSupabaseServerClient({
     allowCookieWrites: true,
+    experimental: { appendPkceFlowIdToRedirects: true },
   });
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: result.data.provider,

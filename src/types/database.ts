@@ -31,6 +31,9 @@ export type Database = {
           display_name: string;
           locale: string;
           status: string;
+          avatar_url: string | null;
+          given_name: string | null;
+          family_name: string | null;
           created_at: string;
           updated_at: string;
         },
@@ -39,6 +42,9 @@ export type Database = {
           display_name?: string;
           locale?: string;
           status?: never;
+          avatar_url?: string | null;
+          given_name?: string | null;
+          family_name?: string | null;
           created_at?: never;
           updated_at?: never;
         },
@@ -47,6 +53,9 @@ export type Database = {
           locale?: string;
           id?: never;
           status?: never;
+          avatar_url?: string | null;
+          given_name?: string | null;
+          family_name?: string | null;
           created_at?: never;
           updated_at?: never;
         }
@@ -379,6 +388,10 @@ export type Database = {
       create_company: {
         Args: { company_name: string; company_slug: string };
         Returns: string;
+      };
+      sync_oauth_profile: {
+        Args: Record<PropertyKey, never>;
+        Returns: undefined;
       };
       has_platform_role: {
         Args: { _role: PlatformRole };

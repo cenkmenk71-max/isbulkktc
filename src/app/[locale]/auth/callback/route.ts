@@ -7,6 +7,7 @@ import type { WelcomeAudience } from "../../../../../supabase/functions/_shared/
 import {
   audienceFromCallbackParam,
   parseAuthFlow,
+  parsePkceFlowId,
   resolveAuthDestination,
   resolveAuthFailurePath,
 } from "@/features/identity/auth-routing";
@@ -76,6 +77,11 @@ export async function GET(request: NextRequest) {
   const isOAuthFlow = flow === "oauth";
   const isResetFlow = flow === "reset";
   const code = request.nextUrl.searchParams.get("code");
+  // `sb_flow_id` is appended by `appendPkceFlowIdToRedirects` on the OAuth
+  // start (see startOAuthSignIn). Passing it selects the verifier created by
+  // that exact flow, instead of the shared legacy key — which mirrors only the
+  // most recently started flow and breaks when two flows overlap.
+  const flowId = parsePkceFlowId(request.nextUrl.searchParams.get("sb_flow_id"));
   const failurePath = resolveAuthFailurePath(flow, locale, audience);
 
   if (!code || request.nextUrl.searchParams.has("error")) {
@@ -85,7 +91,10 @@ export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient({
     allowCookieWrites: true,
   });
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { error } = await supabase.auth.exchangeCodeForSession(
+    code,
+    flowId ? { flowId } : undefined,
+  );
 
   if (error) {
     console.error("Supabase auth callback failed.", { code: error.code });
@@ -115,6 +124,17 @@ export async function GET(request: NextRequest) {
   }
 
   if (isOAuthFlow) {
+    // Pull the provider's own claims (avatar, given/family name) onto the
+    // profile. Best-effort: the session is already established, so a failure
+    // here must not turn a successful sign-in into an error page.
+    const { error: syncError } = await supabase.rpc("sync_oauth_profile");
+
+    if (syncError) {
+      console.error("OAuth profile auto-fill could not be applied.", {
+        code: syncError.code,
+      });
+    }
+
     const intent = parseOAuthSignupIntent(
       request.cookies.get(oauthSignupIntentCookieName)?.value,
     );

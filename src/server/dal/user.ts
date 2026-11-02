@@ -18,6 +18,15 @@ export type CurrentUserDTO = {
   displayName: string;
   locale: AppLocale;
   status: "active" | "suspended" | "closed";
+  /**
+   * Provider-sourced identity claims (Google/LinkedIn), written by the auth
+   * trigger and `sync_oauth_profile`. Read-only for the user — the columns are
+   * not in the `authenticated` UPDATE grant — so they are surfaced as profile
+   * defaults rather than editable fields.
+   */
+  avatarUrl: string | null;
+  givenName: string | null;
+  familyName: string | null;
 };
 
 function isMissingOrUnauthenticatedAuthError(error: unknown): boolean {
@@ -83,7 +92,9 @@ export const getCurrentUser = cache(
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("id, display_name, locale, status")
+      .select(
+        "id, display_name, locale, status, avatar_url, given_name, family_name",
+      )
       .eq("id", user.id)
       .maybeSingle();
 
@@ -118,6 +129,9 @@ export const getCurrentUser = cache(
       displayName: profile.display_name,
       locale: profile.locale,
       status: profile.status,
+      avatarUrl: profile.avatar_url,
+      givenName: profile.given_name,
+      familyName: profile.family_name,
     };
   },
 );

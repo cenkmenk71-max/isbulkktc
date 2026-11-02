@@ -46,6 +46,17 @@ export function createSupabasePublicClient() {
 
 type SupabaseServerOptions = {
   allowCookieWrites?: boolean;
+  /**
+   * Opt-in auth feature flags. `appendPkceFlowIdToRedirects` makes the PKCE
+   * flow id travel through the OAuth redirect (`sb_flow_id`) so the callback
+   * can select the verifier of *that* flow. Without it every flow falls back to
+   * the shared legacy key, which mirrors only the most recently started flow —
+   * so two flows in flight (e.g. Google, then LinkedIn) collide and the
+   * exchange fails with `bad_code_verifier`.
+   */
+  experimental?: {
+    appendPkceFlowIdToRedirects?: boolean;
+  };
 };
 
 export async function createSupabaseServerClient(
@@ -75,5 +86,8 @@ export async function createSupabaseServerClient(
 
   return createServerClient<Database>(supabaseUrl, supabaseKey, {
     cookies: cookieMethods,
+    ...(options.experimental
+      ? { auth: { experimental: options.experimental } }
+      : {}),
   });
 }
