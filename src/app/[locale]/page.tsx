@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { HomeExperience } from "@/components/home/home-experience";
 import { publicJobSearchSchema } from "@/features/jobs/schemas";
+import { resolveAuthErrorRedirect } from "@/features/identity/auth-routing";
 import { routing } from "@/i18n/routing";
 import { createLocalizedPageMetadata } from "@/lib/seo";
 import { searchPublicJobPreviews } from "@/server/dal/jobs";
@@ -45,6 +46,11 @@ export default async function HomePage({
     notFound();
   }
   setRequestLocale(locale);
+
+  const authErrorRedirect = resolveAuthErrorRedirect(query, locale);
+  if (authErrorRedirect) {
+    redirect(authErrorRedirect);
+  }
 
   const defaultFilters = publicJobSearchSchema.parse({});
   const search = publicJobSearchSchema.safeParse({

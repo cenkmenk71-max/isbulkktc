@@ -30,11 +30,46 @@ export function parseAuthFlow(value: string | null | undefined): AuthFlow {
   return "email";
 }
 
+/**
+ * The `sb_flow_id` an OAuth start appends to the callback URL (auth-js
+ * `appendPkceFlowIdToRedirects`). It is 32 lowercase hex characters — the same
+ * shape `generatePKCEFlowId` produces. The callback is a public GET, so the
+ * value is untrusted: it is only forwarded to `exchangeCodeForSession` when it
+ * matches, otherwise the exchange falls back to the legacy verifier key.
+ */
+export function parsePkceFlowId(
+  value: string | null | undefined,
+): string | undefined {
+  return typeof value === "string" && /^[0-9a-f]{32}$/.test(value)
+    ? value
+    : undefined;
+}
+
 export function resolveAuthDestination(
   audience: AccountAudience,
   locale: AppLocale,
 ): string {
   return `${getLocalePrefix(locale)}${audienceDestinations[audience]}`;
+}
+
+/**
+ * GoTrue answers a failed OAuth round-trip (or an unusable link) by redirecting
+ * to the Site URL — the bare origin — with the failure in the query string,
+ * *not* to `/auth/callback`. The marketing home page has no handler for that,
+ * so the visitor used to land on an unrelated page with no explanation.
+ *
+ * When the query carries GoTrue's `error_code`, send them to the localized
+ * login page, which already renders the OAuth failure message. Only
+ * `error_code` is trusted as the signal; a bare `?error=` is left alone so the
+ * home page cannot be turned into an open redirect by an arbitrary link.
+ */
+export function resolveAuthErrorRedirect(
+  query: Record<string, string | string[] | undefined>,
+  locale: AppLocale,
+): string | null {
+  const errorCode = query.error_code;
+  if (typeof errorCode !== "string" || errorCode.length === 0) return null;
+  return `${getLocalePrefix(locale)}/login?error=oauth`;
 }
 
 /**
