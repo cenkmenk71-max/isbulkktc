@@ -45,6 +45,8 @@
     "pushNotConfigured": "Bildirimler bu kurulumda kullanılamıyor.",
     "pushUnsupported": "Bu tarayıcı bildirimleri desteklemiyor. iPhone'da bildirimler yalnızca ana ekrana eklenen uygulamada çalışır.",
     "pushDenied": "Bildirim izni reddedilmiş. Tarayıcı ayarlarından açabilirsiniz.",
+    "pushSignInRequired": "Bildirimleri açmak için önce giriş yapmalısınız.",
+    "pushSignInAction": "Giriş yap",
     "pushEnable": "Bildirimleri aç",
     "pushDisable": "Bildirimleri kapat",
     "pushLoading": "Bildirim durumu yükleniyor…",

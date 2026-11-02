@@ -45,6 +45,8 @@
     "pushNotConfigured": "Notifications are unavailable on this deployment.",
     "pushUnsupported": "This browser does not support notifications. On iPhone, notifications work only in the app added to the home screen.",
     "pushDenied": "Notification permission was denied. You can re-enable it in your browser settings.",
+    "pushSignInRequired": "Sign in first to turn on notifications.",
+    "pushSignInAction": "Sign in",
     "pushEnable": "Enable notifications",
     "pushDisable": "Turn off notifications",
     "pushLoading": "Loading notification status…",

@@ -45,6 +45,8 @@
     "pushNotConfigured": "Benachrichtigungen sind in dieser Bereitstellung nicht verfügbar.",
     "pushUnsupported": "Dieser Browser unterstützt keine Benachrichtigungen. Auf dem iPhone funktionieren sie nur in der zum Startbildschirm hinzugefügten App.",
     "pushDenied": "Die Benachrichtigungsberechtigung wurde abgelehnt. Sie können sie in den Browsereinstellungen aktivieren.",
+    "pushSignInRequired": "Melden Sie sich zuerst an, um Benachrichtigungen zu aktivieren.",
+    "pushSignInAction": "Anmelden",
     "pushEnable": "Benachrichtigungen aktivieren",
     "pushDisable": "Benachrichtigungen ausschalten",
     "pushLoading": "Benachrichtigungsstatus wird geladen…",

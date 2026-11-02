@@ -172,6 +172,21 @@ test("the install page offers a manual path when no install prompt is available"
   await expect(page.locator("a.pwa-install-primary").first()).toBeVisible();
 });
 
+test("an anonymous visitor is asked to sign in, not handed a dead permission button", async ({
+  page,
+}) => {
+  // A push subscription row is bound to `auth.uid()`. Asking an anonymous
+  // visitor for notification permission would spend the browser prompt on a
+  // grant that can never be stored — and on iOS that prompt is offered once.
+  await page.goto("/tr/install");
+  await expect(page.locator(".pwa-push-button")).toHaveCount(0);
+  await expect(page.locator(".pwa-push-signin-row")).toBeVisible();
+  await expect(page.locator(".pwa-push-signin")).toHaveAttribute(
+    "href",
+    /\/login$/,
+  );
+});
+
 test("the QR route returns a scannable SVG for the install URL", async ({ request }) => {
   const response = await request.get("/api/qr?format=svg&next=%2Fjobs");
   expect(response.ok()).toBe(true);

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import {
   getPushPreferenceState,
@@ -76,6 +77,13 @@ export function PushPermissionControl({ vapidPublicKey }: Props) {
       setError(t("pushUnsupported"));
       return;
     }
+    // Never spend the browser permission prompt on a visitor who cannot store the
+    // result: the server binds a subscription to `auth.uid()`, so an anonymous
+    // grant would be recorded nowhere and iOS offers the prompt only once.
+    if (!state?.authenticated) {
+      setError(t("pushSignInRequired"));
+      return;
+    }
 
     setBusy(true);
     trackInstallEvent("push_permission_requested");
@@ -109,18 +117,19 @@ export function PushPermissionControl({ vapidPublicKey }: Props) {
       }
 
       trackInstallEvent("push_subscription_created");
-      setState({
+      setState((prev) => ({
         permission: "granted",
         subscribed: true,
         preferences: null,
         supported: true,
-      });
+        authenticated: prev?.authenticated ?? true,
+      }));
     } catch {
       setError(t("pushSaveFailed"));
     } finally {
       if (mounted.current) setBusy(false);
     }
-  }, [t, vapidPublicKey]);
+  }, [t, vapidPublicKey, state?.authenticated]);
 
   const unsubscribe = useCallback(async () => {
     setError(null);
@@ -171,6 +180,16 @@ export function PushPermissionControl({ vapidPublicKey }: Props) {
       </div>
       {unsupported ? (
         <p className="pwa-push-note">{t("pushUnsupported")}</p>
+      ) : !state.authenticated ? (
+        // A subscription row is bound to the account, so an anonymous visitor has
+        // nothing to enable. Offering the button would spend the browser
+        // permission prompt on a grant that cannot be stored.
+        <div className="pwa-push-signin-row">
+          <p className="pwa-push-note">{t("pushSignInRequired")}</p>
+          <Link href="/login" className="pwa-push-signin">
+            {t("pushSignInAction")}
+          </Link>
+        </div>
       ) : state.permission === "denied" ? (
         <p className="pwa-push-note" data-push-state="denied">
           {t("pushDenied")}

@@ -87,6 +87,13 @@ export type PushPreferenceState = {
   subscribed: boolean;
   preferences: PushPreferences | null;
   supported: boolean;
+  /**
+   * Whether a session exists. A subscription row is bound to `auth.uid()`, so an
+   * anonymous visitor cannot store one; the control uses this to ask for a
+   * sign-in instead of triggering a browser permission prompt whose grant could
+   * never be saved (and which iOS only offers once).
+   */
+  authenticated: boolean;
 };
 
 const preferenceSchema = z.object({
@@ -130,7 +137,13 @@ export async function savePushPreferences(
  */
 export async function getPushPreferenceState(): Promise<PushPreferenceState> {
   if (!isPushConfigured()) {
-    return { permission: "unsupported", subscribed: false, preferences: null, supported: false };
+    return {
+      permission: "unsupported",
+      subscribed: false,
+      preferences: null,
+      supported: false,
+      authenticated: false,
+    };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -138,7 +151,13 @@ export async function getPushPreferenceState(): Promise<PushPreferenceState> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { permission: "default", subscribed: false, preferences: null, supported: true };
+    return {
+      permission: "default",
+      subscribed: false,
+      preferences: null,
+      supported: true,
+      authenticated: false,
+    };
   }
 
   const [subscriptions, preferences] = await Promise.all([
@@ -161,5 +180,6 @@ export async function getPushPreferenceState(): Promise<PushPreferenceState> {
         }
       : null,
     supported: true,
+    authenticated: true,
   };
 }

@@ -13185,6 +13185,22 @@ html[dir="rtl"] input[name="slug"] {
   cursor: progress;
 }
 
+.pwa-push-signin-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.pwa-push-signin {
+  width: fit-content;
+  color: var(--green);
+  font-size: var(--type-supporting);
+  font-weight: 600;
+  text-underline-offset: 3px;
+  text-decoration: underline;
+}
+
 .pwa-spin {
   animation: pwa-spin 900ms linear infinite;
 }
