@@ -34,9 +34,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const jobs = await listPublicJobSitemapEntries();
 
+  // The listing routes advertise the newest vacancy `<lastmod>`, so it must be
+  // the same instant the vacancy entry below carries (`modifiedAt`). Deriving it
+  // from `publishedAt` would make the two disagree whenever a listing is edited
+  // after publication, and a `<lastmod>` that cannot be verified against the page
+  // is one Google drops.
   const newestJobDate = jobs.reduce<Date | null>((newest, job) => {
-    const published = new Date(job.publishedAt);
-    return newest === null || published > newest ? published : newest;
+    const modified = new Date(job.modifiedAt);
+    return newest === null || modified > newest ? modified : newest;
   }, null);
 
   const staticEntries: MetadataRoute.Sitemap = publicPages.flatMap(

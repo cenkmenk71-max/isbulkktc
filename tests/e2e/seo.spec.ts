@@ -506,3 +506,49 @@ test("localized vacancy URLs canonicalise to the Turkish listing", async ({
     canonicalUrl,
   );
 });
+
+test("filtered job searches that match nothing are not indexable", async ({
+  page,
+}) => {
+  // A search that returns no results still answers 200 with a full page shell,
+  // so without a `noindex` it is a soft 404 that competes with the real listing.
+  for (const search of ["?query=zzzznomatchzzz", "?district=zzz-not-a-district"]) {
+    await page.goto(`/jobs${search}`, { waitUntil: "domcontentloaded" });
+    await expect(
+      page.locator('meta[name="robots"]'),
+      `${search} renders an empty result and must not be indexed`,
+    ).toHaveAttribute("content", /noindex/);
+  }
+
+  // The unfiltered listing is the canonical, indexable page.
+  await page.goto("/jobs", { waitUntil: "domcontentloaded" });
+  await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+});
+
+test("a job page number past the last page is a hard 404", async ({ page }) => {
+  const listing = await page.request.get("/jobs");
+  expect(listing.ok()).toBe(true);
+
+  // `?page=N` beyond the last page would otherwise serve the final page again
+  // under a fresh, never-linked URL (a soft 404 that the canonical to /jobs
+  // cannot rescue). It must be a genuine 404.
+  const outOfRange = await page.request.get("/jobs?page=1000");
+  expect(outOfRange.status()).toBe(404);
+
+  // A real page number keeps working.
+  const firstPage = await page.request.get("/jobs?page=1");
+  expect(firstPage.status()).toBe(200);
+});
+
+test("hreflang alternates are declared once, in the HTML head", async ({
+  page,
+}) => {
+  const response = await page.request.get("/jobs");
+  expect(response.ok()).toBe(true);
+
+  // The middleware used to also emit a `Link` response header advertising every
+  // locale variant — including for paths that canonicalise to one locale, and
+  // for 404s. The HTML head is the single source of truth.
+  const linkHeader = response.headers()["link"] ?? "";
+  expect(linkHeader).not.toContain("hreflang");
+});

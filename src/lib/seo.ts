@@ -7,6 +7,7 @@ import { getAppBaseUrl } from "@/server/config/app-url";
 // preview budget and makes link unfurls slow on every platform, so the card is
 // a separate, lighter asset.
 const socialImagePath = "/images/og-cover.webp";
+const socialImageType = "image/webp";
 const socialImageWidth = 1200;
 const socialImageHeight = 630;
 
@@ -33,6 +34,7 @@ export function getLocalizedSocialImageAlt(locale: AppLocale): string {
 export function getDefaultSocialImage(locale: AppLocale, baseUrl: URL) {
   return {
     url: new URL(socialImagePath, baseUrl).toString(),
+    type: socialImageType,
     width: socialImageWidth,
     height: socialImageHeight,
     alt: getLocalizedSocialImageAlt(locale),
@@ -136,6 +138,7 @@ export function createLocalizedPageMetadata({
       images: [
         {
           url: imageUrl,
+          type: socialImageType,
           width: socialImageWidth,
           height: socialImageHeight,
           alt: getLocalizedSocialImageAlt(locale),
