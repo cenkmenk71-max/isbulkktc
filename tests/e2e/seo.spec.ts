@@ -540,6 +540,24 @@ test("a job page number past the last page is a hard 404", async ({ page }) => {
   expect(firstPage.status()).toBe(200);
 });
 
+test("an out-of-range page inside a filter is also a hard 404", async ({
+  page,
+}) => {
+  // The RPC clamps `_page` to the last page *of the filtered set*, so a
+  // filter that matches one page of results still answers 200 for `?page=50`
+  // unless the render path rejects it. The empty-result filter (`noindex`) and
+  // the out-of-range page (`404`) are separate guards and both must hold when
+  // they combine.
+  const filtered = await page.request.get("/jobs?district=Girne");
+  expect(filtered.ok()).toBe(true);
+
+  const outOfRange = await page.request.get("/jobs?district=Girne&page=50");
+  expect(outOfRange.status()).toBe(404);
+
+  const firstPage = await page.request.get("/jobs?district=Girne&page=1");
+  expect(firstPage.status()).toBe(200);
+});
+
 test("hreflang alternates are declared once, in the HTML head", async ({
   page,
 }) => {

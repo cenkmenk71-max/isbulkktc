@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { JobsExperience } from "@/components/jobs/jobs-experience";
-import { publicJobSearchSchema } from "@/features/jobs/schemas";
+import {
+  publicJobSearchSchema,
+  type PublicJobSearchFilters,
+} from "@/features/jobs/schemas";
 import { routing } from "@/i18n/routing";
 import { createLocalizedPageMetadata } from "@/lib/seo";
 import { searchPublicJobs } from "@/server/dal/jobs";
@@ -11,6 +15,31 @@ type JobsPageProps = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+// `generateMetadata` and the page both need the result set, and Next renders
+// them within one request scope, so memoise per request instead of querying
+// twice. The key is the primitive filter values, not the filter object: React
+// compares arguments by reference, so two structurally equal objects from two
+// parses would miss the cache.
+const searchPublicJobsOnce = cache(
+  (
+    query: string,
+    district: string | null,
+    jobType: string | null,
+    workplaceMode: string | null,
+    page: number,
+  ) => searchPublicJobs({ query, district, jobType, workplaceMode, page }),
+);
+
+function searchJobsOnce(filters: PublicJobSearchFilters) {
+  return searchPublicJobsOnce(
+    filters.query,
+    filters.district,
+    filters.jobType,
+    filters.workplaceMode,
+    filters.page,
+  );
+}
 
 function parseJobSearchQuery(
   query: Record<string, string | string[] | undefined>,
@@ -76,7 +105,7 @@ export async function generateMetadata({
       filters.workplaceMode,
   );
   if (isFiltered) {
-    const results = await searchPublicJobs(filters);
+    const results = await searchJobsOnce(filters);
     if (results.total === 0) return noIndexSearchMetadata(metadata);
   }
 
@@ -101,7 +130,7 @@ export default async function JobsPage({
   const filters = search.success
     ? search.data
     : publicJobSearchSchema.parse({});
-  const results = search.success ? await searchPublicJobs(filters) : null;
+  const results = search.success ? await searchJobsOnce(filters) : null;
   // `?page=N` past the last page is not a real page: the search RPC clamps the
   // offset to the final page, so it would otherwise serve that page's content
   // again under a fresh, never-linked URL (a soft 404). Fail it here, on the
