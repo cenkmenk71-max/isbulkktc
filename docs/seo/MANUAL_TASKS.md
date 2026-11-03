@@ -7,34 +7,30 @@ Son güncelleme: 2026-11-03. Hedef: `https://isbulkktc.com`.
 
 ---
 
-## 1. 🔴 ZORUNLU — DNSSEC DS kaydı (registrar)
+## 1. ✅ TAMAM — DNSSEC aktif (elle iş YOK)
 
-**Durum:** Cloudflare tarafında DNSSEC **etkin** ama durum `pending`; üst bölgede (registrar)
-DS kaydı **yok**. Kanıt: `dig DS isbulkktc.com` → boş; Cloudflare API `/dnssec` →
-`status: "pending"`. DNSSEC, DS kaydı yayınlanana kadar **doğrulanmıyor**.
+**Durum: yayında ve doğrulanıyor.** Alan adı **Cloudflare Registrar'da** kayıtlı
+(RDAP: `registrar = Cloudflare, Inc.`), bu yüzden DNSSEC açıldığında Cloudflare DS kaydını
+registry'ye **otomatik** yayınlıyor — ayrı bir registrar adımı gerekmiyor.
 
-**Yapılacak:** Alan adı sağlayıcının (registrar) panelinde DNSSEC / DS kaydı ekranına
-aşağıdaki DS kaydını gir. Cloudflare panelinde **DNS → Settings → DNSSEC** sayfası
-bu kaydı zaten gösterir; oradan kopyala.
+Doğrulandı (2026-11-03, üç bağımsız kaynak):
 
-```
-Key Tag:        2371
-Algorithm:      13 (ECDSAP256SHA256)
-Digest Type:    2 (SHA-256)
-Digest:         36E054F2B3F7EC415B0BE85C8CB301DBB439CF7FA010AE82AAE106C3C583775B
-```
+| Kaynak | Sonuç |
+|---|---|
+| Cloudflare API `/dnssec` | `status: active` |
+| Cloudflare DoH (`DS isbulkktc.com`) | DS döndü, **`AD: true`** (doğrulanmış) |
+| Google DoH (`DS isbulkktc.com`) | DS döndü, **`AD: true`** |
+| Registry RDAP (Verisign + rdap.org) | `delegationSigned: true`, DS yayınlanmış |
+| DNSKEY | 2 kayıt yayında, `AD: true` |
 
-Tam DS kaydı (bind biçimi):
+Yayınlanan DS kaydı (bilgi amaçlı):
 ```
 isbulkktc.com. 3600 IN DS 2371 13 2 36E054F2B3F7EC415B0BE85C8CB301DBB439CF7FA010AE82AAE106C3C583775B
 ```
 
-**Doğrulama:** Kaydı girdikten sonra `dig +short DS isbulkktc.com @1.1.1.1` çıktı vermeli ve
-Cloudflare panelindeki DNSSEC durumu **Active** olmalı. DNS yayılımı 24 saate kadar sürebilir.
-
-> Neden önemli: DNSSEC, alan adının DNS yanıtlarının sahte olmadığını kanıtlar. Arama motorları
-> ve tarayıcılar için güven sinyalidir. SEO'yu doğrudan etkilemez ama domain güvenilirliği
-> açısından önerilir. **Bu, CF tarafında yapılabilecek bir şey değil — registrar işidir.**
+> Not: Denetimin ilk anında Cloudflare API `pending` dönüyordu ve DS registry'de henüz
+> görünmüyordu — bu, yayılımın ortasıydı. Kısa süre sonra `active` oldu ve DS registry'ye
+> yayıldı. **Kullanıcı adımı gerekmiyor.**
 
 ---
 
@@ -112,7 +108,7 @@ Doğrulananlar:
   `/sitemap.xml` `public, max-age=3600` (ISR revalidate ile uyumlu). Doğru.
 - **Email obfuscation:** `on` (destek e-postası CF tarafından gizleniyor). Doğru.
 
-**Tek CF ile ilgili iş:** §1'deki DNSSEC DS kaydı — o da registrar'da yapılır.
+**CF ile ilgili açık iş yok.** DNSSEC de tamam (§1).
 
 > Opsiyonel (SEO dışı, riskli): DMARC `p=none` → `quarantine`/`reject` sıkılaştırması.
 > Posta teslimini bozma riski taşır; ayrı bir karar. Şimdilik dokunulmadı.
@@ -151,10 +147,10 @@ istersen gerçek veri + özgün içerik şartıyla değerlendirilebilir:
 
 | # | Platform | İş | Öncelik |
 |---|---|---|---|
-| 1 | Registrar | DNSSEC DS kaydını gir (§1) | 🔴 Zorunlu |
+| 1 | Registrar | DNSSEC — **zaten aktif**, elle iş yok (§1) | ✅ Tamam |
 | 2 | Search Console | Doğrula, sitemap gönder, Pages/Inspection denetle | 🔴 Zorunlu |
 | 3 | GA4 | Organic + consent ölçümü gözden geçir | 🟡 Önerilir |
 | 4 | Vercel | Bing/Yandex doğrulama env (opsiyonel) | 🟡 Opsiyonel |
-| 5 | Cloudflare | Denetlendi — **iş yok** (DNSSEC hariç, o registrar'da) | 🟢 Tamam |
+| 5 | Cloudflare | Denetlendi — **iş yok** | 🟢 Tamam |
 | 6 | Google Cloud | Indexing API (opsiyonel, eklenmedi) | ⚪ İsteğe bağlı |
 | 7 | İçerik | Şehir/şirket sayfaları (onay ister) | ⚪ İsteğe bağlı |
