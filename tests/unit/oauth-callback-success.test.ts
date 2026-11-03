@@ -16,31 +16,39 @@ const readSource = (relative: string) =>
  * "social sign-in could not be completed" and left on the login screen instead
  * of the dashboard.
  */
-test("the OAuth callback only fails on the code exchange, never after it", () => {
+test("the OAuth callback never fails a request that already has a session", () => {
   const source = readSource("src/app/[locale]/auth/callback/route.ts");
 
   const exchangeIndex = source.indexOf("exchangeCodeForSession(");
   assert.ok(exchangeIndex > -1, "the callback must exchange the auth code");
 
-  // The exchange's own error branch is legitimate: it is the one failure that
-  // happens *before* the session exists.
   const afterExchange = source.slice(exchangeIndex);
-  const errorBranchEnd = afterExchange.indexOf("if (isResetFlow)");
-  assert.ok(
-    errorBranchEnd > -1,
-    "the reset-flow branch must follow the exchange error check",
-  );
 
-  const postSession = afterExchange.slice(errorBranchEnd);
+  // A PKCE code is single-use: when the same callback is delivered twice the
+  // second exchange answers `flow_state_not_found` while the visitor is already
+  // signed in. So the *only* failure redirect that may follow the exchange must
+  // be gated on a session check — never returned unconditionally.
+  const failureRedirects =
+    afterExchange.split("new URL(failurePath, appBaseUrl)").length - 1;
   assert.equal(
-    postSession.includes("failurePath"),
-    false,
-    "no failure redirect may follow a successful code exchange",
+    failureRedirects,
+    1,
+    "exactly one failure redirect may follow the exchange",
   );
 
-  // Every post-session exit is the success destination.
+  const sessionCheckIndex = afterExchange.indexOf(
+    "await supabase.auth.getUser()",
+  );
+  const failureIndex = afterExchange.indexOf("new URL(failurePath, appBaseUrl)");
+  assert.ok(
+    sessionCheckIndex > -1 && sessionCheckIndex < failureIndex,
+    "the failure redirect must follow a session check, so a live session never lands on the failure page",
+  );
+
+  // Both the error-recovery exit and the normal exit end on the audience
+  // destination rather than the login screen.
   assert.match(
-    postSession,
+    afterExchange,
     /resolveAuthDestination\(audience, locale\)/,
     "the callback must end on the audience destination",
   );

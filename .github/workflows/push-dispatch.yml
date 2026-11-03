@@ -46,11 +46,19 @@ jobs:
         env:
           APP_URL: ${{ secrets.APP_URL || vars.APP_URL || secrets.NEXT_PUBLIC_APP_URL }}
           CRON_SECRET: ${{ secrets.PUSH_CRON_SECRET }}
+          # The canonical host sits behind Cloudflare, whose bot protection
+          # answers GitHub's datacenter egress with a 403 "Just a moment..."
+          # challenge before the request ever reaches the app — which failed
+          # this job every ten minutes. Call the Vercel deployment alias
+          # directly instead: it serves the identical build without Cloudflare
+          # in the path. Override with a repository variable if the alias ever
+          # changes. (Same trick submit-indexnow.yml uses for the sitemap.)
+          DISPATCH_ORIGIN: ${{ vars.PUSH_DISPATCH_ORIGIN || 'https://isbulkktc-amber.vercel.app' }}
         run: |
           set -o pipefail
           status=$(curl -sS -o /tmp/push-response.txt -w '%{http_code}' \
             -X POST -H "Authorization: Bearer ${CRON_SECRET}" \
-            "${APP_URL%/}/api/push/dispatch")
+            "${DISPATCH_ORIGIN%/}/api/push/dispatch")
           echo "HTTP ${status}"
           cat /tmp/push-response.txt
           # 503 means push is not configured on the server, which is a valid

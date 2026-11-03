@@ -443,10 +443,26 @@ async function main(): Promise<void> {
   const serviceRoleKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
 
   console.info("Kaynak ilanlar getiriliyor…");
-  const [iskibrisJobs, isbulkibrisJobs] = await Promise.all([
+  // One source site going down must not fail the whole refresh. The two sources
+  // are independent upstreams, so a single outage is tolerated: the import
+  // continues with whichever source answered, and the per-source counts in the
+  // summary below make the degraded run visible.
+  const [iskibrisResult, isbulkibrisResult] = await Promise.allSettled([
     fetchIskibrisJobs({ onProgress: (message) => console.info(`  · ${message}`) }),
     fetchIsbulkibrisJobs({ onProgress: (message) => console.info(`  · ${message}`) }),
   ]);
+
+  const describeSource = (
+    name: string,
+    result: PromiseSettledResult<SourceJobRecord[]>,
+  ): SourceJobRecord[] => {
+    if (result.status === "fulfilled") return result.value;
+    console.warn(`  · ${name} kaynağına ulaşılamadı: ${String(result.reason)}`);
+    return [];
+  };
+
+  const iskibrisJobs = describeSource("iskibris", iskibrisResult);
+  const isbulkibrisJobs = describeSource("isbulkibris", isbulkibrisResult);
 
   const records = dedupeRecords([...iskibrisJobs, ...isbulkibrisJobs])
     .map(sanitizeSourceJobRecord)

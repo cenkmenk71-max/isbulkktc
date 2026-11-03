@@ -95,8 +95,36 @@ export async function GET(request: NextRequest) {
   );
 
   if (error) {
-    console.error("Supabase auth callback failed.", { code: error.code });
-    return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
+    // A PKCE code is single-use. When the same `/auth/callback` request is
+    // delivered twice (an edge/proxy retry, a preflight, or the user reopening
+    // the link), the first exchange already wrote the session cookies and the
+    // second one answers `flow_state_not_found` — but the visitor *is* signed
+    // in. Treating that second response as a failure is what showed
+    // "social sign-in could not be completed" to a user whose session was
+    // live, and bounced them to the login screen instead of their dashboard.
+    // So only fail when no session was actually established.
+    const {
+      data: { user: sessionUser },
+    } = await supabase.auth.getUser();
+
+    if (!sessionUser) {
+      console.error("Supabase auth callback failed.", { code: error.code });
+      return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
+    }
+
+    console.warn("Supabase auth code was already exchanged.", {
+      code: error.code,
+    });
+
+    if (isResetFlow) {
+      return redirectAndClearOAuthIntent(
+        new URL(`${getLocalePrefix(locale)}/reset-password`, appBaseUrl),
+      );
+    }
+
+    return redirectAndClearOAuthIntent(
+      new URL(resolveAuthDestination(audience, locale), appBaseUrl),
+    );
   }
 
   if (isResetFlow) {
