@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { submitSalesLead } from "./actions";
 import type { SalesLeadFormState } from "./schemas";
+import { useTrackConversionOnSuccess } from "@/lib/analytics/conversion-client";
 
 const initialState: SalesLeadFormState = { status: "idle", message: "idle" };
 
@@ -18,6 +19,8 @@ export function SalesLeadForm({ plan }: { plan?: string }) {
   const copy = useTranslations("SalesLeadForm");
   const locale = useLocale();
   const [state, action, pending] = useActionState(submitSalesLead, initialState);
+
+  useTrackConversionOnSuccess(state.status, "sales_lead", plan ? { plan } : {});
 
   return (
     <form className="editorial-form sales-lead-form" action={action}>

@@ -10,6 +10,7 @@ import {
   configureInstallTracking,
   trackInstallEvent,
 } from "@/lib/pwa/install-analytics";
+import { configureConversionTracking } from "@/lib/analytics/conversion";
 import { useServiceWorker } from "@/lib/pwa/use-service-worker";
 import { standaloneMediaQuery } from "@/lib/pwa/platform";
 import { AppUpdateToast } from "@/components/pwa/app-update-toast";
@@ -31,6 +32,7 @@ export function PwaRuntime() {
 
   useEffect(() => {
     configureInstallTracking({ analyticsConsent: consent.analytics });
+    configureConversionTracking({ analyticsConsent: consent.analytics });
   }, [consent.analytics]);
 
   useEffect(() => {

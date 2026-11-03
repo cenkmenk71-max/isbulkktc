@@ -8,6 +8,7 @@ import { signUp } from "./actions";
 import { CaptchaNotice, TurnstileField } from "./turnstile-field";
 import { useCaptchaAction } from "./use-captcha-action";
 import { OAuthProviderForm } from "./oauth-provider-form";
+import { useTrackConversionOnSuccess } from "@/lib/analytics/conversion-client";
 import type {
   AccountAudience,
   OAuthProvider,
@@ -29,6 +30,10 @@ export function SignUpForm({
   const { state, action, pending, resetSignal, captchaBlocked } =
     useCaptchaAction(signUp, initialState, formRef);
   const [passwordVisible, setPasswordVisible] = useState(false);
+
+  // A confirmed sign-up (session present) redirects, so this only fires on the
+  // "verification link sent" path — which is still a completed registration.
+  useTrackConversionOnSuccess(state.status, "sign_up", { method: "email" });
 
   return (
     <>

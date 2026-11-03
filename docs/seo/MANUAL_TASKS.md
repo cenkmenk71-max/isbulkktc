@@ -71,6 +71,26 @@ kalmalı.
 
 ---
 
+## 3b. 🟡 GA4 — dönüşümleri "conversion" olarak işaretle
+
+Kod artık dört iş dönüşümünü GA4'e gönderiyor (`sign_up`, `apply_to_job`,
+`company_registered`, `sales_lead`). Bunların raporlarda **dönüşüm** sayılması için
+GA4 arayüzünde bir kez işaretlenmeleri gerekir:
+
+1. GA4 → **Admin → Events** (Events bölümü).
+2. Listede `sign_up`, `apply_to_job`, `company_registered`, `sales_lead` görünene kadar bekleyin.
+   Event'ler yalnızca ilgili akış **ilk kez** gerçekleştiğinde listeye düşer; hiç kimse
+   kayıt/başvuru yapmadıysa görünmezler. Doğrulamak için `?ga_debug=1` ile DebugView kullanın.
+3. Her birinin yanındaki **"Mark as conversion"** anahtarını açın.
+4. İsteğe bağlı: **Admin → Conversions**'tan öncelik sırası verin (ör. `apply_to_job` en üst).
+5. Sonuç: **Reports → Engagement → Conversions** ve **Advertising → Attribution** raporlarında
+   hangi kanaldan gelen kaç kişinin kayıt/başvuru yaptığını görürsünüz.
+
+> Not: `sign_up` GA4'ün önerilen adıdır; diğer üçü özel addır ve **işaretlenmeden**
+> dönüşüm sayılmaz. Event adları kodda sabittir (`src/lib/analytics/conversion.ts`).
+
+---
+
 ## 4. 🟡 Vercel — eksik doğrulama env değişkenleri (opsiyonel)
 
 **Durum:** Kod hazır, değerler yok.

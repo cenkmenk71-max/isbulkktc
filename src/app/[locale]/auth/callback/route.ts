@@ -81,6 +81,10 @@ export async function GET(request: NextRequest) {
   // most recently started flow and breaks when two flows overlap.
   const flowId = parsePkceFlowId(request.nextUrl.searchParams.get("sb_flow_id"));
   const failurePath = resolveAuthFailurePath(flow, locale, audience);
+  // Set when this callback completed a brand-new account, so the destination
+  // can report the `sign_up` conversion. A form cannot: both flows here end in
+  // a redirect, so the client form never sees a success state.
+  let createdAccount = false;
 
   if (!code || request.nextUrl.searchParams.has("error")) {
     return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
@@ -176,6 +180,7 @@ export async function GET(request: NextRequest) {
       }
 
       if (isNewOAuthAccount(user.created_at, intent)) {
+        createdAccount = true;
         const { error: profileError } = await supabase
           .from("profiles")
           .update({ locale: intent.locale })
@@ -201,6 +206,7 @@ export async function GET(request: NextRequest) {
     // Greet a brand-new account exactly once, on the first callback that
     // resolves its session. The freshness window keeps this to genuine
     // sign-ups.
+    createdAccount = true;
     await greetNewAccount({
       email: user.email,
       audience,
@@ -209,7 +215,8 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  const destination = resolveAuthDestination(audience, locale);
   return redirectAndClearOAuthIntent(
-    new URL(resolveAuthDestination(audience, locale), appBaseUrl),
+    new URL(createdAccount ? `${destination}?signup=1` : destination, appBaseUrl),
   );
 }

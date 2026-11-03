@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useTranslations } from "next-intl";
 import { applyToJob } from "@/features/jobs/actions";
 import { Link } from "@/i18n/navigation";
+import { useTrackConversionOnSuccess } from "@/lib/analytics/conversion-client";
 
 const initialState = { status: "idle", message: "idle" } as const;
 
@@ -23,6 +24,8 @@ export function JobApplicationForm({
   // candidate can act on. A signed-out visitor has no address to show, so the
   // box stays enabled and the submit explains the login requirement instead.
   const contactBlocked = Boolean(contact?.email && !contact.emailConfirmed);
+
+  useTrackConversionOnSuccess(state.status, "apply_to_job", { job_id: jobId });
 
   return (
     <section className="job-application-card" aria-labelledby="job-application-title">

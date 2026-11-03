@@ -31,6 +31,7 @@ import { getLocalePrefix, routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
 import { PushPermissionControl } from "@/components/pwa/push-permission-control";
 import { getVapidPublicKey } from "@/server/push/vapid";
+import { MarkerConversion } from "@/lib/analytics/conversion-client";
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
@@ -152,6 +153,7 @@ export default async function CompanyDashboardPage({
 
   return (
     <main className="company-management page-container">
+      <MarkerConversion marker="created" event="company_registered" />
       <header className="company-management-heading">
         <p className="eyebrow">
           <span className="eyebrow-rule" />

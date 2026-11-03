@@ -9,6 +9,7 @@ import { getMyApplications } from "@/server/dal/jobs";
 import { getApplicationStatusMessageKey } from "@/features/jobs/presentation";
 import { PushPermissionControl } from "@/components/pwa/push-permission-control";
 import { getVapidPublicKey } from "@/server/push/vapid";
+import { MarkerConversion } from "@/lib/analytics/conversion-client";
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
@@ -21,6 +22,7 @@ export default async function CandidateDashboardPage() {
   ]);
   return (
     <div className="candidate-dashboard page-container">
+      <MarkerConversion marker="signup" event="sign_up" params={{ method: "oauth" }} />
       <header className="candidate-dashboard-heading">
         <p className="eyebrow">
           <span className="eyebrow-rule" />

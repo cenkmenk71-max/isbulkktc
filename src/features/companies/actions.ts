@@ -71,7 +71,7 @@ export async function createCompany(
   }
 
   redirect(
-    `${getLocalePrefix(user.locale)}/company/dashboard?company=${encodeURIComponent(companyId)}`,
+    `${getLocalePrefix(user.locale)}/company/dashboard?company=${encodeURIComponent(companyId)}&created=1`,
   );
 }
 
