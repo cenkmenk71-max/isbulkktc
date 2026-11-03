@@ -24,6 +24,8 @@ import renewableEnergyPhoto from "../../../assets-src/sector-photos/pexels-nc-fa
 import technologyPhoto from "../../../assets-src/sector-photos/pexels-zayed-hossain-52728970-36706460.jpg";
 import tourismPhoto from "../../../assets-src/sector-photos/pexels-imda-12160204.jpg";
 import { HomeJobSearch, type HomeJobSearchData } from "@/components/home/home-job-search";
+import { DistrictLinks } from "@/components/jobs/district-links";
+import { JobTypeLinks } from "@/components/jobs/job-type-links";
 import { HomeJourneys } from "@/components/home/home-journeys";
 import { SignatureBanner } from "@/components/home/signature-banner";
 import {
@@ -211,6 +213,14 @@ export async function HomeExperience({
   jobSearch: HomeJobSearchData;
 }) {
   const copy = await getTranslations({ locale, namespace: "HomePage" });
+  const landingCopy = await getTranslations({
+    locale,
+    namespace: "DistrictPage",
+  });
+  const typeCopy = await getTranslations({
+    locale,
+    namespace: "JobTypePage",
+  });
   const getSectorCard = (
     sector: (typeof sectors)[number],
   ): SectorCardData => ({
@@ -270,6 +280,27 @@ export async function HomeExperience({
       </section>
 
       <HomeJobSearch locale={locale} {...jobSearch} />
+
+      {/* The homepage is the strongest page on the site, so it links to the
+          district and employment-type landing pages directly. Without this they
+          are reachable only from /jobs, which slows their discovery. */}
+      <section className="home-landing-links" aria-label={landingCopy("eyebrow")}>
+        <div className="page-container">
+          <div className="home-landing-links-grid">
+            <DistrictLinks
+              locale={locale}
+              title={landingCopy("otherDistricts")}
+              browseAllLabel={landingCopy("browseAll")}
+            />
+            <JobTypeLinks
+              locale={locale}
+              title={typeCopy("otherTypes")}
+              browseAllLabel={landingCopy("browseAll")}
+            />
+          </div>
+        </div>
+      </section>
+
       <HomeJourneys locale={locale} />
 
       <section className="sector-showcase" aria-labelledby="sector-heading">

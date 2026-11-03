@@ -13311,3 +13311,83 @@ html[dir="rtl"] input[name="slug"] {
   font-size: var(--type-supporting);
   line-height: 1.6;
 }
+
+/* District and employment-type cross-link blocks. Rendered on the homepage,
+   the job listing and every district/type page, so the landing pages are
+   reachable from the strongest pages instead of only from each other. */
+.district-links {
+  margin-top: 2rem;
+}
+
+.district-links-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-vanadium-600);
+}
+
+.district-links ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.district-links li {
+  margin: 0;
+}
+
+.district-links a,
+.district-links-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 44px;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--color-vanadium-200);
+  border-radius: 999px;
+  background: var(--color-crayon-highlight);
+  color: var(--color-vanadium-800);
+  font-size: 0.875rem;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.district-links a:hover {
+  border-color: var(--color-vanadium-400);
+  background: var(--color-crayon-100);
+}
+
+.district-links a:focus-visible {
+  outline: 2px solid var(--color-vanadium-700);
+  outline-offset: 2px;
+}
+
+.district-links-current {
+  border-color: var(--color-vanadium-700);
+  background: var(--color-vanadium-800);
+  color: var(--color-crayon-50);
+}
+
+.district-links-all {
+  font-weight: 600;
+}
+
+.home-landing-links {
+  padding: 2.5rem 0 1rem;
+}
+
+.home-landing-links-grid {
+  display: grid;
+  gap: 1.5rem 3rem;
+}
+
+@media (min-width: 900px) {
+  .home-landing-links-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
