@@ -7,6 +7,11 @@ import {
 } from "@/content/ai-visibility/faq";
 import { regionNames, servedDistricts, SITE_NAME } from "@/content/ai-visibility/site";
 import { districtSlug } from "@/features/locations/northern-cyprus-districts";
+import {
+  jobTypeKeys,
+  jobTypeSlugs,
+  type JobTypeKey,
+} from "@/features/jobs/job-type-slugs";
 
 /**
  * The canonical page list the brief advertises. These are the same routes the
@@ -52,9 +57,37 @@ function primaryPageLines(baseUrl: URL, locale: AppLocale): string {
         const suffix = locale === routing.defaultLocale ? "iş ilanları" : "jobs";
         return `- [${label} ${suffix}](${localeUrl(baseUrl, locale, `/is-ilanlari/${districtSlug(district.tr)}`)})`;
       }),
+      // Employment-type landing pages, so "uzaktan iş" / "tam zamanlı iş" can be
+      // answered with the matching page.
+      jobTypeKeys.map((jobType) => {
+        const label = locale === routing.defaultLocale
+          ? jobTypeLabelsTr[jobType]
+          : jobTypeLabelsEn[jobType];
+        const suffix = locale === routing.defaultLocale ? "iş ilanları" : "jobs";
+        return `- [${label} ${suffix}](${localeUrl(baseUrl, locale, `/is-turleri/${jobTypeSlugs[jobType]}`)})`;
+      }),
     )
     .join("\n");
 }
+
+/** Employment-type labels for the brief (the brief is TR + EN only). */
+const jobTypeLabelsTr: Record<JobTypeKey, string> = {
+  full_time: "Tam zamanlı",
+  part_time: "Yarı zamanlı",
+  contract: "Sözleşmeli",
+  temporary: "Geçici",
+  internship: "Staj",
+  freelance: "Serbest çalışma",
+};
+
+const jobTypeLabelsEn: Record<JobTypeKey, string> = {
+  full_time: "Full-time",
+  part_time: "Part-time",
+  contract: "Contract",
+  temporary: "Temporary",
+  internship: "Internship",
+  freelance: "Freelance",
+};
 
 /**
  * The district list for the brief. Every district is written with its Turkish

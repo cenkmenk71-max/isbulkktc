@@ -669,3 +669,61 @@ test("an unknown district slug is a hard 404", async ({ request }) => {
   expect(response.status()).toBe(404);
 });
 
+
+test("employment-type landing pages are indexable, self-canonical and interlinked", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(180_000);
+
+  const types = [
+    { slug: "tam-zamanli", tr: "Tam zamanlı" },
+    { slug: "yari-zamanli", tr: "Yarı zamanlı" },
+    { slug: "sozlesmeli", tr: "Sözleşmeli" },
+    { slug: "gecici", tr: "Geçici" },
+    { slug: "staj", tr: "Staj" },
+    { slug: "serbest-calisma", tr: "Serbest çalışma" },
+  ];
+
+  for (const type of types) {
+    const response = await request.get(`/is-turleri/${type.slug}`);
+    expect(response.status(), `${type.slug} must resolve`).toBe(200);
+
+    await page.goto(`/is-turleri/${type.slug}`, {
+      waitUntil: "domcontentloaded",
+    });
+    const siteOrigin = new URL(page.url()).origin;
+    await expect(page).toHaveTitle(
+      new RegExp(`${type.tr} İş İlanları`),
+    );
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      `${siteOrigin}/is-turleri/${type.slug}`,
+    );
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      type.tr,
+    );
+    await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+
+    // Cross-links to the other types are real anchors.
+    for (const other of types) {
+      if (other.slug === type.slug) continue;
+      await expect(
+        page.locator(`a[href="/is-turleri/${other.slug}"]`),
+      ).toHaveCount(1);
+    }
+  }
+
+  // Every type page is advertised in the sitemap.
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+  const origin = new URL(page.url()).origin;
+  for (const type of types) {
+    expect(sitemap).toContain(`<loc>${origin}/is-turleri/${type.slug}</loc>`);
+  }
+});
+
+test("an unknown employment-type slug is a hard 404", async ({ request }) => {
+  const response = await request.get("/is-turleri/not-a-type");
+  expect(response.status()).toBe(404);
+});
+

@@ -318,12 +318,13 @@ test("the brief advertises only routes the app actually serves", () => {
     ...primarySection.matchAll(/\]\((https:\/\/isbulkktc\.com[^)]*)\)/g),
   ].map((match) => new URL(match[1]).pathname);
 
-  // Seven primary pages plus the six district landing pages the brief now also
-  // advertises, so an answer engine can cite "Lefkoşa iş ilanları" directly.
+  // Seven primary pages, six district pages and six employment-type pages, so
+  // an answer engine can cite "Lefkoşa iş ilanları" or "Tam zamanlı iş ilanları"
+  // directly instead of only the national listing.
   assert.equal(
     primaryPaths.length,
-    13,
-    "the brief lists the seven primary pages and six district pages",
+    19,
+    "the brief lists the seven primary pages plus twelve landing pages",
   );
   for (const pathname of primaryPaths) {
     assert.ok(

@@ -4,6 +4,7 @@ import {
   districtSlug,
   northernCyprusDistrictValues,
 } from "@/features/locations/northern-cyprus-districts";
+import { jobTypeKeys, jobTypeSlugs } from "@/features/jobs/job-type-slugs";
 import { routing } from "@/i18n/routing";
 import { getLocalizedPageUrl } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
@@ -119,6 +120,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }));
     });
 
-  return [...staticEntries, ...districtEntries, ...jobEntries];
+  // Employment-type landing pages ("Tam zamanlı iş ilanları", "Staj", ...).
+  // Same shape as the district pages: localized, self-canonical, sharing the
+  // newest vacancy date.
+  const jobTypeEntries: MetadataRoute.Sitemap = jobTypeKeys.flatMap((jobType) => {
+    const slug = jobTypeSlugs[jobType];
+    const pathname = `/is-turleri/${slug}`;
+    const languages = {
+      ...Object.fromEntries(
+        routing.locales.map((locale) => [
+          locale,
+          getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
+        ]),
+      ),
+      "x-default": getLocalizedPageUrl(
+        routing.defaultLocale,
+        pathname,
+        baseUrl,
+      ).toString(),
+    };
+
+    return routing.locales.map((locale) => ({
+      url: getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
+      alternates: { languages },
+      ...(newestJobDate ? { lastModified: newestJobDate } : {}),
+      changeFrequency: "daily" as const,
+      priority: 0.7,
+    }));
+  });
+
+  return [...staticEntries, ...districtEntries, ...jobTypeEntries, ...jobEntries];
 }
 

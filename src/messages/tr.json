@@ -1438,5 +1438,18 @@
     "browseAll": "Tüm KKTC iş ilanlarını gör",
     "otherDistricts": "Diğer ilçelerdeki iş ilanları",
     "countLabel": "{count} ilan"
+  },
+  "JobTypePage": {
+    "eyebrow": "KKTC İŞ İLANLARI",
+    "title": "{type} İş İlanları",
+    "metaTitle": "{type} İş İlanları | KKTC ve Kuzey Kıbrıs",
+    "metaDescription": "KKTC ve Kuzey Kıbrıs'ta {type} iş ilanları ve münhaller. {type} pozisyonları İşBul KKTC ile inceleyin ve başvurun.",
+    "intro": "KKTC ve Kuzey Kıbrıs genelinde {type} iş ilanlarını ve münhalleri tek yerde inceleyin. İlçe ve pozisyona göre filtreleyin; size uygun fırsata başvurun.",
+    "emptyTitle": "{type} kategorisinde şu anda yayında ilan yok",
+    "emptyDescription": "Yeni ilanlar eklendikçe burada görünecek. Tüm KKTC ilanlarına göz atabilir veya daha sonra tekrar bakabilirsiniz.",
+    "browseAll": "Tüm KKTC iş ilanlarını gör",
+    "otherTypes": "Diğer çalışma türlerinde iş ilanları",
+    "districts": "İlçeye göre iş ilanları",
+    "countLabel": "{count} ilan"
   }
 }

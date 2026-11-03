@@ -1438,5 +1438,18 @@
     "browseAll": "View all jobs in Northern Cyprus",
     "otherDistricts": "Jobs in other districts",
     "countLabel": "{count} listings"
+  },
+  "JobTypePage": {
+    "eyebrow": "JOBS IN NORTHERN CYPRUS",
+    "title": "{type} Jobs",
+    "metaTitle": "{type} Jobs | Northern Cyprus (TRNC)",
+    "metaDescription": "{type} jobs and vacancies in Northern Cyprus (TRNC). Browse {type} positions and apply with İşBul KKTC.",
+    "intro": "Browse {type} jobs and vacancies across Northern Cyprus (TRNC). Filter by district and position, then apply to the role that fits you.",
+    "emptyTitle": "No {type} listings are published right now",
+    "emptyDescription": "New listings will appear here as they are posted. You can browse all Northern Cyprus jobs or check back later.",
+    "browseAll": "View all jobs in Northern Cyprus",
+    "otherTypes": "Jobs by employment type",
+    "districts": "Jobs by district",
+    "countLabel": "{count} listings"
   }
 }

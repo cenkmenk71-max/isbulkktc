@@ -4,6 +4,7 @@ import { cache } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { JobsExperience } from "@/components/jobs/jobs-experience";
 import { DistrictLinks } from "@/components/jobs/district-links";
+import { JobTypeLinks } from "@/components/jobs/job-type-links";
 import {
   publicJobSearchSchema,
   type PublicJobSearchFilters,
@@ -145,6 +146,10 @@ export default async function JobsPage({
     locale,
     namespace: "DistrictPage",
   });
+  const jobTypeCopy = await getTranslations({
+    locale,
+    namespace: "JobTypePage",
+  });
 
   return (
     <JobsExperience
@@ -156,11 +161,18 @@ export default async function JobsPage({
       description={copy("description")}
       eyebrow={copy("eyebrow")}
       footerSlot={
-        <DistrictLinks
-          locale={locale}
-          title={districtCopy("otherDistricts")}
-          browseAllLabel={districtCopy("browseAll")}
-        />
+        <>
+          <DistrictLinks
+            locale={locale}
+            title={districtCopy("otherDistricts")}
+            browseAllLabel={districtCopy("browseAll")}
+          />
+          <JobTypeLinks
+            locale={locale}
+            title={jobTypeCopy("otherTypes")}
+            browseAllLabel={jobTypeCopy("browseAll")}
+          />
+        </>
       }
     />
   );
