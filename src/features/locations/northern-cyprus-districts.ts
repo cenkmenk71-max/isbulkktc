@@ -274,3 +274,32 @@ export function getNorthernCyprusDistrictForLocation(location: {
 
   return candidates.size === 1 ? [...candidates][0] : null;
 }
+
+/**
+ * The URL slug for a district, e.g. `Lefkoşa` -> `lefkosa`, `Gazimağusa` ->
+ * `gazimagusa`. Kept here (not duplicated per call site) so the district page
+ * route and the sitemap can never disagree about a district's URL.
+ */
+export function districtSlug(value: string): string {
+  return value
+    .toLocaleLowerCase("tr-TR")
+    .replace(/[ıİ]/g, "i")
+    .replace(/ş/g, "s")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/** Resolves a district URL slug back to its canonical value, or null. */
+export function resolveDistrictFromSlug(
+  slug: string,
+): NorthernCyprusDistrict | null {
+  return (
+    northernCyprusDistrictValues.find(
+      (district) => districtSlug(district) === slug,
+    ) ?? null
+  );
+}

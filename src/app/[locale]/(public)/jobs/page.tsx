@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { JobsExperience } from "@/components/jobs/jobs-experience";
+import { DistrictLinks } from "@/components/jobs/district-links";
 import {
   publicJobSearchSchema,
   type PublicJobSearchFilters,
@@ -140,6 +141,10 @@ export default async function JobsPage({
     if (filters.page > lastPage) notFound();
   }
   const copy = await getTranslations({ locale, namespace: "JobsPage" });
+  const districtCopy = await getTranslations({
+    locale,
+    namespace: "DistrictPage",
+  });
 
   return (
     <JobsExperience
@@ -150,6 +155,13 @@ export default async function JobsPage({
       title={copy("title")}
       description={copy("description")}
       eyebrow={copy("eyebrow")}
+      footerSlot={
+        <DistrictLinks
+          locale={locale}
+          title={districtCopy("otherDistricts")}
+          browseAllLabel={districtCopy("browseAll")}
+        />
+      }
     />
   );
 }

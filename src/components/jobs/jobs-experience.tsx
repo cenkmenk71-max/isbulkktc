@@ -1,4 +1,5 @@
 import Image from "next/image";
+import type { ReactNode } from "react";
 import { ArrowUpRight, BriefcaseBusiness, MapPin, Search } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
@@ -37,6 +38,9 @@ export async function JobsExperience({
   title,
   description,
   eyebrow,
+  emptyTitle,
+  emptyDescription,
+  footerSlot,
 }: {
   locale: AppLocale;
   filters: PublicJobSearchFilters;
@@ -45,6 +49,12 @@ export async function JobsExperience({
   title: string;
   description: string;
   eyebrow: string;
+  /** Overrides the empty-state heading (district pages name the district). */
+  emptyTitle?: string;
+  /** Overrides the empty-state body. */
+  emptyDescription?: string;
+  /** Extra content after the results (district cross-links, etc.). */
+  footerSlot?: ReactNode;
 }) {
   const [t, searchCopy] = await Promise.all([
     getTranslations({ locale, namespace: "JobsPage" }),
@@ -251,8 +261,8 @@ export async function JobsExperience({
                 <span className="jobs-empty-icon" aria-hidden="true">
                   <BriefcaseBusiness size={24} />
                 </span>
-                <h3>{searchCopy("emptyTitle")}</h3>
-                <p>{searchCopy("emptyDescription")}</p>
+                <h3>{emptyTitle ?? searchCopy("emptyTitle")}</h3>
+                <p>{emptyDescription ?? searchCopy("emptyDescription")}</p>
               </div>
             )}
 
@@ -281,6 +291,7 @@ export async function JobsExperience({
           </section>
         ) : null}
 
+        {footerSlot}
       </div>
     </div>
   );

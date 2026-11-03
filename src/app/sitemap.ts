@@ -1,5 +1,9 @@
 import type { MetadataRoute } from "next";
 import { newestJobModifiedAt } from "@/features/jobs/sitemap-lastmod";
+import {
+  districtSlug,
+  northernCyprusDistrictValues,
+} from "@/features/locations/northern-cyprus-districts";
 import { routing } from "@/i18n/routing";
 import { getLocalizedPageUrl } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
@@ -84,5 +88,37 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticEntries, ...jobEntries];
+  // District landing pages ("Lefkoşa iş ilanları", ...). Each is localized and
+  // carries its own canonical, so it is listed per locale like the static
+  // routes. They share the newest vacancy date: a new listing in a district is
+  // the only thing that changes the page.
+  const districtEntries: MetadataRoute.Sitemap =
+    northernCyprusDistrictValues.flatMap((district) => {
+      const slug = districtSlug(district);
+      const pathname = `/is-ilanlari/${slug}`;
+      const languages = {
+        ...Object.fromEntries(
+          routing.locales.map((locale) => [
+            locale,
+            getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
+          ]),
+        ),
+        "x-default": getLocalizedPageUrl(
+          routing.defaultLocale,
+          pathname,
+          baseUrl,
+        ).toString(),
+      };
+
+      return routing.locales.map((locale) => ({
+        url: getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
+        alternates: { languages },
+        ...(newestJobDate ? { lastModified: newestJobDate } : {}),
+        changeFrequency: "daily" as const,
+        priority: 0.7,
+      }));
+    });
+
+  return [...staticEntries, ...districtEntries, ...jobEntries];
 }
+

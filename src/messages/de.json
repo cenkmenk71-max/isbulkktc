@@ -1,7 +1,7 @@
 {
   "Meta": {
-    "title": "İşBul KKTC — Arbeit und Karriere in Nordzypern",
-    "description": "Erstellen Sie Ihr Bewerberprofil, präsentieren Sie Ihre Fähigkeiten und starten Sie die Unternehmensregistrierung in Nordzypern."
+    "title": "İşBul KKTC — Stellenangebote und Jobs in Nordzypern",
+    "description": "Aktuelle Stellenangebote, Jobs und Karrierechancen in Nordzypern (TRNC). Die İşBul KKTC Plattform für Arbeitssuchende und Arbeitgeber."
   },
   "InstallMeta": {
     "title": "App installieren",
@@ -53,8 +53,8 @@
     "pushSaveFailed": "Das Abonnement konnte nicht gespeichert werden. Bitte erneut versuchen."
   },
   "HomeMeta": {
-    "title": "Arbeit und Karriere in Nordzypern",
-    "description": "Erstellen Sie Ihr berufliches Profil, verwalten Sie Ihre Fähigkeiten und starten Sie die Unternehmensregistrierung in Nordzypern."
+    "title": "Stellenangebote in Nordzypern (TRNC) und Jobbörse",
+    "description": "Aktuelle Jobs, Stellenangebote und Karrierechancen in Nordzypern (TRNC). Suchen Sie nach Bezirk, Beschäftigungsart und Arbeitsort – mit İşBul KKTC."
   },
   "FreelanceMeta": {
     "title": "Selbstständiges Arbeiten in Nordzypern",
@@ -221,8 +221,8 @@
     "description": "Suchen Sie Unternehmen in Nordzypern nach Name, Branche und Standort."
   },
   "JobsMeta": {
-    "title": "Aktuelle Stellenangebote in Nordzypern",
-    "description": "Suchen Sie aktuelle Stellenangebote in Nordzypern nach Position, Bezirk, Beschäftigungsart und Arbeitsmodell."
+    "title": "Aktuelle Stellenangebote und Jobs in Nordzypern (TRNC)",
+    "description": "Suchen Sie aktuelle Stellenangebote und Jobs in Nordzypern (TRNC) nach Position, Bezirk, Beschäftigungsart und Arbeitsort."
   },
   "Nav": {
     "login": "Anmelden",
@@ -660,8 +660,8 @@
     "slugPreviewLabel": "Kurzname:"
   },
   "HomePage": {
-    "eyebrow": "ARBEITSNETZWERK NORDZYPERN",
-    "title": "<line>Entdecken Sie in Nordzypern</line> <line>Ihren nächsten</line> <accent>Karriereschritt.</accent>",
+    "eyebrow": "JOBS UND BESCHÄFTIGUNGSNETZWERK IN NORDZYPERN",
+    "title": "<line>Stellenangebote in</line> <line>Nordzypern, Jobs und</line> <accent>Karrierechancen an einem Ort.</accent>",
     "sectorEyebrow": "REGIONALER FOKUS",
     "sectorTitle": "Berufsfelder in Nordzypern",
     "sectorRegion": "Nordzypern",
@@ -1426,5 +1426,17 @@
       "submitted": "Ihre Anfrage ist eingegangen! Wir melden uns in Kürze.",
       "failed": "Die Anfrage konnte gerade nicht gesendet werden. Bitte später erneut versuchen."
     }
+  },
+  "DistrictPage": {
+    "eyebrow": "JOBS IN NORDZYPERN",
+    "title": "Jobs in {district}",
+    "metaTitle": "Stellenangebote in {district} | Nordzypern",
+    "metaDescription": "Aktuelle Stellenangebote und Jobs in {district}, Nordzypern. Sehen Sie sich Angebote in {district} an und bewerben Sie sich mit İşBul KKTC.",
+    "intro": "Aktuelle Stellenangebote und Jobs in {district}, Nordzypern. Filtern Sie nach Position, Beschäftigungsart und Arbeitsort und bewerben Sie sich.",
+    "emptyTitle": "Derzeit keine Angebote in {district}",
+    "emptyDescription": "Neue Angebote erscheinen hier, sobald sie veröffentlicht werden. Sie können alle Jobs in Nordzypern ansehen oder später erneut vorbeischauen.",
+    "browseAll": "Alle Jobs in Nordzypern ansehen",
+    "otherDistricts": "Jobs in anderen Bezirken",
+    "countLabel": "{count} Angebote"
   }
 }

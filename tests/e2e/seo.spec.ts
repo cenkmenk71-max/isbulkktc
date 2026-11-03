@@ -11,9 +11,9 @@ test("public routes expose localized canonical and social metadata", async ({
       canonicalPath: "/",
       trPath: "/",
       enPath: "/en",
-      title: "Kuzey Kıbrıs’ta iş ve kariyer",
+      title: "KKTC İş İlanları ve İş Bulma Platformu",
       description:
-        "Mesleki profilinizi oluşturun, becerilerinizi yönetin ve Kuzey Kıbrıs’ta şirket kayıt sürecinizi başlatın.",
+        "KKTC ve Kuzey Kıbrıs'ta güncel iş ilanları, münhal ve kariyer fırsatları. İş ilanlarını ilçe, çalışma türü ve çalışma düzenine göre arayın; İşBul KKTC ile iş bulun.",
     },
     {
       locale: "en",
@@ -21,9 +21,9 @@ test("public routes expose localized canonical and social metadata", async ({
       canonicalPath: "/en",
       trPath: "/",
       enPath: "/en",
-      title: "Work and careers in Northern Cyprus",
+      title: "Jobs in Northern Cyprus (TRNC) and Job Search Platform",
       description:
-        "Create your professional profile, manage your skills, and begin company registration in Northern Cyprus.",
+        "Current jobs, vacancies and career opportunities in Northern Cyprus (TRNC). Search listings by district, employment type and workplace, and find work with İşBul KKTC.",
     },
     {
       locale: "tr",
@@ -147,7 +147,7 @@ test("all advertised locales render with correct direction and complete SEO alte
     {
       code: "tr",
       prefix: "",
-      title: "Kuzey Kıbrıs’ta iş ve kariyer",
+      title: "KKTC İş İlanları ve İş Bulma Platformu",
       direction: "ltr",
       directoryTitle: "Aradığınız şirketi bulun.",
       packageTitle: "İşe alım hakları, açık ve anlaşılır.",
@@ -157,7 +157,7 @@ test("all advertised locales render with correct direction and complete SEO alte
     {
       code: "en",
       prefix: "/en",
-      title: "Work and careers in Northern Cyprus",
+      title: "Jobs in Northern Cyprus (TRNC) and Job Search Platform",
       direction: "ltr",
       directoryTitle: "Find the company you need.",
       packageTitle: "Hiring rights, clearly defined.",
@@ -167,7 +167,7 @@ test("all advertised locales render with correct direction and complete SEO alte
     {
       code: "ru",
       prefix: "/ru",
-      title: "Работа и карьера на Северном Кипре",
+      title: "Вакансии и работа на Северном Кипре (ТРСК)",
       direction: "ltr",
       directoryTitle: "Найдите нужную компанию.",
       packageTitle: "Права на найм — чётко и прозрачно.",
@@ -177,7 +177,7 @@ test("all advertised locales render with correct direction and complete SEO alte
     {
       code: "el",
       prefix: "/el",
-      title: "Εργασία και καριέρα στη Βόρεια Κύπρο",
+      title: "Θέσεις εργασίας στη Βόρεια Κύπρο (ΤΔΒΚ)",
       direction: "ltr",
       directoryTitle: "Βρείτε την εταιρεία που χρειάζεστε.",
       packageTitle: "Σαφή δικαιώματα για τις προσλήψεις σας.",
@@ -188,7 +188,7 @@ test("all advertised locales render with correct direction and complete SEO alte
     {
       code: "fa",
       prefix: "/fa",
-      title: "کار و مسیر شغلی در قبرس شمالی",
+      title: "آگهی‌های استخدام و کار در قبرس شمالی",
       direction: "rtl",
       directoryTitle: "شرکت موردنیاز خود را پیدا کنید.",
       packageTitle: "حقوق استخدام، روشن و مشخص.",
@@ -198,7 +198,7 @@ test("all advertised locales render with correct direction and complete SEO alte
     {
       code: "de",
       prefix: "/de",
-      title: "Arbeit und Karriere in Nordzypern",
+      title: "Stellenangebote in Nordzypern (TRNC) und Jobbörse",
       direction: "ltr",
       directoryTitle: "Finden Sie das passende Unternehmen.",
       packageTitle: "Klare Rechte für Ihre Personalsuche.",
@@ -599,5 +599,73 @@ test("every vacancy URL in the sitemap actually resolves", async ({
       `${path} is advertised in the sitemap but answers ${response.status()}`,
     ).toBe(200);
   }
+});
+
+
+test("district landing pages are indexable, self-canonical and interlinked", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(180_000);
+
+  const districts = [
+    { slug: "lefkosa", tr: "Lefkoşa", en: "Nicosia" },
+    { slug: "magusa", tr: "Mağusa", en: "Famagusta" },
+    { slug: "girne", tr: "Girne", en: "Kyrenia" },
+    { slug: "guzelyurt", tr: "Güzelyurt", en: "Morphou" },
+    { slug: "iskele", tr: "İskele", en: "Trikomo" },
+    { slug: "lefke", tr: "Lefke", en: "Lefka" },
+  ];
+
+  for (const district of districts) {
+    // The Turkish page names the district and carries its own canonical.
+    const response = await request.get(`/is-ilanlari/${district.slug}`);
+    expect(response.status(), `${district.slug} must resolve`).toBe(200);
+
+    await page.goto(`/is-ilanlari/${district.slug}`, {
+      waitUntil: "domcontentloaded",
+    });
+    const siteOrigin = new URL(page.url()).origin;
+    await expect(page).toHaveTitle(
+      new RegExp(`${district.tr} İş İlanları ve Münhaller`),
+    );
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      `${siteOrigin}/is-ilanlari/${district.slug}`,
+    );
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      district.tr,
+    );
+    // The page must not be a soft 404: it is indexable.
+    await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+
+    // Cross-links to the other districts are real anchors, so crawlers reach
+    // every district page from any one of them.
+    for (const other of districts) {
+      if (other.slug === district.slug) continue;
+      await expect(
+        page.locator(`a[href="/is-ilanlari/${other.slug}"]`),
+      ).toHaveCount(1);
+    }
+  }
+
+  // The English page localizes the district name and its canonical.
+  await page.goto("/en/is-ilanlari/girne", { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveTitle(/Jobs and Vacancies in Kyrenia/);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    `${new URL(page.url()).origin}/en/is-ilanlari/girne`,
+  );
+
+  // Every district page is advertised in the sitemap, per locale.
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+  for (const district of districts) {
+    expect(sitemap).toContain(`<loc>${new URL(page.url()).origin}/is-ilanlari/${district.slug}</loc>`);
+  }
+});
+
+test("an unknown district slug is a hard 404", async ({ request }) => {
+  const response = await request.get("/is-ilanlari/not-a-district");
+  expect(response.status()).toBe(404);
 });
 

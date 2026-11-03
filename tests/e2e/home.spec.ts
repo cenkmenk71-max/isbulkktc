@@ -68,10 +68,10 @@ test("homepage cycles through local district photos with an animated light-ray l
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/tr?district=invalid");
 
-  await expect(page).toHaveTitle(/Kuzey Kıbrıs’ta iş ve kariyer/);
+  await expect(page).toHaveTitle(/KKTC İş İlanları ve İş Bulma Platformu/);
   await expect(
     page.getByRole("heading", {
-      name: "Kuzey Kıbrıs’ta kariyerinizin bir sonraki adımını keşfedin.",
+      name: "KKTC iş ilanları, münhal ve kariyer fırsatları tek yerde.",
     }),
   ).toBeVisible();
   await expect

@@ -1,7 +1,7 @@
 {
   "Meta": {
-    "title": "İşBul KKTC — Kuzey Kıbrıs’ta iş ve kariyer",
-    "description": "Aday profilinizi oluşturun, uzmanlık alanlarınızı öne çıkarın ve Kuzey Kıbrıs’ta şirket kaydınızı başlatın."
+    "title": "İşBul KKTC — KKTC ve Kuzey Kıbrıs İş İlanları",
+    "description": "KKTC ve Kuzey Kıbrıs'taki güncel iş ilanlarını, münhalleri ve kariyer fırsatlarını keşfedin. İş arayanlar ve işverenler için İşBul KKTC platformu."
   },
   "InstallMeta": {
     "title": "Uygulamayı yükle",
@@ -53,8 +53,8 @@
     "pushSaveFailed": "Bildirim kaydedilemedi. Lütfen tekrar deneyin."
   },
   "HomeMeta": {
-    "title": "Kuzey Kıbrıs’ta iş ve kariyer",
-    "description": "Mesleki profilinizi oluşturun, becerilerinizi yönetin ve Kuzey Kıbrıs’ta şirket kayıt sürecinizi başlatın."
+    "title": "KKTC İş İlanları ve İş Bulma Platformu",
+    "description": "KKTC ve Kuzey Kıbrıs'ta güncel iş ilanları, münhal ve kariyer fırsatları. İş ilanlarını ilçe, çalışma türü ve çalışma düzenine göre arayın; İşBul KKTC ile iş bulun."
   },
   "FreelanceMeta": {
     "title": "Kuzey Kıbrıs’ta serbest çalışma",
@@ -221,8 +221,8 @@
     "description": "Kuzey Kıbrıs'taki şirketleri ad, sektör ve konuma göre arayın; telefon, adres ve web sitesi bilgilerini inceleyin."
   },
   "JobsMeta": {
-    "title": "Kuzey Kıbrıs güncel iş ilanları",
-    "description": "Kuzey Kıbrıs'ta yayımlanan iş ilanlarını pozisyon, ilçe, çalışma türü ve çalışma düzenine göre arayın."
+    "title": "KKTC Güncel İş İlanları ve Münhaller",
+    "description": "KKTC ve Kuzey Kıbrıs'ta yayımlanan güncel iş ilanlarını ve münhalleri pozisyon, ilçe, çalışma türü ve çalışma düzenine göre arayın."
   },
   "PackagesPage": {
     "eyebrow": "İŞVERENLER İÇİN İLAN HAKLARI",
@@ -660,8 +660,8 @@
     "managePreferences": "Çerez tercihlerini yönet"
   },
   "HomePage": {
-    "eyebrow": "KUZEY KIBRIS İSTİHDAM AĞI",
-    "title": "<line>Kuzey Kıbrıs’ta</line> <line>kariyerinizin bir sonraki</line> <accent>adımını keşfedin.</accent>",
+    "eyebrow": "KKTC İŞ İLANLARI VE İSTİHDAM AĞI",
+    "title": "<line>KKTC iş ilanları,</line> <line>münhal ve kariyer</line> <accent>fırsatları tek yerde.</accent>",
     "sectorEyebrow": "BÖLGESEL ODAKLAR",
     "sectorTitle": "Kuzey Kıbrıs’ta öne çıkan çalışma alanları",
     "sectorRegion": "Kuzey Kıbrıs",
@@ -1426,5 +1426,17 @@
       "submitted": "Talebiniz bize ulaştı! Ekibimiz en kısa sürede dönecek.",
       "failed": "Talep şu anda gönderilemedi. Lütfen daha sonra tekrar deneyin."
     }
+  },
+  "DistrictPage": {
+    "eyebrow": "KKTC İŞ İLANLARI",
+    "title": "{district} İş İlanları",
+    "metaTitle": "{district} İş İlanları ve Münhaller | KKTC",
+    "metaDescription": "{district} (Kuzey Kıbrıs) güncel iş ilanları, münhal ve kariyer fırsatları. {district} iş ilanlarını İşBul KKTC ile inceleyin ve başvurun.",
+    "intro": "{district} bölgesinde yayımlanan güncel iş ilanlarını ve münhalleri tek yerde inceleyin. Pozisyon, çalışma türü ve çalışma düzenine göre filtreleyin; size uygun fırsata başvurun.",
+    "emptyTitle": "{district} için şu anda yayında ilan yok",
+    "emptyDescription": "Yeni ilanlar eklendikçe burada görünecek. Tüm KKTC ilanlarına göz atabilir veya daha sonra tekrar bakabilirsiniz.",
+    "browseAll": "Tüm KKTC iş ilanlarını gör",
+    "otherDistricts": "Diğer ilçelerdeki iş ilanları",
+    "countLabel": "{count} ilan"
   }
 }

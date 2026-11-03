@@ -1,7 +1,7 @@
 {
   "Meta": {
-    "title": "İşBul KKTC — Work and careers in Northern Cyprus",
-    "description": "Create your candidate profile, highlight your skills, and begin company registration in Northern Cyprus."
+    "title": "İşBul KKTC — Jobs and Vacancies in Northern Cyprus (TRNC)",
+    "description": "Browse current jobs, vacancies and career opportunities in Northern Cyprus (TRNC). The İşBul KKTC platform for job seekers and employers."
   },
   "InstallMeta": {
     "title": "Install the app",
@@ -53,8 +53,8 @@
     "pushSaveFailed": "The subscription could not be saved. Please try again."
   },
   "HomeMeta": {
-    "title": "Work and careers in Northern Cyprus",
-    "description": "Create your professional profile, manage your skills, and begin company registration in Northern Cyprus."
+    "title": "Jobs in Northern Cyprus (TRNC) and Job Search Platform",
+    "description": "Current jobs, vacancies and career opportunities in Northern Cyprus (TRNC). Search listings by district, employment type and workplace, and find work with İşBul KKTC."
   },
   "FreelanceMeta": {
     "title": "Independent work in Northern Cyprus",
@@ -221,8 +221,8 @@
     "description": "Search companies in Northern Cyprus by name, sector and location; browse their phone, address and website details."
   },
   "JobsMeta": {
-    "title": "Current jobs in Northern Cyprus",
-    "description": "Search live job listings in Northern Cyprus by role, district, employment type and work arrangement."
+    "title": "Current Jobs and Vacancies in Northern Cyprus (TRNC)",
+    "description": "Search current jobs and vacancies published in Northern Cyprus (TRNC) by position, district, employment type and workplace."
   },
   "PackagesPage": {
     "eyebrow": "EMPLOYER JOB ENTITLEMENTS",
@@ -660,8 +660,8 @@
     "managePreferences": "Manage cookie preferences"
   },
   "HomePage": {
-    "eyebrow": "NORTHERN CYPRUS EMPLOYMENT NETWORK",
-    "title": "<line>In Northern Cyprus,</line> <line>discover your next</line> <accent>career step.</accent>",
+    "eyebrow": "JOBS AND EMPLOYMENT NETWORK IN NORTHERN CYPRUS",
+    "title": "<line>Jobs in Northern Cyprus,</line> <line>vacancies and career</line> <accent>opportunities in one place.</accent>",
     "sectorEyebrow": "REGIONAL FOCUS",
     "sectorTitle": "Career areas across Northern Cyprus",
     "sectorRegion": "Northern Cyprus",
@@ -1426,5 +1426,17 @@
       "submitted": "Your request reached us! Our team will get back to you shortly.",
       "failed": "The request could not be sent right now. Please try again later."
     }
+  },
+  "DistrictPage": {
+    "eyebrow": "JOBS IN NORTHERN CYPRUS",
+    "title": "Jobs in {district}",
+    "metaTitle": "Jobs and Vacancies in {district} | Northern Cyprus",
+    "metaDescription": "Current jobs, vacancies and career opportunities in {district}, Northern Cyprus. Browse {district} listings and apply with İşBul KKTC.",
+    "intro": "Browse current jobs and vacancies published in {district}, Northern Cyprus. Filter by position, employment type and workplace, then apply to the role that fits you.",
+    "emptyTitle": "No listings are published in {district} right now",
+    "emptyDescription": "New listings will appear here as they are posted. You can browse all Northern Cyprus jobs or check back later.",
+    "browseAll": "View all jobs in Northern Cyprus",
+    "otherDistricts": "Jobs in other districts",
+    "countLabel": "{count} listings"
   }
 }
