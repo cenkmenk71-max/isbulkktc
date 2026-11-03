@@ -54,6 +54,9 @@ export function GoogleAnalytics() {
     window.gtag("event", "page_view", {
       page_path: window.location.pathname,
       page_title: document.title,
+      // Mirror the config's `?ga_debug=1` opt-in so each navigated view also
+      // reaches DebugView, not just the first one.
+      debug_mode: new URLSearchParams(window.location.search).has("ga_debug"),
     });
   }, [enabled, ready, pathname]);
 
@@ -71,7 +74,13 @@ export function GoogleAnalytics() {
             `window.gtag=function(){window.dataLayer.push(arguments)};` +
             `window.gtag('consent','default',{analytics_storage:'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'});` +
             `window.gtag('js',new Date());` +
-            `window.gtag('config','${measurementId}',{send_page_view:false});`,
+            // `debug_mode` is set only when the visitor opts in with
+            // `?ga_debug=1`. It makes the very next hits stream into GA4's
+            // DebugView, which is otherwise empty for ordinary traffic, so the
+            // analytics wiring can be confirmed in seconds instead of waiting
+            // for the standard reports (which lag by a day or more on a new
+            // property). Every other visitor is untouched.
+            `window.gtag('config','${measurementId}',{send_page_view:false,debug_mode:new URLSearchParams(window.location.search).has('ga_debug')});`,
         }}
       />
       <Script
