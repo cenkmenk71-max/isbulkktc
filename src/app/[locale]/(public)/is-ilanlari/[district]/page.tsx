@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { JobsExperience } from "@/components/jobs/jobs-experience";
 import { DistrictLinks } from "@/components/jobs/district-links";
+import { buildDistrictPageStructuredData } from "@/content/ai-visibility/structured-data";
+import { JsonLd } from "@/content/ai-visibility/json-ld";
 import {
   publicJobSearchSchema,
   type PublicJobSearchFilters,
@@ -11,6 +13,7 @@ import { getDistrictMessageKey } from "@/features/jobs/presentation";
 import { resolveDistrictFromSlug } from "@/features/locations/northern-cyprus-districts";
 import { routing, type AppLocale } from "@/i18n/routing";
 import { createLocalizedPageMetadata } from "@/lib/seo";
+import { getAppBaseUrl } from "@/server/config/app-url";
 import { searchPublicJobs } from "@/server/dal/jobs";
 
 type DistrictPageProps = {
@@ -75,25 +78,37 @@ export default async function DistrictPage({ params }: DistrictPageProps) {
   });
   const results = await searchPublicJobs(filters);
 
+  const structuredData = buildDistrictPageStructuredData({
+    locale,
+    baseUrl: getAppBaseUrl(),
+    districtSlug: requestedDistrict,
+    districtName,
+    jobsLabel: searchCopy("title"),
+    homeLabel: searchCopy("eyebrow"),
+  });
+
   return (
-    <JobsExperience
-      locale={locale}
-      filters={filters}
-      results={results}
-      invalidFilters={false}
-      title={t("title", { district: districtName })}
-      description={t("intro", { district: districtName })}
-      eyebrow={t("eyebrow")}
-      emptyTitle={t("emptyTitle", { district: districtName })}
-      emptyDescription={t("emptyDescription", { district: districtName })}
-      footerSlot={
-        <DistrictLinks
-          locale={locale as AppLocale}
-          currentDistrict={district}
-          title={t("otherDistricts")}
-          browseAllLabel={t("browseAll")}
-        />
-      }
-    />
+    <>
+      <JsonLd data={structuredData} />
+      <JobsExperience
+        locale={locale}
+        filters={filters}
+        results={results}
+        invalidFilters={false}
+        title={t("title", { district: districtName })}
+        description={t("intro", { district: districtName })}
+        eyebrow={t("eyebrow")}
+        emptyTitle={t("emptyTitle", { district: districtName })}
+        emptyDescription={t("emptyDescription", { district: districtName })}
+        footerSlot={
+          <DistrictLinks
+            locale={locale as AppLocale}
+            currentDistrict={district}
+            title={t("otherDistricts")}
+            browseAllLabel={t("browseAll")}
+          />
+        }
+      />
+    </>
   );
 }

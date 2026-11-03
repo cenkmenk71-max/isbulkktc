@@ -6,6 +6,7 @@ import {
   siteSummaryByLocale,
 } from "@/content/ai-visibility/faq";
 import { regionNames, servedDistricts, SITE_NAME } from "@/content/ai-visibility/site";
+import { districtSlug } from "@/features/locations/northern-cyprus-districts";
 
 /**
  * The canonical page list the brief advertises. These are the same routes the
@@ -39,6 +40,19 @@ function primaryPageLines(baseUrl: URL, locale: AppLocale): string {
       const label = locale === routing.defaultLocale ? page.tr : page.en;
       return `- [${label}](${localeUrl(baseUrl, locale, page.pathname)})`;
     })
+    .concat(
+      // District landing pages ("Lefkoşa iş ilanları", ...). Listed so an answer
+      // engine can cite the district-specific page for a "jobs in <district>"
+      // question instead of only the national listing.
+      servedDistricts.map((district) => {
+        const label =
+          locale === routing.defaultLocale
+            ? district.tr
+            : district.names[locale];
+        const suffix = locale === routing.defaultLocale ? "iş ilanları" : "jobs";
+        return `- [${label} ${suffix}](${localeUrl(baseUrl, locale, `/is-ilanlari/${districtSlug(district.tr)}`)})`;
+      }),
+    )
     .join("\n");
 }
 

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
@@ -44,7 +44,22 @@ function appPageExists(pathname: string): boolean {
     path.join(REPO_ROOT, "src/app/[locale]", `(public)${pathname}`, "page.tsx"),
     path.join(REPO_ROOT, "src/app/[locale]", pathname, "page.tsx"),
   ];
-  return candidates.some((candidate) => existsSync(candidate));
+  if (candidates.some((candidate) => existsSync(candidate))) return true;
+
+  // A dynamic route serves the concrete path: `/is-ilanlari/lefkosa` is served
+  // by `.../is-ilanlari/[district]/page.tsx`. Without this a valid brief link
+  // into a dynamic segment would read as a dead page.
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length === 0) return false;
+  const parent = path.join(
+    REPO_ROOT,
+    "src/app/[locale]",
+    `(public)/${segments.slice(0, -1).join("/")}`,
+  );
+  if (!existsSync(parent)) return false;
+  return readdirSync(parent).some(
+    (entry) => entry.startsWith("[") && entry.endsWith("]"),
+  );
 }
 
 test("the organization graph carries the required entity fields", () => {
@@ -303,7 +318,13 @@ test("the brief advertises only routes the app actually serves", () => {
     ...primarySection.matchAll(/\]\((https:\/\/isbulkktc\.com[^)]*)\)/g),
   ].map((match) => new URL(match[1]).pathname);
 
-  assert.equal(primaryPaths.length, 7, "the brief lists seven primary pages");
+  // Seven primary pages plus the six district landing pages the brief now also
+  // advertises, so an answer engine can cite "Lefkoşa iş ilanları" directly.
+  assert.equal(
+    primaryPaths.length,
+    13,
+    "the brief lists the seven primary pages and six district pages",
+  );
   for (const pathname of primaryPaths) {
     assert.ok(
       appPageExists(pathname),

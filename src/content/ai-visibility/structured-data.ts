@@ -156,4 +156,84 @@ export function getRegionName(locale: AppLocale): string {
   return regionNames[locale];
 }
 
+/**
+ * The `BreadcrumbList` + `CollectionPage` graph for a district landing page.
+ *
+ * A district page ("Lefkoşa iş ilanları") is a collection, not an article, so it
+ * declares `CollectionPage` and names the district in `about`. The breadcrumb
+ * gives answer engines the hierarchy (home → jobs → district) that the URL alone
+ * only implies, which is what lets a result be attributed to the right place.
+ *
+ * The page URL and the district name are the only inputs, so nothing here can
+ * drift from the page the route actually renders.
+ */
+export function buildDistrictPageStructuredData({
+  locale,
+  baseUrl,
+  districtSlug,
+  districtName,
+  jobsLabel,
+  homeLabel,
+}: {
+  locale: AppLocale;
+  baseUrl: URL;
+  districtSlug: string;
+  districtName: string;
+  jobsLabel: string;
+  homeLabel: string;
+}) {
+  const siteUrl = baseUrl.origin;
+  const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
+  const jobsUrl = `${siteUrl}${prefix}/jobs`;
+  const districtUrl = `${siteUrl}${prefix}/is-ilanlari/${districtSlug}`;
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": `${districtUrl}#webpage`,
+        url: districtUrl,
+        name: `${districtName} İş İlanları`,
+        inLanguage: locale,
+        isPartOf: { "@id": `${siteUrl}/#website` },
+        about: {
+          "@type": "AdministrativeArea",
+          name: districtName,
+          containedInPlace: {
+            "@type": "Country",
+            name: regionNames[locale],
+            identifier: "CY",
+          },
+        },
+        breadcrumb: { "@id": `${districtUrl}#breadcrumb` },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${districtUrl}#breadcrumb`,
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: homeLabel,
+            item: `${siteUrl}${prefix}`,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: jobsLabel,
+            item: jobsUrl,
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: districtName,
+            item: districtUrl,
+          },
+        ],
+      },
+    ],
+  };
+}
+
 export { LOCATION_DISTRICT, LOCATION_LOCALITY };
