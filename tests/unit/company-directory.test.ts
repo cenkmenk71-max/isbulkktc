@@ -18,6 +18,7 @@ import {
   importCompanyDirectory,
   isWithinNorthernCyprusCoverage,
   parseCsvRecords,
+  sanitizeDirectoryAddress,
 } from "../../src/features/companies/directory-import";
 
 const sampleCompanies: CompanyDirectoryEntry[] = [
@@ -698,3 +699,42 @@ test("excludes Greek-script company names but keeps Latin-script names", () => {
   assert.equal(imported.greekNameRecordCount, 1);
   assert.deepEqual(imported.entries.map((company) => company.id), ["latin"]);
 });
+
+test("strips a personal e-mail and a repeated phone out of a map address", () => {
+  // A scraped map listing can carry a personal mailbox in its address text.
+  // Publishing it inside the company card republishes it to every crawler, so
+  // the importer drops it while keeping the human-readable parts.
+  assert.equal(
+    sanitizeDirectoryAddress("59Q5+P64 c.oztekiner@gmail.com, Lefkoşa 99010"),
+    "59Q5+P64, Lefkoşa 99010",
+  );
+  assert.equal(
+    sanitizeDirectoryAddress(
+      "Birtek Oto Elektrik - 0392 2252776, Trachonas 99010",
+    ),
+    "Birtek Oto Elektrik -, Trachonas 99010",
+  );
+  assert.equal(
+    sanitizeDirectoryAddress("Yaman Bey Sokağı No: 87, Ortaköy 99010"),
+    "Yaman Bey Sokağı No: 87, Ortaköy 99010",
+  );
+  // A short postal / plot code must survive: only phone-shaped runs go.
+  assert.equal(
+    sanitizeDirectoryAddress("Karaoğlanoğlu Cd No:156-9932, Girne 9932"),
+    "Karaoğlanoğlu Cd No:156-9932, Girne 9932",
+  );
+  assert.equal(sanitizeDirectoryAddress("   "), null);
+  assert.equal(sanitizeDirectoryAddress("only c.oztekiner@gmail.com here"), "only here");
+});
+
+test("the CSV importer sanitises addresses end to end", () => {
+  const { entries } = companyEntriesFromCsv(
+    [
+      "place_id,title,address,latitude,longitude",
+      'p1,"Ada şirketi","59Q5+P64 c.oztekiner@gmail.com, Lefkoşa 99010",35.19,33.36',
+    ].join("\n"),
+  );
+
+  assert.equal(entries[0].locations[0].address, "59Q5+P64, Lefkoşa 99010");
+});
+

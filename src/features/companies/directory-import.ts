@@ -139,6 +139,42 @@ function splitCategories(value: string): string[] {
   return [...new Set(value.split(",").map((category) => category.trim()).filter(Boolean))];
 }
 
+const addressEmailPattern = /[\w.+-]+@[\w-]+\.[\w.-]+/;
+// A run of ten or more digits with the separators a phone number uses. The
+// floor is deliberate: a postal code (4-5 digits) or a plot number must survive,
+// so only a genuinely phone-shaped run is treated as one.
+const addressPhonePattern = /\+?\d[\d\s().-]{7,}\d/;
+
+/**
+ * A map-listing `address` occasionally carries a contact the operator published
+ * elsewhere — a personal e-mail, or the shop's own phone repeated in the text.
+ * An e-mail is not an address, and rendering it inside the company card (and in
+ * the RSC payload behind it) republishes a scraped mailbox to every crawler. The
+ * importer therefore drops both from the address text: the dedicated `phone`
+ * column already carries the phone a company meant to publish, and a public
+ * e-mail is only ever published through an explicit directory override.
+ */
+export function sanitizeDirectoryAddress(raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return null;
+
+  const withoutContact = value
+    .replace(addressEmailPattern, " ")
+    .replace(addressPhonePattern, (token) =>
+      token.replace(/\D/g, "").length >= 10 ? " " : token,
+    );
+
+  const tidied = withoutContact
+    .replace(/\s*,\s*,+/g, ", ")
+    .replace(/\s+,/g, ",")
+    .replace(/\(\s*\)/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[\s,]+|[\s,]+$/g, "")
+    .trim();
+
+  return tidied || null;
+}
+
 export function companyEntriesFromCsv(
   text: string,
 ): {
@@ -193,7 +229,7 @@ export function companyEntriesFromCsv(
       categories: splitCategories(field("categories")),
       locations: [
         {
-          address: field("address") || null,
+          address: sanitizeDirectoryAddress(field("address")),
           municipality: field("municipality") || null,
           phone: field("phone") || null,
           website: safeWebsite(field("website"), index + 2),

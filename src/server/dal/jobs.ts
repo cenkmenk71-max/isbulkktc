@@ -194,7 +194,13 @@ export async function searchPublicJobs(
     }
 
     return results.data;
-  } catch {
+  } catch (error) {
+    // Falling back to an empty result set is deliberate (the listing must never
+    // 500), but it is indistinguishable from "no vacancies" to the caller. Log
+    // so a broken RPC surfaces as an outage instead of a silently empty board.
+    console.error("The public job search failed; rendering the fallback.", {
+      cause: error instanceof Error ? error.message : undefined,
+    });
     const fallback = await searchFallbackPublicJobs(filters);
     return fallback as Awaited<ReturnType<typeof searchPublicJobs>>;
   }
@@ -224,7 +230,13 @@ export async function getPublicJobBySlug(input: unknown) {
     }
 
     return job.data;
-  } catch {
+  } catch (error) {
+    // A thrown lookup makes this route answer 404 — a live vacancy would be
+    // reported as missing. The fallback still decides the outcome, but the log
+    // makes the difference between "gone" and "the RPC broke" visible.
+    console.error("The public job detail could not be loaded; rendering the fallback.", {
+      cause: error instanceof Error ? error.message : undefined,
+    });
     const jobs = await fetchFallbackPublicJobs();
     const match = jobs.find((job) => job.slug === slug);
     if (!match) return null;
@@ -290,7 +302,15 @@ export async function listPublicJobSitemapEntries(): Promise<
     }
 
     return entries;
-  } catch {
+  } catch (error) {
+    // The sitemap must never fail the build or the request, so it degrades to
+    // the static routes. But an empty list is not the same as "no vacancies":
+    // if it is silent, a broken RPC quietly drops every vacancy URL from the
+    // sitemap and nothing surfaces it. Log so the outage is visible, then fall
+    // back.
+    console.error("The job sitemap entries could not be listed.", {
+      cause: error instanceof Error ? error.message : undefined,
+    });
     return [];
   }
 }

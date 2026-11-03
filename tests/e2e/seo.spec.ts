@@ -570,3 +570,34 @@ test("hreflang alternates are declared once, in the HTML head", async ({
   const linkHeader = response.headers()["link"] ?? "";
   expect(linkHeader).not.toContain("hreflang");
 });
+
+test("every vacancy URL in the sitemap actually resolves", async ({
+  request,
+}) => {
+  test.setTimeout(180_000);
+
+  const sitemapResponse = await request.get("/sitemap.xml");
+  expect(sitemapResponse.ok()).toBe(true);
+  const sitemap = await sitemapResponse.text();
+
+  const vacancyPaths = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)]
+    .map((match) => match[1])
+    .filter((loc) => loc.includes("/jobs/"))
+    .map((loc) => new URL(loc).pathname);
+
+  // The imported catalogue changes on every refresh, so this is the one place a
+  // stale entry could ship: a vacancy that was dropped from the catalogue is
+  // still advertised by the hourly-cached sitemap until it revalidates. Google
+  // drops a sitemap that advertises URLs which do not resolve, so the sitemap
+  // must never carry a vacancy URL that 404s.
+  expect(vacancyPaths.length).toBeGreaterThan(0);
+
+  for (const path of vacancyPaths) {
+    const response = await request.get(path);
+    expect(
+      response.status(),
+      `${path} is advertised in the sitemap but answers ${response.status()}`,
+    ).toBe(200);
+  }
+});
+
