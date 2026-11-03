@@ -1,4 +1,5 @@
 import Image, { type StaticImageData } from "next/image";
+import { Link } from "@/i18n/navigation";
 import {
   BriefcaseBusiness,
   ChefHat,
@@ -53,6 +54,8 @@ export type SectorCardData = {
   searchTerms: string[];
   featuredLabel: string;
   featured?: boolean;
+  /** Where the card goes when activated: the listing filtered to this sector. */
+  href: string;
 };
 
 export function SectorCard({
@@ -67,13 +70,14 @@ export function SectorCard({
   const Icon = sectorIcons[sector.icon];
 
   return (
-    <article
+    <Link
       className={`sector-card sector-${sector.style}`}
       data-sector={sector.key}
       data-sector-image={sector.image.src}
       data-sector-category={sector.category}
       data-reveal
       data-tilt
+      href={sector.href}
     >
       <div className="sector-image">
         <Image
@@ -100,6 +104,6 @@ export function SectorCard({
           )}
         </span>
       </div>
-    </article>
+    </Link>
   );
 }

@@ -236,6 +236,10 @@ export async function HomeExperience({
     searchTerms: [...sector.searchTerms],
     featuredLabel: copy("sectorFeaturedLabel"),
     featured: sector.featured,
+    // The sector card is a real link into the filtered listing, so a crawler
+    // follows it and a visitor lands on that sector's vacancies rather than a
+    // dead card. The first Turkish term is the search the importer stores.
+    href: `/jobs?query=${encodeURIComponent(sector.searchTerms[0] ?? sector.key)}`,
   });
   const allSectorData = sectors.map(getSectorCard);
 
