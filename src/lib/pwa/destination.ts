@@ -61,7 +61,23 @@ export function sanitizeNextPath(raw: string | null | undefined): string | null 
     return null;
   }
 
-  return `${resolved.pathname}${resolved.search}${resolved.hash}`;
+  const normalized = `${resolved.pathname}${resolved.search}${resolved.hash}`;
+
+  // Re-validate the *output*, not just the input. The checks above run on the
+  // raw string, but `new URL` resolves `..`/`.` segments first, so a path that
+  // hides a second slash behind a dot segment normalises back into a
+  // protocol-relative URL: `sanitizeNextPath("/..//host")` used to return
+  // `"//host"`, which a browser resolves off-origin. The origin check on
+  // `resolved` cannot catch it — the origin is always the base's.
+  if (
+    normalized.startsWith("//") ||
+    normalized.includes("\\") ||
+    forbiddenScheme.test(normalized)
+  ) {
+    return null;
+  }
+
+  return normalized;
 }
 
 /**
