@@ -31,3 +31,43 @@ Bunlara dokunma; ihtiyacın varsa kendi brief'ine TODO yaz.
 - Sadece sahibi olduğun dosyalara yaz. Ortak yardımcı gerekiyorsa rapor et.
 - CI yeşil: `bun run lint`, `typecheck`, `check:frontend-source`, `test:unit`.
 - Skill: `code-review`, `qa-changes`.
+
+---
+
+## Çalışma notları (lane/urun)
+
+### Tur 1 — kaynak ilan hattında iki gerçek hata (jobs dilimi)
+
+**1. `buildSourceJobSlug` sonsuz döngü (yüksek önem).**
+`src/features/jobs/source-job-import.ts` içinde çakışma çözümü `clampSlug(\`${withCompany}-${counter}\`, 100)`
+ile yapılıyordu. Slug 100 karakter sınırına oturduğunda sayaç eki kırpılıyor,
+her aday aynı (alınmış) diziye çöküyor ve `while` döngüsü hiç bitmiyordu —
+yani `scripts/import-source-jobs.ts` toplu içe aktarmada asılı kalıyordu.
+Kanıt: temel uygulamada üçüncü çağrı `timeout` ile kesildi (exit 124);
+düzeltmeden sonra 0 ms'de geçerli slug döndü. Çözüm: ek için yer ayıran
+`withCounterSuffix` (100 − ek uzunluğu kadar kırp) — böylece her sayaç farklı.
+
+**2. `decodeHtmlEntities` / `decodeHtml` aralık dışı kod noktasında çöküyor (orta-yüksek).**
+`String.fromCodePoint` sınır denetimi olmadan çağrılıyordu; kazınmış HTML'deki
+bozuk `&#x110000;` bir `RangeError` atıyor, bu `String.replace` içinde tüm metin
+çıkarımını durdurup içe aktarmayı düşürüyordu. Çözüm: aralık dışı ve vekil
+(surrogate) kod noktalarını ham hâliyle bırakan `decodeNumericEntity`; her iki
+modül (`source-job-import.ts`, `iskibris-source-parser.ts`) aynı korumalı
+kod çözücüyü paylaşıyor (kod-simplifier bulgusuna göre yinelenen kopya kaldırıldı).
+
+**3. Boş şirket adı sonunda tire.** Şirket adı slug'lanabilir karakter
+içermediğinde (`"***"`) eski kod `source-iskibris-garson-` gibi sonu tireli bir
+slug üretiyordu; bu DB slug CHECK'ini (`^[a-z0-9]+(-[a-z0-9]+)*$`) ihlal eder.
+Çözüm: şirket slug'ı boşsa taban slug'a düş ve `clampSlug` baştaki/sondaki
+tireleri temizlesin.
+
+**Eklenen test:** `src/features/jobs/source-job-import.test.ts` (5 test) —
+sonlandırma, her uzunlukta benzersiz+geçerli slug, tireli-kenar ve kod noktası
+aralık denetimleri. `bun run test:unit` 353 → 358 yeşil.
+
+**Çalıştırılan kontroller:** `bun run lint`, `bun run typecheck`,
+`bun run check:frontend-source`, `bun run test:unit` → hepsi yeşil.
+Canlıya dokunulmadı (yalnız `src/features/jobs/**`, DB yazımı yok).
+
+### TODO (sahiplerine)
+- (yok)
