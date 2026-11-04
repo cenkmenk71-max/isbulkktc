@@ -102,11 +102,15 @@ test("source employer details stay separate and link back to their public source
       'a[href="https://www.fikrico.com/"][target="_blank"]',
     ),
   ).toBeVisible();
+  // The employer's own site is linked, but the page must never send a visitor to
+  // the site the listing was imported from — that is the competitor's page for
+  // the same vacancy.
   await expect(
-    employerCard.locator(
-      'a[href="https://isbulkibris.com/firmalar/fikri-co-chartered-accountants"]',
-    ),
-  ).toBeVisible();
+    employerCard.locator('a[href*="isbulkibris.com"]'),
+  ).toHaveCount(0);
+  await expect(
+    employerCard.locator('a[href*="iskibris.com"]'),
+  ).toHaveCount(0);
   await expect(
     employerCard.locator(".company-job-employer-sources"),
   ).toHaveCount(0);

@@ -640,9 +640,11 @@ test("every page hero uses its own uploaded photo", async ({ page }) => {
               path: photo.src ? new URL(photo.src).searchParams.get("url") : null,
             };
           }),
-        // Seven full-page loads plus a decode each; the default 5 s poll is too
-        // tight under CI load, which made this test flake.
-        { timeout: 12_000 },
+        // Seven full-page loads plus a decode each. The 5 s default was too
+        // tight and 12 s still lost the race under CI load, so the budget is
+        // raised again and the message names the route that stalled — a timeout
+        // here should say *which* hero failed, not just that one did.
+        { timeout: 20_000, message: `hero photo for ${route}` },
       )
       .toMatchObject({ loaded: true, path: expectedPath });
   }
