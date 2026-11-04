@@ -7,20 +7,40 @@ E2E, `node:test` unit tests, pgTAP database suites.
 
 ## Verify before pushing
 
-CI (`.github/workflows/ci.yml`, job "Quality, database and E2E") runs the same
-steps locally. Run them in this order:
+CI (`.github/workflows/ci.yml`) runs the same steps locally, split across three
+jobs plus an aggregator. The aggregator keeps the name
+"Quality, database and E2E" so branch protection's required check still
+resolves; it passes only when all three did.
 
-- `npm run lint`
-- `npm run typecheck`
-- `npm run check:frontend-source` (design gate: palette tokens, contrast
-  pairs, uploaded-photo budgets, locale routing — 175 assertions)
-- `npm run test:unit`
-- `npm run build`, then `npm run test:e2e` (E2E runs against the production
-  standalone server at `.next/standalone/server.js`)
-- `npm run test:db` (pgTAP; needs the local Supabase stack via Docker)
+- `static` — `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`
+  (design gate: palette tokens, contrast pairs, uploaded-photo budgets, locale
+  routing), `bun run test:unit`. Finishes in well under a minute.
+- `database` — `bun run test:db` (pgTAP; needs the local Supabase stack via Docker).
+- `e2e` — `bun run build`, then `bun run test:e2e`, split across four Playwright
+  shards (`--shard=n/4`). The suite runs against the production standalone server
+  at `.next/standalone/server.js`.
+
+Run them in this order locally:
+
+- `bun run lint`
+- `bun run typecheck`
+- `bun run check:frontend-source`
+- `bun run test:unit`
+- `bun run build`, then `bun run test:e2e`
+- `bun run test:db`
+
+Use `bun`, not `npm`: the lockfile is `bun.lock` and `npm ci` fails against it.
 
 CI triggers only on `pull_request` and on `push` to `main`. Pushing a feature
 branch by itself starts nothing — open a PR to get a run.
+
+**Branch protection does not require the branch to be up to date.** It was on
+once; every merge then invalidated every open PR, so a queue of parallel lanes
+left the last one waiting roughly forty-five minutes. With several lanes running
+at once the cascade cost more than it caught, so it is off. Full CI is still
+required on every PR, and `main` runs CI on every push, so an integration
+problem surfaces on `main` immediately. If the repository ever moves to a plan
+with merge queue, turn it on — that is the correct fix for the cascade.
 
 ## Gotchas worth remembering
 

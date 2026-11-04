@@ -1,19 +1,19 @@
 name: Lane PR automation
 
-# Automation for the parallel "lane" programme (see docs/lanes/).
+# Opt-in merge automation for the parallel "lane" programme (docs/lanes/).
 #
-# Two independent, opt-in behaviours, each keyed on a label so the owner keeps
-# the merge decision the lane contract reserves for them:
+# The lane contract reserves the merge decision for the owner, so nothing here
+# merges a PR unless the `agent:automerge` label is present. That label is the
+# owner's standing instruction for a specific PR.
 #
-#   `agent`            -> keep the branch rebased on `main` so the strict
-#                         "branch must be up to date" protection rule holds.
-#                         A conflicting branch makes `update-branch` fail and
-#                         the PR stays blocked for a human to split.
-#   `agent:automerge`  -> also turn on squash auto-merge, so the PR lands by
-#                         itself once `Quality, database and E2E` is green.
-#                         Add this only when unattended merge is wanted.
-#
-# It never writes to `main`; the PR is the only path.
+# History: this workflow also rebased the branch onto `main` on every event, to
+# satisfy the strict "branch must be up to date" protection rule. That rule is
+# now off — it made every merge invalidate every open PR, so a queue of six
+# lanes left the last one waiting about forty-five minutes for a check that
+# mostly repeated work. The rebase step went with it: without strict, rebasing
+# only re-runs CI for no benefit. Full CI is still required on every PR, and
+# `main` still runs CI on every push, so an integration problem surfaces on
+# `main` immediately rather than blocking the queue.
 
 on:
   pull_request:
@@ -24,7 +24,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: agent-pr-${{ github.event.pull_request.number }}
+  group: lane-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
@@ -32,25 +32,14 @@ jobs:
     if: >-
       github.event.pull_request.base.ref == 'main' &&
       github.event.pull_request.draft == false &&
-      contains(github.event.pull_request.labels.*.name, 'agent')
+      contains(github.event.pull_request.labels.*.name, 'agent:automerge')
     runs-on: ubuntu-latest
     steps:
-      - name: Keep the branch current with main
+      - name: Enable squash auto-merge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           pr="${{ github.event.pull_request.number }}"
-          # Fails when the branch conflicts with main; leave the PR for a human.
-          if ! gh pr update-branch "$pr" --repo "${{ github.repository }}"; then
-            echo "::warning::PR #$pr conflicts with main and was left for a human"
-          fi
-
-      - name: Enable squash auto-merge (opt-in)
-        if: contains(github.event.pull_request.labels.*.name, 'agent:automerge')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          pr="${{ github.event.pull_request.number }}"
+          # Waits for the required check, so a PR only lands when CI is green.
           gh pr merge "$pr" --repo "${{ github.repository }}" --squash --auto
