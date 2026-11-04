@@ -784,8 +784,9 @@ test("editorial guides are indexable, self-canonical and carry Article data", as
 
   // Every guide page is advertised in the sitemap.
   const sitemap = await (await request.get("/sitemap.xml")).text();
+  const sitemapOrigin = new URL(page.url()).origin;
   for (const guide of guides) {
-    expect(sitemap).toContain(`<loc>${origin}/rehber/${guide.slug}</loc>`);
+    expect(sitemap).toContain(`<loc>${sitemapOrigin}/rehber/${guide.slug}</loc>`);
   }
 });
 
