@@ -1,0 +1,121 @@
+#!/usr/bin/env node
+/**
+ * Lane spawner — start the parallel lane team on demand.
+ *
+ * The lane programme (docs/lanes/) was designed for a human to open one chat
+ * per lane and paste the kickoff prompt. This script does that part: it starts
+ * every lane as its own conversation, each in its own sandbox with its own
+ * clone, all at the same time. The lanes never share a working tree, so they
+ * cannot overwrite each other; they meet only at `main`, through pull requests.
+ *
+ * Usage:
+ *   node scripts/spawn-lanes.mjs --dry-run              # print, start nothing
+ *   node scripts/spawn-lanes.mjs seo geo tasarim        # start three lanes
+ *   node scripts/spawn-lanes.mjs --all                  # start every lane
+ *
+ * Needs OPENHANDS_API_KEY in the environment. Each started lane consumes
+ * sandbox budget, so nothing starts without an explicit lane list or --all.
+ */
+
+const API = 'https://app.all-hands.dev/api/v1';
+const REPO = 'cenkmenk71-max/isbulkktc';
+const PROVIDER = 'github';
+
+const LANES = {
+  supabase: { branch: 'lane/supabase', wave: 1, scope: 'şema, RLS, indeks, pgTAP' },
+  cloudflare: { branch: 'lane/cloudflare', wave: 2, scope: 'WAF/cache/DNS/SSL/bot denetimi' },
+  seo: { branch: 'lane/seo', wave: 0, scope: 'sitemap, canonical, hreflang, OG, route metadata' },
+  geo: { branch: 'lane/geo', wave: 0, scope: 'llms.txt, yerel entity, AI görünürlük, JSON-LD üreticisi' },
+  tasarim: { branch: 'lane/tasarim', wave: 0, scope: 'UI/UX, motion, erişilebilirlik, guard\'lar' },
+  auth: { branch: 'lane/auth', wave: 0, scope: 'oturum akışı, e-posta şablonları, güvenlik' },
+};
+
+function kickoff(name) {
+  return [
+    `isbulkktc reposunda paralel "lane" programında çalışacaksın. Lane: ${name}.`,
+    'Önce şu dosyaları OKU: docs/lanes/00-orchestration.md ve docs/lanes/' +
+      `${name}.md. Ayrıca AGENTS.md'yi oku. Sonra kendi lane'inin görevini uygula.`,
+    'Kurallar: main\'e push YOK, kendi branch\'in (' +
+      `${LANES[name].branch}) + PR açık bırak; canlı Supabase'e yazma ` +
+      '(tek yazar LANE-SUPABASE\'dir); sadece sahibi olduğun dosyalara yaz; ' +
+      "CI'ı (bun run lint, typecheck, check:frontend-source, test:unit) yeşile getir.",
+    'En güncel ve profesyonel kaynakları kullan: resmî dokümanlar, sürüme özel ' +
+      'kütüphane dokümanı (context7), repo Q&A (deepwiki), W3C/schema.org gibi ' +
+      'standartlar. Rapor formatı docs/lanes/00-orchestration.md sonunda.',
+  ].join('\n');
+}
+
+async function startLane(name, key) {
+  const lane = LANES[name];
+  const response = await fetch(`${API}/app-conversations`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      selected_repository: REPO,
+      selected_branch: 'main',
+      git_provider: PROVIDER,
+      title: `LANE-${name}`,
+      initial_message: {
+        role: 'user',
+        content: [{ type: 'text', text: kickoff(name) }],
+        run: true,
+      },
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`${name}: HTTP ${response.status} ${await response.text()}`);
+  }
+  const body = await response.json();
+  return { name, taskId: body.id, branch: lane.branch };
+}
+
+const args = process.argv.slice(2);
+const dryRun = args.includes('--dry-run');
+const all = args.includes('--all');
+const names = args.filter((a) => !a.startsWith('--'));
+
+// A bare `--dry-run` previews the whole team; otherwise a lane list or --all
+// is required so nothing starts by accident.
+if (!all && names.length === 0 && !dryRun) {
+  console.error('Give lane names or --all. Known lanes:');
+  for (const [name, lane] of Object.entries(LANES)) {
+    console.error(`  ${name.padEnd(12)} wave ${lane.wave}  ${lane.scope}`);
+  }
+  process.exit(1);
+}
+
+const targets = all || names.length === 0 ? Object.keys(LANES) : names;
+for (const name of targets) {
+  if (!LANES[name]) {
+    console.error(`Unknown lane "${name}". Known: ${Object.keys(LANES).join(', ')}`);
+    process.exit(1);
+  }
+}
+
+if (dryRun) {
+  for (const name of targets) {
+    console.log(`would start ${name} -> branch ${LANES[name].branch}`);
+  }
+  process.exit(0);
+}
+
+const key = process.env.OPENHANDS_API_KEY;
+if (!key) {
+  console.error('OPENHANDS_API_KEY is not set');
+  process.exit(1);
+}
+
+const results = await Promise.allSettled(targets.map((n) => startLane(n, key)));
+let failed = 0;
+for (const result of results) {
+  if (result.status === 'fulfilled') {
+    console.log(`started ${result.value.name} -> ${result.value.branch} (task ${result.value.taskId})`);
+  } else {
+    failed += 1;
+    console.error(`FAILED ${result.reason}`);
+  }
+}
+process.exit(failed === 0 ? 0 : 1);
