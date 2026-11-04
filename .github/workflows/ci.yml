@@ -141,8 +141,16 @@ jobs:
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
 
+      # The download is a network call to a CDN and fails transiently (seen
+      # once: the step failed while the tests themselves passed). Retry it
+      # rather than fail a whole shard on a flake.
       - name: Install Playwright browser
-        run: bunx playwright install --with-deps chrome
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 15
+          command: bunx playwright install --with-deps chrome
 
       - name: Set up Supabase CLI
         id: supabase_cli
