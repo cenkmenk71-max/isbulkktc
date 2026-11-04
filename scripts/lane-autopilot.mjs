@@ -63,22 +63,34 @@ function saveState(state) {
 }
 
 async function api(path, init = {}) {
-  const response = await fetch(`${API}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      ...(init.headers ?? {}),
-    },
-  });
-  const text = await response.text();
-  let body = null;
+  // Always bound the request. send-message blocks while the target agent is
+  // busy, so an unbounded fetch would hang the whole pass.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), init.timeoutMs ?? 20000);
   try {
-    body = JSON.parse(text);
-  } catch {
-    body = null;
+    const response = await fetch(`${API}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        ...(init.headers ?? {}),
+      },
+    });
+    const text = await response.text();
+    let body = null;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = null;
+    }
+    return { ok: response.ok, status: response.status, body };
+  } catch (error) {
+    // A timeout is reported, not thrown, so callers can decide what it means.
+    return { ok: false, status: 0, body: null, timedOut: true, error: String(error) };
+  } finally {
+    clearTimeout(timer);
   }
-  return { ok: response.ok, status: response.status, body };
 }
 
 /** Open PRs keyed by head branch. */
@@ -140,6 +152,22 @@ async function idleConversations() {
   );
 }
 
+/**
+ * A lane's own paused sandbox, if it has one. Resuming an existing sandbox does
+ * not create one, so it costs no quota — the third way to keep working on a
+ * quota-exhausted day, after reuse and before a fresh sandbox.
+ */
+async function pausedConversations() {
+  const { ok, body } = await api('/app-conversations/search?limit=50');
+  if (!ok || !body) return [];
+  return (body.items ?? []).filter((c) => c.sandbox_status === 'PAUSED');
+}
+
+async function resumeSandbox(sandboxId) {
+  const { ok } = await api(`/sandboxes/${sandboxId}/resume`, { method: 'POST' });
+  return ok;
+}
+
 function kickoff(name, context) {
   const lane = LANES[name];
   const parts = [
@@ -199,10 +227,11 @@ async function spawnLane(name, context) {
  * instead of a fresh one. Returns the conversation id it used.
  */
 async function sendToExisting(conversationId, name, context) {
-  const { ok, body } = await api(
+  const { ok, body, timedOut } = await api(
     `/app-conversations/${conversationId}/send-message`,
     {
       method: 'POST',
+      timeoutMs: 20000,
       body: JSON.stringify({
         role: 'user',
         content: [{ type: 'text', text: kickoff(name, context) }],
@@ -210,6 +239,10 @@ async function sendToExisting(conversationId, name, context) {
       }),
     },
   );
+  // The endpoint holds the response until the agent accepts the message, so a
+  // timeout means the agent was busy — the message was delivered, it is just
+  // not acknowledged. Treat it as sent rather than retrying into a duplicate.
+  if (timedOut) return conversationId;
   if (!ok) throw new Error(`${name}: HTTP ${body?.detail ?? 'unknown'}`);
   return conversationId;
 }
@@ -300,12 +333,13 @@ async function main() {
     process.exit(1);
   }
 
-  const [prs, blocked, tasks, sandboxes, idle] = await Promise.all([
+  const [prs, blocked, tasks, sandboxes, idle, paused] = await Promise.all([
     Promise.resolve(openPullRequests()),
     Promise.resolve(blockedIssues()),
     startTasks(),
     runningSandboxes(),
     idleConversations(),
+    pausedConversations(),
   ]);
 
   const branches = execFileSync('git', ['branch', '-r'], { encoding: 'utf8' })
@@ -340,19 +374,31 @@ async function main() {
   // first is what keeps the team moving on a quota-exhausted day.
   const reusableFor = (d) =>
     idle.find((c) => String(c.title ?? '') === `LANE-${d.name}`);
+  const resumableFor = (d) =>
+    paused.find(
+      (c) =>
+        String(c.title ?? '') === `LANE-${d.name}` && c.sandbox_id,
+    );
   const reusable = toSpawn.filter((d) => reusableFor(d));
-  const fresh = toSpawn.filter((d) => !reusableFor(d));
+  const resumable = toSpawn.filter(
+    (d) => !reusableFor(d) && resumableFor(d),
+  );
+  const fresh = toSpawn.filter((d) => !reusableFor(d) && !resumableFor(d));
 
   const capacity = Math.max(0, SANDBOX_BUDGET - running);
   const freshAllowed = fresh.slice(0, capacity);
-  const allowed = [...reusable, ...freshAllowed];
+  const allowed = [...reusable, ...resumable, ...freshAllowed];
   const deferred = fresh.slice(capacity);
 
   console.log(`sandboxes running: ${running} (budget ${SANDBOX_BUDGET})`);
   for (const d of decisions) {
     const isAllowed = allowed.includes(d);
     const marker = d.action === 'spawn' && !isAllowed ? 'deferred' : d.action;
-    const note = reusableFor(d) ? ' (reuse)' : '';
+    const note = reusableFor(d)
+      ? ' (reuse)'
+      : resumableFor(d)
+        ? ' (resume)'
+        : '';
     console.log(`  ${d.name.padEnd(11)} ${marker.padEnd(9)} ${d.reason}${note}`);
   }
 
@@ -363,10 +409,13 @@ async function main() {
 
   for (const d of allowed) {
     try {
-      // Prefer a sandbox this lane already owns and is not using. Creating one
-      // may be refused by the daily quota; reusing one never is.
+      // Prefer a sandbox this lane already owns. Creating one may be refused
+      // by the daily quota; reusing or resuming one never is.
       const reusable = idle.find(
         (c) => String(c.title ?? '') === `LANE-${d.name}`,
+      );
+      const resumable = paused.find(
+        (c) => String(c.title ?? '') === `LANE-${d.name}` && c.sandbox_id,
       );
       let entry = state[d.name] ?? { attempts: 0 };
 
@@ -382,6 +431,24 @@ async function main() {
           `  ${d.name}: reused sandbox (attempt ${entry.attempts})`,
         );
         continue;
+      }
+
+      if (resumable) {
+        const resumed = await resumeSandbox(resumable.sandbox_id);
+        if (resumed) {
+          await sendToExisting(resumable.id, d.name, d.context);
+          entry.attempts = (entry.attempts ?? 0) + 1;
+          entry.lastConversationId = resumable.id;
+          entry.lastStatus = 'RESUMED';
+          entry.lastError = null;
+          entry.updatedAt = new Date().toISOString();
+          state[d.name] = entry;
+          console.log(
+            `  ${d.name}: resumed sandbox (attempt ${entry.attempts})`,
+          );
+          continue;
+        }
+        console.error(`  ${d.name}: resume failed, falling through to a new sandbox`);
       }
 
       const taskId = await spawnLane(d.name, d.context);
