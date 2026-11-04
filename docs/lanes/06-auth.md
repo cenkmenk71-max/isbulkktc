@@ -25,3 +25,68 @@
 
 ## Raporla
 Akış diyagramı + bulunan açıklar + düzeltmeler + testler. Branch + PR, CI yeşil.
+
+---
+
+## Çalıştırma raporu — 2026-11-04
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: #98
+Değişen dosyalar:
+  src/features/identity/auth-routing.ts        (+ callbackAudienceParam)
+  src/features/identity/schemas.ts             (resendConfirmationSchema.audience)
+  src/features/identity/actions.ts             (resend + sign-up + OAuth start)
+  src/features/identity/sign-in-form.tsx       (gizli audience alanı)
+  src/features/identity/auth-audience-routing.test.ts  (yeni, 4 test)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (358, 4'ü yeni)
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; şablon/config değişmedi)
+```
+
+### Bulunan açık (düzeltildi)
+`email_not_confirmed` kurtarma formu yalnız e-posta+locale gönderiyordu ve
+`resendConfirmation` onay bağlantısını sabit `next=candidate` ile kuruyordu.
+Doğrulanmamış bir **işveren** "yeniden gönder" deyip e-postadaki bağlantıya
+tıklayınca `/profile/dashboard` (aday) panosuna düşüyordu; kendi panosu
+`/company/dashboard` yerine. sign-up ve OAuth-start yolları audience'ı zaten
+doğru taşıyordu — yalnız resend eksikti.
+
+Düzeltme: `callbackAudienceParam()` (audience→`next` tek kaynağı), şemaya zorunlu
+`audience`, form gizli alanı, aksiyonda `next` türetimi; sign-up/OAuth-start
+ternary'leri de aynı helper'a çekildi.
+
+### Güvenlik değerlendirmesi (security skill)
+- `next` istemci kontrollü ama `/company/dashboard` gerçek `company_members`
+  kaydına bağlı (`getEmployerWorkspace` → yoksa `/company/new`). Ayrıcalık
+  yükseltme yok; düzeltme yalnız yönlendirme doğruluğu.
+- `service_role` anahtarı hiçbir identity dosyasında yok (yalnız
+  `NEXT_PUBLIC_TURNSTILE_SITE_KEY` ve `AUTH_OAUTH_PROVIDERS` okunuyor).
+- E-posta şablonları GoTrue sözleşmesiyle çapraz kontrol edildi: `.Data`
+  (user_metadata), `.ConfirmationURL`, `.Email`, `.NewEmail`, `.Token`,
+  `.SiteURL` — hepsi güncel `supabase/auth` (v2.197) kaynağında mevcut.
+- Şablonlarda `<script>`/inline handler/`javascript:`/iframe yok; tüm
+  bağlantılar mutlak https; tek stil sayfası ve WCAG kontrast testi mevcut.
+
+### QA (qa-changes skill)
+Gerçek modüllerle (tsx) before/after:
+```
+BASELINE employer resend link : /en/auth/callback?next=candidate -> /en/profile/dashboard
+FIXED    employer resend link : /en/auth/callback?next=company   -> /en/company/dashboard
+```
+Tam yerel Supabase + Mailpit E2E'si bu sandbox'ta Docker olmadığı için
+çalıştırılamadı (3 farklı yaklaşım denendi, hepsi Docker'a bağlı); mantık gerçek
+modüllerle yürütüldü ve birim testiyle kilitlendi.
+
+### Sahibin yapması gerekenler
+- `src/app/[locale]/auth/callback/route.ts` sahiplik tablosunda hiçbir lane'e
+  atanmamış. Auth ile ilgili olduğundan LANE-AUTH'a (veya LANE-URUN'a) açıkça
+  atanmalı. Bu PR o dosyaya dokunmadı.
+
+### Sonraki lane için notlar
+- **Invite akışı:** GoTrue davet linki implicit (`#access_token=...`) redirect
+  döndürüyor; callback rotası yalnız PKCE `?code=` işliyor. E2E bunu kısıt
+  olarak belgeliyor. Davranış değişikliği gerektirdiğinden bu lane'in kapsamı
+  dışında bırakıldı; ayrı bir iş olarak ele alınmalı.
+- E-posta şablonları (6 dil, marka, erişilebilirlik) ve `config.toml` kablolaması
+  incelendi: şablon adları GoTrue listesiyle eşleşiyor, `content_path`'ler
+  mevcut, konular yerelleştirilmiş. Bu turda değişiklik gerekmedi.
