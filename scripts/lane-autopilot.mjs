@@ -184,6 +184,20 @@ async function confirm(taskId) {
   return { status: task.status, detail: task.detail };
 }
 
+/**
+ * A quota rejection is not the lane's fault, so it must not spend an attempt.
+ * Counting it would exhaust a lane that never ran once and hand a healthy task
+ * to a human. Detected by the message the backend returns.
+ */
+function isCapacityError(detail) {
+  const text = String(detail ?? '').toLowerCase();
+  return (
+    text.includes('sandbox limit') ||
+    text.includes('quota') ||
+    text.includes('capacity')
+  );
+}
+
 function blockedForLane(name, issues) {
   // Use the lane-specific label. The coarse discipline label (agent:backend)
   // is shared by several lanes, so matching on it made every backend lane stop
@@ -302,6 +316,19 @@ async function main() {
       await new Promise((r) => setTimeout(r, 4000));
       const result = await confirm(taskId);
       const entry = state[d.name] ?? { attempts: 0 };
+
+      // A capacity rejection is the platform's limit, not the lane's failure.
+      // Do not spend an attempt on it, and stop the pass: if the quota is
+      // exhausted, the remaining lanes will be refused too.
+      if (result.status === 'ERROR' && isCapacityError(result.detail)) {
+        console.error(`  ${d.name}: no capacity — ${result.detail}`);
+        entry.lastError = result.detail;
+        entry.updatedAt = new Date().toISOString();
+        state[d.name] = entry;
+        console.error('  stopping this pass: no sandbox capacity');
+        break;
+      }
+
       entry.attempts = (entry.attempts ?? 0) + 1;
       entry.lastTaskId = taskId;
       entry.lastStatus = result.status;
