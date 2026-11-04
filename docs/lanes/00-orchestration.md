@@ -31,6 +31,25 @@ Bu dosya kuralları ve sırayı tanımlar. Bir lane'in brief'i `docs/lanes/<ad>.
 | LANE-AUTH | `src/features/identity/**`, `src/app/[locale]/(auth)/**`, `supabase/templates/**` |
 | LANE-INFRA | `.github/**`, `scripts/**` (CI, workflow, guard ve lane otomasyonu) |
 
+### Lane → skill eşlemesi
+
+Her lane işini yaparken kendi uzmanlık skill'ini kullanır. Skill'ler
+`.agents/skills/` altındadır (OpenHands extensions reposundan kuruldu, tarandı).
+
+| Lane | Skill'ler |
+|---|---|
+| LANE-TASARIM | `frontend-design` (özgün, üretim kalitesinde UI), `code-simplifier` |
+| LANE-SEO / LANE-GEO | `evidence-based-citations` (iddiaları resmî kaynakla bağla) |
+| LANE-SUPABASE / LANE-AUTH | `security` (güvenli kodlama, yetkilendirme, veri koruma) |
+| LANE-CLOUDFLARE | `security` |
+| LANE-INFRA | `github-actions` (workflow kur/debug et) |
+| Her lane (PR öncesi) | `code-review`, `qa-changes` |
+| PR'a yorum yazarken | `github-pr-review` |
+| Sadeleştirme turunda | `code-simplifier` |
+
+`code-review` ve `qa-changes` her lane'in **tanım-bitti** kapısının parçasıdır:
+PR açmadan önce değişikliği kendi başına gözden geçir, çalıştır, sonucu raporla.
+
 ### Çakışma çözümü (ÖNEMLİ)
 - **`src/app/[locale]/layout.tsx` ve `jobs/[slug]/page.tsx` içinde hem görsel JSX
   hem JSON-LD var.** Bu dosyaların sahibi **LANE-SEO**'dur. Görsel/JSX

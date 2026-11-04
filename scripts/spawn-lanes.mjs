@@ -22,27 +22,65 @@ const REPO = 'cenkmenk71-max/isbulkktc';
 const PROVIDER = 'github';
 
 const LANES = {
-  supabase: { branch: 'lane/supabase', wave: 1, scope: 'şema, RLS, indeks, pgTAP' },
-  cloudflare: { branch: 'lane/cloudflare', wave: 2, scope: 'WAF/cache/DNS/SSL/bot denetimi' },
-  seo: { branch: 'lane/seo', wave: 0, scope: 'sitemap, canonical, hreflang, OG, route metadata' },
-  geo: { branch: 'lane/geo', wave: 0, scope: 'llms.txt, yerel entity, AI görünürlük, JSON-LD üreticisi' },
-  tasarim: { branch: 'lane/tasarim', wave: 0, scope: 'UI/UX, motion, erişilebilirlik, guard\'lar' },
-  auth: { branch: 'lane/auth', wave: 0, scope: 'oturum akışı, e-posta şablonları, güvenlik' },
+  supabase: {
+    branch: 'lane/supabase',
+    wave: 1,
+    scope: 'şema, RLS, indeks, pgTAP',
+    skills: ['security', 'code-review', 'qa-changes'],
+  },
+  cloudflare: {
+    branch: 'lane/cloudflare',
+    wave: 2,
+    scope: 'WAF/cache/DNS/SSL/bot denetimi',
+    skills: ['security', 'code-review'],
+  },
+  seo: {
+    branch: 'lane/seo',
+    wave: 0,
+    scope: 'sitemap, canonical, hreflang, OG, route metadata',
+    skills: ['evidence-based-citations', 'code-review', 'qa-changes'],
+  },
+  geo: {
+    branch: 'lane/geo',
+    wave: 0,
+    scope: 'llms.txt, yerel entity, AI görünürlük, JSON-LD üreticisi',
+    skills: ['evidence-based-citations', 'code-review', 'qa-changes'],
+  },
+  tasarim: {
+    branch: 'lane/tasarim',
+    wave: 0,
+    scope: "UI/UX, motion, erişilebilirlik, guard'lar",
+    skills: ['frontend-design', 'code-simplifier', 'code-review', 'qa-changes'],
+  },
+  auth: {
+    branch: 'lane/auth',
+    wave: 0,
+    scope: 'oturum akışı, e-posta şablonları, güvenlik',
+    skills: ['security', 'code-review', 'qa-changes'],
+  },
 };
 
 function kickoff(name) {
+  const lane = LANES[name];
+  const skillLine = lane.skills.length
+    ? `Kullanacağın skill'ler (.agents/skills/ altında): ${lane.skills.join(', ')}. ` +
+      'Bunları görevine uygula — özellikle PR açmadan önce code-review ve qa-changes.'
+    : '';
   return [
     `isbulkktc reposunda paralel "lane" programında çalışacaksın. Lane: ${name}.`,
     'Önce şu dosyaları OKU: docs/lanes/00-orchestration.md ve docs/lanes/' +
       `${name}.md. Ayrıca AGENTS.md'yi oku. Sonra kendi lane'inin görevini uygula.`,
     'Kurallar: main\'e push YOK, kendi branch\'in (' +
-      `${LANES[name].branch}) + PR açık bırak; canlı Supabase'e yazma ` +
+      `${lane.branch}) + PR açık bırak; canlı Supabase'e yazma ` +
       '(tek yazar LANE-SUPABASE\'dir); sadece sahibi olduğun dosyalara yaz; ' +
       "CI'ı (bun run lint, typecheck, check:frontend-source, test:unit) yeşile getir.",
     'En güncel ve profesyonel kaynakları kullan: resmî dokümanlar, sürüme özel ' +
       'kütüphane dokümanı (context7), repo Q&A (deepwiki), W3C/schema.org gibi ' +
       'standartlar. Rapor formatı docs/lanes/00-orchestration.md sonunda.',
-  ].join('\n');
+    skillLine,
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 async function startLane(name, key) {
