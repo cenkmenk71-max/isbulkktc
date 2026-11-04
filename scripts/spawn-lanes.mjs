@@ -23,36 +23,42 @@ const PROVIDER = 'github';
 
 const LANES = {
   supabase: {
+    brief: '01-supabase',
     branch: 'lane/supabase',
     wave: 1,
     scope: 'şema, RLS, indeks, pgTAP',
     skills: ['security', 'code-review', 'qa-changes'],
   },
   cloudflare: {
+    brief: '02-cloudflare',
     branch: 'lane/cloudflare',
     wave: 2,
     scope: 'WAF/cache/DNS/SSL/bot denetimi',
     skills: ['security', 'code-review'],
   },
   seo: {
+    brief: '03-seo',
     branch: 'lane/seo',
     wave: 0,
     scope: 'sitemap, canonical, hreflang, OG, route metadata',
     skills: ['evidence-based-citations', 'code-review', 'qa-changes'],
   },
   geo: {
+    brief: '04-geo',
     branch: 'lane/geo',
     wave: 0,
     scope: 'llms.txt, yerel entity, AI görünürlük, JSON-LD üreticisi',
     skills: ['evidence-based-citations', 'code-review', 'qa-changes'],
   },
   tasarim: {
+    brief: '05-tasarim',
     branch: 'lane/tasarim',
     wave: 0,
     scope: "UI/UX, motion, erişilebilirlik, guard'lar",
     skills: ['frontend-design', 'code-simplifier', 'code-review', 'qa-changes'],
   },
   auth: {
+    brief: '06-auth',
     branch: 'lane/auth',
     wave: 0,
     scope: 'oturum akışı, e-posta şablonları, güvenlik',
@@ -69,7 +75,7 @@ function kickoff(name) {
   return [
     `isbulkktc reposunda paralel "lane" programında çalışacaksın. Lane: ${name}.`,
     'Önce şu dosyaları OKU: docs/lanes/00-orchestration.md ve docs/lanes/' +
-      `${name}.md. Ayrıca AGENTS.md'yi oku. Sonra kendi lane'inin görevini uygula.`,
+      `${lane.brief}.md. Ayrıca AGENTS.md'yi oku. Sonra kendi lane'inin görevini uygula.`,
     'Kurallar: main\'e push YOK, kendi branch\'in (' +
       `${lane.branch}) + PR açık bırak; canlı Supabase'e yazma ` +
       '(tek yazar LANE-SUPABASE\'dir); sadece sahibi olduğun dosyalara yaz; ' +
