@@ -10,9 +10,11 @@
  * It is deliberately conservative:
  *   - it never pushes to `main`; lanes land by pull request,
  *   - it never spawns a lane whose work is already in flight,
- *   - it retries a lane at most `maxAttemptsPerLane` times, then opens an issue
- *     for a human and stops trying. Infinite retries are how an autonomous
- *     system burns budget without getting closer to done.
+ *   - it retries a lane at most `maxAttemptsPerLane` times, then stops trying and
+ *     flags the lane as out of attempts for a human. Infinite retries are how an
+ *     autonomous system burns budget without getting closer to done. (It does not
+ *     open the issue itself: `gh` is run read-only here, so an exhausted lane is
+ *     reported in the pass output and on the workflow summary.)
  *
  * State lives in .lane-state.json (gitignored), keyed by lane. Each attempt
  * records why it started and, when known, why the previous one failed, so a
@@ -25,9 +27,11 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+
+import { kickoff } from './lane-kickoff.mjs';
 
 const API = 'https://app.all-hands.dev/api/v1';
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -233,42 +237,12 @@ async function resumeSandbox(sandboxId) {
   return ok;
 }
 
-function kickoff(name, context) {
-  const lane = LANES[name];
-  const parts = [
-    `isbulkktc reposunda paralel "lane" programında çalışacaksın. Lane: ${name}.`,
-    'Önce şu dosyaları OKU: docs/lanes/00-orchestration.md ve docs/lanes/' +
-      `${lane.brief}.md. Ayrıca AGENTS.md'yi oku. Sonra kendi lane'inin görevini uygula.`,
-    'KURULUM: kalite kapılarından ÖNCE `bash scripts/bootstrap-bun.sh` ve ' +
-      '`export PATH="$HOME/.local/bin:$PATH"`, sonra `bun install --frozen-lockfile`.',
-    `SOMUT İŞ: \`gh issue list --state open --label ${lane.label}\` ile sana ` +
-      'atanmış issue var mı bak; varsa al. Yoksa brief\'inden sınırlı bir iş seç.',
-    'MICRO-DENETİM: docs/lanes/AUDIT.md\'yi uygula — sahip olduğun her dosyayı ' +
-      '`git ls-files` ile listele, boyut boyut tara, bulguları kanıtla ve PR ' +
-      'gövdesine tablo yaz. Atladığın dosyayı "bakılmadı" işaretle.',
-    'KENDİNİ DOĞRULA: PR açmadan önce gate\'leri çalıştır; kırmızıysa düzelt. ' +
-      `Aynı hata ${MAX_ATTEMPTS} denemede çözülmezse PR açma, \`agent:blocked\` ` +
-      'issue aç ve hatayı yaz. `agent:blocked` yalnız "insan gerekli" içindir.',
-    // A defect in another lane's files is a handoff, not a human blocker.
-    // agent:blocked stops both the finder and the owner; agent:handoff gives
-    // the work to the owner and keeps the team moving.
-    'DEVİR: bulduğun eksik başka bir lane\'in dosyasındaysa, düzeltme; sahibinin ' +
-      'lane etiketiyle (`lane:<ad>`) ve `agent:handoff` ile issue aç, kanıtı koy. ' +
-      '`agent:blocked` KULLANMA — o, insan gerektiren tıkanma içindir ve hem ' +
-      'seni hem sahibi durdurur.',
-    `Kurallar: main'e push YOK; kendi branch'in (${lane.branch}) + PR; canlı ` +
-      "Supabase'e yazma (tek yazar LANE-SUPABASE'dir); sadece sahibi olduğun " +
-      'dosyalara yaz; CI yeşil olsun.',
-    'Güncel ve profesyonel kaynakları kullan (resmî dokümanlar, context7, ' +
-      'deepwiki, W3C/schema.org).',
-  ];
-  if (context?.previousError) {
-    parts.push(
-      'ÖNCEKİ DENEME BAŞARISIZ OLDU. Hata: ' +
-        `${context.previousError}. Bu hatayı tekrarlama; önce onu çöz.`,
-    );
-  }
-  return parts.join('\n');
+/** The kickoff prompt for a lane, with the autopilot's retry budget and hint. */
+function laneKickoff(name, context) {
+  return kickoff(name, LANES[name], {
+    maxAttempts: MAX_ATTEMPTS,
+    previousError: context?.previousError,
+  });
 }
 
 async function spawnLane(name, context) {
@@ -281,7 +255,7 @@ async function spawnLane(name, context) {
       title: `LANE-${name}`,
       initial_message: {
         role: 'user',
-        content: [{ type: 'text', text: kickoff(name, context) }],
+        content: [{ type: 'text', text: laneKickoff(name, context) }],
         run: true,
       },
     }),
@@ -306,7 +280,7 @@ async function sendToExisting(conversationId, name, context) {
       timeoutMs: 20000,
       body: JSON.stringify({
         role: 'user',
-        content: [{ type: 'text', text: kickoff(name, context) }],
+        content: [{ type: 'text', text: laneKickoff(name, context) }],
         run: true,
       }),
     },
@@ -590,9 +564,25 @@ async function main() {
     }
   }
 
-  for (const d of decisions) {
-    if (d.action === 'exhausted') {
-      console.log(`\n${d.name} is out of attempts — open an issue for a human.`);
+  // An exhausted lane is the one thing here a human must see: it will not be
+  // retried again. Surface it as a workflow warning and on the run summary, not
+  // only in the log, so it cannot scroll past unnoticed.
+  const exhausted = decisions.filter((d) => d.action === 'exhausted');
+  if (exhausted.length > 0) {
+    const lines = exhausted.map((d) => `- \`${d.name}\`: ${d.reason}`);
+    for (const d of exhausted) {
+      console.log(`\n${d.name} is out of attempts — needs a human (${d.reason}).`);
+    }
+    console.log(
+      `::warning title=Lane(s) out of attempts::${exhausted
+        .map((d) => d.name)
+        .join(', ')} — open an issue for a human.`,
+    );
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      appendFileSync(
+        process.env.GITHUB_STEP_SUMMARY,
+        `## Lane(s) out of attempts\n\n${lines.join('\n')}\n`,
+      );
     }
   }
   if (deferred.length > 0) {

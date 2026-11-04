@@ -49,10 +49,18 @@ function checkRegistryMatchesDoc(lanes) {
 function parseOwnership(markdown) {
   const lanes = [];
   const row = /^\|\s*(LANE-[^\s|]+)\s*\|(.+)\|\s*$/gm;
+  // A path token is either a glob (contains `/`) or a root-level filename
+  // (`package.json`). Requiring a slash silently dropped root files: the table
+  // listed `package.json` under LANE-INFRA but the detector never saw it, so an
+  // edit to package.json reported as "owned by no lane". The filename branch is
+  // deliberately narrow (a dot-extension) so a skill name in the same table
+  // (`github-actions`) is not mistaken for a path.
+  const isPathToken = (token) => token.includes("/") || /\.[a-z0-9]+$/i.test(token);
   for (const match of markdown.matchAll(row)) {
-    const lane = match[1];
-    const globs = [...match[2].matchAll(/`([^`]*\/[^`]*)`/g)].map((m) => m[1]);
-    if (globs.length > 0) lanes.push({ lane, globs });
+    const globs = [...match[2].matchAll(/`([^`]+)`/g)]
+      .map((m) => m[1])
+      .filter(isPathToken);
+    if (globs.length > 0) lanes.push({ lane: match[1], globs });
   }
   return lanes;
 }
