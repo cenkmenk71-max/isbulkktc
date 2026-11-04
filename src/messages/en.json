@@ -405,12 +405,12 @@
     "latestBadge": "LATEST",
     "localNewsBadge": "LOCAL BRIEFING",
     "illustrativeImage": "ILLUSTRATIVE · UNSPLASH",
-    "readSource": "Open the article from {source}",
     "emptyTitle": "There are no headlines to show right now.",
     "emptyBody": "New headlines will appear here when the feed updates. You can open the source search in the meantime.",
     "editorialNoteTitle": "See the source. Read the publisher’s report.",
     "editorialNoteBody": "This page lists current headlines and publisher names; it does not copy article text or present it as original İşBul KKTC reporting. The Unsplash photos on news cards are topic-matched illustrations, not photographs of the specific events. Visit the publisher for the complete story and context.",
-    "photoLicense": "Unsplash image licence"
+    "photoLicense": "Unsplash image licence",
+    "sourceLabel": "Source: {source}"
   },
   "ContactPage": {
     "eyebrow": "İŞBUL KKTC · CONTACT",

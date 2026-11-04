@@ -168,26 +168,10 @@ export default async function CompaniesPage({ params }: CompaniesPageProps) {
                           <ArrowUpRight size={14} aria-hidden="true" />
                         </a>
                       ) : null}
-                      {company.source_profile_url ? (
-                        <a
-                          href={company.source_profile_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {t("sourceProfileLink")}
-                          <ArrowUpRight size={14} aria-hidden="true" />
-                        </a>
-                      ) : null}
-                      {company.source_listing_url ? (
-                        <a
-                          href={company.source_listing_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {t("sourceListingLink")}
-                          <ArrowUpRight size={14} aria-hidden="true" />
-                        </a>
-                      ) : null}
+                      {/* The source-site profile and listing links used to be
+                          rendered here. They sent our own visitors to the
+                          competitor's page the listing was imported from, which
+                          is the opposite of what the page is for. */}
                     </div>
                   </article>
                 </li>

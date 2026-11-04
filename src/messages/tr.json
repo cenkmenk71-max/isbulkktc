@@ -405,12 +405,12 @@
     "latestBadge": "EN YENİ",
     "localNewsBadge": "YEREL GÜNDEM",
     "illustrativeImage": "TEMSİLİ · UNSPLASH",
-    "readSource": "{source} kaynağındaki haberi açın",
     "emptyTitle": "Şu an gösterilecek haber başlığı yok.",
     "emptyBody": "Akış güncellendiğinde yeni başlıklar burada görünür. Bu arada kaynak aramasını açabilirsiniz.",
     "editorialNoteTitle": "Kaynağı görün, haberi asıl yayıncıdan okuyun.",
     "editorialNoteBody": "Bu sayfa güncel başlıkları ve yayıncı adlarını listeler; haber metinlerini kopyalamaz veya İşBul KKTC’nin özgün haberi gibi sunmaz. Haber kartlarındaki Unsplash görselleri konuya uygun temsili fotoğraflardır, haberin olay fotoğrafları değildir. İçeriğin tamamı ve bağlamı için kaynak yayını ziyaret edin.",
-    "photoLicense": "Unsplash görsel lisansı"
+    "photoLicense": "Unsplash görsel lisansı",
+    "sourceLabel": "Kaynak: {source}"
   },
   "ContactPage": {
     "eyebrow": "İŞBUL KKTC · İLETİŞİM",

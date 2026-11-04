@@ -446,12 +446,12 @@
     "latestBadge": "NEU",
     "localNewsBadge": "LOKALER ÜBERBLICK",
     "illustrativeImage": "SYMBOLBILD · UNSPLASH",
-    "readSource": "Artikel von {source} öffnen",
     "emptyTitle": "Zurzeit gibt es keine Meldungen.",
     "emptyBody": "Neue Meldungen erscheinen nach der Aktualisierung des Feeds. Bis dahin können Sie die Quellensuche öffnen.",
     "editorialNoteTitle": "Quelle ansehen. Bericht beim Herausgeber lesen.",
     "editorialNoteBody": "Diese Seite zeigt aktuelle Schlagzeilen und Herausgebernamen. Sie kopiert keine Artikeltexte und stellt sie nicht als eigene Berichte von İşBul KKTC dar. Die Unsplash-Fotos auf den Karten illustrieren passende Themen, zeigen aber nicht die konkreten Ereignisse. Den vollständigen Bericht und Kontext finden Sie beim Herausgeber.",
-    "photoLicense": "Unsplash-Bildlizenz"
+    "photoLicense": "Unsplash-Bildlizenz",
+    "sourceLabel": "Quelle: {source}"
   },
   "ContactPage": {
     "eyebrow": "İŞBUL KKTC · KONTAKT",

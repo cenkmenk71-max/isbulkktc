@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { rewriteImportedJobText } from "./job-copy-rewrite";
 
 import { northernCyprusDistrictValues } from "@/features/locations/northern-cyprus-districts";
 
@@ -367,14 +368,18 @@ function sanitizeCategories(categories: readonly string[]): string[] {
  */
 export function sanitizeSourceJobRecord(record: SourceJobRecord): SourceJobRecord {
   const title = clampText(record.title, 5, 140);
-  const summary = clampText(record.summary, 20, 500);
-  const description = clampText(record.description, 50, 20_000);
+  // Rewrite the imported prose before clamping: the source writes run-on
+  // sentences, drops the space after a full stop and leaves its own brand in the
+  // text. Normalising the presentation is what keeps the listing from reading as
+  // a verbatim copy of the page it came from.
+  const description = rewriteImportedJobText(record.description) ?? record.description;
+  const summary = rewriteImportedJobText(record.summary) ?? record.summary;
 
   return {
     ...record,
     title,
-    summary,
-    description,
+    summary: clampText(summary, 20, 500),
+    description: clampText(description, 50, 20_000),
     requirements: clampText(record.requirements, 0, 10_000),
     responsibilities: clampText(record.responsibilities, 0, 10_000),
     employer: {

@@ -388,22 +388,10 @@ export async function BlogPageContent({ locale }: { locale: AppLocale }) {
                     <div className="blog-article-meta">
                       <time dateTime={article.publishedAt}>{publishedDate}</time>
                     </div>
-                    <h3>
-                      <a href={article.url} target="_blank" rel="noreferrer">
-                        {article.title}
-                      </a>
-                    </h3>
-                    <div className="blog-article-footer">
-                      <a
-                        className="blog-article-link"
-                        href={article.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label={t("readSource", { source: article.source })}
-                      >
-                        <ArrowUpRight size={17} aria-hidden="true" />
-                      </a>
-                    </div>
+                    <h3>{article.title}</h3>
+                    <p className="blog-article-source">
+                      {t("sourceLabel", { source: article.source })}
+                    </p>
                   </article>
                 );
               })}

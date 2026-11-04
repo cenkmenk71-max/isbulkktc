@@ -10437,14 +10437,14 @@ main :where(p) {
   line-height: 1.38;
   letter-spacing: -0.025em;
 }
-.blog-article-card h3 a {
-  text-decoration: none;
-}
-.blog-article-card h3 a:hover {
-  color: var(--green);
-  text-decoration: underline;
-  text-decoration-color: var(--color-shade-green-300);
-  text-underline-offset: 4px;
+/* The article title is plain text, not a link: the news card is a summary of a
+   local source, and the page no longer sends the visitor to a competing site.
+   The source name stays as attribution, in a muted style. */
+.blog-article-source {
+  margin: 0 7px 12px;
+  color: var(--color-vanadium-600);
+  font-size: 12px;
+  line-height: 1.4;
 }
 .blog-article-footer {
   display: flex;
