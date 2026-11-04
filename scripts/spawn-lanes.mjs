@@ -131,6 +131,15 @@ function kickoff(name) {
       `\`gh issue list --state open --label ${ROLE_LABEL[name]}\`. Varsa onu al ` +
       '(içindeki kanıtı doğrula, düzelt, test et). Yoksa kendi brief\'indeki ' +
       'hedeflerden en yüksek etkili olanı seç ve sınırlı tut.',
+    // The audit protocol turns "find one bug" into "examine every file". The
+    // brief names the domain; AUDIT.md names the dimensions to check per file.
+    'MICRO-DENETİM: docs/lanes/AUDIT.md\'yi oku ve uygula. Sahip olduğun her ' +
+      'dosyayı `git ls-files` ile listele, dosya dosya ilerle, her boyutu ' +
+      '(doğruluk, hata yolu, yetki, erişilebilirlik, kontrast, RTL, linkler, ' +
+      'mantık, sınır girdiler) tek tek sor. Bulguları kanıtla (dosya:satır, ' +
+      'gözlenen, beklenen, etki) ve PR gövdesine tablo hâlinde yaz. Atladığın ' +
+      'dosya varsa "bakılmadı" diye işaretle — sessizce geçme. Tek bir bug ' +
+      'düzeltip durmak yeterli değil; alanı tara.',
     'Kurallar: main\'e push YOK, kendi branch\'in (' +
       `${lane.branch}) + PR açık bırak; canlı Supabase'e yazma ` +
       '(tek yazar LANE-SUPABASE\'dir); sadece sahibi olduğun dosyalara yaz; ' +
