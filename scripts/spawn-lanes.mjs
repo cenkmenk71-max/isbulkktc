@@ -21,6 +21,19 @@ const API = 'https://app.all-hands.dev/api/v1';
 const REPO = 'cenkmenk71-max/isbulkktc';
 const PROVIDER = 'github';
 
+// Issue label per lane, so a kickoff can point the agent at its own queue.
+const ROLE_LABEL = {
+  supabase: 'agent:backend',
+  cloudflare: 'agent:infra',
+  seo: 'agent:seo',
+  geo: 'agent:seo',
+  tasarim: 'agent:frontend',
+  auth: 'agent:backend',
+  urun: 'agent:backend',
+  qa: 'agent:test',
+  guvenlik: 'agent:test',
+};
+
 const LANES = {
   supabase: {
     brief: '01-supabase',
@@ -105,6 +118,12 @@ function kickoff(name) {
       '`bash scripts/bootstrap-bun.sh` ve sonra `export PATH="$HOME/.local/bin:$PATH"`. ' +
       'Bun kurulu değilse kapıları çalıştıramazsın ve PR açamazsın.',
     'Kurulumdan sonra bağımlılıkları kur: `bun install --frozen-lockfile`.',
+    // A lane with no bounded task stops early (the first wave proved it: geo
+    // spent 1.4M tokens and produced nothing). Point it at its labelled issues.
+    'SOMUT İŞ: önce sana atanmış açık issue var mı bak: ' +
+      `\`gh issue list --state open --label ${ROLE_LABEL[name]}\`. Varsa onu al ` +
+      '(içindeki kanıtı doğrula, düzelt, test et). Yoksa kendi brief\'indeki ' +
+      'hedeflerden en yüksek etkili olanı seç ve sınırlı tut.',
     'Kurallar: main\'e push YOK, kendi branch\'in (' +
       `${lane.branch}) + PR açık bırak; canlı Supabase'e yazma ` +
       '(tek yazar LANE-SUPABASE\'dir); sadece sahibi olduğun dosyalara yaz; ' +
