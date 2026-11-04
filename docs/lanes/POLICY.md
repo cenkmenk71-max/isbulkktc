@@ -44,3 +44,19 @@ olmayan ikisi durdu. Politika bu ayrımı kalıcılaştırır.
 - **Dalga 1:** supabase (tek canlı DB yazarı) — diğerleri PR akışını
   kanıtladıktan sonra
 - **Dalga 2:** cloudflare (token yetkileri netleşince)
+
+## Kaynak sınırı: sandbox kotası
+
+Günlük sandbox limiti **20**'dir ve **duraklatılmış sandbox'lar da sayılır**.
+Limit dolunca yeni lane başlatma denemesi `ERROR` ile döner
+("Daily sandbox limit of 20 reached") — sessizce başarısız olmaz, ama dalga
+planı bunu hesaba katmalıdır.
+
+Dalga başlatmadan önce:
+
+1. Sandbox'ları say: `GET /api/v1/sandboxes/search`
+2. Ölü olanları **sil** (duraklatmak yetmez): `DELETE /api/v1/sandboxes/{id}`
+3. Kendi oturumunun ve çalışan lane'lerin sandbox'ını koru.
+4. Sonra dalgayı başlat.
+
+Bütçe: ~4–6 lane + kendi oturumun.
