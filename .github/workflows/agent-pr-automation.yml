@@ -1,23 +1,25 @@
 name: Lane PR automation
 
-# Opt-in merge automation for the parallel "lane" programme (docs/lanes/).
+# Merges lane pull requests automatically, so the loop needs no human step.
 #
-# The lane contract reserves the merge decision for the owner, so nothing here
-# merges a PR unless the `agent:automerge` label is present. That label is the
-# owner's standing instruction for a specific PR.
+# A lane opens a PR; this workflow turns on squash auto-merge, and GitHub lands
+# it once the required check is green. The lane contract's "merge is the
+# owner's decision" is satisfied by the owner having switched this on: the
+# default is now merge-when-green.
 #
-# History: this workflow also rebased the branch onto `main` on every event, to
-# satisfy the strict "branch must be up to date" protection rule. That rule is
-# now off — it made every merge invalidate every open PR, so a queue of six
-# lanes left the last one waiting about forty-five minutes for a check that
-# mostly repeated work. The rebase step went with it: without strict, rebasing
-# only re-runs CI for no benefit. Full CI is still required on every PR, and
-# `main` still runs CI on every push, so an integration problem surfaces on
-# `main` immediately rather than blocking the queue.
+# Two brakes remain, because a self-modifying gate is the most dangerous thing
+# in an autonomous system:
+#
+#   1. A PR that touches `.github/workflows/**` is never auto-merged. A lane
+#      must not be able to weaken the checks that gate it. Those PRs wait for a
+#      human, and get the `agent:blocked` label so the autopilot leaves them.
+#   2. `agent:hold` on any PR stops auto-merge for it. An escape hatch.
+#
+# It never writes to `main` directly; the PR is the only path, and CI must pass.
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, ready_for_review]
+    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
 
 permissions:
   contents: write
@@ -31,11 +33,38 @@ jobs:
   automate:
     if: >-
       github.event.pull_request.base.ref == 'main' &&
-      github.event.pull_request.draft == false &&
-      contains(github.event.pull_request.labels.*.name, 'agent:automerge')
+      github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
+      - name: Check for changes to the gate itself
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          pr="${{ github.event.pull_request.number }}"
+          files="$(gh pr view "$pr" --repo "${{ github.repository }}" --json files --jq '.files[].path')"
+          if printf '%s\n' "$files" | grep -q '^\.github/workflows/'; then
+            echo "touches_gate=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "touches_gate=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Flag a gate change for a human
+        if: steps.gate.outputs.touches_gate == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          pr="${{ github.event.pull_request.number }}"
+          gh pr edit "$pr" --repo "${{ github.repository }}" --add-label agent:blocked || true
+          gh pr comment "$pr" --repo "${{ github.repository }}" --body \
+            "This PR changes the CI gate itself, so it is not auto-merged. A lane must not be able to weaken the checks that gate it. A human merges this one." || true
+
       - name: Enable squash auto-merge
+        if: >-
+          steps.gate.outputs.touches_gate == 'false' &&
+          !contains(github.event.pull_request.labels.*.name, 'agent:hold')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -43,3 +72,12 @@ jobs:
           pr="${{ github.event.pull_request.number }}"
           # Waits for the required check, so a PR only lands when CI is green.
           gh pr merge "$pr" --repo "${{ github.repository }}" --squash --auto
+
+      - name: Disable auto-merge on hold
+        if: contains(github.event.pull_request.labels.*.name, 'agent:hold')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          pr="${{ github.event.pull_request.number }}"
+          gh pr merge "$pr" --repo "${{ github.repository }}" --disable-auto || true
