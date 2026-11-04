@@ -38,7 +38,7 @@ Bulgu tablosu (rota → mevcut → olması gereken → kanıt) + uygulanan düze
 ## Uygulama raporu (lane/seo)
 
 ```
-Lane: LANE-SEO        Branch: lane/seo        PR: (bu rapordan sonra açıldı)
+Lane: LANE-SEO        Branch: lane/seo        PR: #105
 Değişen dosyalar: src/lib/seo.ts, src/app/sitemap.ts,
                   src/app/[locale]/(public)/rehber/[slug]/page.tsx,
                   src/app/[locale]/(public)/blog/[slug]/page.tsx,
