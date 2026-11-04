@@ -66,6 +66,13 @@ jobs:
       - name: Unit tests
         run: bun run test:unit
 
+      # The security layer is source-level (it reads migrations and modules and
+      # attacks sanitise/redirect boundaries), so it needs neither Supabase nor a
+      # browser and belongs in the fast job. It is a separate step from the unit
+      # tests so a boundary regression is attributable at a glance.
+      - name: Security boundary tests
+        run: bun run test:security
+
   # The database suite runs once, on its own: every E2E shard would otherwise
   # repeat the ~80s local Supabase boot just to assert the same pgTAP contracts.
   database:

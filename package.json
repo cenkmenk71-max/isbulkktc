@@ -16,6 +16,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:unit": "tsx --test \"tests/unit/**/*.test.ts\" \"tests/unit/**/*.test.tsx\" \"src/**/*.test.ts\" \"src/**/*.test.tsx\"",
+    "test:security": "tsx --test \"tests/security/**/*.test.ts\"",
     "import:company-directory": "tsx scripts/import-company-directory.ts",
     "import:source-jobs": "tsx scripts/import-source-jobs.ts",
     "import:source-jobs:dry": "tsx scripts/import-source-jobs.ts --dry-run",
