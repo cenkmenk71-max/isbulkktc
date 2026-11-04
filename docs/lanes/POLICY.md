@@ -47,16 +47,24 @@ olmayan ikisi durdu. Politika bu ayrımı kalıcılaştırır.
 
 ## Kaynak sınırı: sandbox kotası
 
-Günlük sandbox limiti **20**'dir ve **duraklatılmış sandbox'lar da sayılır**.
-Limit dolunca yeni lane başlatma denemesi `ERROR` ile döner
-("Daily sandbox limit of 20 reached") — sessizce başarısız olmaz, ama dalga
-planı bunu hesaba katmalıdır.
+Günlük sandbox **oluşturma** limiti **20**'dir. Bu eşzamanlılık sınırı değil,
+gün içinde kaç sandbox *yaratıldığı*dır.
+
+İki ayrı tuzak:
+
+1. **Duraklatılmış sandbox'lar listede birikir** ve `GET /api/v1/sandboxes/search`
+   şişer. Bunları silmek listeyi temizler: `DELETE /api/v1/sandboxes/{id}`.
+2. **Günlük oluşturma kotası dolabilir.** Limit dolunca başlatma isteği HTTP 200
+   döner ama görev `ERROR` olur: `Daily sandbox limit of 20 reached`. Bu yüzden
+   spawner artık görevi geri okuyup doğrular; `REJECTED` yazar ve sıfırdan farklı
+   çıkış kodu verir. Bu kotayı **silmek açmaz, yalnız beklemek** açar.
 
 Dalga başlatmadan önce:
 
-1. Sandbox'ları say: `GET /api/v1/sandboxes/search`
-2. Ölü olanları **sil** (duraklatmak yetmez): `DELETE /api/v1/sandboxes/{id}`
+1. Çalışan sandbox sayısını say, gereksizleri sil.
+2. Kota doluysa dalgayı küçült ya da ertesi güne bırak — körlemesine denemek
+   hata üretir, zaman kaybettirir.
 3. Kendi oturumunun ve çalışan lane'lerin sandbox'ını koru.
-4. Sonra dalgayı başlat.
 
-Bütçe: ~4–6 lane + kendi oturumun.
+Bütçe: ~4–6 lane + kendi oturumun, günlük oluşturma limiti 20 içinde.
+
