@@ -98,6 +98,13 @@ const LANES = {
     scope: 'tehdit modeli, yetki sınırları, saldırgan testler',
     skills: ['security', 'code-review'],
   },
+  infra: {
+    brief: '00-orchestration',
+    branch: 'lane/infra',
+    wave: 0,
+    scope: 'CI, workflow, guard, lane otomasyonu',
+    skills: ['github-actions', 'code-review'],
+  },
 };
 
 function kickoff(name) {
