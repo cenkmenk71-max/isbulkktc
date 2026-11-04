@@ -23,16 +23,19 @@ Bu dosya kuralları ve sırayı tanımlar. Bir lane'in brief'i `docs/lanes/<ad>.
 
 | Lane | Sahip olduğu yollar (SADECE bunlara yazar) |
 |---|---|
-| LANE-SUPABASE | `supabase/**` (migrations, tests, seed, config.toml) |
-| LANE-CLOUDFLARE | repo dosyası YOK (CF API); isterse `docs/cloudflare.md` |
-| LANE-SEO | `src/lib/seo.ts`, `src/app/sitemap.ts`, `src/app/robots.ts`, `src/app/[locale]/**/opengraph-image.tsx`, `src/app/[locale]/**/twitter-image.tsx`, **ve `src/app/[locale]/**` route/layout dosyaları** (metadata, `<head>`, JSON-LD mount) |
-| LANE-GEO | `src/content/**`, `src/app/llms.txt/**`, `public/llms*`, `src/features/**/structured-data*.ts`, `src/features/jobs/job-posting-structured-data.ts` |
-| LANE-TASARIM | `src/components/**`, `src/experience/**`, `src/assets/**`, `tests/e2e/accessibility.spec.ts`, `tests/unit/design-tokens.test.ts`, `tests/unit/design-token-drift.baseline.json` |
-| LANE-AUTH | `src/features/identity/**`, `src/app/[locale]/(auth)/**`, `supabase/templates/**` |
-| LANE-URUN | `src/features/**`, `!src/features/identity/**`, `!src/features/**/structured-data*.ts`, `!src/features/jobs/job-posting-structured-data.ts`, `src/server/config/**`, `src/server/push/**`, `src/lib/analytics/**`, `src/lib/pwa/**` |
-| LANE-QA | `tests/**`, `!tests/e2e/accessibility.spec.ts`, `!tests/unit/design-tokens.test.ts`, `!tests/unit/design-token-drift.baseline.json`, `!tests/security/**`, `docs/performance-budget.md` |
-| LANE-GÜVENLİK | `tests/security/**`, `docs/threat-model.md`, `docs/data-retention.md` |
-| LANE-INFRA | `.github/**`, `scripts/**` (CI, workflow, guard ve lane otomasyonu) |
+| LANE-SUPABASE | `supabase/**` (migrations, tests, seed, config.toml), `docs/lanes/01-supabase.md` |
+| LANE-CLOUDFLARE | repo dosyası YOK (CF API); isterse `docs/cloudflare.md`, `docs/lanes/02-cloudflare.md` |
+| LANE-SEO | `src/lib/seo.ts`, `src/app/sitemap.ts`, `src/app/robots.ts`, `src/app/[locale]/**`, `docs/lanes/03-seo.md` |
+| LANE-GEO | `src/content/**`, `src/app/llms.txt/**`, `public/llms*`, `src/features/**/structured-data*.ts`, `src/features/jobs/job-posting-structured-data.ts`, `docs/lanes/04-geo.md` |
+| LANE-TASARIM | `src/components/**`, `src/experience/**`, `src/styles/**`, `src/assets/**`, `tests/e2e/accessibility.spec.ts`, `tests/unit/design-tokens.test.ts`, `tests/unit/design-token-drift.baseline.json`, `docs/lanes/05-tasarim.md` |
+| LANE-AUTH | `src/features/identity/**`, `src/app/[locale]/(auth)/**`, `supabase/templates/**`, `docs/lanes/06-auth.md` |
+| LANE-URUN | `src/features/**`, `!src/features/identity/**`, `!src/features/**/structured-data*.ts`, `!src/features/jobs/job-posting-structured-data.ts`, `src/server/config/**`, `src/server/push/**`, `src/lib/analytics/**`, `src/lib/pwa/**`, `docs/lanes/07-urun.md` |
+| LANE-QA | `tests/**`, `!tests/e2e/accessibility.spec.ts`, `!tests/unit/design-tokens.test.ts`, `!tests/unit/design-token-drift.baseline.json`, `!tests/security/**`, `docs/performance-budget.md`, `docs/lanes/08-qa.md` |
+| LANE-GÜVENLİK | `tests/security/**`, `docs/threat-model.md`, `docs/data-retention.md`, `docs/lanes/09-guvenlik.md` |
+| LANE-INFRA | `.github/**`, `scripts/**`, `docs/lanes/00-orchestration.md`, `docs/lanes/README.md` |
+
+**Her lane kendi brief'ine sahiptir.** Protokol "notlarını `docs/lanes/<ad>.md`'ye
+yaz" der; o dosya o lane'in çalışma alanıdır, başkası dokunmaz.
 
 **Dışlama sözdizimi:** bir glob `!` ile başlıyorsa o yol o lane'in **dışındadır**.
 Sıra önemlidir: önce dahil edilenler, sonra dışlananlar uygulanır. Yukarıdaki

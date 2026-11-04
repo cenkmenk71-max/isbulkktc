@@ -24,13 +24,36 @@ const ORCHESTRATION = 'docs/lanes/00-orchestration.md';
 
 function parseOwnership(markdown) {
   const lanes = [];
-  const row = /^\|\s*(LANE-[A-ZÇĞİÖŞÜ]+)\s*\|(.+)\|\s*$/gm;
+  const row = /^\|\s*(LANE-[^\s|]+)\s*\|(.+)\|\s*$/gm;
   for (const match of markdown.matchAll(row)) {
     const lane = match[1];
     const globs = [...match[2].matchAll(/`([^`]*\/[^`]*)`/g)].map((m) => m[1]);
     if (globs.length > 0) lanes.push({ lane, globs });
   }
   return lanes;
+}
+
+/**
+ * Fold a name to a comparable form. The lane table uses Turkish characters
+ * (LANE-GÜVENLİK) while a branch name cannot (lane/guvenlik), so a raw
+ * comparison would report every file in that lane as unowned. Folds to ASCII
+ * and lowercases.
+ */
+function foldName(name) {
+  return name
+    .replace(/İ/g, 'I')
+    .replace(/ı/g, 'i')
+    .replace(/Ş/g, 'S')
+    .replace(/ş/g, 's')
+    .replace(/Ğ/g, 'G')
+    .replace(/ğ/g, 'g')
+    .replace(/Ü/g, 'U')
+    .replace(/ü/g, 'u')
+    .replace(/Ö/g, 'O')
+    .replace(/ö/g, 'o')
+    .replace(/Ç/g, 'C')
+    .replace(/ç/g, 'c')
+    .toLowerCase();
 }
 
 function globToRegExp(glob) {
@@ -77,9 +100,9 @@ function openPullRequests() {
 }
 
 function laneFromBranch(branch) {
-  const match = branch.match(/^lane\/([a-z-]+)/);
+  const match = branch.match(/^lane\/([a-z0-9-]+)/);
   if (!match) return null;
-  return `LANE-${match[1].toUpperCase()}`;
+  return foldName(`LANE-${match[1]}`);
 }
 
 function main() {
@@ -98,10 +121,11 @@ function main() {
     for (const file of pr.files ?? []) {
       const path = file.path ?? file;
       const owners = ownersOf(path, lanes);
+      const foldedOwners = owners.map(foldName);
       if (owners.length === 0) {
         problems.push(`#${pr.number} ${path} — owned by no lane`);
       }
-      if (lane && owners.length > 0 && !owners.includes(lane)) {
+      if (lane && owners.length > 0 && !foldedOwners.includes(lane)) {
         problems.push(
           `#${pr.number} ${path} — ${lane} does not own it (${owners.join(', ')})`,
         );
