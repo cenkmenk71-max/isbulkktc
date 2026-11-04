@@ -3,8 +3,13 @@
 import { feedbackSchema, type FeedbackFormState } from "./schemas";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { sendFeedbackEmails } from "@/server/email/mailer";
+import { feedbackRateLimiter } from "@/features/abuse/limits";
+import { clientIp } from "@/features/abuse/request-context";
 
 const invalidForm: FeedbackFormState = { status: "error", message: "invalid" };
+// Throttling answers with the same "try again later" copy as a send failure, so
+// a scripted caller cannot confirm from the response that it tripped a limit.
+const throttledForm: FeedbackFormState = { status: "error", message: "failed" };
 
 /**
  * Accepts a feedback / contact message, stores it through the `submit_feedback`
@@ -31,6 +36,18 @@ export async function submitFeedback(
   });
 
   if (!result.success) return invalidForm;
+
+  // Throttle before the RPC and the mail it triggers. Per client address and
+  // per submitted address, so neither one origin nor one victim mailbox floods.
+  if (!feedbackRateLimiter.check(`ip:${await clientIp()}`).ok) {
+    return throttledForm;
+  }
+  if (
+    result.data.email &&
+    !feedbackRateLimiter.check(`email:${result.data.email}`).ok
+  ) {
+    return throttledForm;
+  }
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("submit_feedback", {

@@ -3,8 +3,13 @@
 import { salesLeadSchema, type SalesLeadFormState } from "./schemas";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { sendSalesLeadEmails } from "@/server/email/mailer";
+import { salesLeadRateLimiter } from "@/features/abuse/limits";
+import { clientIp } from "@/features/abuse/request-context";
 
 const invalidForm: SalesLeadFormState = { status: "error", message: "invalid" };
+// Same "try again later" copy as a send failure, so a scripted caller cannot
+// confirm from the response that it tripped the throttle.
+const throttledForm: SalesLeadFormState = { status: "error", message: "failed" };
 
 /**
  * Accepts a corporate quote request, stores it through `submit_sales_lead` and,
@@ -29,6 +34,16 @@ export async function submitSalesLead(
   });
 
   if (!result.success) return invalidForm;
+
+  // Throttle before the RPC and the mail it triggers: the receipt goes to the
+  // submitted address and the team gets a copy. Per address and per origin, so
+  // both a single attacker and a single victim mailbox are bounded.
+  if (!salesLeadRateLimiter.check(`ip:${await clientIp()}`).ok) {
+    return throttledForm;
+  }
+  if (!salesLeadRateLimiter.check(`email:${result.data.email}`).ok) {
+    return throttledForm;
+  }
 
   const durationDays =
     result.data.durationDays && result.data.durationDays.length > 0
