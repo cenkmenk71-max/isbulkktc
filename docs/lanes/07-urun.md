@@ -147,3 +147,47 @@ ama **tam** bir paylaşımlı sayaç değildir; o bir Redis/Upstash gerektirir
   altı dilde anahtar eşitliğini zaten zorluyor.
 - Aynı desen (`createRateLimiter` + `clientIp`) başka anonim yazma yollarına da
   uygulanabilir; `src/features/abuse/limits.ts` tek yer.
+
+---
+
+## Tur 3 — açık yönlendirme kapatıldı (#101, kapanmış sanılan gerçek açık)
+
+### Neden alındı
+Kuyruk taramasında **#108** `agent:backend` göründü ama durumu **CLOSED**'dı
+("Duplicate of #101"). Doğrulayınca #101'in **hâlâ açık** ve `lane:urun` etiketli
+olduğu, hatanın `main` üzerinde **canlı** olduğu ortaya çıktı:
+
+```
+sanitizeNextPath("/..//evil.example") -> "//evil.example"
+new URL("//evil.example", "https://isbulkktc.com/install").origin === "https://evil.example"
+```
+
+`src/lib/pwa/destination.ts` LANE-URUN'un sahip olduğu `src/lib/pwa/**` altında.
+Yani bu, lane'in en yüksek etkili sınırlı işiydi (posterden taranan QR ile
+phishing). #108'i "kapandı" sayıp geçmek yanlış olurdu.
+
+### Kök neden
+Girdi `//` ile **başlamıyordu**, bu yüzden giriş kontrolü geçiyordu. Ama fonksiyon
+dönüş değerini `new URL(value, base)` ile kurup `pathname+search+hash`
+döndürüyordu; WHATWG çözümleyicisi `..`/`.` segmentlerini **önce** işlediği için
+`..` tek slash'ı yutup baştaki `//`'i geri getiriyordu. `resolved.origin` kontrolü
+bunu yakalayamaz — origin her zaman base'in origin'idir.
+
+### Düzeltme
+`src/lib/pwa/destination.ts` — normalize edilen **çıktı** yeniden doğrulanıyor:
+`//` ile başlıyorsa, `\` içeriyorsa veya şema taşıyorsa `null`. Girdi kontrolleri
+olduğu gibi korundu; normal yollar (`/jobs`, `/jobs?x=1`) aynen dönüyor.
+
+### Eklenen test
+`src/lib/pwa/destination.test.ts` (3 test) — nokta-segment kaçışı, fuzz korpusu
+(49 kombinasyon), ve meşru yol normalizasyonu (`/jobs/../profile -> /profile`).
+
+### Kapılar
+lint/typecheck/check:frontend-source/test:unit (374 → **377**)/test:security →
+hepsi yeşil; `tests/security/open-redirect.test.ts`'teki iki `todo` artık **✔**.
+Canlıya dokunulmadı.
+
+### Not (sahiplerine)
+- **#108 kapalı ama hata `main`'de canlıydı.** Bir issue'yu "duplicate" diye
+  kapatmak, orijinali (#101) kapatmaz; kuyruk tararken `state` kontrol edilmeli.
+  Bu turda LANE-URUN farkı yakaladı ve düzeltti.
