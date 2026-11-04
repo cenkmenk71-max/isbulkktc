@@ -24,6 +24,18 @@ export function audienceFromCallbackParam(
   return value === "company" ? "employer" : "candidate";
 }
 
+/**
+ * The inverse of `audienceFromCallbackParam`: the `next` value an auth redirect
+ * carries so the callback can recover the audience. Every flow that emails a
+ * confirmation/recovery link (sign-up, OAuth start, resend) must use this — a
+ * hardcoded `candidate` silently drops an employer on the candidate dashboard.
+ */
+export function callbackAudienceParam(
+  audience: AccountAudience,
+): "candidate" | "company" {
+  return audience === "employer" ? "company" : "candidate";
+}
+
 export function parseAuthFlow(value: string | null | undefined): AuthFlow {
   if (value === "oauth") return "oauth";
   if (value === "reset") return "reset";

@@ -34,6 +34,7 @@ export const requestPasswordResetSchema = z.object({
 
 export const resendConfirmationSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email()),
+  audience: accountAudienceSchema,
   locale: z.enum(routing.locales),
   captchaToken: z.string().trim().min(1).max(4096).optional(),
 });

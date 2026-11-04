@@ -19,9 +19,17 @@ const initialState: SignInFormState = { status: "idle", message: "idle" };
 /**
  * Recovery affordance for the `email_not_confirmed` branch. Resending is
  * itself a server action so the address travels back to the server in a
- * signed-in-the-form flow rather than being persisted on the client.
+ * signed-in-the-form flow rather than being persisted on the client. The
+ * audience travels with it so the fresh confirmation link lands the employer on
+ * the company dashboard, not the candidate one.
  */
-function ResendConfirmationForm({ email }: { email: string }) {
+function ResendConfirmationForm({
+  email,
+  audience,
+}: {
+  email: string;
+  audience: AccountAudience;
+}) {
   const copy = useTranslations("AuthForms");
   const locale = useLocale();
   const formRef = useRef<HTMLFormElement>(null);
@@ -31,6 +39,7 @@ function ResendConfirmationForm({ email }: { email: string }) {
   return (
     <form ref={formRef} action={action} className="editorial-form-resend">
       <input name="email" type="hidden" value={email} />
+      <input name="audience" type="hidden" value={audience} />
       <input name="locale" type="hidden" value={locale} />
       <TurnstileField resetSignal={resetSignal} />
       <button
@@ -161,7 +170,7 @@ export function SignInForm({
               {copy(`messages.${state.message}`)}
             </p>
             {state.message === "emailNotConfirmed" && state.email ? (
-              <ResendConfirmationForm email={state.email} />
+              <ResendConfirmationForm email={state.email} audience={audience} />
             ) : null}
           </div>
         )

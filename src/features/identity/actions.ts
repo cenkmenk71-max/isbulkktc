@@ -13,7 +13,10 @@ import {
 } from "./schemas";
 import { parseEnabledOAuthProviders } from "./oauth-providers";
 import { messageForAuthErrorCode } from "./auth-errors";
-import { resolveAuthDestination } from "./auth-routing";
+import {
+  callbackAudienceParam,
+  resolveAuthDestination,
+} from "./auth-routing";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import { redirectLocalized } from "@/i18n/redirect";
@@ -61,8 +64,7 @@ export async function startOAuthSignIn(
   }
 
   const localePrefix = getLocalePrefix(result.data.locale);
-  const destination =
-    result.data.audience === "employer" ? "company" : "candidate";
+  const destination = callbackAudienceParam(result.data.audience);
   const redirectTo = new URL(
     `${localePrefix}/auth/callback?flow=oauth&next=${destination}`,
     getAppBaseUrl(),
@@ -173,9 +175,9 @@ export async function signUp(
         locale: result.data.locale,
       },
       emailRedirectTo: new URL(
-        `${getLocalePrefix(result.data.locale)}/auth/callback?next=${
-          result.data.audience === "employer" ? "company" : "candidate"
-        }`,
+        `${getLocalePrefix(result.data.locale)}/auth/callback?next=${callbackAudienceParam(
+          result.data.audience,
+        )}`,
         getAppBaseUrl(),
       ).toString(),
       captchaToken: result.data.captchaToken,
@@ -247,6 +249,7 @@ export async function resendConfirmation(
 ): Promise<SignInFormState> {
   const result = resendConfirmationSchema.safeParse({
     email: formData.get("email"),
+    audience: formData.get("audience"),
     locale: formData.get("locale"),
     captchaToken: readCaptchaToken(formData),
   });
@@ -260,8 +263,13 @@ export async function resendConfirmation(
     type: "signup",
     email: result.data.email,
     options: {
+      // Carry the audience so the confirmation link lands the employer on the
+      // company dashboard, not the candidate one. A hardcoded `candidate` here
+      // sent an employer who re-verified to /profile/dashboard.
       emailRedirectTo: new URL(
-        `${getLocalePrefix(result.data.locale)}/auth/callback?next=candidate`,
+        `${getLocalePrefix(result.data.locale)}/auth/callback?next=${callbackAudienceParam(
+          result.data.audience,
+        )}`,
         getAppBaseUrl(),
       ).toString(),
       captchaToken: result.data.captchaToken,
