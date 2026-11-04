@@ -1,0 +1,63 @@
+name: Lane autopilot
+
+# Runs the lane autopilot on a schedule, so the team keeps working without a
+# human in the loop. One pass per lane: read its real state and decide
+# spawn / respawn / wait / blocked / exhausted / deferred.
+#
+# It never writes to `main`. Lanes land by pull request, and the autopilot only
+# reads PRs and issues and calls the OpenHands API.
+#
+# Needs the OPENHANDS_API_KEY repository secret. Without it the job fails fast
+# rather than pretending to run.
+
+on:
+  schedule:
+    # Every 30 minutes. A pass that finds no capacity is cheap: it stops early
+    # and does not spend a lane's attempt budget.
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Decide only, start nothing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: lane-autopilot
+  cancel-in-progress: false
+
+jobs:
+  autopilot:
+    name: One autopilot pass
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Run one pass
+        env:
+          # The autopilot reads PRs and issues through gh, and calls the
+          # OpenHands API. The default token can read both, so it is enough.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENHANDS_API_KEY: ${{ secrets.OPENHANDS_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${OPENHANDS_API_KEY:-}" ]; then
+            echo "::error::OPENHANDS_API_KEY is not set as a repository secret"
+            exit 1
+          fi
+          args=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            args="--dry-run"
+          fi
+          node scripts/lane-autopilot.mjs $args

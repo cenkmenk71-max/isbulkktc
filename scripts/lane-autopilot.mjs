@@ -126,6 +126,20 @@ async function runningSandboxes() {
   return (body.items ?? []).filter((s) => s.status === 'RUNNING');
 }
 
+/**
+ * Conversations whose sandbox is running but whose agent is not busy — the
+ * ones a new task can be sent to without creating a sandbox.
+ */
+async function idleConversations() {
+  const { ok, body } = await api('/app-conversations/search?limit=50');
+  if (!ok || !body) return [];
+  return (body.items ?? []).filter(
+    (c) =>
+      c.sandbox_status === 'RUNNING' &&
+      !['running'].includes(String(c.execution_status ?? '')),
+  );
+}
+
 function kickoff(name, context) {
   const lane = LANES[name];
   const parts = [
@@ -174,6 +188,30 @@ async function spawnLane(name, context) {
   });
   if (!ok) throw new Error(`${name}: HTTP ${body?.detail ?? 'unknown'}`);
   return body.id;
+}
+
+/**
+ * Send a new task to an existing conversation's sandbox.
+ *
+ * The daily quota counts sandbox *creation*, so once it is exhausted no new
+ * lane can start — but a lane whose sandbox is already running can still be
+ * given work. This reuses that sandbox: the next task in the queue goes to it
+ * instead of a fresh one. Returns the conversation id it used.
+ */
+async function sendToExisting(conversationId, name, context) {
+  const { ok, body } = await api(
+    `/app-conversations/${conversationId}/send-message`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        role: 'user',
+        content: [{ type: 'text', text: kickoff(name, context) }],
+        run: true,
+      }),
+    },
+  );
+  if (!ok) throw new Error(`${name}: HTTP ${body?.detail ?? 'unknown'}`);
+  return conversationId;
 }
 
 /** Read a start task back; the POST returns 200 even when the sandbox is refused. */
@@ -262,11 +300,12 @@ async function main() {
     process.exit(1);
   }
 
-  const [prs, blocked, tasks, sandboxes] = await Promise.all([
+  const [prs, blocked, tasks, sandboxes, idle] = await Promise.all([
     Promise.resolve(openPullRequests()),
     Promise.resolve(blockedIssues()),
     startTasks(),
     runningSandboxes(),
+    idleConversations(),
   ]);
 
   const branches = execFileSync('git', ['branch', '-r'], { encoding: 'utf8' })
@@ -294,15 +333,27 @@ async function main() {
   }
 
   const toSpawn = decisions.filter((d) => d.action === 'spawn');
+
+  // A lane that can reuse a running sandbox costs no quota, so it never waits
+  // for budget — and it goes first, because a lane that needs a fresh sandbox
+  // may be refused once the daily quota is gone. Processing the reusable ones
+  // first is what keeps the team moving on a quota-exhausted day.
+  const reusableFor = (d) =>
+    idle.find((c) => String(c.title ?? '') === `LANE-${d.name}`);
+  const reusable = toSpawn.filter((d) => reusableFor(d));
+  const fresh = toSpawn.filter((d) => !reusableFor(d));
+
   const capacity = Math.max(0, SANDBOX_BUDGET - running);
-  const allowed = toSpawn.slice(0, capacity);
-  const deferred = toSpawn.slice(capacity);
+  const freshAllowed = fresh.slice(0, capacity);
+  const allowed = [...reusable, ...freshAllowed];
+  const deferred = fresh.slice(capacity);
 
   console.log(`sandboxes running: ${running} (budget ${SANDBOX_BUDGET})`);
   for (const d of decisions) {
-    const marker =
-      d.action === 'spawn' && !allowed.includes(d) ? 'deferred' : d.action;
-    console.log(`  ${d.name.padEnd(11)} ${marker.padEnd(9)} ${d.reason}`);
+    const isAllowed = allowed.includes(d);
+    const marker = d.action === 'spawn' && !isAllowed ? 'deferred' : d.action;
+    const note = reusableFor(d) ? ' (reuse)' : '';
+    console.log(`  ${d.name.padEnd(11)} ${marker.padEnd(9)} ${d.reason}${note}`);
   }
 
   if (dryRun) {
@@ -312,10 +363,30 @@ async function main() {
 
   for (const d of allowed) {
     try {
+      // Prefer a sandbox this lane already owns and is not using. Creating one
+      // may be refused by the daily quota; reusing one never is.
+      const reusable = idle.find(
+        (c) => String(c.title ?? '') === `LANE-${d.name}`,
+      );
+      let entry = state[d.name] ?? { attempts: 0 };
+
+      if (reusable) {
+        await sendToExisting(reusable.id, d.name, d.context);
+        entry.attempts = (entry.attempts ?? 0) + 1;
+        entry.lastConversationId = reusable.id;
+        entry.lastStatus = 'REUSED';
+        entry.lastError = null;
+        entry.updatedAt = new Date().toISOString();
+        state[d.name] = entry;
+        console.log(
+          `  ${d.name}: reused sandbox (attempt ${entry.attempts})`,
+        );
+        continue;
+      }
+
       const taskId = await spawnLane(d.name, d.context);
       await new Promise((r) => setTimeout(r, 4000));
       const result = await confirm(taskId);
-      const entry = state[d.name] ?? { attempts: 0 };
 
       // A capacity rejection is the platform's limit, not the lane's failure.
       // Do not spend an attempt on it, and stop the pass: if the quota is
