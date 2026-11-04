@@ -157,6 +157,50 @@ export function getRegionName(locale: AppLocale): string {
 }
 
 /**
+ * The `Article` graph for an editorial guide.
+ *
+ * A guide is written for the site, so it declares `Article` with the site as
+ * author and publisher, and a `dateModified` that is the copy's own authored
+ * date rather than the request time — the page is statically rendered, and a
+ * build timestamp would claim an edit that never happened.
+ */
+export function buildGuideStructuredData({
+  locale,
+  baseUrl,
+  slug,
+  title,
+  description,
+  updated,
+}: {
+  locale: AppLocale;
+  baseUrl: URL;
+  slug: string;
+  title: string;
+  description: string;
+  updated: string;
+}) {
+  const siteUrl = baseUrl.origin;
+  const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
+  const url = `${siteUrl}${prefix}/rehber/${slug}`;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": `${url}#article`,
+    headline: title,
+    description,
+    url,
+    inLanguage: locale,
+    datePublished: updated,
+    dateModified: updated,
+    author: { "@id": `${siteUrl}/#organization` },
+    publisher: { "@id": `${siteUrl}/#organization` },
+    isPartOf: { "@id": `${siteUrl}/#website` },
+    mainEntityOfPage: url,
+  };
+}
+
+/**
  * The `BreadcrumbList` + `CollectionPage` graph for a district landing page.
  *
  * A district page ("Lefkoşa iş ilanları") is a collection, not an article, so it

@@ -5,6 +5,7 @@ import {
   northernCyprusDistrictValues,
 } from "@/features/locations/northern-cyprus-districts";
 import { jobTypeKeys, jobTypeSlugs } from "@/features/jobs/job-type-slugs";
+import { GUIDE_UPDATED, getGuideSlugs } from "@/content/guides";
 import { routing } from "@/i18n/routing";
 import { getLocalizedPageUrl } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
@@ -149,6 +150,45 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }));
   });
 
-  return [...staticEntries, ...districtEntries, ...jobTypeEntries, ...jobEntries];
+  // Editorial guides. Written for the site rather than imported, so they are the
+  // one content family that is genuinely ours; each is localized with its own
+  // copy and canonical.
+  const guideEntries: MetadataRoute.Sitemap = [
+    { pathname: "/rehber", priority: 0.8 },
+    ...getGuideSlugs().map((slug) => ({
+      pathname: `/rehber/${slug}`,
+      priority: 0.7,
+    })),
+  ].flatMap(({ pathname, priority }) => {
+    const languages = {
+      ...Object.fromEntries(
+        routing.locales.map((locale) => [
+          locale,
+          getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
+        ]),
+      ),
+      "x-default": getLocalizedPageUrl(
+        routing.defaultLocale,
+        pathname,
+        baseUrl,
+      ).toString(),
+    };
+
+    return routing.locales.map((locale) => ({
+      url: getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
+      alternates: { languages },
+      lastModified: GUIDE_UPDATED,
+      changeFrequency: "monthly" as const,
+      priority,
+    }));
+  });
+
+  return [
+    ...staticEntries,
+    ...districtEntries,
+    ...jobTypeEntries,
+    ...guideEntries,
+    ...jobEntries,
+  ];
 }
 

@@ -263,7 +263,8 @@
       "contact": "Kontakt",
       "privacy": "Datenschutz",
       "cookies": "Cookies",
-      "terms": "Nutzungsbedingungen"
+      "terms": "Nutzungsbedingungen",
+      "guides": "Karriereratgeber"
     },
     "rights": "© {year} İşBul KKTC. Alle Rechte vorbehalten.",
     "madeIn": "Nordzypern",
@@ -1451,5 +1452,19 @@
     "otherTypes": "Jobs nach Beschäftigungsart",
     "districts": "Jobs nach Bezirk",
     "countLabel": "{count} Angebote"
+  },
+  "Guides": {
+    "eyebrow": "KARRIERERATGEBER",
+    "title": "Karriereratgeber Nordzypern",
+    "lead": "Originale Ratgeber zu Jobsuche, Lebenslauf und Arbeitnehmerrechten in Nordzypern.",
+    "updated": "Aktualisiert: {date}",
+    "readMinutes": "{minutes} Min. Lesezeit",
+    "ctaBody": "Bereit, den Ratgeber umzusetzen? Sehen Sie sich die aktuellen Anzeigen an oder erstellen Sie ein kostenloses Konto.",
+    "ctaJobs": "Jobs ansehen",
+    "ctaRegister": "Kostenlos registrieren",
+    "moreGuides": "Weitere Ratgeber",
+    "metaTitle": "Karriereratgeber Nordzypern | Jobs, Lebenslauf und Rechte",
+    "metaDescription": "Originale Ratgeber zu Jobsuche, Lebenslauf und Arbeitserlaubnis in Nordzypern. İşBul KKTC.",
+    "allGuides": "Alle Ratgeber"
   }
 }

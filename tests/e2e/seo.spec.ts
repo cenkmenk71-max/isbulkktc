@@ -727,3 +727,70 @@ test("an unknown employment-type slug is a hard 404", async ({ request }) => {
   expect(response.status()).toBe(404);
 });
 
+
+test("editorial guides are indexable, self-canonical and carry Article data", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(180_000);
+
+  const guides = [
+    { slug: "kktc-is-bulma-rehberi", tr: "KKTC'de İş Bulma Rehberi" },
+    { slug: "kktc-cv-hazirlama-rehberi", tr: "KKTC İçin CV Hazırlama Rehberi" },
+    { slug: "kktc-calisma-izni-ve-haklar", tr: "KKTC'de Çalışma İzni ve Çalışan Hakları" },
+  ];
+
+  // The index lists every guide as a real link.
+  await page.goto("/rehber", { waitUntil: "domcontentloaded" });
+  await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+  for (const guide of guides) {
+    await expect(page.locator(`a[href="/rehber/${guide.slug}"]`)).toHaveCount(1);
+  }
+
+  for (const guide of guides) {
+    const response = await request.get(`/rehber/${guide.slug}`);
+    expect(response.status(), `${guide.slug} must resolve`).toBe(200);
+
+    await page.goto(`/rehber/${guide.slug}`, { waitUntil: "domcontentloaded" });
+    const origin = new URL(page.url()).origin;
+    await expect(page).toHaveTitle(new RegExp(guide.tr.slice(0, 24)));
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      `${origin}/rehber/${guide.slug}`,
+    );
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      guide.tr.slice(0, 20),
+    );
+    await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+
+    // The guide declares itself as an Article, authored by the site.
+    const structuredData = await page
+      .locator('script[type="application/ld+json"]')
+      .evaluateAll((nodes) =>
+        nodes.map((node) => node.textContent ?? "").join("\n"),
+      );
+    expect(structuredData).toContain('"@type":"Article"');
+    expect(structuredData).toContain(`${origin}/rehber/${guide.slug}`);
+  }
+
+  // A guide in another locale localizes its own canonical.
+  await page.goto("/en/rehber/finding-a-job-in-northern-cyprus", {
+    waitUntil: "domcontentloaded",
+  });
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    `${new URL(page.url()).origin}/en/rehber/finding-a-job-in-northern-cyprus`,
+  );
+
+  // Every guide page is advertised in the sitemap.
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+  for (const guide of guides) {
+    expect(sitemap).toContain(`<loc>${origin}/rehber/${guide.slug}</loc>`);
+  }
+});
+
+test("an unknown guide slug is a hard 404", async ({ request }) => {
+  const response = await request.get("/rehber/not-a-guide");
+  expect(response.status()).toBe(404);
+});
+

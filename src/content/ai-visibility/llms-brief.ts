@@ -12,6 +12,7 @@ import {
   jobTypeSlugs,
   type JobTypeKey,
 } from "@/features/jobs/job-type-slugs";
+import { getGuideSlugs } from "@/content/guides";
 
 /**
  * The canonical page list the brief advertises. These are the same routes the
@@ -59,6 +60,12 @@ function primaryPageLines(baseUrl: URL, locale: AppLocale): string {
       }),
       // Employment-type landing pages, so "uzaktan iş" / "tam zamanlı iş" can be
       // answered with the matching page.
+      // Editorial guides — the site's own content, so the brief points at them
+      // first among the resources an answer engine may quote.
+      getGuideSlugs().map((slug) => {
+        const label = locale === routing.defaultLocale ? "Rehber" : "Guide";
+        return `- [${label}: ${slug}](${localeUrl(baseUrl, locale, `/rehber/${slug}`)})`;
+      }),
       jobTypeKeys.map((jobType) => {
         const label = locale === routing.defaultLocale
           ? jobTypeLabelsTr[jobType]

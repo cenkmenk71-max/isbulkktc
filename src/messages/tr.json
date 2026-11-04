@@ -349,7 +349,8 @@
       "contact": "İletişim",
       "privacy": "Gizlilik",
       "cookies": "Çerezler",
-      "terms": "Kullanım koşulları"
+      "terms": "Kullanım koşulları",
+      "guides": "Kariyer rehberleri"
     },
     "rights": "© {year} İşBul KKTC. Tüm hakları saklıdır.",
     "madeIn": "Kuzey Kıbrıs",
@@ -1451,5 +1452,19 @@
     "otherTypes": "Diğer çalışma türlerinde iş ilanları",
     "districts": "İlçeye göre iş ilanları",
     "countLabel": "{count} ilan"
+  },
+  "Guides": {
+    "eyebrow": "KARİYER REHBERLERİ",
+    "title": "KKTC Kariyer Rehberleri",
+    "lead": "Kuzey Kıbrıs'ta iş arama, CV hazırlama ve çalışma hakları hakkında özgün rehberler.",
+    "updated": "Güncelleme: {date}",
+    "readMinutes": "{minutes} dakika okuma",
+    "ctaBody": "Bu rehberdeki adımları uygulamaya hazır mısınız? Güncel ilanlara göz atın veya ücretsiz hesap oluşturun.",
+    "ctaJobs": "İş ilanlarını gör",
+    "ctaRegister": "Ücretsiz kayıt ol",
+    "moreGuides": "Diğer rehberler",
+    "metaTitle": "KKTC Kariyer Rehberleri | İş Arama, CV ve Çalışma Hakları",
+    "metaDescription": "Kuzey Kıbrıs'ta iş bulma, CV hazırlama ve çalışma izni hakkında özgün rehberler. İşBul KKTC kariyer rehberleri.",
+    "allGuides": "Tüm rehberler"
   }
 }

@@ -349,7 +349,8 @@
       "contact": "Contact",
       "privacy": "Privacy",
       "cookies": "Cookies",
-      "terms": "Terms of use"
+      "terms": "Terms of use",
+      "guides": "Career guides"
     },
     "rights": "© {year} İşBul KKTC. All rights reserved.",
     "madeIn": "Northern Cyprus",
@@ -1451,5 +1452,19 @@
     "otherTypes": "Jobs by employment type",
     "districts": "Jobs by district",
     "countLabel": "{count} listings"
+  },
+  "Guides": {
+    "eyebrow": "CAREER GUIDES",
+    "title": "Northern Cyprus Career Guides",
+    "lead": "Original guides on finding work, writing a CV and knowing your rights in Northern Cyprus.",
+    "updated": "Updated: {date}",
+    "readMinutes": "{minutes} min read",
+    "ctaBody": "Ready to put this guide to work? Browse the current listings or create a free account.",
+    "ctaJobs": "Browse jobs",
+    "ctaRegister": "Create a free account",
+    "moreGuides": "More guides",
+    "metaTitle": "Northern Cyprus Career Guides | Jobs, CV and Work Rights",
+    "metaDescription": "Original guides on finding a job, writing a CV and work permits in Northern Cyprus. İşBul KKTC career guides.",
+    "allGuides": "All guides"
   }
 }
