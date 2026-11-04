@@ -185,21 +185,37 @@ export function buildGuideStructuredData({
   const siteUrl = baseUrl.origin;
   const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
   const url = `${siteUrl}${prefix}${pathname}/${slug}`;
+  const sectionUrl = `${siteUrl}${prefix}${pathname}`;
+  const sectionName = pathname === "/blog" ? "Blog" : "Rehber";
 
   return {
     "@context": "https://schema.org",
-    "@type": "Article",
-    "@id": `${url}#article`,
-    headline: title,
-    description,
-    url,
-    inLanguage: locale,
-    datePublished: updated,
-    dateModified: updated,
-    author: { "@id": `${siteUrl}/#organization` },
-    publisher: { "@id": `${siteUrl}/#organization` },
-    isPartOf: { "@id": `${siteUrl}/#website` },
-    mainEntityOfPage: url,
+    "@graph": [
+      {
+        "@type": "Article",
+        "@id": `${url}#article`,
+        headline: title,
+        description,
+        url,
+        inLanguage: locale,
+        datePublished: updated,
+        dateModified: updated,
+        author: { "@id": `${siteUrl}/#organization` },
+        publisher: { "@id": `${siteUrl}/#organization` },
+        isPartOf: { "@id": `${siteUrl}/#website` },
+        mainEntityOfPage: url,
+        breadcrumb: { "@id": `${url}#breadcrumb` },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${url}#breadcrumb`,
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "İşBul KKTC", item: `${siteUrl}${prefix}` },
+          { "@type": "ListItem", position: 2, name: sectionName, item: sectionUrl },
+          { "@type": "ListItem", position: 3, name: title, item: url },
+        ],
+      },
+    ],
   };
 }
 
