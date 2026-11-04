@@ -24,7 +24,7 @@ const ORCHESTRATION = 'docs/lanes/00-orchestration.md';
 
 function parseOwnership(markdown) {
   const lanes = [];
-  const row = /^\|\s*(LANE-[A-Z]+)\s*\|(.+)\|\s*$/gm;
+  const row = /^\|\s*(LANE-[A-ZÇĞİÖŞÜ]+)\s*\|(.+)\|\s*$/gm;
   for (const match of markdown.matchAll(row)) {
     const lane = match[1];
     const globs = [...match[2].matchAll(/`([^`]*\/[^`]*)`/g)].map((m) => m[1]);
@@ -43,10 +43,21 @@ function globToRegExp(glob) {
   return new RegExp(`^${escaped}$`);
 }
 
+/**
+ * Whether a lane owns a path. A glob prefixed with `!` excludes: the lane owns
+ * the path if some include matches and no exclusion does. Order in the doc is
+ * include-first, then exclusions.
+ */
+function owns(path, globs) {
+  const includes = globs.filter((g) => !g.startsWith('!'));
+  const excludes = globs.filter((g) => g.startsWith('!')).map((g) => g.slice(1));
+  const included = includes.some((g) => globToRegExp(g).test(path));
+  const excluded = excludes.some((g) => globToRegExp(g).test(path));
+  return included && !excluded;
+}
+
 function ownersOf(path, lanes) {
-  return lanes
-    .filter(({ globs }) => globs.some((g) => globToRegExp(g).test(path)))
-    .map(({ lane }) => lane);
+  return lanes.filter(({ globs }) => owns(path, globs)).map(({ lane }) => lane);
 }
 
 function openPullRequests() {

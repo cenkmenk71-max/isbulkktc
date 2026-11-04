@@ -64,6 +64,27 @@ const LANES = {
     scope: 'oturum akışı, e-posta şablonları, güvenlik',
     skills: ['security', 'code-review', 'qa-changes'],
   },
+  urun: {
+    brief: '07-urun',
+    branch: 'lane/urun',
+    wave: 0,
+    scope: 'ürün & domain: ilan, şirket, aday, başvuru, paket, mesaj, belge',
+    skills: ['code-review', 'qa-changes', 'code-simplifier'],
+  },
+  qa: {
+    brief: '08-qa',
+    branch: 'lane/qa',
+    wave: 0,
+    scope: 'bug & regresyon: entegrasyon, görsel, E2E dengesi',
+    skills: ['qa-changes', 'code-review'],
+  },
+  guvenlik: {
+    brief: '09-guvenlik',
+    branch: 'lane/guvenlik',
+    wave: 0,
+    scope: 'tehdit modeli, yetki sınırları, saldırgan testler',
+    skills: ['security', 'code-review'],
+  },
 };
 
 function kickoff(name) {

@@ -16,6 +16,10 @@ kaynağı paylaşırlar: **canlı Supabase** ve **`main` branch**.
 | 4 | [geo](04-geo.md) | llms.txt, yerel entity, AI görünürlük, JSON-LD üreticisi | ❌ | 0 |
 | 5 | [tasarim](05-tasarim.md) | UI/UX, motion, erişilebilirlik, guard'lar | ❌ | 0 |
 | 6 | [auth](06-auth.md) | oturum akışı, e-posta şablonları, güvenlik | ❌ | 0 |
+| 7 | [urun](07-urun.md) | ürün & domain: ilan, şirket, aday, başvuru, paket, mesaj | ❌ | 0 |
+| 8 | [qa](08-qa.md) | bug & regresyon: entegrasyon, görsel, E2E dengesi | ❌ | 0 |
+| 9 | [guvenlik](09-guvenlik.md) | tehdit modeli, yetki sınırları, saldırgan testler | ❌ | 0 |
+| — | [infra](00-orchestration.md) | CI, workflow, guard, lane otomasyonu | ❌ | — |
 
 ## Üç değişmez kural
 
