@@ -141,6 +141,53 @@ test("the palette keeps its canonical scale anchors", () => {
   assert.equal(token("--color-shade-green-800"), "#194435");
 });
 
+/**
+ * A card that fades in from `opacity: 0` also fades every label inside it. When
+ * that label clears AA by a hair (the auth submit's brand blue does), the
+ * mid-flight composite drops below 4.5:1 and the visitor sees a real flash of
+ * failing contrast — even though the settled state passes axe. `consent-card-in`
+ * was fixed for this once; `editorial-page-enter` carried the same defect on the
+ * sign-in, register and password-recovery cards. Guard the rule, not the two
+ * names: resolve each entrance animation from its selector and require that the
+ * keyframe it plays declares no `opacity`.
+ */
+function ruleBody(selector: string): string {
+  const match = new RegExp(`(?:^|\\n)\\s*${selector}\\s*\\{([^}]*)\\}`).exec(
+    css,
+  );
+  assert.ok(match, `${selector} rule is missing from global.css`);
+  return match[1];
+}
+
+function keyframesBody(name: string): string {
+  const start = css.search(new RegExp(`@keyframes\\s+${name}\\b`));
+  assert.notEqual(start, -1, `@keyframes ${name} is missing from global.css`);
+  const open = css.indexOf("{", start);
+  let depth = 0;
+  for (let index = open; index < css.length; index += 1) {
+    if (css[index] === "{") depth += 1;
+    else if (css[index] === "}") {
+      depth -= 1;
+      if (depth === 0) return css.slice(open + 1, index);
+    }
+  }
+  throw new Error(`@keyframes ${name} is never closed`);
+}
+
+test("card entrance animations never fade opacity under AA-fragile labels", () => {
+  for (const selector of [".editorial-page-layout", ".consent-card"]) {
+    const shorthand = /animation:\s*([^;]+);/.exec(ruleBody(selector));
+    assert.ok(shorthand, `${selector} must keep its entrance animation`);
+    const name = shorthand[1].trim().split(/\s+/)[0];
+    const frames = keyframesBody(name);
+    assert.doesNotMatch(
+      frames,
+      /opacity\s*:/,
+      `${selector}'s ${name} entrance must not animate opacity: a partly transparent card measures its inner text against the page behind it and drops below the AA floor for the length of the animation.`,
+    );
+  }
+});
+
 test("typography tokens stay defined and sane", () => {
   const radiusTokens = [
     "--radius-sm",

@@ -7,6 +7,13 @@ import { expect, test } from "@playwright/test";
  * heading can skip a level. axe-core runs the same rules a manual accessibility
  * audit would, on every locale, so a "micro" visual change cannot ship a
  * regression that nobody notices.
+ *
+ * One test per (locale, viewport, route) rather than one per locale. Playwright
+ * shards by test, so a single test that walked all ~26 pages pinned a whole
+ * shard to roughly nine minutes while the others finished in five (issue #95).
+ * The page-level split leaves the coverage identical — same locales, same
+ * routes, same axe tags, same settle — but gives the shard planner ~126
+ * uniformly sized tests to spread across the four shards.
  */
 
 const locales = ["tr", "en", "ru", "el", "fa", "de"] as const;
@@ -47,22 +54,24 @@ function localePrefix(locale: string): string {
 }
 
 for (const locale of locales) {
-  test(`axe finds no accessibility violations in ${locale}`, async ({
-    page,
-  }) => {
-    test.setTimeout(300_000);
-    const violations: string[] = [];
-    const activeViewports = desktopLocales.has(locale)
-      ? viewports
-      : [viewports[0]];
+  const activeViewports = desktopLocales.has(locale)
+    ? viewports
+    : [viewports[0]];
 
-    for (const viewport of activeViewports) {
-      await page.setViewportSize({
-        width: viewport.width,
-        height: viewport.height,
-      });
+  for (const viewport of activeViewports) {
+    for (const route of publicRoutes) {
+      test(`axe finds no accessibility violations in ${locale} ${viewport.name} ${route.name}`, async ({
+        page,
+      }) => {
+        // Animated hero scenes settle late and software WebGL in CI is slow.
+        // 120s matches the project's convention for the 3D-heavy routes; it is
+        // per route now, so a slow page cannot borrow time from a fast one.
+        test.setTimeout(120_000);
+        await page.setViewportSize({
+          width: viewport.width,
+          height: viewport.height,
+        });
 
-      for (const route of publicRoutes) {
         await page.goto(`${localePrefix(locale)}${route.path}`, {
           waitUntil: "domcontentloaded",
         });
@@ -97,21 +106,19 @@ for (const locale of locales) {
           .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
           .analyze();
 
-        for (const violation of results.violations) {
+        const violations = results.violations.map((violation) => {
           const nodes = violation.nodes
             .slice(0, 2)
             .map((node) => node.target.join(" "))
             .join(", ");
-          violations.push(
-            `${locale}${route.path} @${viewport.name}: [${violation.id}] ${violation.help} -> ${nodes}`,
-          );
-        }
-      }
-    }
+          return `${locale}${route.path} @${viewport.name}: [${violation.id}] ${violation.help} -> ${nodes}`;
+        });
 
-    expect(
-      violations,
-      `Accessibility violations found:\n${violations.join("\n")}`,
-    ).toEqual([]);
-  });
+        expect(
+          violations,
+          `Accessibility violations found:\n${violations.join("\n")}`,
+        ).toEqual([]);
+      });
+    }
+  }
 }

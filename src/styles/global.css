@@ -4902,14 +4902,15 @@ a {
   }
 }
 @keyframes editorial-page-enter {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  /* Deliberately no opacity fade. The layout holds the auth submit button,
+     whose brand-blue label clears AA by only about a tenth of a point on the
+     light surface. While the card fades in, that label composites toward the
+     page behind it and the ratio falls to roughly 2.3-3.9:1, so a visitor sees
+     a real flash of failing contrast even though the settled state passes axe.
+     The card slides in fully opaque instead; `consent-card-in` follows the same
+     rule for the same reason. */
+  from { transform: translateY(10px); }
+  to { transform: translateY(0); }
 }
 @media (max-width: 740px) {
   .hero-light-layer--warmth {
