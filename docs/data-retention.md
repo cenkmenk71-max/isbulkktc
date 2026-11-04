@@ -43,3 +43,24 @@ ilk kurulumun erişim durumunu açıkça kaydeder; uydurma silme süresi içerme
 V4'ün RPO ≤ 24 saat / RTO ≤ 8 saat değerleri hosting kabiliyeti kanıtlanıp
 ürün sahibi onayladıktan sonra hedef kabul edilebilir; mevcut kurulumda
 garanti veya yedekleme doğrulaması değildir.
+
+## LANE-GÜVENLİK — retention'a dokunan denetim notları
+
+Saldırgan denetimin veri yaşam döngüsüne bakan bulguları (ayrıntı ve kanıt:
+[`threat-model.md`](./threat-model.md), "LANE-GÜVENLİK" bölümü):
+
+- **`feedback_submissions` ve `sales_leads` için yaş/temizleme yok ve giriş
+  kontrolü zayıf.** İki tablo da kimlik doğrulaması olmayan çağıranlardan
+  (`anon`) serbest metin kabul ediyor ve her satır dış e-posta tetikliyor. Ne
+  captcha ne hız sınırı olduğundan bu tablolar otomatik spam ile şişebilir; her
+  spam satırı gerçek bir PII taşıyıcısı olmasa da saklama/silme süresi ve
+  gönderen-IP kaydı politikası hâlâ ürün kararı bekliyor. Bu, tablolar için
+  "saklama" satırındaki belirsizliği artırır: karar verilene kadar büyüme
+  sınırsızdır.
+- **Başarısız/gönderilmiş e-posta kuyruğu satırları.** `notification_email_outbox`
+  satırlarında alıcı adresi **saklanmıyor** (gönderim anında `auth.users`'tan
+  çözülüyor) — bu retention açısından doğru; ancak satırların yaşı ve temizliği
+  için iş yok, karar bekliyor (mevcut tablo notu geçerli).
+- **`server-only` sınırı ve açık yönlendirme** kişisel veri saklamıyor; retention
+  tablosunu değiştirmez, yalnız erişim/ifşa riskini artırır. İlgili düzeltmeler
+  `threat-model.md`'de izleniyor.

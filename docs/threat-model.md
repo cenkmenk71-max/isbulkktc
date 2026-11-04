@@ -121,3 +121,72 @@ admin bootstrap prosedürü, şirket doğrulama kriteri, upload izinleri, passwo
 policy, rate-limit sağlayıcısı, backup planı ve olay alarm endpoint'i
 yapılandırılmamıştır. Bunlar bilinçli planlama blokajlarıdır; implemented
 kontroller gibi varsayılmamalıdır.
+
+## LANE-GÜVENLİK — saldırgan denetim (dalga 0)
+
+Bu bölüm, `tests/security/**` katmanının ilk turunda yapılan düşman gözüyle
+denetimin sonucudur. Denetçi bulduğu açığı **düzeltmez**; kanıtı ve öneriyi
+buraya yazar, sahibi lane'e issue açar.
+
+### Doğrulanan güçlü kontroller (kanıtlı)
+
+- **Yetki sınırı:** `public` şemasındaki 29 tablonun tamamı RLS ile açılıyor;
+  istemciye `grant` edilen her fonksiyon, `revoke ... from public, anon,
+  authenticated` ile eşleşiyor. `tests/security/sql-hardening.test.ts` bunu her
+  migration'da statik olarak zorlar ve pgTAP ratchet whitelist'i ile
+  karşılaştırır (isim + argüman sayısı), böylece Docker beklemeden sapma yakalanır.
+- **`SECURITY DEFINER` hijyeni:** 82 definer fonksiyonun hepsi `set search_path
+  = ''` ile sabitlenmiş ve gövdeleri tam nitelikli (`pg_catalog.*`, `public.*`)
+  referans kullanıyor.
+- **Yönetici RPC'leri:** 13 `admin_*` fonksiyonunun tamamı gövdesinde
+  `has_platform_role('platform_admin')` çağırıyor; bu da imzalı JWT'de `aal2`
+  ister. İstemci bu fonksiyonları doğrudan çağırabilse bile yetki yükseltmesi yok.
+- **Bildirim worker'ı:** Edge Function `verify_jwt = false` olmasına rağmen
+  bearer'ı **yapılandırma kontrolünden önce** doğruluyor; eksik sır guard'ı
+  atlamıyor (`tests/security/notification-worker-auth.test.ts`).
+- **Sırlar:** `NEXT_PUBLIC_*` ile sızmış bir sır adı yok; hiçbir istemci modülü
+  `@/server/**` içe aktarmıyor veya `NEXT_PUBLIC_` olmayan bir env okumuyor
+  (`tests/security/client-boundary.test.ts`).
+- **Unsubscribe imzası:** HMAC-SHA256 + `timingSafeEqual`, anahtar yoksa
+  imzalama kapalı; açık uç nokta yalnız servis rolüyle yazar.
+
+### Açık bulgular (sahibine bildirildi, düzeltme bekliyor)
+
+1. **Açık yönlendirme — `sanitizeNextPath` normalizasyon bypass'ı** (sahibi:
+   `src/lib/pwa/destination.ts`, LANE-URUN). `/[locale]/install?next=` girdisi,
+   WHATWG URL çözümlemesi `..`/`.` segmentlerini **önce** işlediği için, ikinci
+   slash'ı bir nokta segmentinin arkasına saklayan bir yol protokol-göreli URL'ye
+   dönüşüyor:
+   `sanitizeNextPath("/..//evil.example") → "//evil.example"` ve
+   `new URL("//evil.example", "https://isbulkktc.com/install").origin ===
+   "https://evil.example"`. Sonuç: posterden taranan QR, "Uygulamaya devam et"
+   bağlantısını (`next-intl` `<Link href={destination}>`) **başka bir host'a**
+   yönlendirebiliyor — markalı poster üzerinden phishing. Guard'lar doğru;
+   kusur, normalize edilen çıktının yeniden doğrulanmadan döndürülmesi.
+   Düzeltme: çıktıyı `//`, `\` ve şema içermediği için yeniden kontrol et veya
+   `pathname`'i segmentlere ayırıp `..`/`.` sonrası oluşan çift slash'ı reddet.
+   Kanıt: `tests/security/open-redirect.test.ts` (`todo` işaretli iki test).
+2. **`server-only` sınırı eksik** (sahibi: `src/server/email/**`, LANE-URUN).
+   `src/server/email/unsubscribe-token-core.ts` `ENGAGEMENT_UNSUBSCRIBE_SECRET`
+   ve `RESEND_API_KEY` okuyor ama `import "server-only"` taşımıyor. `src/server`
+   altındaki diğer tüm sır-okuyan modüller bu işareti taşıyor; eksik olan, yanlış
+   bir istemci içe aktarımını derleme hatası yerine sessiz bir sızıntıya çevirir.
+   Kanıt: `tests/security/client-boundary.test.ts` (`todo`).
+3. **Anonim yazma yollarında istismar kontrolü yok** (sahibi:
+   `src/features/feedback/**`, `src/features/sales/**`, LANE-URUN).
+   `submit_feedback` ve `submit_sales_lead` `anon`'a açık (tasarım gereği) ve
+   her ikisi de dış e-posta gönderiyor: gönderen adrese makbuz, ekibe kopya.
+   Ne formlarda captcha var ne server action'da/RPC'de hız sınırı; script'li bir
+   çağıran `POST /contact` ile keyfi adrese istenmeyen e-posta gönderebilir ve
+   ekip gelen kutusunu boğabilir. Düzeltme: Turnstile token'ı ve/veya
+   adres/IP başına hız sınırı. Kanıt:
+   `tests/security/anonymous-write-surface.test.ts` (`todo`).
+
+### Katmanın CI'a bağlanması
+
+`tests/security/**` şu an hiçbir CI işi tarafından toplanmıyor (`test:unit` globu
+yalnız `tests/unit/**` ve `src/**`). Katman yerelde
+`bunx tsx --test "tests/security/**/*.test.ts"` ile çalışır ve yeşildir
+(17 pass / 4 todo / 0 fail). `static` işine bağlanması **LANE-INFRA**'nın
+dosyalarında (`.github/workflows/**`, `package.json`) yapılmalıdır; bu yüzden
+buraya TODO olarak yazıldı, LANE-GÜVENLİK kendi sahiplik dışına yazmadı.
