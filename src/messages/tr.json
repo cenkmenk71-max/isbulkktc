@@ -411,7 +411,9 @@
     "editorialNoteTitle": "Kaynağı görün, haberi asıl yayıncıdan okuyun.",
     "editorialNoteBody": "Bu sayfa güncel başlıkları ve yayıncı adlarını listeler; haber metinlerini kopyalamaz veya İşBul KKTC’nin özgün haberi gibi sunmaz. Haber kartlarındaki Unsplash görselleri konuya uygun temsili fotoğraflardır, haberin olay fotoğrafları değildir. İçeriğin tamamı ve bağlamı için kaynak yayını ziyaret edin.",
     "photoLicense": "Unsplash görsel lisansı",
-    "sourceLabel": "Kaynak: {source}"
+    "sourceLabel": "Kaynak: {source}",
+    "metaTitle": "KKTC İş ve Kariyer Gündemi | İşBul KKTC",
+    "metaDescription": "Kuzey Kıbrıs iş piyasası, işverenler için ilan rehberi ve yeni mezunlar için kariyer ipuçları. İşBul KKTC editoryal yazıları."
   },
   "ContactPage": {
     "eyebrow": "İŞBUL KKTC · İLETİŞİM",

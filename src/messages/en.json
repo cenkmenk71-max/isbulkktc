@@ -411,7 +411,9 @@
     "editorialNoteTitle": "See the source. Read the publisher’s report.",
     "editorialNoteBody": "This page lists current headlines and publisher names; it does not copy article text or present it as original İşBul KKTC reporting. The Unsplash photos on news cards are topic-matched illustrations, not photographs of the specific events. Visit the publisher for the complete story and context.",
     "photoLicense": "Unsplash image licence",
-    "sourceLabel": "Source: {source}"
+    "sourceLabel": "Source: {source}",
+    "metaTitle": "Northern Cyprus Work and Career Journal | İşBul KKTC",
+    "metaDescription": "The Northern Cyprus job market, a guide to posting a job for employers, and career tips for graduates. İşBul KKTC editorial."
   },
   "ContactPage": {
     "eyebrow": "İŞBUL KKTC · CONTACT",

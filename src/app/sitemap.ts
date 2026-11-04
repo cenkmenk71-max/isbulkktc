@@ -6,6 +6,7 @@ import {
 } from "@/features/locations/northern-cyprus-districts";
 import { jobTypeKeys, jobTypeSlugs } from "@/features/jobs/job-type-slugs";
 import { GUIDE_UPDATED, getGuideSlugs } from "@/content/guides";
+import { ARTICLE_UPDATED, getArticleSlugs } from "@/content/editorial";
 import { routing } from "@/i18n/routing";
 import { getLocalizedPageUrl } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
@@ -183,11 +184,41 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }));
   });
 
+  // Editorial articles. Written for the site (not aggregated), so they are
+  // indexable in their own right rather than duplicate headlines.
+  const articleEntries: MetadataRoute.Sitemap = getArticleSlugs().flatMap(
+    (slug) => {
+      const pathname = `/blog/${slug}`;
+      const languages = {
+        ...Object.fromEntries(
+          routing.locales.map((locale) => [
+            locale,
+            getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
+          ]),
+        ),
+        "x-default": getLocalizedPageUrl(
+          routing.defaultLocale,
+          pathname,
+          baseUrl,
+        ).toString(),
+      };
+
+      return routing.locales.map((locale) => ({
+        url: getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
+        alternates: { languages },
+        lastModified: ARTICLE_UPDATED,
+        changeFrequency: "monthly" as const,
+        priority: 0.6,
+      }));
+    },
+  );
+
   return [
     ...staticEntries,
     ...districtEntries,
     ...jobTypeEntries,
     ...guideEntries,
+    ...articleEntries,
     ...jobEntries,
   ];
 }

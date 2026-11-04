@@ -13525,3 +13525,31 @@ html[dir="rtl"] input[name="slug"] {
   color: var(--color-vanadium-600);
   font-size: 0.75rem;
 }
+
+/* Blog article cards: category + read time, a linked headline and an excerpt.
+   The card no longer links out to another outlet, so the headline is the link. */
+.blog-article-category {
+  color: var(--color-vanadium-700);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.blog-article-card h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.blog-article-card h3 a:hover {
+  color: var(--green);
+  text-decoration: underline;
+  text-decoration-color: var(--color-shade-green-300);
+  text-underline-offset: 4px;
+}
+
+.blog-article-excerpt {
+  margin: 0 7px 14px;
+  color: var(--color-vanadium-700);
+  font-size: 13px;
+  line-height: 1.55;
+}

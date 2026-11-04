@@ -171,6 +171,7 @@ export function buildGuideStructuredData({
   title,
   description,
   updated,
+  pathname = "/rehber",
 }: {
   locale: AppLocale;
   baseUrl: URL;
@@ -178,10 +179,12 @@ export function buildGuideStructuredData({
   title: string;
   description: string;
   updated: string;
+  /** The section the article lives under (`/rehber` or `/blog`). */
+  pathname?: string;
 }) {
   const siteUrl = baseUrl.origin;
   const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
-  const url = `${siteUrl}${prefix}/rehber/${slug}`;
+  const url = `${siteUrl}${prefix}${pathname}/${slug}`;
 
   return {
     "@context": "https://schema.org",

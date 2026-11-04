@@ -16,7 +16,7 @@ import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
-import { getLatestNews } from "@/features/blog/news-feed";
+import { getArticles } from "@/content/editorial";
 import { FeedbackForm } from "@/features/feedback/feedback-form";
 import { FaqSection } from "@/content/ai-visibility/faq-section";
 import type { FaqEntry } from "@/content/ai-visibility/faq";
@@ -313,10 +313,11 @@ export async function ContactPageContent({ locale }: { locale: AppLocale }) {
 }
 
 export async function BlogPageContent({ locale }: { locale: AppLocale }) {
-  const [t, feed] = await Promise.all([
+  const [t, guideCopy] = await Promise.all([
     getTranslations({ locale, namespace: "BlogPage" }),
-    getLatestNews(),
+    getTranslations({ locale, namespace: "Guides" }),
   ]);
+  const articles = getArticles(locale);
 
   return (
     <div className="editorial-page blog-page">
@@ -345,7 +346,7 @@ export async function BlogPageContent({ locale }: { locale: AppLocale }) {
               <Newspaper size={24} />
             </span>
             <span>{t("feedAsideLabel")}</span>
-            <strong>{feed.articles.length.toString().padStart(2, "0")}</strong>
+            <strong>{articles.length.toString().padStart(2, "0")}</strong>
             <p>{t("feedAsideBody")}</p>
           </div>
         </section>
@@ -358,55 +359,33 @@ export async function BlogPageContent({ locale }: { locale: AppLocale }) {
             </div>
           </div>
 
-          {feed.articles.length > 0 ? (
-            <div className="blog-article-grid">
-              {feed.articles.map((article) => {
-                const publishedAt = new Date(article.publishedAt);
-                const publishedDate = new Intl.DateTimeFormat(
-                  {
-                    tr: "tr-TR",
-                    en: "en-GB",
-                    ru: "ru-RU",
-                    el: "el-GR",
-                    fa: "fa-IR",
-                    de: "de-DE",
-                  }[locale],
-                  { dateStyle: "medium", timeZone: "Europe/Nicosia" },
-                ).format(publishedAt);
-
-                return (
-                  <article className="blog-article-card" key={article.id}>
-                    <div className="blog-article-image" aria-hidden="true">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={article.imageUrl ?? getArticleImage(article.title)}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </div>
-                    <div className="blog-article-meta">
-                      <time dateTime={article.publishedAt}>{publishedDate}</time>
-                    </div>
-                    <h3>{article.title}</h3>
-                    <p className="blog-article-source">
-                      {t("sourceLabel", { source: article.source })}
-                    </p>
-                  </article>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="blog-feed-empty">
-              <span>
-                <Newspaper size={21} aria-hidden="true" />
-              </span>
-              <h3>{t("emptyTitle")}</h3>
-              <p>{t("emptyBody")}</p>
-            </div>
-          )}
+          <div className="blog-article-grid">
+            {articles.map((article) => (
+              <article className="blog-article-card" key={article.slug}>
+                <div className="blog-article-image" aria-hidden="true">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={getArticleImage(article.title)}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+                <div className="blog-article-meta">
+                  <span className="blog-article-category">{article.category}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>
+                    {guideCopy("readMinutes", { minutes: article.readMinutes })}
+                  </span>
+                </div>
+                <h3>
+                  <Link href={`/blog/${article.slug}`}>{article.title}</Link>
+                </h3>
+                <p className="blog-article-excerpt">{article.description}</p>
+              </article>
+            ))}
+          </div>
         </section>
-
       </div>
     </div>
   );

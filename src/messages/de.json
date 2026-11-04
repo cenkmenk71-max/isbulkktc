@@ -452,7 +452,9 @@
     "editorialNoteTitle": "Quelle ansehen. Bericht beim Herausgeber lesen.",
     "editorialNoteBody": "Diese Seite zeigt aktuelle Schlagzeilen und Herausgebernamen. Sie kopiert keine Artikeltexte und stellt sie nicht als eigene Berichte von İşBul KKTC dar. Die Unsplash-Fotos auf den Karten illustrieren passende Themen, zeigen aber nicht die konkreten Ereignisse. Den vollständigen Bericht und Kontext finden Sie beim Herausgeber.",
     "photoLicense": "Unsplash-Bildlizenz",
-    "sourceLabel": "Quelle: {source}"
+    "sourceLabel": "Quelle: {source}",
+    "metaTitle": "Arbeits- und Karrierejournal Nordzypern | İşBul KKTC",
+    "metaDescription": "Der Arbeitsmarkt Nordzyperns, ein Leitfaden für Arbeitgeber und Karrieretipps für Absolventen. İşBul KKTC."
   },
   "ContactPage": {
     "eyebrow": "İŞBUL KKTC · KONTAKT",
