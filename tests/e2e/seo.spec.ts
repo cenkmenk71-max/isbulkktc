@@ -795,3 +795,49 @@ test("an unknown guide slug is a hard 404", async ({ request }) => {
   expect(response.status()).toBe(404);
 });
 
+
+test("the FAQ page is indexable and carries FAQPage structured data", async ({
+  page,
+  request,
+}) => {
+  const response = await request.get("/sss");
+  expect(response.status()).toBe(200);
+
+  await page.goto("/sss", { waitUntil: "domcontentloaded" });
+  const origin = new URL(page.url()).origin;
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    `${origin}/sss`,
+  );
+  await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+
+  const structuredData = await page
+    .locator('script[type="application/ld+json"]')
+    .evaluateAll((nodes) =>
+      nodes.map((node) => node.textContent ?? "").join("\n"),
+    );
+  expect(structuredData).toContain('"@type":"FAQPage"');
+  expect(structuredData).toContain(`${origin}/sss`);
+
+  // The page renders the questions visibly, not only in the graph.
+  await expect(page.locator(".faq-item").first()).toBeVisible();
+
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+  expect(sitemap).toContain(`<loc>${origin}/sss</loc>`);
+});
+
+test("the RSS feed lists only the site's own editorial pages", async ({
+  request,
+}) => {
+  const response = await request.get("/feed.xml");
+  expect(response.ok()).toBe(true);
+  expect(response.headers()["content-type"]).toContain("rss+xml");
+
+  const feed = await response.text();
+  expect(feed).toContain("<rss");
+  expect(feed).toContain("/rehber/");
+  expect(feed).toContain("/blog/");
+  // The feed must never point at another outlet: it lists our own pages only.
+  expect(feed).not.toContain("yeniduzen.com");
+  expect(feed).not.toContain("kibrisgazetesi.com");
+});

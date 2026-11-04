@@ -83,6 +83,7 @@ export async function SiteFooter() {
             <span className="footer-label">{t('information')}</span>
             <Link href="/about">{t('links.about')}</Link>
             <Link href="/rehber">{t('links.guides')}</Link>
+            <Link href="/sss">{t('links.faq')}</Link>
             <Link href="/blog">{t('links.blog')}</Link>
             <Link href="/contact">{t('links.contact')}</Link>
           </div>

@@ -350,7 +350,8 @@
       "privacy": "Gizlilik",
       "cookies": "Çerezler",
       "terms": "Kullanım koşulları",
-      "guides": "Kariyer rehberleri"
+      "guides": "Kariyer rehberleri",
+      "faq": "Sıkça sorulan sorular"
     },
     "rights": "© {year} İşBul KKTC. Tüm hakları saklıdır.",
     "madeIn": "Kuzey Kıbrıs",
@@ -1468,5 +1469,15 @@
     "metaTitle": "KKTC Kariyer Rehberleri | İş Arama, CV ve Çalışma Hakları",
     "metaDescription": "Kuzey Kıbrıs'ta iş bulma, CV hazırlama ve çalışma izni hakkında özgün rehberler. İşBul KKTC kariyer rehberleri.",
     "allGuides": "Tüm rehberler"
+  },
+  "FaqPage": {
+    "eyebrow": "SIKÇA SORULAN SORULAR",
+    "title": "KKTC İş ve Kariyer Hakkında Sıkça Sorulan Sorular",
+    "lead": "Kuzey Kıbrıs'ta iş arama, başvuru ve işveren süreçleri hakkında en çok sorulan soruların yanıtları.",
+    "metaTitle": "Sıkça Sorulan Sorular | KKTC İş ve Kariyer",
+    "metaDescription": "KKTC'de iş arama, başvuru, şirket kaydı ve işveren süreçleri hakkında sıkça sorulan sorular ve yanıtları. İşBul KKTC.",
+    "ctaBody": "Aradığınız yanıtı bulamadınız mı? İlanlara göz atın veya bize ulaşın.",
+    "ctaJobs": "İş ilanlarını gör",
+    "ctaContact": "İletişime geç"
   }
 }

@@ -264,7 +264,8 @@
       "privacy": "Datenschutz",
       "cookies": "Cookies",
       "terms": "Nutzungsbedingungen",
-      "guides": "Karriereratgeber"
+      "guides": "Karriereratgeber",
+      "faq": "Häufige Fragen"
     },
     "rights": "© {year} İşBul KKTC. Alle Rechte vorbehalten.",
     "madeIn": "Nordzypern",
@@ -1468,5 +1469,15 @@
     "metaTitle": "Karriereratgeber Nordzypern | Jobs, Lebenslauf und Rechte",
     "metaDescription": "Originale Ratgeber zu Jobsuche, Lebenslauf und Arbeitserlaubnis in Nordzypern. İşBul KKTC.",
     "allGuides": "Alle Ratgeber"
+  },
+  "FaqPage": {
+    "eyebrow": "HÄUFIGE FRAGEN",
+    "title": "Häufige Fragen zu Jobs in Nordzypern",
+    "lead": "Antworten auf die häufigsten Fragen zu Jobsuche, Bewerbung und Arbeitgeberprozessen in Nordzypern.",
+    "metaTitle": "Häufige Fragen | Jobs in Nordzypern",
+    "metaDescription": "Häufige Fragen und Antworten zu Jobsuche, Bewerbung, Firmenregistrierung und Arbeitgeberprozessen in Nordzypern. İşBul KKTC.",
+    "ctaBody": "Keine passende Antwort gefunden? Sehen Sie sich die Anzeigen an oder kontaktieren Sie uns.",
+    "ctaJobs": "Jobs ansehen",
+    "ctaContact": "Kontakt"
   }
 }

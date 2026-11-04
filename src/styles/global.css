@@ -13553,3 +13553,37 @@ html[dir="rtl"] input[name="slug"] {
   font-size: 13px;
   line-height: 1.55;
 }
+
+/* FAQ accordion (/sss). Native <details> so it works without JavaScript and is
+   keyboard-operable by default. */
+.faq-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 2rem;
+}
+
+.faq-item {
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.faq-item summary {
+  cursor: pointer;
+  padding: 1rem 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.faq-item summary:focus-visible {
+  outline: 2px solid var(--color-vanadium-700);
+  outline-offset: -2px;
+  border-radius: 12px;
+}
+
+.faq-item p {
+  margin: 0;
+  padding: 0 1.25rem 1.25rem;
+  color: var(--color-vanadium-700);
+  line-height: 1.65;
+}
