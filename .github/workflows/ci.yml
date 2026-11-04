@@ -13,9 +13,25 @@ concurrency:
   group: isbulkktc-ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  # Throwaway id so tests/e2e/analytics.spec.ts exercises the consent gate in CI
+  # instead of skipping. Not a real property.
+  NEXT_PUBLIC_GA_MEASUREMENT_ID: "G-CITEST0000"
+  # Throwaway VAPID pair so the push control takes its configured branch in CI.
+  # Without it `isPushConfigured()` is false and the install page renders
+  # "notifications unavailable", which would let a regression in the sign-in gate
+  # pass unnoticed. The private key is fake and signs nothing.
+  VAPID_PUBLIC_KEY: "BDTiN9dfiTCTvoBonY7CUAOLWTbh7MSYlWOmIcQOINtoS7ym9_mHxMyTJd-eYL-r1-GujGHw25SDGtgMDunR5cQ"
+  VAPID_PRIVATE_KEY: "jlSWLkluvBHoQ74Fdjyjw9lgxX0prWhjLmW4R2hi8L0"
+  VAPID_SUBJECT: "mailto:ci@example.com"
+
 jobs:
-  app:
-    name: Quality, database and E2E
+  # Fast feedback: everything that needs neither Supabase nor a browser. Finishes
+  # in well under a minute, so a lane learns about a lint or type error without
+  # waiting for the end-to-end suite.
+  static:
+    name: Static checks
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
@@ -50,6 +66,74 @@ jobs:
       - name: Unit tests
         run: bun run test:unit
 
+  # The database suite runs once, on its own: every E2E shard would otherwise
+  # repeat the ~80s local Supabase boot just to assert the same pgTAP contracts.
+  database:
+    name: Database
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4
+
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Set up Supabase CLI
+        id: supabase_cli
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.120.0
+
+      - name: Start the seeded local Supabase stack
+        id: supabase_start
+        run: bun run db:start
+
+      - name: Apply migrations and run pgTAP tests
+        run: bun run test:db
+
+      - name: Stop local Supabase stack
+        if: always() && steps.supabase_cli.outcome == 'success' && steps.supabase_start.outcome != 'skipped'
+        run: bun run db:stop -- --no-backup
+
+  # The end-to-end suite is the long pole (about 8 minutes serially). Split across
+  # four shards so it lands in about two. Playwright's --shard is deterministic:
+  # every spec runs in exactly one shard, so coverage is unchanged.
+  e2e:
+    name: E2E (${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4
+
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+
       - name: Install Playwright browser
         run: bunx playwright install --with-deps chrome
 
@@ -79,9 +163,6 @@ jobs:
             printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
 
-      - name: Apply migrations and run pgTAP tests
-        run: bun run test:db
-
       - name: Build production standalone server
         run: |
           bun run build
@@ -89,29 +170,35 @@ jobs:
           cp -a .next/static/. .next/standalone/.next/static/
           cp -a public/. .next/standalone/public/
         env:
-          NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_APP_URL: "http://localhost:3000"
-          # Throwaway id so tests/e2e/analytics.spec.ts exercises the consent
-          # gate in CI instead of skipping. Not a real property.
-          NEXT_PUBLIC_GA_MEASUREMENT_ID: "G-CITEST0000"
-          # Throwaway VAPID pair so the push control takes its configured branch
-          # in CI. Without it `isPushConfigured()` is false and the install page
-          # renders "notifications unavailable", which would let a regression in
-          # the sign-in gate pass unnoticed. The private key is fake and signs
-          # nothing; it is not used in any real deployment.
-          VAPID_PUBLIC_KEY: "BDTiN9dfiTCTvoBonY7CUAOLWTbh7MSYlWOmIcQOINtoS7ym9_mHxMyTJd-eYL-r1-GujGHw25SDGtgMDunR5cQ"
-          VAPID_PRIVATE_KEY: "jlSWLkluvBHoQ74Fdjyjw9lgxX0prWhjLmW4R2hi8L0"
-          VAPID_SUBJECT: "mailto:ci@example.com"
 
       - name: End-to-end tests against seeded Supabase
-        run: bun run test:e2e
-        env:
-          NEXT_TELEMETRY_DISABLED: "1"
-          NEXT_PUBLIC_GA_MEASUREMENT_ID: "G-CITEST0000"
-          VAPID_PUBLIC_KEY: "BDTiN9dfiTCTvoBonY7CUAOLWTbh7MSYlWOmIcQOINtoS7ym9_mHxMyTJd-eYL-r1-GujGHw25SDGtgMDunR5cQ"
-          VAPID_PRIVATE_KEY: "jlSWLkluvBHoQ74Fdjyjw9lgxX0prWhjLmW4R2hi8L0"
-          VAPID_SUBJECT: "mailto:ci@example.com"
+        run: bun run test:e2e -- --shard=${{ matrix.shard }}/4
 
       - name: Stop local Supabase stack
         if: always() && steps.supabase_cli.outcome == 'success' && steps.supabase_start.outcome != 'skipped'
         run: bun run db:stop -- --no-backup
+
+  # Single required check. Branch protection on `main` requires the name
+  # "Quality, database and E2E", so it keeps pointing here while the work is
+  # split across the jobs above. This job passes only when every one did.
+  required:
+    name: Quality, database and E2E
+    if: always()
+    needs: [static, database, e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any dependency did not succeed
+        run: |
+          echo "static=${{ needs.static.result }}"
+          echo "database=${{ needs.database.result }}"
+          echo "e2e=${{ needs.e2e.result }}"
+          for result in \
+            "${{ needs.static.result }}" \
+            "${{ needs.database.result }}" \
+            "${{ needs.e2e.result }}"; do
+            if [ "$result" != "success" ]; then
+              echo "::error::a required job did not succeed"
+              exit 1
+            fi
+          done
