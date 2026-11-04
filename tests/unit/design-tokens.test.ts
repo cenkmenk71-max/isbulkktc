@@ -175,7 +175,11 @@ function keyframesBody(name: string): string {
 }
 
 test("card entrance animations never fade opacity under AA-fragile labels", () => {
-  for (const selector of [".editorial-page-layout", ".consent-card"]) {
+  for (const selector of [
+    ".editorial-page-layout",
+    ".consent-card",
+    ".packages-hero-copy",
+  ]) {
     const shorthand = /animation:\s*([^;]+);/.exec(ruleBody(selector));
     assert.ok(shorthand, `${selector} must keep its entrance animation`);
     const name = shorthand[1].trim().split(/\s+/)[0];
@@ -265,5 +269,67 @@ test("hardcoded hex values do not grow beyond the recorded baseline", () => {
     added,
     [],
     `New hardcoded hex values appeared outside @theme. Add a token in @theme instead:\n${added.join("\n")}`,
+  );
+});
+
+/**
+ * Every `animation-name` a rule plays must resolve to a declared `@keyframes`.
+ * `.packages-hero-copy` asked for `packages-rise-in` for the whole life of the
+ * packages page, but the keyframe was never declared, so the hero copy just
+ * appeared with no entrance and nothing failed. A dangling reference is silent
+ * by construction, so assert the whole set instead of trusting review to catch
+ * it: collect every animation name used by a rule (first identifier of the
+ * `animation`/`animation-name` value) and require each to have a `@keyframes`.
+ */
+test("every animation a rule plays has a matching @keyframes", () => {
+  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const declared = new Set(
+    [...withoutComments.matchAll(/@keyframes\s+([\w-]+)/g)].map(
+      (match) => match[1],
+    ),
+  );
+
+  const referenced = new Set<string>();
+  for (const [, value] of withoutComments.matchAll(
+    /(?:^|[\s;{])animation(?:-name)?\s*:\s*([^;{}]+);/g,
+  )) {
+    // The value can carry several comma-separated animations. Split on commas
+    // that are not inside a function such as `cubic-bezier(0.22, 1, 0.36, 1)`,
+    // or the function's arguments read as extra animation names. The name is
+    // the leading custom-ident of each animation.
+    const parts: string[] = [];
+    let depth = 0;
+    let current = "";
+    for (const char of value) {
+      if (char === "(") depth += 1;
+      else if (char === ")") depth -= 1;
+      if (char === "," && depth === 0) {
+        parts.push(current);
+        current = "";
+        continue;
+      }
+      current += char;
+    }
+    parts.push(current);
+
+    for (const part of parts) {
+      const name = part.trim().split(/\s+/)[0];
+      // A name is a custom-ident; durations, easing keywords and functions are
+      // not, so skipping non-idents keeps the check to real animation names.
+      // `none` and the CSS-wide keywords are not animation names either.
+      if (
+        /^(none|inherit|initial|unset|revert|revert-layer)$/.test(name)
+      ) {
+        continue;
+      }
+      if (/^[a-zA-Z_][\w-]*$/.test(name)) referenced.add(name);
+    }
+  }
+
+  const missing = [...referenced].filter((name) => !declared.has(name)).sort();
+  assert.deepEqual(
+    missing,
+    [],
+    `These animations are played by a rule but have no @keyframes declaration, so they never run:\n${missing.join("\n")}`,
   );
 });

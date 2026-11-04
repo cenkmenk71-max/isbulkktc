@@ -35,6 +35,72 @@ Bulgu + düzeltme + piksel kanıtı + çalıştırılan gate sonuçları. Branch
 
 ---
 
+## LANE-TASARIM çalışma notları (2026-11-04, tur 2)
+
+Branch: `lane/tasarim`. Karşılaştırma tabanı: `origin/main` @ `77d2a04`.
+
+İlk turdaki iki bulgu (auth kartı kontrastı, E2E shard dengesi) artık `main`'de
+(PR #106) — kuyrukta bekleyen `agent:frontend` issue'lardan #95 çözüldü; #101
+`LANE-URUN`'un ve `agent:blocked`. Bu yüzden brief'in 4. maddesinden (motion /
+opacity) en yüksek etkili, sınırlı bir bulgu seçildi.
+
+### Bulgu 3 — `packages-rise-in` keyframe'i hiç tanımlanmamış; hero girişi hiç oynamıyordu (düzeltildi)
+
+- **Belirti:** `/packages` (6 dil) hero metni (`.packages-hero-copy`) hiç giriş
+  animasyonu olmadan beliriyordu.
+- **Kök neden:** Kural `animation: packages-rise-in 0.68s var(--ease-premium) both;`
+  diyor, ama `@keyframes packages-rise-in` **hiçbir yerde tanımlı değil** (tüm
+  repoda tek referans kuralın kendisi). Adı çözülemeyen animasyon sessizce hiç
+  çalışmaz — bu yüzden ne `check:frontend-source` ne de mevcut testler göremedi.
+  İlk proje aktarımından (`3dfe8e8`) beri böyle.
+- **Düzeltme:** `src/styles/global.css` — keyframe eklendi; hero metni
+  `translateY(18px)`'den yükseliyor, **opak** (opacity fade yok). Aynı gerekçe
+  `editorial-page-enter`/`consent-card-in` için de geçerli: yarı saydam kart/panel
+  metni arkadaki yüzeye kompozitlenince AA altına düşüyor. `backwards` dolgu ile
+  ilk kare başlangıç offsetini tutuyor, sonra transform bırakılıyor → oturmuş
+  durum **birebir eskisi gibi**.
+- **Kanıt (piksel, `deviceScaleFactor: 2`, sharp buffer diff):**
+  - Oturmuş durum (reduced-motion ile tüm ambient animasyonlar donuk), öncesi↔sonrası
+    **byte-identical**: md5 `35fe687a22f7` = `35fe687a22f7`, **0/3174400 px** değişti.
+  - İlk kare (sayfadaki tüm animasyonlar `currentTime=0`'da donduruldu), öncesi↔sonrası:
+    **163401/3174400 px (%5.15), maxDelta 245** — yani giriş offseti artık gerçekten var.
+  - `getAnimations()`: öncesi `[]`, sonrası `[{name:"packages-rise-in", playState:"running"}]`.
+- **Guard (negatif test edildi):**
+  - `tests/unit/design-tokens.test.ts` — yeni test "every animation a rule plays has a
+    matching @keyframes": her kuralın oynattığı animasyon adını toplar ve `@keyframes`
+    tanımı olmasını şart koşar. Keyframe geri alınınca kırmızı (`packages-rise-in`
+    değeriyle), eklenince yeşil.
+  - Mevcut "card entrance animations never fade opacity" testi `.packages-hero-copy`
+    seçicisini de kapsayacak şekilde genişletildi (aynı sınıf hata: fade eden kart).
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅
+- `bun run test:unit` ✅ (365 test, +1 yeni)
+- `tests/e2e/packages.spec.ts` ✅ 3 passed (1 worker; 4 worker'da WebGL yük flake'i —
+  AGENTS.md'de bilinen durum, bu değişiklikle ilgisiz)
+- `tests/e2e/accessibility.spec.ts -g packages` ✅ 9 passed
+
+### Sahibin yapması gerekenler / sonraki notlar
+
+- **Axe guard'ı yeni public rotaları kapsamıyor (takip işi).** `tests/e2e/accessibility.spec.ts`
+  içindeki `publicRoutes` 14 statik rota içeriyor; sonradan eklenen `/sss` (FAQ),
+  `/rehber` + `/rehber/[slug]` (rehberler), `/blog/[slug]` (makaleler),
+  `/is-ilanlari/[district]` ve `/is-turleri/[type]` **hiç taranmıyor**. Elle axe
+  probu (6 dil × 6 rota × mobil; tr/de/fa ayrıca masaüstü = 54 test) bu rotaların
+  hepsinde **temiz** olduğunu gösterdi, ama regresyon guard'ı yok. Sahibi
+  LANE-TASARIM olduğu için ayrı ve sınırlı bir PR'da eklenmeli (bu PR'ı dar tutmak
+  için buraya alınmadı).
+- `src/styles/global.css` hiçbir lane'in sahiplik tablosunda **yok** (ilk turdan
+  not): TASARIM yalnızca görsel guard'ların okuduğu design-system sheet olduğu için
+  düzenliyor. Sahiplik tablosuna açık satır eklemek INFRA'nın işi.
+- Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`.
+  İkisi de bu lane'in kapsamında.
+
+---
+
 ## LANE-TASARIM çalışma notları (2026-11-04)
 
 Branch: `lane/tasarim`. Karşılaştırma tabanı: `origin/main` @ `b5b11cc`.

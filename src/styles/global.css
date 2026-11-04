@@ -7579,7 +7579,19 @@ main :where(p) {
 }
 .packages-hero-copy {
   max-width: 820px;
-  animation: packages-rise-in 0.68s var(--ease-premium) both;
+  animation: packages-rise-in 0.68s var(--ease-premium) backwards;
+}
+@keyframes packages-rise-in {
+  /* `.packages-hero-copy` referenced this keyframe since the page shipped, but it
+     was never declared anywhere, so the hero copy simply appeared with no
+     entrance at all. It rises fully opaque: the copy sits over a dark
+     photographic hero, and an opacity fade would composite the heading and lead
+     toward the backdrop mid-flight — the same below-AA dip that was fixed on the
+     auth and consent cards. `backwards` holds the start offset for the first
+     frame and then releases the transform, so the resting state is exactly the
+     pre-existing one; the global reduced-motion rule collapses it to the end. */
+  from { transform: translateY(18px); }
+  to { transform: translateY(0); }
 }
 .packages-hero-copy .eyebrow {
   margin-bottom: 0;
