@@ -1,0 +1,136 @@
+{
+  "$comment": "Single source of truth for the lane team. Read by spawn-lanes.mjs, lane-collisions.mjs and lane-autopilot.mjs so the three never disagree. Path ownership mirrors docs/lanes/00-orchestration.md; keep both in step.",
+  "repo": "cenkmenk71-max/isbulkktc",
+  "provider": "github",
+  "maxAttemptsPerLane": 3,
+  "sandboxBudget": 6,
+  "lanes": {
+    "supabase": {
+      "brief": "01-supabase",
+      "branch": "lane/supabase",
+      "wave": 1,
+      "label": "agent:backend",
+      "scope": "şema, RLS, indeks, pgTAP (tek canlı DB yazarı)",
+      "skills": [
+        "security",
+        "code-review",
+        "qa-changes"
+      ],
+      "laneLabel": "lane:supabase"
+    },
+    "cloudflare": {
+      "brief": "02-cloudflare",
+      "branch": "lane/cloudflare",
+      "wave": 2,
+      "label": "agent:infra",
+      "scope": "WAF/cache/DNS/SSL/bot denetimi",
+      "skills": [
+        "security",
+        "code-review"
+      ],
+      "laneLabel": "lane:cloudflare"
+    },
+    "seo": {
+      "brief": "03-seo",
+      "branch": "lane/seo",
+      "wave": 0,
+      "label": "agent:seo",
+      "scope": "sitemap, canonical, hreflang, OG, route metadata",
+      "skills": [
+        "evidence-based-citations",
+        "code-review",
+        "qa-changes"
+      ],
+      "laneLabel": "lane:seo"
+    },
+    "geo": {
+      "brief": "04-geo",
+      "branch": "lane/geo",
+      "wave": 0,
+      "label": "agent:seo",
+      "scope": "llms.txt, yerel entity, AI görünürlük, JSON-LD üreticisi",
+      "skills": [
+        "evidence-based-citations",
+        "code-review",
+        "qa-changes"
+      ],
+      "laneLabel": "lane:geo"
+    },
+    "tasarim": {
+      "brief": "05-tasarim",
+      "branch": "lane/tasarim",
+      "wave": 0,
+      "label": "agent:frontend",
+      "scope": "UI/UX, motion, erişilebilirlik, guard'lar",
+      "skills": [
+        "frontend-design",
+        "code-simplifier",
+        "code-review",
+        "qa-changes"
+      ],
+      "laneLabel": "lane:tasarim"
+    },
+    "auth": {
+      "brief": "06-auth",
+      "branch": "lane/auth",
+      "wave": 0,
+      "label": "agent:backend",
+      "scope": "oturum akışı, e-posta şablonları, güvenlik",
+      "skills": [
+        "security",
+        "code-review",
+        "qa-changes"
+      ],
+      "laneLabel": "lane:auth"
+    },
+    "urun": {
+      "brief": "07-urun",
+      "branch": "lane/urun",
+      "wave": 0,
+      "label": "agent:backend",
+      "scope": "ürün & domain: ilan, şirket, aday, başvuru, paket, mesaj, belge",
+      "skills": [
+        "code-review",
+        "qa-changes",
+        "code-simplifier"
+      ],
+      "laneLabel": "lane:urun"
+    },
+    "qa": {
+      "brief": "08-qa",
+      "branch": "lane/qa",
+      "wave": 0,
+      "label": "agent:test",
+      "scope": "bug & regresyon: entegrasyon, görsel, E2E dengesi",
+      "skills": [
+        "qa-changes",
+        "code-review"
+      ],
+      "laneLabel": "lane:qa"
+    },
+    "guvenlik": {
+      "brief": "09-guvenlik",
+      "branch": "lane/guvenlik",
+      "wave": 0,
+      "label": "agent:test",
+      "scope": "tehdit modeli, yetki sınırları, saldırgan testler",
+      "skills": [
+        "security",
+        "code-review"
+      ],
+      "laneLabel": "lane:guvenlik"
+    },
+    "infra": {
+      "brief": "00-orchestration",
+      "branch": "lane/infra",
+      "wave": 0,
+      "label": "agent:infra",
+      "scope": "CI, workflow, guard, lane otomasyonu",
+      "skills": [
+        "github-actions",
+        "code-review"
+      ],
+      "laneLabel": "lane:infra"
+    }
+  }
+}

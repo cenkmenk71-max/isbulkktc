@@ -17,95 +17,22 @@
  * sandbox budget, so nothing starts without an explicit lane list or --all.
  */
 
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
 const API = 'https://app.all-hands.dev/api/v1';
-const REPO = 'cenkmenk71-max/isbulkktc';
-const PROVIDER = 'github';
 
-// Issue label per lane, so a kickoff can point the agent at its own queue.
-const ROLE_LABEL = {
-  supabase: 'agent:backend',
-  cloudflare: 'agent:infra',
-  seo: 'agent:seo',
-  geo: 'agent:seo',
-  tasarim: 'agent:frontend',
-  auth: 'agent:backend',
-  urun: 'agent:backend',
-  qa: 'agent:test',
-  guvenlik: 'agent:test',
-};
-
-const LANES = {
-  supabase: {
-    brief: '01-supabase',
-    branch: 'lane/supabase',
-    wave: 1,
-    scope: 'şema, RLS, indeks, pgTAP',
-    skills: ['security', 'code-review', 'qa-changes'],
-  },
-  cloudflare: {
-    brief: '02-cloudflare',
-    branch: 'lane/cloudflare',
-    wave: 2,
-    scope: 'WAF/cache/DNS/SSL/bot denetimi',
-    skills: ['security', 'code-review'],
-  },
-  seo: {
-    brief: '03-seo',
-    branch: 'lane/seo',
-    wave: 0,
-    scope: 'sitemap, canonical, hreflang, OG, route metadata',
-    skills: ['evidence-based-citations', 'code-review', 'qa-changes'],
-  },
-  geo: {
-    brief: '04-geo',
-    branch: 'lane/geo',
-    wave: 0,
-    scope: 'llms.txt, yerel entity, AI görünürlük, JSON-LD üreticisi',
-    skills: ['evidence-based-citations', 'code-review', 'qa-changes'],
-  },
-  tasarim: {
-    brief: '05-tasarim',
-    branch: 'lane/tasarim',
-    wave: 0,
-    scope: "UI/UX, motion, erişilebilirlik, guard'lar",
-    skills: ['frontend-design', 'code-simplifier', 'code-review', 'qa-changes'],
-  },
-  auth: {
-    brief: '06-auth',
-    branch: 'lane/auth',
-    wave: 0,
-    scope: 'oturum akışı, e-posta şablonları, güvenlik',
-    skills: ['security', 'code-review', 'qa-changes'],
-  },
-  urun: {
-    brief: '07-urun',
-    branch: 'lane/urun',
-    wave: 0,
-    scope: 'ürün & domain: ilan, şirket, aday, başvuru, paket, mesaj, belge',
-    skills: ['code-review', 'qa-changes', 'code-simplifier'],
-  },
-  qa: {
-    brief: '08-qa',
-    branch: 'lane/qa',
-    wave: 0,
-    scope: 'bug & regresyon: entegrasyon, görsel, E2E dengesi',
-    skills: ['qa-changes', 'code-review'],
-  },
-  guvenlik: {
-    brief: '09-guvenlik',
-    branch: 'lane/guvenlik',
-    wave: 0,
-    scope: 'tehdit modeli, yetki sınırları, saldırgan testler',
-    skills: ['security', 'code-review'],
-  },
-  infra: {
-    brief: '00-orchestration',
-    branch: 'lane/infra',
-    wave: 0,
-    scope: 'CI, workflow, guard, lane otomasyonu',
-    skills: ['github-actions', 'code-review'],
-  },
-};
+// The lane team lives in lanes.json so the spawner, the collision detector and
+// the autopilot read the same source.
+const HERE = dirname(fileURLToPath(import.meta.url));
+const REGISTRY = JSON.parse(readFileSync(join(HERE, 'lanes.json'), 'utf8'));
+const REPO = REGISTRY.repo;
+const PROVIDER = REGISTRY.provider;
+const LANES = REGISTRY.lanes;
+const ROLE_LABEL = Object.fromEntries(
+  Object.entries(LANES).map(([name, lane]) => [name, lane.label]),
+);
 
 function kickoff(name) {
   const lane = LANES[name];
@@ -140,6 +67,13 @@ function kickoff(name) {
       'gözlenen, beklenen, etki) ve PR gövdesine tablo hâlinde yaz. Atladığın ' +
       'dosya varsa "bakılmadı" diye işaretle — sessizce geçme. Tek bir bug ' +
       'düzeltip durmak yeterli değil; alanı tara.',
+    // Autonomy: the agent must verify its own work before opening the PR, and
+    // retry a bounded number of times. The orchestrator re-spawns a failed lane
+    // with the failure detail, so a fix round is a fresh, informed attempt.
+    'KENDİNİ DOĞRULA: PR açmadan önce değişikliğini kendin test et. Bir gate ' +
+      'kırmızıysa düzelt ve tekrar çalıştır. Aynı hata üç denemede çözülmezse ' +
+      'PR açma: `agent:blocked` etiketiyle issue aç, hatanın çıktısını ve ' +
+      'denediklerini yaz. Sonsuz deneme yok — bütçe 3.',
     'Kurallar: main\'e push YOK, kendi branch\'in (' +
       `${lane.branch}) + PR açık bırak; canlı Supabase'e yazma ` +
       '(tek yazar LANE-SUPABASE\'dir); sadece sahibi olduğun dosyalara yaz; ' +

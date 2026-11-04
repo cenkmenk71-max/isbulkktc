@@ -21,6 +21,30 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 const ORCHESTRATION = 'docs/lanes/00-orchestration.md';
+const REGISTRY = 'scripts/lanes.json';
+
+/**
+ * The lane list lives in lanes.json; the path ownership lives in the
+ * orchestration doc, which is what humans read. Two sources drift, so check
+ * they name the same lanes before trusting either.
+ */
+function checkRegistryMatchesDoc(lanes) {
+  const registry = JSON.parse(readFileSync(REGISTRY, 'utf8'));
+  const fromDoc = new Set(lanes.map((l) => foldName(l.lane)));
+  const fromRegistry = new Set(
+    Object.keys(registry.lanes).map((name) => foldName(`LANE-${name}`)),
+  );
+  const missingInDoc = [...fromRegistry].filter((n) => !fromDoc.has(n));
+  const missingInRegistry = [...fromDoc].filter((n) => !fromRegistry.has(n));
+  const problems = [];
+  for (const n of missingInDoc) {
+    problems.push(`${n} is in lanes.json but has no ownership row in ${ORCHESTRATION}`);
+  }
+  for (const n of missingInRegistry) {
+    problems.push(`${n} has an ownership row but is not in ${REGISTRY}`);
+  }
+  return problems;
+}
 
 function parseOwnership(markdown) {
   const lanes = [];
@@ -109,6 +133,13 @@ function main() {
   const lanes = parseOwnership(readFileSync(ORCHESTRATION, 'utf8'));
   if (lanes.length === 0) {
     console.error(`No ownership table found in ${ORCHESTRATION}`);
+    process.exit(1);
+  }
+
+  const drift = checkRegistryMatchesDoc(lanes);
+  if (drift.length > 0) {
+    console.log(`Registry and ownership table disagree (${drift.length}):`);
+    for (const problem of drift) console.log(`  ${problem}`);
     process.exit(1);
   }
 

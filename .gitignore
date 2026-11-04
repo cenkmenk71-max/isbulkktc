@@ -22,3 +22,6 @@ supabase/.branches/
 .openhands/
 # Vercel CLI project link (created by `vercel link`)
 .vercel
+
+# Lane autopilot local state
+.lane-state.json
