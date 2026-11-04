@@ -1,3 +1,5 @@
+import { decodeHtmlEntities } from "./source-job-import";
+
 export type IskibrisSourceCard = {
   id: string;
   title: string;
@@ -36,24 +38,8 @@ const supportedDistricts = new Set([
   "Lefke",
 ]);
 
-function decodeHtml(value: string): string {
-  return value
-    .replace(/&nbsp;|&#160;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;|&apos;|&#x27;/gi, "'")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&#x([0-9a-f]+);/gi, (_, code: string) =>
-      String.fromCodePoint(Number.parseInt(code, 16)),
-    )
-    .replace(/&#(\d+);/g, (_, code: string) =>
-      String.fromCodePoint(Number.parseInt(code, 10)),
-    );
-}
-
 function normalizeText(value: string): string {
-  return decodeHtml(
+  return decodeHtmlEntities(
     value
       .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, " ")
       .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, " ")
@@ -109,7 +95,7 @@ export function parseIskibrisListingCards(html: string): IskibrisSourceCard[] {
     /<a\b(?=[^>]*\bclass=["'][^"']*\bjob-card\b[^"']*["'])[^>]*\bhref=["']([^"']*\/jobs\/\d+[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
 
   for (const match of html.matchAll(cardPattern)) {
-    const href = decodeHtml(match[1]);
+    const href = decodeHtmlEntities(match[1]);
     const block = match[2];
     const id = /\/jobs\/(\d+)/i.exec(href)?.[1];
     const title = normalizeText(

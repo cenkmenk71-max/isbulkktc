@@ -88,10 +88,26 @@ export function slugifySourceText(value: string): string {
 }
 
 function clampSlug(slug: string, maxLength: number): string {
-  if (slug.length <= maxLength) return slug;
-  const trimmed = slug.slice(0, maxLength);
+  const cleaned = slug.replace(/-+$/g, "").replace(/^-+/, "");
+  if (cleaned.length <= maxLength) return cleaned;
+  const trimmed = cleaned.slice(0, maxLength);
   const lastDash = trimmed.lastIndexOf("-");
   return (lastDash > 1 ? trimmed.slice(0, lastDash) : trimmed).replace(/-+$/g, "");
+}
+
+/**
+ * Appends the `-<counter>` disambiguator to a slug while reserving room for it,
+ * so the suffix is never the part `clampSlug` trims away.
+ *
+ * Clamping the concatenation (`clampSlug(`${slug}-${counter}`)`) is what used to
+ * loop forever: once the slug sat at the length limit, the counter was trimmed
+ * off, every candidate collapsed back to the same taken string, and the `while`
+ * never exited. Reserving the suffix length keeps each counter a distinct value.
+ */
+function withCounterSuffix(slug: string, counter: number): string {
+  const suffix = `-${counter}`;
+  const stem = clampSlug(slug, 100 - suffix.length);
+  return stem ? `${stem}${suffix}` : suffix.replace(/^-/, "");
 }
 
 export function buildSourceCompanySlug(
@@ -113,17 +129,15 @@ export function buildSourceJobSlug(
   const base = clampSlug(`${prefix}${slugifySourceText(title) || "ilan"}`, 100);
   if (!takenSlugs.has(base)) return base;
 
-  const withCompany = clampSlug(
-    `${base}-${slugifySourceText(companyName)}`,
-    100,
-  );
-  if (!takenSlugs.has(withCompany)) return withCompany;
+  const company = slugifySourceText(companyName);
+  const withCompany = company ? clampSlug(`${base}-${company}`, 100) : base;
+  if (withCompany !== base && !takenSlugs.has(withCompany)) return withCompany;
 
   let counter = 2;
-  let candidate = clampSlug(`${withCompany}-${counter}`, 100);
+  let candidate = withCounterSuffix(withCompany, counter);
   while (takenSlugs.has(candidate)) {
     counter += 1;
-    candidate = clampSlug(`${withCompany}-${counter}`, 100);
+    candidate = withCounterSuffix(withCompany, counter);
   }
   return candidate;
 }
@@ -140,6 +154,27 @@ export function normalizeSourceDistrict(value: unknown): SourceDistrict | null {
   return districtAliases.get(key) ?? null;
 }
 
+/**
+ * Decodes one numeric character reference, leaving the raw entity in place when
+ * the value is not a valid code point.
+ *
+ * Scraped markup does contain out-of-range references (a mangled `&#x110000;`),
+ * and `String.fromCodePoint` throws a `RangeError` on those — inside a
+ * `String.replace`, that aborts the whole text extraction and fails the import.
+ * Returning the original match keeps the text usable instead.
+ */
+function decodeNumericEntity(match: string, codePoint: number): string {
+  if (
+    !Number.isInteger(codePoint) ||
+    codePoint < 0 ||
+    codePoint > 0x10ffff ||
+    (codePoint >= 0xd800 && codePoint <= 0xdfff)
+  ) {
+    return match;
+  }
+  return String.fromCodePoint(codePoint);
+}
+
 export function decodeHtmlEntities(value: string): string {
   return value
     .replace(/&nbsp;|&#160;/gi, " ")
@@ -148,11 +183,11 @@ export function decodeHtmlEntities(value: string): string {
     .replace(/&#39;|&apos;|&#x27;/gi, "'")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
-    .replace(/&#x([0-9a-f]+);/gi, (_, code: string) =>
-      String.fromCodePoint(Number.parseInt(code, 16)),
+    .replace(/&#x([0-9a-f]+);/gi, (match, code: string) =>
+      decodeNumericEntity(match, Number.parseInt(code, 16)),
     )
-    .replace(/&#(\d+);/g, (_, code: string) =>
-      String.fromCodePoint(Number.parseInt(code, 10)),
+    .replace(/&#(\d+);/g, (match, code: string) =>
+      decodeNumericEntity(match, Number.parseInt(code, 10)),
     );
 }
 
