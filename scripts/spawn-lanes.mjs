@@ -97,6 +97,14 @@ function kickoff(name) {
     `isbulkktc reposunda paralel "lane" programında çalışacaksın. Lane: ${name}.`,
     'Önce şu dosyaları OKU: docs/lanes/00-orchestration.md ve docs/lanes/' +
       `${lane.brief}.md. Ayrıca AGENTS.md'yi oku. Sonra kendi lane'inin görevini uygula.`,
+    // The sandbox ships neither bun nor unzip and has no usable sudo, so the
+    // gates cannot run until bun is installed. bootstrap-bun.sh handles that
+    // without sudo (extracts the release zip with Python).
+    'KURULUM: kalite kapılarını çalıştırmadan ÖNCE bun gerekir. Sandbox\'ta bun ' +
+      've unzip yoktur, sudo çalışmaz. Şunu çalıştır: ' +
+      '`bash scripts/bootstrap-bun.sh` ve sonra `export PATH="$HOME/.local/bin:$PATH"`. ' +
+      'Bun kurulu değilse kapıları çalıştıramazsın ve PR açamazsın.',
+    'Kurulumdan sonra bağımlılıkları kur: `bun install --frozen-lockfile`.',
     'Kurallar: main\'e push YOK, kendi branch\'in (' +
       `${lane.branch}) + PR açık bırak; canlı Supabase'e yazma ` +
       '(tek yazar LANE-SUPABASE\'dir); sadece sahibi olduğun dosyalara yaz; ' +
