@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { getGuide, getGuideSlugs } from "@/content/guides";
+import { getGuide, getGuideSlugs, getGuides } from "@/content/guides";
 import { buildGuideStructuredData } from "@/content/ai-visibility/structured-data";
 import { JsonLd } from "@/content/ai-visibility/json-ld";
 import { routing } from "@/i18n/routing";
-import { createLocalizedPageMetadata } from "@/lib/seo";
+import {
+  createLocalizedPageMetadata,
+  getLocalizedSlugPathnames,
+} from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
 
 type GuidePageProps = {
@@ -34,6 +37,15 @@ export async function generateMetadata({
   return createLocalizedPageMetadata({
     locale,
     pathname: `/rehber/${guide.slug}`,
+    // Guide slugs are translated per locale, so each `hreflang` alternate has to
+    // resolve the sibling slug rather than reuse this locale's one under every
+    // prefix — otherwise five of the six advertised URLs answer 404.
+    localizedPathnames: getLocalizedSlugPathnames({
+      section: "/rehber",
+      locale,
+      slug: guide.slug,
+      siblings: getGuides,
+    }),
     title: guide.title,
     description: guide.description,
   });

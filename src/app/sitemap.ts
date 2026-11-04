@@ -5,10 +5,10 @@ import {
   northernCyprusDistrictValues,
 } from "@/features/locations/northern-cyprus-districts";
 import { jobTypeKeys, jobTypeSlugs } from "@/features/jobs/job-type-slugs";
-import { GUIDE_UPDATED, getGuideSlugs } from "@/content/guides";
-import { ARTICLE_UPDATED, getArticleSlugs } from "@/content/editorial";
-import { routing } from "@/i18n/routing";
-import { getLocalizedPageUrl } from "@/lib/seo";
+import { GUIDE_UPDATED, getGuideSlugs, getGuides } from "@/content/guides";
+import { ARTICLE_UPDATED, getArticleSlugs, getArticles } from "@/content/editorial";
+import { routing, type AppLocale } from "@/i18n/routing";
+import { getLocalizedPageUrl, getLocalizedSlugPathnames } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import { listPublicJobSitemapEntries } from "@/server/dal/jobs";
 
@@ -48,34 +48,59 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // `newestJobModifiedAt`.
   const newestJobDate = newestJobModifiedAt(jobs);
 
-  const staticEntries: MetadataRoute.Sitemap = publicPages.flatMap(
-    ({ pathname, changeFrequency, priority }) => {
-      const languages = {
-        ...Object.fromEntries(
-          routing.locales.map((locale) => [
-            locale,
-            getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
-          ]),
-        ),
-        "x-default": getLocalizedPageUrl(
-          routing.defaultLocale,
-          pathname,
-          baseUrl,
-        ).toString(),
-      };
-      const lastModified =
-        newestJobDate && routesWithListingDate.has(pathname)
-          ? newestJobDate
-          : undefined;
+  // One entry per locale for a page that is localized and carries its own
+  // canonical. `pathname` covers routes whose slug is identical in every
+  // language (static pages, district/type landings); `pathnames` covers content
+  // whose slug is translated (guides, articles), where reusing one language's
+  // slug under another language's prefix would advertise URLs that 404.
+  const buildLocalizedEntries = ({
+    pathname,
+    pathnames,
+    lastModified,
+    changeFrequency,
+    priority,
+  }: {
+    pathname?: string;
+    pathnames?: Record<AppLocale, string>;
+    lastModified?: string | Date;
+    changeFrequency?: MetadataRoute.Sitemap[number]["changeFrequency"];
+    priority: number;
+  }): MetadataRoute.Sitemap => {
+    const pathnameFor = (locale: AppLocale) =>
+      pathnames?.[locale] ?? pathname ?? "/";
+    const languages = {
+      ...Object.fromEntries(
+        routing.locales.map((locale) => [
+          locale,
+          getLocalizedPageUrl(locale, pathnameFor(locale), baseUrl).toString(),
+        ]),
+      ),
+      "x-default": getLocalizedPageUrl(
+        routing.defaultLocale,
+        pathnameFor(routing.defaultLocale),
+        baseUrl,
+      ).toString(),
+    };
 
-      return routing.locales.map((locale) => ({
-        url: getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
-        alternates: { languages },
-        ...(lastModified ? { lastModified } : {}),
+    return routing.locales.map((locale) => ({
+      url: getLocalizedPageUrl(locale, pathnameFor(locale), baseUrl).toString(),
+      alternates: { languages },
+      ...(lastModified ? { lastModified } : {}),
+      changeFrequency,
+      priority,
+    }));
+  };
+
+  const staticEntries: MetadataRoute.Sitemap = publicPages.flatMap(
+    ({ pathname, changeFrequency, priority }) =>
+      buildLocalizedEntries({
+        pathname,
         changeFrequency,
         priority,
-      }));
-    },
+        ...(newestJobDate && routesWithListingDate.has(pathname)
+          ? { lastModified: newestJobDate }
+          : {}),
+      }),
   );
 
   // Vacancies are stored in Turkish and served identically under every locale
@@ -97,120 +122,72 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // routes. They share the newest vacancy date: a new listing in a district is
   // the only thing that changes the page.
   const districtEntries: MetadataRoute.Sitemap =
-    northernCyprusDistrictValues.flatMap((district) => {
-      const slug = districtSlug(district);
-      const pathname = `/is-ilanlari/${slug}`;
-      const languages = {
-        ...Object.fromEntries(
-          routing.locales.map((locale) => [
-            locale,
-            getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
-          ]),
-        ),
-        "x-default": getLocalizedPageUrl(
-          routing.defaultLocale,
-          pathname,
-          baseUrl,
-        ).toString(),
-      };
-
-      return routing.locales.map((locale) => ({
-        url: getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
-        alternates: { languages },
-        ...(newestJobDate ? { lastModified: newestJobDate } : {}),
-        changeFrequency: "daily" as const,
+    northernCyprusDistrictValues.flatMap((district) =>
+      buildLocalizedEntries({
+        pathname: `/is-ilanlari/${districtSlug(district)}`,
+        changeFrequency: "daily",
         priority: 0.7,
-      }));
-    });
+        ...(newestJobDate ? { lastModified: newestJobDate } : {}),
+      }),
+    );
 
   // Employment-type landing pages ("Tam zamanlı iş ilanları", "Staj", ...).
   // Same shape as the district pages: localized, self-canonical, sharing the
   // newest vacancy date.
-  const jobTypeEntries: MetadataRoute.Sitemap = jobTypeKeys.flatMap((jobType) => {
-    const slug = jobTypeSlugs[jobType];
-    const pathname = `/is-turleri/${slug}`;
-    const languages = {
-      ...Object.fromEntries(
-        routing.locales.map((locale) => [
-          locale,
-          getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
-        ]),
-      ),
-      "x-default": getLocalizedPageUrl(
-        routing.defaultLocale,
-        pathname,
-        baseUrl,
-      ).toString(),
-    };
-
-    return routing.locales.map((locale) => ({
-      url: getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
-      alternates: { languages },
-      ...(newestJobDate ? { lastModified: newestJobDate } : {}),
-      changeFrequency: "daily" as const,
+  const jobTypeEntries: MetadataRoute.Sitemap = jobTypeKeys.flatMap((jobType) =>
+    buildLocalizedEntries({
+      pathname: `/is-turleri/${jobTypeSlugs[jobType]}`,
+      changeFrequency: "daily",
       priority: 0.7,
-    }));
-  });
+      ...(newestJobDate ? { lastModified: newestJobDate } : {}),
+    }),
+  );
 
   // Editorial guides. Written for the site rather than imported, so they are the
   // one content family that is genuinely ours; each is localized with its own
-  // copy and canonical.
-  const guideEntries: MetadataRoute.Sitemap = [
-    { pathname: "/rehber", priority: 0.8 },
-    ...getGuideSlugs().map((slug) => ({
-      pathname: `/rehber/${slug}`,
+  // copy and canonical. The index route (`/rehber`) has one slug for every
+  // locale, but each guide's slug is translated, so its per-locale pathnames are
+  // resolved by position rather than by reusing the Turkish slug under six
+  // prefixes — which would advertise five URLs that 404.
+  const guideIndexEntries: MetadataRoute.Sitemap = buildLocalizedEntries({
+    pathname: "/rehber",
+    changeFrequency: "monthly",
+    priority: 0.8,
+    lastModified: GUIDE_UPDATED,
+  });
+  const guideEntries: MetadataRoute.Sitemap = getGuideSlugs().flatMap((slug) => {
+    const pathnames = getLocalizedSlugPathnames({
+      section: "/rehber",
+      locale: routing.defaultLocale,
+      slug,
+      siblings: getGuides,
+    });
+    return buildLocalizedEntries({
+      pathnames,
+      changeFrequency: "monthly",
       priority: 0.7,
-    })),
-  ].flatMap(({ pathname, priority }) => {
-    const languages = {
-      ...Object.fromEntries(
-        routing.locales.map((locale) => [
-          locale,
-          getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
-        ]),
-      ),
-      "x-default": getLocalizedPageUrl(
-        routing.defaultLocale,
-        pathname,
-        baseUrl,
-      ).toString(),
-    };
-
-    return routing.locales.map((locale) => ({
-      url: getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
-      alternates: { languages },
       lastModified: GUIDE_UPDATED,
-      changeFrequency: "monthly" as const,
-      priority,
-    }));
+    });
   });
 
   // Editorial articles. Written for the site (not aggregated), so they are
-  // indexable in their own right rather than duplicate headlines.
+  // indexable in their own right rather than duplicate headlines. Like guides,
+  // their slugs are translated per locale, so each locale's URL is resolved
+  // from the sibling slug.
   const articleEntries: MetadataRoute.Sitemap = getArticleSlugs().flatMap(
     (slug) => {
-      const pathname = `/blog/${slug}`;
-      const languages = {
-        ...Object.fromEntries(
-          routing.locales.map((locale) => [
-            locale,
-            getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
-          ]),
-        ),
-        "x-default": getLocalizedPageUrl(
-          routing.defaultLocale,
-          pathname,
-          baseUrl,
-        ).toString(),
-      };
-
-      return routing.locales.map((locale) => ({
-        url: getLocalizedPageUrl(locale, pathname, baseUrl).toString(),
-        alternates: { languages },
-        lastModified: ARTICLE_UPDATED,
-        changeFrequency: "monthly" as const,
+      const pathnames = getLocalizedSlugPathnames({
+        section: "/blog",
+        locale: routing.defaultLocale,
+        slug,
+        siblings: getArticles,
+      });
+      return buildLocalizedEntries({
+        pathnames,
+        changeFrequency: "monthly",
         priority: 0.6,
-      }));
+        lastModified: ARTICLE_UPDATED,
+      });
     },
   );
 
@@ -218,6 +195,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticEntries,
     ...districtEntries,
     ...jobTypeEntries,
+    ...guideIndexEntries,
     ...guideEntries,
     ...articleEntries,
     ...jobEntries,

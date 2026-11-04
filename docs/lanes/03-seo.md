@@ -32,3 +32,78 @@ sana rapor eder.
 
 ## Raporla
 Bulgu tablosu (rota → mevcut → olması gereken → kanıt) + uygulanan düzeltmeler + sahibin girmesi gereken env değerleri. Branch + PR, CI yeşil.
+
+---
+
+## Uygulama raporu (lane/seo)
+
+```
+Lane: LANE-SEO        Branch: lane/seo        PR: (bu rapordan sonra açıldı)
+Değişen dosyalar: src/lib/seo.ts, src/app/sitemap.ts,
+                  src/app/[locale]/(public)/rehber/[slug]/page.tsx,
+                  src/app/[locale]/(public)/blog/[slug]/page.tsx,
+                  docs/lanes/03-seo.md
+Çalıştırılan kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
+                  test:unit ✅ (353/353)  build ✅ (NEXT_DIST_DIR=.next-lane-seo)
+                  canlı standalone HTML/sitemap doğrulaması ✅
+Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
+```
+
+### Bulgu 1 — Rehber ve blog sayfalarının `hreflang` + sitemap URL'leri 404 veriyordu (YÜKSEK)
+
+**Rota:** `/[locale]/rehber/[slug]`, `/[locale]/blog/[slug]` — 6 dil × 6 içerik.
+
+**Mevcut (bozuk):** Rehber ve blog yazılarının slug'ı her dilde çevrilidir
+(`kktc-is-bulma-rehberi` ↔ `finding-a-job-in-northern-cyprus`), ama
+`createLocalizedPageMetadata` tek bir `pathname` alıp her dilin önüne aynı slug'ı
+koyuyordu. Sonuç: her sayfa, var olmayan 5 kardeş URL'i `hreflang` olarak ilan
+ediyor ve sitemap aynı 5 ölü URL'i listeliyordu.
+
+**Olması gereken:** Her dil için o dilin *kendi* slug'ı (`hreflang` karşılıklı ve
+kendine-canonical).
+
+**Kanıt (düzeltme öncesi, üretim standalone sunucusu):**
+- Sitemap'te 186 `<loc>` vardı, bunlardan **30'u 404** dönüyordu
+  (24'ü 5 dilde rehber/blog detayları + ilgili karışıklıklar).
+- `/en/rehber/finding-a-job-in-northern-cyprus` sayfasının `hreflang="de"` hedefi
+  `/de/rehber/finding-a-job-in-northern-cyprus` idi → **404**
+  (doğrusu `/de/rehber/arbeit-finden-in-nordzypern`).
+
+**Kanıt (düzeltme sonrası):** Sitemap 186 `<loc>`; **0 ölü URL**; 900 çeviri
+`hreflang` hedefi 200 döndü; her dilde `hreflang` kümesi birebir aynı ve
+kendine-canonical doğru.
+
+**Uygulanan düzeltme:**
+- `src/lib/seo.ts`: `getLocalizedSlugPathnames({ section, locale, slug, siblings })`
+  eklendi — slug'ı sahibi olduğu dilde bulup *sıra numarasıyla* her dilin kardeş
+  slug'ına eşler (liste uzunluğu farklıysa güvenli tarafa, kendi slug'ına düşer).
+  `createLocalizedPageMetadata` artık opsiyonel `localizedPathnames` alıyor;
+  canonical + `hreflang` + `x-default` hepsi ondan üretiliyor.
+- `rehber/[slug]/page.tsx` ve `blog/[slug]/page.tsx`: `localizedPathnames` geçildi.
+- `src/app/sitemap.ts`: rehber/blog detay girdileri kardeş slug'la üretiliyor.
+  Ayrıca tekrar eden `languages` kurulumu tek `buildLocalizedEntries` yardımcısına
+  indirildi (davranış aynı; `changefreq`/`priority`/`lastmod` değerleri korundu).
+
+### Bulgu tablosu
+
+| Rota | Mevcut | Olması gereken | Kanıt |
+|---|---|---|---|
+| `/[locale]/rehber/[slug]` | 5 dilde 404 `hreflang` | her dil kendi slug'ı | önce 404 / sonra 200 |
+| `/[locale]/blog/[slug]` | 5 dilde 404 `hreflang` | her dil kendi slug'ı | önce 404 / sonra 200 |
+| `sitemap.xml` | 30 ölü `<loc>` | yalnız 200 veren URL | `curl` taraması |
+| `/robots.txt` | doğru (`Disallow` yok) | değişmeden korundu | `seo.spec.ts` kuralı |
+| canonical (statik/ilan) | doğru, mutlak string | korundu | `curl` |
+
+### Sahibin girmesi gereken env değerleri
+
+- `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`, `NEXT_PUBLIC_BING_SITE_VERIFICATION`,
+  `NEXT_PUBLIC_YANDEX_SITE_VERIFICATION` — kod hazır; Vercel'de değer girilince
+  etiketler yayınlanır. **Hâlâ yok.**
+
+### Sonraki lane için notlar
+
+- `feed.xml` ve `llms.txt` yalnızca varsayılan dil (tr) slug'larını kullanıyor ve
+  bunlar 200 dönüyor; dokunulmadı.
+- Bu düzeltme yalnızca çeviri slug'ı olan **içerik** ailelerini kapsar; ilçe
+  (`/is-ilanlari/*`) ve çalışma türü (`/is-turleri/*`) slug'ları her dilde aynı
+  olduğu için zaten doğruydu.

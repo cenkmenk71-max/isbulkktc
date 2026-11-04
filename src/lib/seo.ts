@@ -56,15 +56,67 @@ export function getLocalizedPageUrl(
   return new URL(localizedPath, baseUrl);
 }
 
+/**
+ * Locale → pathname for a content family whose slug is translated per locale.
+ *
+ * Guides and editorial articles carry a different slug in each language
+ * (`kktc-is-bulma-rehberi` vs `finding-a-job-in-northern-cyprus`) while the
+ * locale files hold the same entries in the same order. Prefixing one language's
+ * slug with another language's prefix — which is what assuming an identical
+ * pathname does — advertises URLs that 404, so `hreflang` and the sitemap point
+ * at pages that do not exist. Resolving the sibling slug by position keeps both
+ * signals on real pages.
+ *
+ * `locale` must be the locale that owns `slug`; the index is looked up there and
+ * then applied to every other locale's list. A locale whose list is a different
+ * length, or an index that does not resolve, falls back to the caller's own
+ * slug: an alternate that points at a *different* page is worse than one that
+ * points at a missing one, because it asserts a false equivalence between two
+ * distinct articles.
+ */
+export function getLocalizedSlugPathnames({
+  section,
+  locale,
+  slug,
+  siblings,
+}: {
+  section: string;
+  locale: AppLocale;
+  slug: string;
+  siblings: (locale: AppLocale) => readonly { slug: string }[];
+}): Record<AppLocale, string> {
+  const ownerList = siblings(locale);
+  const index = ownerList.findIndex((entry) => entry.slug === slug);
+  const pathnames = {} as Record<AppLocale, string>;
+  for (const candidate of routing.locales) {
+    const candidateList = siblings(candidate);
+    const sibling =
+      index >= 0 && candidateList.length === ownerList.length
+        ? candidateList[index]
+        : undefined;
+    pathnames[candidate] = `${section}/${sibling?.slug ?? slug}`;
+  }
+  return pathnames;
+}
+
 export function createLocalizedPageMetadata({
   locale,
   pathname,
+  localizedPathnames,
   title,
   description,
   contentLocale,
 }: {
   locale: AppLocale;
   pathname: string;
+  /**
+   * Locale → pathname for content whose slug is translated per locale. When
+   * present, both the canonical and every `hreflang` alternate are built from
+   * it instead of from `pathname`; without it, prefixing one language's slug
+   * with another language's prefix advertises URLs that 404. See
+   * `getLocalizedSlugPathnames`.
+   */
+  localizedPathnames?: Record<AppLocale, string>;
   title: string;
   description: string;
   /**
@@ -81,15 +133,17 @@ export function createLocalizedPageMetadata({
   // re-resolves it against the current request pathname, which prefixes the default
   // locale onto already-canonical URLs (e.g. /freelance -> /tr/freelance). Pass an
   // absolute string so the value is emitted verbatim.
+  const pathnameFor = (targetLocale: AppLocale) =>
+    localizedPathnames?.[targetLocale] ?? pathname;
   const canonicalLocale = contentLocale ?? locale;
   const canonicalUrl = getLocalizedPageUrl(
     canonicalLocale,
-    pathname,
+    pathnameFor(canonicalLocale),
     baseUrl,
   ).toString();
   const defaultLocaleUrl = getLocalizedPageUrl(
     routing.defaultLocale,
-    pathname,
+    pathnameFor(routing.defaultLocale),
     baseUrl,
   ).toString();
   const openGraphLocales = {
@@ -116,7 +170,7 @@ export function createLocalizedPageMetadata({
                   supportedLocale,
                   getLocalizedPageUrl(
                     supportedLocale,
-                    pathname,
+                    pathnameFor(supportedLocale),
                     baseUrl,
                   ).toString(),
                 ]),

@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { getArticle, getArticleSlugs } from "@/content/editorial";
+import { getArticle, getArticleSlugs, getArticles } from "@/content/editorial";
 import { buildGuideStructuredData } from "@/content/ai-visibility/structured-data";
 import { JsonLd } from "@/content/ai-visibility/json-ld";
 import { routing } from "@/i18n/routing";
-import { createLocalizedPageMetadata } from "@/lib/seo";
+import {
+  createLocalizedPageMetadata,
+  getLocalizedSlugPathnames,
+} from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
 
 type ArticlePageProps = {
@@ -34,6 +37,15 @@ export async function generateMetadata({
   return createLocalizedPageMetadata({
     locale,
     pathname: `/blog/${article.slug}`,
+    // Article slugs are translated per locale, so every `hreflang` alternate
+    // resolves the sibling slug instead of reusing this locale's slug under
+    // every prefix, which would advertise 404s.
+    localizedPathnames: getLocalizedSlugPathnames({
+      section: "/blog",
+      locale,
+      slug: article.slug,
+      siblings: getArticles,
+    }),
     title: article.title,
     description: article.description,
   });
