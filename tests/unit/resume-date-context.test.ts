@@ -9,18 +9,29 @@ import { mergeResumeDraft } from "../../src/features/candidates/resume-profile-d
  *
  * A CV carries dates that are not employment dates — a birth date, an address,
  * an ID number — and a parser that accepts a bare year anywhere turns them into
- * work history. The first half of this file pins the contracts that already
- * hold, including the negative invariant "personal data never becomes a
- * profile field". The second half records the defects that are still open in
+ * work history. The first half pins the contracts that hold, including the
+ * negative invariant "personal data never becomes a profile field".
+ *
+ * The second half records the defects that are still open in
  * `resume-parser.ts` (LANE-URUN's file) as `todo` tests: each asserts the
  * behaviour #208 asks for, so the day the parser is fixed the `todo` turns into
  * a real failure and the marker can be dropped. They are `todo`, not skipped,
  * because `node:test` reports a `todo` that starts passing — a skipped test
  * never would.
  *
- * Owner of the source: LANE-URUN. Owner of this test: LANE-QA. Measured on
- * `main` at the time of writing; every "observed" value below was produced by
- * running the parser, not read off the source.
+ * That is the trap this file was in once. LANE-URUN's #217 landed a partial fix
+ * (the personal-data context filter and a forwards-and-≤60-years rule), and
+ * three of the markers here went on asserting a bug that no longer existed —
+ * a dead `todo` that could never turn green. Worse, one marker asserted the
+ * opposite of the shipped contract: it demanded a 54-year range be rejected
+ * while #217 deliberately accepts up to 60. A stale guard is not neutral: it
+ * misleads the next reader about what the code does. So this file is kept
+ * reconciled with the parser after every source fix — the contracts that now
+ * hold are asserted directly, and the markers left are re-measured against the
+ * current build, not the build they were written on.
+ *
+ * Owner of the source: LANE-URUN. Owner of this test: LANE-QA. Every "observed"
+ * value below was produced by running the parser, not read off the source.
  */
 
 const emptyProfile = {
@@ -135,55 +146,64 @@ test("parse then merge puts each extracted field in its own profile box", () => 
 });
 
 // ---------------------------------------------------------------------------
+// Contracts shipped by LANE-URUN's #217 (a regression in any of these must go
+// red). These were `todo` markers until #217 landed; they are asserted directly
+// now, because a marker that keeps asserting a fixed bug is a lie about the code.
+// ---------------------------------------------------------------------------
+
+test("a personal-data line contributes no date to work experience", () => {
+  // #217's context filter. Before it, "1995-2000 doğumlu" was a job period.
+  for (const line of ["1995-2000 doğumlu", "Yaş: 29 (1995)", "TC: 2019"]) {
+    const dates = experienceOf(line).map((entry) => [entry.startDate, entry.endDate]);
+    assert.deepEqual(dates, [["", ""]], `${line} must not carry a date`);
+  }
+});
+
+test("a range whose start is after its end is rejected", () => {
+  assert.deepEqual(experienceOf("Acme - Dev - 2022 - 2019"), [
+    { role: "Acme", organization: "Dev", location: "", startDate: "", endDate: "", description: "" },
+  ]);
+});
+
+test("a year-only span up to sixty years is accepted, beyond it is rejected", () => {
+  // #217's rule: a year-only range must run forwards and span <= 60 years.
+  const atLimit = experienceOf("Acme - Dev - 1965 - 2025")[0];
+  assert.equal(atLimit?.startDate, "1965");
+  assert.equal(atLimit?.endDate, "2025");
+
+  const overLimit = experienceOf("Acme - Dev - 1965 - 2026")[0];
+  assert.equal(overLimit?.startDate, "", "a 61-year span must be rejected");
+  assert.equal(overLimit?.endDate, "");
+});
+
+test("a university named 'Doğu Akdeniz' is not filtered as a birth line", () => {
+  // "doğu" (east) must not read as the "doğum" (birth) stem; #217 is explicit
+  // about this, and a naive stem match would break the commonest local CV line.
+  const draft = parseResumeText(
+    ["EĞİTİM", "Doğu Akdeniz Üniversitesi - Bilgisayar Mühendisliği - 2012 - 2016"].join("\n"),
+  );
+  assert.equal(draft.education?.[0]?.institution, "Doğu Akdeniz Üniversitesi");
+  assert.equal(draft.education?.[0]?.startDate, "2012");
+  assert.equal(draft.education?.[0]?.endDate, "2016");
+});
+
+// ---------------------------------------------------------------------------
 // Open defects from #208 (source: LANE-URUN). Each fails today; when the parser
-// is fixed the assertion starts holding and `node:test` reports the todo.
+// is fixed the assertion starts holding and `node:test` reports the todo. Each
+// was re-measured against the current build after #217, so none of them is the
+// already-fixed bug.
 // ---------------------------------------------------------------------------
 
 test(
-  "a birth date is not read as an employment date",
-  { todo: "resume-parser.ts accepts a bare year as a date anywhere (#208, LANE-URUN)" },
+  "an address line does not become the profile location",
+  { todo: "the personal section is still inferred as headline/location (#208, LANE-URUN)" },
   () => {
-    // Measured: role "doğumlu", startDate "1995", endDate "2000".
-    assert.deepEqual(experienceOf("1995-2000 doğumlu"), []);
-  },
-);
-
-test(
-  "an age or ID line is not read as a date",
-  { todo: "resume-parser.ts accepts a bare year as a date anywhere (#208, LANE-URUN)" },
-  () => {
-    // Measured: role "Yaş: 29" startDate "1995"; role "TC:" startDate "2019".
-    assert.deepEqual(experienceOf("Yaş: 29 (1995)"), []);
-    assert.deepEqual(experienceOf("TC: 2019"), []);
-  },
-);
-
-test(
-  "an address line does not become the headline or location",
-  { todo: "the personal section is inferred as a headline/location (#208, LANE-URUN)" },
-  () => {
+    // Measured: headline "1995-2000 doğumlu", location "Lefkoşa - 2019"; the
+    // merge then keeps "Lefkoşa". #217 filtered the *date* on the line but the
+    // line itself is still read as a location.
     const draft = parseResumeText(["AHMET YILMAZ", "Adres: Lefkoşa - 2019"].join("\n"));
-    // Measured: headline "1995-2000 doğumlu", location "Lefkoşa - 2019".
     assert.equal(draft.headline, "AHMET YILMAZ");
     assert.equal(draft.location, "");
-  },
-);
-
-test(
-  "a range whose start is after its end is rejected",
-  { todo: "resume-parser.ts has no start>end sanity check (#208, LANE-URUN)" },
-  () => {
-    // Measured: 2022 - 2019 is kept as-is.
-    assert.deepEqual(experienceOf("Acme - Dev - 2022 - 2019"), []);
-  },
-);
-
-test(
-  "a range longer than fifty years is rejected",
-  { todo: "resume-parser.ts has no span sanity check (#208, LANE-URUN)" },
-  () => {
-    // Measured: 1970 - 2024 (54 years) is kept.
-    assert.deepEqual(experienceOf("Acme - Dev - 1970 - 2024"), []);
   },
 );
 
@@ -191,7 +211,8 @@ test(
   "a future date is rejected",
   { todo: "resume-parser.ts has no future-date check (#208, LANE-URUN)" },
   () => {
-    // Measured: 2030 - 2035 is kept.
+    // Measured: 2030 - 2035 is kept. #217 added the span rule but not a
+    // future-date rule, so a date that has not happened yet still parses.
     assert.deepEqual(experienceOf("Acme - Dev - 2030 - 2035"), []);
   },
 );
