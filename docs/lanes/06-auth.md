@@ -322,3 +322,69 @@ Kök neden **kanıtla** araştırıldı:
   hesap denemesi (bu sandbox'ta 401).
 - `src/messages/**` sahipliği belirsiz; AUTH'a verilirse `same_password →
   passwordUnchanged` eşlemesi burada kapatılabilir.
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (issue turu: #171)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Aldığı issue: #171 (auth e-postaları Gmail/Outlook'ta düz yazı görünüyor)
+Değişen dosyalar:
+  supabase/templates/*.html (7 şablon)               (tablo + satır içi stil + logo)
+  src/features/identity/email-template-layout.test.ts (yeni, 5 test)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (442, 5'i yeni) / test:security ✅ (24 pass, 3 todo, 0 fail)
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration değişmedi)
+```
+
+### Denetlenen dosyalar (micro-denetim)
+`git ls-files 'src/features/identity/**' 'src/app/[locale]/(auth)/**'
+'supabase/templates/**'` → **36 dosya**; bu turda 7 şablon yeniden yazıldı, kalan
+29 dosya önceki turlarda denetlendi ve değişmedi. Bakılmayan dosya yok.
+
+### Bulgular
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `supabase/templates/*.html` (7) | görsel/erişilebilirlik | Düzen `div`+`<style>` sınıflarıyla; `<img>` **0**; Gmail `<style>`'ı kaldırır, Outlook yok sayar → düz yazı | Tablo kabuğu + **satır içi** stil + marka logosu | Auth e-postaları markasız düz metin görünüyordu (kullanıcı bildirimi) | düzeltildi |
+| 2 | `supabase/templates/*.html` | spam skoru / tutarlılık | Transactional sistem (`email-layout.ts`) zaten doğru yapıda; iki sistem farklı görsel dil | İki sistem aynı kabuğu paylaşmalı | Tutarsız marka + auth mail'leri zayıf | düzeltildi (aynı `LOGO_URL` + palet) |
+| 3 | `supabase/templates/password-changed.html` | erişilebilirlik | (kontrol edildi) `h1`+`h2`+`lang`/`dir` var; değişiklik gerekmedi | — | — | bilgi |
+
+### Düzeltilen
+- 7 şablon **tablo tabanlı kabuğa** taşındı (`role="presentation"`, 600px ortalanmış,
+  `div`/flex/grid yok). Kabuk `email-layout.ts` ile aynı: yeşil `#0D5C3A` başlık,
+  `LOGO_URL` logosu (`alt="İşBul KKTC"`), `#F5F2EB` zemin, `#E6E4DE` ayırıcı,
+  ortalanmış footer.
+- Her metin/buton/not/kod öğesine **satır içi stil**; `<style>` bloğu yalnız
+  kademeli iyileştirme (dark mode, hover, mobil padding) olarak kaldı ve 7
+  şablonda **birebir aynı**.
+- Preheader `opacity:0;color:transparent` + `mso-hide:all` ile her şablonda.
+- GoTrue değişkenleri (`.Email`, `.NewEmail`, `.ConfirmationURL`, `.Token`,
+  `.SiteURL`) ve 6 dil + `fa` RTL aynen korundu.
+
+### Kanıt
+- Logo canlı: `curl -I https://isbulkktc.com/images/isbul-logo-mark-white.png` →
+  **200**, `image/png`, 83686 bayt.
+- Issue'nun doğrulama komutu: her şablonda `img=1`, `styleblock=1`, `inline=16-17`.
+- Gerçek modülle render (6 dil × 7 şablon): `{{` artığı yok, marka metni var.
+- `tests/unit/auth-hardening.test.ts` (LANE-QA renderer'ı) **21/21** geçiyor —
+  diller, GoTrue değişkenleri, `.ConfirmationURL`, mutlak https linkler, `<script>`
+  yokluğu, WCAG kontrast tabanları dahil.
+- Yeni `email-template-layout.test.ts` (5 test) tablo/satır içi/logo sözleşmesini
+  ve `LOGO_URL` paylaşımını kilitler.
+
+### Güvenlik değerlendirmesi (security skill)
+- Şablonlarda `<script>`, inline event handler, `javascript:`, `<iframe>` yok
+  (QA testi kilitliyor). Tüm linkler mutlak https.
+- Logo URL'i sabit ve marka alan adında; kullanıcı girdisi şablona girmiyor.
+- `{{ .ConfirmationURL }}` tek eylem linki kaynağı olarak korundu → `redirect_to`
+  kaybolmuyor (token_hash elle kurulmuyor).
+
+### Devredilen
+- **#170** (SPF/Resend + auth SMTP) — spam sorunu; `supabase/config.toml`/DNS
+  gerektirir, LANE-CLOUDFLARE + LANE-SUPABASE sahipliğinde. Bu turda dokunulmadı.
+
+### Sahibin yapması gerekenler
+- **Gmail/Outlook'ta gerçek e-posta ile görsel doğrulama** (kabul ölçütü): bu
+  sandbox'ta canlı Supabase'e yazma/gerçek gönderim yok. `supabase/templates/**`
+  değişikliği hosted projeye `db push`/dashboard ile alınmalı (LANE-SUPABASE).
