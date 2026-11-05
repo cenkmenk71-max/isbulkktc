@@ -73,6 +73,16 @@ jobs:
       - name: Security boundary tests
         run: bun run test:security
 
+      # The integration layer drives the real server actions, data-access paths
+      # and authorization guards, replacing only the process edges (the Supabase
+      # client, the mailer, `next/*`), so like the security layer it needs
+      # neither Supabase nor a browser. `node:test` exposes module mocking only
+      # behind `--experimental-test-module-mocks`, which `test:integration`
+      # passes; without it every test dies on `mock.module is not a function`.
+      # Its own step so a boundary regression is attributable at a glance.
+      - name: Integration tests
+        run: bun run test:integration
+
   # The database suite runs once, on its own: every E2E shard would otherwise
   # repeat the ~80s local Supabase boot just to assert the same pgTAP contracts.
   database:
@@ -186,6 +196,47 @@ jobs:
           cp -a public/. .next/standalone/public/
         env:
           NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+
+      # Visual regression runs against the production standalone build assembled
+      # above, with the seeded Supabase stack still up — the only place in CI
+      # where a real render is available. It is gated to a single shard: the
+      # baselines are byte-identical on every shard, so running it four times
+      # would quadruple the cost for no coverage. The server is started and torn
+      # down within the step so the Playwright webServer that `test:e2e` starts
+      # next can bind port 3000.
+      - name: Visual regression against the production build
+        if: matrix.shard == 1
+        env:
+          HOSTNAME: 0.0.0.0
+          PORT: "3000"
+        run: |
+          node .next/standalone/server.js > /tmp/visual-server.log 2>&1 &
+          server_pid=$!
+          # Tear the server down on every exit path and wait for the port to be
+          # released, so the Playwright webServer in the next step can bind it.
+          stop_server() {
+            kill "$server_pid" 2>/dev/null || true
+            # No `-f`: any HTTP response (including the `/` → locale 308) means
+            # the port is still bound; only a connection failure means it is free.
+            for _ in $(seq 1 20); do
+              if ! curl -s -o /dev/null --max-time 2 http://localhost:3000/; then break; fi
+              sleep 1
+            done
+          }
+          trap stop_server EXIT
+          ready=""
+          # `/` answers 308 to the default locale, so follow redirects (`-L`) to
+          # treat "the app is serving" as ready rather than "it returned 200".
+          for _ in $(seq 1 60); do
+            if curl -sfL -o /dev/null http://localhost:3000/; then ready=1; break; fi
+            sleep 2
+          done
+          if [ -z "$ready" ]; then
+            echo "::error::the production server did not become ready"
+            cat /tmp/visual-server.log
+            exit 1
+          fi
+          PLAYWRIGHT_BASE_URL=http://localhost:3000 bun run test:visual
 
       - name: End-to-end tests against seeded Supabase
         run: bun run test:e2e -- --shard=${{ matrix.shard }}/4
