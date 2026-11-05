@@ -4,6 +4,9 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { JobsExperience } from "@/components/jobs/jobs-experience";
 import { DistrictLinks } from "@/components/jobs/district-links";
 import { JobTypeLinks } from "@/components/jobs/job-type-links";
+import { buildJobTypePageStructuredData } from "@/content/ai-visibility/structured-data";
+import { JsonLd } from "@/content/ai-visibility/json-ld";
+import { SITE_NAME } from "@/content/ai-visibility/site";
 import {
   publicJobSearchSchema,
   type PublicJobSearchFilters,
@@ -12,6 +15,7 @@ import { getJobTypeMessageKey } from "@/features/jobs/presentation";
 import { resolveJobTypeFromSlug } from "@/features/jobs/job-type-slugs";
 import { routing, type AppLocale } from "@/i18n/routing";
 import { createLocalizedPageMetadata } from "@/lib/seo";
+import { getAppBaseUrl } from "@/server/config/app-url";
 import { searchPublicJobs } from "@/server/dal/jobs";
 
 type JobTypePageProps = {
@@ -71,32 +75,49 @@ export default async function JobTypePage({ params }: JobTypePageProps) {
   });
   const results = await searchPublicJobs(filters);
 
+  const navCopy = await getTranslations({ locale, namespace: "Nav" });
+  const structuredData = buildJobTypePageStructuredData({
+    locale,
+    baseUrl: getAppBaseUrl(),
+    typeSlug: requestedType,
+    typeName,
+    // Breadcrumb labels must name the pages the trail walks through, not the
+    // home hero's slogans: `HomeJobSearch.title`/`eyebrow` are marketing copy
+    // ("Fırsatları hesap açmadan keşfedin."), which a crawler would read as the
+    // title of the home page and of the jobs index in the breadcrumb.
+    jobsLabel: navCopy("jobs"),
+    homeLabel: SITE_NAME,
+  });
+
   return (
-    <JobsExperience
-      locale={locale}
-      filters={filters}
-      results={results}
-      invalidFilters={false}
-      title={t("title", { type: typeName })}
-      description={t("intro", { type: typeName })}
-      eyebrow={t("eyebrow")}
-      emptyTitle={t("emptyTitle", { type: typeName })}
-      emptyDescription={t("emptyDescription", { type: typeName })}
-      footerSlot={
-        <>
-          <JobTypeLinks
-            locale={locale as AppLocale}
-            currentType={jobType}
-            title={t("otherTypes")}
-            browseAllLabel={t("browseAll")}
-          />
-          <DistrictLinks
-            locale={locale as AppLocale}
-            title={t("districts")}
-            browseAllLabel={t("browseAll")}
-          />
-        </>
-      }
-    />
+    <>
+      <JsonLd data={structuredData} />
+      <JobsExperience
+        locale={locale}
+        filters={filters}
+        results={results}
+        invalidFilters={false}
+        title={t("title", { type: typeName })}
+        description={t("intro", { type: typeName })}
+        eyebrow={t("eyebrow")}
+        emptyTitle={t("emptyTitle", { type: typeName })}
+        emptyDescription={t("emptyDescription", { type: typeName })}
+        footerSlot={
+          <>
+            <JobTypeLinks
+              locale={locale as AppLocale}
+              currentType={jobType}
+              title={t("otherTypes")}
+              browseAllLabel={t("browseAll")}
+            />
+            <DistrictLinks
+              locale={locale as AppLocale}
+              title={t("districts")}
+              browseAllLabel={t("browseAll")}
+            />
+          </>
+        }
+      />
+    </>
   );
 }

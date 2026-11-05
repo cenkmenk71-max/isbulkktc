@@ -600,3 +600,76 @@ halka lane dışında**: Bing/Yandex mülk doğrulaması yok ve indeks henüz ol
 
 - `#163`'ün geri kalanı LANE-CLOUDFLARE (bot/edge) + sahip (Search Console/Bing
   doğrulama) işidir; LANE-SEO tarafı temiz.
+
+---
+
+## Micro-denetim raporu — tur 7 (#165 mount + #126/#127)
+
+```
+Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
+Değişen dosyalar: src/app/[locale]/(public)/is-turleri/[type]/page.tsx,
+                  docs/lanes/03-seo.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
+            test:unit ✅ (430/430)  test:security ✅ (24 pass, 3 belgeli todo)
+            build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone doğrulaması ✅
+Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
+```
+
+### Denetlenen dosyalar
+
+`git ls-files` ile LANE-SEO sahipliği: **41 dosya** — `src/lib/seo.ts`,
+`src/app/sitemap.ts`, `src/app/robots.ts`, `scripts/submit-indexnow.mjs` ve
+`src/app/[locale]/**` altındaki **37 route/layout** (2 `.gitkeep` dahil).
+Hepsi tarandı; bakılmayan dosya yok.
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/app/[locale]/(public)/is-turleri/[type]/page.tsx` | JSON-LD mount / GEO | Tür iniş sayfaları **hiçbir** sayfaya-özel JSON-LD yayınlamıyordu; kardeş rota `is-ilanlari/[district]` `CollectionPage`+`BreadcrumbList` yayınlıyor. Üretim: `/is-turleri/staj` → yalnız layout `WebSite\|Organization`; `/is-ilanlari/girne` → + `CollectionPage\|BreadcrumbList` | eşdeğer `CollectionPage`+`BreadcrumbList` (GEO üretiyor, SEO mount eder) | 36 sayfa (6 tür × 6 dil) zengin sonuç/AI atıf sinyali kaybediyordu | **düzeltildi** → #165 |
+| 2 | `src/app/[locale]/(public)/rehber/[slug]/page.tsx` + `blog/[slug]/page.tsx` | JSON-LD / GEO | Breadcrumb 2. adımı üreticide sabit `"Rehber"`/`"Blog"` | çağıranın yerelleştirilmiş etiketi | `de`/`fa`/`ru`/`el` sayfada yapısal veri Türkçe bölüm adı taşıyor | **beklemede** → #179; üretici parametresi (`sectionName`) henüz `main`'de yok, **PR #178** (LANE-GEO) merge edilince mount edilecek |
+| 3 | `src/messages/*.json` `Legal` | SEO meta | `/privacy`,`/cookies`,`/terms` başlık+açıklaması 6 dilde aynı Türkçe | her dil kendi metni | 18 sayfa kopya meta+gövde | devredildi → #141 |
+| 4 | 404 yanıtı | SEO meta | `<html>` `lang`/`dir` taşımıyor, SSR gövdesi boş | `<html lang dir>` | `fa` RTL sinyali yok | devredildi → #149 |
+| 5 | Bing/Yandex doğrulama | bulunabilirlik | `msvalidate.01`/`yandex-verification` üretimde yok | iki motor doğrulanmalı | Bing/Yandex indeksleme yavaş | devredildi → #173 |
+
+### Kanıt
+
+- **Bulgu 1 (önce):** üretim `curl` → `/is-turleri/staj` çıktısında
+  `"@type"` dağılımı: yalnız `WebSite, Organization, SearchAction, …` (sayfaya-özel
+  düğüm yok); `/is-ilanlari/girne` → `CollectionPage, BreadcrumbList, ListItem ×3` ekli.
+  **Sonra** (üretim standalone, `NEXT_DIST_DIR=.next-lane-seo`): 6 dil × 6 tür = **36
+  kombinasyon** tarandı, hepsi `CollectionPage` + `BreadcrumbList` yayınlıyor,
+  JSON parse hatası **0**. District ile anahtar pariteleri birebir:
+  `['@id','about','breadcrumb','inLanguage','isPartOf','name','url']`.
+  Breadcrumb etiketleri: `tr` → `İşBul KKTC > İş İlanları > Staj`;
+  `en` → `İşBul KKTC > Jobs > Internship`; `de` → `… > Stellenangebote > Praktikum`;
+  `fa` → `… > آگهی‌های شغلی > کارآموزی`. `about` = `{"@type":"Thing","name":"Staj"}`.
+- **Bulgu 2:** `grep -rn sectionName src/` → yalnız üreticide yerel sabit
+  (`structured-data.ts:184`); parametre **yok**. **PR #178** (lane/geo) bu parametreyi
+  ekliyor, merge edilmemiş. Bu yüzden mount edilemez; #179 açık kalıyor.
+- **Bulgu 3–5:** önceki turların kanıtı geçerli (üretim taraması).
+
+### Doğrulanan ve sağlam bulunanlar (bu tur)
+
+- **Boundary/error yolu:** `/is-turleri/STAJ`, `/is-turleri/not-a-type`,
+  `/is-turleri/%20` → **404** (tek `robots: noindex`); `/is-turleri/` ve
+  `/is-turleri/staj/` → **308** kanonik yola; `/en/is-turleri/staj` → self-canonical;
+  `?foo=bar` canonical'ı etkilemiyor. District rotası aynı davranışta (parite).
+- **Sitemap:** 186 `<loc>` (yerel; üretimde 207 = +21 ilan), 186/186 → 200,
+  self-canonical, hreflang 6 dil + `x-default`, `noindex` URL yok, 0 tekrar.
+- **Sayfa hijyeni:** 186 sayfada 1 `<h1>`, doğru `lang`, canonical, `og:image`,
+  `twitter:card=summary_large_image`; `og:title`↔`title` ve `og:url`↔`canonical`
+  tutarlı; kırık iç bağlantı **0** (415 hedef), yetim **0**, boş anchor **0**.
+- **Kopya meta:** yalnız yasal sayfa aileleri (#141).
+
+### Düzeltilen / devredilen
+
+- **Düzeltildi:** #1 (tür JSON-LD mount) — bu PR.
+- **Beklemede:** #2 (`sectionName` mount'u) — LANE-GEO PR #178 merge edilince.
+- **Devredildi:** #141 (yasal meta, LANE-URUN), #149 (404 lang/dir), #173 (Bing/Yandex).
+
+### Sonraki lane için notlar
+
+- `buildCollectionPageGraph` `name` alanı hâlâ `${subjectName} İş İlanları` — sabit
+  Türkçe ek. Bu **GEO'nun üreticisi** (`src/content/ai-visibility/structured-data.ts`);
+  ilçe sayfasında da aynı (`Kyrenia İş İlanları`). #152 ile takip edilmeli.
