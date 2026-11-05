@@ -254,7 +254,7 @@ anahtar kelimelerinin indiği sayfa.
 opsiyonel `pageName` alıyor (varsayılan eski etiket → geriye dönük uyumlu). Bu,
 #152/#179 ile aynı sınıftır (İngilizce sayfa Türkçe ad taşıyordu).
 
-### Devredilen — LANE-SEO (issue #226)
+### Devredilen — LANE-SEO (issue #230)
 
 Dört indeks route'una `<JsonLd>` + yeni üretici çağrısı; ayrıca
 `is-ilanlari/[district]` ve `is-turleri/[type]` mount'larına `pageName` geçilmeli
