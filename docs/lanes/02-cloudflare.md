@@ -72,7 +72,7 @@ edilir ve **pass** olur; issue'nun istediği "kök SPF'e `include:amazonses.com`
 ekle" adımı **gereksiz**. Gerçek fırsatlar: DKIM **1024-bit** (2048'e yükselt) ve
 DMARC'i `ruf` + sıkı alignment ile güçlendir. Detay: `docs/cloudflare.md` →
 "E-posta kimlik doğrulama denetimi". Yıkıcı DNS değişikliği yapılmadı.
-Handoff: `[auth.smtp]` (LANE-AUTH), `List-Unsubscribe`/`Reply-To` (LANE-URUN).
+Handoff: auth SMTP (LANE-SUPABASE; doğru bölüm **`[auth.email.smtp]`**), `List-Unsubscribe`/`Reply-To` (LANE-URUN).
 
 ### Uç/edge mikro-denetim (tur 4) — 2026-11-05
 
@@ -92,7 +92,7 @@ güvenlik mikro-denetimi".
 #195'in LANE-CLOUDFLARE'e düşen parçası **DKIM 1024→2048 rotasyonu**. Canlı DoH
 ölçümü doğruladı: `resend._domainkey` **1024-bit** (tek selector), kök SPF/SES
 return-path/DMARC/CAA tam; MTA-STS/TLS-RPT/BIMI yok. **Panel + DNS yazma →
-sahibin onayı** (uygulanmadı). `[auth.smtp]` eksikliği `supabase/config.toml`'da
+sahibin onayı** (uygulanmadı). Auth SMTP bloğu eksikliği `supabase/config.toml`'da
 = **LANE-SUPABASE** (repo okumasıyla doğrulandı, yazılmadı). Ayrıca CORS (preflight
 + simple GET) ve Set-Cookie bayrakları tarandı — temiz. Detay: `docs/cloudflare.md`
 → "DKIM sahiplik ayrımı".
@@ -107,3 +107,14 @@ Sahip #170'te teşhisi düzeltti ve bu lane'e **açık görev** verdi: "DMARC'i
 `docs/cloudflare.md` → "DMARC `p=quarantine` dağıtımı". **DNS yazma → sahibin
 onayı; değişiklik yapılmadı.** `rsend` CNAME'inin **dangling olmadığı** da
 doğrulandı. G-01 (email obfuscation) ve DKIM 1024-bit hâlâ açık.
+
+### Edge mikro-denetim tur 7 — 2026-11-05
+
+Cache-key + hata yolu + TLS tazelendi; **yeni açık yok**. `/robots.txt` ve
+`/sitemap.xml` gzip/identity varyantları `Vary: accept-encoding` ile ayrı
+tutuluyor; çerez/`Accept-Language` gövdeyi değiştirmiyor; 404/401/400 hata yolları
+`no-store`/`max-age=0` + `DYNAMIC` ve gövdede sızıntı yok; TLS min 1.2; sertifika
+`*.isbulkktc.com`; HTTP/3 açık. **Düzeltme:** önceki notlarda `[auth.smtp]` yazan
+yerler doğru bölüm adı **`[auth.email.smtp]`** olarak güncellendi (LANE-SUPABASE
+PR #239 kanıtı). IPv6 bu sandbox'ta doğrulanamadı → "bakılmadı". Detay:
+`docs/cloudflare.md` → "Edge mikro-denetim tur 7".

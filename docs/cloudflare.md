@@ -250,12 +250,14 @@ Bu çıktı, "kök SPF'e include ekle" adımının gereksiz olduğunu kanıtlar.
 
 ### Bu lane dışına handoff
 
-- **`[auth.smtp]` yok (LANE-AUTH, #170 adım 6):** `supabase/config.toml`'da
-  `[auth.smtp]` bloğu **yok**; auth e-postaları (confirmation, recovery,
-  magic_link, email_change, invite, reauthentication) Supabase'in varsayılan
-  SMTP'sinden gidiyor → bu postaların SPF/DKIM'i `isbulkktc.com` ile **hizasız**.
-  Kanıt: `grep -niE 'smtp' supabase/config.toml` → boş (config'te yalnız
-  `[auth.email]` + `[auth.email.template.*]` var, satır 79–122).
+- **Auth SMTP bloğu (LANE-SUPABASE, #170 adım 6):** **Düzeltme (2026-11-05,
+  LANE-SUPABASE PR #239):** doğru bölüm adı **`[auth.email.smtp]`**, `[auth.smtp]`
+  **değil** — CLI şeması SMTP'yi `[auth.email]` altına koyar; `[auth.smtp]` bilinmeyen
+  anahtardır ve CLI sessizce yok sayar. LANE-SUPABASE bloğu **yorumlu** olarak
+  ekledi (`supabase/config.toml`), aktif değil (aktif edilirse yerel/CI auth
+  postaları Mailpit'ten kopar). Üretim auth SMTP'si **zaten Resend'e bağlı**
+  (sahip Auth dashboard'dan okudu). Kanıt: `supabase/config.toml` →
+  `# [auth.email.smtp]` (yorumlu), `# The section is \`[auth.email.smtp]\` — NOT \`[auth.smtp]\``.
 - **`List-Unsubscribe` / `Reply-To` eksik (LANE-URUN, #170 adımları 9, 11):**
   `src/server/email/mailer.ts:69-78` içindeki `resend.emails.send` çağrısı yalnız
   `from/to/subject/html/text` gönderiyor; `headers` (`List-Unsubscribe`,
@@ -374,10 +376,11 @@ tutmaz, yalnız **yayınlanacak kaydı ve doğrulamayı** belgeler. Doğrulama:
 
 ### Repo dışı / başka lane
 
-- **`[auth.smtp]` (K-09):** `supabase/config.toml`'da SMTP bloğu **yok**
-  (`grep -niE 'smtp' supabase/config.toml` → boş; yalnız `[auth.email]` +
-  `[auth.email.template.*]` var). Sahibi **LANE-SUPABASE** (`supabase/**`).
-  Bu doğrulama **repo okumasıyla** yapıldı, yazma yok. (#227 parça 1)
+- **Auth SMTP bloğu (K-09):** **Düzeltme:** doğru bölüm adı **`[auth.email.smtp]`**,
+  `[auth.smtp]` değil (CLI şeması SMTP'yi `[auth.email]` altına koyar; `[auth.smtp]`
+  bilinmeyen anahtar → sessizce yok sayılır). LANE-SUPABASE bloğu **yorumlu** ekledi
+  (PR #239); aktif değil. Sahibi **LANE-SUPABASE** (`supabase/**`). Bu doğrulama
+  **repo okumasıyla** yapıldı, yazma yok. (#227 parça 1)
 - **`RESEND_API_KEY` geçersiz (#186):** panel doğrulaması bu anahtarla yapılamıyor;
   sahibi **insan** (env).
 
@@ -452,7 +455,8 @@ dig +short TXT _dmarc.isbulkktc.com
 - **#187 (LANE-VERIFY):** mail-tester.com 10/10 + 3 gerçek adreste yerleşim.
 - **#171 (LANE-AUTH):** auth şablonlarına logo/satır içi stil.
 - **#195 / #227:** auth SMTP üretimde **zaten** Resend'e bağlı (sahip doğruladı);
-  kalan `[auth.smtp]` yalnız *yerel* config → LANE-SUPABASE.
+  yerel config bloğu LANE-SUPABASE tarafından **yorumlu** eklendi (PR #239), doğru
+  bölüm adı **`[auth.email.smtp]`**.
 
 ### Ayrıca bu turda doğrulananlar (drift yok)
 
@@ -464,3 +468,43 @@ dig +short TXT _dmarc.isbulkktc.com
 - **DKIM:** hâlâ **1024-bit** (K-01) — rotasyon hâlâ onay bekliyor.
 - Cache (dinamik `private/no-store`, `/_next` immutable), WAF (6/6 saldırı → 403,
   meşru → 200), DNSSEC (DS mevcut), CAA, TLS/HSTS — **değişmedi**.
+
+---
+
+## Edge mikro-denetim tur 7 — cache-key / hata yolu / TLS (2026-11-05)
+
+Yeni atanmış `agent:infra` issue'ı yok (#218 LANE-INFRA otomasyonu, #209 env/secret
+→ insan). Bu yüzden brief'in 3. (cache rules) ve 2. (SSL/TLS) maddeleri tazelendi
+ve hata-yolu boyutu eklendi. **Yeni açık yok; bir doküman düzeltmesi var.**
+
+### Ölçüm
+
+| # | Boyut | Test | Gözlenen | Durum |
+|---|---|---|---|---|
+| T-01 | Cache-key | `/robots.txt`, `/sitemap.xml` — `Accept-Encoding: gzip` vs `identity` | `Vary: accept-encoding` var; gzip'te `content-encoding: gzip`, identity'de gzip yok → **iki varyant ayrı cache'leniyor** | ✔ doğru |
+| T-02 | Cache-key | `/_next/static/*` | `immutable` + `HIT`; `vary: accept-encoding` | ✔ |
+| T-03 | Kişiselleştirme sızıntısı | `/robots.txt`, `/sitemap.xml` — `Cookie: NEXT_LOCALE=de/fa`, `Accept-Language: de` | gövde md5 **değişmiyor**, `REVALIDATED` | ✔ sızıntı yok |
+| T-04 | Hata yolu | `GET /definitely-not-a-page-xyz123` | **404**, `private, no-store`, `DYNAMIC`; gövdede stack/`node_modules`/`/home/`/`eyJ` **yok** | ✔ |
+| T-05 | Hata yolu | `POST /api/push/dispatch` (token yok/yanlış) | **401** JSON, `cache-control: public, max-age=0, must-revalidate`, `DYNAMIC`, gövde 26 B | ✔ |
+| T-06 | Hata yolu | `GET /api/email/unsubscribe` (param yok) | **400** `text/plain`, `max-age=0`, `DYNAMIC` | ✔ |
+| T-07 | TLS | min sürüm | TLS 1.0/1.1 **reddedilir**, 1.2/1.3 çalışır | ✔ |
+| T-08 | TLS | sertifika SAN | `*.isbulkktc.com, isbulkktc.com` — tüm alt alanları kapsıyor | ✔ |
+| T-09 | HTTP/3 | `alt-svc` | `h3=":443"; ma=86400` | ✔ |
+| T-10 | IPv6 | AAAA var; bu sandbox'tan v6 | **çözümlenemedi** (ortamda v6 çözümleyici yok) | **bakılmadı** |
+
+**T-01 önemli:** `/robots.txt` ve `/sitemap.xml` gzip/identity varyantları ayrı
+tutuluyor — `Vary: accept-encoding` doğru. Aksi halde gzip gövdesi bir identity
+istemciye servis edilir ve bozuk içerik dönerdi.
+
+### Doküman düzeltmesi
+
+Önceki bölümlerde `[auth.smtp]` yazıyordu; **doğrusu `[auth.email.smtp]`**
+(LANE-SUPABASE PR #239 kanıtı: CLI şeması SMTP'yi `[auth.email]` altına koyar,
+`[auth.smtp]` bilinmeyen anahtardır ve sessizce yok sayılır). Bu dosyadaki üç
+referans düzeltildi.
+
+### Bakılmayan
+
+- **IPv6 (T-10):** sandbox'ta v6 çözümleyici yok → doğrulanamadı.
+- **CF zone API** (`CF_API_TOKEN` yok) ve **Resend paneli** (`RESEND_API_KEY`
+  geçersiz) — panel durumu okunamadı.
