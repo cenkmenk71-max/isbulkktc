@@ -29,3 +29,34 @@ ona dokunma, ihtiyacı raporla.
 
 ## Raporla
 Kural ihlali/eksik listesi + önerilen tek migration + pgTAP testi. Branch + PR aç, CI yeşil olsun.
+
+## Çalışma günlüğü (2026-11-05)
+
+**Canlı DB erişimi:** `.env.local` bu sandbox'ta yok; `SUPABASE_ACCESS_TOKEN` bir
+36 karakterlik UUID (Management API `sbp_` token'ı değil) ve `api.supabase.com`
+401 döndürüyor. Docker daemon kapalı, psql yok. Bu yüzden **hiçbir canlı yazma /
+okuma yapılmadı**; denetim statik (pglast ile SQL ayrıştırma + dosya okuma)
+yürütüldü ve bulgu mantık yürütmeyle kanıtlandı. pgTAP mantığı CI'ın `database`
+işine bırakıldı.
+
+**Bulgular (kanıt PR gövdesinde):**
+
+1. **`submit_sales_lead` telefon kısıtı uyuşmazlığı (gerçek hata, düzeltildi).**
+   `sales_leads.phone` `between 4 and 32` ister; RPC yalnız üst sınırı
+   uyguluyordu (`nullif(left(btrim(_phone),32),'')`). Form + zod şeması 1–32
+   karakter kabul ettiği için `"12"` gibi bir değer `23514` ile **tüm lead'i**
+   düşürüyordu. Tek idempotent migration ile RPC eşiğin altını boş gibi
+   düşürecek biçimde düzeltildi.
+2. **`sales_leads` / `submit_sales_lead` sıfır pgTAP kapsamı (düzeltildi).**
+   Kardeş tablo `feedback_submissions`'ın suite'i varken bu tablonun yoktu.
+   `supabase/tests/database/sales_leads.test.sql` eklendi.
+3. **Devredildi (LANE-URUN):** `src/features/sales/schemas.ts` telefonu
+   `max(32)` ile kabul ediyor, alt sınır yok — DB tarafı artık düşürüyor ama
+   kullanıcıya "geçersiz telefon" geri bildirimi verilmiyor. İstemci tarafı
+   sıkılaştırma URUN'un dosyasında.
+
+**Denetim sonucu (hepsi temiz):** 29 `public` tablosunun tamamında RLS açık
+(pglast ile `create table` ↔ `alter table ... enable row level security`
+karşılaştırması); 29/29 tabloda `revoke` var; son tanımı `SECURITY DEFINER` olan
+her fonksiyonda `set search_path = ''` var. `function_privileges.test.sql`
+ratchet'i istemci-yürütülebilir imzaları zaten sabitliyor.
