@@ -115,6 +115,40 @@ max_frequency = "60s"
 otp_length = 6
 otp_expiry = 3600
 
+# Production SMTP for the auth mail (#195/#227).
+#
+# Without this block GoTrue sends auth mail (confirmation, recovery, magic_link,
+# email_change, invite, reauthentication) through Supabase's built-in SMTP, whose
+# SPF/DKIM do not align with `isbulkktc.com`, so the messages land in spam. Resend
+# is already the transactional provider (`RESEND_API_KEY`), and its SMTP relay is
+# the same domain the app sends from, so the auth mail becomes aligned.
+#
+# The section is `[auth.email.smtp]` — NOT `[auth.smtp]`. The CLI schema (v2.120.0)
+# places SMTP under `[auth.email]`; an `[auth.smtp]` section is an unknown key the
+# CLI **silently ignores**, so a block written that way configures nothing. This
+# block is deliberately left **disabled** for two reasons:
+#
+#   * the local stack and CI must keep capturing auth mail in Mailpit (port
+#     54324) — `tests/e2e/auth-flows.spec.ts` reads the confirmation link from
+#     there, and pointing GoTrue at an external relay would starve it;
+#   * `enabled = true` requires `host`, `port`, `user`, `pass` and `admin_email`,
+#     so it must only be turned on where `RESEND_API_KEY` is a real key and the
+#     domain is verified. On the hosted project those values are configured in
+#     the Auth dashboard (or applied with `supabase config push`); this repo file
+#     is the local/dev source of truth.
+#
+# To exercise the real path locally, uncomment `enabled` and export
+# `RESEND_API_KEY`; `admin_email`/`sender_name` must come from the verified
+# domain, and `port = 465` is Resend's implicit-TLS port.
+# [auth.email.smtp]
+# enabled = true
+# host = "smtp.resend.com"
+# port = 465
+# user = "resend"
+# pass = "env(RESEND_API_KEY)"
+# admin_email = "no-reply@isbulkktc.com"
+# sender_name = "İşBul KKTC"
+
 [auth.email.template.confirmation]
 subject = "{{- $locale := \"tr\" -}}{{- with .Data -}}{{- if and .locale (or (eq .locale \"tr\") (eq .locale \"en\") (eq .locale \"ru\") (eq .locale \"el\") (eq .locale \"fa\") (eq .locale \"de\")) -}}{{- $locale = .locale -}}{{- end -}}{{- end -}}{{ if eq $locale \"tr\" }}İşBul KKTC e-posta adresinizi doğrulayın{{ else if eq $locale \"en\" }}İşBul KKTC — Confirm your email address{{ else if eq $locale \"ru\" }}İşBul KKTC — Подтвердите адрес электронной почты{{ else if eq $locale \"el\" }}İşBul KKTC — Επιβεβαιώστε τη διεύθυνση email σας{{ else if eq $locale \"fa\" }}İşBul KKTC — نشانی ایمیل خود را تأیید کنید{{ else if eq $locale \"de\" }}İşBul KKTC — Bestätigen Sie Ihre E-Mail-Adresse{{ end }}"
 content_path = "./supabase/templates/confirmation.html"

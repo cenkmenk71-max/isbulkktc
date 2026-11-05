@@ -227,3 +227,38 @@ tamamı `search_path` sabit; tüm migration'lar pglast ile ayrıştırıldı (0 
 dosyasına dokunulmadı. Devir gerekmedi.
 
 **Canlıya dokunulmadı.** Migration canlıya uygulanmadı — sahip onayıyla `db push`.
+
+## Çalışma günlüğü — 6. tur (2026-11-06)
+
+Bana atanmış issue: **#227** (`lane:supabase` + `lane:cloudflare`, #195'ten devir)
+— "`[auth.smtp]` bloğu `supabase/config.toml`'a eklenmeli".
+
+**Bulgu (gerçek, issue'nun kendi önerisinde):** #227/#195 `[auth.smtp]` bloğu
+öneriyor, ama **doğru bölüm adı `[auth.email.smtp]`**. Kanıt (üç kaynak):
+- CLI 2.120.0 binary (`strings`) → `auth.email.smtp.{enabled,host,port,user,pass,admin_email,sender_name}` ve doğrulama metni "Missing required field in config: **auth.email.smtp.host**".
+- `supabase init` çıktısı → yorumlu `# [auth.email.smtp]` bloğu.
+- Resmî doküman (`supabase.com/docs/guides/local-development/cli/config`) → `auth.email.smtp.*`.
+- Deney: `[auth.smtp]` eklenip `supabase start` → CLI **Docker adımına geçti**, yani bilinmeyen anahtarı **sessizce yok saydı**. Issue'nun snippet'i SMTP'yi hiç yapılandırmazdı.
+
+**Ek kısıt (neden aktif blok yerine yorumlu):**
+- Aktif SMTP, yerel yığının/CI'ın auth postalarını **Mailpit (54324)**'te
+  yakalamasını bozar; `tests/e2e/auth-flows.spec.ts` onay linkini oradan okur.
+- `enabled = true` `host`/`port`/`user`/`pass`/`admin_email` **zorunlu** kılar →
+  `env(RESEND_API_KEY)` çözülmemişse yerel yığın yüklenmez; ayrıca hosted'da
+  SMTP `config push` ile taşınmıyor (panel işi).
+
+**Düzeltme (repo tarafı):** `[auth.email.smtp]` bloğu, doğru bölüm adı ve tüm
+gerekçelerle **yorumlu** olarak eklendi (resend, 465, `env(RESEND_API_KEY)`,
+`no-reply@isbulkktc.com`, `İşBul KKTC`). Böylece operatör yerelde `enabled`'ı
+açıp test edebilir; yerel/CI davranışı değişmez.
+
+**Denetim (temiz):** 30/30 `public` tablo RLS + `revoke`; 57 definer fonksiyonun
+tamamı `search_path` sabit; 46 migration pglast ile ayrıştırıldı (0 hata).
+
+**Devir/not:** #227'nin 2. maddesi (DKIM 1024→2048) **panel/DNS** işi;
+LANE-CLOUDFLARE zaten ölçtü (PR #234), sahip onayında. Hosted'da auth SMTP'sinin
+gerçekten aktif olduğu kanıtlanamadı (canlı erişim yok) — sahibin panel
+doğrulaması gerekir. `supabase/templates/**` LANE-AUTH'un; dokunulmadı.
+
+**Canlıya dokunulmadı.** `config.toml` yalnız repo dosyası; hosted'a `config push`
+veya panel gerekir.
