@@ -30,3 +30,20 @@ Repo dışı CF API; gerekirse yeni `docs/cloudflare.md` (kendi dosyan).
 
 ## Raporla
 Bulgu tablosu (nokta → mevcut → olması gereken → kanıt) + uygulanacak değişiklikler (onay bekleyen) + eksik token scope'ları.
+
+## Durum (2026-11-05)
+
+Read-only denetim yapıldı; bulgular `docs/cloudflare.md`'de. Özet:
+
+- **Token yok:** bu sandbox'ta `CF_API_TOKEN` tanımlı değil → zone-level API
+  denetimi (WAF ruleset, cache rules, rate-limit kuralı, Bot Management,
+  Analytics) yapılamadı; canlı HTTP + DNS kanıtı toplandı.
+- **Doğrulanan gerçekler:** WAF saldırı yollarını 403'ler (case/kaçış denemeleri
+  dahil), meşru aramalarda yanlış pozitif yok, TLS min 1.2, HSTS+preload,
+  DNSSEC açık, dinamik HTML asla cache'lenmiyor. Cache "düzeltmesi" **gerekmiyor**.
+- **Yeni bulgu (F-08):** `isbulkktc-amber.vercel.app` CF edge'ini tamamen atlıyor
+  → WAF/bot/rate-limit devre dışı kalıyor. Vercel Deployment Protection önerisi
+  (sahip/INFRA onayı).
+- **Onay bekleyen:** (1) tek rate-limit kuralını auth brute-force'a tahsis,
+  (2) origin doğrudan erişimini kapat, (3) DMARC `p=none` → `quarantine/reject`,
+  (4) HSTS preload `pending` iken DNS/TLS'e dokunma.
