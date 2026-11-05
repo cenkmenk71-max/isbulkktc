@@ -241,6 +241,7 @@ function buildCollectionPageGraph({
   baseUrl,
   collectionPath,
   subjectName,
+  pageName = `${subjectName} İş İlanları`,
   about,
   jobsLabel,
   homeLabel,
@@ -251,6 +252,13 @@ function buildCollectionPageGraph({
   collectionPath: string;
   /** The collection's own name, e.g. `Girne` or `Tam zamanlı`. */
   subjectName: string;
+  /**
+   * The page's localized visible `<h1>`, e.g. `Jobs in Kyrenia`. The default is
+   * the historical Turkish-suffixed label, kept only so a caller that has not
+   * been updated yet still type-checks; pass the localized title so the
+   * structured data names the page the way the reader sees it.
+   */
+  pageName?: string;
   about: Record<string, unknown>;
   jobsLabel: string;
   homeLabel: string;
@@ -267,7 +275,7 @@ function buildCollectionPageGraph({
         "@type": "CollectionPage",
         "@id": `${collectionUrl}#webpage`,
         url: collectionUrl,
-        name: `${subjectName} İş İlanları`,
+        name: pageName,
         inLanguage: locale,
         isPartOf: { "@id": `${siteUrl}/#website` },
         about,
@@ -310,6 +318,7 @@ export function buildDistrictPageStructuredData({
   baseUrl,
   districtSlug,
   districtName,
+  pageName,
   jobsLabel,
   homeLabel,
 }: {
@@ -317,6 +326,8 @@ export function buildDistrictPageStructuredData({
   baseUrl: URL;
   districtSlug: string;
   districtName: string;
+  /** The page's localized visible title (`DistrictPage.title`). */
+  pageName?: string;
   jobsLabel: string;
   homeLabel: string;
 }) {
@@ -325,6 +336,7 @@ export function buildDistrictPageStructuredData({
     baseUrl,
     collectionPath: `/is-ilanlari/${districtSlug}`,
     subjectName: districtName,
+    ...(pageName ? { pageName } : {}),
     about: {
       "@type": "AdministrativeArea",
       name: districtName,
@@ -353,6 +365,7 @@ export function buildJobTypePageStructuredData({
   baseUrl,
   typeSlug,
   typeName,
+  pageName,
   jobsLabel,
   homeLabel,
 }: {
@@ -360,6 +373,8 @@ export function buildJobTypePageStructuredData({
   baseUrl: URL;
   typeSlug: string;
   typeName: string;
+  /** The page's localized visible title (`JobTypePage.title`). */
+  pageName?: string;
   jobsLabel: string;
   homeLabel: string;
 }) {
@@ -368,8 +383,166 @@ export function buildJobTypePageStructuredData({
     baseUrl,
     collectionPath: `/is-turleri/${typeSlug}`,
     subjectName: typeName,
+    ...(pageName ? { pageName } : {}),
     about: { "@type": "Thing", name: typeName },
     jobsLabel,
+    homeLabel,
+  });
+}
+
+/**
+ * The `BreadcrumbList` + `CollectionPage` graph for a section index page.
+ *
+ * The index pages (`/jobs`, `/companies`, `/rehber`, `/blog`) are the top of
+ * their own hierarchy, so the breadcrumb is two steps (home → the page itself)
+ * rather than the three a sub-collection carries.
+ *
+ * `pageLabel` names the section as the product's own navigation already labels
+ * it (`Nav.jobs`, `Nav.blog`, the footer's guide label), not the hero slogan the
+ * page happens to render as its `<h1>`: `name` is what an answer engine reads as
+ * the page's subject, and "Find your next role." names nothing. It is reused for
+ * `about` so the page declares the same topic it is named after.
+ */
+function buildIndexPageStructuredData({
+  locale,
+  baseUrl,
+  pathname,
+  pageLabel,
+  homeLabel,
+}: {
+  locale: AppLocale;
+  baseUrl: URL;
+  /** Path without the locale prefix, e.g. `/companies`. */
+  pathname: string;
+  /** The section's localized name, e.g. `Nav.jobs`. */
+  pageLabel: string;
+  homeLabel: string;
+}) {
+  const siteUrl = baseUrl.origin;
+  const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
+  const pageUrl = `${siteUrl}${prefix}${pathname}`;
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": `${pageUrl}#webpage`,
+        url: pageUrl,
+        name: pageLabel,
+        inLanguage: locale,
+        isPartOf: { "@id": `${siteUrl}/#website` },
+        about: { "@type": "Thing", name: pageLabel },
+        breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${pageUrl}#breadcrumb`,
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: homeLabel,
+            item: `${siteUrl}${prefix}`,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: pageLabel,
+            item: pageUrl,
+          },
+        ],
+      },
+    ],
+  };
+}
+
+/**
+ * The graph for the jobs index (`/jobs`), the highest-traffic landing page.
+ * `pageLabel` is `Nav.jobs`.
+ */
+export function buildJobsIndexStructuredData({
+  locale,
+  baseUrl,
+  pageLabel,
+  homeLabel,
+}: {
+  locale: AppLocale;
+  baseUrl: URL;
+  pageLabel: string;
+  homeLabel: string;
+}) {
+  return buildIndexPageStructuredData({
+    locale,
+    baseUrl,
+    pathname: "/jobs",
+    pageLabel,
+    homeLabel,
+  });
+}
+
+/** The graph for the company directory index (`/companies`); `Nav.employer`. */
+export function buildCompaniesIndexStructuredData({
+  locale,
+  baseUrl,
+  pageLabel,
+  homeLabel,
+}: {
+  locale: AppLocale;
+  baseUrl: URL;
+  pageLabel: string;
+  homeLabel: string;
+}) {
+  return buildIndexPageStructuredData({
+    locale,
+    baseUrl,
+    pathname: "/companies",
+    pageLabel,
+    homeLabel,
+  });
+}
+
+/**
+ * The graph for the guide index (`/rehber`); `pageLabel` is the footer's guide
+ * label (`Footer.links.guides`).
+ */
+export function buildGuideIndexStructuredData({
+  locale,
+  baseUrl,
+  pageLabel,
+  homeLabel,
+}: {
+  locale: AppLocale;
+  baseUrl: URL;
+  pageLabel: string;
+  homeLabel: string;
+}) {
+  return buildIndexPageStructuredData({
+    locale,
+    baseUrl,
+    pathname: "/rehber",
+    pageLabel,
+    homeLabel,
+  });
+}
+
+/** The graph for the article index (`/blog`); `pageLabel` is `Nav.blog`. */
+export function buildArticleIndexStructuredData({
+  locale,
+  baseUrl,
+  pageLabel,
+  homeLabel,
+}: {
+  locale: AppLocale;
+  baseUrl: URL;
+  pageLabel: string;
+  homeLabel: string;
+}) {
+  return buildIndexPageStructuredData({
+    locale,
+    baseUrl,
+    pathname: "/blog",
+    pageLabel,
     homeLabel,
   });
 }

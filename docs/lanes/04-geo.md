@@ -219,3 +219,48 @@ tipin parçası — bu turda dokunulmadı (bulgu değil, gözlem).
 `lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (432 test,
 +2 yeni: bölüm etiketi + brief kural kapsamı) · her iki guard için kırmızı→yeşil
 kanıtlandı.
+
+---
+
+## Rapor — issue #203, branch `lane/geo`
+
+**Durum:** düzeltmeler branch'te, CI bekliyor. Mount devri: LANE-SEO.
+
+### Bulgu (LANE-SEO'dan devredildi, #203)
+
+Dört **indeks** sayfası (`/jobs`, `/companies`, `/rehber`, `/blog`) sayfaya-özel
+hiçbir JSON-LD yayınlamıyordu; yalnız layout'un `WebSite`/`Organization` grafiği
+vardı. Kardeş koleksiyon aileleri (`is-ilanlari/[district]`, `is-turleri/[type]`)
+`CollectionPage` + `BreadcrumbList` yayınlıyor. `/jobs` ayrıca #190'ın birincil
+anahtar kelimelerinin indiği sayfa.
+
+### Ne yapıldı (GEO sahibi olduğu modülde)
+
+`src/content/ai-visibility/structured-data.ts`:
+
+- Yeni iç `buildIndexPageStructuredData()`: 2 adımlı breadcrumb (home → sayfanın
+  kendisi; indeks kendi hiyerarşisinin tepesi) + `about` = `Thing`.
+- Dört yeni export: `buildJobsIndexStructuredData`, `buildCompaniesIndexStructuredData`,
+  `buildGuideIndexStructuredData`, `buildArticleIndexStructuredData`.
+- `pageLabel` ürünün kendi bölüm etiketidir (`Nav.jobs`, `Nav.blog`,
+  `Footer.links.guides`); ana sayfa kahraman sloganı (`JobsPage.title` =
+  "Sıradaki işinizi bulun.") **değil** — `CollectionPage.name` bir konu adı
+  olmalı, çağrı yeri bunu geçer.
+
+### Kapsam-dışı notu da düzeltildi (#203 "Kapsam dışı")
+
+`buildCollectionPageGraph` içindeki sabit `"İş İlanları"` eki kaldırıldı:
+`buildDistrictPageStructuredData` / `buildJobTypePageStructuredData` artık
+opsiyonel `pageName` alıyor (varsayılan eski etiket → geriye dönük uyumlu). Bu,
+#152/#179 ile aynı sınıftır (İngilizce sayfa Türkçe ad taşıyordu).
+
+### Devredilen — LANE-SEO (issue #226)
+
+Dört indeks route'una `<JsonLd>` + yeni üretici çağrısı; ayrıca
+`is-ilanlari/[district]` ve `is-turleri/[type]` mount'larına `pageName` geçilmeli
+(`DistrictPage.title` / `JobTypePage.title`). Örnek kod ve beklenen JSON issue'da.
+
+### Kapılar
+`lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (496 test,
++2 yeni: indeks breadcrumb'ı + `pageName`) · `pageName` guard'ı için kırmızı→yeşil
+kanıtlandı · `JSON.stringify` ile 6 dil × 4 indeks çıktısı gözle doğrulandı.

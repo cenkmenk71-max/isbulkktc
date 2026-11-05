@@ -8,8 +8,12 @@ import {
   buildLlmsFullBrief,
 } from "@/content/ai-visibility/llms-brief";
 import {
+  buildArticleIndexStructuredData,
+  buildCompaniesIndexStructuredData,
   buildDistrictPageStructuredData,
+  buildGuideIndexStructuredData,
   buildGuideStructuredData,
+  buildJobsIndexStructuredData,
   buildJobTypePageStructuredData,
   buildOrganizationGraph,
 } from "@/content/ai-visibility/structured-data";
@@ -225,5 +229,68 @@ test("collection graphs localize the prefix for every locale", () => {
     const trail = breadcrumb(graph);
     assert.equal(trail[1].item, `https://isbulkktc.com${prefix}/jobs`);
     assert.equal(trail[2].item, `https://isbulkktc.com${prefix}/is-turleri/staj`);
+  }
+});
+
+test("a collection page takes the caller's localized title as its name", () => {
+  // `pageName` is what keeps the structured data from naming an English page in
+  // Turkish. It must reach `CollectionPage.name`; the default preserves the old
+  // Turkish-suffixed label so an un-updated caller still type-checks.
+  const graph = buildDistrictPageStructuredData({
+    locale: "en",
+    baseUrl: BASE_URL,
+    districtSlug: "girne",
+    districtName: "Kyrenia",
+    pageName: "Jobs in Kyrenia",
+    jobsLabel: "Jobs",
+    homeLabel: SITE_NAME,
+  });
+  const page = collectionPage(graph);
+  assert.equal(page.name, "Jobs in Kyrenia");
+  // The breadcrumb's final step stays the subject name, not the page title.
+  assert.equal(breadcrumb(graph)[2].name, "Kyrenia");
+});
+
+const indexBuilders = {
+  "/jobs": buildJobsIndexStructuredData,
+  "/companies": buildCompaniesIndexStructuredData,
+  "/rehber": buildGuideIndexStructuredData,
+  "/blog": buildArticleIndexStructuredData,
+} as const;
+
+test("every index page emits a two-step CollectionPage breadcrumb", () => {
+  for (const [pathname, build] of Object.entries(indexBuilders)) {
+    for (const locale of routing.locales) {
+      const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
+      const label = `LABEL-${locale}`;
+      const page = collectionPage(
+        build({ locale, baseUrl: BASE_URL, pageLabel: label, homeLabel: SITE_NAME }),
+      );
+
+      const url = `https://isbulkktc.com${prefix}${pathname}`;
+      assert.equal(page.url, url, `${pathname} ${locale} URL drifted`);
+      assert.equal(page["@id"], `${url}#webpage`);
+      // `name` is the product's own section label, never the hero slogan the
+      // page renders as its <h1>.
+      assert.equal(page.name, label);
+      assert.equal(page.inLanguage, locale);
+      assert.deepEqual(page.isPartOf, { "@id": "https://isbulkktc.com/#website" });
+      // The page declares the topic it is named after.
+      assert.deepEqual(page.about, { "@type": "Thing", name: label });
+      assert.deepEqual(page.breadcrumb, { "@id": `${url}#breadcrumb` });
+
+      // An index is the top of its hierarchy: home → the page itself.
+      const trail = breadcrumb(
+        build({ locale, baseUrl: BASE_URL, pageLabel: label, homeLabel: SITE_NAME }),
+      );
+      assert.deepEqual(
+        trail.map((step) => [step.position, step.name, step.item]),
+        [
+          [1, SITE_NAME, `https://isbulkktc.com${prefix}`],
+          [2, label, url],
+        ],
+        `${pathname} ${locale} breadcrumb drifted`,
+      );
+    }
   }
 });
