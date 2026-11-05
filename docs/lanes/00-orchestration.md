@@ -107,3 +107,58 @@ Canlıya dokundu mu: hayır / evet (ne yaptı)
 Sahibin yapması gerekenler: ...
 Sonraki lane için notlar: ...
 ```
+
+---
+
+## LANE-INFRA — tur notları
+
+> LANE-INFRA'nın brief'i bu dosyadır (`lanes.json` → `brief: "00-orchestration"`);
+> ayrı bir `docs/lanes/infra.md` yok. Bu yüzden infra tur notları buraya yazılır.
+
+### Tur — CI kapıları + mikro-denetim (PR #193, 2026-11-05)
+
+**Kapsam.** Atanmış iki `agent:infra` issue'su (#136, #150) alındı; ikisi de
+"suite'i script'e ve CI'a bağla" istiyordu. Ayrıca sahip olunan dosyalar
+(`.github/**`, `scripts/**`, `package.json`) AUDIT.md boyutlarıyla tarandı.
+
+**Yapılanlar.**
+
+1. `test:integration` script'i + `static` job'da ayrı adım. Katman
+   `--experimental-test-module-mocks` ister; bayraksız **3 dosya patlar, 0 geçer**
+   (`mock.module is not a function`), bayrakla **43/43**. Kanıtlandı.
+2. `test:visual` script'i + `e2e` job'da shard 1'e kısıtlı adım. Mevcut üretim
+   standalone build'i ve seed'li Supabase'i yeniden kullanır; sunucu adım içinde
+   başlatılıp (sinyal → port bırakma beklemesi) kapatılır ki ardından gelen
+   Playwright `webServer` :3000'e bağlanabilsin. Baseline'lar shard'lar arası
+   bit-bit aynı olduğu için dört kez koşmak kapsam katmaz.
+
+**Mikro-denetim bulguları (hepsi düzeltildi, hepsi kendi dosyamda).**
+
+| # | Bulgu | Düzeltme |
+|---|---|---|
+| 1 | `sharp` 7 dosyada doğrudan import ediliyor ama `package.json`'da yok; yalnız `next` optional dep + `@gltf-transform/cli` üzerinden geçişli çözülüyor (phantom dependency) | `devDependencies`'e eklendi |
+| 2 | `bun.lock` sahiplik tablosunda yok → `package.json`'ı düzenleyen lane lockfile'ı commit'leyemez, `lane-collisions.mjs` "owned by no lane" der | LANE-INFRA'ya eklendi |
+| 3 | `.github/copilot-instructions.md` "Available gates" listesi eksik (`check:frontend-source`, `test:security`, `test:integration`, `test:visual` yok) | Liste gerçek script'lerle hizalandı |
+| 4 | İki test katmanı hiçbir CI adımında değil → `tsx --test <glob>` eşleşmezse exit 0, sessiz yeşil | İki adım eklendi |
+
+**Doğrulama (gerçek üretim build'i + seed'li Supabase, yerel).** `lint`,
+`typecheck`, `check:frontend-source` temiz; `test:unit` 444/444; `test:security`
+35 pass / 3 todo (exit 0); `test:integration` 43/43; `test:visual` **12/12, 0px**.
+`test:visual` kırmızı→yeşil: bir baseline silinince çıkış 1 (`FAIL — 1/12`),
+geri konunca `PASS — 12/12`. Canlıya dokunulmadı.
+
+**Notlar (sonraki turlar için).**
+
+- Bu PR `.github/workflows/**` değiştirdiği için `agent-pr-automation.yml`
+  gereği otomatik merge **edilmez**; insan merge eder.
+- Yerel doğrulama için: sandbox'ta `sudo dockerd` + `sudo chmod 666
+  /var/run/docker.sock` ile Docker ayağa kalkar, `bun run db:start` seed'li
+  stack'i getirir. `next` standalone sunucusu çalışırken süreç adını
+  `next-server` yapar — `pkill -f standalone/server.js` onu öldürmez, portu
+  `/proc/<pid>/net/tcp` içinde `0BB8` arayarak bulup PID ile öldür.
+- **`NEXT_DIST_DIR` ile üretim build'i standalone sunucuyu bozar:** server.js
+  `config.distDir`'i kullanır ve static'i `<distDir>/static`'ten bekler, ama
+  standalone çıktısı `.next/static`'e kopyalanır → tüm `/_next/static/**` 404
+  döner ve `test:visual` 12/12 kırmızı olur. Bu yüzden görsel doğrulama
+  **varsayılan `.next`** ile build edilmeli (CI de öyle yapar).
+
