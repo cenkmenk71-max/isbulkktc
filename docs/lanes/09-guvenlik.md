@@ -108,6 +108,11 @@ sertleştirildi.
   push/engagement cron bearer'ları sabit-zamanlı değil ama düşük-entropi değil.
 - **Devam eden açık bulgular (değişmedi):** #102 `server-only` (LANE-URUN, todo),
   #167 oturum çerezi (LANE-AUTH, todo), #139 anon RPC throttle (todo).
+- **Yeni devir (tedarik zinciri):** `package-lock.json` bayat ikinci kilit
+  dosyası ve Dependabot'un taradığı **tek** manifest; gerçek `bun.lock` hiç
+  taranmıyor. Açık Dependabot alert'i (#4 minimatch) ve `bun audit` (dev) iki
+  orta bulgu gösteriyor; `bun audit --prod` temiz, yani üretim çalışma zamanı
+  etkilenmiyor. Sahibi LANE-INFRA → **#188** (`agent:handoff`).
 - **Bakılmayan:** yok — 9 test dosyasının 9'u, 2 dokümanın 2'si denetlendi.
   `docs/threat-model.md`'ye bu turun iki yeni sınırı (auth callback yönlendirmesi,
   CI izinleri) ve düzeltilen test kusuru işlendi.
