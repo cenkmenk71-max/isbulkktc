@@ -162,6 +162,12 @@ issue açar.
 - **Sırlar:** `NEXT_PUBLIC_*` ile sızmış bir sır adı yok; hiçbir istemci modülü
   `@/server/**` içe aktarmıyor veya `NEXT_PUBLIC_` olmayan bir env okumuyor
   (`tests/security/client-boundary.test.ts`).
+- **Yanıt başlıkları:** `next.config.ts` global grubu CSP (wildcard/bare-scheme
+  yok, `unsafe-eval` yok), HSTS, `X-Frame-Options`, `X-Content-Type-Options`,
+  `Referrer-Policy`, COOP/CORP, `Permissions-Policy` gönderir; `X-Powered-By`
+  kapalıdır; Vercel alias host'u `noindex, nofollow` alır.
+  `tests/security/security-headers.test.ts` **gerçek config'i import edip**
+  `headers()`'ı çağırarak bunları doğrular (metin grep'i değil).
 - **Açık yönlendirme kapalı:** `sanitizeNextPath` normalizasyon sonrası çıktıyı
   yeniden doğruluyor (`//`, `\`, şema reddi). Denetimde bulunan `"/..//host"`
   bypass'ı sahibi tarafından kapatıldı; `tests/security/open-redirect.test.ts`

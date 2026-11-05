@@ -243,3 +243,27 @@ rotası** ve **unsubscribe uç noktası** hiç test edilmiyordu.
   (c) service client'ı imza doğrulamasından öne al → unsubscribe testi kırmızı.
 - **Bakılmayan:** yok — 11 test dosyası + 2 doküman. Kalan iki `todo` yürürlükte
   (#206 throttle app-yolu IP, #102 `server-only`).
+
+## Durum (2026-11-05, 9. tur) — yanıt başlıkları kapısı
+
+Brief'in 4. hedefi (sızıntı) ve genel sertleştirme: `next.config.ts` bu uygulamanın
+CSP/HSTS/`X-Frame-Options` vb. başlıkları **tanımladığı tek yer** ve hiçbir lane'in
+test katmanı onu pinlemiyordu — bir refactor bir başlığı düşürse veya CSP
+`script-src`'i genişletse **tüm kapılar yeşil kalırdı**.
+
+- **Bulgu + düzeltme: güvenlik başlıkları hiç test edilmiyordu.**
+  `security-headers.test.ts` eklendi. **Metin grep'i değil**: gerçek
+  `next.config.ts` import edilir, `headers()` Next.js'in çağırdığı gibi çağrılır
+  ve dönen başlıklar doğrulanır. Kontroller: (a) global grupta dokuz savunma
+  başlığının tamamı doğru değerle var; (b) CSP'nin yüksek-değer direktifleri
+  (`default-src`/`base-uri`/`object-src`/`frame-ancestors`/`form-action` +
+  `upgrade-insecure-requests`); (c) `script-src` wildcard/bare-scheme/`unsafe-eval`
+  içermez; (d) `poweredByHeader === false`; (e) Vercel alias grubu
+  `noindex, nofollow`.
+- **Kanıt (mutation):** (a) HSTS'i zayıflat (`max-age=0`) → kırmızı;
+  (b) `script-src`'i `'self' https:`'e genişlet → kırmızı; (c) `poweredByHeader`'ı
+  `true` yap → kırmızı.
+- **Not:** `next.config.ts` hiçbir lane'in sahiplik tablosunda yok; bu test onu
+  **yalnız okur**, yazmaz — sahiplik ihlali yok.
+- **Bakılmayan:** yok — 12 test dosyası + 2 doküman. Kalan iki `todo` yürürlükte
+  (#206 throttle app-yolu IP, #102 `server-only`).
