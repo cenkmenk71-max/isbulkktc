@@ -460,3 +460,62 @@ test("an article's datePublished is its publication date, not its edit date", ()
   assert.equal(single.datePublished, "2026-11-04");
   assert.equal(single.dateModified, "2026-11-04");
 });
+
+/** The `- [label](url)` entries of a brief section, per locale. */
+function briefLinkLabels(section: string): string[] {
+  return [...section.matchAll(/^- \[([^\]]+)\]\(/gm)].map((match) => match[1]);
+}
+
+test("the brief anchors name their target, never a machine slug", () => {
+  // Every other entry in the list carries a human label. A bare slug names
+  // nothing a reader or an answer engine can quote, and it is the one place the
+  // list stopped being a reading aid.
+  for (const locale of routing.locales) {
+    const brief = buildLlmsBrief(BASE_URL);
+    const section =
+      locale === routing.defaultLocale
+        ? brief.split("## Öne çıkan sayfalar")[1].split("Her sayfa altı dilde")[0]
+        : buildLlmsFullBrief(BASE_URL)
+            .split(`## ${locale} — `)[1]!
+            .split("### FAQ")[0];
+
+    const labels = briefLinkLabels(section);
+    assert.ok(labels.length > 0, `${locale} section has no links`);
+    for (const label of labels) {
+      assert.ok(
+        !/^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(label),
+        `${locale}: "${label}" is a bare slug, not an anchor label`,
+      );
+    }
+
+    // The guides are named by their own title in the reader's language.
+    for (const guide of getGuides(locale)) {
+      assert.ok(
+        labels.includes(guide.title),
+        `${locale} brief does not name the guide "${guide.title}"`,
+      );
+    }
+  }
+});
+
+test("the full brief's page labels are localized, not English everywhere", () => {
+  const full = buildLlmsFullBrief(BASE_URL);
+  // The German section must not carry the English label; that is the machine-
+  // translation smell the localized sections exist to avoid.
+  const en = full.split("## en — ")[1]!.split("### FAQ")[0];
+  const de = full.split("## de — ")[1]!.split("### FAQ")[0];
+  const enLabels = briefLinkLabels(en);
+  const deLabels = briefLinkLabels(de);
+  assert.equal(enLabels.length, deLabels.length, "section link counts differ");
+
+  // The 7 primary pages are the first entries; the German label of the jobs page
+  // is not the English one.
+  assert.ok(
+    deLabels.includes("Stellenangebote"),
+    "the German section must name the jobs page in German",
+  );
+  assert.ok(
+    !deLabels.includes("Job listings"),
+    "the German section must not fall back to the English label",
+  );
+});

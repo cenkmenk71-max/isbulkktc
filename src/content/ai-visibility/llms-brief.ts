@@ -18,17 +18,93 @@ import { getGuides } from "@/content/guides";
  * The canonical page list the brief advertises. These are the same routes the
  * sitemap and the robots allowlist already publish; the brief never points at a
  * URL the site does not serve.
+ *
+ * `label` is the page's own name in the language the section is written in, so a
+ * German or Persian section names the page the way its navigation does instead of
+ * falling back to English inside otherwise-localized copy.
  */
-const primaryPages: ReadonlyArray<{ pathname: string; tr: string; en: string }> =
-  [
-    { pathname: "/jobs", tr: "İş ilanları", en: "Job listings" },
-    { pathname: "/companies", tr: "Şirket rehberi", en: "Company directory" },
-    { pathname: "/freelance", tr: "Serbest çalışma", en: "Freelance work" },
-    { pathname: "/packages", tr: "İşveren ilan paketleri", en: "Employer packages" },
-    { pathname: "/about", tr: "Hakkımızda ve SSS", en: "About and FAQ" },
-    { pathname: "/blog", tr: "Kariyer gündemi", en: "Career news" },
-    { pathname: "/contact", tr: "İletişim", en: "Contact" },
-  ];
+const primaryPages: ReadonlyArray<{
+  pathname: string;
+  label: Record<AppLocale, string>;
+}> = [
+  {
+    pathname: "/jobs",
+    label: {
+      tr: "İş ilanları",
+      en: "Job listings",
+      de: "Stellenangebote",
+      ru: "Вакансии",
+      el: "Θέσεις εργασίας",
+      fa: "آگهی‌های شغلی",
+    },
+  },
+  {
+    pathname: "/companies",
+    label: {
+      tr: "Şirket rehberi",
+      en: "Company directory",
+      de: "Unternehmensverzeichnis",
+      ru: "Каталог компаний",
+      el: "Κατάλογος εταιρειών",
+      fa: "فهرست شرکت‌ها",
+    },
+  },
+  {
+    pathname: "/freelance",
+    label: {
+      tr: "Serbest çalışma",
+      en: "Freelance work",
+      de: "Freiberufliche Arbeit",
+      ru: "Фриланс",
+      el: "Ανεξάρτητη εργασία",
+      fa: "کار آزاد",
+    },
+  },
+  {
+    pathname: "/packages",
+    label: {
+      tr: "İşveren ilan paketleri",
+      en: "Employer packages",
+      de: "Arbeitgeber-Pakete",
+      ru: "Пакеты для работодателей",
+      el: "Πακέτα εργοδοτών",
+      fa: "بسته‌های کارفرمایان",
+    },
+  },
+  {
+    pathname: "/about",
+    label: {
+      tr: "Hakkımızda ve SSS",
+      en: "About and FAQ",
+      de: "Über uns und FAQ",
+      ru: "О нас и вопросы",
+      el: "Σχετικά και συχνές ερωτήσεις",
+      fa: "درباره ما و پرسش‌ها",
+    },
+  },
+  {
+    pathname: "/blog",
+    label: {
+      tr: "Kariyer gündemi",
+      en: "Career news",
+      de: "Karriere-News",
+      ru: "Новости карьеры",
+      el: "Νέα καριέρας",
+      fa: "اخبار شغلی",
+    },
+  },
+  {
+    pathname: "/contact",
+    label: {
+      tr: "İletişim",
+      en: "Contact",
+      de: "Kontakt",
+      ru: "Контакты",
+      el: "Επικοινωνία",
+      fa: "تماس",
+    },
+  },
+];
 
 function localeUrl(baseUrl: URL, locale: AppLocale, pathname: string): string {
   const path =
@@ -42,10 +118,10 @@ function localeUrl(baseUrl: URL, locale: AppLocale, pathname: string): string {
 
 function primaryPageLines(baseUrl: URL, locale: AppLocale): string {
   return primaryPages
-    .map((page) => {
-      const label = locale === routing.defaultLocale ? page.tr : page.en;
-      return `- [${label}](${localeUrl(baseUrl, locale, page.pathname)})`;
-    })
+    .map(
+      (page) =>
+        `- [${page.label[locale]}](${localeUrl(baseUrl, locale, page.pathname)})`,
+    )
     .concat(
       // District landing pages ("Lefkoşa iş ilanları", ...). Listed so an answer
       // engine can cite the district-specific page for a "jobs in <district>"
@@ -60,12 +136,14 @@ function primaryPageLines(baseUrl: URL, locale: AppLocale): string {
       }),
       // Editorial guides — the site's own content, so the brief points at them
       // first among the resources an answer engine may quote. A guide's slug is
-      // translated per locale, so the locale's own slug is used here; reusing
-      // the Turkish slug under another prefix advertises a URL that 404s.
-      getGuides(locale).map((guide) => {
-        const label = locale === routing.defaultLocale ? "Rehber" : "Guide";
-        return `- [${label}: ${guide.slug}](${localeUrl(baseUrl, locale, `/rehber/${guide.slug}`)})`;
-      }),
+      // translated per locale, so the locale's own slug is used in the URL;
+      // reusing the Turkish slug under another prefix advertises a URL that
+      // 404s. The anchor is the guide's own title, like every other entry here:
+      // a bare slug names nothing a reader or a model can quote.
+      getGuides(locale).map(
+        (guide) =>
+          `- [${guide.title}](${localeUrl(baseUrl, locale, `/rehber/${guide.slug}`)})`,
+      ),
       // Employment-type landing pages, so "uzaktan iş" / "tam zamanlı iş" can be
       // answered with the matching page.
       jobTypeKeys.map((jobType) => {
