@@ -592,6 +592,7 @@
       "resetRequestSent": "If this email address is registered, a password reset link has been sent. Check your inbox and spam folder.",
       "resetRequestFailed": "Could not send the password reset link. Please try again.",
       "passwordUpdateFailed": "Your password could not be updated. Please try again.",
+      "passwordUnchanged": "Your new password cannot be the same as your current one. Choose a different password.",
       "sessionExpired": "Your link has expired. Please request a new password reset link.",
       "passwordMismatch": "Passwords do not match. Enter the same password in both fields."
     }

@@ -761,3 +761,65 @@ regex ile doğrular.
 ### Sahibin yapması gerekenler
 - **#227** (auth SMTP + DKIM) hâlâ LANE-SUPABASE + LANE-CLOUDFLARE'i bekliyor.
 - **#191** (marka paleti) sahiplik çelişkisi çözülmeli.
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (micro-denetim turu 5)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Aldığı issue: yok (yeni sahipsiz lane:auth issue'su yok) → micro-denetim
+Değişen dosyalar:
+  src/features/identity/auth-errors.ts              (+same_password)
+  src/features/identity/schemas.ts                  (+1 mesaj üyesi)
+  src/features/identity/actions.ts                  (updatePassword kod eşler)
+  src/features/identity/password-update-errors.test.ts   (yeni, 4 test)
+  src/messages/{tr,en,ru,el,fa,de}.json             (+1 anahtar)
+Devredilen: #271 (transactional e-posta lang/dir), #277 (weak_password koordinasyon)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (559, 4'ü yeni) / test:security ✅ (69 pass, 3 todo, 0 fail) /
+  test:integration ✅ (47 — CI'ın Static işinde koşan adım)
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration/şablon değişmedi)
+```
+
+### Denetlenen dosyalar (micro-denetim)
+`git ls-files 'src/features/identity/**'` (36) + 5 `(auth)`/callback route +
+7 şablon → **48 dosya**; hepsine bakıldı. Bakılmayan dosya yok.
+
+### Bulgular
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `actions.ts:363-366` | hata yolu | `updateUser` hatası **her zaman** `passwordUpdateFailed` ("tekrar deneyin") | `same_password` kendi mesajına eşlenmeli | Kullanıcı aynı şifreyi tekrar dener → aynı hata; döngü | düzeltildi |
+| 2 | `auth-errors.ts:24` | doğruluk | `same_password` haritada yok | haritada olmalı | (yukarıdaki ile aynı) | düzeltildi |
+| 6 | `tests/integration/credential-boundary.test.ts:102` (LANE-QA) | koordinasyon | `weak_password`'ı "jenerik hata" örneği olarak kullanıyor | — | `weak_password` eşlemesi bu testi kırar | devredildi (#277) |
+| 3 | `email-layout.ts:169` (sahiplik dışı) | erişilebilirlik/RTL | `<html lang="tr">` sabit, `dir` yok | locale'e göre lang+dir | Farsça/Almanca mail Türkçe okunur; RTL bozuk | devredildi (#271) |
+| 4 | 7 şablon | tutarlılık | logo/preheader/tablo/inline stil birebir aynı, tek stylesheet; preheader konuyu tekrarlıyor ama konu marka önekli → tam kopya değil | — | sorun yok | bilgi |
+| 5 | `use-captcha-action.ts` / `turnstile.ts` | mantık | başarısız script retry'ı düzeltilmiş; reset tek-uçuş paylaşımı doğru | — | sorun yok | bilgi |
+
+### Düzeltilen (#1, #2)
+`authErrorMessages`'a `same_password → passwordUnchanged` eklendi; `updatePassword`
+artık `messageForAuthErrorCode(error.code, "passwordUpdateFailed")` kullanıyor.
+`SignInFormState.message` union'ına bir üye, 6 dile bir anahtar eklendi.
+Kardeş durum `weak_password` **bilerek dışarıda**: eşlemesi LANE-QA'nın
+integration testini kırdığı için #277 ile koordine edilmeli.
+auth-js kaynağı doğrulandı: `_updateUser` `AuthError`'ı **döndürür** (fırlatmaz),
+yani `error.code` doğru okuma yeri.
+
+### Kanıt (mutasyon testi)
+`password-update-errors.test.ts`; düzeltme geri alınınca kırmızı olur:
+```
+BUGGY (hardcoded passwordUpdateFailed) → ✖ "reads the error code" fail
+FIXED                                  → ✔ 4/4 pass
+```
+
+### Güvenlik değerlendirmesi (security skill)
+- Yalnız hata mesajı eşlemesi; yetki/oturum/DB yolu değişmedi.
+- Mesajlar kullanıcıya "neden" söyler, hesap varlığını sızdırmaz (kullanıcı zaten
+  kendi oturumunda).
+- `service_role` hiçbir değişen dosyada yok.
+
+### Sahibin yapması gerekenler
+- **#271** → LANE-URUN: transactional e-posta kabuğuna `locale`+`dir`.
+- **#277** → LANE-QA + LANE-AUTH: `weak_password` eşlemesi (test örnek kodu).
+- **#227** (auth SMTP + DKIM) hâlâ LANE-SUPABASE + LANE-CLOUDFLARE'i bekliyor.
+- **#191** (marka paleti) sahiplik çelişkisi çözülmeli.

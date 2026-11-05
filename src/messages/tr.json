@@ -592,6 +592,7 @@
       "resetRequestSent": "Bu e-posta adresi kayıtlıysa şifre yenileme bağlantısı gönderildi. Gelen kutunuzu ve spam klasörünüzü kontrol edin.",
       "resetRequestFailed": "Şifre yenileme bağlantısı gönderilemedi. Lütfen tekrar deneyin.",
       "passwordUpdateFailed": "Şifre güncellenemedi. Lütfen tekrar deneyin.",
+      "passwordUnchanged": "Yeni şifreniz mevcut şifrenizle aynı olamaz. Farklı bir şifre seçin.",
       "sessionExpired": "Bağlantınızın süresi dolmuş. Lütfen yeni bir şifre yenileme bağlantısı isteyin.",
       "passwordMismatch": "Şifreler eşleşmiyor. Aynı şifreyi iki alana da girin."
     }

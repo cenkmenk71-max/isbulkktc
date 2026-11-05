@@ -362,7 +362,12 @@ export async function updatePassword(
 
   if (error) {
     console.error("Supabase password update failed.", { code: error.code });
-    return { status: "error", message: "passwordUpdateFailed" };
+    // `same_password` and `weak_password` are actionable: the visitor must pick a
+    // different value. The generic copy would tell them to retry the same one.
+    return {
+      status: "error",
+      message: messageForAuthErrorCode(error.code, "passwordUpdateFailed"),
+    };
   }
 
   const { error: signOutError } = await supabase.auth.signOut();

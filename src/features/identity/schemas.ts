@@ -96,6 +96,7 @@ export type SignInFormState = {
     | "resetRequestSent"
     | "resetRequestFailed"
     | "passwordUpdateFailed"
+    | "passwordUnchanged"
     | "sessionExpired";
   status: "idle" | "error" | "success";
   /**
