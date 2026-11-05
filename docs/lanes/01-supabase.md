@@ -100,3 +100,40 @@ seçeneği (1) uygulandı. Yine de istemci tarafı için `lane:urun` notu bırak
 
 **Not (kural):** `docs/threat-model.md` LANE-GÜVENLİK'in dosyası — düzenlenmedi;
 #139'a yorum yazıldı.
+
+## Çalışma günlüğü — 3. tur (2026-11-06)
+
+Bana atanmış issue: **#181** (`lane:supabase` + `agent:handoff`) —
+`supabase/config.toml`'da **kimlik-bağlama (identity linking) politikası
+belirsizdi**. #162'nin "sosyal ↔ e-posta çakışması" kararı bu dosyada.
+
+**Kaynak (resmî):** `supabase.com/docs/guides/auth/auth-identity-linking` +
+`.../cli/config`. Doğrulama: `supabase init` ile bu CLI sürümü (2.120.0) için
+otoriter `config.toml` üretildi ve anahtar adları oradan + CLI binary'sinden
+(`strings`) teyit edildi.
+
+**Karar (kanıt issue'da):**
+- **Otomatik bağlama** GoTrue'nun yerleşik davranışı ve **açık kalır**: yalnız
+  *doğrulanmış* e-posta eşleşince mevcut hesaba bağlanır → mükerrer kayıt yok,
+  hesap devralma da yok. İstenen politika bu.
+- **Manuel bağlama** (`linkIdentity()`, farklı adres) → **kapalı**:
+  `enable_manual_linking = false`. Hiçbir route `linkIdentity()` çağırmıyor;
+  saldırı yüzeyi, arkasında özellik yok. Ayrıca `manual_linking_disabled` hata
+  yolu tamamen kapanır.
+- Ek olarak **`enable_anonymous_sign_ins = false`** açıkça yazıldı (varsayılan
+  zaten `false`; anonim oturum hiçbir yerde kullanılmıyor).
+
+**Denetim sonucu (temiz):**
+- 30/30 `public` tablosunda RLS + `revoke`; `SECURITY DEFINER` fonksiyonlarda
+  `search_path` sabit; tüm migration'lar pglast ile ayrıştırıldı (0 hata).
+- Her tablo ve her public RPC'nin pgTAP kapsamı var (tablo→test haritası PR'da).
+- `supabase/` içinde gömülü sır yok (yalnız yorumda `env(SUPABASE_AUTH_CAPTCHA_SECRET)`).
+- `minimum_password_length = 10` ↔ `src/features/identity/schemas.ts` `.min(10)` uyumlu.
+
+**Değerlendirilip ertelenenler:** `[auth].enable_signup` ve
+`enable_refresh_token_rotation` hâlâ varsayılana bırakılmış (ikisi de güvenli
+varsayılan: signup açık, rotasyon açık). #181'in kapsamı yalnız bağlama
+politikası olduğu için ek anahtar eklenmedi; gerekirse ayrı iş.
+
+**Canlıya dokunulmadı.** `config push` canlı projeye yazar; bu PR yalnız repo
+dosyasını taşır — sahip onayıyla `supabase config push` gerekir.

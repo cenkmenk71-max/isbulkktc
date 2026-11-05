@@ -36,6 +36,29 @@ jwt_expiry = 3600
 minimum_password_length = 10
 password_requirements = ""
 
+# Identity-linking policy — the answer to #162's "same e-mail + social sign-in"
+# question, decided explicitly rather than left to GoTrue's default. The two
+# strategies (https://supabase.com/docs/guides/auth/auth-identity-linking):
+#
+#   * Automatic linking is GoTrue's built-in behaviour and is always on: a new
+#     OAuth identity whose provider-verified e-mail matches an existing account
+#     is attached to that account instead of creating a second one. Only
+#     *verified* addresses link, so an unverified attacker cannot claim someone
+#     else's account. This is the policy this project wants — one person, one
+#     account, whichever button they press — and `public.profiles` is 1:1 with
+#     `auth.users` regardless, so no duplicate profile can be produced.
+#
+#   * Manual linking (linkIdentity()) lets a signed-in user attach an identity
+#     with a *different* address. No route in this app calls linkIdentity(), and
+#     every account here is e-mail-scoped, so manual linking is attack surface
+#     with no feature behind it. Keep it off; enabling it would also open the
+#     `manual_linking_disabled` error path the app does not map.
+enable_manual_linking = false
+# Anonymous sign-ins are unused: every write path requires a confirmed session
+# (`auth.uid()`), and no route calls `signInAnonymously`. Leaving this at the
+# default `false` keeps an unauthenticated identity out of `auth.users`.
+enable_anonymous_sign_ins = false
+
 # Cloudflare Turnstile protects the auth forms on the hosted project
 # (security_captcha_enabled = true, provider = turnstile). The local stack and CI
 # keep it off so the E2E suite can drive the forms without solving a challenge.
