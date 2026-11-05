@@ -14,7 +14,7 @@ begin;
 
 delete from public.anon_write_throttle;
 
-select plan(14);
+select plan(18);
 
 -- ---------------------------------------------------------------------------
 -- Least privilege: the ledger and the helper are invisible to clients.
@@ -190,6 +190,71 @@ select is(
   ),
   1,
   'the leftmost forwarded address is the bucket key, not the appended hop'
+);
+
+-- ---------------------------------------------------------------------------
+-- App-forwarded address: the server action sets `x-client-ip` because
+-- supabase-js sends no IP header of its own, so without it every app submission
+-- shared one `unknown` bucket (issue #206). It must key the bucket, and the
+-- edge headers must still win when the edge itself wrote one.
+-- ---------------------------------------------------------------------------
+
+set local "request.headers" = '{"x-client-ip":"203.0.113.7"}';
+set local role anon;
+
+select lives_ok(
+  $$select public.submit_feedback(
+      'Visitor', 'client-ip@example.test', 'general', 5,
+      'A feedback message long enough to pass validation.', 'tr'
+    )$$,
+  'a submission carrying the app-forwarded address is accepted'
+);
+
+reset role;
+
+select is(
+  (
+    select count(*)::integer
+    from public.anon_write_throttle
+    where scope = 'ip'
+      and subject_hash =
+        pg_catalog.encode(
+          pg_catalog.sha256(pg_catalog.convert_to('203.0.113.7', 'UTF8')),
+          'hex'
+        )
+  ),
+  1,
+  'the app-forwarded x-client-ip keys its own bucket, not the shared unknown one'
+);
+
+-- The edge header is written by the platform and cannot be forged, so it must
+-- outrank the app-forwarded value when both are present.
+set local "request.headers" = '{"cf-connecting-ip":"198.51.100.9","x-client-ip":"203.0.113.7"}';
+set local role anon;
+
+select lives_ok(
+  $$select public.submit_feedback(
+      'Visitor', 'edge-wins@example.test', 'general', 5,
+      'A feedback message long enough to pass validation.', 'tr'
+    )$$,
+  'a submission carrying both an edge and an app address is accepted'
+);
+
+reset role;
+
+select is(
+  (
+    select count(*)::integer
+    from public.anon_write_throttle
+    where scope = 'ip'
+      and subject_hash =
+        pg_catalog.encode(
+          pg_catalog.sha256(pg_catalog.convert_to('198.51.100.9', 'UTF8')),
+          'hex'
+        )
+  ),
+  1,
+  'the edge header outranks the app-forwarded x-client-ip'
 );
 
 -- ---------------------------------------------------------------------------

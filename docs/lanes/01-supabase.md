@@ -137,3 +137,51 @@ politikası olduğu için ek anahtar eklenmedi; gerekirse ayrı iş.
 
 **Canlıya dokunulmadı.** `config push` canlı projeye yazar; bu PR yalnız repo
 dosyasını taşır — sahip onayıyla `supabase config push` gerekir.
+
+## Çalışma günlüğü — 4. tur (2026-11-06)
+
+Bana atanmış issue: **#206** (`lane:supabase` + `lane:urun`, LANE-GÜVENLİK'in
+devri) — DB anon-write throttle'ının **IP boyutu app yolunda tek kovaya
+düşüyor**.
+
+**Kanıt (doğrulandı):** `supabase-js@2.118.0` ile `client.rpc("submit_feedback")`
+isteğinin başlıkları ölçüldü → yalnız `apikey, authorization, content-profile,
+content-type, x-client-info`. **IP benzeri başlık yok.** Action `clientIp()`
+değerini RPC'ye geçirmiyor (`src/features/feedback/actions.ts:53`,
+`src/features/sales/actions.ts:54`). Yani migration'ın IP çıkarımı app için her
+zaman `'unknown'`a düşer → `scope='ip'` kovası site geneli tek satır olur → 10
+dk'da 5 gönderimden sonra 6. meşru gönderim `54000` alır (yanlış-pozitif).
+
+**Düzeltme — tek idempotent migration**
+`20261106100000_v4_anon_write_throttle_client_ip.sql`:
+- `submit_feedback` / `submit_sales_lead` IP çıkarımına **`x-client-ip`** eklendi
+  (edge başlıklarından sonra, `x-forwarded-for`'dan önce). `create or replace` —
+  **imzalar değişmedi**, bu yüzden `function_privileges` ratchet'i ve
+  LANE-GÜVENLİK'in imza-tabanlı `tests/security/anonymous-*.test.ts` dosyaları
+  yeşil kalır.
+- **Neden imza değişmedi:** #206 literal olarak `_client_ip` argümanı öneriyordu;
+  ama `grant execute … to anon` satırına 7. argüman eklenince
+  `anonymous-write-surface.test.ts`'in literal imza regex'i eşleşmez ve
+  `test:security` (CI `static` işinde) kırmızı olur. Başlık yoluyla aynı sonuç
+  imza değişikliği olmadan elde edildi.
+- Ayrıca `x-forwarded-for` çıkarımına da `split_part(…, ',', 1)` tutarlılığı
+  uygulandı (feedback ve sales artık birebir aynı blok).
+
+**QA (davranış deltası):** çıkarım mantığı öncesi/sonrası ile replike edildi:
+- app yolu + `x-client-ip` → **`unknown` → `203.0.113.7`** (düzelme).
+- doğrudan çağıran (edge `cf-connecting-ip`) → değişmedi.
+- edge + app başlığı birlikte → edge kazanır (değişmedi).
+- yalnız `x-forwarded-for` → ilk hop (değişmedi). **Regresyon yok.**
+
+**pgTAP:** `anon_write_throttle.test.sql` 14 → **18 assertion** (`x-client-ip`
+kova anahtarı + edge'in üstünlüğü). Seed'den bağımsız.
+
+**Denetim (temiz):** 30/30 `public` tablo RLS + `revoke`; 57 definer fonksiyonun
+tamamı `search_path` sabit; tüm migration'lar pglast ile ayrıştırıldı (0 hata).
+
+**Devir (LANE-URUN, #206'nın kalanı):** action'ın `x-client-ip` başlığını
+göndermesi gerekir — `createSupabaseServerClient` factory'si (`src/server/db/**`,
+URUN'un dosyası) `global.headers` ya da per-request `headers` ile. DB tarafı
+hazır; sözleşme `x-client-ip`. Kanıt issue'ya yorum olarak bırakıldı.
+
+**Canlıya dokunulmadı.** Migration canlıya uygulanmadı — sahip onayıyla `db push`.
