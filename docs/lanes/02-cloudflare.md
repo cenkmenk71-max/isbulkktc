@@ -147,3 +147,13 @@ Aynı isteği **edge (`isbulkktc.com`)** ve **origin (`isbulkktc-amber.vercel.ap
 Detay: `docs/cloudflare.md` → "Edge vs origin başlık karşılaştırması". Panel
 değişikliği → sahibin onayında; kod değişmez. CSP/diğer güvenlik başlıkları
 edge'de **birebir** korunuyor.
+
+### Edge mikro-denetim tur 10 — HTTP semantiği / cache-key / kaçakçılık (2026-11-05)
+
+Brief 3/4/5 + AUDIT sınır-girdi boyutları derinleştirildi; **yeni açık yok**.
+Cache-key doğru (304 koşullu, 206 range, HEAD, sorgu-dizesi ve `Accept-Encoding`
+ayrımı; RSC kişisel yanıtlar `DYNAMIC`+`private, no-store`). Özel rotalar **tüm
+metodlarda** 307 `/login`; cacheable statiklere yazma 405. Sahte
+`X-Forwarded-*`/`Forwarded` canonical'ı değiştirmiyor; absolute-form 403, `%00`
+400, CRLF yansımıyor. `sqlmap` 403, diğer botlar 200. Önceki bulgular (H-01, H-02,
+R-01, G-01) hâlâ açık. Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 10".

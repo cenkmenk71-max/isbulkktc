@@ -628,3 +628,67 @@ bırakılıp `robots.txt` değişiminde purge planı yazılır. **Kod değişmez
   (Browser Cache TTL) panel durumu okunamadı; ölçüm edge↔origin diff ile.
 - **WAF/cache regresyon:** 5/5 saldırı → 403, meşru → 200; dinamik HTML `DYNAMIC`
   + `private, no-store` — **drift yok**.
+
+---
+
+## Edge mikro-denetim tur 10 — HTTP semantiği / cache-key / istek kaçakçılığı (2026-11-05)
+
+Yeni atanmış `agent:infra` issue'ı yok (#218 LANE-INFRA otomasyonu, #209 env/secret
+→ insan). Brief 3 (cache), 4 (WAF), 5 (bot) + AUDIT sınır-girdi/hata-yolu
+boyutları daha derin tarandı. **Yeni açık yok; önceki bulgular (H-01, H-02, R-01,
+G-01) hâlâ açık.**
+
+### Ölçüm
+
+| # | Boyut | Test | Gözlenen | Durum |
+|---|---|---|---|---|
+| U-01 | Cache | Koşullu istek (`If-None-Match`, `If-Modified-Since`) | `/images/*`, `/sitemap.xml`, `/robots.txt` → **304** | ✔ |
+| U-02 | Cache | `Range: bytes=0-99` | **206** + `content-range` + `accept-ranges: bytes` | ✔ |
+| U-03 | Cache | `HEAD` | 200, `content-length` doğru | ✔ |
+| U-04 | Cache-key | Statik varlıkta sorgu dizesi (`?v=1`, `?x=abc`) | her varyant **ayrı** girdi (`MISS`) | ✔ |
+| U-05 | Cache-key | `Accept-Encoding` (`gzip`/`br`/`*`/`gzip;q=0`/`identity;q=0`) | `Vary: accept-encoding`; doğru kodlama | ✔ |
+| U-06 | Cache | RSC/prefetch (`?_rsc=`, `RSC: 1`, `Next-Router-Prefetch: 1`) | **DYNAMIC** + `private, no-store` (kişisel veri cache'lenmiyor) | ✔ |
+| U-07 | Cache | Cacheable yolda `Set-Cookie` var mı | yalnız `NEXT_LOCALE`; cacheable statiklerde yok | ✔ |
+| U-08 | Yetki | Özel rotalar **tüm metodlarda** | `PUT/POST/DELETE /profile/dashboard` → **307 /login** (içerik yok) | ✔ |
+| U-09 | WAF | Kodlanmış yol kaçışları (`/.%2eenv`, `/%2e%65nv`, `/.env..;/`, `/.env%00`) | 403 (veya güvenli 404/400) | ✔ |
+| U-10 | Metod | `X-HTTP-Method-Override`, `OPTIONS`, `PUT/DELETE/PATCH /` | Next.js sayfa rotası her metoda 200 döner (normal; sayfa içeriği, mutasyon yok) | ✔ bilgi |
+| U-11 | Güvenlik | Sahte proxy başlıkları (`X-Forwarded-Proto/Host`, `Forwarded`) | canonical **değişmiyor** (`https://isbulkktc.com`), redirect göreli | ✔ |
+| U-12 | Güvenlik | İstek kaçakçılığı göstergeleri (CL+TE, TE:chunked, çift `Host`, absolute-form) | absolute-form → **403**; diğerleri Next tarafından normal işlenir | ✔ |
+| U-13 | Sınır girdi | `/%00` / `%0a%0d` yol ve sorgu | `%00` → **400**; CRLF **yansımıyor**, canonical `/jobs` | ✔ |
+| U-14 | Cache | Cacheable statik yola `PUT/POST/DELETE` | **405** `DYNAMIC` (zehirleme yok) | ✔ |
+| U-15 | Analitik | CF Web Analytics beacon (`cloudflareinsights`) | **yok** | ℹ️ bilgi |
+| U-16 | Güvenlik | `security.txt` (RFC 9116) | geçerli: Contact/Expires(2027-09-01)/Canonical/Preferred-Languages | ✔ |
+| U-17 | TLS | OCSP stapling | `no response sent` (OCSP düşürülüyor; beklenen) | ℹ️ |
+| U-18 | Bilgi | `/cdn-cgi/trace` | **kendi** bağlantı bilgini yansıtır (CF standardı, sızıntı değil) | ℹ️ |
+| U-19 | Bot | UA testleri (Googlebot/bingbot/curl/HeadlessChrome/Semrush/sqlmap) | yalnız `sqlmap` → **403**; gerisi 200, `cf-mitigated` yok | ✔ |
+
+### Değerlendirme
+
+- **Cache-key bütünlüğü doğru:** koşullu (304), aralık (206), HEAD, sorgu-dizesi
+  varyantı ve `Accept-Encoding` ayrımı — hepsi beklenen. Kişisel RSC yanıtları
+  `DYNAMIC` + `private, no-store` ile korunuyor (cache-deception'a kapalı).
+- **Yöntemler:** Next.js sayfa rotaları (`/`, `/jobs`) her metoda sayfa döner; bu
+  **mutasyon yapmaz** (form action'ları ayrı server action). Özel rotalar tüm
+  metodlarda **307 /login** → içerik sızmıyor. Cacheable statiklere yazma → **405**.
+- **Sahte başlıklar etkisiz:** `X-Forwarded-*`/`Forwarded` canonical veya redirect'i
+  değiştirmiyor (trust edilmiyor).
+- **Kaçakçılık/CRLF:** absolute-form reddediliyor (403), `%00` → 400, CRLF yol/sorgu
+  **yansımıyor**.
+
+### Önceki bulgular — hâlâ açık (drift yok)
+
+| Bulgu | Durum (tur 10) |
+|---|---|
+| **H-01** CF HSTS `max-age` eziyor | edge `31536000` vs origin `63072000` — **açık** |
+| **H-02** CF Browser Cache TTL yükseltiyor | `/robots.txt` edge `2628000` vs origin `0` — **açık** |
+| **R-01** trailing-dot apex 404 | `https://isbulkktc.com./` → **404** — **açık** (#261) |
+| **G-01** CF Email Obfuscation | 1× `email-decode` — **açık** |
+| DMARC `p=quarantine` | hâlâ `p=none` — onayda (#170) |
+| DKIM 1024-bit | hâlâ 1024 — onayda (#227) |
+| HSTS preload | `pending` |
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` yok): Edge Certificates / Caching / Bot Fight Mode
+  panel durumu okunamadı; ölçüm canlı HTTP ile.
+- **IPv6:** sandbox'ta v6 çözümleyici yok.
