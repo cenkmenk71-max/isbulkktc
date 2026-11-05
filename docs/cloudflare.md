@@ -337,3 +337,60 @@ istenmezse kabul edilebilir — o zaman yalnız tutarsızlık raporlanır.
   `401 {"message":"JWT could not be decoded"}`; token 36 karakter, `sbp_` öneki yok ve
   `RESEND_API_KEY` ile **birebir aynı**. Ama sahipliği **env/secret → insan**; bu lane'in
   dosyası değil, bu yüzden handoff issue açılmadı (zaten açık: #209).
+
+---
+
+## DKIM sahiplik ayrımı — issue #227 (2026-11-05)
+
+#195 iki parçaya ayrıldı; **LANE-CLOUDFLARE'e düşen** parça **DKIM 1024→2048
+rotasyonu** (panel + yeni DNS TXT). #227'nin "bu sandbox'ta `dig`/DNS erişimi yok"
+notu bizim için geçerli değil: DNS-over-HTTPS ile ölçüm yapabiliyoruz.
+
+### Ölçüm (canlı DoH, 2026-11-05)
+
+| # | Kayıt | Gözlenen | Değerlendirme |
+|---|---|---|---|
+| K-01 | `resend._domainkey` DKIM | `openssl pkey -pubin` → **`Public-Key: (1024 bit)`** | 🔴 zayıf — rotasyon onay bekliyor |
+| K-02 | DKIM selector | **yalnız** `resend` (11 selector tarandı) | ℹ️ tek selector; rotasyonda yeni TXT **aynı** `resend._domainkey` adına yayınlanır |
+| K-03 | Kök SPF | `v=spf1 include:_spf.mx.cloudflare.net ~all` | ✔ CF Email Routing |
+| K-04 | Resend SPF (return-path) | `send.isbulkktc.com TXT "v=spf1 include:amazonses.com ~all"` | ✔ SES |
+| K-05 | Resend return-path MX | `send.isbulkktc.com MX 10 feedback-smtp.eu-west-1.amazonses.com` | ✔ |
+| K-06 | DMARC | `v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; fo=1` | 🟠 `ruf`/alignment yok |
+| K-07 | MTA-STS / TLS-RPT / BIMI | `_mta-sts` / `_smtp._tls` / `default._bimi` **yok** | 🟡 opsiyonel |
+| K-08 | CAA | 5 CA + `issuewild` | ✔ |
+
+### LANE-CLOUDFLARE aksiyonu: DKIM rotasyonu (onay bekliyor)
+
+`resend._domainkey` **1024-bit** — Resend paneli → domain → DKIM anahtarını yenile
+(2048-bit) → panelin verdiği yeni `resend._domainkey` **TXT**'ini Cloudflare DNS'e
+yayınla. Aynı ad olduğundan (K-02) tek kayıt güncellenir. **DNS yazma → sahibin
+onayı gerekli; uygulanmadı.**
+
+Resend resmî dokümanı rotasyon prosedürünü panelde tanımlar; bu lane repo dosyası
+tutmaz, yalnız **yayınlanacak kaydı ve doğrulamayı** belgeler. Doğrulama:
+`dig +short TXT resend._domainkey.isbulkktc.com` → yeni anahtar;
+`openssl pkey -pubin` → **2048 bit**; sonra bir Resend test postasında
+`dkim=pass header.d=isbulkktc.com`.
+
+### Repo dışı / başka lane
+
+- **`[auth.smtp]` (K-09):** `supabase/config.toml`'da SMTP bloğu **yok**
+  (`grep -niE 'smtp' supabase/config.toml` → boş; yalnız `[auth.email]` +
+  `[auth.email.template.*]` var). Sahibi **LANE-SUPABASE** (`supabase/**`).
+  Bu doğrulama **repo okumasıyla** yapıldı, yazma yok. (#227 parça 1)
+- **`RESEND_API_KEY` geçersiz (#186):** panel doğrulaması bu anahtarla yapılamıyor;
+  sahibi **insan** (env).
+
+### Bakılmayan
+
+- **Resend paneli:** `RESEND_API_KEY` bu sandbox'ta geçersiz → "domain verified"
+  durumu ve rotasyon UI'ı okunamadı; ölçüm yayınlanmış DNS ile.
+- **`CF_API_TOKEN`:** yok → DNS kaydını ben yayınlayamam; rotasyon sonrası TXT'i
+  sahip yayınlar, ben yalnız doğrularım.
+
+### Bu turda ayrıca taranan (temiz)
+
+CORS (preflight + simple GET, `Origin: https://evil.example`) → hiçbir `/api/*`
+uç noktası yansıtmıyor; yalnız `/api/build-info` statik `ACAO: *` (sır yok).
+Set-Cookie bayrakları → yalnız `NEXT_LOCALE=…; Path=/; SameSite=lax` (tercih
+çerezi, hassas veri yok). Yani edge/CORS/çerez eksenlerinde bulgu yok.

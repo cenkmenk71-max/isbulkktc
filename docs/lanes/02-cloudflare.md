@@ -86,3 +86,13 @@ CF **Email Address Obfuscation** açık — footer `mailto:` linki
 tutarsızlık; CSP aynı-origin olduğu için kırılmıyor). Öneri: Scrape Shield →
 Email Obfuscation **OFF** (onay bekliyor). Detay: `docs/cloudflare.md` → "Uç/edge
 güvenlik mikro-denetimi".
+
+### DKIM sahiplik ayrımı (#227) — 2026-11-05
+
+#195'in LANE-CLOUDFLARE'e düşen parçası **DKIM 1024→2048 rotasyonu**. Canlı DoH
+ölçümü doğruladı: `resend._domainkey` **1024-bit** (tek selector), kök SPF/SES
+return-path/DMARC/CAA tam; MTA-STS/TLS-RPT/BIMI yok. **Panel + DNS yazma →
+sahibin onayı** (uygulanmadı). `[auth.smtp]` eksikliği `supabase/config.toml`'da
+= **LANE-SUPABASE** (repo okumasıyla doğrulandı, yazılmadı). Ayrıca CORS (preflight
++ simple GET) ve Set-Cookie bayrakları tarandı — temiz. Detay: `docs/cloudflare.md`
+→ "DKIM sahiplik ayrımı".
