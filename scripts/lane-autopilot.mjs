@@ -32,11 +32,18 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { kickoff } from './lane-kickoff.mjs';
+import {
+  hasLabelledWork,
+  isCapacityError,
+  nextConversationAction,
+} from './lane-autopilot-core.mjs';
 
 const API = 'https://app.all-hands.dev/api/v1';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, '..');
 const REGISTRY = JSON.parse(readFileSync(join(HERE, 'lanes.json'), 'utf8'));
+// The state file is gitignored. The autopilot workflow caches this exact path
+// between scheduled runs so the attempt counters survive on a fresh runner.
 const STATE_FILE = join(REPO_ROOT, '.lane-state.json');
 
 const { repo: REPO, provider: PROVIDER, lanes: LANES } = REGISTRY;
@@ -46,6 +53,12 @@ const SANDBOX_BUDGET = REGISTRY.sandboxBudget ?? 6;
 // A conversation re-sends its whole transcript every turn, so reuse is a
 // context cost, not a saving — see issue #218.
 const MAX_REUSES = REGISTRY.maxReusesPerConversation ?? 2;
+// Whether a lane must have a labelled issue to be started. The kickoff prompt
+// also lets a lane pick its own bounded task from its brief, so this is a
+// deliberate policy switch: on, the autopilot only starts lanes with a labelled
+// issue (a lane with nothing to do is not woken to discover that); off, it
+// starts every idle lane as before. `docs/lanes/POLICY.md` argues for on.
+const REQUIRE_LABELLED_WORK = REGISTRY.requireLabelledWork ?? false;
 
 const key = process.env.OPENHANDS_API_KEY;
 const ghToken = process.env.GITHUB_PERSONAL_ACCESS_TOKEN ?? process.env.GH_TOKEN;
@@ -146,6 +159,27 @@ function handoffIssues() {
     'number,title,labels',
     '--limit',
     '50',
+  ]);
+  return JSON.parse(raw);
+}
+
+/**
+ * Every open issue, so a lane is only started when one names it.
+ *
+ * Fetched once and reused for all lanes: the per-lane decision needs the whole
+ * set (an issue labelled `lane:qa` must not also start `infra`, which shares the
+ * broad `agent:test` label). A single list keeps the pass to one `gh` call.
+ */
+function openIssues() {
+  const raw = gh([
+    'issue',
+    'list',
+    '--state',
+    'open',
+    '--json',
+    'number,title,labels',
+    '--limit',
+    '100',
   ]);
   return JSON.parse(raw);
 }
@@ -311,6 +345,41 @@ async function spawnLane(name, context) {
 }
 
 /**
+ * Start a fresh conversation on a sandbox that already exists.
+ *
+ * The daily quota counts sandbox *creation*, so a lane with a running sandbox
+ * can keep working without spending quota. Reusing that sandbox with a *new*
+ * conversation (rather than appending to the old transcript) keeps the context
+ * bounded: every task appended to one conversation makes the next turn pay for
+ * the whole history again, which is how a single lane reached 100M+ prompt
+ * tokens. A fresh transcript costs no sandbox; the sandbox is shared, only the
+ * history is new.
+ *
+ * Starting a conversation is asynchronous (the POST returns a start-task, not a
+ * conversation), so the caller records the sandbox id and a task count, not the
+ * returned id. Returns true when the API accepted the request, false when it
+ * refused, so the caller can fall back to appending.
+ */
+async function startConversationOnSandbox(sandboxId, name, context) {
+  const { ok } = await api('/app-conversations', {
+    method: 'POST',
+    body: JSON.stringify({
+      sandbox_id: sandboxId,
+      selected_repository: REPO,
+      selected_branch: 'main',
+      git_provider: PROVIDER,
+      title: `LANE-${name}`,
+      initial_message: {
+        role: 'user',
+        content: [{ type: 'text', text: laneKickoff(name, context) }],
+        run: true,
+      },
+    }),
+  });
+  return ok;
+}
+
+/**
  * Send a new task to an existing conversation's sandbox.
  *
  * The daily quota counts sandbox *creation*, so once it is exhausted no new
@@ -345,20 +414,6 @@ async function confirm(taskId) {
   const task = tasks.find((t) => t.id === taskId);
   if (!task) return { status: 'UNKNOWN' };
   return { status: task.status, detail: task.detail };
-}
-
-/**
- * A quota rejection is not the lane's fault, so it must not spend an attempt.
- * Counting it would exhaust a lane that never ran once and hand a healthy task
- * to a human. Detected by the message the backend returns.
- */
-function isCapacityError(detail) {
-  const text = String(detail ?? '').toLowerCase();
-  return (
-    text.includes('sandbox limit') ||
-    text.includes('quota') ||
-    text.includes('capacity')
-  );
 }
 
 /**
@@ -418,6 +473,13 @@ async function decide(name, ctx) {
       reason: `${state.attempts} attempts used; needs a human`,
     };
   }
+  // A handoff names the work. Without one, only start the lane if some open
+  // issue names it — a lane with nothing to do would otherwise burn a full
+  // conversation before discovering that (docs/lanes/POLICY.md: "a lane is only
+  // started when it has concrete, bounded work").
+  if (REQUIRE_LABELLED_WORK && !handoff && !hasLabelledWork(lane, ctx.laneIssues)) {
+    return { action: 'idle', reason: 'no labelled issue to work' };
+  }
   return {
     action: 'spawn',
     reason: handoff
@@ -425,7 +487,7 @@ async function decide(name, ctx) {
       : branchExists
         ? 'stale branch, restarting'
         : state.attempts === 0
-          ? 'no work yet'
+          ? 'labelled work'
           : `retry ${state.attempts + 1}/${MAX_ATTEMPTS}`,
     context: { previousError: state.lastError },
   };
@@ -454,11 +516,12 @@ async function main() {
     process.exit(1);
   }
 
-  const [prs, blocked, handoffs, tasks, sandboxes, idle, paused] =
+  const [prs, blocked, handoffs, issues, tasks, sandboxes, idle, paused] =
     await Promise.all([
       Promise.resolve(openPullRequests()),
       Promise.resolve(blockedIssues()),
       Promise.resolve(handoffIssues()),
+      Promise.resolve(openIssues()),
       startTasks(),
       runningSandboxes(),
       idleConversations(),
@@ -488,7 +551,7 @@ async function main() {
     ...busyConversations,
   ]);
 
-  const ctx = { prs, blocked, handoffs, branches, state, working };
+  const ctx = { prs, blocked, handoffs, laneIssues: issues, branches, state, working };
   const decisions = [];
   let running = sandboxes.length;
 
@@ -609,7 +672,8 @@ async function main() {
       // conversation so the context stays small. Unbounded reuse is what pushed
       // one lane past 100M prompt tokens (issue #218).
       const reuses = entry.reuses ?? 0;
-      const reuseAllowed = reuses < MAX_REUSES;
+      const reuseAllowed =
+        nextConversationAction({ reuses, maxReuses: MAX_REUSES }) === 'append';
 
       if (reusable && reuseAllowed) {
         await sendToExisting(reusable.id, d.name, d.context);
@@ -626,8 +690,31 @@ async function main() {
         continue;
       }
       if (reusable && !reuseAllowed) {
-        console.log(
-          `  ${d.name}: context budget spent (${reuses} reuses), starting a fresh conversation`,
+        // Start a fresh conversation on the *same* sandbox instead of falling
+        // through to a new one: the daily quota counts sandbox creation, so a
+        // new sandbox here would spend quota the reuse was meant to save. The
+        // counter resets, otherwise every later pass would take the "budget
+        // spent" path and leak a sandbox each time.
+        const started = await startConversationOnSandbox(
+          reusable.sandbox_id,
+          d.name,
+          d.context,
+        );
+        if (started) {
+          entry.attempts = (entry.attempts ?? 0) + 1;
+          entry.reuses = 1;
+          entry.lastConversationId = reusable.id;
+          entry.lastStatus = 'REFRESHED';
+          entry.lastError = null;
+          entry.updatedAt = new Date().toISOString();
+          state[d.name] = entry;
+          console.log(
+            `  ${d.name}: context budget spent (${reuses} reuses), fresh conversation on the reused sandbox (attempt ${entry.attempts})`,
+          );
+          continue;
+        }
+        console.error(
+          `  ${d.name}: could not start a fresh conversation on the sandbox, falling back to a new one`,
         );
       }
 

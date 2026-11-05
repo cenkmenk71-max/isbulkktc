@@ -131,9 +131,30 @@ function openPullRequests() {
   return JSON.parse(raw);
 }
 
-function laneFromBranch(branch) {
-  const match = branch.match(/^lane\/([a-z0-9-]+)/);
+/**
+ * Map a branch name to the lane it belongs to.
+ *
+ * A lane branch is `lane/<name>`, but a lane may open more than one branch for
+ * distinct work: `lane/qa-visual-baselines` still belongs to LANE-QA. Taking the
+ * whole suffix as the lane name folded it to `LANE-QA-VISUAL-BASELINES`, which
+ * matches no lane, so every file in that PR was reported as "does not own it".
+ * Match the longest known lane name that the suffix starts with instead.
+ *
+ * @param {string} branch
+ * @param {string[]} knownLanes lane names as they appear in the ownership table
+ *   (e.g. `LANE-QA`), before folding
+ * @returns {string|null} the folded lane name, or null for a non-lane branch
+ */
+export function laneFromBranch(branch, knownLanes = []) {
+  const match = branch.match(/^lane\/(.+)$/);
   if (!match) return null;
+  const suffix = foldName(match[1]).replace(/-/g, '');
+  const candidates = knownLanes
+    .map((name) => ({ name, key: foldName(name).replace(/^lane-/, '').replace(/-/g, '') }))
+    .filter((candidate) => candidate.key.length > 0 && suffix.startsWith(candidate.key))
+    .sort((a, b) => b.key.length - a.key.length);
+  if (candidates.length > 0) return foldName(candidates[0].name);
+  // Unknown lane: fall back to the raw suffix so the report still names it.
   return foldName(`LANE-${match[1]}`);
 }
 
@@ -156,7 +177,7 @@ function main() {
   const problems = [];
 
   for (const pr of prs) {
-    const lane = laneFromBranch(pr.headRefName);
+    const lane = laneFromBranch(pr.headRefName, lanes.map((l) => l.lane));
     for (const file of pr.files ?? []) {
       const path = file.path ?? file;
       const owners = ownersOf(path, lanes);
@@ -193,4 +214,7 @@ function main() {
   process.exit(1);
 }
 
-main();
+// Only run when invoked directly, so `laneFromBranch` stays importable in tests.
+if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}

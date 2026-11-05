@@ -193,3 +193,65 @@ koşunca yanlış pozitif verir. Bir görsel kapıyı CI'a bağlamadan önce bas
 doğrula; değilse önce baseline'ı runner'da üret.
 
 
+
+### Tur 3 — token israfı denetimi (#218)
+
+**Kapsam.** `agent:infra` etiketli #218 (520M prompt token) alındı; kanıt API
+şemasıyla (`https://app.all-hands.dev/openapi.json`) ve kodla doğrulandı. Dört
+kök nedenden ikisi platform ayarı (operatör), ikisi repo kodunda (bu lane).
+
+**Bulgular (tablo PR gövdesinde).**
+
+| # | Bulgu | Durum |
+|---|---|---|
+| 1 | `.lane-state.json` gitignored **ve** `lane-autopilot.yml`'de hiçbir kalıcılık adımı yok → her 30 dk'lık koşuda taze runner'da state sıfırlanıyor, `maxAttemptsPerLane` (sonsuz-retry freni) **hiç ateşlenemiyor** | düzeltildi (cache) |
+| 2 | Konuşma yeniden kullanımı tükenince **yeni sandbox** açılıyordu → kota (sandbox yaratma) harcanıyordu; üstelik sayaç sıfırlanmadığı için sonraki her geçişte yeniden | düzeltildi (aynı sandbox'ta taze konuşma + sayaç sıfırlama) |
+| 3 | İşi olmayan lane'e yine kickoff gidiyordu ("no work yet") → boşuna tam konuşma yakıyor | düzeltildi (`hasLabelledWork` kapısı, `requireLabelledWork`) |
+| 4 | Condenser pratikte kapalı (`max_size` 1e18) + `max_budget_per_task` null | operatör script'i + doküman (org-geneli, canlıya yazılmadı) |
+
+**Not:** #2 main'de kısmen vardı (`MAX_REUSES` / `maxReusesPerConversation`, #192
+ile geldi) ama tükenince **yeni sandbox**'a düşüyor ve `reuses` sayacını
+sıfırlamıyordu — ikisi de kota sızıntısı. Bu tur onu aynı sandbox'ta taze
+konuşmaya çevirdi.
+
+**Platform kanıtı.** `GET /api/organizations/app` → `max_budget_per_task: null`,
+condenser ayarı yok. `POST /app-conversations` şeması `max_iterations`/`condenser`
+**kabul etmiyor** (yalnız `sandbox_id`, `conversation_id`, `initial_message`, …).
+Tek kol: `POST /api/organizations/app` (`OrgAppSettingsUpdate` →
+`max_budget_per_task`, `agent_settings_diff`). Bu yüzden #4 repo kodundan
+çözülemez; `scripts/lane-budget.mjs` (varsayılan salt-okuma, `--apply` ile yazar)
+ve `bun run lane:budget` eklendi.
+
+**Mekanizma.** `POST /app-conversations` `sandbox_id` kabul ettiği için aynı
+sandbox üzerinde **taze konuşma** açılabiliyor: kota maliyeti yok (sandbox
+yaratılmıyor), geçmiş sıfır. Konuşma açma asenkron (POST bir start-task döner),
+bu yüzden state **sandbox id + görev sayısı** tutar, dönen id'yi değil.
+
+**Doğrulama.** `scripts/lane-autopilot-core.test.mjs` **12/12** (yeni),
+`scripts/lane-collisions.test.mjs` **6/6** (yeni), `test:unit` **462/462**,
+`lint`/`typecheck`/`check:frontend-source` temiz, `lane-autopilot.mjs --dry-run`
+karar tablosunu hatasız basıyor. Canlıya dokunulmadı (org ayarı yalnız `--apply`
++ insan onayıyla yazılır).
+
+**Sahibin yapması gereken (operatör).** `OPENHANDS_API_KEY=… bun run lane:budget
+-- --apply` ile condenser `max_size` ve `max_budget_per_task` canlıya uygulanır;
+bu org-geneli olduğu için bilinçli bir karar.
+
+### Tur 3 — ek bulgu: çakışma dedektörü yanlış pozitif üretiyordu
+
+**Bulgu.** `scripts/lane-collisions.mjs` içindeki `laneFromBranch` branch adının
+**tüm** sonekini lane adı sanıyordu: `lane/qa-visual-baselines` →
+`LANE-QA-VISUAL-BASELINES` (hiçbir lane'e uymaz). Sonuç: bir lane ek iş için
+ikinci bir branch açtığında (ör. QA'nın #228'i) o PR'ın **her dosyası** "does not
+own it" diye raporlanıyordu — dedektörün tam da engellemek istediği şeyi yanlış
+alarmla gölgeliyordu.
+
+**Düzeltme.** `laneFromBranch` artık bilinen lane adlarından **en uzun öneki**
+eşliyor (`lane/qa-visual-baselines` → `lane-qa`). `main()` çağrısı
+`import.meta.url` ile korundu (test edilebilir), `laneFromBranch` dışa açıldı.
+`scripts/lane-collisions.test.mjs` **6/6** (yeni): düz branch, ek sözcüklü
+branch, Türkçe ad katlama, önek çakışması (LANE-A vs LANE-AUTH), lane olmayan
+branch, bilinmeyen lane.
+
+**Kanıt.** Düzeltme öncesi: 19 yanlış "does not own it" (hepsi #228). Sonrası:
+0 yanlış pozitif.

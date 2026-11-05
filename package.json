@@ -43,6 +43,7 @@
     "seo:submit": "node scripts/submit-indexnow.mjs",
     "vercel:prune": "node scripts/prune-vercel-deployments.mjs",
     "vercel:prune:apply": "node scripts/prune-vercel-deployments.mjs --apply",
+    "lane:budget": "node scripts/lane-budget.mjs",
     "vercel:verify": "node scripts/verify-production-deployment.mjs",
     "auth:verify": "node scripts/verify-auth-config.mjs",
     "auth:set-turnstile-secret": "node scripts/set-turnstile-secret.mjs",

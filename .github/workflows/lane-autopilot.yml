@@ -47,6 +47,20 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      # The autopilot keeps its per-lane attempt counters in `.lane-state.json`,
+      # which `.gitignore` excludes. On a fresh runner that file would start
+      # empty every pass, so `maxAttemptsPerLane` would never fire and a lane
+      # could be re-spawned forever — the exact token leak in issue #218. Cache
+      # it between scheduled runs; the run_id suffix makes each pass save a new
+      # immutable cache that the next pass restores, so the counters accumulate.
+      - name: Restore lane autopilot state
+        uses: actions/cache/restore@v4
+        with:
+          path: .lane-state.json
+          key: lane-state-${{ github.run_id }}
+          restore-keys: |
+            lane-state-
+
       - name: Run one pass
         env:
           # The autopilot reads PRs and issues through gh, and calls the
@@ -64,3 +78,12 @@ jobs:
             args="--dry-run"
           fi
           node scripts/lane-autopilot.mjs $args
+
+      - name: Save lane autopilot state
+        # A dry run (and a pass that started nothing) never writes the file;
+        # `cache/save` errors when its path is absent, so skip it then.
+        if: always() && hashFiles('.lane-state.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .lane-state.json
+          key: lane-state-${{ github.run_id }}

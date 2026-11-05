@@ -172,5 +172,6 @@
       ]
     }
   },
-  "maxReusesPerConversation": 2
+  "maxReusesPerConversation": 2,
+  "requireLabelledWork": true
 }
