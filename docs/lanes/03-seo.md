@@ -862,3 +862,91 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
 - Sahipsiz yollar (`src/server/dal/**`, `src/app/global-error.tsx`,
   `next.config.ts`) için sahiplik hâlâ belirsiz; devretmeden önce
   `docs/lanes/00-orchestration.md` tablosundan doğrula.
+
+---
+
+## Micro-denetim raporu — tur 10 (sayfalanmış liste canonical'ı)
+
+```
+Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
+Değişen dosyalar: src/app/[locale]/(public)/jobs/page.tsx, docs/lanes/03-seo.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
+            test:unit ✅ (504 pass, 8 belgeli todo)  test:security ✅ (47 pass, 2 todo)
+            build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone doğrulaması ✅
+Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
+```
+
+### Denetlenen dosyalar
+
+`git ls-files` ile LANE-SEO sahipliği: **41 dosya** — `src/lib/seo.ts`,
+`src/app/sitemap.ts`, `src/app/robots.ts`, `scripts/submit-indexnow.mjs` ve
+`src/app/[locale]/**` altındaki 37 route/layout. Hepsi tarandı; bakılmayan yok.
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/app/[locale]/(public)/jobs/page.tsx:89-143` | canonical / sayfalama | `?page=2` **kendi içeriğini** gösteriyor (üretimde 1 benzersiz ilan, sayfa 1 ile örtüşme 0), `index, follow` taşıyor, ama `canonical` **sayfa 1'e** (`/jobs`) işaret ediyordu; hreflang/`og:url` de öyle | her sayfa kendi canonical'ı | 21 ilanlı katalogda 2. sayfa indekslenemiyor; Google'ın "ilk sayfayı canonical yapma" kuralı ihlali | **düzeltildi** |
+| 2 | `/jobs`, `/companies`, `/rehber`, `/blog` | JSON-LD mount | Önceki turlarda düzeltildi | — | — | doğrulandı (sağlam) |
+| 3 | `src/messages/*.json` `Legal` | SEO meta | `/privacy`,`/cookies`,`/terms` meta 6 dilde aynı Türkçe | her dil kendi metni | 18 sayfa kopya meta+gövde | devredildi → #141 |
+| 4 | 404 `<html>` | SEO meta | 404'te `lang`/`dir` yok, SSR gövdesi boş | `<html lang dir>` | `fa` RTL sinyali yok | devredildi → #149 |
+| 5 | Bing/Yandex doğrulama | bulunabilirlik | `msvalidate.01`/`yandex-verification` üretimde yok | iki motor doğrulanmalı | indeksleme yavaş | devredildi → #173 |
+
+### Kanıt
+
+- **Bulgu 1 (önce, üretim):**
+  ```
+  GET /jobs        -> canonical https://isbulkktc.com/jobs     (20 ilan)
+  GET /jobs?page=2 -> canonical https://isbulkktc.com/jobs     (1 ilan, örtüşme 0)
+                      robots: (yok → indexable)
+  ```
+  İki URL **farklı ilanlar** listeliyor ve ikisi de indekslenebilir, ama ikisi de
+  aynı canonical'ı ilan ediyor — Google ikincisini kopya sayıp indekslemez.
+  **Google dayanağı** (resmî doküman): *"Give each page a unique URL. For example,
+  include a `?page=n` query parameter, as URLs in a paginated sequence are treated
+  as separate pages by Google. **Don't use the first page of a paginated sequence
+  as the canonical page. Instead, give each page its own canonical URL.**"*
+  (developers.google.com/search/docs/specialty/ecommerce/pagination-and-incremental-page-loading)
+- **Düzeltme:** `pathname` artık sayfa numarasını taşıyor
+  (`/jobs?page=${page}`), böylece canonical + `hreflang` + `og:url` **üçü birlikte**
+  doğru sayfayı gösteriyor. `getLocalizedPageUrl` doğrulandı:
+  `tr → /jobs?page=2`, `en → /en/jobs?page=2`, `de → /de/jobs?page=2`.
+- **Kapsam dışı bırakılanlar (bilinçli):**
+  - `?page=1` canonical'ı `/jobs` kalıyor (ilk sayfanın kendi URL'i kanonik).
+  - Filtreli aramalar (`?district=…`, `?query=…`) `/jobs`'a canonical'lanmaya devam
+    ediyor — onlar sayfa dizisi değil, sorgu varyantı; Google'ın "filtreleri
+    indeksleme" önerisiyle uyumlu ve zaten boşsa `noindex`.
+  - Aralık dışı `?page=N` render yolunda **404** (değişmedi).
+  - Ana sayfa sayfalanmıyor (yalnız `/jobs` sayfalıyor), o yüzden kapsam dışı.
+
+### Doğrulanan ve sağlam bulunanlar
+
+- **JSON-LD:** 186 sayfanın tamamı geçerli JSON-LD (0 parse hatası); dağılım
+  `WebSite`×186, `Organization`×186, `CollectionPage`×96, `BreadcrumbList`×132,
+  `Article`×36, `FAQPage`×12.
+- **Sitemap ↔ sayfa hreflang çapraz kontrolü:** sitemap `<xhtml:link>` ile sayfanın
+  kendi `<link rel=alternate>` seti **birebir aynı** (0 fark, 0 eksik).
+- **hreflang/x-default karşılıklılık:** 186 sayfa → **0 ihlal**; her sayfa kendi
+  diline + `x-default`'a işaret ediyor.
+- **Sitemap:** geçerli XML, 186 `<loc>`, 0 tekrar, `noindex` URL yok, sitemap'teki
+  her kayıt 200.
+- **robots.txt:** `noindex` sayfaları disallow etmiyor; yalnız `/api/` + 6 `/auth/`.
+- **Sayfa hijyeni:** 1 `<h1>`/sayfa, doğru `lang`/`dir` (fa=rtl), canonical,
+  `og:image` 1200×630 (bitmap'ten doğrulandı), `og:image:alt`, `twitter:image:alt`,
+  RSS autodiscovery; `og:title`↔`title`, `og:url`↔`canonical`; rehber/blog
+  `og:type=article`, diğerleri `website`.
+- **Link bütünlüğü:** 415 benzersiz iç hedef → 0 kırık; yetim 0; boş anchor 0.
+- **Kopya meta:** yalnız yasal sayfa aileleri (#141).
+
+### Düzeltilen / devredilen
+
+- **Düzeltildi:** #1 (`/jobs?page=N` canonical'ı).
+- **Devredildi:** #141, #149, #173.
+
+### Sonraki lane için notlar
+
+- `/jobs` H1'i (`JobsPage.title` = "Sıradaki işinizi bulun.") anahtar kelime
+  taşımıyor; `JobsMeta.title` taşıyor ("KKTC Güncel İş İlanları ve Münhaller").
+  H1 metni `src/messages/**` (sahipsiz; #141 URUN'e devretti) → #190 için not.
+- `/jobs?page=N` sayfaları sitemap'e **girmiyor**; Google sayfa dizisini iç
+  bağlantıdan keşfeder ve sayfa 2'ye `/jobs`'tan `href` var (doğrulandı).

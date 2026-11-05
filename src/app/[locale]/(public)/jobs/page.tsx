@@ -87,17 +87,19 @@ export async function generateMetadata({
   if (!locale) notFound();
 
   const t = await getTranslations({ locale, namespace: "JobsMeta" });
-  const metadata = createLocalizedPageMetadata({
-    locale,
-    pathname: "/jobs",
-    title: t("title"),
-    description: t("description"),
-  });
-
   const search = parseJobSearchQuery(query);
   // Unparseable filters render the generic listing under a junk URL — the same
   // dead end as an empty result, so it must not be indexed either.
-  if (!search.success) return noIndexSearchMetadata(metadata);
+  if (!search.success) {
+    return noIndexSearchMetadata(
+      createLocalizedPageMetadata({
+        locale,
+        pathname: "/jobs",
+        title: t("title"),
+        description: t("description"),
+      }),
+    );
+  }
 
   const filters = search.data;
   // A filtered search that matches nothing is a soft 404 if it answers
@@ -112,10 +114,33 @@ export async function generateMetadata({
   );
   if (isFiltered) {
     const results = await searchJobsOnce(filters);
-    if (results.total === 0) return noIndexSearchMetadata(metadata);
+    if (results.total === 0) {
+      return noIndexSearchMetadata(
+        createLocalizedPageMetadata({
+          locale,
+          pathname: "/jobs",
+          title: t("title"),
+          description: t("description"),
+        }),
+      );
+    }
   }
 
-  return metadata;
+  // A page of the unfiltered sequence is its own page, not a duplicate of
+  // `/jobs`. Google treats `?page=n` URLs as separate pages and is explicit that
+  // the first page must not be their canonical, so the pathname carries the
+  // parameter and every signal built from it — canonical, `hreflang` alternates
+  // and `og:url` — points at the same page in each locale. Out-of-range numbers
+  // never reach here: the render path 404s `page > lastPage`. A filtered result
+  // stays on `/jobs` because it is a query variation, not a page of the
+  // sequence, and is `noindex` whenever it renders nothing.
+  const paged = !isFiltered && filters.page > 1;
+  return createLocalizedPageMetadata({
+    locale,
+    pathname: paged ? `/jobs?page=${filters.page}` : "/jobs",
+    title: t("title"),
+    description: t("description"),
+  });
 }
 
 export default async function JobsPage({
