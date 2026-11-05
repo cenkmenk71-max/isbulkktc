@@ -185,3 +185,45 @@ URUN'un dosyası) `global.headers` ya da per-request `headers` ile. DB tarafı
 hazır; sözleşme `x-client-ip`. Kanıt issue'ya yorum olarak bırakıldı.
 
 **Canlıya dokunulmadı.** Migration canlıya uygulanmadı — sahip onayıyla `db push`.
+
+## Çalışma günlüğü — 5. tur (2026-11-06)
+
+**Atanmış issue yok:** `lane:supabase` issue'larının (#206, #181, #162, #139)
+supabase yarıları merge edildi (#216, #197, #169); kalanlar LANE-URUN/LANE-AUTH
+ve sahibin kararı. Bu yüzden brief'teki en yüksek etkili sınırlı işi seçtim:
+**kendi throttle migration'ımı denetlemek** (AUDIT.md: "sahip olduğun alanı
+dosya dosya tara").
+
+**Bulgu (gerçek, kendi dosyamda):**
+`supabase/migrations/20261106000000_v4_anon_write_throttle.sql` başlığı
+"expired row is deleted lazily … table stays bounded" **sözünü veriyor**, ama
+`consume_anon_write_quota` gövdesinde **hiç `delete` yok** — yalnız upsert var.
+Yani her farklı subject (saldırganın adresleri / gönderilen mailler) **kalıcı**
+bir satır bırakır → ledger sınırsız büyür; throttle'ın var oluş sebebi tam da bu
+desen. Ayrıca gönderilen `anon_write_throttle_window_idx` **ölü** (hiçbir sorgu
+`window_started_at`'i filtrelemiyordu). Bu, "yorum kodun söylediğini yapmıyor"
++ "ölü kod" boyutları.
+
+**Düzeltme — tek idempotent migration**
+`20261106110000_v4_anon_write_throttle_cleanup.sql`:
+- `consume_anon_write_quota` artık saymadan **önce** `window_started_at <=
+  now() - interval '1 hour'` olan satırları siler. Eşik, kullanımdaki tüm
+  pencerelerin (iki çağıran da 600 sn) çok üstünde → canlı bir pencere asla
+  geri alınmaz; indeks-destekli, maliyet yalnız soğumuş kümeye orantılı.
+- İmza/`revoke` **değişmedi** (`create or replace`) → ratchet ve imza-tabanlı
+  `tests/security/anonymous-*.test.ts` yeşil kalır.
+
+**QA (davranış deltası, ledger yaşam döngüsü simüle edildi):**
+- 5000 çağrı (1/sn): önce **5000 satır (sınırsız)**, sonra **3600 satır (sınırlı)**.
+- 1000 çağrı + 2 saat boşluk + 1 çağrı: soğumuş 1000 satır geri kazanıldı → 1.
+
+**pgTAP:** `anon_write_throttle.test.sql` 18 → **20 assertion** (soğumuş satır
+geri kazanılır, sıcak satır korunur). Seed'den bağımsız.
+
+**Denetim (temiz):** 30/30 `public` tablo RLS + `revoke`; 57 definer fonksiyonun
+tamamı `search_path` sabit; tüm migration'lar pglast ile ayrıştırıldı (0 hata).
+
+**Not:** `consume_anon_write_quota` throttle'ın kendi yardımcısı; başka lane'in
+dosyasına dokunulmadı. Devir gerekmedi.
+
+**Canlıya dokunulmadı.** Migration canlıya uygulanmadı — sahip onayıyla `db push`.

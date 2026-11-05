@@ -14,7 +14,7 @@ begin;
 
 delete from public.anon_write_throttle;
 
-select plan(18);
+select plan(20);
 
 -- ---------------------------------------------------------------------------
 -- Least privilege: the ledger and the helper are invisible to clients.
@@ -104,6 +104,68 @@ where scope = 'email'
 select lives_ok(
   $$select public.consume_anon_write_quota('email', 'unit@example.test', 5, 600)$$,
   'an elapsed window resets the counter'
+);
+
+-- ---------------------------------------------------------------------------
+-- Bounded growth: the helper must reclaim cold rows (the migration's header
+-- promised opportunistic cleanup that the first version never performed, so the
+-- ledger grew one permanent row per subject).
+-- ---------------------------------------------------------------------------
+
+-- A row whose window went cold more than an hour ago, and one still inside the
+-- hour. Both are seeded directly, since the helper only ever writes `now()`.
+insert into public.anon_write_throttle (scope, subject_hash, window_started_at, hits)
+values
+  (
+    'email',
+    pg_catalog.encode(
+      pg_catalog.sha256(pg_catalog.convert_to('cold@example.test', 'UTF8')),
+      'hex'
+    ),
+    pg_catalog.now() - interval '2 hours',
+    3
+  ),
+  (
+    'email',
+    pg_catalog.encode(
+      pg_catalog.sha256(pg_catalog.convert_to('warm@example.test', 'UTF8')),
+      'hex'
+    ),
+    pg_catalog.now() - interval '10 minutes',
+    2
+  );
+
+-- Any helper call runs the cleanup; the subject here is incidental.
+select public.consume_anon_write_quota('email', 'trigger@example.test', 5, 600);
+
+select is(
+  (
+    select count(*)::integer
+    from public.anon_write_throttle
+    where scope = 'email'
+      and subject_hash =
+        pg_catalog.encode(
+          pg_catalog.sha256(pg_catalog.convert_to('cold@example.test', 'UTF8')),
+          'hex'
+        )
+  ),
+  0,
+  'a row whose window went cold more than an hour ago is reclaimed'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.anon_write_throttle
+    where scope = 'email'
+      and subject_hash =
+        pg_catalog.encode(
+          pg_catalog.sha256(pg_catalog.convert_to('warm@example.test', 'UTF8')),
+          'hex'
+        )
+  ),
+  1,
+  'a row still inside the hour survives the cleanup'
 );
 
 -- ---------------------------------------------------------------------------
