@@ -59,3 +59,63 @@ yere taşı (footer, hukuki sayfa, admin).
 - 6 dil tam ve tutarlı
 - Uzun metin `de`'de taşmıyor, `fa` RTL doğru
 - Her metin kullanıcının eylemini açıklıyor
+
+## Tur 1 — mikro-denetim (2026-11-05)
+
+**PR #267** (merge `dcdbfa3`) + **PR #276**. İki bulgu sınıfı kapatıldı.
+
+### 1. Ölü mesaj anahtarları (#255)
+
+`src/messages/**` içindeki her katalog yaprağı için `src/**`'ta literal veya
+şablon referansı tarandı. **19 anahtarın hiçbir çağıranı yoktu**, altı dilde de:
+
+- `BlogPage`: `sourceSearchLink`, `latestBadge`, `localNewsBadge`,
+  `illustrativeImage`, `emptyBody`, `editorialNoteTitle`, `editorialNoteBody`,
+  `photoLicense`, `sourceLabel`
+- `CompanyDirectory`: `sourceProfileLink`, `sourceListingLink`,
+  `categoryPlaceholder`, `districtDataNote`
+- `CandidateDashboard.sectionsDescription`
+- `CompanyManagement`: `workspace.documentsTitle`, `directoryTargetNone`,
+  `directoryTargetHint`
+- `DistrictPage.countLabel`, `JobTypePage.countLabel`
+- `Guides.allGuides`
+
+`districtDataNote` #220'de kod tarafında kaldırılmıştı; kalan 18'i aynı sınıftan.
+Kaldırıldı (6 dil, 1150 anahtar, parite korundu).
+
+**Yöntem notu (tekrar kullanılabilir).** Geniş "kullanılıyor mu" sezgisi
+yanıltıcı: `copy(\`sectors.${key}.title\`)` gibi şablonlar ve dizi/`map`
+üzerinden dolaylı kullanım sahte pozitif üretir. Güvenilir ölçüt: katalog
+yaprağının **son segmenti** (`leaf`) tüm `src/**` (test hariç) içinde kelime
+sınırıyla geçiyor mu? Sıfır geçen = ölü. Yalnız leaf adı başka bir yerde
+geçiyorsa (örn. `directoryTarget` bir değişken adı) elle doğrula.
+
+### 2. İç sözlük sızıntısı — `CompanyDirectory.sourceNote` (PR #276)
+
+Brief satır 36 "kaynak koordinatları"nı yasaklı iç terim diye sayıyor; ama
+`sourceNote` altı dilde de o cümleyle başlıyordu:
+`"Kapsam kaynak koordinatlarına göre yaklaşık belirlenmiştir; …"`. Ziyaretçi
+kapsamın nasıl hesaplandığını görmemeli. "Koordinat" iç sözlüğü çıkarıldı, iki
+maddi uyarı (resmî sınır değil; listeleme ≠ tescil) korundu.
+
+### Ratchet'ler (`src/i18n/message-catalogs.test.ts`)
+
+1. Legal bloğu dil başına yazılmış mı (yalnız `contactEmail` aynı olabilir).
+2. Legal başlık/bölüm başlıkları çevrilmiş mi.
+3. `RETIRED_KEYS` — emekli anahtar UI'sı olmadan geri gelemez.
+4. `FORBIDDEN_INTERNAL_PHRASES` — yasak iç sözlük tr katalogda görünemez.
+
+### Devir
+
+- **#141** (bayat `supabase/seed-managed-content.sql`): 18 `legal.*` satırının
+  hepsi Türkçe; yönetilen içerik mesajları ezdiği için canlıda her dil tr döner.
+  LANE-SUPABASE seed'i yeniden üretir. Bu lane `supabase/**` sahibi değil.
+
+### Notlar
+
+- `src/messages/**` sahiplik tablosunda LANE-İÇERİK olarak var; `scripts/lanes.json`
+  ile çakışma yok.
+- Yasak-liste testi **yalnız tr** üzerinde koşar (kaynak dil); çeviriler ondan
+  türer. `resumeImport.title` gibi meşru "içe aktar" ifadeleri listeye alınmadı.
+- Lane PR otomasyonu yeşil PR'ı otomatik merge ediyor; PR açıldıktan sonra gelen
+  commit'ler yeni branch + PR ister (bu yüzden #276 ayrı açıldı).
