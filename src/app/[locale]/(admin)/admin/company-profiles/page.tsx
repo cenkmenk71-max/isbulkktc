@@ -90,7 +90,7 @@ export default async function CompanyProfileReviewPage({
                   <>
                     <dt>{copy("website")}</dt>
                     <dd>
-                      <a href={submission.website} rel="noreferrer" target="_blank">
+                      <a href={submission.website} rel="noopener noreferrer" target="_blank">
                         {submission.website}
                       </a>
                     </dd>

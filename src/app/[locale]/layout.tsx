@@ -96,21 +96,11 @@ export async function generateMetadata({
           },
         }
       : {}),
-    // Only the Googlebot directives are declared here. Asserting the generic
-    // `index, follow` in a layout that also wraps the 404 route produced two
-    // conflicting `<meta name="robots">` tags on 404 responses (Next injects
-    // `noindex` for a 404 automatically). Omitting the top-level fields leaves
-    // normal pages on Next's implicit index,follow default and lets the injected
-    // `noindex` stand alone on 404s.
-    robots: {
-      googleBot: {
-        index: true,
-        follow: true,
-        "max-image-preview": "large",
-        "max-snippet": -1,
-        "max-video-preview": -1,
-      },
-    },
+    // No `robots` directive is declared here. The layout also wraps the 404
+    // route, and a layout-level `googlebot: index, follow` sat beside the
+    // `noindex` Next injects for a 404 as a second, contradictory directive.
+    // The Googlebot display hints are declared per page instead — see
+    // `createLocalizedPageMetadata` — so a 404 carries one unambiguous tag.
     openGraph: {
       title: t("title"),
       description: t("description"),

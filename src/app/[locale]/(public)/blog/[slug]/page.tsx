@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { getArticle, getArticleSlugs, getArticles } from "@/content/editorial";
+import { getArticle, getArticles } from "@/content/editorial";
 import { buildGuideStructuredData } from "@/content/ai-visibility/structured-data";
 import { JsonLd } from "@/content/ai-visibility/json-ld";
-import { routing } from "@/i18n/routing";
+import { getLocalePrefix, routing, type AppLocale } from "@/i18n/routing";
 import {
   createLocalizedPageMetadata,
   getLocalizedSlugPathnames,
+  resolveLocalizedSlugPathname,
 } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
 
@@ -17,9 +18,27 @@ type ArticlePageProps = {
 };
 
 export function generateStaticParams() {
+  // Each locale's own slugs; reusing the default locale's set under every prefix
+  // prerenders five URLs that 404.
   return routing.locales.flatMap((locale) =>
-    getArticleSlugs().map((slug) => ({ locale, slug })),
+    getArticles(locale).map((article) => ({ locale, slug: article.slug })),
   );
+}
+
+/**
+ * A slug that belongs to a different locale is a mislabelled link, not a
+ * missing page, so send it to the article it names; a slug no locale knows is a
+ * genuine 404.
+ */
+function siblingRedirect(locale: AppLocale, slug: string): never {
+  const pathname = resolveLocalizedSlugPathname({
+    section: "/blog",
+    locale,
+    slug,
+    siblings: getArticles,
+  });
+  if (!pathname) notFound();
+  redirect(`${getLocalePrefix(locale)}${pathname}`);
 }
 
 export async function generateMetadata({
@@ -32,7 +51,7 @@ export async function generateMetadata({
   if (!locale) notFound();
 
   const article = getArticle(locale, slug);
-  if (!article) notFound();
+  if (!article) siblingRedirect(locale, slug);
 
   return createLocalizedPageMetadata({
     locale,
@@ -59,7 +78,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   if (!locale) notFound();
 
   const article = getArticle(locale, slug);
-  if (!article) notFound();
+  if (!article) siblingRedirect(locale, slug);
 
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "Guides" });

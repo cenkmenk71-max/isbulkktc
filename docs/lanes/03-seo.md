@@ -107,3 +107,93 @@ kendine-canonical doğru.
 - Bu düzeltme yalnızca çeviri slug'ı olan **içerik** ailelerini kapsar; ilçe
   (`/is-ilanlari/*`) ve çalışma türü (`/is-turleri/*`) slug'ları her dilde aynı
   olduğu için zaten doğruydu.
+
+---
+
+## Micro-denetim raporu — #126 (SEO meta + GEO) ve #127 (link bütünlüğü)
+
+```
+Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
+Değişen dosyalar: src/lib/seo.ts,
+                  src/app/[locale]/layout.tsx,
+                  src/app/[locale]/(public)/rehber/[slug]/page.tsx,
+                  src/app/[locale]/(public)/blog/[slug]/page.tsx,
+                  src/app/[locale]/(admin)/admin/packages/page.tsx,
+                  src/app/[locale]/(admin)/admin/company-profiles/page.tsx,
+                  docs/lanes/03-seo.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
+            test:unit ✅ (380/380)  test:security ✅ (17 pass, 4 belgeli todo)
+            build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone doğrulaması ✅
+Canlıya dokundu mu: hayır (yalnızca okuma)
+```
+
+### Denetlenen dosyalar
+
+`git ls-files` ile LANE-SEO sahipliği: **42 dosya** — `src/lib/seo.ts`,
+`src/app/sitemap.ts`, `src/app/robots.ts`, `scripts/submit-indexnow.mjs` ve
+`src/app/[locale]/**` altındaki **37 route/layout** dosyası. Hepsi tarandı.
+Denetlenmeyen: yok.
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/app/[locale]/layout.tsx:105` | SEO meta | 404 yanıtı hem `robots: noindex` (Next enjekte eder) hem `googlebot: index, follow` taşıyordu | 404 tek, çelişkisiz bir yönerge taşımalı | Google en kısıtlayıcıyı uygular ama `googlebot` token'ını tek başına okuyan botlar sayfayı indekslenebilir sanar | düzeltildi |
+| 2 | `src/app/[locale]/(public)/rehber/[slug]/page.tsx` + `blog/[slug]/page.tsx` | link bütünlüğü | Dil değiştirici, çevrilen slug'lı sayfalarda hedef dilin slug'ını değil, geçerli slug'ı kullanıyor → `/en/rehber/kktc-is-bulma-rehberi` **404** | var olan kardeş sayfaya yönlenmeli | her rehber/blog sayfasında 5 dil için kırık bağlantı (kullanıcı + tarayıcı) | düzeltildi (route'ta 307) |
+| 3 | `rehber/[slug]/page.tsx:20`, `blog/[slug]/page.tsx:19` | tutarlılık | `generateStaticParams` her dilde **varsayılan dilin** slug'larını üretiyordu → 6×3 yerine 15'i 404 olan URL ön-render ediliyordu | her dil kendi slug'larını üretmeli | 15 gereksiz/ölü prerender + gerçek sayfalar istek üzerine | düzeltildi |
+| 4 | `(admin)/admin/content/page.tsx` | link bütünlüğü | Yönetim konsolu hiçbir yerden bağlantı almıyor (**yetim sayfa**) | admin konsolları birbirine bağlanmalı | panel erişilemez | düzeltildi (packages konsolundan bağlantı) |
+| 5 | `(admin)/admin/company-profiles/page.tsx:93` | link bütünlüğü | dış bağlantıda `rel="noreferrer"` var, `noopener` yok | `noopener noreferrer` | `target="_blank"` reverse-tabnabbing yüzeyi | düzeltildi |
+| 6 | `src/messages/*.json` `Legal` (48 anahtar × 5 dil) | SEO meta | `/privacy`, `/cookies`, `/terms` başlık+açıklaması **6 dilde de aynı Türkçe** metin | her dil kendi metni | 18 sayfa (3 rota × 6 dil) kopya meta; ayrıca sayfa gövdesi de çevrilmemiş | devredildi |
+
+### Kanıt
+
+- **Bulgu 1** (düzeltme öncesi, üretim standalone sunucusu):
+  `curl /this-404` →
+  `<meta name="robots" content="noindex"/>` **+**
+  `<meta name="googlebot" content="index, follow, …"/>`.
+  Google dokümanı: *"For situations where multiple crawlers are specified along
+  with different rules, the search engine will use the sum of the negative
+  rules."* (developers.google.com/search/docs/crawling-indexing/robots-meta-tag).
+  Düzeltme sonrası 404 yalnız `robots: noindex` taşıyor; normal sayfalar
+  `googlebot` ipuçlarını koruyor.
+- **Bulgu 2** (düzeltme öncesi): `/en/rehber/kktc-is-bulma-rehberi` → **404**.
+  Düzeltme sonrası 114 kombinasyon tarandı (6 dil × 6 içerik × geçerli/yanlış
+  slug): **0 hata**; yanlış slug'lar 307 ile doğru kardeş sayfaya gidiyor, hiçbir
+  dilin tanımadığı slug **404** kalıyor.
+- **Bulgu 3**: `generateStaticParams` 18 yerine 90 param üretiyordu; build
+  tablosunda `[+15 more paths]` yerine artık her dil kendi 3 slug'ını listeliyor.
+- **Bulgu 6**: `node` ile katalog taraması — `Legal` 48 anahtarın tamamı 5 dilde
+  tr ile birebir aynı (`{en:48, ru:48, el:48, fa:48, de:48}`). `curl
+  /en/privacy` → `<title>Gizlilik Politikası · İşBul KKTC</title>`.
+
+### Doğrulanan ve sağlam bulunanlar
+
+- **Sitemap:** 186 `<loc>`, hepsi 200; her `<loc>` kendi canonical'ı (self-canonical);
+  1302 `xhtml:link` hreflang hedefinin tamamı 200.
+- **robots.txt:** `noindex` veren sayfaları `Disallow` **etmiyor**; yalnız `/api/`
+  ve `/auth/` (meta taşıyamayan route handler'lar). `seo.spec.ts` kuralı korunuyor.
+- **OG/Twitter:** her rotada `og-cover.webp` 1200×630 (~161 KB < 300 KB WhatsApp
+  bütçesi), `summary_large_image`, 6 dilde yerelleşmiş `og:image:alt`.
+- **Canonical:** hepsi mutlak string (`URL` instance tuzağı yok); içe aktarılan
+  ilanlar tek (tr) canonical'a indiriyor, hreflang yayınlamıyor.
+- **JSON-LD:** `WebSite`+`SearchAction` (`?query=` parametresiyle eşleşiyor),
+  `Organization`, `BreadcrumbList`, `CollectionPage`, `FAQPage`, `JobPosting`.
+- **IndexNow:** çift endpoint fallback + Vercel alias mantığı korunuyor; anahtar
+  dosyası `public/isbulkktc….txt` doğru.
+- **`target="_blank"`:** 7 kullanımın tamamı artık `noopener` taşıyor (bulgu 5
+  düzeltildikten sonra).
+
+### Sahibin yapması gerekenler
+
+- Bulgu 6 (yasal metinlerin 6 dilde çevirisi) → **#141** açıldı (`agent:blocked`,
+  sahibi LANE-URUN: `src/messages/**` + `src/server/dal/content.ts`).
+- `NEXT_PUBLIC_{GOOGLE,BING,YANDEX}_SITE_VERIFICATION` — kod hazır, Vercel'de
+  değer girilince etiketler yayınlanır. **Hâlâ yok.**
+
+### Sonraki lane için notlar
+
+- Bulgu 2'nin **kök nedeni** `src/components/layout/site-header.tsx` (dil
+  değiştirici, LANE-TASARIM sahipliği): `usePathname()` çevrilen slug'ı her dilin
+  önüne koyuyor. Route tarafında 307 fallback eklendi (savunma derinliği), ama
+  doğru düzeltme header'ın `getPathname`/`localizedPathnames` ile hedef dilin
+  slug'ını çözmesidir → LANE-TASARIM'a not.

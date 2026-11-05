@@ -99,6 +99,40 @@ export function getLocalizedSlugPathnames({
   return pathnames;
 }
 
+/**
+ * The pathname that serves `slug` in `locale` when `slug` belongs to a
+ * *different* locale, or `null` when no locale knows the slug at all.
+ *
+ * A content slug is translated per locale, so the same page has a different
+ * slug in each language. Any link that carries one language's slug under
+ * another language's prefix (`/en/rehber/kktc-is-bulma-rehberi`) therefore
+ * addresses a page that does not exist. Resolving the slug's owning locale and
+ * returning the sibling slug for `locale` lets the route answer with a redirect
+ * to the real page instead of a 404 — a link that is merely mislabelled still
+ * lands the reader on the right article, and a crawler consolidates it onto the
+ * canonical URL.
+ */
+export function resolveLocalizedSlugPathname({
+  section,
+  locale,
+  slug,
+  siblings,
+}: {
+  section: string;
+  locale: AppLocale;
+  slug: string;
+  siblings: (locale: AppLocale) => readonly { slug: string }[];
+}): string | null {
+  for (const owner of routing.locales) {
+    const ownerList = siblings(owner);
+    const index = ownerList.findIndex((entry) => entry.slug === slug);
+    if (index < 0) continue;
+    const target = siblings(locale)[index];
+    return target ? `${section}/${target.slug}` : null;
+  }
+  return null;
+}
+
 export function createLocalizedPageMetadata({
   locale,
   pathname,
@@ -159,6 +193,7 @@ export function createLocalizedPageMetadata({
   return {
     title: { absolute: `${title} · İşBul KKTC` },
     description,
+    robots: { googleBot: googleBotHints },
     alternates: {
       canonical: canonicalUrl,
       ...(contentLocale
@@ -207,6 +242,26 @@ export function createLocalizedPageMetadata({
     },
   };
 }
+
+/**
+ * Googlebot display hints carried by every indexable page.
+ *
+ * These live on the page rather than on the locale layout because the layout
+ * also wraps the 404 route: Next injects a `noindex` `<meta name="robots">` for
+ * a 404, and a layout-level `googlebot: index, follow` would then sit beside it
+ * as a second, contradictory directive. Google reads the two tags together and
+ * takes the most restrictive rule, so the contradiction is resolved in Google's
+ * favour — but every other crawler that honours only the `googlebot` token is
+ * told the opposite of what the page means. Declaring the hints per page keeps
+ * the 404 with a single unambiguous directive.
+ */
+const googleBotHints = {
+  index: true,
+  follow: true,
+  "max-image-preview": "large",
+  "max-snippet": -1,
+  "max-video-preview": -1,
+} as const;
 
 export const noIndexMetadata: Metadata = {
   robots: {

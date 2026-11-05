@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { getGuide, getGuideSlugs, getGuides } from "@/content/guides";
+import { getGuide, getGuides } from "@/content/guides";
 import { buildGuideStructuredData } from "@/content/ai-visibility/structured-data";
 import { JsonLd } from "@/content/ai-visibility/json-ld";
-import { routing } from "@/i18n/routing";
+import { getLocalePrefix, routing, type AppLocale } from "@/i18n/routing";
 import {
   createLocalizedPageMetadata,
   getLocalizedSlugPathnames,
+  resolveLocalizedSlugPathname,
 } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
 
@@ -17,9 +18,29 @@ type GuidePageProps = {
 };
 
 export function generateStaticParams() {
+  // Each locale's *own* slugs. Reusing the default locale's slugs under every
+  // prefix would prerender five URLs that 404 and leave the real localized pages
+  // to be rendered on demand.
   return routing.locales.flatMap((locale) =>
-    getGuideSlugs().map((slug) => ({ locale, slug })),
+    getGuides(locale).map((guide) => ({ locale, slug: guide.slug })),
   );
+}
+
+/**
+ * A slug that belongs to a different locale is a mislabelled link, not a
+ * missing page: `/en/rehber/kktc-is-bulma-rehberi` carries the Turkish slug
+ * under the English prefix. Send it to the English guide it names; a slug no
+ * locale knows is a genuine 404.
+ */
+function siblingRedirect(locale: AppLocale, slug: string): never {
+  const pathname = resolveLocalizedSlugPathname({
+    section: "/rehber",
+    locale,
+    slug,
+    siblings: getGuides,
+  });
+  if (!pathname) notFound();
+  redirect(`${getLocalePrefix(locale)}${pathname}`);
 }
 
 export async function generateMetadata({
@@ -32,7 +53,7 @@ export async function generateMetadata({
   if (!locale) notFound();
 
   const guide = getGuide(locale, slug);
-  if (!guide) notFound();
+  if (!guide) siblingRedirect(locale, slug);
 
   return createLocalizedPageMetadata({
     locale,
@@ -59,7 +80,7 @@ export default async function GuidePage({ params }: GuidePageProps) {
   if (!locale) notFound();
 
   const guide = getGuide(locale, slug);
-  if (!guide) notFound();
+  if (!guide) siblingRedirect(locale, slug);
 
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "Guides" });
