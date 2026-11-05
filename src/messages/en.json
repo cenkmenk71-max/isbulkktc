@@ -485,6 +485,11 @@
       "inactiveMessage": "This account is currently inactive. Contact the project administrator for help with your access.",
       "verificationMessage": "The email link could not be verified or has expired. Check your sign-in details or try registering again.",
       "oauthMessage": "Social sign-in could not be completed. Try again or sign in with your email and password.",
+      "oauthAccountExists": "You already have an account with this social sign-in. Sign in below.",
+      "oauthAccountExistsAction": "Reset my password",
+      "oauthCancelled": "Social sign-in was cancelled. You can try again.",
+      "oauthLinkExpired": "The sign-in link has expired or was already used. Try again.",
+      "oauthProviderUnavailable": "The social sign-in provider is unavailable right now. Sign in with your email and password.",
       "resetSuccessMessage": "Your password has been updated. You can sign in with your new password.",
       "signOut": "Sign out",
       "candidate": {

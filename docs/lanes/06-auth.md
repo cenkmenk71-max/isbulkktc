@@ -466,3 +466,74 @@ açıkça LANE-AUTH'a veriyor (aşağıda gerekçe). Bakılmayan dosya yok.
 - Üretimde `Set-Cookie` bayraklarını doğrula (gerçek oturum aç → `Secure; HttpOnly`).
 - #167'nin `todo` testi bu PR ile geçiyor; LANE-GÜVENLİK `todo`'yu kaldırıp kapıya
   terfi ettirebilir.
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (issue turu: #207)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Aldığı issue: #207 (callback hata kodunu ayırt etmiyor; 5 farklı hata tek mesaj)
+Değişen dosyalar:
+  src/features/identity/auth-errors.ts      (+reason sözlüğü + mesaj anahtarı)
+  src/features/identity/auth-routing.ts     (failure/error yolu reason taşır)
+  src/app/[locale]/auth/callback/route.ts   (error.code'u iletir + log zenginleşti)
+  src/app/[locale]/(auth)/login/page.tsx    (reason -> mesaj + "şifremi sıfırla")
+  src/messages/{tr,en,ru,el,fa,de}.json     (+5 anahtar)
+  src/features/identity/oauth-failure-reason.test.ts (yeni, 11 test)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (471, 11'i yeni) / test:security ✅ (35 pass, 3 todo, 0 fail)
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration değişmedi)
+```
+
+### Denetlenen dosyalar (micro-denetim)
+`git ls-files` → **37 dosya**. Bu turda 4 kaynak + 6 katalog + 1 test dosyası
+düzenlendi; kalanlar önceki turlarda denetlendi. Bakılmayan dosya yok.
+
+### Bulgular
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `auth-routing.ts:102` | hata yolu | `flow=oauth` olan **her** başarısızlık `?error=oauth` üretir; sebep kaybolur | sebebe özel reason | Kullanıcı "tekrar deneyin" görür, hesabı olduğunu anlamaz → sonsuz döngü | düzeltildi |
+| 2 | `auth/callback/route.ts:115` | hata yolu | `error.code` loglanır ama URL'e taşınmaz | reason olarak taşınır | Aynı mesaj 5 farklı hatada | düzeltildi |
+| 3 | `login/page.tsx:69` | doğruluk | Tek `oauthMessage` anahtarı | reason'a göre 5 mesaj | Teşhis edilemez UX | düzeltildi |
+| 4 | `login/page.tsx` | UX | "Hesap zaten var" durumunda eylem yok | "Şifremi sıfırla" butonu | Kullanıcı çıkış yolu bulamıyor | düzeltildi |
+| 5 | `auth-errors.ts` | — | (kendi regresyonum) reason'ı code sanıp yeniden eşlemek mesajı genele düşürüyordu | ayrı reason→mesaj eşleyicisi | Fix çalışmıyor görünürdü | düzeltildi (canlı render ile yakalandı) |
+
+### Düzeltilen
+- **Kapalı reason sözlüğü** (`oauthFailureReason`): 11 GoTrue kodu → 5 reason
+  (`accountExists`, `cancelled`, `linkExpired`, `providerUnavailable`, `failed`).
+  Ham kod **asla** URL'e yazılmaz (public GET, saldırgan etkili).
+- `resolveAuthFailurePath(flow, locale, audience, errorCode?)` ve
+  `resolveAuthErrorRedirect` reason'ı taşır; kod verilmezse **eski genel yol**
+  aynen korunur (geriye dönük uyumlu).
+- Callback `error.code`'u (ve `?error_code=`/`?error=`) iletir; log'a `flow`
+  eklenir.
+- Login sayfası reason → mesaj; `accountExists` için "Şifremi sıfırla" bağlantısı.
+- 6 dile 5 yeni anahtar (4 mesaj + 1 eylem).
+
+### Kanıt (gerçek dev sunucusu, `next dev`)
+```
+?error=oauth                            -> Social sign-in could not be completed. Try again…
+?error=oauth&reason=accountExists       -> You already have an account with this social sign-in. Sign in below.
+?error=oauth&reason=cancelled           -> Social sign-in was cancelled. You can try again.
+?error=oauth&reason=linkExpired         -> The sign-in link has expired or was already used. Try again.
+?error=oauth&reason=providerUnavailable -> The social sign-in provider is unavailable right now…
+?error=oauth&reason=unknown             -> (genel mesaja düşer)
+```
+- `reason=accountExists` → render edilen "Reset my password" bağlantısı **1**;
+  `cancelled`/genel → **0** (JSON payload hariç, yalnız gerçek `<a>` sayıldı).
+- Callback zinciri: `/en/auth/callback?flow=oauth&error_code=access_denied` →
+  `307 /en/login?error=oauth&reason=cancelled&audience=candidate`.
+
+### Güvenlik değerlendirmesi (security skill)
+- Ham `error_code` URL'e **yazılmaz**; yalnız kapalı reason sözlüğünden bir literal.
+  `https://evil.example`, `//evil.example`, `../../etc/passwd`, `javascript:` gibi
+  girdiler reason'a çözülmez → genel yola düşer (testle kilitli).
+- Login sayfası bilinmeyen `reason`'ı genel mesaja düşürür; interpolasyon yok.
+- Açık yönlendirme yüzeyi değişmedi (tüm yollar locale-prefix'li literal).
+- "Hesap zaten var" mesajı hesabın varlığını söyler; bu akışta kullanıcı zaten
+  kendi sağlayıcı hesabıyla geliyor → yeni enumeration yolu yok.
+
+### Sahibin yapması gerekenler
+- Gerçek LinkedIn ile "zaten kayıtlı" senaryosunu üretimde doğrula (bu sandbox'ta
+  gerçek OAuth round-trip yok); beklenen: `oauthAccountExists` mesajı + buton.

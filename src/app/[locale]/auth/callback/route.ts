@@ -80,13 +80,32 @@ export async function GET(request: NextRequest) {
   // that exact flow, instead of the shared legacy key — which mirrors only the
   // most recently started flow and breaks when two flows overlap.
   const flowId = parsePkceFlowId(request.nextUrl.searchParams.get("sb_flow_id"));
-  const failurePath = resolveAuthFailurePath(flow, locale, audience);
+  // GoTrue answers a failed round-trip either by redirecting back here with
+  // `?error=&error_code=` (the visitor declined, the link expired) or by an
+  // error from `exchangeCodeForSession` below. Both are reduced to a closed
+  // reason vocabulary so the login page can say *why*, instead of repeating
+  // "try again" for an account that already exists.
+  const callbackErrorCode =
+    request.nextUrl.searchParams.get("error_code") ??
+    request.nextUrl.searchParams.get("error");
+  // Reassigned with the exchange error's own code below, once it is known.
+  let failurePath = resolveAuthFailurePath(
+    flow,
+    locale,
+    audience,
+    callbackErrorCode,
+  );
   // Set when this callback completed a brand-new account, so the destination
   // can report the `sign_up` conversion. A form cannot: both flows here end in
   // a redirect, so the client form never sees a success state.
   let createdAccount = false;
 
   if (!code || request.nextUrl.searchParams.has("error")) {
+    console.warn("Auth callback rejected before exchange.", {
+      code: callbackErrorCode,
+      flow,
+      hasCode: Boolean(code),
+    });
     return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
   }
 
@@ -112,7 +131,13 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (!sessionUser) {
-      console.error("Supabase auth callback failed.", { code: error.code });
+      // Reduce the raw code to a closed reason for the URL (never echo it), but
+      // keep the raw code in the log — that is where an operator diagnoses it.
+      console.error("Supabase auth callback failed.", {
+        code: error.code,
+        flow,
+      });
+      failurePath = resolveAuthFailurePath(flow, locale, audience, error.code);
       return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
     }
 

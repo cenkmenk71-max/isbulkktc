@@ -485,6 +485,11 @@
       "inactiveMessage": "Bu hesap şu anda etkin değil. Erişiminizle ilgili destek almak için proje yöneticisiyle iletişime geçin.",
       "verificationMessage": "E-posta bağlantısı doğrulanamadı veya süresi doldu. Giriş bilgilerinizi kontrol edin ya da kayıt işlemini yeniden deneyin.",
       "oauthMessage": "Sosyal hesapla giriş tamamlanamadı. Yeniden deneyin veya e-posta ve şifrenizle giriş yapın.",
+      "oauthAccountExists": "Bu sosyal hesapla zaten kayıtlısınız. Aşağıdan giriş yapın.",
+      "oauthAccountExistsAction": "Şifremi sıfırla",
+      "oauthCancelled": "Sosyal giriş iptal edildi. Yeniden deneyebilirsiniz.",
+      "oauthLinkExpired": "Giriş bağlantısının süresi doldu veya bağlantı zaten kullanıldı. Yeniden deneyin.",
+      "oauthProviderUnavailable": "Sosyal giriş sağlayıcısı şu anda kullanılamıyor. E-posta ve şifrenizle giriş yapın.",
       "resetSuccessMessage": "Şifreniz güncellendi. Yeni şifrenizle giriş yapabilirsiniz.",
       "signOut": "Oturumu kapat",
       "candidate": {

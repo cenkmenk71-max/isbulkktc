@@ -522,6 +522,11 @@
       "inactiveMessage": "Dieses Konto ist derzeit inaktiv. Wenden Sie sich wegen des Zugangs an die Projektadministration.",
       "verificationMessage": "Der Link aus der E-Mail konnte nicht bestätigt werden oder ist abgelaufen. Prüfen Sie Ihre Anmeldedaten oder versuchen Sie die Registrierung erneut.",
       "oauthMessage": "Die Anmeldung über ein soziales Konto konnte nicht abgeschlossen werden. Versuchen Sie es erneut oder melden Sie sich mit E-Mail und Passwort an.",
+      "oauthAccountExists": "Sie haben bereits ein Konto mit dieser sozialen Anmeldung. Melden Sie sich unten an.",
+      "oauthAccountExistsAction": "Passwort zurücksetzen",
+      "oauthCancelled": "Die Anmeldung über ein soziales Konto wurde abgebrochen. Sie können es erneut versuchen.",
+      "oauthLinkExpired": "Der Anmeldelink ist abgelaufen oder wurde bereits verwendet. Versuchen Sie es erneut.",
+      "oauthProviderUnavailable": "Der Anmeldedienst ist derzeit nicht verfügbar. Melden Sie sich mit E-Mail und Passwort an.",
       "resetSuccessMessage": "Ihr Passwort wurde aktualisiert. Sie können sich jetzt mit dem neuen Passwort anmelden.",
       "signOut": "Abmelden",
       "candidate": {

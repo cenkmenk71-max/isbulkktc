@@ -3,8 +3,10 @@ import { SignInForm } from "@/features/identity/sign-in-form";
 import { EditorialFormPage } from "@/components/layout/editorial-form-page";
 import { AccountAudiencePicker } from "@/components/layout/account-audience-picker";
 import { accountAudienceSchema } from "@/features/identity/schemas";
+import { messageKeyForOAuthFailureReason } from "@/features/identity/auth-errors";
 import { resolveEnabledOAuthProviders } from "@/features/identity/oauth-providers";
 import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { noIndexMetadata } from "@/lib/seo";
 import { getEnabledOAuthProviders } from "@/server/config/oauth-providers";
 
@@ -13,9 +15,19 @@ export const metadata = noIndexMetadata;
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ audience?: string; error?: string; reset?: string }>;
+  searchParams: Promise<{
+    audience?: string;
+    error?: string;
+    reason?: string;
+    reset?: string;
+  }>;
 }) {
-  const { audience: requestedAudience, error, reset } = await searchParams;
+  const {
+    audience: requestedAudience,
+    error,
+    reason,
+    reset,
+  } = await searchParams;
   const audience = accountAudienceSchema
     .catch("candidate")
     .parse(requestedAudience);
@@ -23,6 +35,11 @@ export default async function LoginPage({
   // A malformed AUTH_OAUTH_PROVIDERS must not 500 the sign-in page; it degrades
   // to "no provider enabled", exactly like an empty value.
   const providers = resolveEnabledOAuthProviders(getEnabledOAuthProviders);
+  // The callback carries *why* it failed in `?reason=` (already reduced from the
+  // GoTrue code); map that reason to the specific copy so a visitor whose account
+  // already exists is told to sign in instead of being asked to "try again"
+  // forever.
+  const oauthMessageKey = messageKeyForOAuthFailureReason(reason);
 
   return (
     <EditorialFormPage
@@ -61,13 +78,26 @@ export default async function LoginPage({
               {copy("resetSuccessMessage")}
             </p>
           ) : error === "verification" || error === "oauth" ? (
-            <p
-              className="editorial-page-alert"
-              aria-live="polite"
-              role="status"
-            >
-              {copy(error === "oauth" ? "oauthMessage" : "verificationMessage")}
-            </p>
+            <>
+              <p
+                className="editorial-page-alert"
+                data-status={error === "oauth" ? "error" : undefined}
+                aria-live="polite"
+                role="status"
+              >
+                {copy(
+                  error === "oauth" ? oauthMessageKey : "verificationMessage",
+                )}
+              </p>
+              {error === "oauth" && reason === "accountExists" ? (
+                <Link
+                  className="button button-dark editorial-submit"
+                  href={{ pathname: "/forgot-password" }}
+                >
+                  {copy("oauthAccountExistsAction")}
+                </Link>
+              ) : null}
+            </>
           ) : null}
           <SignInForm audience={audience} providers={providers} />
         </>

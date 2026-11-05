@@ -1,4 +1,5 @@
 import { getLocalePrefix, type AppLocale } from "@/i18n/routing";
+import { oauthFailureReason } from "./auth-errors";
 import type { AccountAudience } from "./schemas";
 
 /**
@@ -71,9 +72,10 @@ export function resolveAuthDestination(
  * so the visitor used to land on an unrelated page with no explanation.
  *
  * When the query carries GoTrue's `error_code`, send them to the localized
- * login page, which already renders the OAuth failure message. Only
- * `error_code` is trusted as the signal; a bare `?error=` is left alone so the
- * home page cannot be turned into an open redirect by an arbitrary link.
+ * login page with the reduced reason, so the message matches the failure (an
+ * account that already exists is not "try again"). Only `error_code` is trusted
+ * as the signal; a bare `?error=` is left alone so the home page cannot be turned
+ * into an open redirect by an arbitrary link.
  */
 export function resolveAuthErrorRedirect(
   query: Record<string, string | string[] | undefined>,
@@ -81,17 +83,27 @@ export function resolveAuthErrorRedirect(
 ): string | null {
   const errorCode = query.error_code;
   if (typeof errorCode !== "string" || errorCode.length === 0) return null;
-  return `${getLocalePrefix(locale)}/login?error=oauth`;
+
+  const reason = oauthFailureReason(errorCode);
+  const suffix = reason === "failed" ? "" : `&reason=${reason}`;
+  return `${getLocalePrefix(locale)}/login?error=oauth${suffix}`;
 }
 
 /**
  * Where a failed confirmation / OAuth / recovery link sends the visitor. Every
  * branch is a literal path; no caller-supplied value is interpolated.
+ *
+ * `errorCode` is GoTrue's raw code from the callback (untrusted on a public GET).
+ * It is reduced to a closed reason vocabulary (`oauthFailureReason`) and only the
+ * resulting literal is appended, so the login page can show the right message
+ * without ever echoing an attacker string. Omitting it keeps the legacy generic
+ * `?error=oauth`, so existing callers and links are unchanged.
  */
 export function resolveAuthFailurePath(
   flow: AuthFlow,
   locale: AppLocale,
   audience: AccountAudience,
+  errorCode?: string | null,
 ): string {
   const prefix = getLocalePrefix(locale);
 
@@ -99,6 +111,12 @@ export function resolveAuthFailurePath(
     return `${prefix}/forgot-password?error=expired`;
   }
 
-  const errorCode = flow === "oauth" ? "oauth" : "verification";
-  return `${prefix}/login?error=${errorCode}&audience=${audience}`;
+  if (flow === "oauth") {
+    const reason = oauthFailureReason(errorCode);
+    return reason === "failed"
+      ? `${prefix}/login?error=oauth&audience=${audience}`
+      : `${prefix}/login?error=oauth&reason=${reason}&audience=${audience}`;
+  }
+
+  return `${prefix}/login?error=verification&audience=${audience}`;
 }
