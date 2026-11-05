@@ -131,3 +131,42 @@ linki yok, `logo` = `icon-512.png`).
 
 Yeni guard: `src/content/ai-visibility/geo-audit.test.ts` — #1 ve #2 için kırmızı→yeşil
 kanıtlandı (bug yeniden konunca test kırmızı).
+
+---
+
+## Rapor — issue #152, branch `lane/geo`
+
+**Durum:** düzeltmeler branch'te, CI bekliyor. Mount devri: issue #165 (LANE-SEO).
+
+### Bulgu (LANE-SEO'dan devredildi, #152)
+
+`/[locale]/is-turleri/[type]` iniş sayfaları **hiç JSON-LD yayınlamıyordu**;
+kardeş rota `/[locale]/is-ilanlari/[district]` `CollectionPage` + `BreadcrumbList`
+yayınlıyor. İkisi de aynı ağırlıkta (6 tür × 6 dil vs 6 ilçe × 6 dil), aynı
+`JobsExperience` bileşenini render eden, sitemap'e giren indekslenebilir sayfalar.
+Kanıt: `curl /is-turleri/tam-zamanli | grep ld+json` → yalnız layout'un
+`WebSite|Organization` grafiği; `/is-ilanlari/girne` → + `CollectionPage|BreadcrumbList`.
+
+### Ne yapıldı (GEO sahibi olduğu modülde)
+
+`src/content/ai-visibility/structured-data.ts`:
+
+- Ortak gövde `buildCollectionPageGraph()` içine çıkarıldı (CollectionPage +
+  3 adımlı BreadcrumbList: home → `/jobs` → koleksiyon).
+- `buildDistrictPageStructuredData()` bu gövdeyi kullanacak şekilde sadeleşti;
+  `subjectName` = ilçe adı, `about` = `AdministrativeArea`.
+- **Yeni** `buildJobTypePageStructuredData()`: `subjectName` = tür adı,
+  `about` = `Thing` (çalışma türü bir yer değil), aynı `@graph` şekli.
+
+**İlçe çıktısı bit bit aynı kaldı** (refactor iddiası pikselsiz/kanıtlı): 6 dil
+için `JSON.stringify` çıktısı önce/sonra `diff` → boş.
+
+### Devredilen — LANE-SEO (issue #165)
+
+`src/app/[locale]/(public)/is-turleri/[type]/page.tsx` **mount**: `<JsonLd>` +
+`buildJobTypePageStructuredData` çağrısı. `Nav.jobs` breadcrumb etiketi; kahraman
+sloganı (`HomeJobSearch.title`) **değil**. Örnek kod ve beklenen JSON issue #165'te.
+
+### Kapılar
+`lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (421 test,
++2 yeni: koleksiyon şekli + dil öneki) · mount sonrası E2E LANE-SEO'nun PR'ında.

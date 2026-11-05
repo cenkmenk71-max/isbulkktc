@@ -7,8 +7,13 @@ import {
   buildLlmsBrief,
   buildLlmsFullBrief,
 } from "@/content/ai-visibility/llms-brief";
-import { buildOrganizationGraph } from "@/content/ai-visibility/structured-data";
+import {
+  buildDistrictPageStructuredData,
+  buildJobTypePageStructuredData,
+  buildOrganizationGraph,
+} from "@/content/ai-visibility/structured-data";
 import { getGuides } from "@/content/guides";
+import { SITE_NAME } from "@/content/ai-visibility/site";
 import { routing, type AppLocale } from "@/i18n/routing";
 
 /**
@@ -89,4 +94,96 @@ test("the organization logo is an existing asset at Google's minimum size", () =
     width >= 112 && height >= 112,
     `logo is ${width}x${height}, below Google's 112x112 minimum`,
   );
+});
+
+type GraphNode = Record<string, unknown>;
+
+function graphNodes(data: unknown): GraphNode[] {
+  return (data as { "@graph": GraphNode[] })["@graph"];
+}
+
+function collectionPage(data: unknown): GraphNode {
+  return graphNodes(data).find((node) => node["@type"] === "CollectionPage")!;
+}
+
+function breadcrumb(data: unknown): GraphNode[] {
+  const node = graphNodes(data).find(
+    (candidate) => candidate["@type"] === "BreadcrumbList",
+  )!;
+  return node.itemListElement as GraphNode[];
+}
+
+test("a job-type page carries the same collection graph a district page does", () => {
+  const graph = buildJobTypePageStructuredData({
+    locale: "tr",
+    baseUrl: BASE_URL,
+    typeSlug: "tam-zamanli",
+    typeName: "Tam zamanlı",
+    jobsLabel: "İş İlanları",
+    homeLabel: SITE_NAME,
+  });
+
+  // The district page it mirrors is a known-good shape; asserting both keeps
+  // the two families from drifting apart in a future edit.
+  const district = buildDistrictPageStructuredData({
+    locale: "tr",
+    baseUrl: BASE_URL,
+    districtSlug: "girne",
+    districtName: "Girne",
+    jobsLabel: "İş İlanları",
+    homeLabel: SITE_NAME,
+  });
+  assert.deepEqual(
+    Object.keys(collectionPage(graph)).sort(),
+    Object.keys(collectionPage(district)).sort(),
+  );
+
+  const page = collectionPage(graph);
+  assert.equal(page["@id"], "https://isbulkktc.com/is-turleri/tam-zamanli#webpage");
+  assert.equal(page.url, "https://isbulkktc.com/is-turleri/tam-zamanli");
+  // Mirrors the district's `"{district} İş İlanları"` shape.
+  assert.equal(page.name, "Tam zamanlı İş İlanları");
+  assert.equal(page.inLanguage, "tr");
+  assert.deepEqual(page.isPartOf, { "@id": "https://isbulkktc.com/#website" });
+  // An employment type is not a place.
+  assert.deepEqual(page.about, { "@type": "Thing", name: "Tam zamanlı" });
+  assert.deepEqual(page.breadcrumb, {
+    "@id": "https://isbulkktc.com/is-turleri/tam-zamanli#breadcrumb",
+  });
+
+  const trail = breadcrumb(graph);
+  assert.deepEqual(
+    trail.map((step) => [step.position, step.name, step.item]),
+    [
+      [1, SITE_NAME, "https://isbulkktc.com"],
+      [2, "İş İlanları", "https://isbulkktc.com/jobs"],
+      [3, "Tam zamanlı", "https://isbulkktc.com/is-turleri/tam-zamanli"],
+    ],
+  );
+});
+
+test("collection graphs localize the prefix for every locale", () => {
+  for (const locale of routing.locales) {
+    const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
+    const graph = buildJobTypePageStructuredData({
+      locale,
+      baseUrl: BASE_URL,
+      typeSlug: "staj",
+      typeName: "Internship",
+      jobsLabel: "Jobs",
+      homeLabel: SITE_NAME,
+    });
+    const page = collectionPage(graph);
+    // The non-default locales are prefixed; the default is not (as-needed).
+    assert.equal(
+      page.url,
+      `https://isbulkktc.com${prefix}/is-turleri/staj`,
+      `${locale} URL drifted`,
+    );
+    assert.equal(page.inLanguage, locale);
+
+    const trail = breadcrumb(graph);
+    assert.equal(trail[1].item, `https://isbulkktc.com${prefix}/jobs`);
+    assert.equal(trail[2].item, `https://isbulkktc.com${prefix}/is-turleri/staj`);
+  }
 });

@@ -215,60 +215,58 @@ export function buildGuideStructuredData({
 }
 
 /**
- * The `BreadcrumbList` + `CollectionPage` graph for a district landing page.
+ * The `BreadcrumbList` + `CollectionPage` graph shared by the two landing-page
+ * families (a district and an employment type).
  *
- * A district page ("Lefkoşa iş ilanları") is a collection, not an article, so it
- * declares `CollectionPage` and names the district in `about`. The breadcrumb
- * gives answer engines the hierarchy (home → jobs → district) that the URL alone
- * only implies, which is what lets a result be attributed to the right place.
+ * Both are collections of live listings, not articles, so each declares
+ * `CollectionPage` and names its subject in `about`. The breadcrumb gives answer
+ * engines the hierarchy (home → jobs → collection) that the URL alone only
+ * implies, which is what lets a result be attributed to the right place or role.
  *
- * The page URL and the district name are the only inputs, so nothing here can
- * drift from the page the route actually renders.
+ * Only the collection's own path, its subject name and the `about` node differ
+ * between the families; sharing the body keeps the two graphs from drifting
+ * apart.
  */
-export function buildDistrictPageStructuredData({
+function buildCollectionPageGraph({
   locale,
   baseUrl,
-  districtSlug,
-  districtName,
+  collectionPath,
+  subjectName,
+  about,
   jobsLabel,
   homeLabel,
 }: {
   locale: AppLocale;
   baseUrl: URL;
-  districtSlug: string;
-  districtName: string;
+  /** Path without the locale prefix, e.g. `/is-ilanlari/girne`. */
+  collectionPath: string;
+  /** The collection's own name, e.g. `Girne` or `Tam zamanlı`. */
+  subjectName: string;
+  about: Record<string, unknown>;
   jobsLabel: string;
   homeLabel: string;
 }) {
   const siteUrl = baseUrl.origin;
   const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
   const jobsUrl = `${siteUrl}${prefix}/jobs`;
-  const districtUrl = `${siteUrl}${prefix}/is-ilanlari/${districtSlug}`;
+  const collectionUrl = `${siteUrl}${prefix}${collectionPath}`;
 
   return {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "CollectionPage",
-        "@id": `${districtUrl}#webpage`,
-        url: districtUrl,
-        name: `${districtName} İş İlanları`,
+        "@id": `${collectionUrl}#webpage`,
+        url: collectionUrl,
+        name: `${subjectName} İş İlanları`,
         inLanguage: locale,
         isPartOf: { "@id": `${siteUrl}/#website` },
-        about: {
-          "@type": "AdministrativeArea",
-          name: districtName,
-          containedInPlace: {
-            "@type": "Country",
-            name: regionNames[locale],
-            identifier: "CY",
-          },
-        },
-        breadcrumb: { "@id": `${districtUrl}#breadcrumb` },
+        about,
+        breadcrumb: { "@id": `${collectionUrl}#breadcrumb` },
       },
       {
         "@type": "BreadcrumbList",
-        "@id": `${districtUrl}#breadcrumb`,
+        "@id": `${collectionUrl}#breadcrumb`,
         itemListElement: [
           {
             "@type": "ListItem",
@@ -285,11 +283,84 @@ export function buildDistrictPageStructuredData({
           {
             "@type": "ListItem",
             position: 3,
-            name: districtName,
-            item: districtUrl,
+            name: subjectName,
+            item: collectionUrl,
           },
         ],
       },
     ],
   };
+}
+
+/**
+ * The graph for a district landing page ("Lefkoşa iş ilanları"). A district is
+ * an `AdministrativeArea` inside the country, so `about` carries the geography.
+ */
+export function buildDistrictPageStructuredData({
+  locale,
+  baseUrl,
+  districtSlug,
+  districtName,
+  jobsLabel,
+  homeLabel,
+}: {
+  locale: AppLocale;
+  baseUrl: URL;
+  districtSlug: string;
+  districtName: string;
+  jobsLabel: string;
+  homeLabel: string;
+}) {
+  return buildCollectionPageGraph({
+    locale,
+    baseUrl,
+    collectionPath: `/is-ilanlari/${districtSlug}`,
+    subjectName: districtName,
+    about: {
+      "@type": "AdministrativeArea",
+      name: districtName,
+      containedInPlace: {
+        "@type": "Country",
+        name: regionNames[locale],
+        identifier: "CY",
+      },
+    },
+    jobsLabel,
+    homeLabel,
+  });
+}
+
+/**
+ * The graph for an employment-type landing page ("Tam zamanlı iş ilanları").
+ *
+ * The sibling of a district page — same `CollectionPage` + `BreadcrumbList`
+ * shape, same route weight, same sitemap presence — so it carries the same
+ * machine-readable hierarchy an answer engine needs to attribute a listing to a
+ * role. An employment type is not a place, so `about` is a plain `Thing` rather
+ * than an `AdministrativeArea`.
+ */
+export function buildJobTypePageStructuredData({
+  locale,
+  baseUrl,
+  typeSlug,
+  typeName,
+  jobsLabel,
+  homeLabel,
+}: {
+  locale: AppLocale;
+  baseUrl: URL;
+  typeSlug: string;
+  typeName: string;
+  jobsLabel: string;
+  homeLabel: string;
+}) {
+  return buildCollectionPageGraph({
+    locale,
+    baseUrl,
+    collectionPath: `/is-turleri/${typeSlug}`,
+    subjectName: typeName,
+    about: { "@type": "Thing", name: typeName },
+    jobsLabel,
+    homeLabel,
+  });
 }
