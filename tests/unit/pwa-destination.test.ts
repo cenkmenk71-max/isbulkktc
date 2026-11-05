@@ -66,6 +66,19 @@ test("non-page handlers are rejected", () => {
   assert.equal(sanitizeNextPath("/auth/callback"), null);
 });
 
+test("a dot segment cannot smuggle a protocol-relative URL past the leading-slash check", () => {
+  // Regression for issue #101, kept in this contract file as well as next to the
+  // implementation (`src/lib/pwa/destination.test.ts`): the input starts with a
+  // single slash, so the `startsWith("//")` guard does not see it, but `new URL`
+  // resolves the `..` *before* the output is built, so `/..//host` normalised to
+  // `//host`, which a browser resolves off-origin. The fix re-validates the
+  // output; this pins the documented bypass in the layer that owns the contract.
+  for (const raw of ["/..//evil.example", "/.//evil.example", "/jobs/..//evil.example"]) {
+    const result = sanitizeNextPath(raw);
+    assert.equal(result, null, `${raw} must be rejected, got ${JSON.stringify(result)}`);
+  }
+});
+
 test("empty, missing and over-long values fall back to the default destination", () => {
   assert.equal(sanitizeNextPath(null), null);
   assert.equal(sanitizeNextPath(undefined), null);
