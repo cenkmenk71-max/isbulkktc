@@ -143,6 +143,10 @@ issue açar.
 - **Yönetici RPC'leri:** 13 `admin_*` fonksiyonunun tamamı gövdesinde
   `has_platform_role('platform_admin')` çağırıyor; bu da imzalı JWT'de `aal2`
   ister. İstemci bu fonksiyonları doğrudan çağırabilse bile yetki yükseltmesi yok.
+  `tests/security/sql-hardening.test.ts` bunu **ratchet'ler**: her `admin_*`'ın
+  *son* gövdesi guard'ı içermeli (yorumlar ayıklanır), ve `has_platform_role`'ün
+  *kazanan* gövdesi `aal2` + aktif profil şartını korumalı — ikisi de kendi
+  migration'ları yeniden oynatıldığı için yalnız son tanım geçerli.
 - **Bildirim worker'ı:** Edge Function `verify_jwt = false` olmasına rağmen
   bearer'ı **yapılandırma kontrolünden önce** doğruluyor; eksik sır guard'ı
   atlamıyor (`tests/security/notification-worker-auth.test.ts`).

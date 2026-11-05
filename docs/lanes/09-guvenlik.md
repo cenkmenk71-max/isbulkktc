@@ -191,3 +191,30 @@ statik olarak ratchet'liydi; **tablo yarısı hiç korunmuyordu**.
   #206'nın DB yarısı indi (LANE-SUPABASE `20261106100000`, `x-client-ip`'i
   okuyor) ama app yarısı (action header'ı göndermeli) hâlâ LANE-URUN'da.
 - **Bakılmayan:** yok — 9 test dosyası + 2 doküman.
+
+## Durum (2026-11-05, 7. tur) — yönetici guard'ı ve AAL2 ratchet'i
+
+Brief'in 1. hedefini (yetki sınırı) derinleştirdi: `threat-model.md` "13 `admin_*`
+RPC'nin tamamı `has_platform_role('platform_admin')` çağırıyor ve o da `aal2`
+ister" diyordu — **iddia doğruydu ama hiçbir test zorlamıyordu**.
+
+- **Bulgu + düzeltme: `admin_*` guard'ı ratchet'lenmiyordu.** pgTAP yalnız iki
+  paket RPC'sini (`admin_save_job_package`, `admin_assign_company_job_package`)
+  sabitliyordu; yeni bir `admin_*` fonksiyonu guard'ı unutsa (üstelik EXECUTE
+  whitelist'inde olduğu için istemciden çağrılabilir) hiçbir test kırmızı
+  olmuyordu. `sql-hardening.test.ts`'e "every admin_* RPC re-checks the
+  platform-admin role in its own body" eklendi: her fonksiyonun **son** gövdesi
+  (her migration yeniden oynatılır) yorumlar ayıklandıktan sonra
+  `public.has_platform_role('platform_admin')` içermeli. Bugün 13/13 temiz.
+- **Bulgu + düzeltme: AAL2 şartı yalnız "kazanan" tanımda ve pinlenmemişti.**
+  `has_platform_role` **iki kez** tanımlı: `20261013000000` yalnız `user_roles`'a
+  bakıyor, `20261020194000` onu yeniden yaratıp `aal2` + aktif profil şartı
+  ekliyor. Yeniden oynatma sırasında ikincisi kazanıyor — ama bunu **hiçbir test
+  sabitlemiyordu**. Sonradan gelen bir migration helper'ı basit gövdeyle yeniden
+  yaratsa MFA şartı sessizce düşerdi (RPC'ler yine "helper'ı çağırıyor" görünür).
+  "the winning has_platform_role body keeps the aal2 and active-profile gate"
+  eklendi.
+- **Kanıt (mutation):** (a) guard'sız yeni `admin_*` → kırmızı; (b) mevcut bir
+  `admin_*`'ı sonradan guard'sız yeniden tanımla → kırmızı (son-tanım kazanır);
+  (c) helper'ı `aal2`'siz yeniden yarat → kırmızı.
+- **Bakılmayan:** yok — 9 test dosyası + 2 doküman.

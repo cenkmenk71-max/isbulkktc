@@ -16,7 +16,8 @@ import test from "node:test";
  *  3. every `grant execute ... to anon/authenticated` is paired with a
  *     `revoke all ... from public, anon, authenticated` first — the exact
  *     failure mode that leaked `list_engagement_recipients`;
- *  4. the pgTAP privilege ratchet's whitelist stays in step with the grants
+ *  4. every `admin_*` RPC re-checks the platform-admin role in its own body;
+ *  5. the pgTAP privilege ratchet's whitelist stays in step with the grants
  *     the migrations actually hand out.
  *
  * These are grep-level checks by design: they cannot prove behaviour, and they
@@ -211,6 +212,126 @@ test("the definer matcher sees tagged dollar quotes and flags an unpinned body (
   );
   assert.equal(pinned.length, 1);
   assert.equal(/set\s+search_path\s*=\s*''/i.test(pinned[0].options), true);
+});
+
+// ---------------------------------------------------------------------------
+// 2b. Every `admin_*` RPC re-checks the platform-admin role in its own body.
+//
+// The threat model claims every `admin_*` function calls
+// `has_platform_role('platform_admin')` (which is AAL2-gated), so a client that
+// can execute one cannot escalate without a verified admin session. That claim
+// held for the 13 functions that exist today, but nothing *enforced* it: the
+// pgTAP console suite pins only the two package RPCs, so a new `admin_*`
+// function — callable by design, hence on the EXECUTE whitelist — could ship
+// without the guard and no test would go red. This ratchets the whole set.
+//
+// The check reads each function's *last* definition (every migration is
+// replayed, so the latest `create or replace` wins), strips line comments so a
+// passing mention in prose cannot satisfy it, and requires the concrete call
+// `public.has_platform_role('platform_admin')`.
+// ---------------------------------------------------------------------------
+
+/** The body of the last definition of every `public.<prefix>*` function. */
+function latestFunctionBodies(prefix: string): Map<string, string> {
+  const bodies = new Map<string, string>();
+  const re = new RegExp(
+    `create\\s+(?:or\\s+replace\\s+)?function\\s+public\\.(${prefix}[a-z_0-9]*)\\s*\\([\\s\\S]*?\\)\\s*[\\s\\S]*?\\bas\\s+\\$[A-Za-z_0-9]*\\$([\\s\\S]*?)\\$[A-Za-z_0-9]*\\$`,
+    "gi",
+  );
+  for (const match of allSql.matchAll(re)) {
+    // Later definitions overwrite earlier ones — the replay order.
+    bodies.set(match[1], match[2]);
+  }
+  return bodies;
+}
+
+/** Removes `--` line comments so a mention in prose does not count as code. */
+function stripSqlComments(sql: string): string {
+  return sql.replace(/--[^\n]*/g, "");
+}
+
+test("the admin-guard matcher ignores comments and reads the latest body (self-test)", () => {
+  // A comment that names the guard must NOT satisfy the check.
+  assert.equal(
+    /public\.has_platform_role\s*\(\s*'platform_admin'\s*\)/.test(
+      stripSqlComments("begin -- public.has_platform_role('platform_admin')\n return; end;"),
+    ),
+    false,
+  );
+  // A real call does.
+  assert.equal(
+    /public\.has_platform_role\s*\(\s*'platform_admin'\s*\)/.test(
+      stripSqlComments("begin if not public.has_platform_role('platform_admin') then raise; end if; end;"),
+    ),
+    true,
+  );
+});
+
+test("every admin_* RPC re-checks the platform-admin role in its own body", () => {
+  const bodies = latestFunctionBodies("admin_");
+  assert.ok(bodies.size >= 10, `expected the admin_* set, found ${bodies.size}`);
+
+  const offenders = [...bodies]
+    .filter(([, body]) =>
+      !/public\.has_platform_role\s*\(\s*'platform_admin'\s*\)/.test(stripSqlComments(body)),
+    )
+    .map(([name]) => name);
+
+  assert.deepEqual(
+    offenders,
+    [],
+    `admin_* functions without a platform-admin guard in their body: ${offenders.join(", ")}`,
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 2c. The role helper itself keeps the MFA gate.
+//
+// `has_platform_role` is the single chokepoint every admin RPC calls, and it is
+// defined **twice**: `20261013000000` only checks `user_roles`, then
+// `20261020194000` re-creates it to additionally require an `aal2` JWT claim and
+// an `active` profile. Because every migration is replayed in order, the later
+// definition wins — but nothing pinned *that*. A future migration that
+// re-created the helper with the simpler first body (or a new file that sorted
+// after the hardened one) would silently drop the MFA requirement while the
+// admin-guard test above stayed green, since the RPCs would still "call the
+// helper". This ratchets the winning body's semantics.
+// ---------------------------------------------------------------------------
+
+test("the winning has_platform_role body keeps the aal2 and active-profile gate", () => {
+  const helper = latestFunctionBodies("has_platform_role");
+  const body = helper.get("has_platform_role");
+  assert.ok(body, "has_platform_role has no definition in the migrations");
+  const code = stripSqlComments(body);
+
+  assert.match(
+    code,
+    /->>\s*'aal'/,
+    "has_platform_role no longer reads the `aal` claim, so MFA is not required",
+  );
+  assert.match(
+    code,
+    /=\s*'aal2'/,
+    "has_platform_role no longer requires aal2, so an AAL1 session would pass",
+  );
+  assert.match(
+    code,
+    /status\s*=\s*'active'/,
+    "has_platform_role no longer requires an active profile",
+  );
+});
+
+test("the admin-guard ratchet reads the last definition, not the first (self-test)", () => {
+  // Two definitions of the same helper; only the last (replay order) may count.
+  const sql = [
+    "create or replace function public.probe() returns boolean language sql as $$ select true $$;",
+    "create or replace function public.probe() returns boolean language sql as $$ select false $$;",
+  ].join("\n");
+  const re =
+    /create\s+(?:or\s+replace\s+)?function\s+public\.(probe)\s*\([\s\S]*?\)\s*[\s\S]*?\bas\s+\$[A-Za-z_0-9]*\$([\s\S]*?)\$[A-Za-z_0-9]*\$/gi;
+  const bodies = new Map<string, string>();
+  for (const match of sql.matchAll(re)) bodies.set(match[1], match[2]);
+  assert.match(bodies.get("probe")!, /select\s+false/);
 });
 
 // ---------------------------------------------------------------------------
