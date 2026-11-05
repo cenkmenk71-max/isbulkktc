@@ -598,3 +598,58 @@ formun sözleşmesiyle aynı.
 - #227'deki `[auth.smtp]` bloğunu `config.toml`'a ekle (LANE-SUPABASE) ve
   RESEND_API_KEY'i düzelt (#186).
 - DKIM'i 2048-bit'e yenile (Resend paneli) + TXT yayınla (LANE-CLOUDFLARE).
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (micro-denetim turu 2)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Aldığı issue: yok (yeni sahipsiz lane:auth issue'su yok) → micro-denetim
+Değişen dosyalar:
+  src/features/identity/turnstile.ts            (başarısız script retry'ı düzeltildi)
+  src/features/identity/turnstile-loader.test.ts (yeni, 3 test)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (508, 3'ü yeni) / test:security ✅ (41 pass, 2 todo, 0 fail)
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration/şablon değişmedi)
+```
+
+### Denetlenen dosyalar (micro-denetim)
+`git ls-files 'src/features/identity/**' 'src/app/[locale]/(auth)/**'
+'supabase/templates/**'` → **39 dosya**; hepsine bakıldı. Bakılmayan dosya yok.
+
+### Bulgular
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `turnstile.ts:30-55` | mantık / hata yolu | Başarısız script indirmesinden sonra `error` işleyicisi `scriptPromise=null` yapıyor ama `<script id="cf-turnstile-script">` DOM'da kalıyor. Yeniden deneme `existing` elemanı yeniden kullanıyor; settle olmuş eleman bir daha `load`/`error` **yaymaz** → promise sonsuza dek pending | Her deneme taze elemanla başlamalı | Ağ hatası/CF blokundan sonra captcha widget'ı **hiç** render olmaz; captcha açıkken kayıt/giriş/şifre sıfırlama **tamamen bloke** | düzeltildi |
+| 2 | `turnstile.ts:8` | ölü kod | `turnstileResponseField` export'u dışarıdan okunmuyor (üretici/tüketici aynı dosyada sabit kullanıyor) | — | önemsiz | bilgi |
+| 3 | 7 şablon | tutarlılık | logo/preheader/tablo/satır içi stil birebir aynı; tek stylesheet | — | sorun yok | bilgi |
+| 4 | `auth-errors.ts` / `auth-routing.ts` | doğruluk | `oauthFailureReason` 11 kod → 5 reason; bilinmeyen/hostile girdi `failed`'a düşer, URL'e ham kod yazılmaz | — | sorun yok (önceki tur) | bilgi |
+
+### Düzeltilen (#1)
+`loadTurnstileScript`: `document.getElementById(scriptId)?.remove()` ile eski
+eleman temizlenip her denemede `createElement` ile taze script ekleniyor; `error`
+işleyicisi başarısız elemanı `script.remove()` ile kaldırıyor. Tek uçuş
+paylaşımı (`if (scriptPromise) return scriptPromise`) ve "hazırsa DOM'a dokunma"
+davranışı korundu.
+
+### Kanıt (mutasyon testi)
+Yeni `turnstile-loader.test.ts` gerçek `loadTurnstileScript`'i minimal DOM stub'ıyla
+sürer. Düzeltme **geri alındığında** test kırmızı olur:
+```
+BUGGY  → ✖ a failed download can be retried instead of hanging forever (timeout)
+FIXED  → ✔ 3/3 pass
+```
+Bu, testin hatayı gerçekten yakaladığını kanıtlar.
+
+### Güvenlik değerlendirmesi (security skill)
+- Değişiklik yalnız **istemci tarafı script yükleme** mantığı; sunucu/DB yolu yok.
+- `scriptSrc` sabit ve Cloudflare alan adına işaret ediyor; kullanıcı girdisi
+  URL'e girmiyor. `remove()` yalnız bizim oluşturduğumuz elemanı hedefler.
+- Captcha açıkken form gönderimini **bloke etmeyen** davranış korundu (site key
+  yoksa widget render edilmez; `useCaptchaAction` yalnız site key varken keser).
+
+### Sahibin yapması gerekenler
+- Gerçek tarayıcıda captcha'lı kayıt akışını doğrula (yerel/üretim), çünkü bu
+  düzeltme istemci runtime'ında; bu sandbox'ta tarayıcı E2E captcha'sız koşuyor.
+- **#227** (auth SMTP + DKIM) hâlâ LANE-SUPABASE + LANE-CLOUDFLARE'i bekliyor.

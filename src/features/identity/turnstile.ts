@@ -22,36 +22,44 @@ const scriptSrc =
 
 let scriptPromise: Promise<void> | null = null;
 
-/** Loads the Turnstile script once per document and resolves when it is ready. */
-function loadTurnstileScript(): Promise<void> {
+/**
+ * Loads the Turnstile script once per document and resolves when it is ready.
+ *
+ * Exported so the retry path can be exercised without a browser (see
+ * `turnstile-loader.test.ts`); the widget hooks call it through
+ * `useTurnstileWidget`.
+ */
+export function loadTurnstileScript(): Promise<void> {
   if (window.turnstile) return Promise.resolve();
   if (scriptPromise) return scriptPromise;
 
   scriptPromise = new Promise<void>((resolve, reject) => {
-    const existing = document.getElementById(scriptId) as
-      | HTMLScriptElement
-      | null;
-    const script = existing ?? document.createElement("script");
+    // A prior attempt may have left a failed `<script>` behind. A settled
+    // element never fires `load`/`error` again, so reusing it would leave this
+    // promise pending forever and the widget would never render — start from a
+    // fresh element on every attempt.
+    document.getElementById(scriptId)?.remove();
 
-    if (!existing) {
-      script.id = scriptId;
-      script.src = scriptSrc;
-      script.async = true;
-      script.defer = true;
-    }
+    const script = document.createElement("script");
+    script.id = scriptId;
+    script.src = scriptSrc;
+    script.async = true;
+    script.defer = true;
 
     script.addEventListener("load", () => resolve(), { once: true });
     script.addEventListener(
       "error",
       () => {
-        // Allow a later mount to retry the download instead of caching failure.
+        // Drop the failed element so a later mount re-downloads instead of
+        // reusing it and hanging on an event that will never fire again.
+        script.remove();
         scriptPromise = null;
         reject(new Error("Turnstile script could not be loaded."));
       },
       { once: true },
     );
 
-    if (!existing) document.head.appendChild(script);
+    document.head.appendChild(script);
   });
 
   return scriptPromise;
