@@ -61,3 +61,15 @@ bot-bağımsız aynı; WAF yalnız `sqlmap` gibi kötü UA'yı 403'lüyor. Yani
 **Kopuk halka adayı (LANE-SEO'ya handoff):** Bing doğrulama artefaktı yok
 (`msvalidate.01` meta, `BingSiteAuth.xml`, Bing DNS TXT'inin üçü de eksik) —
 Bing indeksi 1 sayfada. `lane:seo` + `agent:handoff` ile issue açıldı.
+
+### E-posta kimlik doğrulama (#170) — 2026-11-05
+
+Canlı DNS ölçümü: Resend kayıtları **tam** — `send.isbulkktc.com` TXT
+`v=spf1 include:amazonses.com ~all` + MX `feedback-smtp.eu-west-1.amazonses.com`
+(return-path), `resend._domainkey` DKIM, kök `_dmarc` mevcut. Resend
+**envelope/Return-Path'i `send.` subdomaini** olduğu için SPF orada kontrol
+edilir ve **pass** olur; issue'nun istediği "kök SPF'e `include:amazonses.com`
+ekle" adımı **gereksiz**. Gerçek fırsatlar: DKIM **1024-bit** (2048'e yükselt) ve
+DMARC'i `ruf` + sıkı alignment ile güçlendir. Detay: `docs/cloudflare.md` →
+"E-posta kimlik doğrulama denetimi". Yıkıcı DNS değişikliği yapılmadı.
+Handoff: `[auth.smtp]` (LANE-AUTH), `List-Unsubscribe`/`Reply-To` (LANE-URUN).

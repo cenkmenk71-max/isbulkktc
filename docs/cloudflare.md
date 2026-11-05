@@ -170,3 +170,105 @@ En güçlü kalan adaylar (bu lane'in dışı → handoff):
 
 Bu bölümü ekleyen PR: bkz. PR gövdesi. Yıkıcı CF değişikliği yapılmadı; C-15 için
 handoff issue'su `lane:seo` + `agent:handoff` ile açıldı.
+
+---
+
+## E-posta kimlik doğrulama denetimi — issue #170 (2026-11-05)
+
+Issue #170 ("e-postalar spam'e düşüyor") teşhisindeki **DNS iddiaları canlı
+sorguyla doğrulandı**. Sonuç: Resend kayıtları **eksik değil, tam**; sorunun kökü
+issue'nun işaret ettiği yer değil. Aşağıda ölçüm, düzeltme ve kanıt var.
+
+### Ölçüm — canlı DNS (DoH, 2026-11-05)
+
+| # | Kayıt | Gözlenen | Değerlendirme |
+|---|---|---|---|
+| E-01 | Kök SPF | `v=spf1 include:_spf.mx.cloudflare.net ~all` | CF Email Routing için doğru |
+| E-02 | Kök SPF nested | `_spf.mx.cloudflare.net` → `v=spf1 ip4:104.30.0.0/19 ip6:2405:8100:c000::/38 ~all` | 1 include = 1 lookup |
+| E-03 | **Resend SPF (return-path)** | `send.isbulkktc.com TXT "v=spf1 include:amazonses.com ~all"` | ✅ **mevcut ve doğru** |
+| E-04 | Resend return-path MX | `send.isbulkktc.com MX 10 feedback-smtp.eu-west-1.amazonses.com` | ✅ Resend `send.` kuralı |
+| E-05 | DKIM | `resend._domainkey.isbulkktc.com TXT "p=MIGf…"` | ✅ mevcut — ama bkz. E-10 |
+| E-06 | DMARC | `_dmarc.isbulkktc.com TXT "v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; fo=1"` | 🟠 izleme; `ruf` yok, alignment tag yok |
+| E-07 | Kök MX | Cloudflare Email Routing (inbound) | ✅ |
+| E-08 | MTA-STS | `_mta-sts` TXT **yok** | 🟡 eksik (opsiyonel) |
+| E-09 | TLS-RPT | `_smtp._tls` TXT **yok** | 🟡 eksik (opsiyonel) |
+| **E-10** | **DKIM anahtar uzunluğu** | `openssl pkey -pubin` → **`Public-Key: (1024 bit)`** | 🔴 **zayıf** (Resend bugün 2048 önerir) |
+| E-11 | DKIM selector adı | `resend._domainkey` (Resend standardı) | ✅ |
+| E-12 | `send.` DKIM / DMARC | yok | ℹ️ beklenen (return-path DKIM'siz; DMARC kökte) |
+
+### Ana bulgu: issue'nun SPF teşhisi yanlış
+
+Issue "SPF Resend'i yetkilendirmiyor" diyor ve kök SPF'e `include:amazonses.com`
+eklenmesini istiyor. **Bu gereksiz** — çünkü Resend'in **envelope/Return-Path
+domaini kök değil, `send.isbulkktc.com`**'dir. Resend resmî dokümanı:
+
+> "Return-Path defaults to `send.example.com`" — `resend.com/docs/add-a-domain`
+> "custom return path is used for SPF authentication, DMARC alignment" —
+> `resend.com/docs/api-reference/domains/create-domain`
+> "its return-path domain is different since it operates through a subdomain …
+> formatted as `send.yourdomain.tld` … for MX and SPF records" —
+> `resend.com/docs/knowledge-base/sending-apple-private-relay`
+
+Alıcı sunucu SPF'i **envelope (MAIL FROM) domainine** uygular; o da `send.isbulkktc.com`,
+ve orada `include:amazonses.com` **zaten var** (E-03) → **SPF pass**. Kök SPF
+(E-01) bu akışta hiç okunmaz. DKIM `d=isbulkktc.com` (E-05) ve DMARC kökte (E-06)
+olduğundan, Resend varsayılan kurulumunda **SPF + DKIM + DMARC zaten hizalı ve
+geçer** durumda. Yani spam'in nedeni "kök SPF" değil.
+
+**Doğrulama yöntemi (sahip, 5 dakika):** Resend'den bir test e-postası gönder,
+alıcıda `Authentication-Results` başlığını oku:
+- `spf=pass smtp.mailfrom=…@send.isbulkktc.com` → return-path `send.`, kök SPF konu dışı.
+- `dkim=pass header.d=isbulkktc.com` ve `dmarc=pass` → kimlik doğrulama tam.
+Bu çıktı, "kök SPF'e include ekle" adımının gereksiz olduğunu kanıtlar.
+
+### Gerçek iyileştirme fırsatları (onay bekleyen, uygulanmadı)
+
+1. **DKIM'i 2048-bit'e yükselt (E-10) — yeni bulgu.** Mevcut anahtar 1024-bit RSA.
+   1024-bit günümüzde zayıf kabul edilir ve bazı sağlayıcılar skoru düşürür.
+   Resend paneli → domain → DKIM anahtarını yenile (2048), yeni
+   `resend._domainkey` TXT'i yayınla. **DNS değişikliği → sahibin onayı gerekli.**
+2. **DMARC'i güçlendir (E-06).** Önerilen:
+   `v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; ruf=mailto:dmarc@isbulkktc.com; fo=1; adkim=s; aspf=s`
+   Raporları izledikten sonra `p=quarantine` → `p=reject`. `ruf` (forensic) ve
+   sıkı alignment eklemek, hem görünürlük hem spoofing direnci sağlar.
+3. **Kök SPF'e `include:amazonses.com` EKLEMEYİN** (gerekçe yukarıda). Yalnızca
+   kök domainden (`@isbulkktc.com`) envelope ile mail gönderen bir kaynak
+   (ör. CF Email Routing forward'ları) varsa gerekir; önce o senaryo ölçülmeli.
+4. **MTA-STS + TLS-RPT (E-08/E-09) — opsiyonel.** `_smtp._tls` TXT
+   (`v=TLSRPTv1; rua=mailto:tlsrpt@isbulkktc.com`) ve MTA-STS politikası eklemek
+   aktarım güvenilirliğini artırır. Düşük öncelik.
+
+### Bakılmadı / doğrulanamadı (dürüst işaret)
+
+- **Resend paneli "domain verified" durumu:** bu sandbox'taki `RESEND_API_KEY`
+  **geçersiz** (`GET /domains` → `400 API key is invalid`). Panel/API durumu
+  okunamadı; yalnızca yayınlanmış DNS kayıtları doğrulandı.
+- **Gerçek teslim testi (Gmail/Outlook gelen kutusu + `Authentication-Results`):**
+  gönderim yapılmadı (canlıya dokunmama kuralı); bu adım sahibin/QA'nın.
+- **Cloudflare zone API** (`CF_API_TOKEN` bu sandbox'ta yok): kayıtların panelde
+  birebir eşleştiği varsayımı DNS cevabına dayanır.
+
+### Bu lane dışına handoff
+
+- **`[auth.smtp]` yok (LANE-AUTH, #170 adım 6):** `supabase/config.toml`'da
+  `[auth.smtp]` bloğu **yok**; auth e-postaları (confirmation, recovery,
+  magic_link, email_change, invite, reauthentication) Supabase'in varsayılan
+  SMTP'sinden gidiyor → bu postaların SPF/DKIM'i `isbulkktc.com` ile **hizasız**.
+  Kanıt: `grep -niE 'smtp' supabase/config.toml` → boş (config'te yalnız
+  `[auth.email]` + `[auth.email.template.*]` var, satır 79–122).
+- **`List-Unsubscribe` / `Reply-To` eksik (LANE-URUN, #170 adımları 9, 11):**
+  `src/server/email/mailer.ts:69-78` içindeki `resend.emails.send` çağrısı yalnız
+  `from/to/subject/html/text` gönderiyor; `headers` (`List-Unsubscribe`,
+  `List-Unsubscribe-Post`) veya `replyTo` yok. `sendEngagementEmail`
+  (`mailer.ts:250-267`) promosyonel aile olduğu için `List-Unsubscribe` en çok
+  burada gerekli (Gmail toplu gönderim şartı). `from` varsayılanı
+  `no-reply@isbulkktc.com` (`mailer.ts:34`) — `Reply-To` gerçek kutuya çevrilmeli.
+- **Not (düzeltme):** #170 adım 10'daki "her e-postada `text/plain` olsun" maddesi
+  **zaten karşılanıyor** — `RenderedEmail` tipi `text`'i zorunlu kılıyor
+  (`supabase/functions/_shared/email-render.ts:13`) ve mailer `text: email.text`
+  gönderiyor (`mailer.ts:75`). Bu madde için iş yok.
+- **DKIM 1024-bit (LANE-AUTH):** anahtar rotasyonu Resend panelinden yapılır; kod
+  değil. `lane:auth` + `agent:handoff` ile issue açıldı.
+
+Ayrıntılı kanıt ve komutlar bu bölümde; ölçüm tekrarı:
+`curl -s -H 'accept: application/dns-json' 'https://cloudflare-dns.com/dns-query?name=send.isbulkktc.com&type=TXT'`.
