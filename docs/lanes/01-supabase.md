@@ -60,3 +60,43 @@ işine bırakıldı.
 karşılaştırması); 29/29 tabloda `revoke` var; son tanımı `SECURITY DEFINER` olan
 her fonksiyonda `set search_path = ''` var. `function_privileges.test.sql`
 ratchet'i istemci-yürütülebilir imzaları zaten sabitliyor.
+
+## Çalışma günlüğü — 2. tur (2026-11-06)
+
+Bu turda bana atanmış **iki** issue vardı: **#162** (`lane:supabase` +
+`lane:auth`, mükerrer kayıt) ve **#139** (`lane:supabase` + `lane:urun` handoff,
+anon yazma RPC'lerinde hız sınırı).
+
+**#162 (mükerrer kayıt) — supabase tarafı temiz, AUTH'a devredildi.**
+`public.profiles` ↔ `auth.users` 1:1: `handle_new_auth_user()` trigger'ı
+`on conflict (id) do nothing` ile idempotent (`20261013000000`, `20261031140000`).
+E-posta tekilliği, büyük/küçük harf/artı normalizasyonu ve social↔e-posta
+çakışması GoTrue/AUTH katmanının işi (`src/features/identity/**`,
+`supabase/config.toml`); DB tarafında yapılacak bir şey yok. Issue'ya yorum +
+`lane:auth` etiketiyle devir notu bırakıldı.
+
+**#139 (anon yazma hız sınırı) — düzeltildi (LANE-SUPABASE tarafı).**
+Tek idempotent migration: `20261106000000_v4_anon_write_throttle.sql`.
+- Yeni tablo `public.anon_write_throttle` (scope, **sha256** subject, pencere
+  başlangıcı, sayaç) — ham adres saklanmaz. RLS + `revoke` tam.
+- Yeni yardımcı `public.consume_anon_write_quota(scope, subject, burst, window)`:
+  tek atomik `insert … on conflict do update` (ilk-kayıt yarışı yok), pencere
+  dolunca sıfırlar, bütçe aşılınca **`54000`** fırlatır. `SECURITY DEFINER` +
+  `search_path = ''`; istemciye kapalı.
+- `submit_feedback` ve `submit_sales_lead` artık insert'ten **önce** bu yardımcıyı
+  çağırır: adres (`cf-connecting-ip` → `x-real-ip` → `x-forwarded-for` ilk hop,
+  yoksa `unknown`) ve (varsa) gönderen adres için 10 dk / 5 hak —
+  `src/features/abuse/limits.ts` ile aynı. Doğrudan PostgREST çağrısı artık
+  limiter'ı atlayamaz.
+- `supabase/tests/database/anon_write_throttle.test.sql` (14 assertion) eklendi.
+
+Kanıt: `tests/security/sql-hardening.test.ts` ve
+`tests/security/anonymous-write-surface.test.ts` migration'ları tarar; ikisi de
+yeşil kaldı. pgTAP mantığı Docker olmadığı için CI `database` işinde koşar.
+
+**#139 URUN tarafı:** `anon` grant'i bilinçli korunur (ziyaretçi hesapsız yazabilir);
+bu yüzden `src/features/**` tarafında route-proxy (seçenek 2) gerekmez — DB
+seçeneği (1) uygulandı. Yine de istemci tarafı için `lane:urun` notu bırakıldı.
+
+**Not (kural):** `docs/threat-model.md` LANE-GÜVENLİK'in dosyası — düzenlenmedi;
+#139'a yorum yazıldı.
