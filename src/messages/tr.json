@@ -946,7 +946,7 @@
     "previous": "Önceki",
     "next": "Sonraki",
     "pageCount": "Sayfa {current} / {total}",
-    "sourceNote": "Kapsam kaynak koordinatlarına göre yaklaşık belirlenmiştir; resmi bir sınır değerlendirmesi değildir. Rehber, şirket kaydı veya doğrulama anlamına gelmez."
+    "sourceNote": "Bu rehberdeki coğrafi kapsam yaklaşıktır; resmi bir sınır değildir. Bir şirketin listelenmesi, tescilli veya doğrulanmış olduğu anlamına gelmez."
   },
   "CandidateDashboard": {
     "eyebrow": "ADAY PROFİLİ",

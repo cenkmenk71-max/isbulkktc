@@ -946,7 +946,7 @@
     "previous": "Zurück",
     "next": "Weiter",
     "pageCount": "Seite {current} von {total}",
-    "sourceNote": "Die Abdeckung wird anhand von Quellkoordinaten geschätzt und ist keine offizielle Grenze. Ein Eintrag bedeutet nicht, dass das Unternehmen registriert oder geprüft ist."
+    "sourceNote": "Die hier gezeigte geografische Abdeckung ist ungefähr und stellt keine offizielle Grenze dar. Ein Eintrag bedeutet nicht, dass das Unternehmen registriert oder geprüft ist."
   },
   "CandidateDashboard": {
     "eyebrow": "BEWERBERPROFIL",

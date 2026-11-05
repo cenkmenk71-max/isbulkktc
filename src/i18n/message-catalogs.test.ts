@@ -123,3 +123,28 @@ test("no catalog keeps a message key whose rendering code was removed", () => {
     }
   }
 });
+
+// The lane's rule is that a visitor only ever sees their own action explained,
+// never how the pipeline works underneath. `CompanyDirectory.sourceNote` leaked
+// "kaynak koordinatlarına göre" (the brief names that exact phrase as forbidden
+// internal vocabulary), so this ratchet keeps implementation words off the
+// surface. The list is deliberately narrow — only phrases that describe the
+// system, not a legitimate user action like importing one's own CV.
+const FORBIDDEN_INTERNAL_PHRASES = [
+  "kaynak koordinat",
+  "şube sayısı",
+  "dahil edilmez",
+  "hariç tutul",
+] as const;
+
+test("Turkish catalog keeps internal pipeline vocabulary off the visitor surface", () => {
+  for (const [key, value] of Object.entries(turkish)) {
+    for (const phrase of FORBIDDEN_INTERNAL_PHRASES) {
+      assert.equal(
+        value.toLowerCase().includes(phrase),
+        false,
+        `tr.${key} leaks internal vocabulary "${phrase}"; reword it as the user's own action`,
+      );
+    }
+  }
+});

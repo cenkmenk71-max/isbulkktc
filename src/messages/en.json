@@ -946,7 +946,7 @@
     "previous": "Previous",
     "next": "Next",
     "pageCount": "Page {current} of {total}",
-    "sourceNote": "Coverage is estimated from source coordinates, not an official boundary. A listing does not mean the company is registered or verified."
+    "sourceNote": "The geographic coverage shown here is approximate and not an official boundary. A listing does not mean the company is registered or verified."
   },
   "CandidateDashboard": {
     "eyebrow": "CANDIDATE PROFILE",
