@@ -154,3 +154,17 @@ bir yeni açık bulgu (throttle'ın app-yolu) devredildi.
   (`src/features/**`) + LANE-SUPABASE (`supabase/**`) → **#206** (`agent:handoff`);
   test `todo` işaretli.
 - **Bakılmayan:** yok — 9 test dosyası + 2 doküman.
+
+## Durum (2026-11-05, 5. tur) — kapı terfileri (main ilerledi)
+
+Bu turda main'e inen iki düzeltme kapıya terfi etti; kalan iki `todo` yürürlükte.
+
+- **Kapıya terfi: oturum çerezi (`session-cookie-flags`).** LANE-AUTH #201 ile iki
+  çağrı noktasına `cookieOptions: { httpOnly: true, secure: … }` ekledi; `todo`
+  kaldırıldı, test artık sertleştirmeyi zorluyor. (Mutation: `httpOnly: false`
+  yapınca kırmızı.) **#167 kapandı sayılır** — sahibi lane issue'yu kapatabilir.
+- **Kapıya terfi (önceki tur): anon RPC throttle** — main'e indi (PR #205).
+- **Kalan iki açık `todo`:** (a) throttle'ın app-yolu IP kollapsı → **#206**
+  (LANE-URUN + LANE-SUPABASE); (b) `unsubscribe-token-core.ts` `server-only`
+  eksik → #102 (LANE-URUN).
+- **Bakılmayan:** yok — 9 test dosyası + 2 doküman.

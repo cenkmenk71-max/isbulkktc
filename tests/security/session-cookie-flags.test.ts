@@ -90,10 +90,10 @@ test("the proxy verifies claims rather than trusting the raw session", () => {
 // ---------------------------------------------------------------------------
 // 3. The session cookie is hardened.
 //
-//    Marked `todo` because the fix belongs to LANE-AUTH, not this layer. It
-//    starts passing on its own once both `createServerClient` call sites pass
-//    `cookieOptions: { httpOnly: true, secure: … }` (or the proxy adds the flags
-//    as it forwards the cookies), at which point the `todo` can be dropped.
+//    LANE-AUTH shipped the fix (#201): both `createServerClient` call sites now
+//    pass `cookieOptions: { httpOnly: true, secure: process.env.NODE_ENV ===
+//    "production" }`. The check below used to carry a `todo` while the gap was
+//    open; it is a gate now, so a regression re-opening the cookie fails CI.
 // ---------------------------------------------------------------------------
 
 const sessionClientFiles = ["src/proxy.ts", "src/server/db/supabase-server.ts"];
@@ -119,29 +119,25 @@ function isHardened(source: string): { httpOnly: boolean; secure: boolean } {
   };
 }
 
-test(
-  "the Supabase session cookie is HttpOnly and Secure",
-  { todo: "session cookie keeps @supabase/ssr defaults (httpOnly:false, no Secure) — LANE-AUTH" },
-  () => {
-    const offenders: string[] = [];
-    for (const file of sessionClientFiles) {
-      const source = read(new URL(`../../${file}`, import.meta.url).pathname);
-      const { httpOnly, secure } = isHardened(source);
-      if (!httpOnly || !secure) {
-        offenders.push(`${file} [httpOnly:${httpOnly} secure:${secure}]`);
-      }
+test("the Supabase session cookie is HttpOnly and Secure", () => {
+  const offenders: string[] = [];
+  for (const file of sessionClientFiles) {
+    const source = read(new URL(`../../${file}`, import.meta.url).pathname);
+    const { httpOnly, secure } = isHardened(source);
+    if (!httpOnly || !secure) {
+      offenders.push(`${file} [httpOnly:${httpOnly} secure:${secure}]`);
     }
-    assert.deepEqual(
-      offenders,
-      [],
-      `session cookies without HttpOnly/Secure: ${offenders.join(", ")}`,
-    );
-  },
-);
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `session cookies without HttpOnly/Secure: ${offenders.join(", ")}`,
+  );
+});
 
 test("the cookie-flag check detects a hardened call site (self-test)", () => {
   // Guards the guard: if `isHardened` ever regresses to inspecting the wrong
-  // substring, the `todo` above would pass for the wrong reason. This proves it
+  // substring, the gate above would pass for the wrong reason. This proves it
   // recognises a correctly hardened block and rejects a half-hardened one.
   assert.deepEqual(isHardened("cookieOptions: { httpOnly: true, secure: true }"), {
     httpOnly: true,

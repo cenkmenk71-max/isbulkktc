@@ -203,14 +203,6 @@ issue açar.
    altındaki diğer tüm sır-okuyan modüller bu işareti taşıyor; eksik olan, yanlış
    bir istemci içe aktarımını derleme hatası yerine sessiz bir sızıntıya çevirir.
    Kanıt: `tests/security/client-boundary.test.ts` (`todo`).
-3. **Oturum çerezi sertleştirilmemiş** (sahibi: LANE-AUTH; devir #167).
-   Oturumu taşıyan çerez `@supabase/ssr` varsayılanlarıyla yazılıyor:
-   `httpOnly: false` ve **`Secure` yok** (`node_modules/@supabase/ssr/dist/main/utils/constants.js`;
-   iki çağrı noktası `src/proxy.ts` ve `src/server/db/supabase-server.ts` de
-   `cookieOptions` geçmiyor). Tarayıcıda çerezi okuyan kod olmadığı için
-   `HttpOnly` güvenle eklenebilir; XSS ile çerez hırsızlığı yolunu kapatır.
-   `Secure` üretimde defence-in-depth (HSTS zaten var). Kanıt:
-   `tests/security/session-cookie-flags.test.ts` (`todo`).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
 
@@ -239,6 +231,11 @@ issue açar.
   gevşek bir `/throttle/i` araması yerine her RPC'nin gövdesinde çağrının
   varlığını ve insert'ten önce çalıştığını doğrulayan bir **kapı** çalıştırıyor.
   (IP boyutunun app yolundaki kalan açığı yukarıdaki 1. bulgudur.)
+- **Oturum çerezi sertleştirilmemişti** (sahibi: LANE-AUTH; devir #167). Oturum
+  çerezi `@supabase/ssr` varsayılanlarıyla yazılıyordu (`httpOnly: false`,
+  `Secure` yok). LANE-AUTH (#201) iki çağrı noktasına da
+  `cookieOptions: { httpOnly: true, secure: process.env.NODE_ENV === "production" }`
+  ekledi; `tests/security/session-cookie-flags.test.ts` `todo`'dan kapıya terfi etti.
 
 ### Katmanın kendi dedektörleri (4. tur sertleştirmesi)
 
