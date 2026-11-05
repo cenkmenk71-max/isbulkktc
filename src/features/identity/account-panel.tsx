@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { oauthProviderLabels } from "./oauth-providers";
+import { monogramFor } from "./monogram";
 
 export type AccountPanelAccount = {
   displayName: string;
@@ -48,7 +49,7 @@ export function AccountPanel({ account }: { account: AccountPanelAccount }) {
             aria-hidden="true"
             className="account-panel-avatar account-panel-avatar--monogram"
           >
-            {account.displayName.slice(0, 1).toLocaleUpperCase()}
+            {monogramFor(account.displayName)}
           </span>
         )}
         <div>

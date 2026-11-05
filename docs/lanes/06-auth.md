@@ -710,3 +710,54 @@ NUL/LF/CRLF/TAB/DEL/C1 reddediliyor; `"Ayşe Yılmaz"`, `"Παπαδόπουλο
 - **#191** (marka paleti) sahiplik çelişkisi (#191 yorumlarında) çözülmeli; AUTH
   şablonları `email-layout.ts` ile aynı yeşili (`#0D5C3A`) kullanıyor ve o dosya
   değişirse şablonlar da güncellenmeli.
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (micro-denetim turu 4)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Aldığı issue: yok (yeni sahipsiz lane:auth issue'su yok) → micro-denetim
+Değişen dosyalar:
+  src/features/identity/account-panel.tsx   (monogram: surrogate-pair düzeltmesi)
+  src/features/identity/monogram.ts         (yeni, saf yardımcı)
+  src/features/identity/monogram.test.ts    (yeni, 3 test)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (521, 3'ü yeni) / test:security ✅ (67 pass, 2 todo, 0 fail)
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration/şablon değişmedi)
+```
+
+### Denetlenen dosyalar (micro-denetim)
+`git ls-files 'src/features/identity/**'` (34) + 5 `(auth)`/callback route +
+7 şablon → **46 dosya**; hepsine bakıldı. Bakılmayan dosya yok.
+
+### Bulgular
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `account-panel.tsx:51` | doğruluk / unicode sınır girdi | Monogram `displayName.slice(0, 1)` — ilk **UTF-16 birimi**. Astral karakteri (emoji, Deseret/CJK-eklentisi) ikiye böler | ilk **kod noktası** (`[...name][0]`) | `"😀 Kahraman"` → yarım surrogate (`\uD83D`) → yerine-koyma glifi (tofu). Kullanıcının kendi adı bozuk görünür | düzeltildi |
+| 2 | `schemas.ts` / `actions.ts` | doğruluk | Kayıt ismi (2–80, `[[:cntrl:]]` reddi) ve e-posta normalizasyonu doğru; i18n anahtarlarının tamamı 6 dilde var | — | sorun yok | bilgi |
+| 3 | `auth-routing.ts` | mantık | `resolveAuthFailurePath` reset→`forgot-password?error=expired`, oauth→kapalı reason sözlüğü; ham kod URL'e yazılmıyor | — | sorun yok (önceki tur) | bilgi |
+| 4 | 7 şablon | tutarlılık | logo/preheader/tablo/inline stil birebir aynı, tek stylesheet | — | sorun yok | bilgi |
+
+### Düzeltilen (#1)
+Monogram kuralı saf `monogramFor()` yardımcısına çıkarıldı (`[...displayName][0]?.toLocaleUpperCase() ?? ""`);
+`account-panel.tsx` onu kullanır. İlk **kod noktası** alınır, böylece astral
+karakter bütün kalır; boş isim boş string döner.
+
+### Kanıt (mutasyon testi)
+`monogram.test.ts` gerçek yardımcıyı sürer; `slice(0, 1)`'e geri alınınca kırmızı olur:
+```
+BUGGY (slice(0,1))         → ✖ lone surrogate (tofu) üretiyor
+FIXED ([...name][0])       → ✔ 3/3 pass
+```
+Test, sonucun **tek kod noktası** olduğunu ve **lone surrogate içermediğini**
+regex ile doğrular.
+
+### Güvenlik değerlendirmesi (security skill)
+- Yalnız sunum katmanı (avatar harfi); yetki/oturum/DB yolu değişmedi.
+- Kullanıcı girdisi React tarafından metin olarak render ediliyor (XSS yok).
+- `service_role` hiçbir değişen dosyada yok.
+
+### Sahibin yapması gerekenler
+- **#227** (auth SMTP + DKIM) hâlâ LANE-SUPABASE + LANE-CLOUDFLARE'i bekliyor.
+- **#191** (marka paleti) sahiplik çelişkisi çözülmeli.
