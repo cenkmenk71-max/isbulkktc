@@ -440,20 +440,11 @@
     "eyebrow": "İŞBUL KKTC · LOKALER ÜBERBLICK",
     "title": "Arbeit und Karriere in Nordzypern.",
     "lead": "Verfolgen Sie aktuelle Meldungen zu Beschäftigung und Arbeitsleben in Nordzypern mit Links zu den Herausgebenden.",
-    "sourceSearchLink": "Alle aktuellen Meldungen öffnen",
     "feedAsideLabel": "DIE NEUESTEN MELDUNGEN",
     "feedAsideBody": "Meldungen zum lokalen Arbeitsleben aus den vergangenen 30 Tagen.",
     "feedKicker": "AKTUELLE MELDUNGEN",
     "feedTitle": "Neuigkeiten zu Arbeit und Karriere",
-    "latestBadge": "NEU",
-    "localNewsBadge": "LOKALER ÜBERBLICK",
-    "illustrativeImage": "SYMBOLBILD · UNSPLASH",
     "emptyTitle": "Zurzeit gibt es keine Meldungen.",
-    "emptyBody": "Neue Meldungen erscheinen nach der Aktualisierung des Feeds. Bis dahin können Sie die Quellensuche öffnen.",
-    "editorialNoteTitle": "Quelle ansehen. Bericht beim Herausgeber lesen.",
-    "editorialNoteBody": "Diese Seite zeigt aktuelle Schlagzeilen und Herausgebernamen. Sie kopiert keine Artikeltexte und stellt sie nicht als eigene Berichte von İşBul KKTC dar. Die Unsplash-Fotos auf den Karten illustrieren passende Themen, zeigen aber nicht die konkreten Ereignisse. Den vollständigen Bericht und Kontext finden Sie beim Herausgeber.",
-    "photoLicense": "Unsplash-Bildlizenz",
-    "sourceLabel": "Quelle: {source}",
     "metaTitle": "Arbeits- und Karrierejournal Nordzypern | İşBul KKTC",
     "metaDescription": "Der Arbeitsmarkt Nordzyperns, ein Leitfaden für Arbeitgeber und Karrieretipps für Absolventen. İşBul KKTC."
   },
@@ -924,14 +915,11 @@
     "activeJobCount": "{count} offene Stellen",
     "jobEmployersVerificationNote": "Die Anzeige in diesem Abschnitt bedeutet nicht, dass İşBul KKTC das Unternehmen verifiziert hat.",
     "companyWebsite": "Website",
-    "sourceProfileLink": "Quellprofil des Unternehmens",
-    "sourceListingLink": "Originalanzeige ansehen",
     "resultsLabel": "Suchergebnisse für Unternehmen",
     "searchLabel": "Unternehmensnamen suchen",
     "searchPlaceholder": "Beliebigen Teil des Unternehmensnamens eingeben",
     "clearSearch": "Suchtext löschen",
     "categoryLabel": "Branche oder Geschäftsfeld",
-    "categoryPlaceholder": "Branche auswählen",
     "categoryAll": "Alle Branchen",
     "locationLabel": "Bezirk",
     "locationAll": "Alle Bezirke",
@@ -958,8 +946,7 @@
     "previous": "Zurück",
     "next": "Weiter",
     "pageCount": "Seite {current} von {total}",
-    "sourceNote": "Die Abdeckung wird anhand von Quellkoordinaten geschätzt und ist keine offizielle Grenze. Ein Eintrag bedeutet nicht, dass das Unternehmen registriert oder geprüft ist.",
-    "districtDataNote": "{count} Standorte ohne zuverlässige Bezirksangabe werden bei Auswahl eines Bezirksfilters ausgeschlossen."
+    "sourceNote": "Die Abdeckung wird anhand von Quellkoordinaten geschätzt und ist keine offizielle Grenze. Ein Eintrag bedeutet nicht, dass das Unternehmen registriert oder geprüft ist."
   },
   "CandidateDashboard": {
     "eyebrow": "BEWERBERPROFIL",
@@ -1030,7 +1017,6 @@
       "saved": "Ihr Profil wurde gespeichert."
     },
     "profileIndex": "PROFIL · 01",
-    "sectionsDescription": "Ergänzen Sie die gewünschten Angaben. Alle Bereiche sind optional; prüfen und bearbeiten Sie CV-Vorschläge vor dem Speichern.",
     "additionalDetails": "Erfahrung, Ausbildung und mehr · {count} Einträge",
     "additionalDetailsHint": "Diese Bereiche sind optional. CV-Angaben werden ohne Löschen vorhandener Einträge in das Formular übernommen; prüfen und bearbeiten Sie sie vor dem Speichern.",
     "entryLabel": "Eintrag {number}",
@@ -1172,8 +1158,7 @@
       "verificationNoticeDescription": "Die Freigabe eines Verzeichniseintrags ändert nicht den offiziellen Prüfstatus des Unternehmens. Dokument-Uploads bleiben deaktiviert, bis sichere Speicher- und Löschregeln festgelegt sind.",
       "identitySection": "Unternehmensdaten",
       "contactSection": "Kontaktdaten",
-      "locationSection": "Standort und Verzeichniseintrag",
-      "documentsTitle": "Unternehmensdokumente"
+      "locationSection": "Standort und Verzeichniseintrag"
     },
     "addCompany": "Unternehmen hinzufügen",
     "signOut": "Sicher abmelden",
@@ -1210,8 +1195,6 @@
       "lefke": "Lefke"
     },
     "directoryTarget": "Unternehmen und Standort im bestehenden Verzeichnis",
-    "directoryTargetNone": "Nicht gelistet / keinen Standort verknüpfen",
-    "directoryTargetHint": "Wählen Sie den von Ihnen verwalteten Standort. Freigegebene Angaben aktualisieren nur den Eintrag dieses Standorts.",
     "directorySearchLabel": "Unternehmen im Verzeichnis finden",
     "directorySearchPlaceholder": "Unternehmensname oder Standort eingeben",
     "directorySearchHint": "Wählen Sie den von Ihnen verwalteten Standort. Verfügbare Branchen-, Kontakt- und Standortangaben füllen nur leere Felder aus. Prüfen und bearbeiten Sie diese vor dem Einreichen. Wenn Sie das Unternehmen nicht finden, lassen Sie das Feld leer.",
@@ -1304,85 +1287,85 @@
     "ctaTitle": "Erstellen Sie Ihr Profil und behalten Sie Ihre Angaben unter Kontrolle."
   },
   "Legal": {
-    "eyebrow": "Yasal bilgilendirme",
-    "backLabel": "Geri dön",
-    "backToHome": "Ana sayfaya dön",
-    "lastUpdated": "Son güncelleme: {date}",
-    "contactNote": "Bu metinlerle ilgili sorularınız için bize ulaşabilirsiniz.",
+    "eyebrow": "Rechtliche Hinweise",
+    "backLabel": "Zurück",
+    "backToHome": "Zurück zur Startseite",
+    "lastUpdated": "Zuletzt aktualisiert: {date}",
+    "contactNote": "Bei Fragen zu diesen Texten können Sie uns erreichen.",
     "contactEmail": "info@isbulkktc.com",
-    "relatedLabel": "Diğer yasal metinler",
+    "relatedLabel": "Weitere Rechtstexte",
     "privacy": {
-      "title": "Gizlilik Politikası",
-      "intro": "İşBul KKTC olarak kişisel verilerinizi KVKK ve GDPR ilkelerine uygun şekilde, yalnızca hizmeti sunmak için gerekli olduğu ölçüde işliyoruz.",
-      "updated": "29 Ekim 2026",
+      "title": "Datenschutzerklärung",
+      "intro": "Bei İşBul KKTC verarbeiten wir Ihre personenbezogenen Daten im Einklang mit den Grundsätzen der KVKK und der DSGVO und nur, soweit es für die Bereitstellung des Dienstes erforderlich ist.",
+      "updated": "29. Oktober 2026",
       "sections": {
         "s1": {
-          "title": "Topladığımız veriler",
-          "p1": "Hesap oluşturduğunuzda ad, e-posta adresi, hesap türü ve tercih ettiğiniz arayüz dili gibi bilgileri toplarız. Aday profili oluşturduğunuzda deneyim, eğitim ve beceri bilgileri de saklanır.",
-          "p2": "Platformu kullanırken oluşan oturum ve güvenlik kayıtları, hizmetin kötüye kullanımını engellemek amacıyla tutulur."
+          "title": "Welche Daten wir erheben",
+          "p1": "Wenn Sie ein Konto erstellen, erheben wir Angaben wie Name, E-Mail-Adresse, Kontotyp und Ihre bevorzugte Sprache der Oberfläche. Legen Sie ein Bewerberprofil an, werden auch Angaben zu Erfahrung, Ausbildung und Fähigkeiten gespeichert.",
+          "p2": "Sitzungs- und Sicherheitsprotokolle, die bei der Nutzung der Plattform entstehen, werden aufbewahrt, um Missbrauch des Dienstes zu verhindern."
         },
         "s2": {
-          "title": "Verileri neden işliyoruz",
-          "p1": "Verileriniz; hesabınızı oluşturmak ve doğrulamak, giriş yapmanızı sağlamak, iş başvurularınızı işverene iletmek ve platformun güvenliğini sağlamak için işlenir.",
-          "p2": "Onayınız olduğunda, site deneyimini ölçmek için analitik çerezler kullanırız. Bu çerezleri her zaman reddedebilir veya tercihinizi sonradan değiştirebilirsiniz."
+          "title": "Warum wir Daten verarbeiten",
+          "p1": "Wir verarbeiten Ihre Daten, um Ihr Konto zu erstellen und zu bestätigen, Ihnen die Anmeldung zu ermöglichen, Ihre Bewerbungen an Arbeitgeber weiterzuleiten und die Sicherheit der Plattform zu gewährleisten.",
+          "p2": "Mit Ihrer Einwilligung setzen wir Analyse-Cookies ein, um das Nutzungserlebnis der Website zu messen. Sie können diese Cookies jederzeit ablehnen oder Ihre Wahl später ändern."
         },
         "s3": {
-          "title": "Paylaşım ve saklama",
-          "p1": "Başvurduğunuz işverenler, başvuru kapsamında paylaştığınız profil bilgilerini görür. Verilerinizi reklam amacıyla üçüncü taraflara satmayız.",
-          "p2": "Verilerinizi, hizmetin gerektirdiği süre boyunca ve yasal yükümlülüklerimiz kadar saklarız; hesabınızı sildiğinizde kişisel verileriniz silinir veya anonim hale getirilir."
+          "title": "Weitergabe und Speicherung",
+          "p1": "Arbeitgeber, bei denen Sie sich bewerben, sehen die Profilangaben, die Sie im Rahmen der Bewerbung teilen. Wir verkaufen Ihre Daten nicht zu Werbezwecken an Dritte.",
+          "p2": "Wir speichern Ihre Daten so lange, wie es der Dienst erfordert und wie es unsere gesetzlichen Pflichten verlangen; wenn Sie Ihr Konto löschen, werden Ihre personenbezogenen Daten gelöscht oder anonymisiert."
         },
         "s4": {
-          "title": "Haklarınız",
-          "p1": "KVKK kapsamında verilerinize erişme, düzeltme, silme ve işlemeye itiraz etme hakkınız vardır. Talepleriniz için bizimle iletişime geçebilirsiniz.",
-          "p2": "Talebinizi en geç 30 gün içinde yanıtlarız. Başvurudan önce kimliğinizi doğrulamamız gerekebilir."
+          "title": "Ihre Rechte",
+          "p1": "Nach der KVKK haben Sie das Recht, Ihre Daten einzusehen, zu berichtigen und zu löschen sowie der Verarbeitung zu widersprechen. Für Anfragen können Sie uns kontaktieren.",
+          "p2": "Wir beantworten Ihre Anfrage spätestens innerhalb von 30 Tagen. Vor der Bearbeitung müssen wir möglicherweise Ihre Identität bestätigen."
         }
       }
     },
     "cookies": {
-      "title": "Çerez Politikası",
-      "intro": "Çerezler, siteyi düzgün çalıştırmak ve tercihlerinizi hatırlamak için tarayıcınıza kaydedilen küçük metin dosyalarıdır.",
-      "updated": "29 Ekim 2026",
+      "title": "Cookie-Richtlinie",
+      "intro": "Cookies sind kleine Textdateien, die in Ihrem Browser gespeichert werden, damit die Website ordnungsgemäß funktioniert und Ihre Einstellungen gespeichert bleiben.",
+      "updated": "29. Oktober 2026",
       "sections": {
         "s1": {
-          "title": "Zorunlu çerezler",
-          "p1": "Oturumunuzu açık tutmak, güvenliği sağlamak ve dil tercihinizi hatırlamak için kullanılan çerezler zorunludur; bunlar olmadan site çalışmaz."
+          "title": "Unbedingt erforderliche Cookies",
+          "p1": "Cookies, die Ihre Sitzung offen halten, die Sicherheit gewährleisten und Ihre Spracheinstellung speichern, sind erforderlich; ohne sie funktioniert die Website nicht."
         },
         "s2": {
-          "title": "Analitik çerezler",
-          "p1": "Google Analytics çerezleri yalnızca onayınızı verdiğinizde yüklenir. Bu çerezler ziyaret edilen sayfaları anonim olarak ölçmemize yardımcı olur.",
-          "p2": "Onay vermezseniz hiçbir analitik betiği yüklenmez. Tercihinizi site üzerindeki çerez ayarlarından dilediğiniz zaman değiştirebilirsiniz."
+          "title": "Analyse-Cookies",
+          "p1": "Google-Analytics-Cookies werden nur geladen, wenn Sie einwilligen. Sie helfen uns, die besuchten Seiten anonym zu messen.",
+          "p2": "Wenn Sie nicht einwilligen, wird kein Analyse-Skript geladen. Sie können Ihre Wahl jederzeit über die Cookie-Einstellungen auf der Website ändern."
         },
         "s3": {
-          "title": "Tercihleri yönetme",
-          "p1": "Çerez tercihleriniz tarayıcınızda saklanır ve yalnızca bu siteyi etkiler. Tarayıcı ayarlarınızdan çerezleri tamamen silebilir veya engelleyebilirsiniz.",
-          "p2": "Çerezleri engellemeniz durumunda giriş ve profil işlemleri gibi bazı işlevler çalışmayabilir."
+          "title": "Einstellungen verwalten",
+          "p1": "Ihre Cookie-Einstellungen werden in Ihrem Browser gespeichert und betreffen nur diese Website. In den Browsereinstellungen können Sie Cookies vollständig löschen oder blockieren.",
+          "p2": "Wenn Sie Cookies blockieren, funktionieren einige Funktionen wie Anmeldung und Profilvorgänge möglicherweise nicht."
         }
       }
     },
     "terms": {
-      "title": "Kullanım Koşulları",
-      "intro": "İşBul KKTC’yi kullanarak bu koşulları kabul etmiş olursunuz. Platformu yalnızca yasal amaçlarla ve doğru bilgilerle kullanmanız beklenir.",
-      "updated": "29 Ekim 2026",
+      "title": "Nutzungsbedingungen",
+      "intro": "Mit der Nutzung von İşBul KKTC akzeptieren Sie diese Bedingungen. Sie sollen die Plattform nur für rechtmäßige Zwecke und mit korrekten Angaben nutzen.",
+      "updated": "29. Oktober 2026",
       "sections": {
         "s1": {
-          "title": "Hesap sorumluluğu",
-          "p1": "Hesabınızın güvenliğinden ve paylaştığınız bilgilerin doğruluğundan siz sorumlusunuz. Şifrenizi kimseyle paylaşmamalısınız.",
-          "p2": "Hesabınızda yetkisiz bir kullanım fark ederseniz derhal bize bildirmelisiniz."
+          "title": "Verantwortung für das Konto",
+          "p1": "Sie sind für die Sicherheit Ihres Kontos und die Richtigkeit der von Ihnen geteilten Angaben verantwortlich. Sie dürfen Ihr Passwort nicht an Dritte weitergeben.",
+          "p2": "Wenn Sie eine unbefugte Nutzung Ihres Kontos bemerken, müssen Sie uns unverzüglich informieren."
         },
         "s2": {
-          "title": "Kabul edilebilir kullanım",
-          "p1": "Yanıltıcı ilanlar, spam başvurular veya başkalarının verilerini izinsiz toplama gibi davranışlar yasaktır.",
-          "p2": "Bu koşulları ihlal eden hesapları askıya alma veya kapatma hakkımızı saklı tutarız."
+          "title": "Zulässige Nutzung",
+          "p1": "Verhalten wie irreführende Anzeigen, Spam-Bewerbungen oder das Sammeln fremder Daten ohne Erlaubnis ist untersagt.",
+          "p2": "Wir behalten uns das Recht vor, Konten, die gegen diese Bedingungen verstoßen, zu sperren oder zu schließen."
         },
         "s3": {
-          "title": "İçerik ve fikri mülkiyet",
-          "p1": "Yüklediğiniz içerik size ait kalır; ancak bu içeriği platform üzerinden göstermemize izin vermiş olursunuz.",
-          "p2": "İşBul KKTC markası, tasarımı ve yazılımı bize aittir ve izinsiz kullanılamaz."
+          "title": "Inhalte und geistiges Eigentum",
+          "p1": "Die von Ihnen hochgeladenen Inhalte bleiben Ihr Eigentum; Sie erlauben uns jedoch, diese Inhalte auf der Plattform anzuzeigen.",
+          "p2": "Die Marke, das Design und die Software von İşBul KKTC gehören uns und dürfen nicht ohne Erlaubnis verwendet werden."
         },
         "s4": {
-          "title": "Sorumluluğun sınırı",
-          "p1": "Platformu kesintisiz veya hatasız sunmayı garanti etmeyiz. İşveren ile aday arasındaki anlaşmalardan taraf değiliz.",
-          "p2": "Koşullar güncellenebilir; önemli değişiklikleri site üzerinden duyururuz."
+          "title": "Haftungsbeschränkung",
+          "p1": "Wir garantieren nicht, dass die Plattform unterbrechungsfrei oder fehlerfrei bereitgestellt wird. Wir sind keine Partei von Vereinbarungen zwischen Arbeitgebern und Bewerbenden.",
+          "p2": "Diese Bedingungen können aktualisiert werden; wesentliche Änderungen geben wir auf der Website bekannt."
         }
       }
     }
@@ -1445,8 +1428,7 @@
     "emptyTitle": "Derzeit keine Angebote in {district}",
     "emptyDescription": "Neue Angebote erscheinen hier, sobald sie veröffentlicht werden. Sie können alle Jobs in Nordzypern ansehen oder später erneut vorbeischauen.",
     "browseAll": "Alle Jobs in Nordzypern ansehen",
-    "otherDistricts": "Jobs in anderen Bezirken",
-    "countLabel": "{count} Angebote"
+    "otherDistricts": "Jobs in anderen Bezirken"
   },
   "JobTypePage": {
     "eyebrow": "JOBS IN NORDZYPERN",
@@ -1458,8 +1440,7 @@
     "emptyDescription": "Neue Angebote erscheinen hier. Sie können alle Jobs in Nordzypern ansehen oder später erneut vorbeischauen.",
     "browseAll": "Alle Jobs in Nordzypern ansehen",
     "otherTypes": "Jobs nach Beschäftigungsart",
-    "districts": "Jobs nach Bezirk",
-    "countLabel": "{count} Angebote"
+    "districts": "Jobs nach Bezirk"
   },
   "Guides": {
     "eyebrow": "KARRIERERATGEBER",
@@ -1472,8 +1453,7 @@
     "ctaRegister": "Kostenlos registrieren",
     "moreGuides": "Weitere Ratgeber",
     "metaTitle": "Karriereratgeber Nordzypern | Jobs, Lebenslauf und Rechte",
-    "metaDescription": "Originale Ratgeber zu Jobsuche, Lebenslauf und Arbeitserlaubnis in Nordzypern. İşBul KKTC.",
-    "allGuides": "Alle Ratgeber"
+    "metaDescription": "Originale Ratgeber zu Jobsuche, Lebenslauf und Arbeitserlaubnis in Nordzypern. İşBul KKTC."
   },
   "FaqPage": {
     "eyebrow": "HÄUFIGE FRAGEN",

@@ -440,20 +440,11 @@
     "eyebrow": "İŞBUL KKTC · МЕСТНЫЕ НОВОСТИ",
     "title": "Работа и карьера на Северном Кипре.",
     "lead": "Следите за актуальными заголовками о занятости и карьере на Северном Кипре со ссылками на издателей.",
-    "sourceSearchLink": "Открыть все актуальные новости",
     "feedAsideLabel": "ПОСЛЕДНИЕ НОВОСТИ",
     "feedAsideBody": "Заголовки о местной трудовой жизни за последние 30 дней.",
     "feedKicker": "АКТУАЛЬНЫЕ ЗАГОЛОВКИ",
     "feedTitle": "Новости о работе и карьере",
-    "latestBadge": "СВЕЖЕЕ",
-    "localNewsBadge": "МЕСТНЫЙ ОБЗОР",
-    "illustrativeImage": "ИЛЛЮСТРАЦИЯ · UNSPLASH",
     "emptyTitle": "Сейчас нет заголовков для показа.",
-    "emptyBody": "Новые заголовки появятся после обновления ленты. Пока можно открыть поиск по источникам.",
-    "editorialNoteTitle": "Проверьте источник и прочитайте публикацию.",
-    "editorialNoteBody": "Здесь публикуются актуальные заголовки и названия издателей; тексты статей не копируются и не выдаются за материалы İşBul KKTC. Фотографии Unsplash на карточках иллюстрируют тему, но не изображают конкретные события. Полную информацию и контекст читайте у издателя.",
-    "photoLicense": "Лицензия на изображения Unsplash",
-    "sourceLabel": "Источник: {source}",
     "metaTitle": "Журнал о работе и карьере на Северном Кипре | İşBul KKTC",
     "metaDescription": "Рынок труда Северного Кипра, руководство по публикации вакансий и советы выпускникам. İşBul KKTC."
   },
@@ -924,14 +915,11 @@
     "activeJobCount": "Открытых вакансий: {count}",
     "jobEmployersVerificationNote": "Появление в этом разделе не означает, что İşBul KKTC проверил компанию.",
     "companyWebsite": "Веб-сайт",
-    "sourceProfileLink": "Профиль компании в источнике",
-    "sourceListingLink": "Исходная вакансия",
     "resultsLabel": "Результаты поиска компаний",
     "searchLabel": "Поиск по названию компании",
     "searchPlaceholder": "Введите любую часть названия компании",
     "clearSearch": "Очистить текст поиска",
     "categoryLabel": "Отрасль или вид деятельности",
-    "categoryPlaceholder": "Выберите отрасль",
     "categoryAll": "Все отрасли",
     "locationLabel": "Район",
     "locationAll": "Все районы",
@@ -958,8 +946,7 @@
     "previous": "Назад",
     "next": "Далее",
     "pageCount": "Страница {current} из {total}",
-    "sourceNote": "Географический охват приблизительно определён по координатам источников и не является официальной границей. Наличие записи не означает регистрацию или проверку компании.",
-    "districtDataNote": "Филиалы без надёжных данных о районе ({count}) не показываются при выборе фильтра района."
+    "sourceNote": "Географический охват приблизительно определён по координатам источников и не является официальной границей. Наличие записи не означает регистрацию или проверку компании."
   },
   "CandidateDashboard": {
     "eyebrow": "ПРОФИЛЬ КАНДИДАТА",
@@ -1030,7 +1017,6 @@
       "saved": "Профиль сохранён."
     },
     "profileIndex": "ПРОФИЛЬ · 01",
-    "sectionsDescription": "Добавьте нужные сведения. Все разделы необязательны; проверьте и отредактируйте предложения из резюме перед сохранением.",
     "additionalDetails": "Опыт, образование и другое · записей: {count}",
     "additionalDetailsHint": "Эти разделы необязательны. Данные из резюме добавляются в форму без удаления существующих записей; проверьте и отредактируйте их перед сохранением.",
     "entryLabel": "Запись {number}",
@@ -1172,8 +1158,7 @@
       "verificationNoticeDescription": "Одобрение профиля каталога не меняет официальный статус проверки компании. Загрузка документов отключена до утверждения правил безопасного хранения и удаления.",
       "identitySection": "Сведения о компании",
       "contactSection": "Контактные данные",
-      "locationSection": "Местоположение и связь с каталогом",
-      "documentsTitle": "Документы компании"
+      "locationSection": "Местоположение и связь с каталогом"
     },
     "addCompany": "Добавить компанию",
     "candidateWorkspaceLink": "Профиль кандидата",
@@ -1210,8 +1195,6 @@
       "lefke": "Лефке"
     },
     "directoryTarget": "Компания и филиал из каталога",
-    "directoryTargetNone": "Нет в каталоге / не связывать с филиалом",
-    "directoryTargetHint": "Выберите адрес, которым управляете. После одобрения сведения обновят только запись этого филиала.",
     "directorySearchLabel": "Найдите компанию в каталоге",
     "directorySearchPlaceholder": "Введите название или местоположение",
     "directorySearchHint": "Выберите филиал, которым управляете. Доступные сведения о сфере деятельности, контактах и местоположении заполнят только пустые поля; проверьте и отредактируйте их перед отправкой. Если компании нет, оставьте поле пустым.",
@@ -1304,85 +1287,85 @@
     "ctaTitle": "Создайте профиль и держите свои сведения под контролем."
   },
   "Legal": {
-    "eyebrow": "Yasal bilgilendirme",
-    "backLabel": "Geri dön",
-    "backToHome": "Ana sayfaya dön",
-    "lastUpdated": "Son güncelleme: {date}",
-    "contactNote": "Bu metinlerle ilgili sorularınız için bize ulaşabilirsiniz.",
+    "eyebrow": "Правовая информация",
+    "backLabel": "Назад",
+    "backToHome": "На главную",
+    "lastUpdated": "Обновлено: {date}",
+    "contactNote": "Если у вас есть вопросы по этим документам, свяжитесь с нами.",
     "contactEmail": "info@isbulkktc.com",
-    "relatedLabel": "Diğer yasal metinler",
+    "relatedLabel": "Другие правовые документы",
     "privacy": {
-      "title": "Gizlilik Politikası",
-      "intro": "İşBul KKTC olarak kişisel verilerinizi KVKK ve GDPR ilkelerine uygun şekilde, yalnızca hizmeti sunmak için gerekli olduğu ölçüde işliyoruz.",
-      "updated": "29 Ekim 2026",
+      "title": "Политика конфиденциальности",
+      "intro": "В İşBul KKTC мы обрабатываем ваши персональные данные в соответствии с принципами KVKK и GDPR и только в объёме, необходимом для оказания услуги.",
+      "updated": "29 октября 2026 г.",
       "sections": {
         "s1": {
-          "title": "Topladığımız veriler",
-          "p1": "Hesap oluşturduğunuzda ad, e-posta adresi, hesap türü ve tercih ettiğiniz arayüz dili gibi bilgileri toplarız. Aday profili oluşturduğunuzda deneyim, eğitim ve beceri bilgileri de saklanır.",
-          "p2": "Platformu kullanırken oluşan oturum ve güvenlik kayıtları, hizmetin kötüye kullanımını engellemek amacıyla tutulur."
+          "title": "Какие данные мы собираем",
+          "p1": "При создании аккаунта мы собираем такие сведения, как имя, адрес электронной почты, тип аккаунта и предпочитаемый язык интерфейса. При создании профиля кандидата также сохраняются сведения об опыте, образовании и навыках.",
+          "p2": "Журналы сессий и безопасности, возникающие при использовании платформы, хранятся для предотвращения злоупотреблений сервисом."
         },
         "s2": {
-          "title": "Verileri neden işliyoruz",
-          "p1": "Verileriniz; hesabınızı oluşturmak ve doğrulamak, giriş yapmanızı sağlamak, iş başvurularınızı işverene iletmek ve platformun güvenliğini sağlamak için işlenir.",
-          "p2": "Onayınız olduğunda, site deneyimini ölçmek için analitik çerezler kullanırız. Bu çerezleri her zaman reddedebilir veya tercihinizi sonradan değiştirebilirsiniz."
+          "title": "Зачем мы обрабатываем данные",
+          "p1": "Мы обрабатываем ваши данные, чтобы создать и подтвердить аккаунт, обеспечить вход, передать ваши отклики работодателям и поддерживать безопасность платформы.",
+          "p2": "С вашего согласия мы используем аналитические cookie, чтобы оценивать работу сайта. Вы всегда можете отклонить эти cookie или изменить свой выбор позже."
         },
         "s3": {
-          "title": "Paylaşım ve saklama",
-          "p1": "Başvurduğunuz işverenler, başvuru kapsamında paylaştığınız profil bilgilerini görür. Verilerinizi reklam amacıyla üçüncü taraflara satmayız.",
-          "p2": "Verilerinizi, hizmetin gerektirdiği süre boyunca ve yasal yükümlülüklerimiz kadar saklarız; hesabınızı sildiğinizde kişisel verileriniz silinir veya anonim hale getirilir."
+          "title": "Передача и хранение",
+          "p1": "Работодатели, к которым вы откликаетесь, видят сведения профиля, которые вы передаёте в рамках отклика. Мы не продаём ваши данные третьим лицам в рекламных целях.",
+          "p2": "Мы храним ваши данные столько, сколько требуется для оказания услуги и сколько требуют наши юридические обязанности; при удалении аккаунта ваши персональные данные удаляются или обезличиваются."
         },
         "s4": {
-          "title": "Haklarınız",
-          "p1": "KVKK kapsamında verilerinize erişme, düzeltme, silme ve işlemeye itiraz etme hakkınız vardır. Talepleriniz için bizimle iletişime geçebilirsiniz.",
-          "p2": "Talebinizi en geç 30 gün içinde yanıtlarız. Başvurudan önce kimliğinizi doğrulamamız gerekebilir."
+          "title": "Ваши права",
+          "p1": "В рамках KVKK вы вправе получать доступ к своим данным, исправлять и удалять их, а также возражать против их обработки. По запросам вы можете связаться с нами.",
+          "p2": "Мы отвечаем на ваш запрос не позднее чем в течение 30 дней. Перед обработкой нам может потребоваться подтвердить вашу личность."
         }
       }
     },
     "cookies": {
-      "title": "Çerez Politikası",
-      "intro": "Çerezler, siteyi düzgün çalıştırmak ve tercihlerinizi hatırlamak için tarayıcınıza kaydedilen küçük metin dosyalarıdır.",
-      "updated": "29 Ekim 2026",
+      "title": "Политика в отношении cookie",
+      "intro": "Cookie — это небольшие текстовые файлы, сохраняемые в браузере, чтобы сайт работал корректно и запоминал ваши предпочтения.",
+      "updated": "29 октября 2026 г.",
       "sections": {
         "s1": {
-          "title": "Zorunlu çerezler",
-          "p1": "Oturumunuzu açık tutmak, güvenliği sağlamak ve dil tercihinizi hatırlamak için kullanılan çerezler zorunludur; bunlar olmadan site çalışmaz."
+          "title": "Строго необходимые cookie",
+          "p1": "Cookie, которые поддерживают сессию, обеспечивают безопасность и запоминают выбранный язык, необходимы; без них сайт не работает."
         },
         "s2": {
-          "title": "Analitik çerezler",
-          "p1": "Google Analytics çerezleri yalnızca onayınızı verdiğinizde yüklenir. Bu çerezler ziyaret edilen sayfaları anonim olarak ölçmemize yardımcı olur.",
-          "p2": "Onay vermezseniz hiçbir analitik betiği yüklenmez. Tercihinizi site üzerindeki çerez ayarlarından dilediğiniz zaman değiştirebilirsiniz."
+          "title": "Аналитические cookie",
+          "p1": "Cookie Google Analytics загружаются только с вашего согласия. Они помогают нам анонимно измерять посещаемые страницы.",
+          "p2": "Если вы не даёте согласие, ни один аналитический скрипт не загружается. Вы можете изменить свой выбор в любой момент в настройках cookie на сайте."
         },
         "s3": {
-          "title": "Tercihleri yönetme",
-          "p1": "Çerez tercihleriniz tarayıcınızda saklanır ve yalnızca bu siteyi etkiler. Tarayıcı ayarlarınızdan çerezleri tamamen silebilir veya engelleyebilirsiniz.",
-          "p2": "Çerezleri engellemeniz durumunda giriş ve profil işlemleri gibi bazı işlevler çalışmayabilir."
+          "title": "Управление предпочтениями",
+          "p1": "Ваши настройки cookie хранятся в браузере и влияют только на этот сайт. В настройках браузера вы можете полностью удалить или заблокировать cookie.",
+          "p2": "Если вы заблокируете cookie, некоторые функции, такие как вход и действия с профилем, могут не работать."
         }
       }
     },
     "terms": {
-      "title": "Kullanım Koşulları",
-      "intro": "İşBul KKTC’yi kullanarak bu koşulları kabul etmiş olursunuz. Platformu yalnızca yasal amaçlarla ve doğru bilgilerle kullanmanız beklenir.",
-      "updated": "29 Ekim 2026",
+      "title": "Условия использования",
+      "intro": "Используя İşBul KKTC, вы принимаете эти условия. Вы должны использовать платформу только в законных целях и с достоверными сведениями.",
+      "updated": "29 октября 2026 г.",
       "sections": {
         "s1": {
-          "title": "Hesap sorumluluğu",
-          "p1": "Hesabınızın güvenliğinden ve paylaştığınız bilgilerin doğruluğundan siz sorumlusunuz. Şifrenizi kimseyle paylaşmamalısınız.",
-          "p2": "Hesabınızda yetkisiz bir kullanım fark ederseniz derhal bize bildirmelisiniz."
+          "title": "Ответственность за аккаунт",
+          "p1": "Вы отвечаете за безопасность своего аккаунта и достоверность передаваемых сведений. Вы не должны сообщать свой пароль кому-либо.",
+          "p2": "Если вы заметите несанкционированное использование аккаунта, немедленно сообщите нам."
         },
         "s2": {
-          "title": "Kabul edilebilir kullanım",
-          "p1": "Yanıltıcı ilanlar, spam başvurular veya başkalarının verilerini izinsiz toplama gibi davranışlar yasaktır.",
-          "p2": "Bu koşulları ihlal eden hesapları askıya alma veya kapatma hakkımızı saklı tutarız."
+          "title": "Допустимое использование",
+          "p1": "Запрещается такое поведение, как вводящие в заблуждение объявления, спам-отклики или сбор чужих данных без разрешения.",
+          "p2": "Мы оставляем за собой право приостанавливать или закрывать аккаунты, нарушающие эти условия."
         },
         "s3": {
-          "title": "İçerik ve fikri mülkiyet",
-          "p1": "Yüklediğiniz içerik size ait kalır; ancak bu içeriği platform üzerinden göstermemize izin vermiş olursunuz.",
-          "p2": "İşBul KKTC markası, tasarımı ve yazılımı bize aittir ve izinsiz kullanılamaz."
+          "title": "Контент и интеллектуальная собственность",
+          "p1": "Загруженный вами контент остаётся вашим; однако вы разрешаете нам показывать этот контент на платформе.",
+          "p2": "Бренд, дизайн и программное обеспечение İşBul KKTC принадлежат нам и не могут использоваться без разрешения."
         },
         "s4": {
-          "title": "Sorumluluğun sınırı",
-          "p1": "Platformu kesintisiz veya hatasız sunmayı garanti etmeyiz. İşveren ile aday arasındaki anlaşmalardan taraf değiliz.",
-          "p2": "Koşullar güncellenebilir; önemli değişiklikleri site üzerinden duyururuz."
+          "title": "Ограничение ответственности",
+          "p1": "Мы не гарантируем бесперебойную или безошибочную работу платформы. Мы не являемся стороной соглашений между работодателями и кандидатами.",
+          "p2": "Условия могут обновляться; о существенных изменениях мы сообщаем на сайте."
         }
       }
     }
@@ -1445,8 +1428,7 @@
     "emptyTitle": "Сейчас в {district} нет опубликованных вакансий",
     "emptyDescription": "Новые вакансии появятся здесь. Вы можете посмотреть все вакансии Северного Кипра или зайти позже.",
     "browseAll": "Все вакансии Северного Кипра",
-    "otherDistricts": "Вакансии в других районах",
-    "countLabel": "{count} вакансий"
+    "otherDistricts": "Вакансии в других районах"
   },
   "JobTypePage": {
     "eyebrow": "РАБОТА НА СЕВЕРНОМ КИПРЕ",
@@ -1458,8 +1440,7 @@
     "emptyDescription": "Новые вакансии появятся здесь. Вы можете посмотреть все вакансии Северного Кипра или зайти позже.",
     "browseAll": "Все вакансии Северного Кипра",
     "otherTypes": "Вакансии по типу занятости",
-    "districts": "Вакансии по районам",
-    "countLabel": "{count} вакансий"
+    "districts": "Вакансии по районам"
   },
   "Guides": {
     "eyebrow": "КАРЬЕРНЫЕ ГИДЫ",
@@ -1472,8 +1453,7 @@
     "ctaRegister": "Создать бесплатный аккаунт",
     "moreGuides": "Другие гиды",
     "metaTitle": "Карьерные гиды по Северному Кипру | Работа, резюме и права",
-    "metaDescription": "Оригинальные гиды о поиске работы, резюме и разрешении на работу на Северном Кипре. İşBul KKTC.",
-    "allGuides": "Все гиды"
+    "metaDescription": "Оригинальные гиды о поиске работы, резюме и разрешении на работу на Северном Кипре. İşBul KKTC."
   },
   "FaqPage": {
     "eyebrow": "ЧАСТЫЕ ВОПРОСЫ",

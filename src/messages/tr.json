@@ -399,20 +399,11 @@
     "eyebrow": "İŞBUL KKTC · YEREL GÜNDEM",
     "title": "Kuzey Kıbrıs’ta iş ve çalışma hayatı.",
     "lead": "KKTC’de istihdamı, çalışma hayatını ve kariyer gündemini etkileyen güncel haber başlıklarını yayıncı kaynaklarına ulaşarak takip edin.",
-    "sourceSearchLink": "Tüm güncel başlıkları açın",
     "feedAsideLabel": "SON GÜNDEM",
     "feedAsideBody": "Son 30 günde yayımlanan, yerel çalışma hayatıyla ilgili başlıklar.",
     "feedKicker": "GÜNCEL AKIŞ",
     "feedTitle": "İş ve kariyer gündemi",
-    "latestBadge": "EN YENİ",
-    "localNewsBadge": "YEREL GÜNDEM",
-    "illustrativeImage": "TEMSİLİ · UNSPLASH",
     "emptyTitle": "Şu an gösterilecek haber başlığı yok.",
-    "emptyBody": "Akış güncellendiğinde yeni başlıklar burada görünür. Bu arada kaynak aramasını açabilirsiniz.",
-    "editorialNoteTitle": "Kaynağı görün, haberi asıl yayıncıdan okuyun.",
-    "editorialNoteBody": "Bu sayfa güncel başlıkları ve yayıncı adlarını listeler; haber metinlerini kopyalamaz veya İşBul KKTC’nin özgün haberi gibi sunmaz. Haber kartlarındaki Unsplash görselleri konuya uygun temsili fotoğraflardır, haberin olay fotoğrafları değildir. İçeriğin tamamı ve bağlamı için kaynak yayını ziyaret edin.",
-    "photoLicense": "Unsplash görsel lisansı",
-    "sourceLabel": "Kaynak: {source}",
     "metaTitle": "KKTC İş ve Kariyer Gündemi | İşBul KKTC",
     "metaDescription": "Kuzey Kıbrıs iş piyasası, işverenler için ilan rehberi ve yeni mezunlar için kariyer ipuçları. İşBul KKTC editoryal yazıları."
   },
@@ -924,14 +915,11 @@
     "activeJobCount": "{count} açık ilan",
     "jobEmployersVerificationNote": "Bu bölümde görünmek, şirketin İşBul KKTC tarafından doğrulandığı anlamına gelmez.",
     "companyWebsite": "Web sitesi",
-    "sourceProfileLink": "Kaynak şirket profili",
-    "sourceListingLink": "Kaynak ilanı görüntüle",
     "resultsLabel": "Şirket arama sonuçları",
     "searchLabel": "Şirket adı içinde ara",
     "searchPlaceholder": "Şirket adının herhangi bir bölümünü yazın",
     "clearSearch": "Arama metnini temizle",
     "categoryLabel": "Sektör / faaliyet alanı",
-    "categoryPlaceholder": "Sektör seçin",
     "categoryAll": "Tüm sektörler",
     "locationLabel": "İlçe",
     "locationAll": "Tüm ilçeler",
@@ -958,8 +946,7 @@
     "previous": "Önceki",
     "next": "Sonraki",
     "pageCount": "Sayfa {current} / {total}",
-    "sourceNote": "Kapsam kaynak koordinatlarına göre yaklaşık belirlenmiştir; resmi bir sınır değerlendirmesi değildir. Rehber, şirket kaydı veya doğrulama anlamına gelmez.",
-    "districtDataNote": "Güvenilir ilçe bilgisi bulunmayan {count} şube, ilçe filtresi seçildiğinde sonuçlara dahil edilmez."
+    "sourceNote": "Kapsam kaynak koordinatlarına göre yaklaşık belirlenmiştir; resmi bir sınır değerlendirmesi değildir. Rehber, şirket kaydı veya doğrulama anlamına gelmez."
   },
   "CandidateDashboard": {
     "eyebrow": "ADAY PROFİLİ",
@@ -1030,7 +1017,6 @@
       "saved": "Profiliniz kaydedildi."
     },
     "profileIndex": "PROFİL · 01",
-    "sectionsDescription": "Eklemek istediğiniz bilgileri girin. Tüm bölümler isteğe bağlıdır; CV’den çıkarılan önerileri kaydetmeden önce inceleyip düzenleyebilirsiniz.",
     "additionalDetails": "Deneyim, eğitim ve diğer detaylar · {count} kayıt",
     "additionalDetailsHint": "Bu bölümler isteğe bağlıdır. CV’den çıkarılan bilgiler mevcut kayıtlarınız korunarak forma eklenir; kaydetmeden önce kontrol edip düzenleyebilirsiniz.",
     "entryLabel": "Kayıt {number}",
@@ -1172,8 +1158,7 @@
       "verificationNoticeDescription": "Rehber profilinin onaylanması şirketin resmi doğrulama durumunu değiştirmez. Belge yükleme, güvenli saklama ve silme kuralları netleşene kadar kapalıdır.",
       "identitySection": "Şirket kimliği",
       "contactSection": "İletişim bilgileri",
-      "locationSection": "Konum ve rehber eşleşmesi",
-      "documentsTitle": "Şirket belgeleri"
+      "locationSection": "Konum ve rehber eşleşmesi"
     },
     "addCompany": "Şirket ekle",
     "candidateWorkspaceLink": "Aday profilim",
@@ -1210,8 +1195,6 @@
       "lefke": "Lefke"
     },
     "directoryTarget": "Rehberdeki mevcut şirket ve şube",
-    "directoryTargetNone": "Listede yok / şube ile eşleştirme",
-    "directoryTargetHint": "Yönettiğiniz konumu seçin. Onaylanan bilgiler yalnızca bu şubenin rehber kaydını günceller.",
     "directorySearchLabel": "Şirketinizi rehberde bulun",
     "directorySearchPlaceholder": "Şirket adını veya konumunu yazın",
     "directorySearchHint": "Listeden yönettiğiniz doğru şubeyi seçin. Rehberdeki sektör, iletişim ve konum bilgileri boş alanlara eklenir; göndermeden önce kontrol edip değiştirebilirsiniz. Bulamazsanız boş bırakın.",
@@ -1445,8 +1428,7 @@
     "emptyTitle": "{district} için şu anda yayında ilan yok",
     "emptyDescription": "Yeni ilanlar eklendikçe burada görünecek. Tüm KKTC ilanlarına göz atabilir veya daha sonra tekrar bakabilirsiniz.",
     "browseAll": "Tüm KKTC iş ilanlarını gör",
-    "otherDistricts": "Diğer ilçelerdeki iş ilanları",
-    "countLabel": "{count} ilan"
+    "otherDistricts": "Diğer ilçelerdeki iş ilanları"
   },
   "JobTypePage": {
     "eyebrow": "KKTC İŞ İLANLARI",
@@ -1458,8 +1440,7 @@
     "emptyDescription": "Yeni ilanlar eklendikçe burada görünecek. Tüm KKTC ilanlarına göz atabilir veya daha sonra tekrar bakabilirsiniz.",
     "browseAll": "Tüm KKTC iş ilanlarını gör",
     "otherTypes": "Diğer çalışma türlerinde iş ilanları",
-    "districts": "İlçeye göre iş ilanları",
-    "countLabel": "{count} ilan"
+    "districts": "İlçeye göre iş ilanları"
   },
   "Guides": {
     "eyebrow": "KARİYER REHBERLERİ",
@@ -1472,8 +1453,7 @@
     "ctaRegister": "Ücretsiz kayıt ol",
     "moreGuides": "Diğer rehberler",
     "metaTitle": "KKTC Kariyer Rehberleri | İş Arama, CV ve Çalışma Hakları",
-    "metaDescription": "Kuzey Kıbrıs'ta iş bulma, CV hazırlama ve çalışma izni hakkında özgün rehberler. İşBul KKTC kariyer rehberleri.",
-    "allGuides": "Tüm rehberler"
+    "metaDescription": "Kuzey Kıbrıs'ta iş bulma, CV hazırlama ve çalışma izni hakkında özgün rehberler. İşBul KKTC kariyer rehberleri."
   },
   "FaqPage": {
     "eyebrow": "SIKÇA SORULAN SORULAR",

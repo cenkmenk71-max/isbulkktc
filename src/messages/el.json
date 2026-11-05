@@ -440,20 +440,11 @@
     "eyebrow": "İŞBUL KKTC · ΤΟΠΙΚΗ ΕΝΗΜΕΡΩΣΗ",
     "title": "Εργασία και καριέρα στη Βόρεια Κύπρο.",
     "lead": "Παρακολουθήστε τις πρόσφατες ειδήσεις για την απασχόληση και την εργασία στη Βόρεια Κύπρο, με συνδέσμους προς τους εκδότες.",
-    "sourceSearchLink": "Άνοιγμα όλων των επίκαιρων τίτλων",
     "feedAsideLabel": "ΤΕΛΕΥΤΑΙΑ ΕΝΗΜΕΡΩΣΗ",
     "feedAsideBody": "Τίτλοι σχετικά με την τοπική εργασία, που δημοσιεύτηκαν τις τελευταίες 30 ημέρες.",
     "feedKicker": "ΕΠΙΚΑΙΡΟΙ ΤΙΤΛΟΙ",
     "feedTitle": "Εξελίξεις σε εργασία και καριέρα",
-    "latestBadge": "ΝΕΟΤΕΡΟ",
-    "localNewsBadge": "ΤΟΠΙΚΗ ΕΝΗΜΕΡΩΣΗ",
-    "illustrativeImage": "ΕΝΔΕΙΚΤΙΚΗ ΕΙΚΟΝΑ · UNSPLASH",
     "emptyTitle": "Δεν υπάρχουν τίτλοι για εμφάνιση αυτή τη στιγμή.",
-    "emptyBody": "Νέοι τίτλοι θα εμφανιστούν όταν ενημερωθεί η ροή. Στο μεταξύ μπορείτε να ανοίξετε την αναζήτηση πηγών.",
-    "editorialNoteTitle": "Δείτε την πηγή. Διαβάστε το δημοσίευμα.",
-    "editorialNoteBody": "Αυτή η σελίδα παραθέτει επίκαιρους τίτλους και εκδότες· δεν αντιγράφει άρθρα ούτε τα παρουσιάζει ως ρεπορτάζ του İşBul KKTC. Οι φωτογραφίες Unsplash στις κάρτες είναι ενδεικτικές και όχι εικόνες των συγκεκριμένων γεγονότων. Για την πλήρη ιστορία και το πλαίσιο, επισκεφθείτε τον εκδότη.",
-    "photoLicense": "Άδεια εικόνων Unsplash",
-    "sourceLabel": "Πηγή: {source}",
     "metaTitle": "Εργασία και καριέρα στη Βόρεια Κύπρο | İşBul KKTC",
     "metaDescription": "Η αγορά εργασίας της Βόρειας Κύπρου, οδηγός αγγελιών για εργοδότες και συμβουλές καριέρας. İşBul KKTC."
   },
@@ -924,14 +915,11 @@
     "activeJobCount": "{count} ανοιχτές θέσεις",
     "jobEmployersVerificationNote": "Η εμφάνιση εδώ δεν σημαίνει ότι το İşBul KKTC έχει επαληθεύσει την εταιρεία.",
     "companyWebsite": "Ιστότοπος",
-    "sourceProfileLink": "Προφίλ εταιρείας στην πηγή",
-    "sourceListingLink": "Αρχική αγγελία",
     "resultsLabel": "Αποτελέσματα αναζήτησης εταιρειών",
     "searchLabel": "Αναζήτηση εταιρειών",
     "searchPlaceholder": "Πληκτρολογήστε οποιοδήποτε μέρος του ονόματος",
     "clearSearch": "Καθαρισμός κειμένου αναζήτησης",
     "categoryLabel": "Κλάδος ή επιχειρηματική δραστηριότητα",
-    "categoryPlaceholder": "Επιλέξτε κλάδο",
     "categoryAll": "Όλοι οι κλάδοι",
     "locationLabel": "Επαρχία",
     "locationAll": "Όλες οι επαρχίες",
@@ -958,8 +946,7 @@
     "previous": "Προηγούμενη",
     "next": "Επόμενη",
     "pageCount": "Σελίδα {current} από {total}",
-    "sourceNote": "Η κάλυψη εκτιμάται από τις συντεταγμένες των πηγών και δεν αποτελεί επίσημο όριο. Η καταχώριση δεν σημαίνει ότι η εταιρεία είναι εγγεγραμμένη ή επαληθευμένη.",
-    "districtDataNote": "{count} υποκαταστήματα χωρίς αξιόπιστα στοιχεία επαρχίας εξαιρούνται όταν επιλέγεται φίλτρο επαρχίας."
+    "sourceNote": "Η κάλυψη εκτιμάται από τις συντεταγμένες των πηγών και δεν αποτελεί επίσημο όριο. Η καταχώριση δεν σημαίνει ότι η εταιρεία είναι εγγεγραμμένη ή επαληθευμένη."
   },
   "CandidateDashboard": {
     "eyebrow": "ΠΡΟΦΙΛ ΥΠΟΨΗΦΙΟΥ",
@@ -1030,7 +1017,6 @@
       "saved": "Το προφίλ σας αποθηκεύτηκε."
     },
     "profileIndex": "ΠΡΟΦΙΛ · 01",
-    "sectionsDescription": "Προσθέστε τα στοιχεία που θέλετε. Όλες οι ενότητες είναι προαιρετικές· ελέγξτε και επεξεργαστείτε τις προτάσεις του βιογραφικού πριν από την αποθήκευση.",
     "additionalDetails": "Εμπειρία, εκπαίδευση και άλλα · {count} εγγραφές",
     "additionalDetailsHint": "Οι ενότητες είναι προαιρετικές. Τα στοιχεία από το βιογραφικό προστίθενται στη φόρμα χωρίς να διαγράφονται οι υπάρχουσες εγγραφές· ελέγξτε τα πριν από την αποθήκευση.",
     "entryLabel": "Καταχώριση {number}",
@@ -1172,8 +1158,7 @@
       "verificationNoticeDescription": "Η έγκριση προφίλ καταλόγου δεν αλλάζει την επίσημη κατάσταση επαλήθευσης της εταιρείας. Οι μεταφορτώσεις εγγράφων παραμένουν απενεργοποιημένες μέχρι να καθοριστούν ασφαλείς κανόνες αποθήκευσης και διαγραφής.",
       "identitySection": "Στοιχεία εταιρείας",
       "contactSection": "Στοιχεία επικοινωνίας",
-      "locationSection": "Τοποθεσία και αντιστοίχιση καταλόγου",
-      "documentsTitle": "Έγγραφα εταιρείας"
+      "locationSection": "Τοποθεσία και αντιστοίχιση καταλόγου"
     },
     "addCompany": "Προσθήκη εταιρείας",
     "candidateWorkspaceLink": "Προφίλ υποψηφίου",
@@ -1210,8 +1195,6 @@
       "lefke": "Λεύκα (Lefke)"
     },
     "directoryTarget": "Υφιστάμενη εταιρεία και υποκατάστημα καταλόγου",
-    "directoryTargetNone": "Δεν υπάρχει στον κατάλογο / χωρίς σύνδεση υποκαταστήματος",
-    "directoryTargetHint": "Επιλέξτε την τοποθεσία που διαχειρίζεστε. Τα εγκεκριμένα στοιχεία ενημερώνουν μόνο την καταχώριση αυτού του υποκαταστήματος.",
     "directorySearchLabel": "Βρείτε την εταιρεία σας στον κατάλογο",
     "directorySearchPlaceholder": "Πληκτρολογήστε όνομα εταιρείας ή τοποθεσία",
     "directorySearchHint": "Επιλέξτε το υποκατάστημα που διαχειρίζεστε. Τα διαθέσιμα στοιχεία κλάδου, επικοινωνίας και τοποθεσίας συμπληρώνουν μόνο τα κενά πεδία· ελέγξτε και επεξεργαστείτε τα πριν από την υποβολή. Αν δεν τη βρίσκετε, αφήστε το πεδίο κενό.",
@@ -1304,85 +1287,85 @@
     "ctaTitle": "Δημιουργήστε το προφίλ σας και διατηρήστε τα στοιχεία υπό τον έλεγχό σας."
   },
   "Legal": {
-    "eyebrow": "Yasal bilgilendirme",
-    "backLabel": "Geri dön",
-    "backToHome": "Ana sayfaya dön",
-    "lastUpdated": "Son güncelleme: {date}",
-    "contactNote": "Bu metinlerle ilgili sorularınız için bize ulaşabilirsiniz.",
+    "eyebrow": "Νομικές πληροφορίες",
+    "backLabel": "Επιστροφή",
+    "backToHome": "Επιστροφή στην αρχική",
+    "lastUpdated": "Τελευταία ενημέρωση: {date}",
+    "contactNote": "Για ερωτήσεις σχετικά με αυτά τα κείμενα, μπορείτε να επικοινωνήσετε μαζί μας.",
     "contactEmail": "info@isbulkktc.com",
-    "relatedLabel": "Diğer yasal metinler",
+    "relatedLabel": "Άλλα νομικά κείμενα",
     "privacy": {
-      "title": "Gizlilik Politikası",
-      "intro": "İşBul KKTC olarak kişisel verilerinizi KVKK ve GDPR ilkelerine uygun şekilde, yalnızca hizmeti sunmak için gerekli olduğu ölçüde işliyoruz.",
-      "updated": "29 Ekim 2026",
+      "title": "Πολιτική Απορρήτου",
+      "intro": "Στην İşBul KKTC επεξεργαζόμαστε τα προσωπικά σας δεδομένα σύμφωνα με τις αρχές του KVKK και του GDPR και μόνο στον βαθμό που απαιτείται για την παροχή της υπηρεσίας.",
+      "updated": "29 Οκτωβρίου 2026",
       "sections": {
         "s1": {
-          "title": "Topladığımız veriler",
-          "p1": "Hesap oluşturduğunuzda ad, e-posta adresi, hesap türü ve tercih ettiğiniz arayüz dili gibi bilgileri toplarız. Aday profili oluşturduğunuzda deneyim, eğitim ve beceri bilgileri de saklanır.",
-          "p2": "Platformu kullanırken oluşan oturum ve güvenlik kayıtları, hizmetin kötüye kullanımını engellemek amacıyla tutulur."
+          "title": "Δεδομένα που συλλέγουμε",
+          "p1": "Όταν δημιουργείτε λογαριασμό, συλλέγουμε στοιχεία όπως όνομα, διεύθυνση email, τύπο λογαριασμού και τη γλώσσα διεπαφής που προτιμάτε. Όταν δημιουργείτε προφίλ υποψηφίου, αποθηκεύονται επίσης στοιχεία για εμπειρία, εκπαίδευση και δεξιότητες.",
+          "p2": "Τα αρχεία συνεδρίας και ασφάλειας που δημιουργούνται κατά τη χρήση της πλατφόρμας τηρούνται για την πρόληψη κατάχρησης της υπηρεσίας."
         },
         "s2": {
-          "title": "Verileri neden işliyoruz",
-          "p1": "Verileriniz; hesabınızı oluşturmak ve doğrulamak, giriş yapmanızı sağlamak, iş başvurularınızı işverene iletmek ve platformun güvenliğini sağlamak için işlenir.",
-          "p2": "Onayınız olduğunda, site deneyimini ölçmek için analitik çerezler kullanırız. Bu çerezleri her zaman reddedebilir veya tercihinizi sonradan değiştirebilirsiniz."
+          "title": "Γιατί επεξεργαζόμαστε δεδομένα",
+          "p1": "Επεξεργαζόμαστε τα δεδομένα σας για να δημιουργήσουμε και να επιβεβαιώσουμε τον λογαριασμό σας, να σας επιτρέψουμε να συνδεθείτε, να διαβιβάσουμε τις αιτήσεις σας στους εργοδότες και να διασφαλίσουμε την ασφάλεια της πλατφόρμας.",
+          "p2": "Με τη συγκατάθεσή σας χρησιμοποιούμε cookies ανάλυσης για να μετράμε την εμπειρία του ιστότοπου. Μπορείτε πάντα να απορρίψετε αυτά τα cookies ή να αλλάξετε την επιλογή σας αργότερα."
         },
         "s3": {
-          "title": "Paylaşım ve saklama",
-          "p1": "Başvurduğunuz işverenler, başvuru kapsamında paylaştığınız profil bilgilerini görür. Verilerinizi reklam amacıyla üçüncü taraflara satmayız.",
-          "p2": "Verilerinizi, hizmetin gerektirdiği süre boyunca ve yasal yükümlülüklerimiz kadar saklarız; hesabınızı sildiğinizde kişisel verileriniz silinir veya anonim hale getirilir."
+          "title": "Κοινοποίηση και διατήρηση",
+          "p1": "Οι εργοδότες στους οποίους υποβάλλετε αίτηση βλέπουν τα στοιχεία προφίλ που κοινοποιείτε στο πλαίσιο της αίτησης. Δεν πουλάμε τα δεδομένα σας σε τρίτους για διαφημιστικούς σκοπούς.",
+          "p2": "Διατηρούμε τα δεδομένα σας για όσο διάστημα απαιτεί η υπηρεσία και οι νομικές μας υποχρεώσεις· όταν διαγράφετε τον λογαριασμό σας, τα προσωπικά σας δεδομένα διαγράφονται ή ανωνυμοποιούνται."
         },
         "s4": {
-          "title": "Haklarınız",
-          "p1": "KVKK kapsamında verilerinize erişme, düzeltme, silme ve işlemeye itiraz etme hakkınız vardır. Talepleriniz için bizimle iletişime geçebilirsiniz.",
-          "p2": "Talebinizi en geç 30 gün içinde yanıtlarız. Başvurudan önce kimliğinizi doğrulamamız gerekebilir."
+          "title": "Τα δικαιώματά σας",
+          "p1": "Στο πλαίσιο του KVKK έχετε δικαίωμα πρόσβασης, διόρθωσης και διαγραφής των δεδομένων σας, καθώς και αντίρρησης στην επεξεργασία τους. Για τα αιτήματά σας μπορείτε να επικοινωνήσετε μαζί μας.",
+          "p2": "Απαντάμε στο αίτημά σας το αργότερο εντός 30 ημερών. Ενδέχεται να χρειαστεί να επιβεβαιώσουμε την ταυτότητά σας πριν προχωρήσουμε."
         }
       }
     },
     "cookies": {
-      "title": "Çerez Politikası",
-      "intro": "Çerezler, siteyi düzgün çalıştırmak ve tercihlerinizi hatırlamak için tarayıcınıza kaydedilen küçük metin dosyalarıdır.",
-      "updated": "29 Ekim 2026",
+      "title": "Πολιτική Cookies",
+      "intro": "Τα cookies είναι μικρά αρχεία κειμένου που αποθηκεύονται στον browser σας για να λειτουργεί σωστά ο ιστότοπος και να θυμάται τις προτιμήσεις σας.",
+      "updated": "29 Οκτωβρίου 2026",
       "sections": {
         "s1": {
-          "title": "Zorunlu çerezler",
-          "p1": "Oturumunuzu açık tutmak, güvenliği sağlamak ve dil tercihinizi hatırlamak için kullanılan çerezler zorunludur; bunlar olmadan site çalışmaz."
+          "title": "Απολύτως απαραίτητα cookies",
+          "p1": "Τα cookies που διατηρούν τη συνεδρία σας, διασφαλίζουν την ασφάλεια και θυμούνται τη γλώσσα σας είναι απαραίτητα· χωρίς αυτά ο ιστότοπος δεν λειτουργεί."
         },
         "s2": {
-          "title": "Analitik çerezler",
-          "p1": "Google Analytics çerezleri yalnızca onayınızı verdiğinizde yüklenir. Bu çerezler ziyaret edilen sayfaları anonim olarak ölçmemize yardımcı olur.",
-          "p2": "Onay vermezseniz hiçbir analitik betiği yüklenmez. Tercihinizi site üzerindeki çerez ayarlarından dilediğiniz zaman değiştirebilirsiniz."
+          "title": "Cookies ανάλυσης",
+          "p1": "Τα cookies του Google Analytics φορτώνονται μόνο όταν δώσετε τη συγκατάθεσή σας. Μας βοηθούν να μετράμε ανώνυμα τις σελίδες που επισκέπτεστε.",
+          "p2": "Αν δεν δώσετε συγκατάθεση, δεν φορτώνεται κανένα script ανάλυσης. Μπορείτε να αλλάξετε την επιλογή σας οποιαδήποτε στιγμή από τις ρυθμίσεις cookies του ιστότοπου."
         },
         "s3": {
-          "title": "Tercihleri yönetme",
-          "p1": "Çerez tercihleriniz tarayıcınızda saklanır ve yalnızca bu siteyi etkiler. Tarayıcı ayarlarınızdan çerezleri tamamen silebilir veya engelleyebilirsiniz.",
-          "p2": "Çerezleri engellemeniz durumunda giriş ve profil işlemleri gibi bazı işlevler çalışmayabilir."
+          "title": "Διαχείριση προτιμήσεων",
+          "p1": "Οι προτιμήσεις σας για cookies αποθηκεύονται στον browser σας και επηρεάζουν μόνο αυτόν τον ιστότοπο. Στις ρυθμίσεις του browser μπορείτε να διαγράψετε ή να αποκλείσετε εντελώς τα cookies.",
+          "p2": "Αν αποκλείσετε τα cookies, ορισμένες λειτουργίες, όπως η σύνδεση και οι ενέργειες προφίλ, ενδέχεται να μην λειτουργούν."
         }
       }
     },
     "terms": {
-      "title": "Kullanım Koşulları",
-      "intro": "İşBul KKTC’yi kullanarak bu koşulları kabul etmiş olursunuz. Platformu yalnızca yasal amaçlarla ve doğru bilgilerle kullanmanız beklenir.",
-      "updated": "29 Ekim 2026",
+      "title": "Όροι Χρήσης",
+      "intro": "Χρησιμοποιώντας το İşBul KKTC αποδέχεστε αυτούς τους όρους. Αναμένεται να χρησιμοποιείτε την πλατφόρμα μόνο για νόμιμους σκοπούς και με ακριβείς πληροφορίες.",
+      "updated": "29 Οκτωβρίου 2026",
       "sections": {
         "s1": {
-          "title": "Hesap sorumluluğu",
-          "p1": "Hesabınızın güvenliğinden ve paylaştığınız bilgilerin doğruluğundan siz sorumlusunuz. Şifrenizi kimseyle paylaşmamalısınız.",
-          "p2": "Hesabınızda yetkisiz bir kullanım fark ederseniz derhal bize bildirmelisiniz."
+          "title": "Ευθύνη λογαριασμού",
+          "p1": "Είστε υπεύθυνοι για την ασφάλεια του λογαριασμού σας και την ακρίβεια των πληροφοριών που κοινοποιείτε. Δεν πρέπει να μοιράζεστε τον κωδικό σας με κανέναν.",
+          "p2": "Αν αντιληφθείτε μη εξουσιοδοτημένη χρήση του λογαριασμού σας, πρέπει να μας ενημερώσετε αμέσως."
         },
         "s2": {
-          "title": "Kabul edilebilir kullanım",
-          "p1": "Yanıltıcı ilanlar, spam başvurular veya başkalarının verilerini izinsiz toplama gibi davranışlar yasaktır.",
-          "p2": "Bu koşulları ihlal eden hesapları askıya alma veya kapatma hakkımızı saklı tutarız."
+          "title": "Αποδεκτή χρήση",
+          "p1": "Απαγορεύονται συμπεριφορές όπως παραπλανητικές αγγελίες, spam αιτήσεις ή η συλλογή δεδομένων άλλων χωρίς άδεια.",
+          "p2": "Διατηρούμε το δικαίωμα να αναστείλουμε ή να κλείσουμε λογαριασμούς που παραβιάζουν αυτούς τους όρους."
         },
         "s3": {
-          "title": "İçerik ve fikri mülkiyet",
-          "p1": "Yüklediğiniz içerik size ait kalır; ancak bu içeriği platform üzerinden göstermemize izin vermiş olursunuz.",
-          "p2": "İşBul KKTC markası, tasarımı ve yazılımı bize aittir ve izinsiz kullanılamaz."
+          "title": "Περιεχόμενο και πνευματική ιδιοκτησία",
+          "p1": "Το περιεχόμενο που ανεβάζετε παραμένει δικό σας· ωστόσο μας επιτρέπετε να το εμφανίζουμε στην πλατφόρμα.",
+          "p2": "Το σήμα, ο σχεδιασμός και το λογισμικό του İşBul KKTC ανήκουν σε εμάς και δεν επιτρέπεται να χρησιμοποιηθούν χωρίς άδεια."
         },
         "s4": {
-          "title": "Sorumluluğun sınırı",
-          "p1": "Platformu kesintisiz veya hatasız sunmayı garanti etmeyiz. İşveren ile aday arasındaki anlaşmalardan taraf değiliz.",
-          "p2": "Koşullar güncellenebilir; önemli değişiklikleri site üzerinden duyururuz."
+          "title": "Περιορισμός ευθύνης",
+          "p1": "Δεν εγγυόμαστε ότι η πλατφόρμα θα είναι αδιάλειπτη ή χωρίς σφάλματα. Δεν είμαστε μέρος συμφωνιών μεταξύ εργοδοτών και υποψηφίων.",
+          "p2": "Οι όροι μπορεί να ενημερωθούν· τις σημαντικές αλλαγές τις ανακοινώνουμε στον ιστότοπο."
         }
       }
     }
@@ -1445,8 +1428,7 @@
     "emptyTitle": "Δεν υπάρχουν αγγελίες στη {district} αυτή τη στιγμή",
     "emptyDescription": "Νέες αγγελίες θα εμφανιστούν εδώ. Μπορείτε να δείτε όλες τις θέσεις στη Βόρεια Κύπρο ή να επιστρέψετε αργότερα.",
     "browseAll": "Όλες οι θέσεις εργασίας στη Βόρεια Κύπρο",
-    "otherDistricts": "Θέσεις σε άλλες επαρχίες",
-    "countLabel": "{count} αγγελίες"
+    "otherDistricts": "Θέσεις σε άλλες επαρχίες"
   },
   "JobTypePage": {
     "eyebrow": "ΕΡΓΑΣΙΑ ΣΤΗ ΒΟΡΕΙΑ ΚΥΠΡΟ",
@@ -1458,8 +1440,7 @@
     "emptyDescription": "Νέες αγγελίες θα εμφανιστούν εδώ. Μπορείτε να δείτε όλες τις θέσεις στη Βόρεια Κύπρο ή να επιστρέψετε αργότερα.",
     "browseAll": "Όλες οι θέσεις εργασίας στη Βόρεια Κύπρο",
     "otherTypes": "Θέσεις ανά τύπο απασχόλησης",
-    "districts": "Θέσεις ανά επαρχία",
-    "countLabel": "{count} αγγελίες"
+    "districts": "Θέσεις ανά επαρχία"
   },
   "Guides": {
     "eyebrow": "ΟΔΗΓΟΙ ΚΑΡΙΕΡΑΣ",
@@ -1472,8 +1453,7 @@
     "ctaRegister": "Δωρεάν εγγραφή",
     "moreGuides": "Περισσότεροι οδηγοί",
     "metaTitle": "Οδηγοί καριέρας Βόρειας Κύπρου | Εργασία, βιογραφικό, δικαιώματα",
-    "metaDescription": "Πρωτότυποι οδηγοί για εύρεση εργασίας, βιογραφικό και άδεια εργασίας στη Βόρεια Κύπρο. İşBul KKTC.",
-    "allGuides": "Όλοι οι οδηγοί"
+    "metaDescription": "Πρωτότυποι οδηγοί για εύρεση εργασίας, βιογραφικό και άδεια εργασίας στη Βόρεια Κύπρο. İşBul KKTC."
   },
   "FaqPage": {
     "eyebrow": "ΣΥΧΝΕΣ ΕΡΩΤΗΣΕΙΣ",

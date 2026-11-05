@@ -440,20 +440,11 @@
     "eyebrow": "İŞBUL KKTC · گزارش محلی",
     "title": "کار و مسیر شغلی در قبرس شمالی.",
     "lead": "خبرهای روز درباره اشتغال و زندگی کاری در قبرس شمالی را با پیوند به ناشران دنبال کنید.",
-    "sourceSearchLink": "مشاهده همه خبرهای روز",
     "feedAsideLabel": "تازه‌ترین گزارش",
     "feedAsideBody": "عنوان‌های مرتبط با زندگی کاری محلی در ۳۰ روز گذشته.",
     "feedKicker": "عنوان‌های روز",
     "feedTitle": "تازه‌های کار و مسیر شغلی",
-    "latestBadge": "تازه",
-    "localNewsBadge": "گزارش محلی",
-    "illustrativeImage": "تصویر نمونه · UNSPLASH",
     "emptyTitle": "در حال حاضر خبری برای نمایش وجود ندارد.",
-    "emptyBody": "پس از به‌روزرسانی خوراک، عنوان‌های تازه نمایش داده می‌شوند. در این فاصله می‌توانید جست‌وجوی منبع را باز کنید.",
-    "editorialNoteTitle": "منبع را ببینید و گزارش ناشر را بخوانید.",
-    "editorialNoteBody": "این صفحه عنوان خبرهای روز و نام ناشران را فهرست می‌کند؛ متن مقاله‌ها را کپی نمی‌کند یا به‌عنوان گزارش اصلی İşBul KKTC ارائه نمی‌دهد. عکس‌های Unsplash کارت‌ها تصویرهای موضوعی هستند، نه عکس رویدادهای خاص. برای متن کامل و زمینه خبر به ناشر مراجعه کنید.",
-    "photoLicense": "مجوز تصویر Unsplash",
-    "sourceLabel": "منبع: {source}",
     "metaTitle": "نشریه کار و اشتغال قبرس شمالی | İşBul KKTC",
     "metaDescription": "بازار کار قبرس شمالی، راهنمای آگهی برای کارفرمایان و نکات شغلی برای فارغ‌التحصیلان. İşBul KKTC."
   },
@@ -924,14 +915,11 @@
     "activeJobCount": "{count} آگهی باز",
     "jobEmployersVerificationNote": "نمایش در این بخش به معنای تأیید شرکت توسط İşBul KKTC نیست.",
     "companyWebsite": "وب‌سایت",
-    "sourceProfileLink": "نمایه شرکت در منبع",
-    "sourceListingLink": "نمایش آگهی اصلی",
     "resultsLabel": "نتایج جست‌وجوی شرکت",
     "searchLabel": "جست‌وجوی نام شرکت",
     "searchPlaceholder": "هر بخشی از نام شرکت را بنویسید",
     "clearSearch": "پاک‌کردن متن جست‌وجو",
     "categoryLabel": "حوزه یا نوع کسب‌وکار",
-    "categoryPlaceholder": "یک حوزه انتخاب کنید",
     "categoryAll": "همه حوزه‌ها",
     "locationLabel": "شهرستان",
     "locationAll": "همه شهرستان‌ها",
@@ -958,8 +946,7 @@
     "previous": "قبلی",
     "next": "بعدی",
     "pageCount": "صفحه {current} از {total}",
-    "sourceNote": "پوشش بر اساس مختصات منبع تخمین زده شده و مرز رسمی نیست. وجود یک ورودی به معنای ثبت یا تأیید شرکت نیست.",
-    "districtDataNote": "{count} شعبه بدون داده معتبر شهرستان، هنگام انتخاب فیلتر شهرستان نمایش داده نمی‌شوند."
+    "sourceNote": "پوشش بر اساس مختصات منبع تخمین زده شده و مرز رسمی نیست. وجود یک ورودی به معنای ثبت یا تأیید شرکت نیست."
   },
   "CandidateDashboard": {
     "eyebrow": "پروفایل متقاضی",
@@ -1030,7 +1017,6 @@
       "saved": "پروفایل شما ذخیره شد."
     },
     "profileIndex": "پروفایل · ۰۱",
-    "sectionsDescription": "اطلاعات دلخواه را اضافه کنید. تکمیل همه بخش‌ها اختیاری است؛ پیشنهادهای رزومه را پیش از ذخیره بررسی و ویرایش کنید.",
     "additionalDetails": "سوابق، تحصیلات و موارد دیگر · {count} مورد",
     "additionalDetailsHint": "این بخش‌ها اختیاری‌اند. اطلاعات رزومه بدون حذف موارد موجود به فرم افزوده می‌شود؛ پیش از ذخیره آن‌ها را بررسی و ویرایش کنید.",
     "entryLabel": "مورد {number}",
@@ -1172,8 +1158,7 @@
       "verificationNoticeDescription": "تأیید پروفایل فهرست، وضعیت رسمی تأیید شرکت را تغییر نمی‌دهد. بارگذاری اسناد تا تعیین قواعد نگهداری امن و حذف غیرفعال است.",
       "identitySection": "مشخصات شرکت",
       "contactSection": "اطلاعات تماس",
-      "locationSection": "مکان و پیوند فهرست",
-      "documentsTitle": "اسناد شرکت"
+      "locationSection": "مکان و پیوند فهرست"
     },
     "addCompany": "افزودن شرکت",
     "candidateWorkspaceLink": "پروفایل متقاضی",
@@ -1210,8 +1195,6 @@
       "lefke": "لفکه"
     },
     "directoryTarget": "شرکت و شعبه موجود در فهرست",
-    "directoryTargetNone": "در فهرست نیست / پیوند شعبه ایجاد نشود",
-    "directoryTargetHint": "مکان تحت مدیریت خود را انتخاب کنید. اطلاعات تأییدشده فقط ورودی همان شعبه را به‌روزرسانی می‌کند.",
     "directorySearchLabel": "شرکت خود را در فهرست پیدا کنید",
     "directorySearchPlaceholder": "نام شرکت یا مکان را وارد کنید",
     "directorySearchHint": "شعبه‌ای را که مدیریت می‌کنید انتخاب کنید. اطلاعات موجود درباره حوزه فعالیت، تماس و مکان فقط فیلدهای خالی را پر می‌کند؛ پیش از ارسال آن‌ها را بررسی و ویرایش کنید. اگر شرکت را پیدا نکردید، این فیلد را خالی بگذارید.",
@@ -1304,85 +1287,85 @@
     "ctaTitle": "پروفایل خود را بسازید و اطلاعاتتان را در اختیار خود نگه دارید."
   },
   "Legal": {
-    "eyebrow": "Yasal bilgilendirme",
-    "backLabel": "Geri dön",
-    "backToHome": "Ana sayfaya dön",
-    "lastUpdated": "Son güncelleme: {date}",
-    "contactNote": "Bu metinlerle ilgili sorularınız için bize ulaşabilirsiniz.",
+    "eyebrow": "اطلاعات حقوقی",
+    "backLabel": "بازگشت",
+    "backToHome": "بازگشت به صفحه اصلی",
+    "lastUpdated": "آخرین به‌روزرسانی: {date}",
+    "contactNote": "اگر درباره این متون پرسشی دارید، می‌توانید با ما در تماس باشید.",
     "contactEmail": "info@isbulkktc.com",
-    "relatedLabel": "Diğer yasal metinler",
+    "relatedLabel": "سایر متون حقوقی",
     "privacy": {
-      "title": "Gizlilik Politikası",
-      "intro": "İşBul KKTC olarak kişisel verilerinizi KVKK ve GDPR ilkelerine uygun şekilde, yalnızca hizmeti sunmak için gerekli olduğu ölçüde işliyoruz.",
-      "updated": "29 Ekim 2026",
+      "title": "سیاست حریم خصوصی",
+      "intro": "در İşBul KKTC داده‌های شخصی شما را مطابق اصول KVKK و GDPR و تنها تا حدی که برای ارائه سرویس لازم است پردازش می‌کنیم.",
+      "updated": "۲۹ اکتبر ۲۰۲۶",
       "sections": {
         "s1": {
-          "title": "Topladığımız veriler",
-          "p1": "Hesap oluşturduğunuzda ad, e-posta adresi, hesap türü ve tercih ettiğiniz arayüz dili gibi bilgileri toplarız. Aday profili oluşturduğunuzda deneyim, eğitim ve beceri bilgileri de saklanır.",
-          "p2": "Platformu kullanırken oluşan oturum ve güvenlik kayıtları, hizmetin kötüye kullanımını engellemek amacıyla tutulur."
+          "title": "داده‌هایی که جمع‌آوری می‌کنیم",
+          "p1": "هنگام ساخت حساب، اطلاعاتی مانند نام، نشانی ایمیل، نوع حساب و زبان رابط مورد نظر شما را جمع‌آوری می‌کنیم. هنگام ساخت پروفایل متقاضی، اطلاعات تجربه، تحصیلات و مهارت‌ها نیز ذخیره می‌شود.",
+          "p2": "سوابق نشست و امنیت که هنگام استفاده از پلتفرم ایجاد می‌شود، برای جلوگیری از سوءاستفاده از سرویس نگهداری می‌شود."
         },
         "s2": {
-          "title": "Verileri neden işliyoruz",
-          "p1": "Verileriniz; hesabınızı oluşturmak ve doğrulamak, giriş yapmanızı sağlamak, iş başvurularınızı işverene iletmek ve platformun güvenliğini sağlamak için işlenir.",
-          "p2": "Onayınız olduğunda, site deneyimini ölçmek için analitik çerezler kullanırız. Bu çerezleri her zaman reddedebilir veya tercihinizi sonradan değiştirebilirsiniz."
+          "title": "چرا داده‌ها را پردازش می‌کنیم",
+          "p1": "داده‌های شما را پردازش می‌کنیم تا حساب شما را بسازیم و تأیید کنیم، امکان ورود بدهیم، درخواست‌های شغلی شما را به کارفرما برسانیم و امنیت پلتفرم را تأمین کنیم.",
+          "p2": "با رضایت شما از کوکی‌های تحلیلی برای سنجش تجربه سایت استفاده می‌کنیم. همیشه می‌توانید این کوکی‌ها را رد کنید یا انتخاب خود را بعداً تغییر دهید."
         },
         "s3": {
-          "title": "Paylaşım ve saklama",
-          "p1": "Başvurduğunuz işverenler, başvuru kapsamında paylaştığınız profil bilgilerini görür. Verilerinizi reklam amacıyla üçüncü taraflara satmayız.",
-          "p2": "Verilerinizi, hizmetin gerektirdiği süre boyunca ve yasal yükümlülüklerimiz kadar saklarız; hesabınızı sildiğinizde kişisel verileriniz silinir veya anonim hale getirilir."
+          "title": "اشتراک‌گذاری و نگهداری",
+          "p1": "کارفرمایانی که به آن‌ها درخواست می‌دهید، اطلاعات پروفایلی را که در چارچوب درخواست به اشتراک می‌گذارید می‌بینند. داده‌های شما را برای تبلیغات به اشخاص ثالث نمی‌فروشیم.",
+          "p2": "داده‌های شما را تا زمانی که سرویس لازم دارد و تا حد الزامات قانونی نگه می‌داریم؛ با حذف حساب، داده‌های شخصی شما حذف یا بی‌نام می‌شود."
         },
         "s4": {
-          "title": "Haklarınız",
-          "p1": "KVKK kapsamında verilerinize erişme, düzeltme, silme ve işlemeye itiraz etme hakkınız vardır. Talepleriniz için bizimle iletişime geçebilirsiniz.",
-          "p2": "Talebinizi en geç 30 gün içinde yanıtlarız. Başvurudan önce kimliğinizi doğrulamamız gerekebilir."
+          "title": "حقوق شما",
+          "p1": "در چارچوب KVKK حق دسترسی، اصلاح و حذف داده‌های خود و اعتراض به پردازش آن‌ها را دارید. برای درخواست‌های خود می‌توانید با ما تماس بگیرید.",
+          "p2": "به درخواست شما حداکثر تا ۳۰ روز پاسخ می‌دهیم. ممکن است پیش از اقدام لازم باشد هویت شما را تأیید کنیم."
         }
       }
     },
     "cookies": {
-      "title": "Çerez Politikası",
-      "intro": "Çerezler, siteyi düzgün çalıştırmak ve tercihlerinizi hatırlamak için tarayıcınıza kaydedilen küçük metin dosyalarıdır.",
-      "updated": "29 Ekim 2026",
+      "title": "سیاست کوکی‌ها",
+      "intro": "کوکی‌ها فایل‌های متنی کوچکی هستند که در مرورگر شما ذخیره می‌شوند تا سایت درست کار کند و ترجیحات شما را به یاد بسپارد.",
+      "updated": "۲۹ اکتبر ۲۰۲۶",
       "sections": {
         "s1": {
-          "title": "Zorunlu çerezler",
-          "p1": "Oturumunuzu açık tutmak, güvenliği sağlamak ve dil tercihinizi hatırlamak için kullanılan çerezler zorunludur; bunlar olmadan site çalışmaz."
+          "title": "کوکی‌های ضروری",
+          "p1": "کوکی‌هایی که نشست شما را باز نگه می‌دارند، امنیت را تأمین می‌کنند و زبان انتخابی شما را به یاد می‌سپارند ضروری هستند؛ بدون آن‌ها سایت کار نمی‌کند."
         },
         "s2": {
-          "title": "Analitik çerezler",
-          "p1": "Google Analytics çerezleri yalnızca onayınızı verdiğinizde yüklenir. Bu çerezler ziyaret edilen sayfaları anonim olarak ölçmemize yardımcı olur.",
-          "p2": "Onay vermezseniz hiçbir analitik betiği yüklenmez. Tercihinizi site üzerindeki çerez ayarlarından dilediğiniz zaman değiştirebilirsiniz."
+          "title": "کوکی‌های تحلیلی",
+          "p1": "کوکی‌های Google Analytics فقط با رضایت شما بارگذاری می‌شوند. این کوکی‌ها به ما کمک می‌کنند صفحات بازدیدشده را به‌صورت بی‌نام بسنجیم.",
+          "p2": "اگر رضایت ندهید، هیچ اسکریپت تحلیلی بارگذاری نمی‌شود. می‌توانید انتخاب خود را هر زمان از تنظیمات کوکی در سایت تغییر دهید."
         },
         "s3": {
-          "title": "Tercihleri yönetme",
-          "p1": "Çerez tercihleriniz tarayıcınızda saklanır ve yalnızca bu siteyi etkiler. Tarayıcı ayarlarınızdan çerezleri tamamen silebilir veya engelleyebilirsiniz.",
-          "p2": "Çerezleri engellemeniz durumunda giriş ve profil işlemleri gibi bazı işlevler çalışmayabilir."
+          "title": "مدیریت ترجیحات",
+          "p1": "ترجیحات کوکی شما در مرورگرتان ذخیره می‌شود و فقط بر همین سایت اثر می‌گذارد. در تنظیمات مرورگر می‌توانید کوکی‌ها را کاملاً حذف یا مسدود کنید.",
+          "p2": "اگر کوکی‌ها را مسدود کنید، ممکن است برخی عملکردها مانند ورود و عملیات پروفایل کار نکنند."
         }
       }
     },
     "terms": {
-      "title": "Kullanım Koşulları",
-      "intro": "İşBul KKTC’yi kullanarak bu koşulları kabul etmiş olursunuz. Platformu yalnızca yasal amaçlarla ve doğru bilgilerle kullanmanız beklenir.",
-      "updated": "29 Ekim 2026",
+      "title": "شرایط استفاده",
+      "intro": "با استفاده از İşBul KKTC این شرایط را می‌پذیرید. انتظار می‌رود از پلتفرم فقط برای اهداف قانونی و با اطلاعات درست استفاده کنید.",
+      "updated": "۲۹ اکتبر ۲۰۲۶",
       "sections": {
         "s1": {
-          "title": "Hesap sorumluluğu",
-          "p1": "Hesabınızın güvenliğinden ve paylaştığınız bilgilerin doğruluğundan siz sorumlusunuz. Şifrenizi kimseyle paylaşmamalısınız.",
-          "p2": "Hesabınızda yetkisiz bir kullanım fark ederseniz derhal bize bildirmelisiniz."
+          "title": "مسئولیت حساب",
+          "p1": "شما مسئول امنیت حساب خود و درستی اطلاعاتی هستید که به اشتراک می‌گذارید. نباید رمز عبور خود را با کسی به اشتراک بگذارید.",
+          "p2": "اگر استفاده غیرمجاز از حساب خود را متوجه شدید، باید بی‌درنگ به ما اطلاع دهید."
         },
         "s2": {
-          "title": "Kabul edilebilir kullanım",
-          "p1": "Yanıltıcı ilanlar, spam başvurular veya başkalarının verilerini izinsiz toplama gibi davranışlar yasaktır.",
-          "p2": "Bu koşulları ihlal eden hesapları askıya alma veya kapatma hakkımızı saklı tutarız."
+          "title": "استفاده مجاز",
+          "p1": "رفتارهایی مانند آگهی‌های گمراه‌کننده، درخواست‌های اسپم یا جمع‌آوری بدون اجازه داده‌های دیگران ممنوع است.",
+          "p2": "حق تعلیق یا بستن حساب‌هایی را که این شرایط را نقض می‌کنند برای خود محفوظ می‌داریم."
         },
         "s3": {
-          "title": "İçerik ve fikri mülkiyet",
-          "p1": "Yüklediğiniz içerik size ait kalır; ancak bu içeriği platform üzerinden göstermemize izin vermiş olursunuz.",
-          "p2": "İşBul KKTC markası, tasarımı ve yazılımı bize aittir ve izinsiz kullanılamaz."
+          "title": "محتوا و مالکیت فکری",
+          "p1": "محتوایی که بارگذاری می‌کنید از خودتان می‌ماند؛ با این حال به ما اجازه می‌دهید این محتوا را در پلتفرم نمایش دهیم.",
+          "p2": "برند، طراحی و نرم‌افزار İşBul KKTC از ماست و بدون اجازه قابل استفاده نیست."
         },
         "s4": {
-          "title": "Sorumluluğun sınırı",
-          "p1": "Platformu kesintisiz veya hatasız sunmayı garanti etmeyiz. İşveren ile aday arasındaki anlaşmalardan taraf değiliz.",
-          "p2": "Koşullar güncellenebilir; önemli değişiklikleri site üzerinden duyururuz."
+          "title": "محدودیت مسئولیت",
+          "p1": "تضمین نمی‌کنیم که پلتفرم بدون وقفه یا بدون خطا ارائه شود. ما طرف قرارداد میان کارفرما و متقاضی نیستیم.",
+          "p2": "این شرایط ممکن است به‌روزرسانی شود؛ تغییرات مهم را در سایت اعلام می‌کنیم."
         }
       }
     }
@@ -1445,8 +1428,7 @@
     "emptyTitle": "در حال حاضر آگهی‌ای در {district} منتشر نشده است",
     "emptyDescription": "آگهی‌های جدید در اینجا نمایش داده می‌شوند. می‌توانید همه آگهی‌های قبرس شمالی را ببینید یا بعداً مراجعه کنید.",
     "browseAll": "همه آگهی‌های قبرس شمالی",
-    "otherDistricts": "آگهی‌ها در مناطق دیگر",
-    "countLabel": "{count} آگهی"
+    "otherDistricts": "آگهی‌ها در مناطق دیگر"
   },
   "JobTypePage": {
     "eyebrow": "کار در قبرس شمالی",
@@ -1458,8 +1440,7 @@
     "emptyDescription": "آگهی‌های جدید در اینجا نمایش داده می‌شوند. می‌توانید همه آگهی‌های قبرس شمالی را ببینید یا بعداً مراجعه کنید.",
     "browseAll": "همه آگهی‌های قبرس شمالی",
     "otherTypes": "آگهی‌ها بر اساس نوع استخدام",
-    "districts": "آگهی‌ها بر اساس منطقه",
-    "countLabel": "{count} آگهی"
+    "districts": "آگهی‌ها بر اساس منطقه"
   },
   "Guides": {
     "eyebrow": "راهنماهای شغلی",
@@ -1472,8 +1453,7 @@
     "ctaRegister": "ثبت‌نام رایگان",
     "moreGuides": "راهنماهای دیگر",
     "metaTitle": "راهنماهای شغلی قبرس شمالی | کار، رزومه و حقوق",
-    "metaDescription": "راهنماهای اصیل درباره یافتن کار، رزومه و مجوز کار در قبرس شمالی. İşBul KKTC.",
-    "allGuides": "همه راهنماها"
+    "metaDescription": "راهنماهای اصیل درباره یافتن کار، رزومه و مجوز کار در قبرس شمالی. İşBul KKTC."
   },
   "FaqPage": {
     "eyebrow": "پرسش‌های پرتکرار",
