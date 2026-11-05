@@ -30,16 +30,28 @@ changed" failure.
 
 ## How it runs
 
-The suite has its own Playwright config so it can be invoked on its own:
+The suite has its own Playwright config so it can be invoked on its own. It runs
+against the **production standalone server**, the same artefact the E2E suite
+uses in CI:
 
 ```bash
+bun run build
+mkdir -p .next/standalone/.next .next/standalone/public
+cp -a .next/static/. .next/standalone/.next/static/
+cp -a public/. .next/standalone/public/
 bun run test:visual
 ```
 
-It runs against the same production standalone server as the E2E suite
-(`playwright.config.ts` is reused for the server lifecycle). Because the job
-detail and jobs targets read seeded rows, the local Supabase stack must be up
-(`bun run db:start`) — exactly the precondition the E2E suite already has in CI.
+Because the job-detail and jobs targets read seeded rows, the local Supabase
+stack must be up (`bun run db:start`) — exactly the precondition the E2E suite
+already has in CI.
+
+> **Do not baseline against `next dev`.** The dev server and the built output do
+> not render identically: four of the sixteen targets (the search form, the
+> footer, the first job card and the sign-in form) differed by 0.4-1.3% between
+> the two — far over the 0.1% budget. Baselines are captured from the production
+> build. Point `PLAYWRIGHT_BASE_URL` at a server already running that build to
+> compare against it without the config's own `webServer`.
 
 ## Determinism
 

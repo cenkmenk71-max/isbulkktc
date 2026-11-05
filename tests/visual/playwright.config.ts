@@ -63,12 +63,18 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: process.env.CI ? "node .next/standalone/server.js" : "npm run dev",
+    // The production standalone server, in CI and locally alike. A baseline
+    // captured from `next dev` does not match the built output: four of the
+    // sixteen targets (the search form, footer, first job card and sign-in
+    // form) differed by 0.4-1.3% between the two, well over the 0.1% budget.
+    // Build first (`bun run build`, then copy `.next/static` and `public` into
+    // `.next/standalone` as CI does) or point `PLAYWRIGHT_BASE_URL` at a server
+    // that already serves the production build.
+    command: "node .next/standalone/server.js",
     url: readinessURL,
     env: {
       NEXT_PUBLIC_APP_URL: baseURL,
       AUTH_OAUTH_PROVIDERS: process.env.PLAYWRIGHT_AUTH_OAUTH_PROVIDERS ?? "",
-      ...(process.env.CI ? {} : { NEXT_DIST_DIR: ".next-playwright" }),
       PORT: port,
     },
     reuseExistingServer: !process.env.CI,
