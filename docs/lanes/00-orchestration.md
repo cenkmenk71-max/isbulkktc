@@ -162,3 +162,31 @@ geri konunca `PASS — 12/12`. Canlıya dokunulmadı.
   döner ve `test:visual` 12/12 kırmızı olur. Bu yüzden görsel doğrulama
   **varsayılan `.next`** ile build edilmeli (CI de öyle yapar).
 
+### Tur 2 — görsel kapı runner'da kırmızı: font rasterizasyonu (handoff #210)
+
+**Bulgu.** `test:visual` CI `e2e` job'ında (shard 1) 12/12 shot'ı kırmızı yaktı;
+ama **boyutlar birebir aynı**, fark **metin-ağırlıklı** (`jobs-card` %3.2,
+`header-el` %2.9, `header-de` %2.7 vs `packages-lead` %0.5, `home-search-fa`
+%0.9) ve **deterministik** (iki koşu bit-bit aynı sayaçlar).
+
+**Teşhis.** Aynı kod + aynı Chrome (157.0.8103.38) + CI'ın **tam build env'i**
+(`NEXT_PUBLIC_GA_MEASUREMENT_ID`, VAPID, Supabase değişkenleri) ile yerelde
+**12/12, 0px** yeşil. Tek değişken: OS — sandbox Debian 13, runner ubuntu-24.04.
+Shot'lar `el`/`ru`/`fa` içeriyor; self-hosted display yüzleri her glifi taşımıyor,
+OS'in seçtiği fallback aile pikselleri belirliyor. Yani bu bir **regresyon değil,
+ortam farkı**.
+
+**Karar.** Baseline'lar (`tests/visual/**`) LANE-QA'nın; bu PR onlara dokunmaz.
+Adım **advisory** yapıldı (`continue-on-error`) ama sessiz değil: 12 shot yine
+koşar, tablo basılır, kırmızı `::warning` + job summary + yüklenen diff
+artefaktlarıyla görünür olur, webfont erişilebilirlik teşhisi eklenir (404 olsa
+wiring hatası olurdu). Baseline'ların runner ortamında yeniden üretimi **#210**
+(LANE-QA, `agent:handoff`) ile izleniyor; o merge olunca `continue-on-error`
+kaldırılıp adım gerçek kapı olur.
+
+**Ders.** Ortama bağlı piksel baseline'ı, üretildiği OS'ten başka bir OS'te
+koşunca yanlış pozitif verir. Bir görsel kapıyı CI'a bağlamadan önce baseline'ın
+**hangi ortamda** üretildiğini ve runner'ın o ortamla aynı olup olmadığını
+doğrula; değilse önce baseline'ı runner'da üret.
+
+
