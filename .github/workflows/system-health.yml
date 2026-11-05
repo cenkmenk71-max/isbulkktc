@@ -1,0 +1,37 @@
+name: System health
+
+# The operator's own loop. The autopilot keeps the lanes working; this checks
+# that the autopilot is actually running and that nothing is stuck, so a silent
+# stall is caught by the system rather than by the owner noticing.
+#
+# It fails the job when something is broken, which is what makes it useful: a
+# green run means the machinery is healthy, not merely that the script exited.
+
+on:
+  schedule:
+    - cron: '13 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  actions: read
+
+jobs:
+  health:
+    name: Health check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Run the health check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/system-health.mjs
