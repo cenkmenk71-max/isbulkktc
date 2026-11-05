@@ -18,6 +18,7 @@ import {
   buildOrganizationGraph,
 } from "@/content/ai-visibility/structured-data";
 import { getGuides } from "@/content/guides";
+import { toJobDescriptionHtml } from "@/content/ai-visibility/job-description-html";
 import {
   COUNTRY_CODE,
   buildPostalAddress,
@@ -578,4 +579,60 @@ test("the district and employment-type anchors use the interface catalog", () =>
       `${locale} section does not label the district list in its own language`,
     );
   }
+});
+
+test("a plain-text job description becomes HTML with paragraph breaks", () => {
+  // Google Jobs requires the `JobPosting` description in HTML and, at minimum,
+  // paragraph breaks. The imported listings are one collapsed line whose only
+  // structure is the bullet character, so the raw value would give Google a
+  // single unbroken block.
+  const imported =
+    "Vista Mare Otel bünyesinde görev yapacak Garson arıyoruz. • Tercihen turizm alanında eğitim almış, • Güler yüzlü ve temsil yeteneği yüksek, • İyi derecede İngilizce bilen";
+  const html = toJobDescriptionHtml(imported);
+  assert.match(html, /^<p>[^<]+<\/p><ul>/, "prose then list");
+  assert.equal((html.match(/<li>/g) ?? []).length, 3, "one <li> per bullet");
+  assert.ok(!html.includes("•"), "the bullet separator must not survive");
+
+  // A platform listing written with newlines keeps its paragraphs.
+  const platform = "Görevler\nMüşteri karşılama\nKasa işlemleri";
+  const platformHtml = toJobDescriptionHtml(platform);
+  assert.equal(
+    (platformHtml.match(/<p>/g) ?? []).length,
+    3,
+    "one <p> per line",
+  );
+
+  // Text is escaped, never interpreted: a `<` in the copy cannot inject markup.
+  const hostile = "Aranan: <script>alert(1)</script> deneyim";
+  const safe = toJobDescriptionHtml(hostile);
+  assert.ok(!safe.includes("<script>"), "raw markup must be escaped");
+  assert.ok(safe.includes("&lt;script&gt;"));
+
+  // A value that is already HTML is left alone.
+  const already = "<p>Hazır</p><ul><li>madde</li></ul>";
+  assert.equal(toJobDescriptionHtml(already), already);
+
+  // Boundaries: an empty value stays empty (the caller falls back to summary).
+  assert.equal(toJobDescriptionHtml(""), "");
+  assert.equal(toJobDescriptionHtml("   "), "");
+});
+
+test("the JobPosting producer formats its description through the helper", () => {
+  // `job-posting-structured-data.ts` is `server-only`, so assert at the source
+  // that the raw description is not passed through unformatted.
+  const source = readFileSync(
+    path.join(REPO_ROOT, "src/features/jobs/job-posting-structured-data.ts"),
+    "utf8",
+  );
+  assert.match(
+    source,
+    /toJobDescriptionHtml\(/,
+    "the JobPosting description must be reflowed into HTML",
+  );
+  assert.ok(
+    !/const description = job\.description\.trim\(\) \|\| job\.summary\.trim\(\);/.test(
+      source,
+    ),
+    "the raw description must not be used directly",
+  );
 });

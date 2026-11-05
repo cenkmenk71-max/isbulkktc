@@ -1,3 +1,4 @@
+import { toJobDescriptionHtml } from "@/content/ai-visibility/job-description-html";
 import { COUNTRY_CODE, regionNames, SITE_NAME } from "@/content/ai-visibility/site";
 import { routing } from "@/i18n/routing";
 import { getLocalizedPageUrl } from "@/lib/seo";
@@ -45,7 +46,12 @@ export function buildJobPostingStructuredData({
   job: PublicJobListing;
   baseUrl: URL;
 }) {
-  const description = job.description.trim() || job.summary.trim();
+  // Google Jobs requires the description in HTML, with paragraph breaks; the
+  // imported listings are a single collapsed line, so the raw text is reflowed
+  // into `<p>`/`<ul>` here (see `toJobDescriptionHtml`).
+  const description = toJobDescriptionHtml(
+    job.description.trim() || job.summary.trim(),
+  );
   // Listings are stored in Turkish and served identically under every locale
   // prefix, so the JobPosting URL must be the default-locale canonical the page
   // itself declares; a per-locale URL here would point Google Jobs at a copy

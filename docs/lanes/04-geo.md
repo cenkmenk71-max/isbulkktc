@@ -431,3 +431,46 @@ yalnız mevcut çeviriler tek kaynaktan okunuyor.
 ### Kapılar
 `lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (556 test,
 +1 yeni guard) · guard kırmızı→yeşil kanıtlandı (bug geri konunca 4 test kırmızı).
+
+---
+
+## Rapor — micro-denetim turu 7 (issue #126), branch `lane/geo`
+
+**Durum:** düzeltmeler branch'te, CI bekliyor. Devir yok.
+
+### Denetlenen dosyalar (`git ls-files`)
+
+| Glob | N | Bakıldı |
+|---|---|---|
+| `src/content/**` | 25 | 25 (hepsi) |
+| `src/app/llms.txt/**` | 1 | 1 |
+| `public/llms*` | 0 | — (dosya yok) |
+| `src/features/**/structured-data*.ts` | 1 | 1 |
+| `src/features/jobs/job-posting-structured-data.ts` | 1 | 1 |
+
+### Bulgu
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `job-posting-structured-data.ts:48` (tüketici) + yeni `src/content/ai-visibility/job-description-html.ts` | doğruluk / GEO | `JobPosting.description` ham düz metindi. Google Jobs "You must format the description in HTML. At minimum, add paragraph breaks using `<br>`, `<p>`, or `\n`" diyor. İçe aktarılan ilanların açıklaması **tek satıra çöküyor** (`clampText` her boşluk dizisini tek boşluğa indiriyor) ve tek yapı bullet karakteri; seed'de 328 bullet var, **0** `<p>`/`<br>`/`\n` | açıklama HTML olmalı, paragraf/liste sınırları korunmalı | Google Jobs ilanı okunamaz tek blok olarak görür; madde işaretleri kaybolur (zengin sonuç kalitesi) | **düzeltildi** |
+
+**Doğru bulunanlar (bulgu yok):** brief'teki tüm URL'ler gerçek rotaya çözülüyor
+(157 link, malformed 0); kısa brief hâlâ 22 bağlantı; ilçe adları 6 dilde katalogla
+birebir; `faqByLocale` ile `seed-managed-content.sql` **birebir** aynı (6×6);
+`Article`/`JobPosting` zorunlu alanları tam; `employmentType` ve
+`jobLocationType: "TELECOMMUTE"` Google'ın resmî örneğiyle uyumlu; `resolveJobDateModified`
+`dateModified >= datePosted` koruyor; ilçe/indeks `pageName`/`pageLabel` mount'ları yerinde.
+
+### Ne yapıldı
+
+Yeni `src/content/ai-visibility/job-description-html.ts` (`toJobDescriptionHtml`):
+düz metni `<p>` + `<ul><li>` yapısına **yeniden akıtır** (içeriği yeniden yazmaz),
+metni HTML-escape eder, zaten blok markup içeren değeri dokunmadan geçirir, boş
+değeri boş bırakır. `buildJobPostingStructuredData` açıklamayı bu yardımcıdan geçiriyor.
+Görünen sayfa etkilenmiyor (React düz metni render ediyor); yalnız JSON-LD değeri
+Google'ın istediği biçimi alıyor.
+
+### Kapılar
+`lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (572 test,
++2 yeni guard) · guard kırmızı→yeşil kanıtlandı · gerçek seed açıklamasıyla çıktı
+gözle doğrulandı (`<p>…</p><ul><li>…`).
