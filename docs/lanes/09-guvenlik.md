@@ -75,3 +75,39 @@ boyutuna (çerez bayrakları, oturum sabitleme) odaklandı.
 - **Devir kuralı:** bu turdan itibaren başka lane'in dosyasındaki bulgu
   `agent:handoff` + `lane:<ad>` ile açılıyor (önceki #139 elle düzeltildi);
   `agent:blocked` yalnız insan gerektiren tıkanma için.
+
+## Durum (2026-11-05, 3. tur) — micro-denetim: tüm dosyalar
+
+`tests/security/**` (9 dosya), `docs/threat-model.md`, `docs/data-retention.md`
+dosya dosya; her boyut (yetki, girdi, sızıntı, mantık, tedarik zinciri, hata
+yolu) tek tek sorgulandı. Yeni iki dosya eklendi; bir test yanlış-pozitif'e karşı
+sertleştirildi.
+
+- **Yeni: `auth-redirect-boundary.test.ts`.** `/auth/callback` public GET; query
+  değerleri saldırgan kontrolünde. `auth-routing.ts`'in "yalnız sabit kelime
+  dağarcığı yola dönüşür" sözü 6 testle sabitlendi: `next`/`flow` kapalı enum,
+  `sb_flow_id` yalnız 32-küçük-hex, her hedef/hata yolu locale-prefix'li ve
+  host-değiştirmiyor. **Bulgu yok** — modül sözünü tutuyor. (QR `next` sınırı
+  ayrı: `open-redirect.test.ts`.)
+- **Yeni: `ci-workflow-permissions.test.ts` (tedarik zinciri).** `pull_request`
+  ile koşan her workflow top-level `permissions:` bildirmeli ve (allowlist'li
+  `agent-pr-automation.yml` hariç) `write` içermemeli; hiçbiri
+  `pull_request_target` kullanmamalı; auto-merge kapısı `.github/workflows/**`
+  değişikliğini hâlâ reddetmeli. **Bulgu yok** — 8/8 workflow en az yetkide.
+- **Düzeltilen test kusuru:** `session-cookie-flags.test.ts`'teki blok regex'i
+  (`/createServerClient<[\s\S]*?\);/`) yalnız `setAll` geri-çağrısını yakalıyordu;
+  `cookieOptions` üçüncü argümanda olduğu için LANE-AUTH düzeltmeyi yapsa bile
+  test **yanlış negatif** verecekti. `cookieOptions` bloğunu doğrudan okuyacak
+  şekilde değiştirildi + `isHardened` için self-test eklendi. (Bulgu: test
+  altyapısı, sahibi bu lane.)
+- **Doğrulanan güçlü kontroller (kanıtlı):** `sanitizeNextPath` 81.920 girdilik
+  fuzz'da 0 off-origin; 13/13 `admin_*` RPC `has_platform_role` çağırıyor ve
+  ikinci (kazanan) tanım `aal2` + aktif profil istiyor; `bun audit --prod` temiz
+  (229 paket); hiçbir `dangerouslySetInnerHTML` ham veri basmıyor (JSON-LD `<`
+  kaçışlı, GA script sabit); `register_push_subscription` aktif oturum istiyor;
+  push/engagement cron bearer'ları sabit-zamanlı değil ama düşük-entropi değil.
+- **Devam eden açık bulgular (değişmedi):** #102 `server-only` (LANE-URUN, todo),
+  #167 oturum çerezi (LANE-AUTH, todo), #139 anon RPC throttle (todo).
+- **Bakılmayan:** yok — 9 test dosyasının 9'u, 2 dokümanın 2'si denetlendi.
+  `docs/threat-model.md`'ye bu turun iki yeni sınırı (auth callback yönlendirmesi,
+  CI izinleri) ve düzeltilen test kusuru işlendi.

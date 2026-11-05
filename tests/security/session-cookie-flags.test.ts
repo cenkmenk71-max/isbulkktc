@@ -98,6 +98,27 @@ test("the proxy verifies claims rather than trusting the raw session", () => {
 
 const sessionClientFiles = ["src/proxy.ts", "src/server/db/supabase-server.ts"];
 
+/**
+ * The flags have to reach the Supabase client that writes the session cookie.
+ * Both call sites create exactly one such client, and the only reason to set
+ * `cookieOptions` in either file is to harden it, so the whole file is
+ * inspected. (An earlier version matched `/createServerClient<[\s\S]*?\);/`,
+ * which captured only the client's `setAll` callback body — the flags live in
+ * the third argument, so the match would have reported a false negative even
+ * after the fix landed.)
+ */
+function isHardened(source: string): { httpOnly: boolean; secure: boolean } {
+  const options = source.match(/cookieOptions\s*:\s*\{([\s\S]*?)\}/);
+  const block = options ? options[1] : "";
+  return {
+    httpOnly: /httpOnly\s*:\s*true/.test(block),
+    secure:
+      /secure\s*:\s*(true|process\.env\.NODE_ENV\s*===\s*["']production["'])/.test(
+        block,
+      ),
+  };
+}
+
 test(
   "the Supabase session cookie is HttpOnly and Secure",
   { todo: "session cookie keeps @supabase/ssr defaults (httpOnly:false, no Secure) — LANE-AUTH" },
@@ -105,17 +126,9 @@ test(
     const offenders: string[] = [];
     for (const file of sessionClientFiles) {
       const source = read(new URL(`../../${file}`, import.meta.url).pathname);
-      // The override has to reach `createServerClient`; a flag set anywhere else
-      // (e.g. only on the OAuth-intent cookie) does not cover the session cookie.
-      const call = source.match(/createServerClient<[\s\S]*?\);/);
-      const block = call ? call[0] : source;
-      const hardened = /cookieOptions\s*:\s*\{[^}]*httpOnly\s*:\s*true[^}]*\}/.test(block);
-      const secure =
-        /cookieOptions\s*:\s*\{[^}]*secure\s*:\s*(true|process\.env\.NODE_ENV\s*===\s*["']production["'])/.test(
-          block,
-        );
-      if (!hardened || !secure) {
-        offenders.push(`${file} [httpOnly:${hardened} secure:${secure}]`);
+      const { httpOnly, secure } = isHardened(source);
+      if (!httpOnly || !secure) {
+        offenders.push(`${file} [httpOnly:${httpOnly} secure:${secure}]`);
       }
     }
     assert.deepEqual(
@@ -125,3 +138,23 @@ test(
     );
   },
 );
+
+test("the cookie-flag check detects a hardened call site (self-test)", () => {
+  // Guards the guard: if `isHardened` ever regresses to inspecting the wrong
+  // substring, the `todo` above would pass for the wrong reason. This proves it
+  // recognises a correctly hardened block and rejects a half-hardened one.
+  assert.deepEqual(isHardened("cookieOptions: { httpOnly: true, secure: true }"), {
+    httpOnly: true,
+    secure: true,
+  });
+  assert.deepEqual(
+    isHardened(
+      "cookieOptions: { httpOnly: true, secure: process.env.NODE_ENV === 'production' }",
+    ),
+    { httpOnly: true, secure: true },
+  );
+  assert.deepEqual(isHardened("cookieOptions: { httpOnly: false }"), {
+    httpOnly: false,
+    secure: false,
+  });
+});

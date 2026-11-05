@@ -161,6 +161,17 @@ issue açar.
   okur (ham `getSession()` değil), böylece çerez sahtelenerek başka kullanıcı
   render edilemez. Tarayıcıda `createBrowserClient` yok; uygulama Supabase'e
   yalnız sunucudan konuşur (`tests/security/session-cookie-flags.test.ts`).
+- **Auth callback yönlendirmesi:** `/auth/callback` public GET olduğundan
+  query değerleri güvenilmez. `auth-routing.ts` yalnız kapalı kelime dağarcığını
+  yola çevirir: `next` (`"company"` dışındaki her değer aday), `flow`
+  (`email|oauth|reset`), `sb_flow_id` (yalnız 32-küçük-hex). Her hedef/hata yolu
+  locale-prefix'li literal; `?error=` tek başına yönlendirme üretmez.
+  `tests/security/auth-redirect-boundary.test.ts` bunu sabitler (bulgu yok).
+- **CI tedarik zinciri:** `pull_request` ile koşan her workflow top-level
+  `permissions:` bildirir ve en az yetkidedir; hiçbiri `pull_request_target`
+  kullanmaz. Tek `write` sahibi `agent-pr-automation.yml`'dir (yalnız `gh pr
+  merge/edit`; PR kodunu checkout etmez), ve auto-merge kapısı `.github/workflows/**`
+  değişikliğini yine reddeder. `tests/security/ci-workflow-permissions.test.ts`.
 
 ### Açık bulgular (sahibine bildirildi, düzeltme bekliyor)
 

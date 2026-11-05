@@ -22,8 +22,10 @@ a boundary regression is attributable at a glance.
 | File | Boundary |
 |---|---|
 | `open-redirect.test.ts` | `/[locale]/install?next=` continuation stays same-origin |
+| `auth-redirect-boundary.test.ts` | `/auth/callback` query values (`next`, `flow`, `sb_flow_id`) never become an off-origin path |
 | `sql-hardening.test.ts` | RLS on every table, pinned `search_path`, grant/revoke pairing, pgTAP ratchet drift |
 | `client-boundary.test.ts` | no client module imports server code or reads secrets; `server-only` markers |
+| `ci-workflow-permissions.test.ts` | every `pull_request` workflow declares least-privilege permissions; no `pull_request_target`; the auto-merge gate still refuses to merge a change to the workflows themselves |
 | `notification-worker-auth.test.ts` | the edge worker authenticates before it inspects configuration |
 | `anonymous-write-surface.test.ts` | the anon write RPCs and the control the forms carry |
 | `anonymous-rpc-throttle.test.ts` | the throttle is in the action, but the anon RPC is directly callable |
