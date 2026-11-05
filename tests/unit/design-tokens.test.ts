@@ -186,7 +186,10 @@ test("the semantic brand aliases resolve to their documented palette anchors", (
  * keyframe it plays declares no `opacity`.
  */
 function ruleBody(selector: string): string {
-  const match = new RegExp(`(?:^|\\n)\\s*${selector}\\s*\\{([^}]*)\\}`).exec(
+  // Escape regex metacharacters: selectors can carry `:not(...)`, `[attr]`,
+  // `*` and `.` — `.sector-directory-panel:not([hidden]) .sector-explorer` did.
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(`(?:^|\\n)\\s*${escaped}\\s*\\{([^}]*)\\}`).exec(
     css,
   );
   assert.ok(match, `${selector} rule is missing from global.css`);
@@ -213,6 +216,9 @@ test("card entrance animations never fade opacity under AA-fragile labels", () =
     ".editorial-page-layout",
     ".consent-card",
     ".packages-hero-copy",
+    // The sector-directory disclosure opens a panel of 16 cards; its copy was
+    // measured at ~2.4:1 mid-fade before the keyframe stopped animating opacity.
+    ".sector-directory-panel:not([hidden]) .sector-explorer",
   ]) {
     const shorthand = /animation:\s*([^;]+);/.exec(ruleBody(selector));
     assert.ok(shorthand, `${selector} must keep its entrance animation`);

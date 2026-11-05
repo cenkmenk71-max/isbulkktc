@@ -412,3 +412,80 @@ somut bir kusur sınıfı bulundu.
 - **#191 e-posta tarafı** hâlâ `lane:urun` + `agent:handoff` devrinde (tur 4).
 - Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
   `docs/lanes/05-tasarim.md`. Hepsi bu lane'in kapsamında.
+
+---
+
+## LANE-TASARIM çalışma notları (2026-11-05, tur 6)
+
+Branch: `lane/tasarim`. Taban: `origin/main` @ `dcdbfa3`. Kuyrukta `lane:tasarim`
+etiketli tek iş **#191** idi (e-posta tarafı sahiplik çelişkisinde, devirde). Bu
+turda brief'in 3 ve 5. maddeleri (klavye/odak, 3D graceful degradation) ve 4.
+maddesinin *animasyon ortası kontrast* kısmı tarandı.
+
+### Bulgu 6 — Sektör dizini paneli `opacity: 0`'dan beliriyordu; metin animasyon ortasında AA altına düşüyordu (düzeltildi)
+
+- **Belirti:** `/` ana sayfada "Tüm çalışma alanları" düğmesine basınca açılan
+  `.sector-directory-panel` 300ms boyunca `opacity: 0 → 1` ile beliriyordu. Panel
+  16 sektör kartının metnini taşıyor.
+- **Ölçüm (yerel dev, Chromium 155, mobil 390px):** panel açılırken
+  `getComputedStyle(explorer).opacity` sırasıyla
+  `0, 0.397, 0.681, 0.827, …`. `opacity 0.397`'de kart metni (`strong` rengi
+  `#0d211b`, kart yüzeyi `--surface`) arkadaki sayfaya doğru kompozitlenince
+  ölçülen kontrast **2.43:1** — AA (4.5:1) altı. Oturmuş durumda 15.8:1.
+- **Kök neden:** `@keyframes sector-disclosure-enter` `opacity: 0`'dan başlıyor.
+  Bu tam da daha önce `editorial-page-enter`, `consent-card-in` ve
+  `packages-rise-in` için düzeltilen sınıf.
+- **Neden hiçbir guard görmedi:** axe guard'ı (`tests/e2e/accessibility.spec.ts`)
+  sektör dizinini **hiç açmıyor**; panel hep `hidden`. Yani ihlal taramanın
+  dışında kalıyordu.
+- **Düzeltme:** keyframe'den `opacity` kaldırıldı; panel artık yalnızca
+  `translateY(-6px) → 0` ile tam opak kayıyor (diğer üç keyframe ile aynı kural).
+- **Kanıt (piksel/geometri):** panel açıkken oturmuş durumda öncesi↔sonrası
+  **geometri birebir aynı** — panel 1149×1303 @ top 542, ilk kart 261×256 @
+  (97, 776), 16 kart, `opacity: 1`. (Ham piksel diff bu panelde güvenilmez: sektör
+  fotoğrafları geç çözülüyor ve GSAP reveal/tilt katmanı çalışıyor; iki **özdeş**
+  çekim bile %7.5 farklıydı, bu yüzden deterministik geometri + computed opacity
+  ölçüldü.)
+- **Animasyon ortası kanıtı:** düzeltmeden sonra panel açılırken opacity hep `1`
+  (`["1","1",…]`), yani kontrast baştan oturmuş değerde.
+- **Guard:** mevcut "card entrance animations never fade opacity under AA-fragile
+  labels" testine `.sector-directory-panel:not([hidden]) .sector-explorer` eklendi.
+  `ruleBody` yardımcısı artık regex metakarakterlerini kaçırıyor (`:not([hidden])`
+  gibi seçiciler daha önce eşleşmiyordu). Negatif test edildi (opacity geri
+  konunca kırmızı).
+
+### Micro-denetim (bu tur)
+
+- **Etkileşimli durumlar axe ile tarandı** (guard'ın açmadığı haller): mobil menü
+  açık, sektör dizini açık, consent kartı + politika paneli, dil menüsü açık —
+  6 dil × mobil. **0 ihlal.**
+- **Klavye/odak taraması:** ana sayfada 24 durak Tab ile gezildi; hepsinde görünür
+  odak halkası (`outline: solid 2-3px`) ve dokunma hedefi ≥44px. Odak tuzağı,
+  negatif tabindex, `aria-hidden` içinde odaklanabilir öğe yok.
+- **Dokunma hedefi:** 18 rota × 3 dil, 390px → 24px altı yalnızca satır içi metin
+  linkleri (WCAG 2.5.8 istisnası).
+- **Yinelenen `id` / boş erişilebilir ad:** 18 rota × 6 dil → **0 bulgu**.
+- **3D graceful degradation (brief 5):** WebGL `getContext` engellenerek test
+  edildi → `packages-vend-fallback` mesajı + 4 yedek kontrol görünüyor, 0 canvas,
+  **0 sayfa hatası**, fiyat paneli hâlâ erişilebilir. Sağlam.
+- **Ölü kod:** `card-in`, `fade-in`, `modal-in`, `toast-in` keyframe'lerinin
+  kullanıcısı yok (`card-in` yalnızca hiçbir bileşenin basmadığı `.job-card`'a
+  bağlı). Ölü CSS temizliği ayrı bir iş; bu PR'a alınmadı (davranış değişmez).
+- `autoAlpha` (yasak) yok.
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅
+- `bun run test:unit` ✅ (551 test, guard genişletildi)
+- `tests/e2e/accessibility.spec.ts -g home` ✅ 9 passed
+- `tests/e2e/home.spec.ts` (sector/home) ✅ 22 passed; 1 mevcut veri-bağımlı test
+  (`anonymous visitors can search job previews…`) temiz tabanda da düşüyor —
+  bu PR'la ilgisiz.
+
+### Sahibin yapması gerekenler
+
+- **#191 e-posta tarafı** hâlâ `lane:urun` + `agent:handoff` (tur 4).
+- Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
+  `docs/lanes/05-tasarim.md`. Hepsi bu lane'in kapsamında.

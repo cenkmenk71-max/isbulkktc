@@ -2295,12 +2295,16 @@ a {
   animation: sector-disclosure-enter 300ms var(--ease-premium) both;
 }
 @keyframes sector-disclosure-enter {
+  /* Deliberately no opacity fade. The panel holds the 16 sector cards, and the
+     card copy clears AA by a wide margin only while the panel is opaque; mid-fade
+     the text composites toward the page behind it and the `strong` label drops to
+     ~2.4:1 (measured), a real flash of failing contrast for the 300ms the panel
+     opens. Same rule as `editorial-page-enter`/`consent-card-in`/
+     `packages-rise-in`: slide down fully opaque instead. */
   from {
-    opacity: 0;
     transform: translateY(-6px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
   }
 }
