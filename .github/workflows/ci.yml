@@ -217,19 +217,13 @@ jobs:
       # down within the step so the Playwright webServer that `test:e2e` starts
       # next can bind port 3000.
       #
-      # ADVISORY for now: the committed baselines were captured on a developer
-      # sandbox (Debian 13), and the runner (ubuntu-24.04) rasterises text a
-      # little differently — every shot differs by ~0.5-3% with *identical*
-      # dimensions, deterministically (two CI runs produced byte-identical diff
-      # counts). That is a font-rendering difference, not a regression, and the
-      # baselines are LANE-QA's files, so the fix is to regenerate them in the
-      # runner environment — tracked in the handoff issue linked from this PR.
-      # `continue-on-error` keeps the required check green until then; the step
-      # still runs all 12 shots, prints the table, and uploads the diff images.
+      # This is a real gate. It ran advisory only while the committed baselines
+      # were captured on a developer sandbox (Debian 13) and the runner
+      # (ubuntu-24.04) rasterised text differently; LANE-QA repinned the
+      # baselines to the runner's render (#228), and the step now passes 12/12
+      # here, so `continue-on-error` is gone.
       - name: Visual regression against the production build
-        id: visual
         if: matrix.shard == 1
-        continue-on-error: true
         env:
           HOSTNAME: 0.0.0.0
           PORT: "3000"
@@ -277,24 +271,10 @@ jobs:
           fi
           exit "$status"
 
-      # Surface an advisory visual failure loudly: `continue-on-error` keeps the
-      # check green, so without this the regression would be silent.
-      - name: Report a visual regression
-        if: steps.visual.outcome == 'failure'
-        run: |
-          echo "::warning title=Visual regression (advisory)::test:visual reported a pixel diff — see the run log and the uploaded artifacts. The baselines need regenerating in the runner environment."
-          {
-            echo "## Visual regression (advisory)"
-            echo
-            echo "\`test:visual\` reported a pixel diff. The step is advisory while the"
-            echo "baselines are regenerated for the runner environment; see the job log"
-            echo "for the per-shot table and the \`visual-regression-artifacts\` upload."
-          } >> "$GITHUB_STEP_SUMMARY"
-
       # The diff images are the evidence for a failure: without them a reviewer
       # can only see the percentage.
       - name: Upload visual regression artifacts
-        if: steps.visual.outcome == 'failure'
+        if: failure() && matrix.shard == 1
         uses: actions/upload-artifact@v4
         with:
           name: visual-regression-artifacts

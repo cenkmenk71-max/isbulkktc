@@ -255,3 +255,19 @@ branch, bilinmeyen lane.
 
 **Kanıt.** Düzeltme öncesi: 19 yanlış "does not own it" (hepsi #228). Sonrası:
 0 yanlış pozitif.
+
+### Tur 3 — görsel adım artık gerçek kapı (advisory kaldırıldı)
+
+**Arka plan.** #193'te `test:visual` adımı, baseline'lar geliştirici sandbox'ında
+(Debian 13) üretildiği ve runner (ubuntu-24.04) metni farklı rasterize ettiği
+için **advisory** yapılmıştı (`continue-on-error`), çünkü baseline'lar LANE-QA'nın
+dosyalarıydı (devir #210).
+
+**Ne oldu.** LANE-QA #228 ile baseline'ları runner render'ına sabitledi
+(2026-11-05 20:29'da merge). Rebase sonrası bu branch'te `test:visual` CI'da
+**PASS — 12/12 shots match their baselines** verdi.
+
+**Yapılan.** `ci.yml`'de `continue-on-error` kaldırıldı; adım artık **gerçek
+kapı**. "Report a visual regression" advisory uyarı adımı silindi; diff
+artefaktlarını yükleyen adım `failure()` koşuluna alındı (kapı kırmızı olunca
+kanıt kalır).
