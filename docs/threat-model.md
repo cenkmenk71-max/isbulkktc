@@ -175,23 +175,27 @@ issue açar.
 
 ### Açık bulgular (sahibine bildirildi, düzeltme bekliyor)
 
-1. **Anonim RPC'de hız sınırı yalnız action'da; endpoint açık** (sahibi:
-   `supabase/**` -> LANE-SUPABASE, `src/features/**` -> LANE-URUN).
-   `submit_feedback` ve `submit_sales_lead` `security definer` ve **`anon`'a
-   grant'li**, dolayısıyla publishable anahtarı olan biri `POST
-   /rest/v1/rpc/submit_feedback` ile server action'ı tamamen atlar. Tek abuse
-   kontrolü (`src/features/abuse/**`) action'ın *içinde*, yani RPC'nin üstünde
-   çalışır; doğrudan PostgREST çağıran bu sınırı görmez. Etki:
-   `feedback_submissions` ve `sales_leads` tablolarına sınırsız satır
-   (saldırganın seçtiği adres + serbest metin) yazılabilir; iki tabloda da
-   yaş/temizleme işi yok, dolayısıyla sınırsız büyüme ve PII birikimi. **Mail
-   gönderilemez** — e-posta fan-out'u RPC'de değil action'da
-   (`sendFeedbackEmails` / `sendSalesLeadEmails`) — bu yüzden doğrudan çağıran
-   için mail-flood kapalı. Önerilen düzeltme: saldırganın kullandığı sınırda,
-   yani veritabanında bir sayaç (trigger veya `pg_cron` ile adres başına
-   throttle), ya da `anon` grant'ini kaldırıp yazmayı limiter'ı yeniden uygulayan
-   bir route üzerinden proxy'lemek. Kanıt:
-   `tests/security/anonymous-rpc-throttle.test.ts` (`todo`).
+1. **DB throttle'ın IP boyutu app yolunda tek kovaya düşüyor** (sahibi:
+   `src/features/**` -> LANE-URUN, `supabase/**` -> LANE-SUPABASE).
+   LANE-SUPABASE `20261106000000_v4_anon_write_throttle.sql` ile throttle'ı RPC
+   gövdesine taşıdı: `submit_feedback` ve `submit_sales_lead` artık insert'ten
+   önce `public.consume_anon_write_quota(...)` çağırıyor ve ledger + helper
+   client rollerinden revoke'lu — yani **doğrudan PostgREST saldırganı artık
+   sınırlı** (eski #139 bulgusunun saldırı yarısı kapandı; kapıya terfi etti,
+   `tests/security/anonymous-rpc-throttle.test.ts`).
+   Kalan sorun IP boyutunda: migration IP'yi `current_setting('request.headers')`
+   (`cf-connecting-ip` / `x-real-ip` / `x-forwarded-for`) üzerinden okuyor, bunlar
+   **PostgREST isteğinin** başlıkları. Doğrudan çağıran bir saldırgan bunları
+   taşır; ama uygulamanın Next.js server action'ı supabase-js ile çağırıyor ve
+   supabase-js ziyaretçi IP'sini **göndermiyor** (kurulu `@supabase/supabase-js`
+   ile ölçüldü: yalnız `apikey`, `authorization`, `content-type`,
+   `x-client-info`). Sonuç: app üzerinden gelen **tüm** gönderimler tek paylaşılan
+   kovaya düşer; migration'ın "eksik başlık tek kovaya düşer" notu app için
+   *normal* durumdur, kenar durum değil. Pencerede site geneli altıncı meşru
+   gönderim generic "failed" ile reddedilir. Önerilen düzeltme: action, ziyaretçi
+   adresini (`clientIp()`) RPC'ye açık bir argümanla geçirsin (ya da supabase-js
+   `global.headers` ile `cf-connecting-ip` eklesin), RPC de o argümanı başlığa
+   tercih etsin. Kanıt: `tests/security/anonymous-rpc-throttle.test.ts` (`todo`).
 2. **`server-only` sınırı eksik** (sahibi: `src/server/email/**`, LANE-URUN).
    `src/server/email/unsubscribe-token-core.ts` `ENGAGEMENT_UNSUBSCRIBE_SECRET`
    ve `RESEND_API_KEY` okuyor ama `import "server-only"` taşımıyor. `src/server`
@@ -224,6 +228,30 @@ issue açar.
   `src/features/abuse/**` action'da adres/IP başına throttle uyguluyor;
   `tests/security/anonymous-write-surface.test.ts`'teki test `todo`'dan kapıya
   terfi etti. (Endpoint'in kendisi hâlâ açık — yukarıdaki 1. bulgu.)
+- **Anon write RPC'leri doğrudan çağrılabiliyordu (#139)** (sahibi:
+  `supabase/**`, LANE-SUPABASE). `submit_feedback` / `submit_sales_lead`
+  `anon`'a grant'li ve `security definer`; abuse kontrolü yalnız action'daydı,
+  yani `POST /rest/v1/rpc/submit_feedback` ile atlanıyordu. LANE-SUPABASE
+  `20261106000000_v4_anon_write_throttle.sql` ile throttle'ı RPC gövdesine
+  taşıdı (insert'ten önce `consume_anon_write_quota`, ledger + helper client
+  rollerinden revoke'lu). `tests/security/anonymous-rpc-throttle.test.ts` artık
+  gevşek bir `/throttle/i` araması yerine her RPC'nin gövdesinde çağrının
+  varlığını ve insert'ten önce çalıştığını doğrulayan bir **kapı** çalıştırıyor.
+  (IP boyutunun app yolundaki kalan açığı yukarıdaki 1. bulgudur.)
+
+### Katmanın kendi dedektörleri (4. tur sertleştirmesi)
+
+Denetçi katmanının gücü kendi regex'leri kadardır; bu turda üç yanlış-negatif
+kapatıldı ve her biri bir self-test ile sabitlendi:
+
+- `client-boundary.test.ts` env dedektörü artık `process.env.NAME`,
+  `process.env["NAME"]`, `process.env?.NAME`, `process['env'].NAME` ve
+  `const { NAME } = process.env` biçimlerinin hepsini görüyor (eskiden yalnız
+  nokta erişimi).
+- `sql-hardening.test.ts` `create table` matcher'ı rakam-sonekli ve tırnaklı
+  tablo adlarını tam yakalıyor; `security definer` matcher'ı `$fn$` gibi
+  etiketli gövdeleri de tarıyor; grant matcher'ı `grant all on function` ve
+  `grant … to public` biçimlerini de yakalıyor.
 
 ### Katmanın CI'a bağlanması
 

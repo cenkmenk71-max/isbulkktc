@@ -44,10 +44,36 @@ function read(path: string): string {
 
 const clientFiles = sourceFiles.filter((path) => /^\s*["']use client["']/m.test(read(path)));
 
-const nonPublicEnvNames = (source: string): string[] =>
-  [...source.matchAll(/process\.env\.([A-Z0-9_]+)/g)]
-    .map((match) => match[1])
-    .filter((name) => !name.startsWith("NEXT_PUBLIC_"));
+/**
+ * Non-public environment names a module reads, across every access form a secret
+ * can take.
+ *
+ * The first version of this helper only matched `process.env.NAME`. That misses
+ * the bracket, destructuring and optional-chain spellings — `process.env["NAME"]`,
+ * `const { NAME } = process.env`, `process["env"].NAME` — each of which ships a
+ * secret exactly as effectively, so the boundary it guards had holes. Each form
+ * is now matched explicitly (the self-test below proves the previously-invisible
+ * ones are seen).
+ */
+function nonPublicEnvNames(source: string): string[] {
+  const names = new Set<string>();
+  const add = (name: string) => {
+    if (!name.startsWith("NEXT_PUBLIC_")) names.add(name);
+  };
+
+  for (const m of source.matchAll(/process\s*\.\s*env\s*\??\s*\.\s*([A-Z0-9_]+)/g)) add(m[1]);
+  for (const m of source.matchAll(/process\s*\.\s*env\s*\[\s*["'`]([A-Z0-9_]+)["'`]\s*\]/g)) add(m[1]);
+  for (const m of source.matchAll(/process\s*\[\s*["'`]env["'`]\s*\]\s*\??\s*\.\s*([A-Z0-9_]+)/g)) add(m[1]);
+  for (const m of source.matchAll(/process\s*\[\s*["'`]env["'`]\s*\]\s*\[\s*["'`]([A-Z0-9_]+)["'`]\s*\]/g)) add(m[1]);
+  for (const m of source.matchAll(/\{\s*([^}]*?)\}\s*=\s*process\s*\.\s*env\b/g)) {
+    for (const part of m[1].split(",")) {
+      const id = part.split(":")[0].trim().split(/[\s=]/)[0];
+      if (/^[A-Z0-9_]+$/.test(id)) add(id);
+    }
+  }
+
+  return [...names];
+}
 
 // ---------------------------------------------------------------------------
 // 1. Client components must not reach into the server modules.
@@ -72,6 +98,35 @@ test("no client component reads a non-public environment variable", () => {
     if (names.length > 0) offenders.push(`${relative(path)} [${[...new Set(names)].join(", ")}]`);
   }
   assert.deepEqual(offenders, [], `client modules reading server env: ${offenders.join(", ")}`);
+});
+
+test("the env reader sees every access form, not just dot access (self-test)", () => {
+  // Guards the guard: the boundary above is only as strong as this extractor. A
+  // secret read through brackets or destructuring must be flagged, or the test
+  // would pass while a client module shipped `SUPABASE_SERVICE_ROLE_KEY`.
+  const detected = (snippet: string) => nonPublicEnvNames(snippet);
+
+  assert.deepEqual(detected("process.env.SUPABASE_SERVICE_ROLE_KEY"), [
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ]);
+  assert.deepEqual(detected('process.env["SUPABASE_SERVICE_ROLE_KEY"]'), [
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ]);
+  assert.deepEqual(detected("process.env['RESEND_API_KEY']"), ["RESEND_API_KEY"]);
+  assert.deepEqual(detected("process.env?.VAPID_PRIVATE_KEY"), ["VAPID_PRIVATE_KEY"]);
+  assert.deepEqual(detected("process['env'].PUSH_CRON_SECRET"), ["PUSH_CRON_SECRET"]);
+  assert.deepEqual(detected('process["env"]["RESEND_API_KEY"]'), ["RESEND_API_KEY"]);
+  assert.deepEqual(detected("const { SUPABASE_SERVICE_ROLE_KEY } = process.env;"), [
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ]);
+  assert.deepEqual(
+    detected("const { RESEND_API_KEY: key, VAPID_PRIVATE_KEY } = process.env;"),
+    ["RESEND_API_KEY", "VAPID_PRIVATE_KEY"],
+  );
+
+  // And the public prefix is still excluded in every form.
+  assert.deepEqual(detected('process.env["NEXT_PUBLIC_SUPABASE_URL"]'), []);
+  assert.deepEqual(detected("process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID"), []);
 });
 
 // ---------------------------------------------------------------------------

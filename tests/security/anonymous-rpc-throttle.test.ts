@@ -102,27 +102,100 @@ test("the server action applies a throttle before it calls the RPC", () => {
   }
 });
 
-test(
-  "the direct PostgREST path is throttled too, not just the form",
-  { todo: "anon RPC throttle is action-only; direct PostgREST writes are unbounded (see docs/threat-model.md)" },
-  () => {
-    // The limiter is in-process and lives in the action. Nothing between a
-    // direct PostgREST caller and the table enforces a rate: there is no
-    // per-address counter, no insert trigger and no `pg_cron` job over the two
-    // tables, and the `anon` grant is not revoked. So the boundary the attacker
-    // uses is open. Marked `todo` so the suite documents the gap without failing
-    // CI before the owning lane ships the fix — a database-side throttle, or an
-    // `anon` revoke plus a proxying route that re-applies the limiter.
-    const hasDatabaseThrottle =
-      /pg_cron|cron\.schedule|rate.?limit|throttle/i.test(allSql);
-    const allRevokedFromAnon = anonymousWriteRpcs.every(
-      (signature) => !callableByAnon(signature),
+test("the direct PostgREST path is throttled inside the RPC, not just the form", () => {
+  // LANE-SUPABASE shipped `20261106000000_v4_anon_write_throttle.sql`: the two
+  // anon write RPCs now `perform public.consume_anon_write_quota(...)` before the
+  // insert, so the bound lives at the boundary the attacker actually reaches.
+  // This used to be a `todo`; the fix landed, so it is a gate now.
+  //
+  // The assertion is deliberately specific: the throttle call must be inside the
+  // *body of each RPC*, not just somewhere in the migration text. A loose
+  // `/throttle/i` match over all SQL would pass on a comment, which is how this
+  // class of regression hides.
+  for (const name of ["submit_feedback", "submit_sales_lead"]) {
+    const body = latestFunctionBody(name);
+    assert.ok(body, `${name} has no definition in the migrations`);
+    assert.match(
+      body,
+      /perform\s+public\.consume_anon_write_quota\s*\(/,
+      `${name} inserts without a per-caller throttle inside its own body — a direct ` +
+        `PostgREST caller would be unbounded (see docs/threat-model.md, issue #139)`,
     );
 
+    // And the throttle must run *before* the insert, or the row is written even
+    // when the quota is already spent.
+    const throttleAt = body.indexOf("consume_anon_write_quota");
+    const insertAt = body.search(/insert\s+into\s+public\.(feedback_submissions|sales_leads)/i);
+    assert.ok(insertAt > -1, `${name} has no insert to compare against`);
     assert.ok(
-      hasDatabaseThrottle || allRevokedFromAnon,
-      "a direct PostgREST caller skips the action-level limiter and writes " +
-        "feedback_submissions / sales_leads without bound (see docs/threat-model.md)",
+      throttleAt < insertAt,
+      `${name} inserts before it consumes quota, so an over-budget call still writes a row`,
     );
+  }
+
+  // The throttle ledger and its helper must be invisible to client roles, or an
+  // attacker could read the hashed counters or reset their own bucket.
+  assert.match(
+    allSql,
+    /revoke\s+all\s+on\s+table\s+public\.anon_write_throttle\s+from\s+public,\s*anon,\s*authenticated/i,
+    "the throttle ledger is not revoked from the client roles",
+  );
+  assert.match(
+    allSql,
+    /revoke\s+all\s+on\s+function\s+public\.consume_anon_write_quota\s*\([^)]*\)\s+from\s+public,\s*anon,\s*authenticated/i,
+    "the throttle helper is not revoked from the client roles",
+  );
+});
+
+/**
+ * The body of the last `create [or replace] function public.<name>(…)` in the
+ * migration set — the definition that actually wins, since every migration is
+ * replayed in order.
+ */
+function latestFunctionBody(name: string): string | null {
+  const re = new RegExp(
+    `create\\s+(?:or\\s+replace\\s+)?function\\s+public\\.${name}\\s*\\([\\s\\S]*?\\)\\s*[\\s\\S]*?\\bas\\s+\\$[A-Za-z_0-9]*\\$([\\s\\S]*?)\\$[A-Za-z_0-9]*\\$`,
+    "gi",
+  );
+  const matches = [...allSql.matchAll(re)];
+  return matches.length > 0 ? matches[matches.length - 1][1] : null;
+}
+
+test(
+  "the app action forwards the visitor address the DB throttle keys on",
+  {
+    todo:
+      "the DB throttle reads `request.headers` but the server action sends no visitor IP, " +
+      "so the app-path IP dimension is one shared bucket (see docs/threat-model.md)",
+  },
+  () => {
+    // The migration keys its IP bucket on `current_setting('request.headers')`
+    // (`cf-connecting-ip` / `x-real-ip` / `x-forwarded-for`). Those are headers of
+    // the *PostgREST* request. A direct attacker's request carries them; a request
+    // the Next.js action makes through supabase-js does not — the client sends
+    // only `apikey`, `authorization`, `content-type` and `x-client-info`
+    // (verified against the installed `@supabase/supabase-js`). So every
+    // server-action submission collapses onto one bucket, and the migration's
+    // own note ("an absent header degrades to a single shared bucket") is the
+    // *normal* case for the app, not an edge case: the sixth legitimate form
+    // submission site-wide inside the window is rejected with the generic
+    // "failed" copy. The app must pass the visitor address explicitly (an
+    // argument or a `global.headers` override) for the IP dimension to mean
+    // anything on this path. Owner: LANE-URUN (`src/features/**`) with
+    // LANE-SUPABASE (`supabase/**`).
+    for (const relative of [
+      "src/features/feedback/actions.ts",
+      "src/features/sales/actions.ts",
+    ]) {
+      const source = read(relative);
+      const rpcCall = source.match(/supabase\.rpc\(\s*["']submit_[a-z_]+["']\s*,\s*\{([\s\S]*?)\}\s*\)/);
+      assert.ok(rpcCall, `${relative} no longer calls the submit RPC directly`);
+      assert.match(
+        rpcCall![1],
+        /_client_ip|_ip|clientIp/,
+        `${relative} calls the RPC without forwarding the visitor address, so the ` +
+          `DB throttle cannot tell two app-path callers apart (see docs/threat-model.md)`,
+      );
+    }
   },
 );

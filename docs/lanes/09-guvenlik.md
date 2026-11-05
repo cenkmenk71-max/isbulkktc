@@ -116,3 +116,40 @@ sertleştirildi.
 - **Bakılmayan:** yok — 9 test dosyasının 9'u, 2 dokümanın 2'si denetlendi.
   `docs/threat-model.md`'ye bu turun iki yeni sınırı (auth callback yönlendirmesi,
   CI izinleri) ve düzeltilen test kusuru işlendi.
+
+## Durum (2026-11-05, 4. tur) — kendi katmanını sertleştirme + throttle kapısı
+
+Bu turda dış yüzeyden çok **kendi test katmanımın dedektörleri** denetlendi:
+bir guard'ın regex'i ne kadar dar olursa, koruduğu sınır o kadar delik olur.
+Üç gerçek yanlış-negatif bulundu ve düzeltildi; bir `todo` kapıya terfi etti;
+bir yeni açık bulgu (throttle'ın app-yolu) devredildi.
+
+- **Bulgu + düzeltme: `client-boundary` env dedektörü yalnız nokta erişimini
+  görüyordu.** `process.env.NAME` eşleşiyordu; `process.env["NAME"]`,
+  `process.env?.NAME`, `process['env'].NAME`, `const { NAME } = process.env`
+  biçimleri **görünmüyordu** — yani bir istemci modülü sır okuyup testi yeşil
+  bırakabilirdi. Dedektör beş biçimi de kapsayacak şekilde genişletildi + self-test
+  eklendi. Gerçek kodda yeni suçlu çıkmadı (11 dosya, aynı liste) — yani düzeltme
+  yanlış-pozitif üretmiyor.
+- **Bulgu + düzeltme: `sql-hardening` üç dar regex.** (a) `create table …
+  public.([a-z_]+)` rakam-sonekli adı kırpıyordu (`audit_log2` → `audit_log`),
+  yani RLS'siz bir tablo görünmezdi; (b) `… \$\$` yalnız `$$` gövdesini görüyordu,
+  `$fn$` etiketli gövde görünmezdi; (c) `grant execute … to (anon|authenticated)`
+  `grant all on function` ve `grant … to public` biçimlerini atlıyordu. Üçü de
+  genişletildi, her biri için self-test eklendi. Mevcut migration'lar zaten temiz.
+- **Kapıya terfi: `anonymous-rpc-throttle`'ın `todo`'su.** LANE-SUPABASE
+  `20261106000000_v4_anon_write_throttle.sql`'i getirdi: iki RPC de gövdesinde
+  `perform public.consume_anon_write_quota(...)` çağırıyor (insert'ten **önce**),
+  ledger + helper client rollerinden revoke'lu. Test artık gevşek `/throttle/i`
+  yerine **her RPC'nin gövdesinde** throttle çağrısını ve insert'ten önce
+  çalıştığını doğruluyor; `todo` kaldırıldı. (Mutation: çağrı silinince kırmızı.)
+- **Yeni açık bulgu (devir): throttle'ın IP boyutu app yolunda kollapsıyor.**
+  Migration `request.headers` (PostgREST isteğinin başlığı) üzerinden IP
+  okuyor; ama Next.js action supabase-js ile çağırıyor ve supabase-js ziyaretçi
+  IP'sini **göndermiyor** (kurulu `@supabase/supabase-js` ile ölçüldü: yalnız
+  `apikey`, `authorization`, `content-type`, `x-client-info`). Sonuç: tüm
+  server-action gönderimleri **tek paylaşılan kovaya** düşer; pencerede altıncı
+  meşru gönderim (site geneli) generic "failed" ile reddedilir. Migration'ın
+  "eksik başlık tek kovaya düşer" notu app için *normal* durum. Sahibi LANE-URUN
+  (`src/features/**`) + LANE-SUPABASE (`supabase/**`); test `todo` işaretli.
+- **Bakılmayan:** yok — 9 test dosyası + 2 doküman.

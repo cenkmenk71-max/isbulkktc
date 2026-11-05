@@ -28,7 +28,7 @@ a boundary regression is attributable at a glance.
 | `ci-workflow-permissions.test.ts` | every `pull_request` workflow declares least-privilege permissions; no `pull_request_target`; the auto-merge gate still refuses to merge a change to the workflows themselves |
 | `notification-worker-auth.test.ts` | the edge worker authenticates before it inspects configuration |
 | `anonymous-write-surface.test.ts` | the anon write RPCs and the control the forms carry |
-| `anonymous-rpc-throttle.test.ts` | the throttle is in the action, but the anon RPC is directly callable |
+| `anonymous-rpc-throttle.test.ts` | the throttle now lives inside the anon RPC bodies (a gate); the action-path IP dimension is still one shared bucket |
 | `session-cookie-flags.test.ts` | the Supabase session cookie's `HttpOnly`/`Secure` flags, and the controls around it |
 
 ## Findings
@@ -44,8 +44,17 @@ the test passes on its own — remove the `todo` option to promote it to a gate.
 | `src/server/email/unsubscribe-token-core.ts` lacks `import "server-only"` | LANE-URUN (`src/server/**`) | open |
 | `tests/security/**` not collected by any CI job | LANE-INFRA (`.github/workflows/**`) | **fixed** (`test:security` step) |
 | Anon feedback/sales forms had no captcha or rate limit | LANE-URUN (`src/features/**`) | **fixed** (rate limiter in the actions) |
-| The throttle is action-only; the `anon` RPC is directly callable | LANE-SUPABASE (`supabase/**`) + LANE-URUN (`src/features/**`) | open |
+| The throttle is action-only; the `anon` RPC is directly callable (#139) | LANE-SUPABASE (`supabase/**`) | **fixed** (DB throttle inside the RPC; now a gate) |
+| The DB throttle's IP dimension is one shared bucket on the app path (the action sends no visitor IP) | LANE-URUN (`src/features/**`) + LANE-SUPABASE (`supabase/**`) | open |
 | Supabase session cookie keeps `@supabase/ssr` defaults (`httpOnly:false`, no `Secure`) | LANE-AUTH (`src/features/identity/**`, session lifecycle) | open (handoff #167) |
+| `package-lock.json` is a stale second lockfile and the only manifest Dependabot audits | LANE-INFRA (`package.json`, lockfiles) | open (handoff #188) |
+
+### Guard self-tests
+
+Each detector that reads source or SQL carries a self-test proving it sees the
+access forms it claims to (`client-boundary`, `sql-hardening`,
+`session-cookie-flags`). A guard is only as wide as its matcher; the self-test
+fails when a matcher is narrowed, so a silent hole cannot be reintroduced.
 
 ## Rules
 
