@@ -119,27 +119,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // District landing pages ("Lefkoşa iş ilanları", ...). Each is localized and
   // carries its own canonical, so it is listed per locale like the static
-  // routes. They share the newest vacancy date: a new listing in a district is
-  // the only thing that changes the page.
+  // routes. No `<lastmod>` is advertised: a district page changes only when a
+  // vacancy *in that district* is published or edited, and the job projection
+  // this route reads (`listPublicJobSitemapEntries`) carries no district, so the
+  // newest date overall cannot be verified against the page. Attaching it to
+  // every district would date a district with no listings to a vacancy
+  // elsewhere — the exact "consistently and verifiably accurate" rule Google
+  // drops a `<lastmod>` for, which is why the static routes above omit it too.
   const districtEntries: MetadataRoute.Sitemap =
     northernCyprusDistrictValues.flatMap((district) =>
       buildLocalizedEntries({
         pathname: `/is-ilanlari/${districtSlug(district)}`,
         changeFrequency: "daily",
         priority: 0.7,
-        ...(newestJobDate ? { lastModified: newestJobDate } : {}),
       }),
     );
 
   // Employment-type landing pages ("Tam zamanlı iş ilanları", "Staj", ...).
-  // Same shape as the district pages: localized, self-canonical, sharing the
-  // newest vacancy date.
+  // Same shape and same reasoning as the district pages: a type page changes
+  // only when a vacancy of *that type* is published, which this projection
+  // cannot see, so no unverifiable `<lastmod>` is claimed.
   const jobTypeEntries: MetadataRoute.Sitemap = jobTypeKeys.flatMap((jobType) =>
     buildLocalizedEntries({
       pathname: `/is-turleri/${jobTypeSlugs[jobType]}`,
       changeFrequency: "daily",
       priority: 0.7,
-      ...(newestJobDate ? { lastModified: newestJobDate } : {}),
     }),
   );
 

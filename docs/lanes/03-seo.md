@@ -760,3 +760,82 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
   geçersiz kılıyor; 404'e özel başka bir meta gerekirse yer burasıdır.
 - Yerel e2e çalıştırmak için Chromium `chrome` kanalı yok
   (`/opt/google/chrome/chrome`); yalnız CI'da koşuyor.
+
+---
+
+## Micro-denetim raporu — tur 9 (sitemap `<lastmod>` doğruluğu)
+
+```
+Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
+Değişen dosyalar: src/app/sitemap.ts, docs/lanes/03-seo.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
+            test:unit ✅ (486 pass, 8 belgeli todo)  test:security ✅ (41 pass, 2 todo)
+            build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone doğrulaması ✅
+Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
+```
+
+### Denetlenen dosyalar
+
+`git ls-files` ile LANE-SEO sahipliği: **41 dosya** — `src/lib/seo.ts`,
+`src/app/sitemap.ts`, `src/app/robots.ts`, `scripts/submit-indexnow.mjs` ve
+`src/app/[locale]/**` altındaki 37 route/layout. Hepsi tarandı; bakılmayan yok.
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/app/sitemap.ts:124-148` | sitemap / `<lastmod>` | İlçe (6×6=36) ve tür (6×6=36) iniş sayfalarının **hepsine** aynı `newestJobDate` yazılıyordu. Üretimde 3 ilçenin (Güzelyurt, İskele, Lefke) **0 ilanı** var ama sitemap onları en yeni ilan tarihiyle (`2026-11-05T16:08:07Z`) damgalıyordu | her sayfa yalnızca **kendini değiştiren** tarihi taşımalı; kendi verisi yoksa `<lastmod>` **hiç olmamalı** | Google "consistently and verifiably accurate" olmayan `<lastmod>`'u düşürür; boş ilçe sayfası başka ilçedeki ilana tarihleniyordu | **düzeltildi** |
+| 2 | `/jobs`, `/companies`, `/rehber`, `/blog` | JSON-LD mount | İndeks sayfaları sayfaya-özel JSON-LD yayınlamıyor | `CollectionPage`+`BreadcrumbList` | zengin sonuç kaybı | devredildi → #203 (GEO üretir, SEO mount eder) |
+| 3 | `src/messages/*.json` `Legal` | SEO meta | `/privacy`,`/cookies`,`/terms` meta 6 dilde aynı Türkçe | her dil kendi metni | 18 sayfa kopya meta+gövde | devredildi → #141 |
+| 4 | 404 `<html>` | SEO meta | 404'te `lang`/`dir` yok, SSR gövdesi boş | `<html lang dir>` | `fa` RTL sinyali yok | devredildi → #149 (kök neden kanıtı yorumda) |
+| 5 | Bing/Yandex doğrulama | bulunabilirlik | `msvalidate.01`/`yandex-verification` üretimde yok | iki motor doğrulanmalı | indeksleme yavaş | devredildi → #173 |
+
+### Kanıt
+
+- **Bulgu 1 (önce, üretim sitemap):** 72 ilçe+tür kaydının **hepsi** `<lastmod>`
+  taşıyordu ve hepsi aynı instanttı (`2026-11-05T16:08:07.000Z`) — yani "bu sayfa
+  o an değişti" iddiası. Oysa `curl /is-ilanlari/guzelyurt` → `0 ilan bulundu`.
+  Kod tarafı: `listPublicJobSitemapEntries()` yalnız `{slug, publishedAt,
+  modifiedAt}` döndürür — **district/job_type alanı yok** (`src/server/dal/jobs.ts:247`),
+  bu yüzden ilçe-başına en yeni tarih hesaplanamaz; global tarih tüm ilçelere
+  dağıtılıyordu.
+  **Sonra** (üretim standalone): 72 ilçe+tür kaydının **0**'ı `<lastmod>` taşıyor;
+  `/`, `/en`, `/de`, `/jobs` gibi ilan listeleyen rotalar ve rehber/blog
+  (kendi authored tarihleri var) **koruyor** (42 kayıt). Sitemap yine geçerli XML,
+  186 `<loc>`.
+- **Google dayanağı:** resmî doküman — *"Google uses the `<lastmod>` value if it's
+  consistently and verifiably (for example by comparing to the last modification
+  of the page) accurate. The `<lastmod>` value should reflect the date and time of
+  the last significant update to the page."*
+  (developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap)
+- **Bulgu 2–5:** önceki turların kanıtı geçerli.
+
+### Doğrulanan ve sağlam bulunanlar
+
+- **Sitemap XML:** geçerli (ElementTree parse), 186 `<loc>`, `<lastmod>` biçimleri
+  ISO, entity escaping gerekmiyor, 0 tekrar.
+- **hreflang karşılıklılık:** 186 sayfa × hedef → **0 ihlal**.
+- **Sayfa hijyeni:** 186 sayfada 1 `<h1>`, doğru `lang`/`dir` (fa=rtl),
+  canonical, `og:image`, `og:image:alt`, `twitter:image:alt`; `og:title`↔`title`,
+  `og:url`↔`canonical`; rehber/blog `og:type=article`, diğerleri `website`.
+- **Link bütünlüğü:** 415 benzersiz iç hedef → **0 kırık**; yetim **0**; boş
+  anchor **0**.
+- **Kopya meta:** yalnız yasal sayfa aileleri (#141).
+- **Regresyon yok:** e2e'nin `<lastmod>` kuralları korunuyor — `/about`,
+  `/contact`, `/privacy`, `/cookies`, `/terms`, `/freelance`, `/packages`,
+  `/blog` hâlâ `<lastmod>` **taşımıyor**; `/`+`/jobs` ilan varken taşıyor.
+
+### Düzeltilen / devredilen
+
+- **Düzeltildi:** #1 (`src/app/sitemap.ts`).
+- **Devredildi:** #203, #141, #149, #173.
+
+### Sonraki lane için notlar
+
+- İlçe/tür sayfalarına **doğru** `<lastmod>` vermek istenirse
+  `listPublicJobSitemapEntries()` projeksiyonuna `district` ve `job_type`
+  eklenmeli — bu **LANE-URUN**'un dosyası (`src/server/dal/jobs.ts` sahipsiz,
+  `src/features/jobs/**` URUN). O zaman ilçe-başına `max(modifiedAt)` hesaplanır.
+- Sahipsiz yollar (`src/server/dal/**`, `src/app/global-error.tsx`,
+  `next.config.ts`) için sahiplik hâlâ belirsiz; devretmeden önce
+  `docs/lanes/00-orchestration.md` tablosundan doğrula.
