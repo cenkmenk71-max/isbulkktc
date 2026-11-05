@@ -180,6 +180,9 @@ issue açar.
   okur (ham `getSession()` değil), böylece çerez sahtelenerek başka kullanıcı
   render edilemez. Tarayıcıda `createBrowserClient` yok; uygulama Supabase'e
   yalnız sunucudan konuşur (`tests/security/session-cookie-flags.test.ts`).
+  Oturum çerezi `HttpOnly` + `Secure` (üretimde) + `SameSite=Lax|Strict`'tir; aynı
+  bayraklar OAuth sign-up intent çerezinde de pinlidir. `SameSite=none` (CSRF
+  savunmasını kaldırır) testi kırmızı yapar.
 - **Auth callback yönlendirmesi:** `/auth/callback` public GET olduğundan
   query değerleri güvenilmez. `auth-routing.ts` yalnız kapalı kelime dağarcığını
   yola çevirir: `next` (`"company"` dışındaki her değer aday), `flow`

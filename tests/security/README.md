@@ -32,7 +32,7 @@ a boundary regression is attributable at a glance.
 | `security-headers.test.ts` | imports the real `next.config.ts` and asserts the CSP/HSTS/frame/coop header set, no wildcard `script-src`, no `X-Powered-By`, and the Vercel-alias noindex rule |
 | `anonymous-write-surface.test.ts` | the anon write RPCs and the control the forms carry |
 | `anonymous-rpc-throttle.test.ts` | the throttle now lives inside the anon RPC bodies (a gate); the action-path IP dimension is still one shared bucket |
-| `session-cookie-flags.test.ts` | the Supabase session cookie's `HttpOnly`/`Secure` flags, and the controls around it |
+| `session-cookie-flags.test.ts` | the Supabase session cookie's `HttpOnly`/`Secure`/`SameSite` flags, the OAuth-intent cookie's flags, and the controls around them |
 
 ## Findings
 

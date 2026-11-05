@@ -106,8 +106,19 @@ const sessionClientFiles = ["src/proxy.ts", "src/server/db/supabase-server.ts"];
  * which captured only the client's `setAll` callback body — the flags live in
  * the third argument, so the match would have reported a false negative even
  * after the fix landed.)
+ *
+ * `sameSite` is checked too: `@supabase/ssr` defaults it to `"lax"` (see
+ * `node_modules/@supabase/ssr/dist/main/utils/constants.js`), which is what keeps
+ * the session cookie from riding a cross-site request. Weakening it to `"none"`
+ * removes that CSRF defence and re-enables cross-site cookie sending, and the
+ * earlier version of this check did not look at it — so `sameSite: "none"` passed
+ * every gate. It is now part of the contract.
  */
-function isHardened(source: string): { httpOnly: boolean; secure: boolean } {
+function isHardened(source: string): {
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: boolean;
+} {
   const options = source.match(/cookieOptions\s*:\s*\{([\s\S]*?)\}/);
   const block = options ? options[1] : "";
   return {
@@ -116,22 +127,25 @@ function isHardened(source: string): { httpOnly: boolean; secure: boolean } {
       /secure\s*:\s*(true|process\.env\.NODE_ENV\s*===\s*["']production["'])/.test(
         block,
       ),
+    // `lax` or `strict` keep the cookie off cross-site requests; `none` (or an
+    // absent value) does not.
+    sameSite: /sameSite\s*:\s*["'](?:lax|strict)["']/.test(block),
   };
 }
 
-test("the Supabase session cookie is HttpOnly and Secure", () => {
+test("the Supabase session cookie is HttpOnly, Secure and SameSite", () => {
   const offenders: string[] = [];
   for (const file of sessionClientFiles) {
     const source = read(new URL(`../../${file}`, import.meta.url).pathname);
-    const { httpOnly, secure } = isHardened(source);
-    if (!httpOnly || !secure) {
-      offenders.push(`${file} [httpOnly:${httpOnly} secure:${secure}]`);
+    const { httpOnly, secure, sameSite } = isHardened(source);
+    if (!httpOnly || !secure || !sameSite) {
+      offenders.push(`${file} [httpOnly:${httpOnly} secure:${secure} sameSite:${sameSite}]`);
     }
   }
   assert.deepEqual(
     offenders,
     [],
-    `session cookies without HttpOnly/Secure: ${offenders.join(", ")}`,
+    `session cookies without HttpOnly/Secure/SameSite: ${offenders.join(", ")}`,
   );
 });
 
@@ -139,18 +153,56 @@ test("the cookie-flag check detects a hardened call site (self-test)", () => {
   // Guards the guard: if `isHardened` ever regresses to inspecting the wrong
   // substring, the gate above would pass for the wrong reason. This proves it
   // recognises a correctly hardened block and rejects a half-hardened one.
-  assert.deepEqual(isHardened("cookieOptions: { httpOnly: true, secure: true }"), {
-    httpOnly: true,
-    secure: true,
-  });
+  assert.deepEqual(
+    isHardened("cookieOptions: { sameSite: 'lax', httpOnly: true, secure: true }"),
+    { httpOnly: true, secure: true, sameSite: true },
+  );
   assert.deepEqual(
     isHardened(
-      "cookieOptions: { httpOnly: true, secure: process.env.NODE_ENV === 'production' }",
+      "cookieOptions: { sameSite: 'strict', httpOnly: true, secure: process.env.NODE_ENV === 'production' }",
     ),
-    { httpOnly: true, secure: true },
+    { httpOnly: true, secure: true, sameSite: true },
   );
   assert.deepEqual(isHardened("cookieOptions: { httpOnly: false }"), {
     httpOnly: false,
     secure: false,
+    sameSite: false,
   });
+  // `sameSite: "none"` is not a hardened value, even with HttpOnly/Secure set.
+  assert.deepEqual(
+    isHardened("cookieOptions: { sameSite: 'none', httpOnly: true, secure: true }"),
+    { httpOnly: true, secure: true, sameSite: false },
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 4. The OAuth sign-up intent cookie carries the same flags.
+//
+// It is set from a server action (`startOAuthSignIn`) on the same response as the
+// session, and it carries the locale/audience the callback trusts. It is not the
+// session cookie, so the `createServerClient` check above does not see it; a
+// regression that dropped `httpOnly` or `sameSite` here would leave a cookie the
+// callback reads unprotected.
+// ---------------------------------------------------------------------------
+
+test("the OAuth sign-up intent cookie is HttpOnly, Secure and SameSite", () => {
+  const source = read(
+    new URL("../../src/features/identity/actions.ts", import.meta.url).pathname,
+  );
+  const setCall = source.match(
+    /cookieStore\.set\(\s*oauthSignupIntentCookieName[\s\S]*?\{([\s\S]*?)\}\s*,?\s*\);/,
+  );
+  assert.ok(setCall, "the OAuth sign-up intent cookie is no longer set explicitly");
+  const block = setCall![1];
+  assert.match(block, /httpOnly\s*:\s*true/, "the intent cookie must be HttpOnly");
+  assert.match(
+    block,
+    /sameSite\s*:\s*["'](?:lax|strict)["']/,
+    "the intent cookie must keep a SameSite of lax or strict",
+  );
+  assert.match(
+    block,
+    /secure\s*:\s*(true|process\.env\.NODE_ENV\s*===\s*["']production["'])/,
+    "the intent cookie must set Secure in production",
+  );
 });

@@ -267,3 +267,25 @@ test katmanı onu pinlemiyordu — bir refactor bir başlığı düşürse veya 
   **yalnız okur**, yazmaz — sahiplik ihlali yok.
 - **Bakılmayan:** yok — 12 test dosyası + 2 doküman. Kalan iki `todo` yürürlükte
   (#206 throttle app-yolu IP, #102 `server-only`).
+
+## Durum (2026-11-05, 10. tur) — çerez SameSite bayrağı
+
+Brief'in 2. hedefi (kimlik): `session-cookie-flags.test.ts` oturum çerezinin
+`HttpOnly` + `Secure` bayraklarını pinliyordu ama **`SameSite`'i değil** — oysa
+çerezi siteler-arası isteklerden uzak tutan (CSRF savunması) bayrak odur.
+
+- **Bulgu + düzeltme: `SameSite` pinlenmemişti.** `@supabase/ssr` varsayılanı
+  `sameSite: "lax"` (`node_modules/@supabase/ssr/dist/main/utils/constants.js`);
+  iki çağrı noktası da açıkça `"lax"` geçiyor. Ama `isHardened` yalnız
+  `httpOnly`/`secure`'e bakıyordu: ikisini de `sameSite: "none"`'a çevirmek
+  **hiçbir testi kırmıyordu** (kanıtlandı) — CSRF savunması sessizce kaldırılabilirdi.
+  `isHardened` artık `sameSite: "lax"|"strict"` şartını da arıyor; self-test
+  `sameSite: "none"`'u sertleştirilmiş saymıyor.
+- **Bulgu + düzeltme: OAuth sign-up intent çerezi pinlenmemişti.**
+  `startOAuthSignIn` bu çerezi aynı yanıtta yazar ve callback'in güvendiği
+  locale/audience'ı taşır; `createServerClient` kontrolü onu görmez. Aynı bayraklar
+  (`httpOnly`/`sameSite`/`secure`) için ayrı test eklendi.
+- **Kanıt (mutation):** (a) oturum çerezini `sameSite: "none"` yap → kırmızı;
+  (b) intent çerezini `sameSite: "none"` yap → kırmızı.
+- **Bakılmayan:** yok — 12 test dosyası + 2 doküman. Kalan iki `todo` yürürlükte
+  (#206 throttle app-yolu IP, #102 `server-only`).
