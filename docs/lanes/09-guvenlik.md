@@ -58,3 +58,20 @@ işinde `bun run test:security` adımı olarak koşuyor (`package.json` +
   `getAppBaseUrl` host header'a güvenmiyor (env'e bağlı, HTTPS zorunlu).
 - **Değişmeyen açık bulgu:** `unsubscribe-token-core.ts` `server-only` eksik
   (LANE-URUN, #102).
+
+## Durum (2026-11-05, 2. tur) — kimlik boyutu
+
+Önceki tur yetki sınırı, sızıntı ve girdi boyutlarını taradı; bu tur **kimlik**
+boyutuna (çerez bayrakları, oturum sabitleme) odaklandı.
+
+- **Yeni bulgu + devir:** oturum çerezi `@supabase/ssr` varsayılanlarıyla yazılıyor
+  (`httpOnly: false`, `Secure` yok); iki çağrı noktası da (`src/proxy.ts`,
+  `src/server/db/supabase-server.ts`) `cookieOptions` geçmiyor. Tarayıcıda çerezi
+  okuyan kod olmadığı için `HttpOnly` güvenle eklenebilir. Sahibi LANE-AUTH →
+  **#167** (`agent:handoff`). Kanıt: `tests/security/session-cookie-flags.test.ts`.
+- **Doğrulanan güçlü kontrol:** proxy `auth.getClaims()` ile imza doğruluyor
+  (ham `getSession()` değil); tarayıcıda `createBrowserClient` yok. İkisi de test
+  ile sabitlendi.
+- **Devir kuralı:** bu turdan itibaren başka lane'in dosyasındaki bulgu
+  `agent:handoff` + `lane:<ad>` ile açılıyor (önceki #139 elle düzeltildi);
+  `agent:blocked` yalnız insan gerektiren tıkanma için.

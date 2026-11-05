@@ -157,6 +157,10 @@ issue açar.
   tetikledikleri e-postadan **önce** istemci adresi ve gönderilen adres başına
   sabit-pencere hız sınırı uygular (`src/features/abuse/**`). Böylece form
   üzerinden istenmeyen e-posta ve gelen kutusu boğma vektörü kapandı.
+- **Oturum doğrulaması:** proxy oturumu `auth.getClaims()` ile **imza doğrulayarak**
+  okur (ham `getSession()` değil), böylece çerez sahtelenerek başka kullanıcı
+  render edilemez. Tarayıcıda `createBrowserClient` yok; uygulama Supabase'e
+  yalnız sunucudan konuşur (`tests/security/session-cookie-flags.test.ts`).
 
 ### Açık bulgular (sahibine bildirildi, düzeltme bekliyor)
 
@@ -183,6 +187,14 @@ issue açar.
    altındaki diğer tüm sır-okuyan modüller bu işareti taşıyor; eksik olan, yanlış
    bir istemci içe aktarımını derleme hatası yerine sessiz bir sızıntıya çevirir.
    Kanıt: `tests/security/client-boundary.test.ts` (`todo`).
+3. **Oturum çerezi sertleştirilmemiş** (sahibi: LANE-AUTH; devir #167).
+   Oturumu taşıyan çerez `@supabase/ssr` varsayılanlarıyla yazılıyor:
+   `httpOnly: false` ve **`Secure` yok** (`node_modules/@supabase/ssr/dist/main/utils/constants.js`;
+   iki çağrı noktası `src/proxy.ts` ve `src/server/db/supabase-server.ts` de
+   `cookieOptions` geçmiyor). Tarayıcıda çerezi okuyan kod olmadığı için
+   `HttpOnly` güvenle eklenebilir; XSS ile çerez hırsızlığı yolunu kapatır.
+   `Secure` üretimde defence-in-depth (HSTS zaten var). Kanıt:
+   `tests/security/session-cookie-flags.test.ts` (`todo`).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
 

@@ -27,6 +27,7 @@ a boundary regression is attributable at a glance.
 | `notification-worker-auth.test.ts` | the edge worker authenticates before it inspects configuration |
 | `anonymous-write-surface.test.ts` | the anon write RPCs and the control the forms carry |
 | `anonymous-rpc-throttle.test.ts` | the throttle is in the action, but the anon RPC is directly callable |
+| `session-cookie-flags.test.ts` | the Supabase session cookie's `HttpOnly`/`Secure` flags, and the controls around it |
 
 ## Findings
 
@@ -42,6 +43,7 @@ the test passes on its own — remove the `todo` option to promote it to a gate.
 | `tests/security/**` not collected by any CI job | LANE-INFRA (`.github/workflows/**`) | **fixed** (`test:security` step) |
 | Anon feedback/sales forms had no captcha or rate limit | LANE-URUN (`src/features/**`) | **fixed** (rate limiter in the actions) |
 | The throttle is action-only; the `anon` RPC is directly callable | LANE-SUPABASE (`supabase/**`) + LANE-URUN (`src/features/**`) | open |
+| Supabase session cookie keeps `@supabase/ssr` defaults (`httpOnly:false`, no `Secure`) | LANE-AUTH (`src/features/identity/**`, session lifecycle) | open (handoff #167) |
 
 ## Rules
 
