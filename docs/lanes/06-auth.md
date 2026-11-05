@@ -823,3 +823,77 @@ FIXED                                  → ✔ 4/4 pass
 - **#277** → LANE-QA + LANE-AUTH: `weak_password` eşlemesi (test örnek kodu).
 - **#227** (auth SMTP + DKIM) hâlâ LANE-SUPABASE + LANE-CLOUDFLARE'i bekliyor.
 - **#191** (marka paleti) sahiplik çelişkisi çözülmeli.
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (issue turu: #280)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Aldığı issue: #280 (auth sayfaları ana sayfanın title/description/social card'ını yayınlıyor)
+Değişen dosyalar:
+  src/features/identity/auth-metadata.ts          (yeni, saf metadata üreticisi)
+  src/features/identity/auth-metadata.test.ts     (yeni, 5 test)
+  src/app/[locale]/(auth)/login/page.tsx          (generateMetadata)
+  src/app/[locale]/(auth)/register/page.tsx       (generateMetadata)
+  src/app/[locale]/(auth)/forgot-password/page.tsx(generateMetadata)
+  src/app/[locale]/(auth)/reset-password/page.tsx (generateMetadata)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (575, 5'i yeni) / test:security ✅ (75 pass, 2 todo, 0 fail) /
+  test:integration ✅ (47) / production build ✅
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration değişmedi)
+```
+
+### Denetlenen dosyalar (micro-denetim)
+`git ls-files 'src/features/identity/**'` (36) + 5 `(auth)`/callback route +
+7 şablon → **48 dosya**; hepsine bakıldı. Bakılmayan dosya yok.
+
+### Bulgular
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | 4 `(auth)` page.tsx | SEO/doğruluk | `export const metadata = noIndexMetadata` — yalnız `robots` içerir, gerisi `[locale]/layout.tsx`'in `Meta` bloğundan miras | sayfanın kendi title/description/social card'ı | Sekme "giriş" yerine ana sayfayı söyler; paylaşılan giriş linki **ana sayfa kartı** olarak unfurl edilir | düzeltildi |
+| 2 | `auth-metadata.ts` | — | (yeni) paylaşılan sosyal görsel/`og:locale`/kanonik üretir | — | — | eklendi |
+| 3 | 7 şablon / `turnstile.ts` / `actions.ts` | tutarlılık | önceki turlarda doğrulanan durum korunuyor | — | sorun yok | bilgi |
+
+### Düzeltilen (#1)
+Dört rotaya da kendi `generateMetadata`'sı eklendi; ortak üretim
+`createAuthPageMetadata()` (`src/features/identity/auth-metadata.ts`) içinde:
+- başlık/açıklama sayfanın **kendi çeviri bloğundan** (`AccountPages.login.<audience>`,
+  `.register`, `.reset`, `.resetPassword`) — login `?audience=`'ı izler;
+- `robots: noIndexMetadata.robots` **korunur** (noindex/nofollow/noimageindex);
+- kanonik **mutlak string** (URL instance tuzağından kaçınıldı);
+- `og:title/description/url/locale` + `twitter:*` sayfanın kendi metniyle;
+- sosyal görsel ve `og:locale` `@/lib/seo` paylaşılan yardımcılarından.
+Başlıklar cümle olarak yazıldığı için (`.`) sondaki nokta `<title>`'da kırpılır.
+
+### Kanıt (production standalone sunucu)
+Önce (ana sayfa metni):
+```
+/en/login      <title>İşBul KKTC — Jobs and Vacancies in Northern Cyprus (TRNC)</title>
+/de/forgot-password  <title>İşBul KKTC — Stellenangebote und Jobs in Nordzypern</title>
+```
+Sonra:
+```
+/en/login                  <title>Return to your candidate profile · İşBul KKTC</title>
+/en/login?audience=employer<title>Continue to your company registration · İşBul KKTC</title>
+/de/forgot-password        <title>Passwort zurücksetzen · İşBul KKTC</title>
+/de/reset-password         <title>Legen Sie Ihr neues Passwort fest · İşBul KKTC</title>
+canonical = https://isbulkktc.com/{locale}/<path>
+robots = noindex, nofollow + googlebot noindex, nofollow, noimageindex  (korundu)
+og:image/twitter:image = /images/og-cover.webp   og:locale = en_GB / de_DE
+```
+Yeni `auth-metadata.test.ts` (5 test) sözleşmeyi kilitler: robots, mutlak kanonik,
+paylaşılan görsel/locale, dört rotada `generateMetadata` (ve `export const metadata`
+YOK), login'in audience'a göre başlık üretmesi.
+
+### Güvenlik değerlendirmesi (security skill)
+- `noindex, nofollow, noimageindex` aynen korundu → auth sayfaları indekslenmez.
+- Kanonik string, kullanıcı girdisi içermez (locale `routing.locales` ile doğrulanır,
+  pathname literal).
+- Yeni dosyalarda `service_role`/sır yok; client sınırı testi yeşil.
+
+### Sahibin yapması gerekenler
+- **#280** kabul ölçütü: gerçek tarayıcıda sekme başlığını ve paylaşım önizlemesini
+  doğrula (yerel standalone'da doğrulandı).
+- **#271** (transactional e-posta `lang`/`dir`) ve **#277** (`weak_password`) devirde.
+- **#227** (auth SMTP + DKIM) LANE-SUPABASE + LANE-CLOUDFLARE bekliyor.

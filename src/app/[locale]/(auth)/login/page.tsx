@@ -1,26 +1,55 @@
+import type { Metadata } from "next";
 import { signOut } from "@/features/identity/actions";
 import { SignInForm } from "@/features/identity/sign-in-form";
 import { EditorialFormPage } from "@/components/layout/editorial-form-page";
 import { AccountAudiencePicker } from "@/components/layout/account-audience-picker";
 import { accountAudienceSchema } from "@/features/identity/schemas";
 import { messageKeyForOAuthFailureReason } from "@/features/identity/auth-errors";
+import { createAuthPageMetadata } from "@/features/identity/auth-metadata";
 import { resolveEnabledOAuthProviders } from "@/features/identity/oauth-providers";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { noIndexMetadata } from "@/lib/seo";
+import { routing } from "@/i18n/routing";
 import { getEnabledOAuthProviders } from "@/server/config/oauth-providers";
 
-export const metadata = noIndexMetadata;
+type LoginSearchParams = {
+  audience?: string;
+  error?: string;
+  reason?: string;
+  reset?: string;
+};
+
+// The page's own title/description, not the locale layout's home-page ones: the
+// layout metadata is what used to make /login announce itself as the home page.
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<LoginSearchParams>;
+}): Promise<Metadata> {
+  const [{ locale: requestedLocale }, { audience: requestedAudience }] =
+    await Promise.all([params, searchParams]);
+  const locale =
+    routing.locales.find((supported) => supported === requestedLocale) ??
+    routing.defaultLocale;
+  const audience = accountAudienceSchema
+    .catch("candidate")
+    .parse(requestedAudience);
+  const copy = await getTranslations({ locale, namespace: "AccountPages.login" });
+
+  return createAuthPageMetadata({
+    locale,
+    pathname: "/login",
+    title: copy(`${audience}.title`),
+    description: copy(`${audience}.description`),
+  });
+}
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    audience?: string;
-    error?: string;
-    reason?: string;
-    reset?: string;
-  }>;
+  searchParams: Promise<LoginSearchParams>;
 }) {
   const {
     audience: requestedAudience,
