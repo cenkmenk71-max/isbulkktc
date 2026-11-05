@@ -344,3 +344,22 @@ the RPC" diyordu ama yalnız `RateLimiter.check(` **varlığını** arıyordu.
   (`… calls the RPC before it throttles …`).
 - **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #262, #206,
   #102.
+
+## Durum (2026-11-05, 14. tur) — SSRF kapısı (todo → kapı)
+
+LANE-URUN + LANE-SUPABASE #262'yi **düzeltti** (#273): `isAllowedPushEndpoint`
+(`src/server/push/push-endpoint.ts`) yalnız bilinen push-servis host'larını kabul
+eder; IP literal / decimal-IP / `localhost` / `.local`/`.internal` reddedilir. Her
+iki yazma yolu (route + `savePushSubscription`) ve gönderim ucu onu çağırır.
+
+- **Kapıya terfi:** `push-endpoint-ssrf.test.ts` artık bir `todo` değil, **kapı**.
+  Test yeniden yazıldı: allowlist'i **gerçek fonksiyonla** sürer (kabul edilen push
+  host'ları; loopback/RFC1918/metadata/decimal-IP/local adresleri **reddedilir**),
+  her yazarın `refine(isAllowedPushEndpoint…)` ile bağladığını ve sink'in
+  `sendNotification`'dan **önce** kontrol ettiğini sabitler.
+- **Kanıt (mutation):** (a) bir yazardan `refine(isAllowedPushEndpoint…)`'i kaldır →
+  kırmızı; (b) sink'teki allowlist kontrolünü kaldır → kırmızı; (c) allowlist
+  fonksiyonunun kendisi artık loopback/metadata'yı reddediyor (test bunu sürüyor).
+- **#262 kapatılabilir.** Kalan `todo`'lar: #206 (throttle app-yolu IP),
+  #102 (server-only).
+- **Bakılmayan:** yok — 13 test dosyası + 2 doküman.

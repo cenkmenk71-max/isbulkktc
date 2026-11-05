@@ -2,46 +2,25 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
+import { isAllowedPushEndpoint } from "@/server/push/push-endpoint";
+
 /**
  * The web-push endpoint is an attacker-supplied URL the server fetches.
  *
- * `POST /api/push/subscriptions` lets a signed-in visitor store a push
- * subscription, and the only thing checked about the `endpoint` is that it is a
- * URL of 12–1024 characters starting with `https://` (`src/app/api/push/subscriptions/route.ts`;
- * the same shape is re-asserted in `register_push_subscription`,
- * `supabase/migrations/20261102100000_v4_web_push_subscriptions.sql`). The cron
- * worker then POSTs to that exact URL with `web-push`
- * (`src/app/api/push/dispatch/route.ts` -> `sendPushMessage` in
- * `src/server/push/vapid.ts`).
+ * A signed-in visitor can register a push subscription, and the cron worker then
+ * POSTs to that exact URL with `web-push` (`/api/push/dispatch` -> `sendPushMessage`
+ * in `src/server/push/vapid.ts`). If the host is unchecked that is a blind SSRF:
+ * `https://127.0.0.1:PORT/...` or `https://169.254.169.254/...` (cloud metadata)
+ * makes the worker connect to an internal address from inside the deployment.
  *
- * Nothing constrains the *host*: no allowlist of the real push services
- * (`fcm.googleapis.com`, `updates.push.services.mozilla.com`, `*.notify.windows.com`,
- * `web.push.apple.com`, ...), and no block on loopback / link-local / RFC1918 /
- * cloud-metadata addresses. `web-push` sends to whatever host the URL names (its
- * only special-casing is the legacy GCM/FCM `startsWith` checks).
- *
- * ## Finding (LANE-GUVENLIK — open, filed against the owners)
- *
- * **SSRF via a registered push endpoint.** A visitor registers a subscription
- * whose `endpoint` points at an internal address — `https://127.0.0.1:PORT/...`,
- * `https://169.254.169.254/...` (cloud metadata), an internal service — and the
- * worker connects to it on the next dispatch, from inside the deployment's
- * network. Proven with the real `web-push` client against a local listener:
- *
- *     endpoint = "https://127.0.0.1:<port>/internal-only"   // passes the app's check
- *     webpush.sendNotification({ endpoint, keys }, payload, { timeout: 3000 })
- *     -> the local listener recorded 1 connection, 1568 bytes of TLS ClientHello
- *
- * The connection is made even though the push service would reject the message
- * (a bogus endpoint is not a real subscription); the *reachability probe* is the
- * harm, plus any timing/response the attacker can observe. Whether the response
- * body reaches the attacker is secondary — a blind SSRF against an internal
- * address is already a boundary crossing.
- *
- * Owner: LANE-URUN (`src/features/**`, `src/server/push/**`, the route) with
- * LANE-SUPABASE (`supabase/**`, the RPC validation). The tests below document the
- * gap as `todo` so the suite stays green while it is tracked; when the owner adds
- * a host allowlist they can be promoted to gates.
+ * That was a real finding (#262): the only check was
+ * `url().min(12).max(1024).startsWith("https://")`, and a local listener recorded
+ * the worker's TLS ClientHello. It is now fixed — `isAllowedPushEndpoint`
+ * (`src/server/push/push-endpoint.ts`) accepts only `https://` endpoints on a
+ * known push-service host and rejects IP literals, decimal-encoded addresses,
+ * `localhost` and `.local`/`.internal` names. This test is the **gate** that keeps
+ * it that way: it drives the real allowlist function and pins that every writer
+ * and the send sink call it.
  */
 
 const migrationsDir = new URL("../../supabase/migrations/", import.meta.url);
@@ -82,16 +61,12 @@ function pushWritePaths(): string[] {
   return [...found].sort();
 }
 
-/** Hosts that are legitimate web-push services. */
-const pushServiceHosts = [
-  "fcm.googleapis.com",
-  "updates.push.services.mozilla.com",
-  "notify.windows.com",
-  "push.apple.com",
-];
+function read(relative: string): string {
+  return readFileSync(new URL(`../../${relative}`, import.meta.url), "utf8");
+}
 
 test("every push-endpoint write path is discovered (self-test)", () => {
-  // Guards the guard: if a new writer appears, the `todo` below must still scan
+  // Guards the guard: if a new writer appears, the checks below must still scan
   // it. This asserts at least the two known writers are found.
   const paths = pushWritePaths();
   assert.ok(
@@ -108,62 +83,108 @@ test("every push-endpoint write path is discovered (self-test)", () => {
   );
 });
 
-test("every push write path only requires an https URL today (documents the gap)", () => {
-  // This is the *current* contract, stated so the test below can assert the
-  // missing part rather than the present one. Both writers share the same shape.
+test("the allowlist accepts real push-service endpoints", () => {
+  for (const endpoint of [
+    "https://fcm.googleapis.com/fcm/send/abc123",
+    "https://updates.push.services.mozilla.com/wpush/v2/gAAAA",
+    "https://web.push.apple.com/xyz",
+    "https://wns2-par02p.notify.windows.com/w/?token=abc",
+    "https://eu.web.push.apple.com/xyz",
+  ]) {
+    assert.equal(isAllowedPushEndpoint(endpoint), true, `${endpoint} should be allowed`);
+  }
+});
+
+test("the allowlist rejects internal, loopback and metadata addresses (the SSRF)", () => {
+  for (const endpoint of [
+    // Loopback and link-local / cloud metadata — the core SSRF payloads.
+    "https://127.0.0.1/internal-only",
+    "https://127.0.0.1:8443/internal-only",
+    "https://169.254.169.254/latest/meta-data/",
+    "https://[::1]/internal",
+    // RFC1918.
+    "https://10.0.0.5/",
+    "https://192.168.1.1/",
+    "https://172.16.0.1/",
+    // Decimal-encoded IPv4 (2130706433 == 127.0.0.1).
+    "https://2130706433/",
+    // Local names.
+    "https://localhost/",
+    "https://api.internal/",
+    "https://box.local/",
+    // A non-push public host.
+    "https://evil.example/collect",
+    // A host that merely ends with an allowed suffix but is not on it.
+    "https://fcm.googleapis.com.evil.example/x",
+    "https://notfcm.googleapis.com/x",
+  ]) {
+    assert.equal(isAllowedPushEndpoint(endpoint), false, `${endpoint} must be rejected`);
+  }
+});
+
+test("the allowlist rejects non-https, credentials and non-strings", () => {
+  for (const endpoint of [
+    "http://fcm.googleapis.com/fcm/send/x",
+    "ftp://fcm.googleapis.com/x",
+    "https://user:pass@fcm.googleapis.com/x",
+    "",
+    null,
+    undefined,
+    42,
+    {},
+  ]) {
+    assert.equal(isAllowedPushEndpoint(endpoint), false, `${JSON.stringify(endpoint)} must be rejected`);
+  }
+});
+
+test("every push write path enforces the host allowlist", () => {
   for (const relative of pushWritePaths()) {
-    const source = readFileSync(new URL(`../../${relative}`, import.meta.url), "utf8");
+    const source = read(relative);
+    // The import alone is not enforcement: the schema must *call* it on the
+    // endpoint. Assert the refine wiring, not a bare identifier match.
     assert.match(
       source,
-      /endpoint:\s*z\.string\(\)\.url\(\)\.min\(12\)\.max\(1024\)\.startsWith\("https:\/\/"\)/,
-      `${relative}: the endpoint validation changed — re-read the finding above`,
+      /refine\(\s*isAllowedPushEndpoint\b/,
+      `${relative} stores an endpoint without the host allowlist, so an attacker ` +
+        `can register an internal address (SSRF)`,
     );
   }
 });
 
-test("the dispatch path sends to the stored endpoint with no host check", () => {
-  // Proves the sink: the stored endpoint string is passed straight through to
-  // `sendPushMessage`, which fetches it. If this ever grows a host check, the
-  // finding is being addressed and the `todo` below can be promoted.
-  const dispatch = readFileSync(
-    new URL("../../src/app/api/push/dispatch/route.ts", import.meta.url),
-    "utf8",
+test("the send sink also checks the allowlist (defence in depth)", () => {
+  // A row written before the guard existed (or via the RPC directly) must not
+  // turn the worker into an SSRF probe.
+  const vapid = read("src/server/push/vapid.ts");
+  const check = vapid.indexOf("isAllowedPushEndpoint(target.endpoint)");
+  const send = vapid.indexOf("webpush.sendNotification(subscription");
+  assert.ok(check > -1, "the send sink no longer checks the endpoint host");
+  assert.ok(send > -1, "the web-push send call was not found");
+  assert.ok(
+    check < send,
+    "the send sink fetches the endpoint before it checks the host allowlist",
   );
-  assert.match(dispatch, /endpoint:\s*target\.endpoint/);
-  assert.match(dispatch, /sendPushMessage\(pushTarget/);
-
-  const vapid = readFileSync(
-    new URL("../../src/server/push/vapid.ts", import.meta.url),
-    "utf8",
-  );
-  assert.match(vapid, /webpush\.sendNotification\(subscription/);
 });
 
-test(
-  "the push endpoint host is allow-listed (no SSRF to internal addresses)",
-  {
-    todo:
-      "a registered push endpoint is fetched server-side with no host allowlist, so " +
-      "https://127.0.0.1/... or https://169.254.169.254/... is contacted (SSRF); see docs/threat-model.md",
-  },
-  () => {
-    // When the owners add a host allowlist, it should live at the registration
-    // boundary — *every* writer (the route and the server action) and/or the RPC
-    // and the send sink. This asserts *some* allowlist exists and names the real
-    // push services.
-    const sources = [
-      ...pushWritePaths().map((relative) =>
-        readFileSync(new URL(`../../${relative}`, import.meta.url), "utf8"),
-      ),
-      readFileSync(new URL("../../src/server/push/vapid.ts", import.meta.url), "utf8"),
-      allSql(),
-    ].join("\n");
+test("the allowlist module names the real push services", () => {
+  const source = read("src/server/push/push-endpoint.ts");
+  for (const host of [
+    "fcm.googleapis.com",
+    "updates.push.services.mozilla.com",
+    "web.push.apple.com",
+    "notify.windows.com",
+  ]) {
+    assert.ok(source.includes(host), `the allowlist no longer names ${host}`);
+  }
+});
 
-    const namesPushService = pushServiceHosts.some((host) => sources.includes(host));
-    assert.ok(
-      namesPushService,
-      "no push-service host allowlist is present, so an attacker-registered endpoint " +
-        "can point the worker at an internal address (SSRF, see docs/threat-model.md)",
-    );
-  },
-);
+test("the RPC keeps the endpoint validation it can (the DB half)", () => {
+  // The DB cannot know the push-service hostnames as cleanly as the app, but it
+  // must still keep the https + length contract the app relies on.
+  const sql = allSql();
+  assert.match(sql, /v_endpoint !~ '\^https:\/\//, "register_push_subscription dropped its https check");
+  assert.match(
+    sql,
+    /char_length\(v_endpoint\)\s*<\s*12/,
+    "register_push_subscription dropped its minimum-length check",
+  );
+});

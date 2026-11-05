@@ -228,28 +228,17 @@ issue açar.
    altındaki diğer tüm sır-okuyan modüller bu işareti taşıyor; eksik olan, yanlış
    bir istemci içe aktarımını derleme hatası yerine sessiz bir sızıntıya çevirir.
    Kanıt: `tests/security/client-boundary.test.ts` (`todo`).
-3. **Push endpoint'i üzerinden SSRF** (sahibi: `src/features/**`, `src/server/push/**`
-   -> LANE-URUN; `supabase/**` -> LANE-SUPABASE). Endpoint'i **iki yazma yolu** var,
-   ikisi de aynı zayıf kontrolü kullanır: `POST /api/push/subscriptions` (service
-   worker) ve `src/features/pwa/actions.ts` `savePushSubscription` (kurulum
-   sayfası). Kayıtlı bir ziyaretçi `endpoint` olarak **herhangi bir `https://`
-   URL** saklayabilir (tek kontrol: `z.string().url().min(12).max(1024).startsWith("https://")`;
-   aynı şekil `register_push_subscription`'da da var). Cron worker
-   (`/api/push/dispatch` -> `sendPushMessage` -> `web-push`) o URL'ye **sunucudan**
-   POST eder. **Host allowlist'i yok** (gerçek push servisleri: `fcm.googleapis.com`,
-   `updates.push.services.mozilla.com`, `*.notify.windows.com`, `web.push.apple.com`)
-   ve loopback / link-local / RFC1918 / bulut-metadata adresleri engellenmiyor.
-   Kanıt: gerçek `web-push` istemcisiyle yerel bir dinleyiciye karşı ölçüldü —
-   `endpoint = "https://127.0.0.1:<port>/internal-only"` (uygulamanın kontrolünü
-   geçer) `sendNotification` çağrısı dinleyiciye **1 bağlantı / 1568 bayt TLS
-   ClientHello** yaptı. Yani kayıtlı bir endpoint, worker'ı dağıtımın iç ağındaki
-   keyfî bir adrese bağlatabilir (kör SSRF + erişilebilirlik yoklaması).
-   Önerilen düzeltme: kayıt sınırında (**her iki yazma yolu** + `register_push_subscription`)
-   push servis host'larından oluşan bir allowlist zorla; özel/loopback/link-local
-   adresleri reddet; dilersen gönderim ucunda da doğrula. Kanıt:
-   `tests/security/push-endpoint-ssrf.test.ts` (`todo`; yazma yollarını dosya
-   adıyla değil `register_push_subscription` çağrısından **keşfeder**, yeni bir
-   yazar sessizce kaçamaz). Devir: **#262** (`agent:handoff`, LANE-URUN + LANE-SUPABASE).
+3. **Push endpoint'i üzerinden SSRF — KAPATILDI** (sahibi: LANE-URUN + LANE-SUPABASE;
+   #273, devir #262). Kayıtlı bir ziyaretçi `endpoint`'e herhangi bir `https://`
+   URL yazabiliyordu; cron worker (`/api/push/dispatch` -> `sendPushMessage` ->
+   `web-push`) o URL'ye **sunucudan** bağlanıyordu — host allowlist'i yoktu
+   (kör SSRF; `https://127.0.0.1/...` yerel bir dinleyiciye 1 bağlantı / 1568
+   bayt TLS ClientHello yaptı). Düzeltme: `isAllowedPushEndpoint`
+   (`src/server/push/push-endpoint.ts`) yalnız bilinen push servis host'larını
+   kabul eder; IP literal, decimal-IP, `localhost`, `.local`/`.internal` reddedilir.
+   **Her iki yazma yolu** (route + `savePushSubscription`) ve gönderim ucu onu
+   çağırır. `tests/security/push-endpoint-ssrf.test.ts` artık bir **kapı**
+   (allowlist'i gerçek fonksiyonla sürer + her yazarı ve sink'i sabitler).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
 

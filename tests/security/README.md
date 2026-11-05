@@ -31,7 +31,7 @@ a boundary regression is attributable at a glance.
 | `unsubscribe-route-auth.test.ts` | the public unsubscribe GET verifies the HMAC before the service client, and leaks no subscription oracle |
 | `security-headers.test.ts` | imports the real `next.config.ts` and asserts the CSP/HSTS/frame/coop header set, no wildcard `script-src`, no `X-Powered-By`, and the Vercel-alias noindex rule |
 | `anonymous-write-surface.test.ts` | the anon write RPCs and the control the forms carry |
-| `push-endpoint-ssrf.test.ts` | the push endpoint is a server-fetched URL; documents the missing host allowlist (SSRF) |
+| `push-endpoint-ssrf.test.ts` | the push-endpoint host allowlist (`isAllowedPushEndpoint`): rejects loopback/link-local/RFC1918/metadata/decimal-IP/local names, every writer wires it, and the send sink re-checks it |
 | `anonymous-rpc-throttle.test.ts` | the action throttles before the RPC and the mail fan-out (ordering, not presence); the throttle also lives inside the anon RPC bodies (a gate); the action-path IP dimension is still one shared bucket |
 | `session-cookie-flags.test.ts` | the Supabase session cookie's `HttpOnly`/`Secure`/`SameSite` flags, the OAuth-intent cookie's flags, and the controls around them |
 
