@@ -73,3 +73,61 @@ Kural 3'e göre bunları **sahibinin onayına** sunuyorum:
       profil alanlarını sessizce düşürür (bu hata bir kez yaşandı, pgTAP
       `jobs_applications_rls` 55-57 yakaladı).
 - [ ] **LANE-SEO:** `src/app/sitemap.ts` değişikliği (GEO'dan bağımsızsa) — onay/ret.
+
+---
+
+## Rapor — micro-denetim (issue #126), branch `lane/geo`
+
+**Durum:** düzeltmeler branch'te, CI bekliyor.
+
+### Denetlenen dosyalar (`git ls-files`)
+
+| Glob | N | Bakıldı |
+|---|---|---|
+| `src/content/**` | 22 | 22 (hepsi) |
+| `src/app/llms.txt/**` | 1 | 1 |
+| `public/llms*` | 0 | — (dosya yok) |
+| `src/features/**/structured-data*.ts` | 1 | 1 |
+| `src/features/jobs/job-posting-structured-data.ts` | 1 | 1 |
+
+Üreticileri tüketen ama sahibi olmadığım yüzeyler (rapor için okundu, yazılmadı):
+`src/app/[locale]/layout.tsx`, `about/page.tsx`, `sss/page.tsx`,
+`rehber/[slug]/page.tsx`, `blog/[slug]/page.tsx`, `is-ilanlari/[district]/page.tsx`,
+`jobs/[slug]/page.tsx`, `src/app/sitemap.ts`, `src/lib/seo.ts`.
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/content/ai-visibility/llms-brief.ts:65` | tutarlılık / GEO | `getGuideSlugs()` her dil için TR slug'ını kullanıyordu → `/en/rehber/kktc-is-bulma-rehberi` `getGuide("en", …)` ile çözülmüyor | her dil kendi slug'ını (`finding-a-job-in-northern-cyprus`) vermeli | `/llms-full.txt` içinde **15 kırık link** (6 dil × 3 rehber, TR hariç); AI motoru 404'e gidiyor | **düzeltildi** |
+| 2 | `src/content/ai-visibility/structured-data.ts:69` | doğruluk | `Organization.logo` = `/icon-dark-32x32.png` (32×32) | Google `Organization` logo ≥112×112px | Google logo'yu reddeder; bilgi paneli/sonuç görseli kaybolur | **düzeltildi** |
+| 3 | `src/features/jobs/job-posting-structured-data.ts:76` | doğruluk | `directApply: true` **her** ilan için; kaynak ilanlarda sayfada başvuru formu yok | `directApply` yalnızca platform ilanı için | kaynak ilanda sayfada olmayan bir "doğrudan başvuru" deneyimi iddia ediliyor | **düzeltildi** |
+| 4 | `structured-data.ts:155,302` | ölü kod | `getRegionName` ve `LOCATION_DISTRICT/LOCALITY` re-export'u hiçbir yerde kullanılmıyor | kullanılmayan export kaldırılmalı | bakım yükü | **düzeltildi** |
+| 5 | `faq.ts:259` | tutarlılık | `AI_VISIBILITY_UPDATED` = `2026-10-30`; brief bu turda değişti | kendi sözleşmesi: içerik değişince bump | `dateModified` gerçek değişikliği yansıtmıyor | **düzeltildi** (`2026-11-05`) |
+
+**Doğru bulunanlar (bulgu yok):** `areaServed` altı ilçe + ülke; ilçe adları 6
+dilde `HomeJobSearch.districts` ile birebir; `Mağusa`/`Gazimağusa` ayrımı tutarlı;
+FAQ görünen metni ile `FAQPage` JSON-LD aynı kaynaktan; `regionNames` çevirileri
+sayfa metniyle uyumlu; rehber/ilan bölüm sayıları 6 dilde simetrik; içerikte
+dış bağlantı yok.
+
+### Devredilen (başkasının dosyası — düzeltmedim)
+
+- **LANE-SEO** `is-ilanlari/[district]/page.tsx`: `buildDistrictPageStructuredData`
+  `jobsLabel`/`homeLabel` olarak `HomeJobSearch` **kahraman** metnini
+  ("Fırsatları hesap açmadan keşfedin.", "KARİYERİNİZ İÇİN AÇIK İLANLAR")
+  geçiyor; `BreadcrumbList` bu yüzden yanlış ad taşıyor. Doğrusu `DistrictPage`
+  namespace'indeki `title`/`eyebrow`. Üretici doğru; çağrı yerinde yanlış argüman.
+- **LANE-SEO** `sitemap.ts`: `/rehber` indeksi `GUIDE_UPDATED` (2026-11-04) ile
+  `lastModified` veriyor ama `publicPages` içinde `/rehber` **yok** → indeks
+  sitemap'te hiç listelenmiyor (var olan route, `feed.xml` de `/rehber/` linkiyor).
+- **LANE-QA** `tests/e2e/seo.spec.ts`: `directApply` için assertion yok; kaynak
+  ilanda `false`, platform ilanda `true` olduğunu doğrulayan bir E2E eklenebilir.
+
+### Kapılar
+`lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (383 test,
++3 yeni) · `bun run build` ✅ (NEXT_DIST_DIR ile; çıktıda kırık `/xx/rehber/kktc-*`
+linki yok, `logo` = `icon-512.png`).
+
+Yeni guard: `src/content/ai-visibility/geo-audit.test.ts` — #1 ve #2 için kırmızı→yeşil
+kanıtlandı (bug yeniden konunca test kırmızı).

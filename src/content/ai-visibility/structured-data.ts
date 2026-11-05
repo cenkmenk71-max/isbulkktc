@@ -8,8 +8,6 @@ import {
 import {
   buildPostalAddress,
   getConfiguredSocialProfiles,
-  LOCATION_DISTRICT,
-  LOCATION_LOCALITY,
   regionNames,
   SITE_NAME,
   servedDistricts,
@@ -66,7 +64,9 @@ export function buildOrganizationGraph(baseUrl: URL) {
         name: SITE_NAME,
         alternateName: "İşBul KKTC — Kuzey Kıbrıs iş platformu",
         url: siteUrl,
-        logo: `${siteUrl}/icon-dark-32x32.png`,
+        // Google requires an Organization `logo` of at least 112x112px; the
+        // 32px favicon is below that, so the 512px install icon is advertised.
+        logo: `${siteUrl}/icons/icon-512.png`,
         email: SUPPORT_EMAIL,
         telephone: SUPPORT_PHONE_TEL,
         address: buildPostalAddress(baseUrl),
@@ -149,11 +149,6 @@ export function buildFaqPageStructuredData({
       },
     })),
   };
-}
-
-/** The organization's display name for the region, per locale. */
-export function getRegionName(locale: AppLocale): string {
-  return regionNames[locale];
 }
 
 /**
@@ -298,5 +293,3 @@ export function buildDistrictPageStructuredData({
     ],
   };
 }
-
-export { LOCATION_DISTRICT, LOCATION_LOCALITY };

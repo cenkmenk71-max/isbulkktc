@@ -256,7 +256,7 @@ export const faqSectionByLocale: Record<
  * ISO date the AI-visibility content was last authored. Bump it when the FAQ
  * copy or the brief changes so `dateModified` stays truthful.
  */
-export const AI_VISIBILITY_UPDATED = "2026-10-30";
+export const AI_VISIBILITY_UPDATED = "2026-11-05";
 
 /**
  * A short, quotable summary of the platform per language, used as the opening

@@ -12,7 +12,7 @@ import {
   jobTypeSlugs,
   type JobTypeKey,
 } from "@/features/jobs/job-type-slugs";
-import { getGuideSlugs } from "@/content/guides";
+import { getGuides } from "@/content/guides";
 
 /**
  * The canonical page list the brief advertises. These are the same routes the
@@ -58,14 +58,16 @@ function primaryPageLines(baseUrl: URL, locale: AppLocale): string {
         const suffix = locale === routing.defaultLocale ? "iş ilanları" : "jobs";
         return `- [${label} ${suffix}](${localeUrl(baseUrl, locale, `/is-ilanlari/${districtSlug(district.tr)}`)})`;
       }),
+      // Editorial guides — the site's own content, so the brief points at them
+      // first among the resources an answer engine may quote. A guide's slug is
+      // translated per locale, so the locale's own slug is used here; reusing
+      // the Turkish slug under another prefix advertises a URL that 404s.
+      getGuides(locale).map((guide) => {
+        const label = locale === routing.defaultLocale ? "Rehber" : "Guide";
+        return `- [${label}: ${guide.slug}](${localeUrl(baseUrl, locale, `/rehber/${guide.slug}`)})`;
+      }),
       // Employment-type landing pages, so "uzaktan iş" / "tam zamanlı iş" can be
       // answered with the matching page.
-      // Editorial guides — the site's own content, so the brief points at them
-      // first among the resources an answer engine may quote.
-      getGuideSlugs().map((slug) => {
-        const label = locale === routing.defaultLocale ? "Rehber" : "Guide";
-        return `- [${label}: ${slug}](${localeUrl(baseUrl, locale, `/rehber/${slug}`)})`;
-      }),
       jobTypeKeys.map((jobType) => {
         const label = locale === routing.defaultLocale
           ? jobTypeLabelsTr[jobType]

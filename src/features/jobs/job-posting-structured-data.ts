@@ -73,7 +73,10 @@ export function buildJobPostingStructuredData({
     dateModified: resolveJobDateModified(job.modified_at, job.published_at),
     validThrough: job.expires_at,
     employmentType: employmentTypeByJobType[job.job_type],
-    directApply: true,
+    // Only a platform listing has an on-site application form; an imported
+    // listing's canonical URL is this page, which offers no apply action, so
+    // claiming `directApply` there would assert an experience the page lacks.
+    directApply: job.publication_source === "platform",
     url: canonicalUrl,
     hiringOrganization: {
       "@type": "Organization",
