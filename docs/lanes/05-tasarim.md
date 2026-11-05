@@ -155,3 +155,85 @@ Branch: `lane/tasarim`. Karşılaştırma tabanı: `origin/main` @ `b5b11cc`.
   açık bir satır (ör. TASARIM) eklemek iyi olur — INFRA'nın işi.
 - Değişen dosyalar: `src/styles/global.css`, `tests/e2e/accessibility.spec.ts`,
   `tests/unit/design-tokens.test.ts`. Hepsi bu lane'in kapsamında.
+
+---
+
+## LANE-TASARIM çalışma notları (2026-11-05, tur 3)
+
+Branch: `lane/tasarim`. Karşılaştırma tabanı: `origin/main` @ `e188283`.
+Kuyrukta `agent:frontend` + `lane:tasarim` etiketli iki issue vardı: **#144**
+(dil değiştirici çevrilmiş slug) ve **#95** (axe spec shard dengesi). #95 zaten
+`main`'de çözülmüş (spec rota düzeyinde testlere bölünmüş, `grep -c "test("` =
+1 → 180 test); kapatma notu bırakıldı. Bu yüzden #144 + micro-denetim bulgusu
+işlendi.
+
+### Bulgu 1 — Dil menüsü her dil öneki altında mevcut slug'ı tekrar ediyordu; çevrilmiş içerikte 5 ölü link (düzeltildi, #144)
+
+- **Belirti:** `/de/rehber/arbeit-finden-in-nordzypern` sayfasının dil menüsü
+  `/en/rehber/arbeit-finden-in-nordzypern` gibi var olmayan URL'ler üretiyordu
+  (İngilizce slug `finding-a-job-in-northern-cyprus`).
+- **Kök neden:** `src/components/layout/site-header.tsx:94` dil linkini ham
+  `usePathname()` değeriyle kuruyordu (`href={pathname}`); `usePathname()` öneksiz
+  ama *mevcut dilin* slug'ını taşıyor. Rehber/blog slug'ları dile göre çevrildiği
+  için bu URL'ler 404.
+- **Düzeltme:** `src/components/layout/language-links.ts` — `resolveLanguageHref(
+  pathname, targetLocale)`. `[slug]` taşıyan aileleri (`rehber`, `blog`) tanır ve
+  hedef dilin kardeş slug'ını konumla çözer (`resolveLocalizedSlugPathname`,
+  LANE-SEO'nun hazır saf yardımcısı). Çevrilmemiş rota / bilinmeyen slug / farklı
+  uzunlukta liste → eski davranış (ham pathname) korunur.
+- **Neden slug manifesti, içerik modülünü import etmek değil:** header bir client
+  component ve Next onu sunucuda da render ediyor, yani doğru href SSR HTML'inde
+  olmalı (issue'nun `curl` kanıtı tam da SSR çıktısıydı). `@/content/guides` +
+  `@/content/editorial` import edilince header chunk'ı **26 945 → 135 446 byte**
+  (gzip 8 723 → 47 920) büyüdü; slug-only tablo ile **28 716 byte** (gzip 9 614),
+  yani her sayfaya ~+0.9 KB gzip. Tablo, `language-links.test.ts` içinde içerik
+  modüllerinden türetilen slug'larla karşılaştırılıyor — yeni rehber/yazı eklenince
+  test kırmızı olur, kopya sessizce eskimez.
+- **Kanıt (SSR, üretim standalone sunucusu):** `/de/rehber/…` artık
+  `/tr/rehber/kktc-is-bulma-rehberi`, `/en/rehber/finding-a-job-in-northern-cyprus`,
+  … üretiyor. 6 dil × (3 rehber + 3 yazı) sayfasındaki **180 dil linki tarandı, 0
+  tanesi 404** (default-locale linki 308 ile kanonikleşir, hedefi doğru).
+- **Kanıt (piksel, `deviceScaleFactor: 2`, sharp buffer diff):** dil menüsü açık
+  header görüntüsü öncesi↔sonrası **0/343040 px** değişti, maxDelta 0 — yani
+  görsel çıktı birebir aynı, değişen tek şey `href` değerleri.
+- **Guard:** `src/components/layout/language-links.test.ts` (9 test). Negatif test
+  edildi: resolver gövdesi `return pathname` ile değiştirilince 3 test kırmızı,
+  geri alınınca yeşil.
+
+### Bulgu 2 — axe guard'ı altı rota ailesini hiç taramıyordu (düzeltildi)
+
+- **Belirti:** `tests/e2e/accessibility.spec.ts` içindeki `publicRoutes` 14 statik
+  rota içeriyordu; sonradan eklenen `/sss`, `/rehber` + `/rehber/[slug]`,
+  `/blog/[slug]`, `/is-ilanlari/[district]`, `/is-turleri/[type]` **hiç
+  taranmıyordu** (önceki turun notlarında takip işi olarak duruyordu).
+- **Etki:** FAQ akordeonu, rehber CTA satırı veya ilçe çapraz linklerindeki bir
+  kontrast/hedef-boyutu regresyonu kimse görmeden yayınlanabilirdi.
+- **Düzeltme:** rota listesine statik iki rota eklendi; ilçe/iş-türü slug'ları
+  `districtSlug`/`jobTypeSlugs` ile, çevrilmiş detay rotaları `getGuides(locale)`/
+  `getArticles(locale)` ile dil başına kuruluyor. Test sayısı **126 → 180**;
+  assertion kapsamı aynı (aynı diller, viewport mantığı, axe etiketleri, settle).
+- **Kanıt:** 180/180 axe testi yerel dev sunucusuna karşı geçti (9.5m, 3 worker).
+  Yeni 45 test ayrıca tek başına geçti.
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅
+- `bun run test:unit` ✅ (469 test, +9 yeni)
+- `bun run test:security` ✅ (önceki durum: #102 `todo` işaretiyle CI'ı kırmıyor;
+  bu PR'la ilgisiz)
+- `tests/e2e/accessibility.spec.ts` ✅ 180 passed (dev sunucusu, 3 worker)
+- `tests/e2e/typography.spec.ts` + `responsive-locales.spec.ts` ✅ 48 passed
+
+### Sahibin yapması gerekenler / notlar
+
+- **#95 kapatılabilir:** spec zaten rota düzeyinde bölünmüş durumda (`main`).
+- **#144 bu PR'la çözülür:** dil menüsü artık hedef dilin slug'ını kullanıyor.
+- **#102 (`unsubscribe-token-core.ts` `server-only` eksik)** hâlâ açık ve
+  LANE-URUN'un dosyası; `tests/security/client-boundary.test.ts` onu `todo` olarak
+  işaretliyor, CI kırmızı değil.
+- `src/styles/global.css` hâlâ sahiplik tablosunda yok (önceki turlardan not).
+- Değişen dosyalar: `src/components/layout/site-header.tsx`,
+  `src/components/layout/language-links.ts`, `src/components/layout/language-links.test.ts`,
+  `tests/e2e/accessibility.spec.ts`. Hepsi bu lane'in kapsamında.

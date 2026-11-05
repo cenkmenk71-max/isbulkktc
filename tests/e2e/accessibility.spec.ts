@@ -1,5 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { getArticles } from "@/content/editorial";
+import { getGuides } from "@/content/guides";
+import { districtSlug } from "@/features/locations/northern-cyprus-districts";
+import { jobTypeSlugs } from "@/features/jobs/job-type-slugs";
 
 /**
  * A design that is only checked by eye regresses silently: a colour tweak can
@@ -12,8 +16,15 @@ import { expect, test } from "@playwright/test";
  * shards by test, so a single test that walked all ~26 pages pinned a whole
  * shard to roughly nine minutes while the others finished in five (issue #95).
  * The page-level split leaves the coverage identical — same locales, same
- * routes, same axe tags, same settle — but gives the shard planner ~126
- * uniformly sized tests to spread across the four shards.
+ * routes, same axe tags, same settle — but gives the shard planner uniformly
+ * sized tests to spread across the four shards.
+ *
+ * The route list covers every public route family, including the six that were
+ * added after this guard first shipped (`/sss`, `/rehber` and `/rehber/[slug]`,
+ * `/blog/[slug]`, `/is-ilanlari/[district]`, `/is-turleri/[type]`). They were
+ * only ever probed by hand; without a test here a later tweak to the FAQ
+ * accordion, the guide CTA row or the district cross-links would regress with
+ * nobody watching.
  */
 
 const locales = ["tr", "en", "ru", "el", "fa", "de"] as const;
@@ -26,6 +37,8 @@ const publicRoutes = [
   { path: "/packages", name: "packages" },
   { path: "/about", name: "about" },
   { path: "/blog", name: "blog" },
+  { path: "/rehber", name: "rehber" },
+  { path: "/sss", name: "sss" },
   { path: "/contact", name: "contact" },
   { path: "/login", name: "login" },
   { path: "/register", name: "register" },
@@ -35,7 +48,28 @@ const publicRoutes = [
   { path: "/privacy", name: "privacy" },
   { path: "/cookies", name: "cookies" },
   { path: "/terms", name: "terms" },
+  // District and job-type landing pages share `JobsExperience` with `/jobs`, but
+  // each adds a cross-link block the plain listing does not render. Their slugs
+  // are the same under every locale prefix (the pages canonicalise to the
+  // default locale), so a single slug per family covers all six.
+  { path: `/is-ilanlari/${districtSlug("Girne")}`, name: "district" },
+  { path: `/is-turleri/${jobTypeSlugs.full_time}`, name: "job-type" },
 ] as const;
+
+/**
+ * The translated-slug detail routes. Guides and articles carry a different slug
+ * per locale (`kktc-is-bulma-rehberi` vs `finding-a-job-in-northern-cyprus`), so
+ * the path has to be built from each locale's own content rather than reused
+ * across prefixes. The first entry of each family is audited: it renders the
+ * same template as its siblings, so the extra pages add runtime without adding a
+ * distinct layout to check.
+ */
+function detailRoutesFor(locale: (typeof locales)[number]) {
+  return [
+    { path: `/rehber/${getGuides(locale)[0].slug}`, name: "rehber-detail" },
+    { path: `/blog/${getArticles(locale)[0].slug}`, name: "blog-detail" },
+  ];
+}
 
 const viewports = [
   { name: "mobile", width: 390, height: 844 },
@@ -57,9 +91,10 @@ for (const locale of locales) {
   const activeViewports = desktopLocales.has(locale)
     ? viewports
     : [viewports[0]];
+  const routes = [...publicRoutes, ...detailRoutesFor(locale)];
 
   for (const viewport of activeViewports) {
-    for (const route of publicRoutes) {
+    for (const route of routes) {
       test(`axe finds no accessibility violations in ${locale} ${viewport.name} ${route.name}`, async ({
         page,
       }) => {

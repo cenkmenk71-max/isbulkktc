@@ -6,6 +6,7 @@ import { ArrowRight, BookOpenText, BriefcaseBusiness, Building2, ChevronDown, Co
 import { Logo } from '@/components/brand/logo'
 import { Link, usePathname } from '@/i18n/navigation'
 import { localeNames, routing } from '@/i18n/routing'
+import { resolveLanguageHref } from '@/components/layout/language-links'
 import { signOut } from '@/features/identity/actions'
 import { getHeaderSession } from '@/features/identity/header-session-actions'
 import type { HeaderSessionState } from '@/features/identity/header-session'
@@ -90,7 +91,7 @@ export function SiteHeader() {
               <div className="language-menu" aria-label={languageCopy('title')}>
                 <div className="language-menu-heading"><strong>{languageCopy('title')}</strong></div>
                 {routing.locales.map((code) => (
-                  <Link key={code} href={pathname} locale={code} lang={code} className={`language-option ${locale === code ? 'is-current' : ''}`} aria-current={locale === code ? 'page' : undefined}><span className="language-code">{code.toUpperCase()}</span><span className="language-name">{localeNames[code]}</span>{locale === code && <span className="language-current-mark" aria-label={navCopy('currentLanguage')}>✓</span>}</Link>
+                  <Link key={code} href={resolveLanguageHref(pathname, code)} locale={code} lang={code} className={`language-option ${locale === code ? 'is-current' : ''}`} aria-current={locale === code ? 'page' : undefined}><span className="language-code">{code.toUpperCase()}</span><span className="language-name">{localeNames[code]}</span>{locale === code && <span className="language-current-mark" aria-label={navCopy('currentLanguage')}>✓</span>}</Link>
                 ))}
                 <p className="language-menu-note">{languageCopy('notice')}</p>
               </div>
