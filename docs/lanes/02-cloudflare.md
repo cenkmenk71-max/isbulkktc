@@ -47,3 +47,17 @@ Read-only denetim yapıldı; bulgular `docs/cloudflare.md`'de. Özet:
 - **Onay bekleyen:** (1) tek rate-limit kuralını auth brute-force'a tahsis,
   (2) origin doğrudan erişimini kapat, (3) DMARC `p=none` → `quarantine/reject`,
   (4) HSTS preload `pending` iken DNS/TLS'e dokunma.
+
+### Bulunabilirlik (#163) — 2026-11-05
+
+Issue #163'ün **Cloudflare halkası** ölçüldü: CF arama motoru botlarını
+engelliyor mu? **Hayır.** Sitemap'teki 207 URL'nin tamamı Googlebot UA'ya 200
+döndü; bingbot/YandexBot/GPTBot/ClaudeBot/AhrefsBot de 200; hiçbir yolda
+`cf-mitigated` yok; site geneli `X-Robots-Tag` yok; `robots.txt`/`sitemap.xml`
+bot-bağımsız aynı; WAF yalnız `sqlmap` gibi kötü UA'yı 403'lüyor. Yani
+"sıralanmama"nın nedeni bot engeli değil. Detay + kanıt: `docs/cloudflare.md`
+→ "Bulunabilirlik denetimi".
+
+**Kopuk halka adayı (LANE-SEO'ya handoff):** Bing doğrulama artefaktı yok
+(`msvalidate.01` meta, `BingSiteAuth.xml`, Bing DNS TXT'inin üçü de eksik) —
+Bing indeksi 1 sayfada. `lane:seo` + `agent:handoff` ile issue açıldı.

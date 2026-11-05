@@ -105,3 +105,68 @@ etkilenmez; yine de PR öncesi çalıştırılıp sonucu rapora yazılır.
 - **LANE-INFRA:** `submit-indexnow.yml` ve `push-dispatch.yml` CF challenge'ı
   bildiği için Vercel alias'ından okuyor (F-08 ile aynı kök). Alias kısıtlanırsa
   bu workflow'lar için "Protection Bypass for Automation" token'ı gerekir.
+
+---
+
+## Bulunabilirlik denetimi — issue #163 (2026-11-05)
+
+Issue #163 ("site arama motorlarında çıkmıyor") zincirinin **Cloudflare halkası**
+ölçüldü. Soru: CF bot koruması arama motoru botlarını engelliyor mu? **Cevap:
+hayır.** Bu halka kopuk değil; kanıt aşağıda.
+
+### Yöntem
+
+- Egress: `34.136.162.246` (AS396982 Google LLC) — **datacenter IP**, yani AGENTS.md'de
+  `cf-mitigated: challenge` beklenen tam sınıf. Ağustos 2026'da GH runner'ları bu yüzden
+  engelleniyordu; aynı sınıftan ölçüm yapıldı.
+- Her istek canlı uca: `curl -A "<bot UA>"`, başlıklar `-D -`, gövde ayrı okundu.
+
+### Bulgular
+
+| # | Test | Sonuç | Kanıt |
+|---|---|---|---|
+| C-01 | `site:` sitemap'teki **207 URL**, Googlebot UA | **207/207 → 200** | `curl` sweep, `/tmp/codes.txt` |
+| C-02 | Googlebot, `/ /robots.txt /sitemap.xml /jobs /companies /en` | hepsi 200, `server: cloudflare` | `HTTP` |
+| C-03 | bingbot / YandexBot / GPTBot / ClaudeBot / AhrefsBot `/` | hepsi **200** | `HTTP` |
+| C-04 | `sqlmap/1.7` `/` | **403** (bot koruması yalnız kötü niyetli UA'yı kesiyor) | `HTTP` |
+| C-05 | `cf-mitigated` başlığı (tüm probe'lar) | **hiç yok** (`count=0`) | `HTTP` |
+| C-06 | Googlebot gövdesi gerçek sayfa mı | `<title>KKTC İş İlanları…</title>`, 279 KB; `just a moment`/`cf-chl` yok | `HTTP` |
+| C-07 | `robots.txt` / `sitemap.xml` Googlebot vs varsayılan UA | **birebir aynı** (`diff` boş) | `HTTP` |
+| C-08 | Derin ilan sayfası (Googlebot) | 200, `<title>…Depo Sorumlusu…</title>`, `JobPosting` JSON-LD var, canonical doğru | `HTTP` |
+| C-09 | `www.isbulkktc.com` (her yol) | 308 → apex (doğru) | `HTTP` |
+| C-10 | `http://` → `https://` | 301 (doğru) | `HTTP` |
+| C-11 | `X-Robots-Tag` (/, /jobs, /companies, /en, robots, sitemap) | **yok** (site geneli noindex yok) | `HTTP` |
+| C-12 | `<meta name="robots">` (/, /jobs, /en) | yok = varsayılan index,follow | `HTTP` |
+| C-13 | `google-site-verification` meta (üretim HTML) | **var** — `1zuidCsJ2y0GCfp_g-AmsYuagg_fIDDCo36POZr0wSM` | `HTTP` |
+| C-14 | Yandex doğrulama | DNS TXT `yandex-verification: 556993cbb856e57b` **var** | DoH |
+| C-15 | **Bing doğrulama** | HTML'de `msvalidate.01` **yok**; `/BingSiteAuth.xml` **404**; DNS TXT'te Bing kaydı **yok** | `HTTP`+DoH |
+| C-16 | Vercel alias `/` (CF'yi atlar) | 200 ama `x-robots-tag: noindex, nofollow` + canonical apex → **duplike içerik riski yok** | `HTTP` |
+| C-17 | WAF temeli (regresyon) | `/.env`, `/.git/config`, `/wp-login.php`, `/api/devtools/` → 403 | `HTTP` |
+
+### Ölçülen indeks durumu (dış gözlem)
+
+- Bing `site:isbulkktc.com` → **1 sonuç** (yalnız ana sayfa). Sahibin şikâyetiyle uyumlu.
+- `IndexNow` günlük çalışıyor ve **207 URL'yi `api.indexnow.org`'a HTTP 200 ile
+  gönderiyor** (workflow run `41981082862`, 2026-11-05 06:32). Yani "bildirim"
+  halkası da sağlam.
+- (Bu ölçüm datacenter IP'sinden yapıldı; kişiselleştirilmiş/residential bir
+  tarayıcı daha fazla sonuç gösterebilir. Kesin sayı için Search Console / Bing
+  Webmaster Tools gerekir — token bu sandbox'ta yok.)
+
+### Sonuç: kopuk halka Cloudflare değil
+
+CF, arama motoru botlarının **tamamına** gerçek içeriği 200 ile veriyor; hiçbir
+yolda `cf-mitigated` yok; site geneli `noindex` yok; `robots.txt`/`sitemap.xml`
+bot-bağımsız aynı; WAF yalnız `sqlmap` gibi kötü niyetli UA'yı kesiyor. Yani
+"sıralanmama"nın nedeni **bot engeli değil**.
+
+En güçlü kalan adaylar (bu lane'in dışı → handoff):
+1. **Bing doğrulama artefaktı yok** (C-15) — `msvalidate.01` meta, `BingSiteAuth.xml`
+   ve Bing DNS TXT'inin üçü de eksik. Bing indeksinin 1 sayfada kalması bununla
+   açıklanır: IndexNow URL *bildirir* ama mülk sahipliği doğrulanmadan Bing
+   güvenilir biçimde tarayıp indekslemiyor. → **LANE-SEO** (handoff issue açıldı).
+2. İçerik derinliği / iç bağlantı / benzersiz meta → #126, #127 (LANE-SEO).
+3. Search Console kapsam raporu — panel erişimi gerekir.
+
+Bu bölümü ekleyen PR: bkz. PR gövdesi. Yıkıcı CF değişikliği yapılmadı; C-15 için
+handoff issue'su `lane:seo` + `agent:handoff` ile açıldı.
