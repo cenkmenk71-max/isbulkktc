@@ -5,12 +5,16 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { JobsExperience } from "@/components/jobs/jobs-experience";
 import { DistrictLinks } from "@/components/jobs/district-links";
 import { JobTypeLinks } from "@/components/jobs/job-type-links";
+import { buildJobsIndexStructuredData } from "@/content/ai-visibility/structured-data";
+import { JsonLd } from "@/content/ai-visibility/json-ld";
+import { SITE_NAME } from "@/content/ai-visibility/site";
 import {
   publicJobSearchSchema,
   type PublicJobSearchFilters,
 } from "@/features/jobs/schemas";
 import { routing } from "@/i18n/routing";
 import { createLocalizedPageMetadata } from "@/lib/seo";
+import { getAppBaseUrl } from "@/server/config/app-url";
 import { searchPublicJobs } from "@/server/dal/jobs";
 
 type JobsPageProps = {
@@ -150,30 +154,43 @@ export default async function JobsPage({
     locale,
     namespace: "JobTypePage",
   });
+  // The index page names its own section: `Nav.jobs` is the label the reader
+  // already sees for this route, so the breadcrumb and `about` agree with the
+  // navigation instead of the hero slogan (`JobsPage.title`).
+  const navCopy = await getTranslations({ locale, namespace: "Nav" });
+  const structuredData = buildJobsIndexStructuredData({
+    locale,
+    baseUrl: getAppBaseUrl(),
+    pageLabel: navCopy("jobs"),
+    homeLabel: SITE_NAME,
+  });
 
   return (
-    <JobsExperience
-      locale={locale}
-      filters={filters}
-      results={results}
-      invalidFilters={!search.success}
-      title={copy("title")}
-      description={copy("description")}
-      eyebrow={copy("eyebrow")}
-      footerSlot={
-        <>
-          <DistrictLinks
-            locale={locale}
-            title={districtCopy("otherDistricts")}
-            browseAllLabel={districtCopy("browseAll")}
-          />
-          <JobTypeLinks
-            locale={locale}
-            title={jobTypeCopy("otherTypes")}
-            browseAllLabel={jobTypeCopy("browseAll")}
-          />
-        </>
-      }
-    />
+    <>
+      <JsonLd data={structuredData} />
+      <JobsExperience
+        locale={locale}
+        filters={filters}
+        results={results}
+        invalidFilters={!search.success}
+        title={copy("title")}
+        description={copy("description")}
+        eyebrow={copy("eyebrow")}
+        footerSlot={
+          <>
+            <DistrictLinks
+              locale={locale}
+              title={districtCopy("otherDistricts")}
+              browseAllLabel={districtCopy("browseAll")}
+            />
+            <JobTypeLinks
+              locale={locale}
+              title={jobTypeCopy("otherTypes")}
+              browseAllLabel={jobTypeCopy("browseAll")}
+            />
+          </>
+        }
+      />
+    </>
   );
 }

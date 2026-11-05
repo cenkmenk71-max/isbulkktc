@@ -14,7 +14,11 @@ import { getManagedDirectoryEntries } from "@/server/dal/content";
 import { getPublicJobCompanies } from "@/server/dal/jobs";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
+import { buildCompaniesIndexStructuredData } from "@/content/ai-visibility/structured-data";
+import { JsonLd } from "@/content/ai-visibility/json-ld";
+import { SITE_NAME } from "@/content/ai-visibility/site";
 import { createLocalizedPageMetadata } from "@/lib/seo";
+import { getAppBaseUrl } from "@/server/config/app-url";
 
 type CompaniesPageProps = {
   params: Promise<{ locale: string }>;
@@ -65,8 +69,19 @@ export default async function CompaniesPage({ params }: CompaniesPageProps) {
         ),
       );
 
+  // The directory index names its own section with the nav's employer label,
+  // so the structured data agrees with the visible navigation.
+  const navCopy = await getTranslations({ locale, namespace: "Nav" });
+  const structuredData = buildCompaniesIndexStructuredData({
+    locale,
+    baseUrl: getAppBaseUrl(),
+    pageLabel: navCopy("employer"),
+    homeLabel: SITE_NAME,
+  });
+
   return (
     <div className="company-directory-page">
+      <JsonLd data={structuredData} />
       <div className="page-container">
         <header className="company-directory-hero">
           <Image

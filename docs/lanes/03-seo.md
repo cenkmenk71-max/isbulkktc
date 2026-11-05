@@ -767,7 +767,12 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
 
 ```
 Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
-Değişen dosyalar: src/app/sitemap.ts, docs/lanes/03-seo.md
+Değişen dosyalar: src/app/sitemap.ts,
+                  src/app/[locale]/(public)/jobs/page.tsx,
+                  src/app/[locale]/(public)/companies/page.tsx,
+                  src/app/[locale]/(public)/rehber/page.tsx,
+                  src/app/[locale]/(public)/blog/page.tsx,
+                  docs/lanes/03-seo.md
 Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
             test:unit ✅ (486 pass, 8 belgeli todo)  test:security ✅ (41 pass, 2 todo)
             build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone doğrulaması ✅
@@ -785,7 +790,7 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
 | # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
 |---|---|---|---|---|---|---|
 | 1 | `src/app/sitemap.ts:124-148` | sitemap / `<lastmod>` | İlçe (6×6=36) ve tür (6×6=36) iniş sayfalarının **hepsine** aynı `newestJobDate` yazılıyordu. Üretimde 3 ilçenin (Güzelyurt, İskele, Lefke) **0 ilanı** var ama sitemap onları en yeni ilan tarihiyle (`2026-11-05T16:08:07Z`) damgalıyordu | her sayfa yalnızca **kendini değiştiren** tarihi taşımalı; kendi verisi yoksa `<lastmod>` **hiç olmamalı** | Google "consistently and verifiably accurate" olmayan `<lastmod>`'u düşürür; boş ilçe sayfası başka ilçedeki ilana tarihleniyordu | **düzeltildi** |
-| 2 | `/jobs`, `/companies`, `/rehber`, `/blog` | JSON-LD mount | İndeks sayfaları sayfaya-özel JSON-LD yayınlamıyor | `CollectionPage`+`BreadcrumbList` | zengin sonuç kaybı | devredildi → #203 (GEO üretir, SEO mount eder) |
+| 2 | `/jobs`, `/companies`, `/rehber`, `/blog` | JSON-LD mount | İndeks sayfaları sayfaya-özel JSON-LD yayınlamıyordu; GEO üreticileri (#203, PR #232) merge oldu ama **mount edilmemişti** | `CollectionPage`+`BreadcrumbList` | 4 indeks sayfası × 6 dil zengin sonuç kaybediyordu | **düzeltildi** (mount) |
 | 3 | `src/messages/*.json` `Legal` | SEO meta | `/privacy`,`/cookies`,`/terms` meta 6 dilde aynı Türkçe | her dil kendi metni | 18 sayfa kopya meta+gövde | devredildi → #141 |
 | 4 | 404 `<html>` | SEO meta | 404'te `lang`/`dir` yok, SSR gövdesi boş | `<html lang dir>` | `fa` RTL sinyali yok | devredildi → #149 (kök neden kanıtı yorumda) |
 | 5 | Bing/Yandex doğrulama | bulunabilirlik | `msvalidate.01`/`yandex-verification` üretimde yok | iki motor doğrulanmalı | indeksleme yavaş | devredildi → #173 |
@@ -803,6 +808,15 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
   `/`, `/en`, `/de`, `/jobs` gibi ilan listeleyen rotalar ve rehber/blog
   (kendi authored tarihleri var) **koruyor** (42 kayıt). Sitemap yine geçerli XML,
   186 `<loc>`.
+- **Bulgu 2 (önce):** GEO üreticileri (#232) merge edildi ama route'lar mount
+  etmiyordu — `/jobs`, `/companies`, `/rehber`, `/blog` yalnız layout grafiğini
+  yayınlıyordu. **Sonra** (standalone): dördü de `CollectionPage` +
+  `BreadcrumbList` yayınlıyor; etiketler ürünün kendi çevirilerinden
+  (`Nav.jobs`, `Nav.employer`, `Footer.links.guides`, `Nav.blog`):
+  `tr: İş İlanları / Şirketler / Kariyer rehberleri / İş Haberleri`,
+  `en: Jobs / Companies / Career guides / Business News`,
+  `de: Stellenangebote / Unternehmen / Karriereratgeber / Geschäftsnachrichten`.
+  Breadcrumb 2 adımlı (home → sayfa), `about` = `{"@type":"Thing","name":<label>}`.
 - **Google dayanağı:** resmî doküman — *"Google uses the `<lastmod>` value if it's
   consistently and verifiably (for example by comparing to the last modification
   of the page) accurate. The `<lastmod>` value should reflect the date and time of
@@ -827,8 +841,8 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
 
 ### Düzeltilen / devredilen
 
-- **Düzeltildi:** #1 (`src/app/sitemap.ts`).
-- **Devredildi:** #203, #141, #149, #173.
+- **Düzeltildi:** #1 (`src/app/sitemap.ts`), #2 (indeks JSON-LD mount'u — dört route).
+- **Devredildi:** #141, #149, #173.
 
 ### Sonraki lane için notlar
 
