@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getLocalePrefix } from "@/i18n/routing";
 import { hasAssignedPlatformRole, getCurrentUser } from "@/server/dal/user";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
+import { staleUnverifiedTotpFactorIds } from "./admin-mfa-factors";
 
 export type AdminMfaState = {
   status: "idle" | "error";
@@ -58,6 +59,24 @@ export async function beginAdminMfa(
   const verifiedFactor = factorList.totp.find(
     (factor) => factor.status === "verified",
   );
+
+  // A prior enrollment that was started but never confirmed leaves an
+  // unverified factor behind. It is absent from `factorList.totp` (auth-js
+  // buckets only verified factors there) but still occupies a row, so a fresh
+  // enroll would be rejected with `mfa_factor_name_conflict` and the admin
+  // could never finish setup. Unenrolling an unverified factor needs no AAL2,
+  // so clearing the stale rows here is what makes a retry possible.
+  for (const factorId of staleUnverifiedTotpFactorIds(factorList.all)) {
+    const { error: unenrollError } = await supabase.auth.mfa.unenroll({
+      factorId,
+    });
+    if (unenrollError) {
+      console.warn("A stale unverified admin MFA factor could not be removed.", {
+        code: unenrollError.code,
+      });
+    }
+  }
+
   if (verifiedFactor) {
     const { data: challenge, error } = await supabase.auth.mfa.challenge({
       factorId: verifiedFactor.id,

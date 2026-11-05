@@ -90,3 +90,84 @@ modüllerle yürütüldü ve birim testiyle kilitlendi.
 - E-posta şablonları (6 dil, marka, erişilebilirlik) ve `config.toml` kablolaması
   incelendi: şablon adları GoTrue listesiyle eşleşiyor, `content_path`'ler
   mevcut, konular yerelleştirilmiş. Bu turda değişiklik gerekmedi.
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (micro-denetim turu)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Değişen dosyalar:
+  src/features/identity/admin-mfa-factors.ts        (yeni, saf seçici)
+  src/features/identity/admin-mfa-factors.test.ts   (yeni, 6 test)
+  src/features/identity/identity-client-boundary.test.ts (yeni, 2 test)
+  src/features/identity/admin-mfa-actions.ts        (bayat faktör temizliği)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (388, 8'i yeni) / test:security ✅ (21: 17 pass, 4 todo — hepsi
+  önceden var olan, lane dışı bulgular)
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; şablon/config değişmedi)
+```
+
+### Denetlenen dosyalar
+`git ls-files` ile 23 identity + 4 `(auth)` route + 7 şablon = **34 dosya**,
+tamamına bakıldı. Bakılmayan dosya yok.
+
+### Bulgular
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `admin-mfa-actions.ts:59-78` | mantık/durum makinesi | Yarım kalan TOTP enrollment satırı `listFactors().totp`'ta görünmez (auth-js yalnız `verified` bucket'lar) ama satır kalır; aynı `friendlyName` ile ikinci enroll GoTrue'da `mfa_factor_name_conflict` (422) → `setupFailed` | Bayat doğrulanmamış faktör enroll'dan önce temizlenir | Yönetici kurulum ekranından bir kez çıktıysa 2FA'yı **hiç** tamamlayamaz; 10 denemede `MaxEnrolledFactors` dolup kalıcı kilit | düzeltildi |
+| 2 | `auth-errors.ts:13` | hata yolu | GoTrue `same_password` döndüğünde `messageForAuthErrorCode` eşlemediği için genel `passwordUpdateFailed` gösterilir | "Yeni şifre eskisinden farklı olmalı" mesajı | Kullanıcı nedenini anlamaz, aynı şifreyi tekrar dener | devredildi (aşağıda) |
+| 3 | `turnstile.ts:8` | ölü kod | `turnstileResponseField` export'u hiçbir yerden okunmuyor (üretici/tüketici aynı dosyada sabit kullanıyor) | — | Önemsiz; silmek churn | bilgi |
+
+### Düzeltilen / devredilen
+- **Düzeltildi (#1):** `beginAdminMfa`, `mfa.enroll` çağrısından **önce**
+  `staleUnverifiedTotpFactorIds(factorList.all)` ile seçilen bayat
+  doğrulanmamış TOTP faktörlerini `mfa.unenroll` ile siler. Doğrulanmamış
+  faktörün silinmesi AAL2 gerektirmez; doğrulanmış faktöre dokunulmaz.
+- **Devredildi (#2):** `same_password` eşlemesi `src/messages/**` içine yeni bir
+  anahtar eklemeyi gerektiriyor; o dizin sahiplik tablosunda hiçbir lane'e
+  atanmamış. Tek-yazar kuralını bozmamak için bu lane dosyaya dokunmadı.
+  Sahibi belirlenince: `authErrorMessages`'a `same_password: "passwordUnchanged"`
+  ekle + 6 katalogda `AuthForms.messages.passwordUnchanged`. (Kanıt: GoTrue
+  `internal/api/user.go` → `ErrorCodeSamePassword`.)
+
+### Güvenlik değerlendirmesi (security skill)
+- Kimlik istemci sınırı tarandı: hiçbir `"use client"` identity modülü `@/server/**`
+  import etmiyor, `NEXT_PUBLIC_` olmayan env okumuyor. Yeni `identity-client-boundary.test.ts`
+  bunu ratchet'ler.
+- `service_role` hiçbir identity dosyasında yok (yalnız `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+  ve `AUTH_OAUTH_PROVIDERS` okunuyor).
+- Açık yönlendirme: callback yalnız sabit sözlük (`candidate`/`company`, `email`/`oauth`/`reset`)
+  kullanıyor; testlerde `//evil.example`, `../../etc` reddi kilitli.
+- `mfa.unenroll` yalnız **oturum sahibinin** kendi faktörünü siler (GoTrue
+  `UnenrollFactor` oturum+faktör eşleşmesi ister); yetki yükseltme yolu yok.
+
+### QA (qa-changes skill)
+Gerçek modül (`tsx`) ile before/after — GoTrue `validateFactors` + auth-js
+`listFactors` bucket'laması modellendi:
+```
+has verified factor?      : false (false -> enroll path)
+BEFORE (no cleanup)       : 422 mfa_factor_name_conflict -> setupFailed
+stale ids selected        : [ 'stale' ]
+AFTER  (cleanup applied)  : 200 enrollment started
+```
+Tam yerel Supabase + Mailpit E2E'si bu sandbox'ta Docker olmadığı için
+çalıştırılamadı; mantık gerçek modülle yürütüldü ve birim testiyle kilitlendi.
+
+### Şablonlar (bu tur)
+6 GoTrue şablonu + `password-changed.html` yeniden okundu: GoTrue `EmailData`
+(`.Email`, `.NewEmail`, `.ConfirmationURL`, `.Token`, `.SiteURL`, `.Data`) ile
+uyumlu, `<script>`/inline handler/`javascript:`/iframe yok, linkler mutlak https,
+tek stil sayfası. Değişiklik gerekmedi.
+
+### Sahibin yapması gerekenler
+- `src/app/[locale]/auth/callback/route.ts` hâlâ hiçbir lane'e atanmamış (önceki
+  turdan devam). Auth ile ilgili; LANE-AUTH'a atanmalı.
+- `src/messages/**` sahipliği belirsiz: AUTH'a verilirse #2 burada kapatılabilir.
+- **Değişmez kural 3:** `src/features/identity/**` sahipliği LANE-URUN'dan
+  (`src/features/**`) hariç tutulmalı; `docs/lanes/00-orchestration.md` tablosu
+  bunu şu an `!src/features/identity/**` ile yapıyor — teyit yeterli.
+
+### Sonraki lane için notlar
+- **Invite akışı** (önceki turdan): GoTrue davet linki implicit (`#access_token=`)
+  döndürüyor; callback yalnız PKCE `?code=` işliyor. Ayrı iş.
