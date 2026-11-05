@@ -144,13 +144,25 @@ jobs:
       # The download is a network call to a CDN and fails transiently (seen
       # once: the step failed while the tests themselves passed). Retry it
       # rather than fail a whole shard on a flake.
+      # Split the two halves: `install-deps` needs apt/sudo and is deterministic,
+      # while the browser *download* is the part that fails transiently. Retrying
+      # the whole `--with-deps` command does not work — the retry wrapper cannot
+      # kill the sudo child and the step dies with `kill EPERM` (seen on #192).
+      - name: Install Playwright system dependencies
+        run: bunx playwright install-deps chrome
+
       - name: Install Playwright browser
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_wait_seconds: 15
-          command: bunx playwright install --with-deps chrome
+        run: |
+          set -uo pipefail
+          for attempt in 1 2 3; do
+            if bunx playwright install chrome; then
+              exit 0
+            fi
+            echo "::warning::playwright install failed (attempt $attempt), retrying"
+            sleep 15
+          done
+          echo "::error::playwright install failed after 3 attempts"
+          exit 1
 
       - name: Set up Supabase CLI
         id: supabase_cli
