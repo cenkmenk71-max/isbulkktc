@@ -19,6 +19,10 @@ export function NewPasswordForm() {
 
   const hasConfirmation = confirmation.length > 0;
   const passwordsMatch = password.length > 0 && password === confirmation;
+  // The server action can reject the update (expired session, weak password).
+  // Wire the message to the fields the same way the sign-in / sign-up / reset
+  // forms do, so a screen reader hears *why* and not only a generic alert.
+  const showStatusMessage = state.message !== "idle";
 
   return (
     <form className="editorial-form" action={action}>
@@ -28,7 +32,12 @@ export function NewPasswordForm() {
         <span className="editorial-password-field">
           <input
             id="reset-new-password"
-            aria-describedby="reset-password-hint"
+            aria-describedby={
+              showStatusMessage
+                ? "reset-password-hint reset-new-password-message"
+                : "reset-password-hint"
+            }
+            aria-invalid={state.status === "error"}
             autoComplete="new-password"
             maxLength={128}
             minLength={10}
@@ -57,7 +66,12 @@ export function NewPasswordForm() {
         <span className="editorial-password-field">
           <input
             id="reset-confirm-password"
-            aria-describedby="reset-confirm-hint"
+            aria-describedby={
+              showStatusMessage
+                ? "reset-confirm-hint reset-new-password-message"
+                : "reset-confirm-hint"
+            }
+            aria-invalid={state.status === "error"}
             autoComplete="new-password"
             maxLength={128}
             minLength={10}
@@ -106,6 +120,7 @@ export function NewPasswordForm() {
           aria-live="polite"
           className="editorial-form-message"
           data-status={state.status}
+          id="reset-new-password-message"
           role={state.status === "error" ? "alert" : "status"}
         >
           {copy(`messages.${state.message}`)}

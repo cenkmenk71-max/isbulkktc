@@ -537,3 +537,64 @@ düzenlendi; kalanlar önceki turlarda denetlendi. Bakılmayan dosya yok.
 ### Sahibin yapması gerekenler
 - Gerçek LinkedIn ile "zaten kayıtlı" senaryosunu üretimde doğrula (bu sandbox'ta
   gerçek OAuth round-trip yok); beklenen: `oauthAccountExists` mesajı + buton.
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (micro-denetim turu: #195 sahiplik ayrımı)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Aldığı issue: #195 (auth e-postaları hizasız) — sahiplik ayrımı + micro-denetim
+Değişen dosyalar:
+  src/features/identity/new-password-form.tsx   (aria-invalid + describedby)
+  src/features/identity/form-error-a11y.test.ts (yeni, 2 test)
+Devredilen: #227 (LANE-SUPABASE + LANE-CLOUDFLARE)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (496, 2'si yeni) / test:security ✅ (41 pass, 2 todo, 0 fail)
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration değişmedi)
+```
+
+### Denetlenen dosyalar (micro-denetim)
+`git ls-files 'src/features/identity/**' 'src/app/[locale]/(auth)/**'
+'supabase/templates/**'` → **38 dosya**; hepsine bakıldı. Bakılmayan dosya yok.
+
+### #195 — neden LANE-AUTH düzeltmedi (devir)
+İki parça, ikisi de sahiplik dışı:
+1. `[auth.smtp]` yok → `supabase/config.toml` **LANE-SUPABASE**'in (tablo satırı
+   + AUTH brief'i: "dokunma, ihtiyacı raporla"). Kanıt: `grep -niE 'smtp'
+   supabase/config.toml` → boş.
+2. DKIM 1024-bit → Resend paneli + DNS; repo dosyası yok.
+→ **#227** (`lane:supabase` + `lane:cloudflare` + `agent:handoff`) açıldı, kanıt
+ve önerilen blok gövdesinde.
+
+### Bulgular
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `new-password-form.tsx:33,66,118` | erişilebilirlik | Şifre alanlarında `aria-invalid` yok; hata `<p>`'inde `id` yok → alan mesaja bağlanmıyor | Diğer 3 formdaki gibi `aria-invalid` + `aria-describedby` | Ekran okuyucu "neden başarısız"ı duymaz; alan geçersiz işaretlenmez (WCAG 3.3.1/4.1.2) | düzeltildi |
+| 2 | `supabase/config.toml` | e-posta teslimi | `[auth.smtp]` yok | Resend SMTP bloğu | Auth postaları hizasız → spam | devredildi (#227) |
+| 3 | `turnstile.ts:8` | ölü kod | `turnstileResponseField` export'u dışarıdan okunmuyor | — | önemsiz | bilgi |
+| 4 | `sign-in-form.tsx:53-66` | erişilebilirlik | Resend alt-formunun mesajında `id` yok | — | Görünür alan yok (yalnız gizli input), mesaj zaten `role=alert` → dangling ref yok | bilgi |
+
+### Düzeltilen (#1)
+`new-password-form.tsx`: iki şifre alanına `aria-invalid={state.status === "error"}`
+ve hata mesajına `id="reset-new-password-message"` eklendi; alanlar
+`aria-describedby`'lerine bu id'yi (ipucu id'sini kaybetmeden) ekliyor. Diğer üç
+formun sözleşmesiyle aynı.
+
+### Kanıt
+- Yeni `form-error-a11y.test.ts` (2 test): dört formun tamamında alan→mesaj
+  bağlantısı, `aria-invalid`, `aria-live`, `role=alert` sözleşmesini kilitler.
+- `bun run test:unit` 496/496 (todo'lar QA'nın #208 izleme testleri).
+
+### Güvenlik değerlendirmesi (security skill)
+- Yalnız ARIA nitelikleri eklendi; form gönderimi/doğrulaması değişmedi.
+- `aria-describedby` id'leri statik literal (kullanıcı girdisi yok).
+- `service_role` hiçbir değişen dosyada yok.
+
+### Devredilen
+- **#227** → LANE-SUPABASE (`[auth.smtp]`) + LANE-CLOUDFLARE (DKIM DNS).
+
+### Sahibin yapması gerekenler
+- #227'deki `[auth.smtp]` bloğunu `config.toml`'a ekle (LANE-SUPABASE) ve
+  RESEND_API_KEY'i düzelt (#186).
+- DKIM'i 2048-bit'e yenile (Resend paneli) + TXT yayınla (LANE-CLOUDFLARE).
