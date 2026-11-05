@@ -82,6 +82,79 @@ test("the RLS table matcher handles digits and quoting (self-test)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// 1b. Every public table is revoked from the client roles.
+//
+// RLS is the row-level gate; the table-level gate is the `revoke`. Supabase's
+// `pg_default_acl` hands every new `public` table to `anon`/`authenticated`, and
+// `revoke ... from public` does not remove those explicit per-role entries — the
+// same mechanism that leaked `list_engagement_recipients` for functions
+// (AGENTS.md). The function half of this is ratcheted by
+// `function_privileges.test.sql`; the table half had no guard at all, so a new
+// migration could `create table public.x` and forget the revoke while this suite
+// (and the threat model's "every table is revoked" claim) stayed green. This
+// test makes the table half fail in the fast job, before the Docker stack boots.
+// ---------------------------------------------------------------------------
+
+/** Every `public` table created anywhere in the migration set. */
+function createdTables(): Set<string> {
+  const tables = new Set<string>();
+  for (const { sql } of files) {
+    for (const match of sql.matchAll(
+      /create\s+table\s+(?:if\s+not\s+exists\s+)?public\."?([A-Za-z0-9_]+)"?/gi,
+    )) {
+      tables.add(match[1]);
+    }
+  }
+  return tables;
+}
+
+/**
+ * Tables revoked from *both* `anon` and `authenticated`. A `revoke` may name a
+ * comma-separated list of tables (`revoke all on table public.a, public.b from
+ * anon, authenticated;`), which the repository uses, so the table side is split
+ * too rather than assumed to be a single identifier.
+ */
+function revokedTablesFromClients(sql: string): Set<string> {
+  const revoked = new Set<string>();
+  for (const match of sql.matchAll(
+    /revoke\s+all\s+on\s+table\s+([^;]+?)\s+from\s+([^;]+);/gi,
+  )) {
+    const roles = match[2].toLowerCase();
+    if (!/\banon\b/.test(roles) || !/\bauthenticated\b/.test(roles)) continue;
+    for (const table of match[1].matchAll(/public\.\s*"?([A-Za-z0-9_]+)"?/g)) {
+      revoked.add(table[1]);
+    }
+  }
+  return revoked;
+}
+
+test("the table-revoke matcher handles comma-separated lists (self-test)", () => {
+  const revoked = (sql: string) => [...revokedTablesFromClients(sql)];
+  assert.deepEqual(revoked("revoke all on table public.a from anon, authenticated;"), ["a"]);
+  assert.deepEqual(
+    revoked("revoke all on table public.a, public.b, public.c from anon, authenticated;"),
+    ["a", "b", "c"],
+  );
+  assert.deepEqual(
+    revoked("revoke all on table public.a, public.b from public, anon, authenticated;"),
+    ["a", "b"],
+  );
+  // A revoke that misses either client role does not count as covering the table.
+  assert.deepEqual(revoked("revoke all on table public.a from anon;"), []);
+  assert.deepEqual(revoked("revoke all on table public.a from public;"), []);
+});
+
+test("every public table is revoked from anon and authenticated", () => {
+  const revoked = revokedTablesFromClients(allSql);
+  const offenders = [...createdTables()].filter((table) => !revoked.has(table));
+  assert.deepEqual(
+    offenders,
+    [],
+    `public tables never revoked from the client roles: ${offenders.join(", ")}`,
+  );
+});
+
+// ---------------------------------------------------------------------------
 // 2. Every SECURITY DEFINER function pins search_path.
 //
 // A definer function runs with the owner's privileges; an unqualified name in

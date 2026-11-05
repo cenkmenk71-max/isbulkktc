@@ -130,12 +130,14 @@ issue açar.
 
 ### Doğrulanan güçlü kontroller (kanıtlı)
 
-- **Yetki sınırı:** `public` şemasındaki 29 tablonun tamamı RLS ile açılıyor;
-  istemciye `grant` edilen her fonksiyon, `revoke ... from public, anon,
-  authenticated` ile eşleşiyor. `tests/security/sql-hardening.test.ts` bunu her
-  migration'da statik olarak zorlar ve pgTAP ratchet whitelist'i ile
-  karşılaştırır (isim + argüman sayısı), böylece Docker beklemeden sapma yakalanır.
-- **`SECURITY DEFINER` hijyeni:** 82 definer fonksiyonunun hepsi `set search_path
+- **Yetki sınırı:** `public` şemasındaki 30 tablonun tamamı RLS ile açılıyor;
+  istemciye `grant` edilen her fonksiyon `revoke ... from public, anon,
+  authenticated` ile eşleşiyor; ve her tablo `anon` + `authenticated`'ten
+  revoke'lu. `tests/security/sql-hardening.test.ts` bu üçünü her migration'da
+  statik olarak zorlar — fonksiyon grant'ını pgTAP ratchet whitelist'i ile
+  karşılaştırır (isim + argüman sayısı), tablo revoke'unu ise (virgüllü çoklu
+  liste dâhil) doğrudan denetler — böylece Docker beklemeden sapma yakalanır.
+- **`SECURITY DEFINER` hijyeni:** 83 definer fonksiyonunun hepsi `set search_path
   = ''` ile sabitlenmiş ve gövdeleri tam nitelikli (`pg_catalog.*`, `public.*`)
   referans kullanıyor.
 - **Yönetici RPC'leri:** 13 `admin_*` fonksiyonunun tamamı gövdesinde

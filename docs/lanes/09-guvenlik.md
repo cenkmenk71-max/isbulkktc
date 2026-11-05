@@ -168,3 +168,26 @@ Bu turda main'e inen iki düzeltme kapıya terfi etti; kalan iki `todo` yürürl
   (LANE-URUN + LANE-SUPABASE); (b) `unsubscribe-token-core.ts` `server-only`
   eksik → #102 (LANE-URUN).
 - **Bakılmayan:** yok — 9 test dosyası + 2 doküman.
+
+## Durum (2026-11-05, 6. tur) — tablo grant/revoke invariantı
+
+Brief'in 1. hedefi "her tablo/fonksiyon/RPC gerçekten kapalı mı?". Fonksiyon yarısı
+statik olarak ratchet'liydi; **tablo yarısı hiç korunmuyordu**.
+
+- **Bulgu + düzeltme: tablo revoke'u statik olarak zorlanmıyordu.** Supabase'in
+  `pg_default_acl`'i her yeni `public` tabloyu `anon`/`authenticated`'e açar ve
+  `revoke ... from public` bu per-role grant'leri **kaldırmaz** (AGENTS.md'de
+  fonksiyonlar için belgelenmiş; tablolar için de aynı). Fonksiyonlar
+  `function_privileges.test.sql` + `sql-hardening` ratchet'iyle korunuyordu, ama
+  bir tablo için `revoke` unutulsa **hiçbir** test kırmızı olmuyordu — oysa
+  `threat-model.md` "her tablo revoke'lu" diyordu. `sql-hardening.test.ts`'e
+  "every public table is revoked from anon and authenticated" invariantı eklendi
+  (virgüllü çoklu tablo listesi destekli) + self-test. Bugün 30/30 tablo temiz.
+  (Mutation: revoke'suz bir `create table` eklenince test kırmızı.)
+- **Doğrulanan sayılar:** 30 `public` tablo (30/30 RLS + 30/30 revoke), 83
+  `security definer` (hepsi `search_path = ''`). `threat-model.md`'deki 29/82
+  sayıları düzeltildi.
+- **Kalan iki açık `todo`:** #206 (throttle app-yolu IP), #102 (`server-only`).
+  #206'nın DB yarısı indi (LANE-SUPABASE `20261106100000`, `x-client-ip`'i
+  okuyor) ama app yarısı (action header'ı göndermeli) hâlâ LANE-URUN'da.
+- **Bakılmayan:** yok — 9 test dosyası + 2 doküman.
