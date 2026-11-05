@@ -37,11 +37,22 @@ npx tsx tests/visual/run-visual.ts --update   # write baselines/<name>.png
 A failing run writes `test-results/visual/<name>.actual.png` and
 `<name>.diff.png` (changed pixels in red over a dimmed baseline).
 
-> **Not yet a gate.** `package.json` and `.github/workflows/**` belong to
-> LANE-INFRA, so this layer has no script and no CI job yet — it is a documented,
-> runnable suite. The wiring is tracked in the issue linked from the PR that
-> added this directory. `tsx --test <glob>` that matches nothing exits 0, so when
-> the step is added, confirm from the CI output that the shots actually ran.
+> **Baselines are pinned to the CI runner, not to a workstation.** The baseline
+> PNGs in this directory are the renders of the GitHub `ubuntu-24.04` runner
+> (`google-chrome-stable`, CI's throwaway env), not of a local machine. The two
+> environments rasterise the same webfonts differently — the same code, same
+> Chrome build, and same committed baselines gave 12/12 shots failing on CI and
+> 12/12 passing locally, on the *same* text-heavy crops. The runner's own render
+> is byte-for-byte reproducible across runs, so it is the reference. Regenerate
+> the baselines **from the runner** (see "Updating baselines"), never from a
+> local build, or the next CI run will be red for a reason that is not a
+> regression.
+
+> **Not yet a required gate.** `package.json` and `.github/workflows/**` belong
+> to LANE-INFRA. The layer is wired into the `E2E (1/4)` job as an **advisory**
+> step (`continue-on-error`), which still runs all 12 shots, prints the table and
+> uploads the diff images. It becomes required once the baselines match the
+> runner — which is what the committed PNGs now do.
 
 ## The shots
 
@@ -107,6 +118,25 @@ A baseline is a reviewed artifact. To change one deliberately:
 
 Never widen `defaultMaxDiffPixelRatio` to silence a real change; fix the render or
 update the baseline with a reason.
+
+### Regenerating for the runner (the normal case)
+
+Because the committed baselines are the runner's renders, the authoritative
+`--update` runs **on the runner**. When a real, intended UI change needs new
+baselines, read them out of the CI artifacts rather than writing them locally:
+
+1. Push the change; the advisory `Visual regression` step fails and uploads
+   `visual-regression-artifacts` (the `*.actual.png` for every shot).
+2. Download the artifact and copy each `*.actual.png` over
+   `tests/visual/baselines/<name>.png`.
+3. Confirm the copy is the render you meant: `diffRgba(ci, newBaseline, 12)`
+   must be `0`, and the dimensions must be unchanged unless the layout changed.
+4. Commit the PNGs. The next CI run is green, and a *later* unintended change is
+   now caught against a reference the runner actually produces.
+
+The runner render was verified byte-for-byte reproducible across two independent
+CI runs before it was adopted (issue #210), which is what makes step 3 a real
+check rather than a hope.
 
 ## Files
 
