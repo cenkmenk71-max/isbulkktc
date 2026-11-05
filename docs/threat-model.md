@@ -176,6 +176,9 @@ issue açar.
   tetikledikleri e-postadan **önce** istemci adresi ve gönderilen adres başına
   sabit-pencere hız sınırı uygular (`src/features/abuse/**`). Böylece form
   üzerinden istenmeyen e-posta ve gelen kutusu boğma vektörü kapandı.
+  `tests/security/anonymous-rpc-throttle.test.ts` bunu **sıra** olarak zorlar
+  (throttle `RateLimiter.check(` çağrısı RPC'den ve mail fan-out'undan **önce**
+  gelmeli), yalnız varlık olarak değil.
 - **Oturum doğrulaması:** proxy oturumu `auth.getClaims()` ile **imza doğrulayarak**
   okur (ham `getSession()` değil), böylece çerez sahtelenerek başka kullanıcı
   render edilemez. Tarayıcıda `createBrowserClient` yok; uygulama Supabase'e

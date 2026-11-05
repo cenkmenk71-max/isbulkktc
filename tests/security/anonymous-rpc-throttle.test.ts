@@ -89,15 +89,35 @@ test("the server action applies a throttle before it calls the RPC", () => {
   // The control exists — this half passes today and is the reason the earlier
   // "no abuse control at all" finding was closed. It is also why the gap below
   // is easy to miss: the form is protected, the endpoint is not.
+  //
+  // The assertion is *ordering*, not presence: the throttle must run before the
+  // RPC (which stores the row) and before the mail fan-out. A version that only
+  // matched `RateLimiter.check(` would pass even if the check were moved after
+  // the RPC — the row would be written and the mail sent before the limit was
+  // consulted, so the limit would bound nothing.
   for (const relative of [
     "src/features/feedback/actions.ts",
     "src/features/sales/actions.ts",
   ]) {
     const source = read(relative);
-    assert.match(
-      source,
-      /RateLimiter\.check\(/,
-      `${relative} no longer throttles before the RPC`,
+    const check = source.indexOf("RateLimiter.check(");
+    assert.ok(check > -1, `${relative} no longer throttles before the RPC`);
+
+    const rpc = source.indexOf('supabase.rpc("submit_');
+    assert.ok(rpc > -1, `${relative}: the submit RPC call was not found`);
+    assert.ok(
+      check < rpc,
+      `${relative} calls the RPC before it throttles, so the row is written ` +
+        `before the limit is consulted`,
+    );
+
+    const mail = source.indexOf("sendFeedbackEmails(") >= 0
+      ? source.indexOf("sendFeedbackEmails(")
+      : source.indexOf("sendSalesLeadEmails(");
+    assert.ok(mail > -1, `${relative}: the mail fan-out call was not found`);
+    assert.ok(
+      check < mail,
+      `${relative} sends mail before it throttles, so a loop mails without bound`,
     );
   }
 });

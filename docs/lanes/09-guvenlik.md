@@ -327,3 +327,20 @@ endpoint'i kaydeden **iki** yol var.
   yeni bir yazar sessizce kaçamaz (self-test: üçüncü bir yazar eklenince kırmızı).
 - **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #262 (SSRF
   allowlist), #206 (throttle app-yolu IP), #102 (server-only).
+
+## Durum (2026-11-05, 13. tur) — throttle sırası (varlık değil)
+
+Threat model'in "form throttle'ı RPC'den **ve** mail'den önce çalışır" iddiasını
+test ettim: `anonymous-rpc-throttle.test.ts`'teki ilgili test adı "before it calls
+the RPC" diyordu ama yalnız `RateLimiter.check(` **varlığını** arıyordu.
+
+- **Bulgu + düzeltme: sıra zorlanmıyordu, yalnız varlık.** Throttle bloğunu RPC
+  çağrısının **arkasına** taşıyan bir mutasyon testi **yeşil bırakıyordu** — yani
+  satır yazılıp mail gittikten sonra limiter'a bakılsa bile test geçerdi; limiter
+  hiçbir şeyi sınırlamazdı. Test artık `indexOf` ile **gerçek sırayı** doğrular:
+  throttle çağrısı hem `supabase.rpc("submit_…")`'dan hem mail fan-out'undan
+  (`sendFeedbackEmails`/`sendSalesLeadEmails`) önce gelmeli.
+- **Kanıt (mutation):** throttle'ı RPC'den sonraya taşı → kırmızı
+  (`… calls the RPC before it throttles …`).
+- **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #262, #206,
+  #102.
