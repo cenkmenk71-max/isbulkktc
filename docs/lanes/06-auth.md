@@ -653,3 +653,60 @@ Bu, testin hatayı gerçekten yakaladığını kanıtlar.
 - Gerçek tarayıcıda captcha'lı kayıt akışını doğrula (yerel/üretim), çünkü bu
   düzeltme istemci runtime'ında; bu sandbox'ta tarayıcı E2E captcha'sız koşuyor.
 - **#227** (auth SMTP + DKIM) hâlâ LANE-SUPABASE + LANE-CLOUDFLARE'i bekliyor.
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (micro-denetim turu 3)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Aldığı issue: yok (yeni sahipsiz lane:auth issue'su yok) → micro-denetim
+Değişen dosyalar:
+  src/features/identity/schemas.ts              (displayName: kontrol karakteri reddi)
+  src/features/identity/display-name-schema.test.ts (yeni, 2 test)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (516, 2'si yeni) / test:security ✅ (61 pass, 2 todo, 0 fail)
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration/şablon değişmedi)
+```
+
+### Denetlenen dosyalar (micro-denetim)
+`git ls-files 'src/features/identity/**'` (33) + 4 `(auth)` route + callback +
+7 şablon → **45 dosya**; hepsine bakıldı. Bakılmayan dosya yok.
+
+### Bulgular
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `schemas.ts:25` (`displayName`) | doğruluk / sınır girdi | `z.string().trim().min(2).max(80)` kontrol karakterlerini kabul ediyor: `"\u0000\u0000"`, `"a\nb"`, `"a\tb"`, `"a\u007fb"`, `"a\u009fb"` geçiyor | POSIX `[[:cntrl:]]` reddedilmeli | **NUL** Postgres'te hiçbir karakter tipinde saklanamaz ("the character with code zero … cannot be stored", PG 8.3) → `handle_new_auth_user` INSERT'i patlar, istemcinin kabul ettiği kayıt sunucuda başarısız olur; ayrıca satır sonu/DEL/C1 ismi bozar | düzeltildi |
+| 2 | `oauth-claims.ts:2` vs `schemas.ts` | tutarlılık | `deriveDisplayName` zaten `[[:cntrl:]]` siliyor ama şema kabul ediyordu → iki türetme çelişiyordu | aynı küme | İsim/kayıt tutarsızlığı | düzeltildi (#1 ile) |
+| 3 | `turnstile.ts:8` | ölü kod | `turnstileResponseField` dışarıdan okunmuyor | — | önemsiz | bilgi |
+| 4 | 7 şablon | tutarlılık | logo/preheader/tablo/inline stil birebir aynı, tek stylesheet | — | sorun yok | bilgi |
+
+### Düzeltilen (#1)
+`displayNameSchema` eklendi: `trim().min(2).max(80)` + `regex(/^[^\u0000-\u001f\u007f-\u009f]*$/)`.
+`signUpSchema` bunu kullanır. Regex (custom `message` yerine) seçildi çünkü
+`auth-messages.test.ts` bekçisi `SignInFormState` union'ını bu dosyadaki **ilk
+`message` anahtarından** dilimliyor; yukarıya ikinci bir anahtar eklemek dilimi
+kaydırıp bekçiyi kırıyordu (bu turda yakalandı ve düzeltildi).
+
+### Kanıt (mutasyon testi)
+`display-name-schema.test.ts` gerçek şemayı sürer:
+```
+BUGGY (z.string().trim().min(2).max(80))  → ✖ kontrol karakterli isim kabul ediliyor
+FIXED (displayNameSchema)                 → ✔ 2/2 pass
+```
+NUL/LF/CRLF/TAB/DEL/C1 reddediliyor; `"Ayşe Yılmaz"`, `"Παπαδόπουλος"`, `"محمد"`,
+`"😀😀"`, 80 karakterlik isim ve trim kabul ediliyor.
+
+### Güvenlik değerlendirmesi (security skill)
+- Girdi doğrulaması **sınırda** (şema) yapılıyor; sunucu action'ı zaten
+  `invalidForm` döndürüyor, yani DB'ye ulaşmadan reddediliyor.
+- Reddedilen küme `public.oauth_profile_claims` (SECURITY DEFINER, `search_path=''`)
+  ile aynı; DB ile istemci sözleşmesi artık örtüşüyor.
+- Bidi override (`U+202E`) gibi görsel-karışıklık karakterleri bu turda
+  kapsam dışı bırakıldı; ayrı bir sertleştirme olarak değerlendirilebilir (bilgi).
+
+### Sahibin yapması gerekenler
+- **#227** (auth SMTP + DKIM) hâlâ LANE-SUPABASE + LANE-CLOUDFLARE'i bekliyor.
+- **#191** (marka paleti) sahiplik çelişkisi (#191 yorumlarında) çözülmeli; AUTH
+  şablonları `email-layout.ts` ile aynı yeşili (`#0D5C3A`) kullanıyor ve o dosya
+  değişirse şablonlar da güncellenmeli.
