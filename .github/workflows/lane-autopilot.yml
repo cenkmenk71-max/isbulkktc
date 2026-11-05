@@ -12,9 +12,12 @@ name: Lane autopilot
 
 on:
   schedule:
-    # Every 30 minutes. A pass that finds no capacity is cheap: it stops early
-    # and does not spend a lane's attempt budget.
-    - cron: '*/30 * * * *'
+    # GitHub's scheduler is best-effort: under load it delays a run by tens of
+    # minutes, so `*/30` was observed firing every ~55 minutes. Two offset
+    # entries raise the chance of one landing near the intended time. The pass
+    # is idempotent, so a duplicate run is harmless.
+    - cron: '*/20 * * * *'
+    - cron: '7,27,47 * * * *'
   workflow_dispatch:
     inputs:
       dry_run:

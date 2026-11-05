@@ -164,18 +164,34 @@ function handoffIssues() {
 function mergeReadyPullRequests(prs, dryRun) {
   const gate = /^\.github\/workflows\//;
   const merged = [];
+  const stalled = [];
   for (const pr of prs) {
     const labels = (pr.labels ?? []).map((l) => l.name ?? l);
+    // A PR that carries a brake is deliberately left for a human. Say so, so a
+    // stalled PR is visible instead of silent — #193 sat CLEAN with no
+    // auto-merge and nothing reported it.
     if (labels.includes('agent:hold') || labels.includes('agent:blocked')) {
+      stalled.push({
+        number: pr.number,
+        reason: `held for a human (${labels.filter((l) => l.startsWith('agent:')).join(', ')})`,
+      });
       continue;
     }
-    if (pr.mergeStateStatus !== 'CLEAN') continue;
-    if (pr.autoMergeRequest) continue;
     if (pr.isDraft) continue;
     const files = JSON.parse(
       gh(['pr', 'view', String(pr.number), '--json', 'files', '--jq', '.files']),
     );
-    if (files.some((f) => gate.test(f.path))) continue;
+    // A PR touching the CI gate is never auto-merged: a lane must not be able to
+    // weaken the checks that gate it. Report it too.
+    if (files.some((f) => gate.test(f.path))) {
+      stalled.push({ number: pr.number, reason: 'touches the CI gate' });
+      continue;
+    }
+    if (pr.mergeStateStatus !== 'CLEAN') {
+      stalled.push({ number: pr.number, reason: `state ${pr.mergeStateStatus}` });
+      continue;
+    }
+    if (pr.autoMergeRequest) continue;
     if (dryRun) {
       merged.push({ number: pr.number, action: 'would merge' });
       continue;
@@ -195,7 +211,7 @@ function mergeReadyPullRequests(prs, dryRun) {
       merged.push({ number: pr.number, action: `failed: ${error.message}` });
     }
   }
-  return merged;
+  return { merged, stalled };
 }
 
 /** Lane tasks this process has started, newest first, from the cloud API. */
@@ -520,10 +536,16 @@ async function main() {
 
   // Reconcile PRs before starting anything: a ready PR should land even if its
   // opening event was missed.
-  const mergeResults = mergeReadyPullRequests(prs, dryRun);
+  const { merged: mergeResults, stalled } = mergeReadyPullRequests(prs, dryRun);
   if (mergeResults.length > 0) {
     console.log('\nready PRs:');
     for (const m of mergeResults) console.log(`  #${m.number} ${m.action}`);
+  }
+  // Never leave a stalled PR silent. A PR that waits for a human is the one
+  // failure the system cannot fix itself, so it must be the loudest line.
+  if (stalled.length > 0) {
+    console.log(`\nSTALLED PRs (need a human): ${stalled.length}`);
+    for (const s of stalled) console.log(`  #${s.number} — ${s.reason}`);
   }
 
   // A bot-opened PR has its checks held at action_required until a human
