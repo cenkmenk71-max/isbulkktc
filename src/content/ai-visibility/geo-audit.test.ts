@@ -401,3 +401,62 @@ test("the brief describes the structured data the site actually emits", () => {
     "the region name is the area the organization graph names",
   );
 });
+
+test("the brand name is not re-typed in any producer", () => {
+  // The brand appears in the guide/article breadcrumb and in the JobPosting
+  // identifier. A second literal is how a rename leaves the site naming itself
+  // two different ways inside its own graph, so every producer must read
+  // SITE_NAME.
+  const guide = buildGuideStructuredData({
+    locale: "tr",
+    baseUrl: BASE_URL,
+    slug: "s",
+    title: "T",
+    description: "D",
+    updated: "2026-11-04",
+  });
+  const trail = breadcrumb(guide);
+  assert.equal(trail[0].name, SITE_NAME);
+
+  const producers = [
+    "src/content/ai-visibility/structured-data.ts",
+    "src/features/jobs/job-posting-structured-data.ts",
+  ];
+  for (const file of producers) {
+    const source = readFileSync(path.join(REPO_ROOT, file), "utf8");
+    assert.ok(
+      !/"İşBul KKTC"/.test(source),
+      `${file} re-types the brand name; import SITE_NAME instead`,
+    );
+  }
+});
+
+test("an article's datePublished is its publication date, not its edit date", () => {
+  const args = {
+    locale: "tr",
+    baseUrl: BASE_URL,
+    slug: "s",
+    title: "T",
+    description: "D",
+    sectionName: "Blog",
+    pathname: "/blog",
+  } as const;
+
+  // A caller that tracks the two dates separately must have both flow through.
+  const edited = buildGuideStructuredData({
+    ...args,
+    published: "2026-10-01",
+    updated: "2026-11-04",
+  })["@graph"][0] as Record<string, unknown>;
+  assert.equal(edited.datePublished, "2026-10-01");
+  assert.equal(edited.dateModified, "2026-11-04");
+
+  // A caller that does not (the historical shape) keeps a single date, so its
+  // output is unchanged.
+  const single = buildGuideStructuredData({
+    ...args,
+    updated: "2026-11-04",
+  })["@graph"][0] as Record<string, unknown>;
+  assert.equal(single.datePublished, "2026-11-04");
+  assert.equal(single.dateModified, "2026-11-04");
+});

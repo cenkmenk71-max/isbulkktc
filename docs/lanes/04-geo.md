@@ -303,3 +303,42 @@ olarak sağlam (kopya slug/açıklama, boş bölüm yok).
 `lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (509 test,
 +2 yeni) · iki guard için kırmızı→yeşil kanıtlandı · refactor sonrası grafik
 çıktısı `diff` boş (geriye dönük uyumlu).
+
+---
+
+## Rapor — micro-denetim turu 4 (issue #126), branch `lane/geo`
+
+**Durum:** düzeltmeler branch'te, CI bekliyor. Bir devir: LANE-SEO (#<TBD>).
+
+### Denetlenen dosyalar (`git ls-files`)
+
+| Glob | N | Bakıldı |
+|---|---|---|
+| `src/content/**` | 24 | 24 (hepsi) |
+| `src/app/llms.txt/**` | 1 | 1 |
+| `public/llms*` | 0 | — (dosya yok) |
+| `src/features/**/structured-data*.ts` | 1 | 1 |
+| `src/features/jobs/job-posting-structured-data.ts` | 1 | 1 |
+
+Not: LANE-İÇERİK `src/content/**` **metin** tarafının sahibi; bu denetim
+**JSON-LD/llms üreticileri** ve `site.ts` (operatör verisi) üzerindedir.
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `structured-data.ts:218`, `job-posting-structured-data.ts:69` | tutarlılık (tek kaynak) | Marka adı `"İşBul KKTC"` iki üreticide yeniden yazılmış; `SITE_NAME` (`site.ts`) zaten var | üreticiler `SITE_NAME` okumalı | bir yeniden adlandırma, grafiğin kendi içinde siteye iki ad verdirir (breadcrumb home etiketi + `JobPosting.identifier.name`) | **düzeltildi** |
+| 2 | `structured-data.ts:215` | doğruluk / GEO | `Article.datePublished` her zaman `updated`'dan geliyor; `Article` modelinde ayrı `published` alanı var ve hiçbir yerde okunmuyor | `datePublished` ilk yayın tarihi olmalı | bir yazı düzenlendiğinde Google'a "bu tarihte yayımlandı" denir; `ARTICLE_PUBLISHED` (2026-11-04) ile `updated` ayrıştığında yanlış olur | üretici **düzeltildi** (opsiyonel `published`, varsayılan `updated`); çağrı yeri **devredildi** (#<TBD>) |
+
+**Doğru bulunanlar (bulgu yok):** `Article`/`JobPosting` zorunlu alanları tam;
+ilçe adları 6 dilde `HomeJobSearch.districts` ile birebir; brief'teki 135 URL
+gerçek rotaya çözülüyor; FAQ JSON-LD görünen metinle aynı kaynaktan;
+`directApply` yalnız platform ilanında `true`; `hiringOrganization.sameAs`
+schema.org tanımına uygun; rehber/yazı içeriği 6 dilde yapısal olarak sağlam;
+`COUNTRY_CODE` tek kaynak (tur 3); ilçe sayfasının `about.containedInPlace.name`
+değerinin yerelleşmesi bilinçli tasarım (sayfa zaten yerelleşiyor, `identifier`
+sabit) — bulgu sayılmadı.
+
+### Kapılar
+`lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (516 test,
++2 yeni) · iki guard için kırmızı→yeşil kanıtlandı · grafik çıktısı `diff` boş.

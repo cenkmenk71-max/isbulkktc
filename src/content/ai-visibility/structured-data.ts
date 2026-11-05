@@ -167,6 +167,7 @@ export function buildGuideStructuredData({
   title,
   description,
   updated,
+  published = updated,
   pathname = "/rehber",
   sectionName = pathname === "/blog" ? "Blog" : "Rehber",
 }: {
@@ -175,7 +176,15 @@ export function buildGuideStructuredData({
   slug: string;
   title: string;
   description: string;
+  /** The copy's last-authored date (`dateModified`). */
   updated: string;
+  /**
+   * The copy's first-publication date (`datePublished`). Google's Article markup
+   * wants the original publication date, so an edited article must not claim it
+   * was first published on the edit date. Defaults to `updated` so a caller that
+   * does not track a separate date keeps its current (single-date) output.
+   */
+  published?: string;
   /** The section the article lives under (`/rehber` or `/blog`). */
   pathname?: string;
   /**
@@ -203,7 +212,7 @@ export function buildGuideStructuredData({
         description,
         url,
         inLanguage: locale,
-        datePublished: updated,
+        datePublished: published,
         dateModified: updated,
         author: { "@id": `${siteUrl}/#organization` },
         publisher: { "@id": `${siteUrl}/#organization` },
@@ -215,7 +224,7 @@ export function buildGuideStructuredData({
         "@type": "BreadcrumbList",
         "@id": `${url}#breadcrumb`,
         itemListElement: [
-          { "@type": "ListItem", position: 1, name: "İşBul KKTC", item: `${siteUrl}${prefix}` },
+          { "@type": "ListItem", position: 1, name: SITE_NAME, item: `${siteUrl}${prefix}` },
           { "@type": "ListItem", position: 2, name: sectionName, item: sectionUrl },
           { "@type": "ListItem", position: 3, name: title, item: url },
         ],

@@ -1,4 +1,4 @@
-import { COUNTRY_CODE, regionNames } from "@/content/ai-visibility/site";
+import { COUNTRY_CODE, regionNames, SITE_NAME } from "@/content/ai-visibility/site";
 import { routing } from "@/i18n/routing";
 import { getLocalizedPageUrl } from "@/lib/seo";
 import type { PublicJobListing } from "@/server/dal/jobs";
@@ -66,7 +66,7 @@ export function buildJobPostingStructuredData({
     description,
     identifier: {
       "@type": "PropertyValue",
-      name: "İşBul KKTC",
+      name: SITE_NAME,
       value: job.id,
     },
     datePosted: job.published_at,
