@@ -42,15 +42,27 @@ test("guarded redirects keep the visitor in their locale", async ({ page }) => {
   }
 });
 
-test("public routes stay within mobile, tablet, and desktop viewports in every locale", async ({
-  page,
-}) => {
-  test.setTimeout(450_000);
+/**
+ * One test per (locale, route) instead of one test covering all 252 checks.
+ *
+ * The previous shape was a single test looping 6 locales x 7 routes x 6 widths:
+ * ~1.6 minutes in one Playwright test. Any overflow threw on the first offender,
+ * so the ~200 checks after it never ran, and a shard that drew this file got a
+ * monolith it could not split. The work is identical — the same 42 navigations
+ * and 252 width checks — but each now reports on its own line, fails only for its
+ * own locale/route, and distributes across shards.
+ */
+for (const locale of locales) {
+  const prefix = locale === "tr" ? "" : `/${locale}`;
 
-  for (const locale of locales) {
-    const prefix = locale === "tr" ? "" : `/${locale}`;
+  for (const route of publicRoutes) {
+    test(`${locale}${route} stays within every viewport width`, async ({
+      page,
+    }) => {
+      // One navigation plus six bounded polls (20s each) fits comfortably; the
+      // cap only absorbs a cold first render under a loaded CI runner.
+      test.setTimeout(120_000);
 
-    for (const route of publicRoutes) {
       await page.goto(`${prefix}${route}`, { waitUntil: "domcontentloaded" });
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
       await expect(page.locator("html")).toHaveAttribute(
@@ -99,6 +111,6 @@ test("public routes stay within mobile, tablet, and desktop viewports in every l
           throw new Error(`${String(error)}\nOverflow details: ${details}`);
         }
       }
-    }
+    });
   }
-});
+}

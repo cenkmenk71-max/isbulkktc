@@ -521,8 +521,18 @@ test("anonymous visitors can search job previews without opening job details", a
   await expect(section.getByLabel("Çalışma türü")).toHaveValue("full_time");
   await expect(section.getByLabel("Çalışma düzeni")).toHaveValue("hybrid");
 
-  const previews = section.locator(".home-job-preview");
-  expect(await previews.count()).toBeLessThanOrEqual(6);
+  // The query above matches nothing, so the preview list is empty and a loop
+  // over it would run zero times — the "a preview cannot open a job detail"
+  // property would never be exercised. Navigate to the unfiltered page, where
+  // previews are present, and assert the property there.
+  await page.goto("/tr");
+  const previews = page
+    .getByRole("region", { name: "Fırsatları hesap açmadan keşfedin." })
+    .locator(".home-job-preview");
+  await expect(previews.first()).toBeVisible();
+  const previewCount = await previews.count();
+  expect(previewCount).toBeGreaterThan(0);
+  expect(previewCount).toBeLessThanOrEqual(6);
   for (const preview of await previews.all()) {
     await expect(preview.locator("h4")).toBeVisible();
     await expect(preview.locator("p")).toBeVisible();
