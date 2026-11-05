@@ -85,6 +85,11 @@ export default async function DistrictPage({ params }: DistrictPageProps) {
     baseUrl: getAppBaseUrl(),
     districtSlug: requestedDistrict,
     districtName,
+    // The graph names the page the way the reader sees it. Without this the
+    // `CollectionPage.name` stays the Turkish-suffixed default on every locale,
+    // so an English page would assert "Kyrenia İş İlanları" alongside its own
+    // English copy.
+    pageName: t("title", { district: districtName }),
     // Breadcrumb labels must name the pages the trail walks through, not the
     // home hero's slogans: `HomeJobSearch.title`/`eyebrow` are marketing copy
     // ("Fırsatları hesap açmadan keşfedin."), which a crawler would read as the

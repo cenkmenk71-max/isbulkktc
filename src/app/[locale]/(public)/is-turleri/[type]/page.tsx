@@ -81,6 +81,11 @@ export default async function JobTypePage({ params }: JobTypePageProps) {
     baseUrl: getAppBaseUrl(),
     typeSlug: requestedType,
     typeName,
+    // The graph names the page the way the reader sees it. Without this the
+    // `CollectionPage.name` stays the Turkish-suffixed default on every locale,
+    // so an English page would assert "Internship İş İlanları" alongside its own
+    // English copy.
+    pageName: t("title", { type: typeName }),
     // Breadcrumb labels must name the pages the trail walks through, not the
     // home hero's slogans: `HomeJobSearch.title`/`eyebrow` are marketing copy
     // ("Fırsatları hesap açmadan keşfedin."), which a crawler would read as the

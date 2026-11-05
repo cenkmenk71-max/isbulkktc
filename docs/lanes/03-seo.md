@@ -705,6 +705,7 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
 | 3 | `src/messages/*.json` `Legal` | SEO meta | `/privacy`,`/cookies`,`/terms` meta 6 dilde aynı Türkçe | her dil kendi metni | 18 sayfa kopya meta+gövde | devredildi → #141 |
 | 4 | 404 `<html>` | SEO meta | 404'te `lang`/`dir` yok, SSR gövdesi boş | `<html lang dir>` | `fa` RTL sinyali yok | devredildi → #149 |
 | 5 | Bing/Yandex doğrulama | bulunabilirlik | `msvalidate.01`/`yandex-verification` üretimde yok | iki motor doğrulanmalı | indeksleme yavaş | devredildi → #173 |
+| 6 | `is-ilanlari/[district]` + `is-turleri/[type]` mount'ları | JSON-LD / yerelleştirme | `pageName` geçilmiyordu → `CollectionPage.name` Türkçe ekli varsayılan (`'Kyrenia İş İlanları'`) kalıyordu; `en`/`de`/`fa` sayfada görünen `<h1>` İngilizce/Almanca iken | `pageName: t("title", …)` — görünen başlık | yapısal veri, sayfanın kendi `<h1>`'i ile uyuşmuyordu (36 ilçe + 36 tür kaydı) | **düzeltildi** |
 | 6 | `/jobs`, `/companies`, `/rehber`, `/blog` | JSON-LD mount | İndeks sayfaları sayfaya-özel JSON-LD yayınlamıyor | `CollectionPage`+`BreadcrumbList` | zengin sonuç kaybı | devredildi → #203 (GEO üretir, SEO mount eder) |
 
 ### Kanıt
@@ -772,6 +773,8 @@ Değişen dosyalar: src/app/sitemap.ts,
                   src/app/[locale]/(public)/companies/page.tsx,
                   src/app/[locale]/(public)/rehber/page.tsx,
                   src/app/[locale]/(public)/blog/page.tsx,
+                  src/app/[locale]/(public)/is-ilanlari/[district]/page.tsx,
+                  src/app/[locale]/(public)/is-turleri/[type]/page.tsx,
                   docs/lanes/03-seo.md
 Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
             test:unit ✅ (486 pass, 8 belgeli todo)  test:security ✅ (41 pass, 2 todo)
@@ -817,6 +820,11 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
   `en: Jobs / Companies / Career guides / Business News`,
   `de: Stellenangebote / Unternehmen / Karriereratgeber / Geschäftsnachrichten`.
   Breadcrumb 2 adımlı (home → sayfa), `about` = `{"@type":"Thing","name":<label>}`.
+- **Bulgu 6 (önce):** `/en/is-ilanlari/girne` → `<h1>Jobs in Kyrenia` ama
+  `CollectionPage.name = 'Kyrenia İş İlanları'`; `/de/is-turleri/staj` →
+  `<h1>Praktikum Jobs` ama `name = 'Praktikum İş İlanları'`. **Sonra:** her
+  dilde `name` görünen `<h1>` ile birebir aynı (`Jobs in Kyrenia`,
+  `Praktikum Jobs`, `آگهی‌های استخدام در گیرنه`). 36 ilçe + 36 tür kaydı.
 - **Google dayanağı:** resmî doküman — *"Google uses the `<lastmod>` value if it's
   consistently and verifiably (for example by comparing to the last modification
   of the page) accurate. The `<lastmod>` value should reflect the date and time of
@@ -841,7 +849,8 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
 
 ### Düzeltilen / devredilen
 
-- **Düzeltildi:** #1 (`src/app/sitemap.ts`), #2 (indeks JSON-LD mount'u — dört route).
+- **Düzeltildi:** #1 (`src/app/sitemap.ts`), #2 (indeks JSON-LD mount'u — dört route),
+  #6 (`pageName` — ilçe/tür mount'ları).
 - **Devredildi:** #141, #149, #173.
 
 ### Sonraki lane için notlar
