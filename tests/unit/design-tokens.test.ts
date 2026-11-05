@@ -142,6 +142,40 @@ test("the palette keeps its canonical scale anchors", () => {
 });
 
 /**
+ * The semantic brand aliases are what the product actually paints with — `--green`
+ * alone is referenced over a hundred times (buttons, links, focus rings). Pinning
+ * the palette *anchors* above is not enough: those anchors can stay put while an
+ * alias silently points somewhere else, which repaints the whole brand with no
+ * test failing. #191 is exactly this failure in another surface (the email shell
+ * carried a "matches the app's --green token" comment over a value that did not
+ * match), so the alias→anchor mapping is asserted rather than assumed.
+ */
+test("the semantic brand aliases resolve to their documented palette anchors", () => {
+  const aliases = {
+    "--green": "--color-shade-green-800",
+    "--green-hover": "--color-shade-green-900",
+    "--green-deep": "--color-shade-green-950",
+    "--green-mid": "--color-shade-green-600",
+    "--green-soft": "--color-shade-green-100",
+    "--green-pale": "--color-shade-green-200",
+    "--green-highlight": "--color-shade-green-300",
+    "--ink": "--color-vanadium-950",
+    "--ink-2": "--color-vanadium-800",
+    "--ink-3": "--color-vanadium-700",
+    "--ink-4": "--color-vanadium-600",
+    "--line": "--color-vanadium-200",
+  } as const;
+
+  for (const [alias, anchor] of Object.entries(aliases)) {
+    assert.equal(
+      token(alias).replace(/\s+/g, ""),
+      `var(${anchor})`,
+      `${alias} must resolve to ${anchor}; a different shade repaints the brand with no other guard noticing.`,
+    );
+  }
+});
+
+/**
  * A card that fades in from `opacity: 0` also fades every label inside it. When
  * that label clears AA by a hair (the auth submit's brand blue does), the
  * mid-flight composite drops below 4.5:1 and the visitor sees a real flash of
@@ -332,4 +366,49 @@ test("every animation a rule plays has a matching @keyframes", () => {
     [],
     `These animations are played by a rule but have no @keyframes declaration, so they never run:\n${missing.join("\n")}`,
   );
+});
+
+/**
+ * The global reduced-motion reset must neutralise the *delay* as well as the
+ * duration. `hero-copy-enter` starts at `opacity: 0` and fills `backwards`, so a
+ * visitor who asks for reduced motion still sees the hero headline blank for the
+ * length of its `animation-delay` (0.16s / 0.28s) unless the delay is zeroed
+ * too: a zeroed duration does not skip the wait, it only collapses the motion
+ * that comes after it. The same holds for `transition-delay`. Resolve the reset
+ * from the `prefers-reduced-motion` block rather than matching a literal string
+ * so the guard follows the rule if it moves.
+ */
+test("the reduced-motion reset zeroes animation and transition delays", () => {
+  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const start = withoutComments.indexOf(
+    "@media (prefers-reduced-motion: reduce)",
+  );
+  assert.notEqual(start, -1, "the reduced-motion reset is missing");
+  const open = withoutComments.indexOf("{", start);
+  let depth = 0;
+  let end = -1;
+  for (let index = open; index < withoutComments.length; index += 1) {
+    if (withoutComments[index] === "{") depth += 1;
+    else if (withoutComments[index] === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        end = index;
+        break;
+      }
+    }
+  }
+  const reset = withoutComments.slice(open, end);
+
+  for (const property of [
+    "animation-duration",
+    "animation-delay",
+    "transition-duration",
+    "transition-delay",
+  ]) {
+    assert.match(
+      reset,
+      new RegExp(`${property}\\s*:\\s*0(?:\\.01ms|ms|s)?\\s*!important`),
+      `the reduced-motion reset must zero ${property}: a delayed entrance holds its start state (often opacity:0) for the whole delay even when the duration is collapsed.`,
+    );
+  }
 });

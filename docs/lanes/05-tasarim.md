@@ -237,3 +237,102 @@ işlendi.
 - Değişen dosyalar: `src/components/layout/site-header.tsx`,
   `src/components/layout/language-links.ts`, `src/components/layout/language-links.test.ts`,
   `tests/e2e/accessibility.spec.ts`. Hepsi bu lane'in kapsamında.
+
+---
+
+## LANE-TASARIM çalışma notları (2026-11-05, tur 4)
+
+Branch: `lane/tasarim`. Taban: `origin/main` @ `6228499`. Kuyrukta `agent:frontend`
++ `lane:tasarim` etiketli tek iş **#191** (marka paleti) idi; #220 `lane:urun`.
+
+### #191 — durum: sahiplik çelişkisi çözülene kadar e-posta tarafı devredildi
+
+#191 iki dosyayı (`supabase/functions/_shared/email-layout.ts`, `email-render.ts`)
+LANE-URUN'a veriyor ama sahiplik tablosu + `scripts/lane-collisions.mjs` `supabase/**`
+altını **LANE-SUPABASE**'e veriyor (önceki turda bu çelişki zaten rapor edildi).
+Kural katı: sahibi olmadığım dosyaya yazmam. Bu yüzden:
+
+- **Site tarafını yaptım** (benim: `src/styles/global.css` + guard'ım): marka
+  token'ları artık guard'lı (aşağıda Bulgu 4).
+- **E-posta tarafı** zaten `lane:urun` + `agent:handoff` etiketli #191'de duruyor;
+  yeni issue açmadım (kopya olurdu), #191'e kanıt + AA uyarısı yorumu bıraktım.
+  Uyarı: issue'nun önerdiği `inkSoft → --color-vanadium-500 (#707875)` eşlemesi
+  **WCAG AA'yı düşürür** (crayon-50 üzerinde 4.05:1 < 4.5:1); site tarafında
+  ikincil metin `--ink-4 = --color-vanadium-600 (#555d5a)` (6.06:1) kullanıyor.
+  Ayrıca `supabase/**` sahipliği LANE-SUPABASE'de olduğu için o dosyalara yazacak
+  lane'in netleşmesi gerekiyor.
+
+### Bulgu 3 — Reduced-motion reseti gecikmeyi sıfırlamıyordu; hero başlığı boş kalıyordu (düzeltildi)
+
+- **Belirti:** `prefers-reduced-motion: reduce` altında ana sayfa hero başlığının
+  satırları (`.hero-title-line`, `.hero-title-accent`) boyanın ardından **0.16s /
+  0.28s boyunca `opacity: 0`** kalıyordu.
+- **Kök neden:** `src/styles/global.css:1360` global reseti
+  `animation-duration: 0.01ms !important` yazıyor ama **`animation-delay`'e
+  dokunmuyor**. `@keyframes hero-copy-enter` `from { opacity: 0 }` ile başlıyor ve
+  kural `backwards` dolgu kullanıyor; dolayısıyla gecikme boyunca başlangıç karesi
+  (görünmez) tutuluyor. `:1721`'deki yorum ise "global reduced-motion kuralı
+  tümünü doğrudan son duruma indirir" diyor — bu **yanlıştı**; sıfırlanan süre
+  gecikmeyi atlamıyor, yalnızca ondan *sonraki* hareketi yok ediyor. Aynı boşluk
+  `transition-delay` için de var.
+- **Ölçüm (yerel dev, Chromium 155, `reducedMotion: reduce`):** düzeltmeden önce
+  `getComputedStyle(...).animationDelay` = `0.16s`/`0.28s`, `opacity` = `0`;
+  düzeltmeden sonra `0s`, `opacity` = `1`.
+- **Düzeltme:** global reseti `animation-delay: 0s !important` ve
+  `transition-delay: 0s !important` ile tamamla.
+- **Kanıt (piksel, `deviceScaleFactor: 2`, sharp diff):** oturmuş durumda (reduced
+  değil) hero öncesi↔sonrası **0/3230720 px** değişti, maxDelta 1 — normal
+  hareket hiç etkilenmedi; fark yalnızca reduced-motion ilk karede.
+- **Guard:** `tests/unit/design-tokens.test.ts` — "the reduced-motion reset zeroes
+  animation and transition delays": `prefers-reduced-motion` bloğunu çözer ve dört
+  özelliğin de sıfırlandığını şart koşar. Negatif test edildi (iki satır çıkarılınca
+  kırmızı).
+
+### Bulgu 4 — Marka alias'ları (`--green` vb.) hiçbir guard'da değildi (düzeltildi)
+
+- **Belirti:** `--green` (105 yerde `var(--green)`), `--green-hover/deep/mid/soft/…`,
+  `--ink*`, `--line` alias'ları bir palet çapasına çözülüyor ama hiçbir test bunu
+  doğrulamıyordu. Çapalar (`--color-shade-green-800` vb.) guard'lı; alias'lar değil.
+- **Etki:** `--green` başka bir shade'e çevrilse marka rengi tüm sitede değişir,
+  `check:frontend-source` ve `test:unit` **yeşil kalır** (ölçüldü).
+- **Düzeltme:** "the semantic brand aliases resolve to their documented palette
+  anchors" testi eklendi; 12 alias'ı çapasına bağlar. Negatif test edildi
+  (`--green` → `shade-green-500` yapılınca kırmızı).
+- **Neden bu #191'in konusu:** #191'de e-posta kabuğu "matches the app's `--green`
+  token" yorumu taşıyor ama değer uyuşmuyor — alias'ın sessizce kayabileceği tam
+  da bu sınıf. Guard, aynı hatanın site tarafında tekrarlanmasını engelliyor.
+
+### Micro-denetim (bu tur)
+
+- **Envanter:** `git ls-files 'src/components/**' 'src/experience/**' 'src/styles/**'`
+  → 56 dosya. Önceki turlarda denetlenenler dışında bu turda:
+- **Etkileşimli durumlar axe ile tarandı** (guard'ın görmediği haller): mobil menü
+  açık, sektör dizini açık, consent kartı, consent politika paneli, dil menüsü açık
+  — 6 dil × mobil. **0 ihlal.**
+- **Dokunma hedefi taraması:** 18 public rota × 3 dil (tr/de/fa), mobil 390px —
+  24px altı kontrol avı. Bulunanlar yalnızca **satır içi metin linkleri** (ör.
+  `editorial-text-link` 190×18), ki WCAG 2.5.8 istisnası (satır içi) kapsamında;
+  buton/kontrol hedefleri ≥44px. İhlal yok.
+- **320px yatay taşma:** 18 rota × 6 dil, `documentElement.scrollWidth` ölçümü —
+  **0 taşma.**
+- **Kontrast:** yeni ham hex yok; alias/çapa testi eklendi.
+- **RTL:** `html[dir=rtl]` girdi yönü kuralları ve mantıksal özellikler yerinde;
+  `fa` axe taraması temiz.
+- `autoAlpha` (yasak) yok; `visibility: hidden` yalnızca dekoratif bir yerde.
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅
+- `bun run test:unit` ✅ (501 test, +2 yeni guard)
+- `tests/e2e/home.spec.ts -g reduced-motion` ✅ 1 passed
+- `tests/e2e/accessibility.spec.ts` + `typography.spec.ts -g home` ✅ 9 passed
+
+### Sahibin yapması gerekenler
+
+- **#191 e-posta tarafı** → zaten `lane:urun` + `agent:handoff` etiketli; #191'e
+  kanıt + AA uyarısı yorumu bırakıldı. Önce hangi lane'in `supabase/**` altına
+  yazacağı netleşmeli (tablo LANE-SUPABASE diyor, issue LANE-URUN diyor).
+- Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
+  `docs/lanes/05-tasarim.md`. Hepsi bu lane'in kapsamında.
