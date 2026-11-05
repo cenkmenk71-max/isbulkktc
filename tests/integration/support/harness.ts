@@ -171,20 +171,43 @@ export class FakeSupabase {
   }
 
   auth = {
-    getUser: async () =>
-      this.script.user
+    getUser: async () => {
+      recorded.supabase.push({ kind: "auth", method: "getUser" });
+      return this.script.user
         ? { data: { user: this.script.user }, error: null }
-        : { data: { user: null }, error: null },
-    signInWithPassword: async () => ({ data: { user: null, session: null }, error: this.script.authError ?? null }),
-    signUp: async () => ({ data: { user: null, session: null }, error: this.script.authError ?? null }),
-    resend: async () => ({ data: null, error: this.script.authError ?? null }),
-    resetPasswordForEmail: async () => ({ data: null, error: this.script.authError ?? null }),
-    updateUser: async () => ({ data: { user: null }, error: this.script.authError ?? null }),
-    signOut: async () => ({ error: this.script.authError ?? null }),
-    signInWithOAuth: async () => ({
-      data: { url: "https://example.invalid/oauth" },
-      error: this.script.authError ?? null,
-    }),
+        : { data: { user: null }, error: null };
+    },
+    signInWithPassword: async () => {
+      recorded.supabase.push({ kind: "auth", method: "signInWithPassword" });
+      return { data: { user: null, session: null }, error: this.script.authError ?? null };
+    },
+    signUp: async () => {
+      recorded.supabase.push({ kind: "auth", method: "signUp" });
+      return { data: { user: null, session: null }, error: this.script.authError ?? null };
+    },
+    resend: async () => {
+      recorded.supabase.push({ kind: "auth", method: "resend" });
+      return { data: null, error: this.script.authError ?? null };
+    },
+    resetPasswordForEmail: async () => {
+      recorded.supabase.push({ kind: "auth", method: "resetPasswordForEmail" });
+      return { data: null, error: this.script.authError ?? null };
+    },
+    updateUser: async () => {
+      recorded.supabase.push({ kind: "auth", method: "updateUser" });
+      return { data: { user: null }, error: this.script.authError ?? null };
+    },
+    signOut: async () => {
+      recorded.supabase.push({ kind: "auth", method: "signOut" });
+      return { error: this.script.authError ?? null };
+    },
+    signInWithOAuth: async () => {
+      recorded.supabase.push({ kind: "auth", method: "signInWithOAuth" });
+      return {
+        data: { url: "https://example.invalid/oauth" },
+        error: this.script.authError ?? null,
+      };
+    },
     mfa: {
       getAuthenticatorAssuranceLevel: async () => ({
         data: { currentLevel: "aal1", nextLevel: "aal2" },
@@ -227,6 +250,18 @@ export function resetBoundary(script: FakeSupabaseScript = {}): FakeSupabase {
 
 export function setRequestHeaders(headers: Record<string, string>): void {
   requestHeaders = new Headers(headers);
+}
+
+/**
+ * The auth methods called on the fake GoTrue client, in order. Lets a test prove
+ * a credential change actually reached `updateUser` (or that it did not) — the
+ * value-only assertion cannot tell "the password was changed" from "the action
+ * returned success without touching the password".
+ */
+export function authMethods(): string[] {
+  return recorded.supabase
+    .filter((call): call is Extract<SupabaseCall, { kind: "auth" }> => call.kind === "auth")
+    .map((call) => call.method);
 }
 
 /**
