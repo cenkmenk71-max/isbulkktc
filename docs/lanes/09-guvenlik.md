@@ -289,3 +289,25 @@ Brief'in 2. hedefi (kimlik): `session-cookie-flags.test.ts` oturum çerezinin
   (b) intent çerezini `sameSite: "none"` yap → kırmızı.
 - **Bakılmayan:** yok — 12 test dosyası + 2 doküman. Kalan iki `todo` yürürlükte
   (#206 throttle app-yolu IP, #102 `server-only`).
+
+## Durum (2026-11-05, 11. tur) — push endpoint SSRF'i
+
+Brief'in 3. hedefi (girdi: SSRF/dosya/yol manipülasyonu) ilk kez derinlemesine
+tarandı; **gerçek ve daha önce bildirilmemiş bir SSRF** bulundu.
+
+- **Bulgu: kayıtlı push endpoint'i üzerinden SSRF.** `POST /api/push/subscriptions`
+  ile oturum açmış bir ziyaretçi `endpoint`'e **herhangi bir `https://` URL**
+  yazabilir (tek kontrol: `url().min(12).max(1024).startsWith("https://")`; aynısı
+  `register_push_subscription`'da). Cron worker (`/api/push/dispatch` →
+  `sendPushMessage` → `web-push`) o URL'ye **sunucudan** POST eder; **host
+  allowlist'i yok**, loopback/link-local/RFC1918/metadata engelli değil.
+- **Kanıt (ölçüldü):** gerçek `web-push` istemcisiyle yerel bir TCP dinleyicisine
+  karşı `endpoint = "https://127.0.0.1:<port>/internal-only"` → **1 bağlantı,
+  1568 bayt TLS ClientHello**. Yani kayıtlı endpoint worker'ı iç ağdaki keyfî bir
+  adrese bağlatıyor (kör SSRF + erişilebilirlik yoklaması).
+- **Yeni test + devir:** `tests/security/push-endpoint-ssrf.test.ts` (bulguyu `todo`
+  olarak belgeler; allowlist gelince kapıya terfi eder — self-test'te doğrulandı).
+  Sahibi LANE-URUN (`src/features/**`, `src/server/push/**`) + LANE-SUPABASE
+  (`supabase/**`) → **#262** (`agent:handoff`).
+- **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Diğer iki `todo` yürürlükte
+  (#206 throttle app-yolu IP, #102 `server-only`).

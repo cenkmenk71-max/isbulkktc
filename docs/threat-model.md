@@ -225,6 +225,25 @@ issue açar.
    altındaki diğer tüm sır-okuyan modüller bu işareti taşıyor; eksik olan, yanlış
    bir istemci içe aktarımını derleme hatası yerine sessiz bir sızıntıya çevirir.
    Kanıt: `tests/security/client-boundary.test.ts` (`todo`).
+3. **Push endpoint'i üzerinden SSRF** (sahibi: `src/features/**`, `src/server/push/**`
+   -> LANE-URUN; `supabase/**` -> LANE-SUPABASE). `POST /api/push/subscriptions`
+   ile kayıtlı bir ziyaretçi `endpoint` olarak **herhangi bir `https://` URL**
+   saklayabilir (tek kontrol: `z.string().url().min(12).max(1024).startsWith("https://")`;
+   aynı şekil `register_push_subscription`'da da var). Cron worker
+   (`/api/push/dispatch` -> `sendPushMessage` -> `web-push`) o URL'ye **sunucudan**
+   POST eder. **Host allowlist'i yok** (gerçek push servisleri: `fcm.googleapis.com`,
+   `updates.push.services.mozilla.com`, `*.notify.windows.com`, `web.push.apple.com`)
+   ve loopback / link-local / RFC1918 / bulut-metadata adresleri engellenmiyor.
+   Kanıt: gerçek `web-push` istemcisiyle yerel bir dinleyiciye karşı ölçüldü —
+   `endpoint = "https://127.0.0.1:<port>/internal-only"` (uygulamanın kontrolünü
+   geçer) `sendNotification` çağrısı dinleyiciye **1 bağlantı / 1568 bayt TLS
+   ClientHello** yaptı. Yani kayıtlı bir endpoint, worker'ı dağıtımın iç ağındaki
+   keyfî bir adrese bağlatabilir (kör SSRF + erişilebilirlik yoklaması).
+   Önerilen düzeltme: kayıt sınırında (route + `register_push_subscription`) push
+   servis host'larından oluşan bir allowlist zorla; özel/loopback/link-local
+   adresleri reddet; dilersen gönderim ucunda da doğrula. Kanıt:
+   `tests/security/push-endpoint-ssrf.test.ts` (`todo`). Devir: **#262**
+   (`agent:handoff`, LANE-URUN + LANE-SUPABASE).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
 
