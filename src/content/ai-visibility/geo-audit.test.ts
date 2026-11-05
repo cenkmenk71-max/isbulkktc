@@ -9,6 +9,7 @@ import {
 } from "@/content/ai-visibility/llms-brief";
 import {
   buildDistrictPageStructuredData,
+  buildGuideStructuredData,
   buildJobTypePageStructuredData,
   buildOrganizationGraph,
 } from "@/content/ai-visibility/structured-data";
@@ -159,6 +160,45 @@ test("a job-type page carries the same collection graph a district page does", (
       [2, "İş İlanları", "https://isbulkktc.com/jobs"],
       [3, "Tam zamanlı", "https://isbulkktc.com/is-turleri/tam-zamanli"],
     ],
+  );
+});
+
+test("the guide breadcrumb names its section in the caller's language", () => {
+  // `sectionName` is the one input the generator cannot know: the localized
+  // label lives in the route's message catalogue. Asserting that it flows into
+  // the breadcrumb is what stops a hardcoded Turkish/Latin label from shipping
+  // under a `de`/`fa` prefix (the district equivalent was fixed in #152).
+  for (const locale of routing.locales) {
+    const graph = buildGuideStructuredData({
+      locale,
+      baseUrl: BASE_URL,
+      slug: "s",
+      title: "T",
+      description: "D",
+      updated: "2026-11-04",
+      sectionName: `SECTION-${locale}`,
+    });
+    const trail = breadcrumb(graph);
+    assert.equal(trail[1].name, `SECTION-${locale}`, `${locale} section label`);
+    // The section node points at the un-prefixed-for-default section URL.
+    const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
+    assert.equal(trail[1].item, `https://isbulkktc.com${prefix}/rehber`);
+  }
+});
+
+test("the short brief scopes its prefix rule to the pages it actually applies to", () => {
+  const brief = buildLlmsBrief(BASE_URL);
+  // The rule is written for the primary pages, whose slugs are identical in
+  // every language. The guide links sit in the same list but do *not* follow it
+  // (their slugs are translated), so the document must say so rather than let a
+  // reader prefix a Turkish guide slug into a 404.
+  const rule = brief
+    .split("## Öne çıkan sayfalar")[1]
+    .split("## Sıkça sorulan sorular")[0]
+    .replace(/\s+/g, " ");
+  assert.ok(
+    /rehber bağlantıları bu kuralın istisnasıdır/i.test(rule),
+    "the prefix rule must name the guide links as an exception",
   );
 });
 

@@ -167,6 +167,7 @@ export function buildGuideStructuredData({
   description,
   updated,
   pathname = "/rehber",
+  sectionName = pathname === "/blog" ? "Blog" : "Rehber",
 }: {
   locale: AppLocale;
   baseUrl: URL;
@@ -176,12 +177,20 @@ export function buildGuideStructuredData({
   updated: string;
   /** The section the article lives under (`/rehber` or `/blog`). */
   pathname?: string;
+  /**
+   * The localized label of that section, for the breadcrumb. The call site owns
+   * the copy — the product already renders `Nav.blog` and the footer's guide
+   * label in every language, so passing one of those keeps the breadcrumb from
+   * naming a section in a language the page does not use. The default is the
+   * historical Turkish/Latin label, kept only so a caller that has not been
+   * updated yet still type-checks; pass the localized label.
+   */
+  sectionName?: string;
 }) {
   const siteUrl = baseUrl.origin;
   const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
   const url = `${siteUrl}${prefix}${pathname}/${slug}`;
   const sectionUrl = `${siteUrl}${prefix}${pathname}`;
-  const sectionName = pathname === "/blog" ? "Blog" : "Rehber";
 
   return {
     "@context": "https://schema.org",

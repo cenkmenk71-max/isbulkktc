@@ -1,5 +1,4 @@
 import type { AppLocale } from "@/i18n/routing";
-import { routing } from "@/i18n/routing";
 
 import { deArticles } from "./de";
 import { elArticles } from "./el";
@@ -32,9 +31,4 @@ export function getArticle(locale: AppLocale, slug: string): Article | undefined
 /** Every article slug (the same set in every locale), for routing. */
 export function getArticleSlugs(): readonly string[] {
   return trArticles.map((article) => article.slug);
-}
-
-/** Locales that actually have article copy, so the sitemap lists only live ones. */
-export function getArticleLocales(): readonly AppLocale[] {
-  return routing.locales.filter((locale) => byLocale[locale].length > 0);
 }

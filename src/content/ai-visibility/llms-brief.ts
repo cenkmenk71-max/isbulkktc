@@ -168,9 +168,12 @@ export function buildLlmsBrief(baseUrl: URL): string {
 ${primaryPageLines(baseUrl, routing.defaultLocale)}
 
 Her sayfa altı dilde sunulur; yerelleştirilmiş adresler yukarıdaki yolun
-başına dil kodu eklenerek elde edilir (ör. ${origin}/en/jobs). Arayüz metni
-çevrilir; kaynaktan gelen ilan metinleri Türkçedir ve altı önek altında aynı
-içeriği taşır, bu yüzden yalnızca varsayılan dildeki URL kanoniktir.
+başına dil kodu eklenerek elde edilir (ör. ${origin}/en/jobs). Rehber
+bağlantıları bu kuralın istisnasıdır: bir rehberin slug'ı her dilde
+çevrildiği için adresi dil kodunu eklemekle değil, o dildeki karşılığını
+yazmakla elde edilir (bkz. \`/llms-full.txt\`). Arayüz metni çevrilir;
+kaynaktan gelen ilan metinleri Türkçedir ve altı önek altında aynı içeriği
+taşır, bu yüzden yalnızca varsayılan dildeki URL kanoniktir.
 
 ## Sıkça sorulan sorular
 

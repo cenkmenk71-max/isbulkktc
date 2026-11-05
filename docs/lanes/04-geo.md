@@ -170,3 +170,52 @@ sloganı (`HomeJobSearch.title`) **değil**. Örnek kod ve beklenen JSON issue #
 ### Kapılar
 `lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (421 test,
 +2 yeni: koleksiyon şekli + dil öneki) · mount sonrası E2E LANE-SEO'nun PR'ında.
+
+---
+
+## Rapor — micro-denetim turu 2 (issue #126), branch `lane/geo`
+
+**Durum:** düzeltmeler branch'te, CI bekliyor.
+
+### Denetlenen dosyalar (`git ls-files`)
+
+| Glob | N | Bakıldı |
+|---|---|---|
+| `src/content/**` | 23 | 23 (hepsi) |
+| `src/app/llms.txt/**` | 1 | 1 |
+| `public/llms*` | 0 | — (dosya yok) |
+| `src/features/**/structured-data*.ts` | 1 | 1 |
+| `src/features/jobs/job-posting-structured-data.ts` | 1 | 1 |
+
+Okunan ama yazılmayan (sahibi başkası): `src/app/[locale]/layout.tsx`,
+`rehber/[slug]`, `blog/[slug]`, `is-ilanlari/[district]`, `jobs/[slug]`,
+`sitemap.ts`, `src/lib/seo.ts`, `src/lib/social-links.ts`.
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/content/ai-visibility/llms-brief.ts:170` | tutarlılık / GEO | Kısa brief "yerelleştirilmiş adresler yolun başına dil kodu eklenerek elde edilir" diyor; ama hemen üstünde listelediği 3 rehber bağlantısının slug'ı dile göre çevrili (`/en/rehber/kktc-is-bulma-rehberi` → 404) | kural, rehber bağlantılarının **istisna** olduğunu söylemeli | AI motoru brief'i izleyip 3 ölü URL türetiyor | **düzeltildi** |
+| 2 | `src/content/ai-visibility/structured-data.ts:209` | tutarlılık / GEO | `buildGuideStructuredData` breadcrumb 2. adımı `"Rehber"`/`"Blog"` olarak **sabit** yazıyor; `de`/`fa`/`ru`… altında da Türkçe/Latin | çağıran, ürünün kendi yerelleştirilmiş etiketini geçmeli (`Nav.blog`, footer guide etiketi) | yapısal veri, sayfanın kendi dilinde adlandırmadığı bir bölümü iddia ediyor (#152'deki ilçe hatasının eşdeğeri) | üretici **düzeltildi** (opsiyonel `sectionName`); çağrı yeri **devredildi** (#175) |
+| 3 | `src/content/guides/index.ts:42`, `src/content/editorial/index.ts:38` | ölü kod | `getGuideLocales()` / `getArticleLocales()` hiçbir yerde çağrılmıyor (repo geneli 0 kullanım) | kaldırılmalı | bakım yükü; yorum sitemap/static-params'ın kullandığını iddia ediyordu ama onlar `getGuideSlugs()`+`routing.locales` kullanıyor | **düzeltildi** |
+
+**Doğru bulunanlar (bulgu yok):** iki brief'teki 135 tekil URL'nin tamamı gerçek
+bir rotaya çözülüyor (`/sitemap.xml`, `/robots.txt`, `/llms-full.txt` dosya
+işleyicileri hariç, onlar da mevcut); `SearchAction.target` `?query=` — `/jobs`
+sayfası tam da `query` paramını okuyor; `Organization.logo` 512×512 mevcut asset;
+`areaServed` altı ilçe; `getConfiguredSocialProfiles` `src/lib/social-links.ts`
+ile aynı env anahtarlarını okuyor; FAQ JSON-LD ile görünen metin aynı kaynaktan;
+`JobPosting` zorunlu alanları (`title`,`description`,`datePosted`,
+`validThrough`,`hiringOrganization`,`jobLocation`) tam; `published` alanı ölü ama
+tipin parçası — bu turda dokunulmadı (bulgu değil, gözlem).
+
+### Devredilen — LANE-SEO (issue #175)
+
+`rehber/[slug]` ve `blog/[slug]` mount'ları `buildGuideStructuredData`'ya
+`sectionName` geçmeli (footer `links.guides` / `Nav.blog`). Varsayılan mevcut
+çıktıyı koruyor, yani devir merge edilene kadar regresyon yok.
+
+### Kapılar
+`lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (432 test,
++2 yeni: bölüm etiketi + brief kural kapsamı) · her iki guard için kırmızı→yeşil
+kanıtlandı.

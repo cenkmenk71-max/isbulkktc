@@ -1,5 +1,4 @@
 import type { AppLocale } from "@/i18n/routing";
-import { routing } from "@/i18n/routing";
 
 import { deGuides } from "./de";
 import { elGuides } from "./el";
@@ -32,13 +31,4 @@ export function getGuide(locale: AppLocale, slug: string): Guide | undefined {
 /** Every guide slug (they are the same set in every locale), for routing. */
 export function getGuideSlugs(): readonly string[] {
   return trGuides.map((guide) => guide.slug);
-}
-
-/**
- * Locales that actually have guide copy. A locale with no guides is left out of
- * the sitemap and the static params, so a URL is never advertised for a page
- * that would render empty.
- */
-export function getGuideLocales(): readonly AppLocale[] {
-  return routing.locales.filter((locale) => byLocale[locale].length > 0);
 }
