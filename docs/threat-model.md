@@ -196,6 +196,7 @@ issue açar.
    adresini (`clientIp()`) RPC'ye açık bir argümanla geçirsin (ya da supabase-js
    `global.headers` ile `cf-connecting-ip` eklesin), RPC de o argümanı başlığa
    tercih etsin. Kanıt: `tests/security/anonymous-rpc-throttle.test.ts` (`todo`).
+   Devir: **#206** (`agent:handoff`, LANE-URUN + LANE-SUPABASE).
 2. **`server-only` sınırı eksik** (sahibi: `src/server/email/**`, LANE-URUN).
    `src/server/email/unsubscribe-token-core.ts` `ENGAGEMENT_UNSUBSCRIBE_SECRET`
    ve `RESEND_API_KEY` okuyor ama `import "server-only"` taşımıyor. `src/server`

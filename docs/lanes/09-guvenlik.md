@@ -151,5 +151,6 @@ bir yeni açık bulgu (throttle'ın app-yolu) devredildi.
   server-action gönderimleri **tek paylaşılan kovaya** düşer; pencerede altıncı
   meşru gönderim (site geneli) generic "failed" ile reddedilir. Migration'ın
   "eksik başlık tek kovaya düşer" notu app için *normal* durum. Sahibi LANE-URUN
-  (`src/features/**`) + LANE-SUPABASE (`supabase/**`); test `todo` işaretli.
+  (`src/features/**`) + LANE-SUPABASE (`supabase/**`) → **#206** (`agent:handoff`);
+  test `todo` işaretli.
 - **Bakılmayan:** yok — 9 test dosyası + 2 doküman.
