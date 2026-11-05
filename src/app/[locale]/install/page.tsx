@@ -53,7 +53,10 @@ export async function generateMetadata({
     title,
     description,
     robots: { index: false, follow: true },
-    alternates: { canonical: canonicalUrl },
+    alternates: {
+      canonical: canonicalUrl,
+      types: { "application/rss+xml": "/feed.xml" },
+    },
     // Without an explicit block the page inherits the locale layout's generic
     // home-page card, so a QR/poster link shared in a chat unfurls with the
     // home title and description and no `og:url`. Build the social block from

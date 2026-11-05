@@ -93,6 +93,14 @@ export async function generateMetadata({
     // `noindex` Next injects for a 404 as a second, contradictory directive.
     // The Googlebot display hints are declared per page instead — see
     // `createLocalizedPageMetadata` — so a 404 carries one unambiguous tag.
+    //
+    // RSS autodiscovery is declared here for the routes that carry no page-level
+    // metadata (auth pages, the 404); the public pages declare it in
+    // `createLocalizedPageMetadata`, because Next replaces `alternates` at the
+    // deepest segment that declares it rather than merging the two.
+    alternates: {
+      types: { "application/rss+xml": "/feed.xml" },
+    },
     openGraph: {
       title: t("title"),
       description: t("description"),

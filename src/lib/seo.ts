@@ -139,6 +139,11 @@ export function createLocalizedPageMetadata({
     robots: { googleBot: googleBotHints },
     alternates: {
       canonical: canonicalUrl,
+      // RSS autodiscovery. Next replaces `alternates` wholesale at the deepest
+      // segment that declares it, so the layout-level link does not reach these
+      // pages; declaring it here keeps the feed discoverable from every public
+      // page instead of only the ones that inherit the layout's metadata.
+      types: { "application/rss+xml": "/feed.xml" },
       ...(contentLocale
         ? {}
         : {

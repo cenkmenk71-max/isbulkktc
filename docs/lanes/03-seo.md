@@ -506,7 +506,8 @@ Bakılmayan dosya yok.
 
 ```
 Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
-Değişen dosyalar: src/lib/seo.ts, docs/lanes/03-seo.md
+Değişen dosyalar: src/lib/seo.ts, src/app/[locale]/layout.tsx,
+                  src/app/[locale]/install/page.tsx, docs/lanes/03-seo.md
 Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
             test:unit ✅ (408/408)  test:security ✅ (22 pass, 2 belgeli todo)
             build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone + üretim doğrulaması ✅
@@ -544,7 +545,7 @@ halka lane dışında**: Bing/Yandex mülk doğrulaması yok ve indeks henüz ol
 | 2 | `src/app/[locale]/not-found.tsx` + kök layout | SEO meta | 404 yanıtı `<html>`'de `lang`/`dir` taşımıyor, SSR gövdesi boş | `<html lang dir>` | `fa` RTL sinyali yok | devredildi → **#149** |
 | 3 | `src/messages/*.json` `Legal` | SEO meta | `/privacy`,`/cookies`,`/terms` başlık+açıklaması 6 dilde aynı Türkçe | her dil kendi metni | 18 sayfa kopya meta+gövde | devredildi → **#141** |
 | 4 | `src/app/[locale]/(public)/is-turleri/[type]/page.tsx` | JSON-LD mount | Tür iniş sayfaları sayfaya-özel JSON-LD yayınlamıyor (ilçe yayınlıyor) | eşdeğer `CollectionPage`+`BreadcrumbList` | zengin sonuç kaybı | devredildi → **#152** (GEO üretir, SEO mount eder) |
-| 5 | `feed.xml` keşfi | SEO meta | `/feed.xml` 200 + geçerli RSS ama `<head>`'de `rel="alternate" type="application/rss+xml"` autodiscovery linki **yok** | `<link rel="alternate" type="application/rss+xml" href="/feed.xml">` | RSS keşfedilebilirliği düşük | devredildi (aşağıda issue) |
+| 5 | `src/lib/seo.ts` + `layout.tsx` + `install/page.tsx` | SEO meta | `/feed.xml` 200 + geçerli RSS ama hiçbir sayfanın `<head>`'inde RSS autodiscovery linki **yok** | `<link rel="alternate" type="application/rss+xml" href="/feed.xml">` | Okuyucu/crawler feed'i keşfedemez; 6 yazı yavaş dağılır | **düzeltildi** |
 
 ### Kanıt
 
@@ -563,8 +564,12 @@ halka lane dışında**: Bing/Yandex mülk doğrulaması yok ve indeks henüz ol
   ailesi kopya — hepsi yasal sayfalar.
 - **Bulgu 4:** `curl /is-turleri/tam-zamanli` → yalnız layout `WebSite|Organization`;
   `curl /is-ilanlari/girne` → + `CollectionPage|BreadcrumbList`.
-- **Bulgu 5:** `curl / | grep -i rss` → **yok**; `curl /feed.xml` → 200
-  `application/rss+xml`, 6 `<item>`.
+- **Bulgu 5 (önce):** `curl / | grep -i rss` → **yok**; `curl /feed.xml` → 200
+  `application/rss+xml`, 6 `<item>`. **Sonra** (standalone): `/`, `/jobs`,
+  `/rehber`, `/blog`, `/sss`, `/freelance`, `/en`, `/de`, `/login` ve 404 → her biri
+  `<link rel="alternate" type="application/rss+xml" href=".../feed.xml"/>`;
+  canonical + `hrefLang` seti değişmedi. Build çıktısı:
+  `canonical:s,types:{"application/rss+xml":"/feed.xml"}`.
 
 ### Doğrulanan ve sağlam bulunanlar (üretim)
 
