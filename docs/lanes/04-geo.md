@@ -342,3 +342,45 @@ sabit) — bulgu sayılmadı.
 ### Kapılar
 `lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (516 test,
 +2 yeni) · iki guard için kırmızı→yeşil kanıtlandı · grafik çıktısı `diff` boş.
+
+---
+
+## Rapor — micro-denetim turu 5 (issue #126), branch `lane/geo`
+
+**Durum:** düzeltmeler branch'te, CI bekliyor. Devir yok (iki düzeltme de GEO'nun
+kendi üreticisinde).
+
+### Denetlenen dosyalar (`git ls-files`)
+
+| Glob | N | Bakıldı |
+|---|---|---|
+| `src/content/**` | 24 | 24 (hepsi) |
+| `src/app/llms.txt/**` | 1 | 1 |
+| `public/llms*` | 0 | — (dosya yok) |
+| `src/features/**/structured-data*.ts` | 1 | 1 |
+| `src/features/jobs/job-posting-structured-data.ts` | 1 | 1 |
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `llms-brief.ts:65-70` | tutarlılık / AI-görünürlük | Liste kalemlerinin tek istisnası rehber bağlantılarıydı: anchor makine slug'ı (`Rehber: kktc-is-bulma-rehberi`); kardeşleri (ilçe, tür, birincil sayfalar) insan etiketi taşıyor | anchor hedefi adlandırmalı (rehberin kendi başlığı) | AI motoru alıntılanabilir bir ad görmüyor; brief okunabilirliği düşüyor | **düzeltildi** |
+| 2 | `llms-brief.ts:119-124` | tutarlılık / çok dillilik | Tam brief'in **her** dil bölümü birincil sayfalar için İngilizce etiket kullanıyordu (`de` bölümünde "Job listings") | etiket o dilde olmalı | 6 dilin 5'inde yarı İngilizce bölüm; "makine çevirisi kokusu" | **düzeltildi** |
+
+**Doğru bulunanlar (bulgu yok):** brief'teki 135 URL gerçek rotaya çözülüyor;
+`Article`/`JobPosting` zorunlu alanları tam; ilçe adları 6 dilde katalogla
+birebir; FAQ JSON-LD görünen metinle aynı kaynaktan; rehber/yazı içeriği 6 dilde
+yapısal olarak sağlam (kopya slug, boş bölüm, geçersiz tarih yok);
+`employmentType` değerleri (`FULL_TIME`, `CONTRACTOR`, `INTERN`…) ve
+`jobLocationType: "TELECOMMUTE"` Google'ın resmî JobPosting örneğiyle uyumlu.
+
+Değerlendirilip **bulgu sayılmayanlar:** `servedDistricts.alternates` arama
+alias tablosunun bir üst kümesi değil (ör. "lefkosa turk belediyesi" yok) — bu
+tablo `alternateName` için değil, arama normalizasyonu için; JSON-LD'de yer adı
+varyantları zaten Türkçe + İngilizce + Rumca biçimleri taşıyor. FAQ
+`dateModified` yönetilen içeriğin `updated_at`'ini izlemiyor — RPC o alanı
+döndürmüyor (LANE-SUPABASE'in alanı), GEO tarafında düzeltilemez.
+
+### Kapılar
+`lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (520 test,
++2 yeni) · iki guard için kırmızı→yeşil kanıtlandı.
