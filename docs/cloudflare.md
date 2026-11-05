@@ -272,3 +272,68 @@ Bu çıktı, "kök SPF'e include ekle" adımının gereksiz olduğunu kanıtlar.
 
 Ayrıntılı kanıt ve komutlar bu bölümde; ölçüm tekrarı:
 `curl -s -H 'accept: application/dns-json' 'https://cloudflare-dns.com/dns-query?name=send.isbulkktc.com&type=TXT'`.
+
+---
+
+## Uç/edge güvenlik mikro-denetimi — 2026-11-05 (tur 4)
+
+Bu turda canlı edge **cache-deception / cache-poisoning / origin-ifşası / WAF
+regresyonu** eksenlerinde yeniden tarandı. Açık veren olmadı; bir **yeni yapılandırma
+bulgusu (G-01)** var.
+
+### Ölçüm tablosu
+
+| # | Test | Gözlenen | Beklenen | Durum |
+|---|---|---|---|---|
+| **G-01** | **CF Email Obfuscation** | Footer e-posta linki `/cdn-cgi/l/email-protection#<hex>`'e çevriliyor; `__cf_email__` span + `email-decode.min.js` enjekte | HTML'de düz `mailto:` | 🔴 **yeni bulgu, onay bekliyor** |
+| G-02 | Web cache deception (özel rota) | `/profile/dashboard`, `/company/dashboard` → **307 → /login**, `cf-cache-status: DYNAMIC`, `cache-control: private, no-store` | Cache'lenmemeli | ✔ |
+| G-03 | WCD — statik uzantı | `/profile/dashboard.css\|.js\|.png\|.webp` → **404 `BYPASS`** | Cache'lenmemeli | ✔ |
+| G-04 | WCD — traversal | `/images/../profile/dashboard` → **307 /login**, `DYNAMIC` | Özel veri cache'lenmemeli | ✔ |
+| G-05 | Cache poisoning (unkeyed header) | `X-Forwarded-Host/Scheme/Proto/Original-URL/Rewrite-URL/Host/Server` → hepsi **200 `DYNAMIC`**, yansıma yok | Yansımamalı | ✔ |
+| G-06 | Absolute-URI istek satırı | `--request-target https://evil.example/` → **403** | Reddet | ✔ |
+| G-07 | Origin ifşası | 56 yaygın alt alan tarandı; yalnız `www` (proxied) + `send.` (Resend) var | Grey-cloud sızıntısı olmamalı | ✔ |
+| G-08 | Güvenlik başlıkları | CSP / HSTS(preload) / XCTO / XFO / COOP / CORP / Referrer / Permissions — her rota sınıfında | Var | ✔ |
+| G-09 | API cache | `/api/build-info` → `no-store`; `/api/qr` → `public, max-age=3600` (statik, kullanıcıya özel değil) | Uygun | ✔ |
+| G-10 | WAF negatif (9 yol) | 9/9 → **403**; TRACE→405, TRACK→403 | 403 | ✔ |
+| G-11 | WAF pozitif (17 rota) | 17/17 → **200** | 200 | ✔ |
+| G-12 | `/api/qr` girdi yansıması | `data=` yok sayılıyor; `next=` (mutlak / `//` / traversal) QR'ı **değiştirmiyor** | Sömürü yok | ✔ |
+
+### G-01 — Cloudflare Email Address Obfuscation (yeni bulgu)
+
+**Kanıt:** `curl -s https://isbulkktc.com/` çıktısında:
+```html
+<a class="footer-support-card" href="/cdn-cgi/l/email-protection#8ae3e4…">
+  <span class="__cf_email__" data-cfemail="2940474f…">[email&#160;protected]</span></a>
+<script src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+```
+Kaynakta footer destek linki `mailto:info@isbulkktc.com?subject=…`; CF bunu bir
+`__cf_email__` span'ına çeviriyor, tarayıcıda `email-decode.min.js` geri `mailto:`'a
+döndürüyor. (`/cdn-cgi/l/email-protection#…` doğrudan GET → **404 "Email Protection"**,
+yani yalnız istemci-taraflı çözülüyor.)
+
+**Etki (dürüst değerlendirme — küçük/orta):**
+1. **Tutarsızlık:** JSON-LD `Organization`/`ContactPoint` içinde
+   `"email":"info@isbulkktc.com"` **düz** duruyor (2 yerde); aynı sayfada hem düz
+   makine-okunur e-posta hem obfuscated link var.
+2. **No-JS:** decoder çalışmazsa kullanıcı `[email protected]` görür.
+3. **CSP:** site `script-src 'self' …` uyguluyor; `/cdn-cgi/scripts/...` aynı origin
+   olduğundan **kırılmıyor** — bu yüzden etki düşük. Yine de gereksiz bir inline
+   decoder bağımlılığı.
+
+**Öneri (CF paneli → sahibin onayı):** Scrape Shield → **Email Address Obfuscation → OFF**.
+Kod değişmez; HTML düz `mailto:` döner ve JSON-LD ile tutarlı olur. Kapatılmak
+istenmezse kabul edilebilir — o zaman yalnız tutarsızlık raporlanır.
+
+### Bakılmayan
+
+- **CF zone API** (Scrape Shield / Bot Fight Mode / rate-limit kuralı): `CF_API_TOKEN`
+  bu sandbox'ta **yok** → panel durumu okunamadı; tüm ölçüm canlı HTTP/DNS ile.
+- **Farklı ASN'lerden bot davranışı:** datacenter egress'im (`34.10.175.217`,
+  AS396982) challenge **almadı**; başka ağlarda davranış aynı olmayabilir.
+
+### İlgili issue
+
+- **#209 doğrulandı:** `GET https://api.supabase.com/v1/projects` →
+  `401 {"message":"JWT could not be decoded"}`; token 36 karakter, `sbp_` öneki yok ve
+  `RESEND_API_KEY` ile **birebir aynı**. Ama sahipliği **env/secret → insan**; bu lane'in
+  dosyası değil, bu yüzden handoff issue açılmadı (zaten açık: #209).

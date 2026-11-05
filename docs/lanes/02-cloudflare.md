@@ -73,3 +73,16 @@ ekle" adımı **gereksiz**. Gerçek fırsatlar: DKIM **1024-bit** (2048'e yükse
 DMARC'i `ruf` + sıkı alignment ile güçlendir. Detay: `docs/cloudflare.md` →
 "E-posta kimlik doğrulama denetimi". Yıkıcı DNS değişikliği yapılmadı.
 Handoff: `[auth.smtp]` (LANE-AUTH), `List-Unsubscribe`/`Reply-To` (LANE-URUN).
+
+### Uç/edge mikro-denetim (tur 4) — 2026-11-05
+
+Cache-deception / cache-poisoning / origin-ifşası / WAF eksenleri yeniden tarandı;
+**açık yok**. Özel rotalar (`/profile/dashboard`, `/company/dashboard`) → 307
+`/login`, `DYNAMIC`, `private, no-store`; statik-uzantı ve traversal varyantları
+cache'lenmiyor; unkeyed header yansıması yok; 56 alt alan tarandı, grey-cloud
+sızıntısı yok; WAF 9/9 saldırı → 403, 17/17 meşru → 200. **Yeni bulgu (G-01):**
+CF **Email Address Obfuscation** açık — footer `mailto:` linki
+`/cdn-cgi/l/email-protection#…`'e çevriliyor (JSON-LD'de e-posta düz kalıyor →
+tutarsızlık; CSP aynı-origin olduğu için kırılmıyor). Öneri: Scrape Shield →
+Email Obfuscation **OFF** (onay bekliyor). Detay: `docs/cloudflare.md` → "Uç/edge
+güvenlik mikro-denetimi".
