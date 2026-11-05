@@ -364,7 +364,7 @@ Bakılmayan dosya: yok.
 | 2 | `src/lib/seo.ts:33` + `src/app/[locale]/layout.tsx` | tutarlılık | `openGraphLocales` eşlemesi iki dosyada elle tekrarlanıyordu (biri `satisfies Record<AppLocale,string>`, diğeri `satisfies Record<(typeof routing.locales)[number],string>`) | tek kaynak | `og:locale` ↔ `alternateLocale` listesi sapabilir; drift sessiz | düzeltildi (tek export) |
 | 3 | `src/messages/*.json` `Legal` (48 anahtar × 5 dil) | SEO meta | `/privacy`,`/cookies`,`/terms` başlık+açıklaması **6 dilde aynı Türkçe**; gövde de çevrilmemiş | her dil kendi metni | 18 sayfa kopya meta + kopya gövde | devredildi → **#141** |
 | 4 | `(auth)/login/page.tsx`, `(auth)/register/page.tsx` | SEO meta | İkisi de layout'un genel `Meta.title`'ını taşıyor (`title`+`description` aynı) | rota-özel başlık | Her ikisi `noindex` olduğundan sıralama etkisi yok; yalnız paylaşım/sekme başlığı | devredildi (düşük öncelik, `src/messages/**` = LANE-URUN) |
-| 5 | 404 yanıtı (tüm diller) | SEO meta | SSR `<html>` `lang`/`dir` taşımıyor (`<html id="__next_error__">`), gövde boş (RSC ile hidrate oluyor); `<title>`/`og:*` dolu | `<html lang="…" dir="…">` | Dil/RTL sinyali yalnız istemci JS'ine bağlı; `fa` için `dir="rtl"` SSR'da yok | devredildi → issue (`agent:blocked`; kök neden `src/app/layout.tsx` yok = LANE-TASARIM/INFRA alanı) |
+| 5 | 404 yanıtı (tüm diller) | SEO meta | SSR `<html>` `lang`/`dir` taşımıyor (`<html id="__next_error__">`), gövde boş (RSC ile hidrate oluyor); `<title>`/`og:*` dolu | `<html lang="…" dir="…">` | Dil/RTL sinyali yalnız istemci JS'ine bağlı; `fa` için `dir="rtl"` SSR'da yok | devredildi → **#149** (`agent:blocked`; kök neden `src/app/layout.tsx` yok = LANE-TASARIM/INFRA alanı) |
 
 ### Kanıt (üretim standalone sunucusu, `curl`/`node`)
 
@@ -418,7 +418,7 @@ Bakılmayan dosya: yok.
 ### Sonraki lane için notlar
 
 - Bulgu 5 (404 `lang`/`dir`) için `src/app/layout.tsx` eklenmesi gerekiyor —
-  LANE-SEO'nun sahipliğinde değil; issue açıldı.
+  LANE-SEO'nun sahipliğinde değil; **#149** açıldı.
 - `src/content/ai-visibility/structured-data.ts` `buildDistrictPageStructuredData`
   içindeki `name: \`${districtName} İş İlanları\`` Türkçe eki taşıyor; yerelleşmiş
   sayfada JSON-LD adı görünen `<h1>` ile uyuşmuyor → LANE-GEO.
