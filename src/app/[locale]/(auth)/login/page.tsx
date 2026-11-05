@@ -3,6 +3,7 @@ import { SignInForm } from "@/features/identity/sign-in-form";
 import { EditorialFormPage } from "@/components/layout/editorial-form-page";
 import { AccountAudiencePicker } from "@/components/layout/account-audience-picker";
 import { accountAudienceSchema } from "@/features/identity/schemas";
+import { resolveEnabledOAuthProviders } from "@/features/identity/oauth-providers";
 import { getTranslations } from "next-intl/server";
 import { noIndexMetadata } from "@/lib/seo";
 import { getEnabledOAuthProviders } from "@/server/config/oauth-providers";
@@ -19,7 +20,9 @@ export default async function LoginPage({
     .catch("candidate")
     .parse(requestedAudience);
   const copy = await getTranslations("AccountPages.login");
-  const providers = getEnabledOAuthProviders();
+  // A malformed AUTH_OAUTH_PROVIDERS must not 500 the sign-in page; it degrades
+  // to "no provider enabled", exactly like an empty value.
+  const providers = resolveEnabledOAuthProviders(getEnabledOAuthProviders);
 
   return (
     <EditorialFormPage

@@ -232,3 +232,93 @@ fonksiyonuna indiği için birim testiyle kilitlendi.
 - `src/messages/**` sahipliği belirsiz; AUTH'a verilirse önceki turun
   `same_password → passwordUnchanged` eşlemesi burada kapatılabilir.
 
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (issue turu: #161, #162)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Aldığı issue'lar: #161 (sosyal giriş gecikme/yanlış hata), #162 (mükerrer kayıt)
+Değişen dosyalar:
+  src/features/identity/oauth-providers.ts            (+ resolveEnabledOAuthProviders)
+  src/features/identity/auth-errors.ts                (+ 4 mükerrer kod eşlemesi)
+  src/features/identity/actions.ts                    (startOAuthSignIn toleranslı okuma)
+  src/app/[locale]/(auth)/login/page.tsx              (toleranslı okuma)
+  src/app/[locale]/(auth)/register/page.tsx           (toleranslı okuma)
+  src/features/identity/oauth-providers-resilience.test.ts   (yeni, 4 test)
+  src/features/identity/duplicate-account-errors.test.ts     (yeni, 3 test)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (426, 7'si yeni) / test:security ✅ (22 pass, 2 todo, 0 fail)
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration/şablon değişmedi)
+```
+
+### Denetlenen dosyalar (micro-denetim)
+`git ls-files` → 34 dosya (27 identity + 7 şablon); `(auth)` route'ları dahil
+tamamına bakıldı. Bakılmayan dosya yok.
+
+### #161 — sosyal giriş gecikmesi / yanlış "başarısız" uyarısı
+Kök neden **kanıtla** araştırıldı:
+
+- **Canlı authorize probu (read-only, üretim):** Google ve LinkedIn
+  `/auth/v1/authorize` → **302**, doğru sağlayıcı login host'una; `redirect_to`
+  aynen taşınıyor. Sağlayıcılar çalışıyor.
+- **Canlı callback probu (read-only, üretim):** `?flow=oauth&next=candidate`
+  (code'suz) → `307 /en/login?error=oauth&audience=candidate`; geçersiz
+  `?code=` → aynı; `?error=access_denied&error_code=...` → `error=verification`.
+  Yani **hata yolu doğru** ve yalnız gerçek hatada tetikleniyor; başarılı
+  oturumda `resolveAuthDestination`'a gidiyor (kod bunu `getUser()` kontrolüyle
+  garanti ediyor, `tests/unit/oauth-callback-success.test.ts` kilitliyor).
+- **Yarış koşulu:** callback tek kullanımlık PKCE kodunu ikinci kez aldığında
+  `flow_state_not_found` → oturum zaten varsa başarı kabul ediliyor (mevcut).
+- **BULUNAN AÇIK (bu turda kapatıldı):** `parseEnabledOAuthProviders` **bozuk
+  `AUTH_OAUTH_PROVIDERS`**'ta (bilinmeyen sağlayıcı, çift virgül) **throw**
+  ediyordu; `getEnabledOAuthProviders()` bunu **render sırasında** çağırdığı için
+  `/login` ve `/register` **6 dilde 500** verirdi — kilitli kullanıcının en çok
+  ihtiyaç duyduğu iki sayfa. Bu, "gecikme + başarısızlık" semptomunun
+  operatör-kaynaklı bir varyantı. **Düzeltme:** `resolveEnabledOAuthProviders()`
+  (throw'u yutar → boş liste, boş env ile aynı durum); login/register sayfaları
+  ve `startOAuthSignIn` bu korumalı yolu kullanır. Katı parser `auth:verify`
+  (ops) için korunur. Kanıt: `google,facebook` → eskiden 500, şimdi `[]`.
+- Kalan #161 alt-başlıkları (sağlayıcı konsolu ayarı, üretim logları) **canlı
+  sbp_ token + gerçek hesap** gerektiriyor; bu sandbox'ta yapılamıyor (401).
+  Bulgu sahibin doğrulamasına not edildi.
+
+### #162 — mükerrer kayıt
+- **BULUNAN AÇIK (bu turda kapatıldı):** GoTrue mükerrer kaydı tek kodla
+  bildirmiyor; `email_exists`, `user_already_exists`, `identity_already_exists`,
+  `email_conflict_identity_not_deletable` kodları `auth-errors.ts` haritasında
+  **yoktu** → genel `signUpFailed` ("bilgilerin yanlış") gösteriliyordu, oysa
+  hesap zaten var. **Düzeltme:** dördü de `emailAlreadyRegistered`'a eşlendi
+  (`email_not_confirmed` deseniyle aynı). Kanıt: önce `signUpFailed`, sonra
+  `emailAlreadyRegistered`.
+- **DB tarafı temiz (kanıtlandı):** `profiles.id` PK → `auth.users` ile 1:1;
+  `handle_new_auth_user` insert'i `on conflict (id) do nothing` → idempotent.
+  Yani mükerrer kayıt olsa bile ikinci `profiles` satırı oluşmuyor.
+- **Büyük/küçük harf:** GoTrue + uygulama şeması (`trim().toLowerCase()`)
+  normalize ediyor → `Ali@X.com`/`ali@x.com` ayrı hesap açmıyor.
+- **Kalan karar Supabase'te:** `supabase/config.toml`'da identity-linking ayarı
+  **yok** → varsayılan davranış. Sahibi LANE-SUPABASE olduğu için **#181**
+  (`lane:supabase` + `agent:handoff`) açıldı, kanıtla.
+
+### Güvenlik değerlendirmesi (security skill)
+- `resolveEnabledOAuthProviders` yalnız **throw'u yutar**; kabul edilen değerler
+  yine katı Zod enum'undan geçer, yani allowlist genişlemiyor.
+- Mükerrer-kod eşlemesi bir **mesaj** değişikliği; hesap açma/kapama yetkisi
+  değişmedi. `emailAlreadyRegistered` kullanıcıya hesabın varlığını söyler —
+  GoTrue zaten `signUp` obfuscation'ıyla bunu e-posta sahibine açık ediyor,
+  yeni bir enumeration yolu açılmıyor (form akışı, kullanıcı kendi adresini
+  biliyor).
+- Yeni yollarda `service_role` yok; client sınırı testi yeşil.
+
+### Devredilen
+- **#181** → LANE-SUPABASE: `config.toml` identity-linking politikası (kanıt
+  gövdede).
+
+### Sahibin yapması gerekenler
+- `src/app/[locale]/auth/callback/route.ts` hâlâ hiçbir lane'e atanmamış
+  (önceki turdan). Auth ile ilgili; LANE-AUTH'a atanmalı.
+- Üretim OAuth davranışı için sbp_ token'ıyla `bun run auth:verify` ve gerçek
+  hesap denemesi (bu sandbox'ta 401).
+- `src/messages/**` sahipliği belirsiz; AUTH'a verilirse `same_password →
+  passwordUnchanged` eşlemesi burada kapatılabilir.

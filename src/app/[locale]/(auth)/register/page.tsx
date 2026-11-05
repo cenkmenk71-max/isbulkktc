@@ -3,6 +3,7 @@ import { AccountAudiencePicker } from "@/components/layout/account-audience-pick
 import { EditorialFormPage } from "@/components/layout/editorial-form-page";
 import { SignUpForm } from "@/features/identity/sign-up-form";
 import { accountAudienceSchema } from "@/features/identity/schemas";
+import { resolveEnabledOAuthProviders } from "@/features/identity/oauth-providers";
 import { noIndexMetadata } from "@/lib/seo";
 import { getEnabledOAuthProviders } from "@/server/config/oauth-providers";
 
@@ -16,7 +17,9 @@ export default async function RegisterPage({
   const { audience: requestedAudience } = await searchParams;
   const audience = accountAudienceSchema.catch("candidate").parse(requestedAudience);
   const copy = await getTranslations("AccountPages.register");
-  const providers = getEnabledOAuthProviders();
+  // A malformed AUTH_OAUTH_PROVIDERS must not 500 the registration page; it
+  // degrades to "no provider enabled", exactly like an empty value.
+  const providers = resolveEnabledOAuthProviders(getEnabledOAuthProviders);
 
   return (
     <EditorialFormPage

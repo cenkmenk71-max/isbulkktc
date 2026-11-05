@@ -45,3 +45,28 @@ export function parseEnabledOAuthProviders(
 
   return [...new Set(result.data)];
 }
+
+/**
+ * The advertised providers for a page render, with the strict parser's failure
+ * contained.
+ *
+ * `AUTH_OAUTH_PROVIDERS` is an operator setting, but the login and registration
+ * pages read it *during render* to decide which social buttons to enable. The
+ * strict parser throws on a typo — an unknown provider name, a stray comma — and
+ * an uncaught throw there turns both auth pages into a 500 in every locale, which
+ * is exactly the pair of pages a locked-out visitor needs. A malformed value
+ * should degrade to the same state as an empty one: email/password sign-in keeps
+ * working and the provider cards stay disabled with their "awaiting setup" note.
+ *
+ * The strict parser is kept for the configuration verifier (`auth:verify`), which
+ * is where a bad value must fail loudly.
+ */
+export function resolveEnabledOAuthProviders(
+  read: () => OAuthProvider[],
+): OAuthProvider[] {
+  try {
+    return read();
+  } catch {
+    return [];
+  }
+}

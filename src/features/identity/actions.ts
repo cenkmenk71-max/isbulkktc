@@ -11,7 +11,7 @@ import {
   updatePasswordSchema,
   type SignInFormState,
 } from "./schemas";
-import { parseEnabledOAuthProviders } from "./oauth-providers";
+import { parseEnabledOAuthProviders, resolveEnabledOAuthProviders } from "./oauth-providers";
 import { messageForAuthErrorCode } from "./auth-errors";
 import {
   callbackAudienceParam,
@@ -56,8 +56,8 @@ export async function startOAuthSignIn(
   const cookieStore = await cookies();
   cookieStore.delete(oauthSignupIntentCookieName);
 
-  const enabledProviders = parseEnabledOAuthProviders(
-    process.env.AUTH_OAUTH_PROVIDERS,
+  const enabledProviders = resolveEnabledOAuthProviders(() =>
+    parseEnabledOAuthProviders(process.env.AUTH_OAUTH_PROVIDERS),
   );
   if (!enabledProviders.includes(result.data.provider)) {
     return { status: "error", message: "oauthUnavailable" };
