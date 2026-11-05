@@ -149,12 +149,19 @@ issue açar.
   migration'ları yeniden oynatıldığı için yalnız son tanım geçerli.
 - **Bildirim worker'ı:** Edge Function `verify_jwt = false` olmasına rağmen
   bearer'ı **yapılandırma kontrolünden önce** doğruluyor; eksik sır guard'ı
-  atlamıyor (`tests/security/notification-worker-auth.test.ts`).
+  atlamıyor (`tests/security/notification-worker-auth.test.ts`). Aynı kural iki
+  Next.js cron rotası için de sabitlendi: `/api/push/dispatch` ve
+  `/api/email/engagement-digest` service-role istemcisini ve yapılandırma
+  kontrollerini bearer karşılaştırmasından **sonra** yapar ve sır yoksa
+  fail-closed davranır (`tests/security/cron-route-auth.test.ts`).
+- **Unsubscribe uç noktası:** `GET /api/email/unsubscribe` oturumsuzdur ama
+  `service_role` ile yazar; yetki tamamen HMAC imzasındadır. İmza, service-role
+  istemcisi kurulmadan **önce** doğrulanır; başarı gövdesi önceki opt-out
+  durumuna göre dallanmaz (abonelik oracle'ı yok); çekirdek `timingSafeEqual` +
+  uzunluk guard'ı kullanır (`tests/security/unsubscribe-route-auth.test.ts`).
 - **Sırlar:** `NEXT_PUBLIC_*` ile sızmış bir sır adı yok; hiçbir istemci modülü
   `@/server/**` içe aktarmıyor veya `NEXT_PUBLIC_` olmayan bir env okumuyor
   (`tests/security/client-boundary.test.ts`).
-- **Unsubscribe imzası:** HMAC-SHA256 + `timingSafeEqual`, anahtar yoksa
-  imzalama kapalı; açık uç nokta yalnız servis rolüyle yazar.
 - **Açık yönlendirme kapalı:** `sanitizeNextPath` normalizasyon sonrası çıktıyı
   yeniden doğruluyor (`//`, `\`, şema reddi). Denetimde bulunan `"/..//host"`
   bypass'ı sahibi tarafından kapatıldı; `tests/security/open-redirect.test.ts`

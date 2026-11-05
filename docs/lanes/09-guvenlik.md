@@ -218,3 +218,28 @@ ister" diyordu — **iddia doğruydu ama hiçbir test zorlamıyordu**.
   `admin_*`'ı sonradan guard'sız yeniden tanımla → kırmızı (son-tanım kazanır);
   (c) helper'ı `aal2`'siz yeniden yarat → kırmızı.
 - **Bakılmayan:** yok — 9 test dosyası + 2 doküman.
+
+## Durum (2026-11-05, 8. tur) — cron rotaları ve unsubscribe sınırı
+
+Brief'in 2. (kimlik) ve 3. (girdi) hedeflerini derinleştirdi: `notification-worker-auth`
+yalnız Edge Function'ı sabitliyordu; aynı bearer-deseni kullanan iki **Next.js cron
+rotası** ve **unsubscribe uç noktası** hiç test edilmiyordu.
+
+- **Bulgu + düzeltme: iki cron rotası sırasız/guard'sız kalabilirdi.**
+  `/api/push/dispatch` ve `/api/email/engagement-digest` public ve service-role
+  istemcisi taşıyor; threat model'in "önce kimlik doğrula, sonra yapılandırmayı
+  oku" kuralı yalnız Edge Function için pinliydi. `cron-route-auth.test.ts`
+  eklendi: her rota (a) sır env'ini okur, (b) bearer karşılaştırmasını
+  `createSupabaseServiceClient()`/`isUnsubscribeSigningConfigured()`'tan **önce**
+  yapar, (c) `!secret ||` ile fail-closed, (d) sırrı yanıt gövdesine yansıtmaz.
+  Bugün ikisi de temiz.
+- **Bulgu + düzeltme: unsubscribe uç noktasının sınırı pinlenmemişti.**
+  `GET /api/email/unsubscribe` oturumsuzdur ama `service_role` ile yazar. İmza
+  service-role istemcisinden **önce** doğrulanmalı, başarı gövdesi önceki opt-out
+  durumuna göre dallanmamalı (abonelik oracle'ı), çekirdek sabit-zamanlı olmalı.
+  `unsubscribe-route-auth.test.ts` eklendi. Bugün temiz.
+- **Kanıt (mutation):** (a) config okumasını bearer'dan öne al → cron testi
+  kırmızı; (b) `!secret ||` guard'ını kaldır → fail-closed testi kırmızı;
+  (c) service client'ı imza doğrulamasından öne al → unsubscribe testi kırmızı.
+- **Bakılmayan:** yok — 11 test dosyası + 2 doküman. Kalan iki `todo` yürürlükte
+  (#206 throttle app-yolu IP, #102 `server-only`).

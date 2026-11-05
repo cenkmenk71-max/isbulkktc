@@ -27,6 +27,8 @@ a boundary regression is attributable at a glance.
 | `client-boundary.test.ts` | no client module imports server code or reads secrets; `server-only` markers |
 | `ci-workflow-permissions.test.ts` | every `pull_request` workflow declares least-privilege permissions; no `pull_request_target`; the auto-merge gate still refuses to merge a change to the workflows themselves |
 | `notification-worker-auth.test.ts` | the edge worker authenticates before it inspects configuration |
+| `cron-route-auth.test.ts` | the two Next.js cron routes (`/api/push/dispatch`, `/api/email/engagement-digest`) authenticate before any config read and fail closed |
+| `unsubscribe-route-auth.test.ts` | the public unsubscribe GET verifies the HMAC before the service client, and leaks no subscription oracle |
 | `anonymous-write-surface.test.ts` | the anon write RPCs and the control the forms carry |
 | `anonymous-rpc-throttle.test.ts` | the throttle now lives inside the anon RPC bodies (a gate); the action-path IP dimension is still one shared bucket |
 | `session-cookie-flags.test.ts` | the Supabase session cookie's `HttpOnly`/`Secure` flags, and the controls around it |
