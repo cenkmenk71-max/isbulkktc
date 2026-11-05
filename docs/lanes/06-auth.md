@@ -171,3 +171,64 @@ tek stil sayfası. Değişiklik gerekmedi.
 ### Sonraki lane için notlar
 - **Invite akışı** (önceki turdan): GoTrue davet linki implicit (`#access_token=`)
   döndürüyor; callback yalnız PKCE `?code=` işliyor. Ayrı iş.
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (micro-denetim turu 2)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Değişen dosyalar:
+  src/features/identity/use-captcha-action.ts        (stale-state maskeleme)
+  src/features/identity/captcha-stale-state.test.ts  (yeni, 3 test)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (395, 3'ü yeni) / test:security ✅ (17 pass, 4 todo — hepsi
+  önceden var olan, lane dışı bulgular)
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; şablon/config değişmedi)
+```
+
+### Denetlenen dosyalar
+`git ls-files 'src/features/identity/**' 'src/app/[locale]/(auth)/**'
+'supabase/templates/**'` → **33 dosya** (26 identity + 7 şablon; `(auth)`
+route'ları `git ls-files` glob'unda görünüyor ama bu turda değişiklik gerekmedi).
+Tamamına bakıldı; bakılmayan dosya yok.
+
+### Bulgular
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `use-captcha-action.ts:27-41` + `sign-in-form.tsx:100-103` / `sign-up-form.tsx:64-67` / `password-reset-form.tsx:31-34` | erişilebilirlik / doğruluk | `captchaBlocked` iken `<CaptchaNotice>` durum mesajının **yerine** render edilir, ama `aria-describedby` yalnız `state.message !== "idle"`'e bakıyor; engellenen submit aksiyona ulaşmadığından `state` **önceki turun** hatasını taşır → alan, artık DOM'da olmayan `login-form-message`'ı işaret eder (dangling idref) | Alan yalnız render edilen mesajı tarif eder | axe `aria-valid-attr-value` ihlali (WCAG 4.1.2); ekran okuyucu var olmayan açıklamayı okur. axe E2E kapısı bunu görmez: yalnız ilk yüklemede denetler, oysa kusur "oturmuş hata → engellenen submit" sırasını gerektirir | düzeltildi |
+| 2 | `turnstile.ts:8` | ölü kod | `turnstileResponseField` export'u hiçbir yerden okunmuyor (üretici/tüketici aynı dosyada sabit kullanıyor) | — | Önemsiz; silmek churn | bilgi (önceki turdan) |
+
+### Düzeltilen / devredilen
+- **Düzeltildi (#1):** `useCaptchaAction` artık `visibleCaptchaState(state,
+  initialState, captchaBlocked)` döndürür — engellenen submit'te idle duruma
+  düşer. Tek kaynak hook olduğu için üç form (sign-in, sign-up, password-reset)
+  birden düzelir; formlar `state`'i okumaya devam eder.
+  Kanıt (gerçek modülle before/after, `.probe-tmp.ts`):
+  ```
+  BEFORE (raw action state): {"describedby":"login-form-message","messageRendered":false,"dangling":true}
+  AFTER  (masked state)    : {"describedby":null,"messageRendered":false,"dangling":false}
+  ```
+  axe kaynağı doğrulandı: `aria-valid-attr-value`'nun `aria-describedby`
+  pre-check'i dangling idref'i reddeder (`node_modules/axe-core/axe.js`).
+
+### Güvenlik değerlendirmesi (security skill)
+- `next`/`flow`/`sb_flow_id`/`audience` sözlükleri değişmedi; callback yalnız
+  sabit değerleri yola çeviriyor. `//evil.example`, `../../etc` reddi testlerle
+  kilitli.
+- `service_role` hiçbir identity dosyasında yok; client sınırı
+  `identity-client-boundary.test.ts` ile ratchet'li.
+- Bu tur yalnız sunum katmanı (ARIA durumu) düzeltti; yetki/oturum yolu
+  değişmedi.
+
+### QA (qa-changes skill)
+Gerçek modül (`tsx`) ile önce/sonra yukarıda. Tam yerel Supabase + Mailpit
+E2E'si bu sandbox'ta Docker olmadığı için çalıştırılamadı; kusur saf durum
+fonksiyonuna indiği için birim testiyle kilitlendi.
+
+### Sahibin yapması gerekenler
+- `src/app/[locale]/auth/callback/route.ts` hâlâ hiçbir lane'e atanmamış (önceki
+  turdan devam). Auth ile ilgili; LANE-AUTH'a atanmalı.
+- `src/messages/**` sahipliği belirsiz; AUTH'a verilirse önceki turun
+  `same_password → passwordUnchanged` eşlemesi burada kapatılabilir.
+

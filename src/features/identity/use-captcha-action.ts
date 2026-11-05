@@ -38,5 +38,29 @@ export function useCaptchaAction(
     dispatch(formData);
   }
 
-  return { state, action: guardedAction, pending, resetSignal, captchaBlocked };
+  return {
+    state: visibleCaptchaState(state, initialState, captchaBlocked),
+    action: guardedAction,
+    pending,
+    resetSignal,
+    captchaBlocked,
+  };
+}
+
+/**
+ * The state a captcha-guarded form should render.
+ *
+ * A blocked submit never reaches the action, so `state` still holds the previous
+ * round's message. The forms render `<CaptchaNotice>` *instead of* that message
+ * while the fields keep `aria-describedby` pointed at the (now absent) message
+ * element whenever the stale message is not `idle` — a dangling reference axe
+ * reports as `aria-valid-attr-value`. Falling back to the idle state keeps the
+ * described element in step with what is actually rendered.
+ */
+export function visibleCaptchaState(
+  state: SignInFormState,
+  initialState: SignInFormState,
+  captchaBlocked: boolean,
+): SignInFormState {
+  return captchaBlocked ? initialState : state;
 }
