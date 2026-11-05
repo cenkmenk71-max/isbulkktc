@@ -75,9 +75,14 @@ function loopBody(source: string, openBraceIndex: number): string {
 
 type TestBlock = { title: string; line: number; body: string };
 
+// Matches `test(` at any indentation (a `test.describe(...)` block indents its
+// children) and any quote style, but not `test.skip(`/`test.fixme(`/`test.describe(`:
+// the group after `test(` must be the opening quote itself.
+const testStartPattern = /^[ \t]*test\(\s*(["`])([^"`\n]*)\1/gm;
+
 function testBlocks(source: string): TestBlock[] {
-  const starts = [...source.matchAll(/^test\("([^"]+)"/gm)].map((match) => ({
-    title: match[1],
+  const starts = [...source.matchAll(testStartPattern)].map((match) => ({
+    title: match[2],
     index: match.index ?? 0,
     line: source.slice(0, match.index ?? 0).split("\n").length,
   }));
@@ -135,4 +140,33 @@ test("the sweep detector still recognises a real sweep and ignores a narrow one"
   const narrowBlock = testBlocks(narrow)[0];
   assert.equal(isRouteSweep(sweep, sweepBlock.body), true, "a 4-route sweep must be detected");
   assert.equal(isRouteSweep(narrow, narrowBlock.body), false, "a 2-route loop must not be flagged");
+});
+
+test("a sweep nested in test.describe is still detected", () => {
+  // `testBlocks` once matched `test(` only at column 0, so a test written inside
+  // a `test.describe(...)` was invisible — and worse, its source was swallowed
+  // into the previous matched block, whose `test.setTimeout` then masked the
+  // unguarded sweep. `analytics.spec.ts` already nests two tests this way.
+  const routes = `const publicRoutes = ["/a", "/b", "/c", "/d", "/e", "/f"] as const;\n`;
+  const nested = `${routes}test.describe("seo", () => {\n  test("sweeps every route", async ({ page }) => {\n    for (const route of publicRoutes) { await page.goto(route); }\n  });\n});`;
+  const blocks = testBlocks(nested);
+  assert.equal(blocks.length, 1, "the nested test must be seen as a block");
+  assert.equal(blocks[0].title, "sweeps every route");
+  assert.equal(isRouteSweep(nested, blocks[0].body), true, "a nested 6-route sweep must be flagged");
+
+  // A previous block's `setTimeout` must not leak into the nested block's body,
+  // which is what made the blind spot silent rather than loud.
+  const masked = `${routes}test("outer", async ({ page }) => {\n  test.setTimeout(120_000);\n  for (const route of publicRoutes) { await page.goto(route); }\n});\ntest.describe("seo", () => {\n  test("inner", async ({ page }) => {\n    for (const route of publicRoutes) { await page.goto(route); }\n  });\n});`;
+  const inner = testBlocks(masked).find((block) => block.title === "inner")!;
+  assert.equal(
+    /test\.setTimeout\(/.test(inner.body),
+    false,
+    "the outer block's budget must not appear in the inner block's body",
+  );
+});
+
+test("test.skip and test.describe are not mistaken for test blocks", () => {
+  const source = `test.skip("skipped", async () => {});\ntest.describe("group", () => {\n  test.fixme("todo", async () => {});\n});\ntest("real", async () => {});`;
+  const titles = testBlocks(source).map((block) => block.title);
+  assert.deepEqual(titles, ["real"]);
 });

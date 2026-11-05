@@ -26,6 +26,11 @@ const localePreservingRedirects = [
 ] as const;
 
 test("guarded redirects keep the visitor in their locale", async ({ page }) => {
+  // Six locales x four redirects = 24 request round-trips in one test. That is
+  // the same shape as the multi-navigation sweeps this suite already budgets, so
+  // it declares its own budget rather than running inside the 60s default, where
+  // a loaded runner reports a bare timeout that names no locale or route.
+  test.setTimeout(120_000);
   for (const locale of locales) {
     const prefix = locale === "tr" ? "" : `/${locale}`;
     for (const { path, landsOn } of localePreservingRedirects) {
