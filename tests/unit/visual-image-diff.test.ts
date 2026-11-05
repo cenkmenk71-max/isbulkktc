@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { diffRgba, type RawImage } from "../visual/support/image-diff";
+import sharp from "sharp";
+import { diffRgba, renderDiff, type RawImage } from "../visual/support/image-diff";
 
 /**
  * The visual layer's diff engine is the one part that decides pass/fail, so it
@@ -74,4 +75,47 @@ test("a dimension change is a hard failure, not a small diff", () => {
     () => diffRgba(actual, baseline, 12),
     /image dimensions differ: actual 10x11 vs baseline 10x10/,
   );
+});
+
+test("the diff image marks every pixel diffRgba counts, alpha included", async () => {
+  // `renderDiff` is what a reviewer looks at on a failure, so it must agree
+  // with the number printed beside it. It once tested RGB only, while
+  // `diffRgba` counted alpha as well: an alpha-only regression was reported as
+  // changed pixels but left dimmed in the diff image, so the artifact
+  // contradicted the count. Both now share the same four-channel test.
+  const baseline = solid(2, 1, [10, 20, 30, 255]);
+  const actual = solid(2, 1, [10, 20, 30, 200]);
+
+  const counted = diffRgba(actual, baseline, 12);
+  assert.equal(counted.diffPixels, 2, "an alpha-only change counts");
+
+  const png = await renderDiff(actual, baseline, 12);
+  const { data, info } = await sharp(png)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  assert.equal(info.width, 2);
+  assert.equal(info.height, 1);
+  for (let i = 0; i < data.length; i += 4) {
+    assert.deepEqual(
+      [data[i], data[i + 1], data[i + 2], data[i + 3]],
+      [255, 0, 0, 255],
+      "every counted pixel must be painted red",
+    );
+  }
+});
+
+test("the diff image dims pixels that are within tolerance", async () => {
+  const baseline = solid(1, 1, [200, 200, 200, 255]);
+  const actual = solid(1, 1, [205, 200, 200, 255]);
+
+  assert.equal(diffRgba(actual, baseline, 12).diffPixels, 0);
+
+  const png = await renderDiff(actual, baseline, 12);
+  const { data } = await sharp(png)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  // 200 * 0.35 = 70, dimmed rather than red.
+  assert.deepEqual([data[0], data[1], data[2]], [70, 70, 70]);
 });

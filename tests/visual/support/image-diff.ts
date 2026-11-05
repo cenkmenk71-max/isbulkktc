@@ -74,6 +74,11 @@ export function diffRgba(
 /**
  * Renders the changed pixels in red over a desaturated copy of the baseline, so
  * a failing shot points at *where* it moved instead of only *how much*.
+ *
+ * The "changed" test must stay identical to `diffRgba`'s, alpha included: an
+ * alpha-only change counts toward the failure ratio, so a renderer that only
+ * looked at RGB would leave those pixels dimmed and the diff image would
+ * contradict the number printed beside it.
  */
 export async function renderDiff(
   actual: RawImage,
@@ -85,7 +90,13 @@ export async function renderDiff(
     const dr = Math.abs(actual.data[i] - baseline.data[i]);
     const dg = Math.abs(actual.data[i + 1] - baseline.data[i + 1]);
     const db = Math.abs(actual.data[i + 2] - baseline.data[i + 2]);
-    if (dr > channelTolerance || dg > channelTolerance || db > channelTolerance) {
+    const da = Math.abs(actual.data[i + 3] - baseline.data[i + 3]);
+    if (
+      dr > channelTolerance ||
+      dg > channelTolerance ||
+      db > channelTolerance ||
+      da > channelTolerance
+    ) {
       out[i] = 255;
       out[i + 1] = 0;
       out[i + 2] = 0;

@@ -909,6 +909,13 @@ test("sector category badges stay legible and unclipped", async ({ page }) => {
 
   await page.setViewportSize({ width: 1440, height: 900 });
   const desktopBadges = await measureBadges();
+  // `measureBadges` drops any badge whose box has collapsed, so without this
+  // the loop below is vacuous: a layout change that hid every desktop badge
+  // would satisfy the legibility contract by iterating nothing.
+  expect(
+    desktopBadges.length,
+    "desktop must render at least one sector category badge",
+  ).toBeGreaterThan(0);
   for (const badge of desktopBadges) {
     expect(badge.fontSize).toBeGreaterThanOrEqual(11);
     expect(badge.clipped).toBe(false);
