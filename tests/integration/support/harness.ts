@@ -207,8 +207,11 @@ export const recorded: Recorded = {
   redirects: [],
 };
 
-export let fakeSupabase = new FakeSupabase();
-export let requestHeaders = new Headers();
+// Reassigned by `resetBoundary`/`setRequestHeaders` below and closed over by the
+// module mocks, so the boundary always reads the current value. Not exported:
+// tests drive them through those functions and assert on `recorded` instead.
+let fakeSupabase = new FakeSupabase();
+let requestHeaders = new Headers();
 
 export function resetBoundary(script: FakeSupabaseScript = {}): FakeSupabase {
   recorded.supabase.length = 0;
@@ -232,7 +235,7 @@ export function setRequestHeaders(headers: Record<string, string>): void {
  */
 export const mailFailures = new Set<string>();
 
-export function recordMail(template: string, payload: Record<string, unknown>): void {
+function recordMail(template: string, payload: Record<string, unknown>): void {
   if (mailFailures.has("*") || mailFailures.has(template)) {
     throw new Error(`Simulated ${template} mail failure`);
   }
