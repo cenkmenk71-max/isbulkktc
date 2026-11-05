@@ -364,7 +364,7 @@ Bakılmayan dosya: yok.
 | 2 | `src/lib/seo.ts:33` + `src/app/[locale]/layout.tsx` | tutarlılık | `openGraphLocales` eşlemesi iki dosyada elle tekrarlanıyordu (biri `satisfies Record<AppLocale,string>`, diğeri `satisfies Record<(typeof routing.locales)[number],string>`) | tek kaynak | `og:locale` ↔ `alternateLocale` listesi sapabilir; drift sessiz | düzeltildi (tek export) |
 | 3 | `src/messages/*.json` `Legal` (48 anahtar × 5 dil) | SEO meta | `/privacy`,`/cookies`,`/terms` başlık+açıklaması **6 dilde aynı Türkçe**; gövde de çevrilmemiş | her dil kendi metni | 18 sayfa kopya meta + kopya gövde | devredildi → **#141** |
 | 4 | `(auth)/login/page.tsx`, `(auth)/register/page.tsx` | SEO meta | İkisi de layout'un genel `Meta.title`'ını taşıyor (`title`+`description` aynı) | rota-özel başlık | Her ikisi `noindex` olduğundan sıralama etkisi yok; yalnız paylaşım/sekme başlığı | devredildi (düşük öncelik, `src/messages/**` = LANE-URUN) |
-| 5 | 404 yanıtı (tüm diller) | SEO meta | SSR `<html>` `lang`/`dir` taşımıyor (`<html id="__next_error__">`), gövde boş (RSC ile hidrate oluyor); `<title>`/`og:*` dolu | `<html lang="…" dir="…">` | Dil/RTL sinyali yalnız istemci JS'ine bağlı; `fa` için `dir="rtl"` SSR'da yok | devredildi → **#149** (`agent:blocked`; kök neden `src/app/layout.tsx` yok = LANE-TASARIM/INFRA alanı) |
+| 5 | 404 yanıtı (tüm diller) | SEO meta | SSR `<html>` `lang`/`dir` taşımıyor (`<html id="__next_error__">`), gövde boş (RSC ile hidrate oluyor); `<title>`/`og:*` dolu | `<html lang="…" dir="…">` | Dil/RTL sinyali yalnız istemci JS'ine bağlı; `fa` için `dir="rtl"` SSR'da yok | devredildi → issue (`agent:blocked`; kök neden `src/app/layout.tsx` yok = LANE-TASARIM/INFRA alanı) |
 
 ### Kanıt (üretim standalone sunucusu, `curl`/`node`)
 
@@ -418,7 +418,7 @@ Bakılmayan dosya: yok.
 ### Sonraki lane için notlar
 
 - Bulgu 5 (404 `lang`/`dir`) için `src/app/layout.tsx` eklenmesi gerekiyor —
-  LANE-SEO'nun sahipliğinde değil; **#149** açıldı.
+  LANE-SEO'nun sahipliğinde değil; issue açıldı.
 - `src/content/ai-visibility/structured-data.ts` `buildDistrictPageStructuredData`
   içindeki `name: \`${districtName} İş İlanları\`` Türkçe eki taşıyor; yerelleşmiş
   sayfada JSON-LD adı görünen `<h1>` ile uyuşmuyor → LANE-GEO.
@@ -499,3 +499,99 @@ Bakılmayan dosya yok.
 - Bulgu 1 birim testi **eklenmedi**: `tests/**` LANE-QA sahipliğinde. QA turu
   breadcrumb etiketlerinin `Nav.jobs`/`SITE_NAME` olduğunu doğrulayabilir
   (yöntem: `curl … | grep ld+json` → `BreadcrumbList.itemListElement`).
+
+---
+
+## Micro-denetim raporu — tur 6 (#163 bulunabilirlik + #126/#127)
+
+```
+Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
+Değişen dosyalar: src/lib/seo.ts, docs/lanes/03-seo.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
+            test:unit ✅ (408/408)  test:security ✅ (22 pass, 2 belgeli todo)
+            build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone + üretim doğrulaması ✅
+Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
+```
+
+### Denetlenen dosyalar
+
+`git ls-files` ile LANE-SEO sahipliği: **42 dosya** — `src/lib/seo.ts`,
+`src/app/sitemap.ts`, `src/app/robots.ts`, `scripts/submit-indexnow.mjs` ve
+`src/app/[locale]/**` altındaki **37 route/layout**. Hepsi tarandı; "bakılmadı" yok.
+
+### #163 — bulunabilirlik zinciri, kanıtlı durum
+
+| Halka | Ölçüm (üretim, `curl`/`node`) | Durum |
+|---|---|---|
+| Doğrulama etiketi | `google-site-verification` **var** (`1zuidCsJ2y0GCfp_g-AmsYuagg_fIDDCo36POZr0wSM`, 6 dilde); `msvalidate.01`/`yandex-verification` **yok** | kısmi |
+| robots.txt | `Allow: /`; yalnız `/api/` + 6 `/auth/` yolu disallow; `Disallow: /` **yok** | ✅ |
+| Sitemap | 207 `<loc>`, **207/207 → 200**, hepsi self-canonical, `noindex` URL **yok**, 0 tekrar | ✅ |
+| Bot engeli | Googlebot/Bingbot/YandexBot/AhrefsBot/GPTBot/boş UA → hepsi **200**, `cf-mitigated` **yok**; bot ve tarayıcı HTML'i aynı (fark = her istekte değişen dinamik render, cloaking değil) | ✅ |
+| SSR içerik | Googlebot `/jobs`'ta **21 ilan + 20 ilan linki** görüyor (istemci hidrasyonu gerekmiyor) | ✅ |
+| IndexNow | `submit-indexnow.yml` günlük çalışıyor (son run 2026-11-05 06:32 UTC, success); alias sitemap **207/207 kanonik host**; canlı POST → api.indexnow.org 200, bing.com 200, yandex.com 202 `{"success":true}` | ✅ |
+| Ölçüm | `site:isbulkktc.com` → DuckDuckGo'da **0 sonuç** (Bing beslemeli) | ⚠️ indeksleme gecikmesi |
+| Sunucu | TTFB 0.11–0.15 s, toplam 0.6–1.2 s (tüm bot UA'ları) | ✅ |
+
+**Sonuç:** LANE-SEO'nun sahip olduğu teknik katmanın tamamı doğru; **kopuk
+halka lane dışında**: Bing/Yandex mülk doğrulaması yok ve indeks henüz oluşmamış
+(yeni alan + 21 ilan). Bu, `agent:handoff` işidir (aşağıda).
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/lib/seo.ts:160-179` (`createLocalizedPageMetadata`) | SEO meta / OGP | Tek-dilli sayfalar (`contentLocale` set: içe aktarılan ilanlar) hreflang alternates'ini düşürüyor ama **`og:locale:alternate` 5 dili yine de yayınlıyordu**. `GET /jobs/<slug>` → `og:locale:tr_TR` + `en_GB,ru_RU,el_GR,fa_IR,de_DE`; `GET /en/jobs/<slug>` → `og:locale:en_GB` (sayfa TR, canonical TR) + `tr_TR,ru_RU,…` | tek-dilli sayfa başka dil sürümü ilan etmemeli; `og:locale` kanonik URL'in dili olmalı | Sosyal bot 6 dilde var olduğunu sandığı sayfayı yanlış dille unfurl eder; OGP `alternate` semantiği ihlali | düzeltildi |
+| 2 | `src/app/[locale]/not-found.tsx` + kök layout | SEO meta | 404 yanıtı `<html>`'de `lang`/`dir` taşımıyor, SSR gövdesi boş | `<html lang dir>` | `fa` RTL sinyali yok | devredildi → **#149** |
+| 3 | `src/messages/*.json` `Legal` | SEO meta | `/privacy`,`/cookies`,`/terms` başlık+açıklaması 6 dilde aynı Türkçe | her dil kendi metni | 18 sayfa kopya meta+gövde | devredildi → **#141** |
+| 4 | `src/app/[locale]/(public)/is-turleri/[type]/page.tsx` | JSON-LD mount | Tür iniş sayfaları sayfaya-özel JSON-LD yayınlamıyor (ilçe yayınlıyor) | eşdeğer `CollectionPage`+`BreadcrumbList` | zengin sonuç kaybı | devredildi → **#152** (GEO üretir, SEO mount eder) |
+| 5 | `feed.xml` keşfi | SEO meta | `/feed.xml` 200 + geçerli RSS ama `<head>`'de `rel="alternate" type="application/rss+xml"` autodiscovery linki **yok** | `<link rel="alternate" type="application/rss+xml" href="/feed.xml">` | RSS keşfedilebilirliği düşük | devredildi (aşağıda issue) |
+
+### Kanıt
+
+- **Bulgu 1 (önce):** `curl https://isbulkktc.com/en/jobs/source-iskibris-…` →
+  `<link rel="canonical" href="https://isbulkktc.com/jobs/…">` (TR) **ama**
+  `og:locale=en_GB` + `og:locale:alternate` `tr_TR,ru_RU,el_GR,fa_IR,de_DE`.
+  OGP spesifikasyonu: `og:locale:alternate` = *"An array of other locales this
+  page is available in."* (ogp.me). Sayfa tek dilde → dizi boş olmalı.
+  **Sonra (standalone, `NEXT_DIST_DIR=.next-lane-seo`):** ilan sayfaları
+  `og:locale` (yalnız) taşıyor, `og:locale:alternate` **yok**; `/freelance` gibi
+  yerelleşmiş sayfalar 5 alternates'i **koruyor**. Build çıktısı:
+  `openGraph:{…,locale:k[r],...n?{}:{alternateLocale:…}}`.
+- **Bulgu 2:** `curl /en/nonexistent` → `<html id="__next_error__">` (lang yok);
+  `curl /en` → `<html lang="en" dir="ltr">`. Üretimde de aynı.
+- **Bulgu 3:** üretim meta taraması (207 sayfa): yalnız 3 başlık + 3 açıklama
+  ailesi kopya — hepsi yasal sayfalar.
+- **Bulgu 4:** `curl /is-turleri/tam-zamanli` → yalnız layout `WebSite|Organization`;
+  `curl /is-ilanlari/girne` → + `CollectionPage|BreadcrumbList`.
+- **Bulgu 5:** `curl / | grep -i rss` → **yok**; `curl /feed.xml` → 200
+  `application/rss+xml`, 6 `<item>`.
+
+### Doğrulanan ve sağlam bulunanlar (üretim)
+
+- **Sitemap:** 207 `<loc>` (186 statik/yerelleşmiş + 21 ilan), 207/207 → 200,
+  self-canonical, hreflang 6 dil + `x-default`, `noindex` URL yok, 0 tekrar,
+  `lastmod` gelecekte değil.
+- **hreflang karşılıklılık:** 207 sayfa tarandı, 186 hedef → **0 ihlal, 0 ölü hedef**.
+- **robots.txt:** `noindex` sayfaları disallow etmiyor; yalnız `/api/` + 6 `/auth/`.
+- **Canonical:** mutlak string; `/jobs?page=2` canonical `/jobs`; `?page=3+` 404;
+  `/jobs?district=girne` gibi filtreler `/jobs`'a canonical + `noindex, follow`;
+  `/en/jobs/<slug>` → `/jobs/<slug>` (tek TR canonical).
+- **Sayfa hijyeni:** 186 sitemap sayfasında 1 `<h1>`, doğru `lang`,
+  canonical, viewport; `alt`'sız `<img>` 0; yetim 0; kırık iç bağlantı 0 (415 hedef).
+- **JobPosting:** `title, description, datePosted, validThrough,
+  hiringOrganization, jobLocation.address.addressCountry=CY, employmentType,
+  identifier, url` dolu.
+- **OG/Twitter:** `og-cover.webp` 1200×630 (~161 KB), `twitter:image:alt` yerelleşmiş.
+
+### Sahibin yapması gerekenler
+
+- `NEXT_PUBLIC_BING_SITE_VERIFICATION` ve `NEXT_PUBLIC_YANDEX_SITE_VERIFICATION`
+  Vercel'de **yok** (Google var). Kod hazır; değer girilince etiketler yayınlanır.
+- Bing Webmaster Tools + Yandex Webmaster'da mülkü doğrulayıp sitemap'i göndermek
+  (IndexNow tek başına indeksleme garantisi değildir).
+- Google Search Console kapsam raporu: 207 URL'nin kaçı indeksli (bu lane erişemez).
+
+### Sonraki lane için notlar
+
+- `#163`'ün geri kalanı LANE-CLOUDFLARE (bot/edge) + sahip (Search Console/Bing
+  doğrulama) işidir; LANE-SEO tarafı temiz.

@@ -163,10 +163,20 @@ export function createLocalizedPageMetadata({
       url: canonicalUrl,
       siteName: "İşBul KKTC",
       type: openGraphType,
-      locale: openGraphLocales[locale],
-      alternateLocale: routing.locales
-        .filter((otherLocale) => otherLocale !== locale)
-        .map((otherLocale) => openGraphLocales[otherLocale]),
+      // A single-locale page (`contentLocale` set) has no other-language
+      // version to point at — its hreflang alternates are dropped above for the
+      // same reason — so it advertises no `og:locale:alternate` either. Both
+      // `og:url` and `og:locale` then describe the canonical URL and its own
+      // language, not the served prefix: `/en/jobs/<slug>` unfurls as the
+      // Turkish listing it canonicalises to.
+      locale: openGraphLocales[canonicalLocale],
+      ...(contentLocale
+        ? {}
+        : {
+            alternateLocale: routing.locales
+              .filter((otherLocale) => otherLocale !== locale)
+              .map((otherLocale) => openGraphLocales[otherLocale]),
+          }),
       images: [
         {
           url: imageUrl,
