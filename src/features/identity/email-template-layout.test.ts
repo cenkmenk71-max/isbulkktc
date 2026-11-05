@@ -79,6 +79,24 @@ test("the stylesheet stays progressive enhancement, one shared copy", () => {
   }
 });
 
+test("the header logo-to-text gap flips for RTL", () => {
+  // The brand name sits in the cell after the logo. A physical `padding-left`
+  // does not flip under `dir="rtl"`, so the `fa` mail had the logo touching the
+  // name with the gap on the wrong side. The gap must be direction-aware.
+  for (const { name, source } of templates()) {
+    assert.match(
+      source,
+      /vertical-align:middle;\{\{ if \$rtl \}\}padding-right\{\{ else \}\}padding-left\{\{ end \}\}:14px;/,
+      `${name} header gap is not RTL-aware`,
+    );
+    assert.doesNotMatch(
+      source,
+      /padding-(left|right):14px/,
+      `${name} has a physical, non-flipping header gap`,
+    );
+  }
+});
+
 test("the logo URL is the one the transactional layout uses", () => {
   // Two email systems, one brand mark. If the transactional layout changes the
   // asset, the auth templates must follow, or the two families look different.

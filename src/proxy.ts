@@ -34,6 +34,14 @@ export async function proxy(request: NextRequest) {
 
   let sessionResponse = NextResponse.next({ request });
   const supabase = createServerClient<Database>(supabaseUrl, supabaseKey, {
+    // Same hardening as the server client: the session cookie must not be
+    // readable by injected JavaScript, and must be Secure in production.
+    cookieOptions: {
+      path: "/",
+      sameSite: "lax",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    },
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet, headers) {

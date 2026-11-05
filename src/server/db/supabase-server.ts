@@ -85,6 +85,16 @@ export async function createSupabaseServerClient(
   };
 
   return createServerClient<Database>(supabaseUrl, supabaseKey, {
+    // The session cookie is the whole session. `@supabase/ssr` defaults to
+    // `httpOnly: false` and never sets `Secure`; the app has no browser Supabase
+    // client, so nothing needs to read it from JavaScript and HttpOnly can be
+    // turned on. `secure` stays conditional so local HTTP dev keeps working.
+    cookieOptions: {
+      path: "/",
+      sameSite: "lax",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    },
     cookies: cookieMethods,
     ...(options.experimental
       ? { auth: { experimental: options.experimental } }

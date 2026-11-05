@@ -388,3 +388,81 @@ Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration değişmed
 - **Gmail/Outlook'ta gerçek e-posta ile görsel doğrulama** (kabul ölçütü): bu
   sandbox'ta canlı Supabase'e yazma/gerçek gönderim yok. `supabase/templates/**`
   değişikliği hosted projeye `db push`/dashboard ile alınmalı (LANE-SUPABASE).
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (issue turu: #167)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Aldığı issue: #167 (Supabase oturum çerezi @supabase/ssr varsayılanlarında:
+              httpOnly:false, Secure yok)
+Değişen dosyalar:
+  src/proxy.ts                              (+ cookieOptions)
+  src/server/db/supabase-server.ts          (+ cookieOptions)
+  src/features/identity/email-template-layout.test.ts (+ RTL guard)
+  supabase/templates/*.html (7)             (RTL başlık boşluğu düzeltmesi)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (445, 1'i yeni) / test:security ✅ (35 pass, 3 todo, 0 fail)
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration değişmedi)
+```
+
+### Denetlenen dosyalar (micro-denetim)
+`git ls-files 'src/features/identity/**' 'src/app/[locale]/(auth)/**'
+'supabase/templates/**'` → **37 dosya**. Bu turda 7 şablon + 1 test dosyası
+düzenlendi; kalanlar önceki turlarda denetlendi. Ayrıca #167 kapsamında
+**sahiplik tablosunda hiçbir lane'e atanmamış** 2 çağrı noktası
+(`src/proxy.ts`, `src/server/db/supabase-server.ts`) düzenlendi — issue bunu
+açıkça LANE-AUTH'a veriyor (aşağıda gerekçe). Bakılmayan dosya yok.
+
+### Bulgular
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/proxy.ts:36`, `src/server/db/supabase-server.ts:87` | yetki/güvenlik (kimlik) | `createServerClient` `cookieOptions` geçmiyor → `httpOnly:false`, `Secure` yok (kanıt: `DEFAULT_COOKIE_OPTIONS`) | `httpOnly:true`, `secure` üretimde, `sameSite:lax`, `path:/` | XSS ile enjekte JS oturum çerezini okuyup hesabı devralabilir | düzeltildi |
+| 2 | `supabase/templates/*.html:45` (7) | RTL / erişilebilirlik | Logo↔marka arası boşluk `padding-left:14px` (fiziksel özellik) | `dir=rtl`'de `padding-right` olmalı | `fa` e-postasında logo ada değiyor, boşluk yanlış tarafta | düzeltildi |
+| 3 | `src/features/identity/oauth-signup-intent.ts` | mantık | (kontrol edildi) `parseOAuthSignupIntent` sınır/saat kayması testleri mevcut; sorun yok | — | — | bilgi |
+| 4 | `src/features/identity/account-panel.tsx` | erişilebilirlik | (kontrol edildi) `aria-hidden` avatar + görünür ad; WCAG 2.5.3 sorunu yok | — | — | bilgi |
+
+### Düzeltilen
+- **#1:** İki `createServerClient` çağrısına ortak `cookieOptions`
+  (`httpOnly:true`, `secure: process.env.NODE_ENV === "production"`, `sameSite:"lax"`,
+  `path:"/"`) eklendi. `HttpOnly` güvenli: tarayıcıda oturum çerezini okuyan kod yok
+  (`createBrowserClient` yok; tek `document.cookie` yazımı `ib_consent`, ayrı çerez).
+  `secure` koşullu çünkü `localhost` güvenli bağlam → E2E/yerel dev kırılmıyor.
+  **Sahiplik gerekçesi:** çağrı noktaları tabloda atanmamış; #167 (LANE-GÜVENLİK
+  açtı) düzeltmeyi açıkça LANE-AUTH'a veriyor ("oturum akışı … güvenlik"), ve
+  `tests/security/session-cookie-flags.test.ts` bayrakların **çağrı yerinde**
+  olmasını şart koşuyor. Dedektör (`lane-collisions.mjs`) çakışma bulmuyor.
+- **#2:** Başlık hücresindeki boşluk `{{ if $rtl }}padding-right{{ else }}padding-left{{ end }}:14px`
+  yapıldı; `fa`'da doğru tarafa kayıyor.
+
+### Kanıt
+- **Gerçek `@supabase/ssr` sınırıyla** (`applyServerStorage`):
+  ```
+  NODE_ENV unset      -> {"path":"/","sameSite":"lax","httpOnly":true,"maxAge":34560000,"secure":false}
+  NODE_ENV=production -> {… ,"httpOnly":true,… ,"secure":true}
+  ```
+- `bun run test:security` → **"the Supabase session cookie is HttpOnly and Secure"**
+  artık **pass** (önce `todo`).
+- Şablonlar: LANE-QA renderer'ı 21/21 + yeni RTL guard'ı 6/6.
+
+### Güvenlik değerlendirmesi (security skill)
+- `HttpOnly` + `Secure` (üretim) + `SameSite=Lax` + `Path=/`. `SameSite=None` yok →
+  CSRF yüzeyi artmadı.
+- `maxAge` ssr varsayılanında (400 gün) bırakıldı; davranış değişmedi.
+- Oturum doğrulaması zaten `getClaims()` ile yapılıyor (imza yeniden doğrulanıyor),
+  ham çereze güvenilmiyor — değişmedi.
+- `service_role` hiçbir değişen dosyada yok.
+
+### Devredilen / not
+- **#191** (marka paleti: site `#194435` vs e-posta `#0D5C3A`) → sahibi LANE-URUN
+  (`email-layout.ts`) + LANE-TASARIM (token'lar). Şablonlarımdaki `#0D5C3A` şu an
+  `email-layout.ts` ile tutarlı; #191 landığında şablonlar da aynı PR ile
+  güncellenmeli (aksi halde iki sistem yine ayrışır). Bu PR'a almadım — sahibi
+  farklı lane.
+- **#189** (yeni pazarlama e-posta tipleri) → LANE-URUN/GEO kapsamı.
+
+### Sahibin yapması gerekenler
+- Üretimde `Set-Cookie` bayraklarını doğrula (gerçek oturum aç → `Secure; HttpOnly`).
+- #167'nin `todo` testi bu PR ile geçiyor; LANE-GÜVENLİK `todo`'yu kaldırıp kapıya
+  terfi ettirebilir.
