@@ -84,7 +84,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   if (!article) siblingRedirect(locale, slug);
 
   setRequestLocale(locale);
-  const t = await getTranslations({ locale, namespace: "Guides" });
+  const [t, navCopy] = await Promise.all([
+    getTranslations({ locale, namespace: "Guides" }),
+    getTranslations({ locale, namespace: "Nav" }),
+  ]);
 
   const structuredData = buildGuideStructuredData({
     locale,
@@ -94,6 +97,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     description: article.description,
     updated: article.updated,
     pathname: "/blog",
+    // The breadcrumb names the section in the page's own language. The producer
+    // defaults to the historical Turkish/Latin "Blog", which a `de`/`fa` page
+    // would assert alongside its localized copy; the nav already renders this
+    // label in all six locales, so the two can never disagree.
+    sectionName: navCopy("blog"),
   });
 
   return (

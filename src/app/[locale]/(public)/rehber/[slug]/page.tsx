@@ -86,7 +86,10 @@ export default async function GuidePage({ params }: GuidePageProps) {
   if (!guide) siblingRedirect(locale, slug);
 
   setRequestLocale(locale);
-  const t = await getTranslations({ locale, namespace: "Guides" });
+  const [t, footerCopy] = await Promise.all([
+    getTranslations({ locale, namespace: "Guides" }),
+    getTranslations({ locale, namespace: "Footer" }),
+  ]);
   const others = (await import("@/content/guides")).getGuides(locale).filter(
     (candidate) => candidate.slug !== guide.slug,
   );
@@ -98,6 +101,11 @@ export default async function GuidePage({ params }: GuidePageProps) {
     title: guide.title,
     description: guide.description,
     updated: guide.updated,
+    // The breadcrumb names the section in the page's own language. The producer
+    // defaults to the historical Turkish/Latin "Rehber", which a `de`/`fa` page
+    // would assert alongside its localized copy; the footer already renders this
+    // label in all six locales, so the two can never disagree.
+    sectionName: footerCopy("links.guides"),
   });
 
   return (

@@ -673,3 +673,90 @@ Hepsi tarandı; bakılmayan dosya yok.
 - `buildCollectionPageGraph` `name` alanı hâlâ `${subjectName} İş İlanları` — sabit
   Türkçe ek. Bu **GEO'nun üreticisi** (`src/content/ai-visibility/structured-data.ts`);
   ilçe sayfasında da aynı (`Kyrenia İş İlanları`). #152 ile takip edilmeli.
+
+---
+
+## Micro-denetim raporu — tur 8 (#179 mount + 404 başlığı)
+
+```
+Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
+Değişen dosyalar: src/app/[locale]/not-found.tsx,
+                  src/app/[locale]/(public)/rehber/[slug]/page.tsx,
+                  src/app/[locale]/(public)/blog/[slug]/page.tsx,
+                  docs/lanes/03-seo.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
+            test:unit ✅ (486 pass, 8 belgeli todo)  test:security ✅ (41 pass, 2 todo)
+            build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone doğrulaması ✅
+Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
+```
+
+### Denetlenen dosyalar
+
+`git ls-files` ile LANE-SEO sahipliği: **41 dosya** — `src/lib/seo.ts`,
+`src/app/sitemap.ts`, `src/app/robots.ts`, `scripts/submit-indexnow.mjs` ve
+`src/app/[locale]/**` altındaki 37 route/layout. Hepsi tarandı; bakılmayan yok.
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/app/[locale]/not-found.tsx` | SEO meta | 404 yanıtı **ana sayfanın** başlığını taşıyordu (`İşBul KKTC — KKTC ve Kuzey Kıbrıs İş İlanları`), çünkü `not-found.tsx` metadata yayınlamıyor ve `[locale]/layout.tsx`'in `Meta.title`'ını miras alıyordu | dile göre "Sayfa bulunamadı" | Kayıp sayfa, arama motoruna/sekme başlığına ana sayfa olarak tanıtılıyordu; 6 dil | **düzeltildi** |
+| 2 | `rehber/[slug]/page.tsx` + `blog/[slug]/page.tsx` | JSON-LD / GEO | `buildGuideStructuredData`'ya `sectionName` geçilmiyordu → breadcrumb 2. adımı sabit `"Rehber"`/`"Blog"`; `de`/`fa`/`ru`/`el` sayfada Türkçe/Latin | çağıranın yerelleştirilmiş etiketi | yapısal veri, sayfanın kendi dilinde olmayan bir bölüm adı iddia ediyordu | **düzeltildi** → #179 |
+| 3 | `src/messages/*.json` `Legal` | SEO meta | `/privacy`,`/cookies`,`/terms` meta 6 dilde aynı Türkçe | her dil kendi metni | 18 sayfa kopya meta+gövde | devredildi → #141 |
+| 4 | 404 `<html>` | SEO meta | 404'te `lang`/`dir` yok, SSR gövdesi boş | `<html lang dir>` | `fa` RTL sinyali yok | devredildi → #149 |
+| 5 | Bing/Yandex doğrulama | bulunabilirlik | `msvalidate.01`/`yandex-verification` üretimde yok | iki motor doğrulanmalı | indeksleme yavaş | devredildi → #173 |
+| 6 | `/jobs`, `/companies`, `/rehber`, `/blog` | JSON-LD mount | İndeks sayfaları sayfaya-özel JSON-LD yayınlamıyor | `CollectionPage`+`BreadcrumbList` | zengin sonuç kaybı | devredildi → #203 (GEO üretir, SEO mount eder) |
+
+### Kanıt
+
+- **Bulgu 1 (önce, üretim standalone):**
+  `/nope`, `/en/nonexistent`, `/de/nonexistent`, `/fa/nonexistent` →
+  hepsi `<title>İşBul KKTC — …</title>` (ana sayfa başlığı; `en`/`de`/`fa` kendi
+  dilinde ana sayfa başlığı). **Sonra:** `Sayfa bulunamadı · İşBul KKTC`,
+  `Page not found · …`, `Seite nicht gefunden · …`, `صفحه پیدا نشد · …`.
+  Durum **404** korunuyor; `<meta name="robots">` **tek** (Next'in enjekte ettiği
+  `noindex`); `og:image` 1200×630 kart değişmedi.
+  Not: `robots` direktifi bu dosyaya **eklenmedi** — eklendiğinde ikinci bir
+  `robots` etiketi doğuyor ve `seo.spec.ts:426` `toHaveCount(1)` kırılıyordu
+  (denendi, geri alındı).
+- **Bulgu 2 (önce):** `de` rehber sayfasında breadcrumb
+  `İşBul KKTC > Rehber > …` (Almanca sayfada Türkçe etiket).
+  **Sonra:** `tr: İşBul KKTC > Kariyer rehberleri > …`,
+  `en: … > Career guides > …`, `de: … > Karriereratgeber > …`,
+  `fa: … > راهنماهای شغلی > …`, `ru: … > Карьерные гиды > …`,
+  `el: … > Οδηγοί καριέρας > …`. Blog: `İş Haberleri` / `Business News` /
+  `Geschäftsnachrichten` / `اخبار کسب‌وکار`. Etiketler ürünün kendi çevirilerinden
+  (`Footer.links.guides`, `Nav.blog`) geliyor — drift imkânsız.
+- **Kök neden hipotezi çürütüldü:** #149 "kök `src/app/layout.tsx` yok" diyordu.
+  Deneyle sınandı: geçici kök layout eklendi → 404 yine `lang`/`dir`'siz ve boş;
+  `globalNotFound: true` + `global-not-found.tsx` eklendi → yine aynı. Yani kök
+  layout eklemek bu sorunu **çözmez**; #149'a bu bulgu yorum olarak eklendi.
+
+### Doğrulanan ve sağlam bulunanlar
+
+- **Sitemap:** 186 `<loc>` (üretimde 207 = +21 ilan), hepsi 200, self-canonical,
+  hreflang 6 dil + `x-default`, `noindex` URL yok, 0 tekrar; üretimde ilan
+  `<lastmod>`'ları ile `/` ve `/jobs` `<lastmod>`'ı tutarlı (`2026-11-05T16:08:07Z`).
+- **Sayfa hijyeni:** 186 sayfada 1 `<h1>`, doğru `lang`, canonical, `og:image`,
+  `twitter:card=summary_large_image`; `og:title`↔`title`, `og:url`↔`canonical`
+  tutarlı; kırık iç bağlantı **0** (415 hedef), yetim **0**, boş anchor **0**.
+- **Pagination:** `/jobs?page=2..999` → **404** (soft-404 değil); filtreli URL'ler
+  `/jobs`'a canonical + `noindex, follow`.
+- **robots.txt:** `noindex` sayfaları disallow etmiyor; yalnız `/api/` + 6 `/auth/`.
+- **JSON-LD regresyonu yok:** `is-turleri` (`CollectionPage`+`BreadcrumbList`,
+  #165) ve rehber `Article`+`BreadcrumbList` korunuyor.
+- **Kopya meta:** yalnız yasal sayfa aileleri (#141).
+
+### Düzeltilen / devredilen
+
+- **Düzeltildi:** #1 (404 başlığı), #2 (#179 mount).
+- **Devredildi:** #141, #149 (kök neden düzeltmesiyle birlikte), #173, #203.
+
+### Sonraki lane için notlar
+
+- `buildCollectionPageGraph` `name` alanı hâlâ `${subjectName} İş İlanları`
+  (sabit Türkçe ek) — GEO üreticisi; #152 ile takip edilmeli.
+- `not-found.tsx` içinde `generateMetadata` **çalışıyor** ve layout metadata'sını
+  geçersiz kılıyor; 404'e özel başka bir meta gerekirse yer burasıdır.
+- Yerel e2e çalıştırmak için Chromium `chrome` kanalı yok
+  (`/opt/google/chrome/chrome`); yalnız CI'da koşuyor.
