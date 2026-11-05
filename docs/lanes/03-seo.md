@@ -1057,3 +1057,87 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
   dışlama (`!src/app/[locale]/(auth)/**`) eklenmesi bu belirsizliği kaldırır.
 - `not-found.tsx` içine metadata eklemek **çalışıyor** ve layout'u geçersiz
   kılıyor — 404'e özel başka sinyal gerekirse yer burası.
+
+---
+
+## Micro-denetim raporu — tur 12 (yeniden denetim; yeni bulgu yok)
+
+```
+Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
+Değişen dosyalar: docs/lanes/03-seo.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
+            test:unit ✅ (531 pass, 4 belgeli todo)  test:security ✅ (47 pass, 2 todo)
+            build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone doğrulaması ✅
+Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
+```
+
+### Denetlenen dosyalar
+
+`git ls-files` ile LANE-SEO sahipliği: **41 dosya** — `src/lib/seo.ts`,
+`src/app/sitemap.ts`, `src/app/robots.ts`, `scripts/submit-indexnow.mjs` ve
+`src/app/[locale]/**` altındaki 37 route/layout. Hepsi tarandı; bakılmayan yok.
+
+### Bulgular
+
+**Yeni, düzeltilebilir bir bulgu çıkmadı.** Önceki turların düzeltmeleri `main`'de
+doğrulandı ve alan baştan tarandı. Bu turda bulunan tek şey, **devredilmiş bir
+issue'nun üçüncü deneyle de çözülemediği** oldu (#149).
+
+| # | Konu | Sonuç |
+|---|---|---|
+| — | Sitemap, canonical, hreflang, robots, OG/Twitter, JSON-LD, link bütünlüğü, slug çift yönlü çözüm, CWV | **0 bulgu** (aşağıdaki kanıt) |
+| 1 | `#149` 404 `<html lang/dir>` | 3. deney (kök `app/not-found.tsx`) de çözmedi → issue'ya yorum; uygulama katmanında çözülemez |
+| 2 | `#141` yasal sayfa çevirisi | **main'de düzeldi** (`/en/privacy` → "Privacy Policy") |
+| 3 | `#280` auth meta | LANE-AUTH'un alanı; bu turda dokunulmadı |
+
+### Kanıt (bu tur, canlı standalone + üretim)
+
+- **Sitemap:** geçerli XML (ElementTree), 186 `<loc>` (üretimde 207 = +21 ilan),
+  **0 tekrar**, hepsi 200, **0 yönlendirme**, `noindex` URL yok, 42 `<lastmod>`
+  (yalnız ilan listeleyen rotalar + rehber/blog; ilçe/tür yok — tur 9 kararı).
+- **Canonical/hreflang:** 186 sayfa → **0 ihlal**; her sayfa kendi diline +
+  `x-default`'a işaret ediyor; sitemap `<xhtml:link>` seti ile sayfanın kendi
+  `<link rel=alternate>` seti **birebir aynı**.
+- **Kopya meta:** **0** — başlık, açıklama, canonical, `og:*`, `twitter:*`,
+  `robots`, `viewport`, `charset` her sayfada tam 1 (tur 8'deki 3 kopya aile
+  #141 ile kapandı).
+- **`<title>` ↔ `og:title` ↔ `twitter:title`:** 186/186 tutarlı; marka iki kez
+  yazılmıyor; `description` = `og:description` = `twitter:description`.
+- **JSON-LD:** 186 sayfanın tamamı geçerli (0 parse hatası); `WebSite`×186,
+  `Organization`×186, `CollectionPage`×96, `BreadcrumbList`×132, `Article`×36,
+  `FAQPage`×12; `/about` ve `/sss` FAQ soruları görünür metinde.
+- **OG görseli:** `og-cover.webp` gerçekten **1200×630** (WebP bitmap'inden
+  ayrıştırıldı), ~161 KB < 300 KB; `og:image:alt` ve `twitter:image:alt` 6 dilde.
+- **404:** kendi yerelleştirilmiş `title` + `og:*` + `twitter:*` (tur 11);
+  tek `robots: noindex`; canonical/`og:url` **yok** (doğru).
+- **JobPosting (üretim):** `title`, `datePosted`, `dateModified`, `validThrough`,
+  `employmentType`, `directApply`, `url`, `addressCountry=CY` dolu;
+  `directApply:false` içe aktarılan ilan için doğru (Google tanımı: kısa ve
+  aracısız başvuru; kaynak ilanın kendi formu yok).
+- **Slug çift yönlü çözüm:** 6 ilçe + 6 tür → `slug→value→slug` **0 hata**;
+  sitemap'teki tüm ilçe/tür slug'ları çözülüyor.
+- **Link bütünlüğü:** 415 benzersiz iç hedef → 0 kırık; yetim 0; boş anchor 0.
+- **robots.txt:** `noindex` sayfaları disallow etmiyor; auth/admin/profile
+  sitemap'te yok; `Disallow` yalnız `/api/` + 6 `/auth/`.
+- **IndexNow:** `public/isbulkktc….txt` tek ve içeriğiyle eşleşiyor; script'in
+  çift-endpoint fallback'i yerinde.
+- **CWV (SEO açısından):** `<head>` 5–6 KB; inline script **0**; tüm
+  `<script src>` `async`; 2 blocking stylesheet (Next'in kendi bundle'ı); fontlar
+  `display:swap` + `preload:false`; LCP görseli `preload` ediliyor.
+
+### Düzeltilen / devredilen
+
+- **Düzeltildi:** yok (yeni bulgu çıkmadı).
+- **Devredildi:** #280 (auth meta, LANE-AUTH), #149 (404 kabuğu, uygulama
+  katmanında çözülemez — issue'ya 3. deney kanıtı eklendi), #173 (Bing/Yandex).
+
+### Sonraki lane için notlar
+
+- `(auth)/**` sahipliği **çift** (SEO `src/app/[locale]/**` + AUTH
+  `src/app/[locale]/(auth)/**`). Tabloya `!src/app/[locale]/(auth)/**` dışlaması
+  eklenmesi bu belirsizliği kaldırır.
+- 404 `<html lang/dir>` ve boş SSR gövdesi Next 16.4.2'nin iç hata ağacından
+  geliyor; kök layout, `globalNotFound` ve kök `not-found.tsx` **üçü de**
+  denendi, hiçbiri değiştirmiyor (#149).
+- SEO alanı bu turda **tamamen temiz**; yeni iş için yeni ürün yüzeyi (yeni rota
+  veya yeni içerik ailesi) gerekir.
