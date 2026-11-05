@@ -412,3 +412,68 @@ test("the reduced-motion reset zeroes animation and transition delays", () => {
     );
   }
 });
+
+/**
+ * Direction-sensitive declarations must use logical properties so the Persian
+ * (`dir=rtl`) layout mirrors. A physical `text-align: left` or `padding-left`
+ * does not flip: on `/fa` the sector-card copy and the mobile menu labels sat at
+ * the left edge of a right-aligned box, and the sector rail / hero divider drew
+ * on the wrong side. The repo already leans on `margin-inline`/`padding-inline`
+ * (50+ uses), so the physical forms are the exception, not the house style.
+ *
+ * `html[dir="rtl"]` override blocks are excluded: they exist precisely to set a
+ * *physical* value for the mirrored direction (e.g. an LTR-forced email input
+ * whose text should still sit on the right), so a physical value there is the
+ * intent, not the bug.
+ */
+test("direction-sensitive declarations use logical properties", () => {
+  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  // Drop every explicit RTL override block (`html[dir="rtl"]` and its modern
+  // `html:dir(rtl)` form), including the one-line variant: a physical value
+  // there is the deliberate mirror, not the bug.
+  const withoutRtlBlocks = withoutComments.replace(
+    /html(?::dir\(rtl\)|\[dir="rtl"\])\s*[^{]*\{[^}]*\}/g,
+    "",
+  );
+
+  const physical =
+    /(?:^|[\s;{])(margin|padding|border)-(left|right)(?:-color|-width|-style)?\s*:|text-align\s*:\s*(?:left|right)\b/gm;
+  const offenders = [...withoutRtlBlocks.matchAll(physical)].map(
+    (match) => match[0].trim(),
+  );
+
+  // A four-value `margin`/`padding` shorthand whose horizontal pair differs
+  // (e.g. `13px 14px 13px 15px`) is the same defect spelled without a
+  // `left`/`right` keyword: the second and fourth values are physical sides, so
+  // it does not mirror. A three-value shorthand is symmetric on the inline axis
+  // and is left alone. The value is split on whitespace that is not inside a
+  // function, so `clamp(38px, 6vw, 66px)` counts as one token, not three.
+  for (const match of withoutRtlBlocks.matchAll(
+    /(?:^|[\s;{])(?:margin|padding)\s*:\s*([^;{}]+);/gm,
+  )) {
+    const value = match[1].trim().replace(/\s*!important\s*$/i, "");
+    const parts: string[] = [];
+    let depth = 0;
+    let current = "";
+    for (const char of value) {
+      if (char === "(") depth += 1;
+      else if (char === ")") depth -= 1;
+      if (/\s/.test(char) && depth === 0) {
+        if (current) parts.push(current);
+        current = "";
+        continue;
+      }
+      current += char;
+    }
+    if (current) parts.push(current);
+    if (parts.length === 4 && parts[1] !== parts[3]) {
+      offenders.push(match[0].trim());
+    }
+  }
+
+  assert.deepEqual(
+    offenders,
+    [],
+    `These direction-sensitive declarations use physical left/right and will not mirror under RTL. Use the logical property (margin-inline-start, border-inline-end, text-align: start/end, padding-inline: …) or add the value to an html[dir="rtl"] block:\n${offenders.join("\n")}`,
+  );
+});

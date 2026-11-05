@@ -336,3 +336,79 @@ Kural katı: sahibi olmadığım dosyaya yazmam. Bu yüzden:
   yazacağı netleşmeli (tablo LANE-SUPABASE diyor, issue LANE-URUN diyor).
 - Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
   `docs/lanes/05-tasarim.md`. Hepsi bu lane'in kapsamında.
+
+---
+
+## LANE-TASARIM çalışma notları (2026-11-05, tur 5)
+
+Branch: `lane/tasarim`. Taban: `origin/main` @ `510ebac`. Kuyrukta `lane:tasarim`
+etiketli tek iş **#191** idi; e-posta tarafı sahiplik çelişkisi yüzünden hâlâ
+devirde (tur 4 notu). Bu turda brief'in 2. maddesi (**RTL**) alanı tarandı ve
+somut bir kusur sınıfı bulundu.
+
+### Bulgu 5 — Yön duyarlı bildirimler fiziksel `left/right` kullanıyordu; `fa` aynalanmıyordu (düzeltildi)
+
+- **Belirti:** `dir="rtl"` altında (Farsça) bir dizi bildirim yönü takip etmiyordu:
+  - `.sector-card { text-align: left }` → kart metni sağa hizalı kutunun **sol**
+    kenarına yapışıyordu (ölçüm: `fa` kutu 211–360, metin 211–288; `tr`'de aynı
+    kutu 31–179, metin 31–133 — yani RTL'de beklenen sağ kenar değil).
+  - `.mobile-nav a/button { text-align: left }` → menü etiketleri sol kenarda.
+  - `.editorial-page-scene-copy` (+ `h2`, `p`) `text-align: left` → giriş/kayıt
+    sayfasındaki sahne metni sağa hizalı panelde sola kaçıyordu.
+  - `.sector-heading { padding-left; border-left }` → yeşil şerit ve girinti
+    RTL'de yanlış tarafta.
+  - `.about-hero-aside/.blog-hero-aside { padding-left; border-left }` → ayırıcı
+    çizgi yanlış tarafta.
+  - `.editorial-password-field > input { padding-right: 48px }` → şifre göster
+    düğmesinin yeri RTL'de ters; metin ile düğme çakışma riski.
+  - `.company-directory-select select { padding-right: 34px }` → seçim oku yeri.
+  - `.candidate-signout { text-align: right }` ve `.vend-panel-price span`
+    (fiyat etiketi) → `end` olmalı.
+  - Header'da `margin-left: auto/clamp(...)` (`.desktop-nav`, `.header-actions`,
+    `.workspace-status`) → RTL'de boşluk yanlış tarafa itiliyordu.
+  - **Asimetrik 4-değerli kısayollar:** `.sector-card-copy`
+    (`padding: 13px 14px 13px 15px`, mobilde `10px 23px 3px 25px`) ve
+    `.text-action` (`8px 0 8px 10px`) — ikinci/dördüncü değerler fiziksel sağ/sol
+    olduğu için aynalanmıyordu.
+- **Kök neden:** bu bildirimler **fiziksel** (`left`/`right`); `dir=rtl` altında
+  aynalanmazlar. Repo zaten `margin-inline`/`padding-inline` ağırlıklı (50+ kullanım),
+  yani fiziksel biçim istisnaydı.
+- **Düzeltme:** yön duyarlı olanlar mantıksal karşılıklarına çevrildi
+  (`text-align: start/end`, `margin-inline-start`, `padding-inline-start/end`,
+  `border-inline-start/end`, `border-inline`, `padding-inline`); asimetrik
+  kısayollar `padding-block` + `padding-inline` çiftine ayrıldı. Yalnızca
+  `html[dir="rtl"]` override'ındaki bilinçli fiziksel değer korundu.
+- **Kanıt (piksel, 8 rota × tr/fa, `deviceScaleFactor: 1`, sharp diff):**
+  - **LTR (`tr`) öncesi↔sonrası: 0/9216000 px (0.00%), maxDelta ≤5** → LTR hiç
+    etkilenmedi (fiziksel == mantıksal orada).
+  - **RTL (`fa`) öncesi↔sonrası: ~174094/9216000 px (%1.89)** → düzeltme yalnızca
+    `fa`'yı hareket ettirdi; beklenen sonuç.
+  - Ölçüm (örnek, mobil 390px): `.sector-card-copy` metni `fa`'da kutunun sağ
+    kenarından **10px** içeride (LTR'de sol kenardan 10px) — ayna simetrik;
+    `.editorial-page-scene-copy h2` `fa` kutu sağ kenarına yapışıyor.
+- **Guard:** `tests/unit/design-tokens.test.ts` — "direction-sensitive
+  declarations use logical properties": yorumları ve `html[dir="rtl"]` /
+  `html:dir(rtl)` bloklarını çıkarıp (a) `margin/padding/border-left|right` ve
+  `text-align: left|right` kalıbını, (b) yatay çifti farklı 4-değerli
+  `margin`/`padding` kısayolunu arar; ikisi de sıfır olmalı. `clamp()` ve
+  `!important` doğru ayrıştırılır. Negatif test edildi (her iki biçim geri
+  konunca kırmızı; simetrik `padding: 10px 22px` yeşil kalır).
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅
+- `bun run test:unit` ✅ (511 test, +1 yeni guard)
+- `tests/e2e/accessibility.spec.ts -g "fa "` ✅ 40 passed
+- `tests/e2e/typography.spec.ts` + `responsive-locales.spec.ts` ✅ 48 passed
+
+### Sahibin yapması gerekenler
+
+- **LANE-QA / #210:** `tests/visual/baselines/header-fa.png` ve
+  `home-search-fa.png` bu düzeltmeyle **meşru olarak** değişti (RTL artık doğru
+  aynalanıyor). Baseline'lar runner ortamında yenilenirken bu düzeltme dahil
+  edilmeli; görsel adım `continue-on-error` olduğu için CI'ı kırmaz.
+- **#191 e-posta tarafı** hâlâ `lane:urun` + `agent:handoff` devrinde (tur 4).
+- Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
+  `docs/lanes/05-tasarim.md`. Hepsi bu lane'in kapsamında.
