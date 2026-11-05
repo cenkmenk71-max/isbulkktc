@@ -96,10 +96,33 @@ test("a malformed password is rejected before any auth call", async () => {
   assert.deepEqual(authMethods(), [], "schema rejection must precede the auth client call");
 });
 
+test("the generic-failure example is a code the action does not map specially", async () => {
+  // This pins the *reason* the test above uses `over_request_rate_limit`, so the
+  // coupling cannot come back. If a future change gives that code its own
+  // message, this fails and points at the test that must switch to a different
+  // generic example — rather than silently forbidding a legitimate mapping the
+  // way using `weak_password` did (#277).
+  const { messageForAuthErrorCode } = await import("../../src/features/identity/auth-errors");
+
+  assert.equal(
+    messageForAuthErrorCode("over_request_rate_limit", "passwordUpdateFailed"),
+    "passwordUpdateFailed",
+    "the generic example must fall back, or the test above asserts the wrong thing",
+  );
+});
+
 test("a failed password change is reported, not swallowed", async () => {
+  // A code with no special meaning for a password update: GoTrue is throttling,
+  // not rejecting the value. It must fall back to the generic copy — and,
+  // crucially, must not sign the user out, because the password was not changed.
+  //
+  // The code is deliberately *not* `weak_password`. That one is actionable (the
+  // visitor must pick a stronger value) and LANE-AUTH maps it to its own message;
+  // using it here made this test forbid that mapping (#277). A generic example
+  // has to be a code with no actionable sibling.
   resetBoundary({
     user: fakeAuthUser({ id: ID }),
-    authError: { code: "weak_password", message: "Password is too weak" },
+    authError: { code: "over_request_rate_limit", message: "Too many requests" },
   });
 
   const { updatePassword } = await loadIdentityActions();
