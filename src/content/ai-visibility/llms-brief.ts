@@ -7,12 +7,32 @@ import {
 } from "@/content/ai-visibility/faq";
 import { regionNames, servedDistricts, SITE_NAME } from "@/content/ai-visibility/site";
 import { districtSlug } from "@/features/locations/northern-cyprus-districts";
-import {
-  jobTypeKeys,
-  jobTypeSlugs,
-  type JobTypeKey,
-} from "@/features/jobs/job-type-slugs";
+import { jobTypeKeys, jobTypeSlugs } from "@/features/jobs/job-type-slugs";
 import { getGuides } from "@/content/guides";
+
+import de from "@/messages/de.json";
+import el from "@/messages/el.json";
+import en from "@/messages/en.json";
+import fa from "@/messages/fa.json";
+import ru from "@/messages/ru.json";
+import tr from "@/messages/tr.json";
+
+/**
+ * The interface catalogs, so the brief names a page exactly as the page and the
+ * navigation name it. The brief is generated for all six locales, so a label it
+ * renders in English (or Turkish) inside a German or Persian section would
+ * contradict the product's own copy. Reading the catalog is the single source of
+ * truth; no copy is authored here.
+ */
+const catalogs = { tr, en, de, ru, el, fa } as const satisfies Record<
+  AppLocale,
+  unknown
+>;
+
+/** Fills a catalog template like `{type} Jobs` / `{district} İş İlanları`. */
+function fillTemplate(template: string, value: string): string {
+  return template.replace(/\{[^}]+\}/g, value);
+}
 
 /**
  * The canonical page list the brief advertises. These are the same routes the
@@ -123,16 +143,16 @@ function primaryPageLines(baseUrl: URL, locale: AppLocale): string {
         `- [${page.label[locale]}](${localeUrl(baseUrl, locale, page.pathname)})`,
     )
     .concat(
-      // District landing pages ("Lefkoşa iş ilanları", ...). Listed so an answer
-      // engine can cite the district-specific page for a "jobs in <district>"
-      // question instead of only the national listing.
+      // District landing pages. Listed so an answer engine can cite the
+      // district-specific page for a "jobs in <district>" question instead of
+      // only the national listing. The anchor is the page's own visible title
+      // (`DistrictPage.title`), so the brief and the page name it identically.
       servedDistricts.map((district) => {
-        const label =
-          locale === routing.defaultLocale
-            ? district.tr
-            : district.names[locale];
-        const suffix = locale === routing.defaultLocale ? "iş ilanları" : "jobs";
-        return `- [${label} ${suffix}](${localeUrl(baseUrl, locale, `/is-ilanlari/${districtSlug(district.tr)}`)})`;
+        const label = fillTemplate(
+          catalogs[locale].DistrictPage.title,
+          district.names[locale],
+        );
+        return `- [${label}](${localeUrl(baseUrl, locale, `/is-ilanlari/${districtSlug(district.tr)}`)})`;
       }),
       // Editorial guides — the site's own content, so the brief points at them
       // first among the resources an answer engine may quote. A guide's slug is
@@ -145,36 +165,19 @@ function primaryPageLines(baseUrl: URL, locale: AppLocale): string {
           `- [${guide.title}](${localeUrl(baseUrl, locale, `/rehber/${guide.slug}`)})`,
       ),
       // Employment-type landing pages, so "uzaktan iş" / "tam zamanlı iş" can be
-      // answered with the matching page.
+      // answered with the matching page. The type name and the page title both
+      // come from the catalog, so a German reader sees "Vollzeit Jobs", not the
+      // English "Full-time jobs".
       jobTypeKeys.map((jobType) => {
-        const label = locale === routing.defaultLocale
-          ? jobTypeLabelsTr[jobType]
-          : jobTypeLabelsEn[jobType];
-        const suffix = locale === routing.defaultLocale ? "iş ilanları" : "jobs";
-        return `- [${label} ${suffix}](${localeUrl(baseUrl, locale, `/is-turleri/${jobTypeSlugs[jobType]}`)})`;
+        const label = fillTemplate(
+          catalogs[locale].JobTypePage.title,
+          catalogs[locale].HomeJobSearch.jobTypes[jobType],
+        );
+        return `- [${label}](${localeUrl(baseUrl, locale, `/is-turleri/${jobTypeSlugs[jobType]}`)})`;
       }),
     )
     .join("\n");
 }
-
-/** Employment-type labels for the brief (the brief is TR + EN only). */
-const jobTypeLabelsTr: Record<JobTypeKey, string> = {
-  full_time: "Tam zamanlı",
-  part_time: "Yarı zamanlı",
-  contract: "Sözleşmeli",
-  temporary: "Geçici",
-  internship: "Staj",
-  freelance: "Serbest çalışma",
-};
-
-const jobTypeLabelsEn: Record<JobTypeKey, string> = {
-  full_time: "Full-time",
-  part_time: "Part-time",
-  contract: "Contract",
-  temporary: "Temporary",
-  internship: "Internship",
-  freelance: "Freelance",
-};
 
 /**
  * The district list for the brief. Every district is written with its Turkish
@@ -201,12 +204,16 @@ function faqBlock(locale: AppLocale): string {
 
 function localeSection(baseUrl: URL, locale: AppLocale): string {
   const name = regionNames[locale];
+  // The prefix is the catalog's own "all districts" label (`Tüm ilçeler`,
+  // `Alle Bezirke`, `همه مناطق`), so a localized section does not open with a
+  // Turkish line.
+  const districtsLabel = catalogs[locale].HomeJobSearch.allDistricts;
   return [
     `## ${locale} — ${name}`,
     "",
     siteSummaryByLocale[locale],
     "",
-    `- Hizmet verilen ilçeler: ${districtLine(locale)}`,
+    `- ${districtsLabel}: ${districtLine(locale)}`,
     "",
     primaryPageLines(baseUrl, locale),
     "",

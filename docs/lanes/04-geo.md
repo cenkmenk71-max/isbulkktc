@@ -384,3 +384,50 @@ döndürmüyor (LANE-SUPABASE'in alanı), GEO tarafında düzeltilemez.
 ### Kapılar
 `lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (520 test,
 +2 yeni) · iki guard için kırmızı→yeşil kanıtlandı.
+
+---
+
+## Rapor — micro-denetim turu 6 (issue #126), branch `lane/geo`
+
+**Durum:** düzeltmeler branch'te, CI bekliyor. Devir yok.
+
+### Denetlenen dosyalar (`git ls-files`)
+
+| Glob | N | Bakıldı |
+|---|---|---|
+| `src/content/**` | 24 | 24 (hepsi) |
+| `src/app/llms.txt/**` | 1 | 1 |
+| `public/llms*` | 0 | — (dosya yok) |
+| `src/features/**/structured-data*.ts` | 1 | 1 |
+| `src/features/jobs/job-posting-structured-data.ts` | 1 | 1 |
+
+### Bulgu
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `llms-brief.ts:167-176`, `:150-156`, `:205-216` | tutarlılık / çok dillilik | `/llms-full.txt`'in **de/ru/el/fa** bölümleri hâlâ İngilizce/Türkçe etiket taşıyordu: `- [Full-time jobs](…/de/is-turleri/tam-zamanli)` (oysa ürünün kendi kataloğu `HomeJobSearch.jobTypes.full_time = "Vollzeit"`), ilçe anchor'ı `- [Kyrenia jobs](…)` (İngilizce "jobs" eki), ve ilçe listesi başlığı her bölümde Türkçe `- Hizmet verilen ilçeler:`. Kök neden: `llms-brief.ts` etiketleri sabit yazıyordu ("the brief is TR + EN only" yorumu bayat — üretici altı dil üretiyor) | etiket, ürünün kendi kataloğundan gelmeli | 6 dilin 5'inde brief, ürünün kendi yerelleştirilmiş adlarıyla çelişiyor ("makine çevirisi kokusu") | **düzeltildi** |
+
+**Doğru bulunanlar (bulgu yok):** brief'teki tüm URL'ler gerçek rotaya çözülüyor;
+kısa brief'in "Öne çıkan sayfalar" listesi hâlâ 22 bağlantı; ilçe adları 6 dilde
+katalogla birebir; `Article`/`JobPosting` zorunlu alanları tam; FAQ JSON-LD
+görünen metinle aynı kaynaktan; rehber/yazı içeriği 6 dilde yapısal olarak sağlam.
+
+### Ne yapıldı
+
+`src/content/ai-visibility/llms-brief.ts` artık altı arayüz kataloğunu
+(`src/messages/*.json`) okuyor ve etiketleri **üretmiyor, devralıyor**:
+
+- ilçe anchor'ı = `DistrictPage.title` şablonu + yerelleştirilmiş ilçe adı
+  (`de`: "Jobs in Kyrenia", `ru`: "Вакансии в Кирения", `fa`: "آگهی‌های استخدام در گیرنه");
+- istihdam türü anchor'ı = `JobTypePage.title` + `HomeJobSearch.jobTypes[key]`
+  (`de`: "Vollzeit Jobs", `ru`: "Полная занятость вакансии");
+- ilçe listesi başlığı = `HomeJobSearch.allDistricts` (`Tüm ilçeler`, `Alle Bezirke`, `همه مناطق`).
+
+Sabit `jobTypeLabelsTr`/`jobTypeLabelsEn` tabloları ve `"iş ilanları"`/`"jobs"`
+eki silindi. Kataloglar yalnız iki `force-static` route tarafından import
+ediliyor, istemci paketine sızmıyor. İçerik yazılmadı (LANE-İÇERİK'in alanı);
+yalnız mevcut çeviriler tek kaynaktan okunuyor.
+
+### Kapılar
+`lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (556 test,
++1 yeni guard) · guard kırmızı→yeşil kanıtlandı (bug geri konunca 4 test kırmızı).

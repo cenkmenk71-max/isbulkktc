@@ -22,8 +22,10 @@ import {
   COUNTRY_CODE,
   buildPostalAddress,
   SITE_NAME,
+  servedDistricts,
   regionNames,
 } from "@/content/ai-visibility/site";
+import { jobTypeKeys } from "@/features/jobs/job-type-slugs";
 import { routing, type AppLocale } from "@/i18n/routing";
 
 /**
@@ -518,4 +520,62 @@ test("the full brief's page labels are localized, not English everywhere", () =>
     !deLabels.includes("Job listings"),
     "the German section must not fall back to the English label",
   );
+});
+
+test("the district and employment-type anchors use the interface catalog", () => {
+  const full = buildLlmsFullBrief(BASE_URL);
+  const catalogs = Object.fromEntries(
+    routing.locales.map((locale) => [
+      locale,
+      JSON.parse(
+        readFileSync(path.join(REPO_ROOT, `src/messages/${locale}.json`), "utf8"),
+      ),
+    ]),
+  ) as Record<
+    AppLocale,
+    {
+      DistrictPage: { title: string };
+      JobTypePage: { title: string };
+      HomeJobSearch: { allDistricts: string; jobTypes: Record<string, string> };
+    }
+  >;
+
+  for (const locale of routing.locales) {
+    const section = full.split(`## ${locale} — `)[1]!.split("### FAQ")[0];
+    const labels = briefLinkLabels(section);
+    const catalog = catalogs[locale];
+
+    // A district anchor is the page's own visible title, so the brief and the
+    // page cannot name the same destination two different ways.
+    for (const district of servedDistricts) {
+      const expected = catalog.DistrictPage.title.replace(
+        /\{[^}]+\}/g,
+        district.names[locale],
+      );
+      assert.ok(
+        labels.includes(expected),
+        `${locale} brief does not use the DistrictPage title "${expected}"`,
+      );
+    }
+
+    // Same for the employment types: the type name and the page title both come
+    // from the catalog, so the anchor is not an English label under `de`/`fa`.
+    for (const jobType of jobTypeKeys) {
+      const expected = catalog.JobTypePage.title.replace(
+        /\{[^}]+\}/g,
+        catalog.HomeJobSearch.jobTypes[jobType],
+      );
+      assert.ok(
+        labels.includes(expected),
+        `${locale} brief does not use the JobTypePage title "${expected}"`,
+      );
+    }
+
+    // The district list must not open with a Turkish line in a non-Turkish
+    // section.
+    assert.ok(
+      section.includes(`${catalog.HomeJobSearch.allDistricts}:`),
+      `${locale} section does not label the district list in its own language`,
+    );
+  }
 });
