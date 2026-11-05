@@ -95,6 +95,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     slug: article.slug,
     title: article.title,
     description: article.description,
+    // `datePublished` is the first-publication date, `dateModified` the edit
+    // date. Passing only `updated` made an edited article claim it was first
+    // published on the edit date, which is the one thing Google's Article markup
+    // asks to be truthful about.
+    published: article.published,
     updated: article.updated,
     pathname: "/blog",
     // The breadcrumb names the section in the page's own language. The producer

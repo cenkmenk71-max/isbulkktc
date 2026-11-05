@@ -869,7 +869,9 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
 
 ```
 Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
-Değişen dosyalar: src/app/[locale]/(public)/jobs/page.tsx, docs/lanes/03-seo.md
+Değişen dosyalar: src/app/[locale]/(public)/jobs/page.tsx,
+                  src/app/[locale]/(public)/blog/[slug]/page.tsx,
+                  docs/lanes/03-seo.md
 Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
             test:unit ✅ (504 pass, 8 belgeli todo)  test:security ✅ (47 pass, 2 todo)
             build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone doğrulaması ✅
@@ -887,7 +889,7 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
 | # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
 |---|---|---|---|---|---|---|
 | 1 | `src/app/[locale]/(public)/jobs/page.tsx:89-143` | canonical / sayfalama | `?page=2` **kendi içeriğini** gösteriyor (üretimde 1 benzersiz ilan, sayfa 1 ile örtüşme 0), `index, follow` taşıyor, ama `canonical` **sayfa 1'e** (`/jobs`) işaret ediyordu; hreflang/`og:url` de öyle | her sayfa kendi canonical'ı | 21 ilanlı katalogda 2. sayfa indekslenemiyor; Google'ın "ilk sayfayı canonical yapma" kuralı ihlali | **düzeltildi** |
-| 2 | `/jobs`, `/companies`, `/rehber`, `/blog` | JSON-LD mount | Önceki turlarda düzeltildi | — | — | doğrulandı (sağlam) |
+| 2 | `src/app/[locale]/(public)/blog/[slug]/page.tsx:92-104` | JSON-LD / doğruluk | `buildGuideStructuredData` opsiyonel `published` alıyor (#252) ama blog mount'u geçmiyordu → `Article.datePublished` her zaman `updated`'dan türüyordu; `Article.published` alanı **hiçbir yerde okunmuyordu** | `datePublished: article.published` | Yazı düzenlendiğinde Google'a "bu tarihte yayımlandı" denir; Google Article markup'ı orijinal yayın tarihini ister | **düzeltildi** → #251 |
 | 3 | `src/messages/*.json` `Legal` | SEO meta | `/privacy`,`/cookies`,`/terms` meta 6 dilde aynı Türkçe | her dil kendi metni | 18 sayfa kopya meta+gövde | devredildi → #141 |
 | 4 | 404 `<html>` | SEO meta | 404'te `lang`/`dir` yok, SSR gövdesi boş | `<html lang dir>` | `fa` RTL sinyali yok | devredildi → #149 |
 | 5 | Bing/Yandex doğrulama | bulunabilirlik | `msvalidate.01`/`yandex-verification` üretimde yok | iki motor doğrulanmalı | indeksleme yavaş | devredildi → #173 |
@@ -940,8 +942,22 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
 
 ### Düzeltilen / devredilen
 
-- **Düzeltildi:** #1 (`/jobs?page=N` canonical'ı).
+- **Düzeltildi:** #1 (`/jobs?page=N` canonical'ı), #2 (`published` mount'u → #251).
 - **Devredildi:** #141, #149, #173.
+
+### Bulgu 2 kanıtı
+
+- **Önce:** `grep -rn "published" src/app/[locale]/` → yalnız `updated` geçiliyordu;
+  `Article.published` (`src/content/editorial/types.ts:26`) hiçbir yerde okunmuyordu.
+- **Sonra:** üretici sözleşmesi (`published` → `datePublished`, `updated` →
+  `dateModified`) ayrık girdiyle kanıtlandı:
+  `published:"2026-11-04", updated:"2026-12-01"` →
+  `datePublished: 2026-11-04`, `dateModified: 2026-12-01`.
+  Build çıktısı: `published:q.published`. Canlı sayfada iki tarih bugün aynı
+  olduğundan (her ikisi de `2026-11-04`) regresyon yok; ayrıştıklarında doğru
+  davranış sözleşmeyle sabit.
+- `rehber/[slug]` değişmedi: `Guide` tipinde `published` alanı yok, varsayılan
+  (`updated`) doğru.
 
 ### Sonraki lane için notlar
 
