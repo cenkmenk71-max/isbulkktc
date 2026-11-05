@@ -29,7 +29,7 @@ a boundary regression is attributable at a glance.
 | `notification-worker-auth.test.ts` | the edge worker authenticates before it inspects configuration |
 | `cron-route-auth.test.ts` | the two Next.js cron routes (`/api/push/dispatch`, `/api/email/engagement-digest`) authenticate before any config read and fail closed |
 | `unsubscribe-route-auth.test.ts` | the public unsubscribe GET verifies the HMAC before the service client, and leaks no subscription oracle |
-| `security-headers.test.ts` | imports the real `next.config.ts` and asserts the CSP/HSTS/frame/coop header set, no wildcard `script-src`, no `X-Powered-By`, and the Vercel-alias noindex rule |
+| `security-headers.test.ts` | imports the real `next.config.ts` and asserts the CSP/HSTS/frame/coop header set, no wildcard `script-src`, no `X-Powered-By`, the Vercel-alias noindex rule, and the image optimizer's `remotePatterns` allowlist (exact https hosts, no private hosts) |
 | `anonymous-write-surface.test.ts` | the anon write RPCs and the control the forms carry |
 | `push-endpoint-ssrf.test.ts` | the push-endpoint host allowlist (`isAllowedPushEndpoint`): rejects loopback/link-local/RFC1918/metadata/decimal-IP/local names, every writer wires it, and the send sink re-checks it |
 | `anonymous-rpc-throttle.test.ts` | the action throttles before the RPC and the mail fan-out (ordering, not presence); the throttle also lives inside the anon RPC bodies (a gate); the action-path IP dimension is still one shared bucket |

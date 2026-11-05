@@ -18,10 +18,18 @@ import test from "node:test";
 
 type Header = { key: string; value: string };
 type HeaderGroup = { source: string; has?: { type: string; value: string }[]; headers: Header[] };
+type RemotePattern = {
+  protocol?: string;
+  hostname?: string;
+  port?: string;
+  pathname?: string;
+  search?: string;
+};
 
 async function loadConfig(): Promise<{
   headers: () => Promise<HeaderGroup[]>;
   poweredByHeader: boolean;
+  images: { remotePatterns?: RemotePattern[] };
 }> {
   const mod = await import(new URL("../../next.config.ts", import.meta.url).href);
   return mod.default;
@@ -116,4 +124,57 @@ test("the Vercel alias group keeps the app out of search indexes", () => {
   assert.ok(robots, "the Vercel-alias group no longer sets X-Robots-Tag");
   assert.match(robots!.value, /noindex/i, "the alias must be noindex");
   assert.match(robots!.value, /nofollow/i, "the alias must be nofollow");
+});
+
+// ---------------------------------------------------------------------------
+// The Next.js image optimizer's remote allowlist.
+//
+// `images.remotePatterns` is the server-side allowlist for `/ _next/image`:
+// Next fetches the `url` query parameter on the server and returns the bytes, so
+// a pattern that is too wide (`hostname: "**"`, or a bare `pathname: "/**"` on a
+// host an attacker controls) turns the optimizer into an SSRF/DoS proxy. Nothing
+// pinned this list — a new entry with `hostname: "**"` would ship with every gate
+// green, exactly as an unpinned header would.
+// ---------------------------------------------------------------------------
+
+test("every image remote pattern pins an exact https host and an https protocol", () => {
+  const patterns = config.images?.remotePatterns ?? [];
+  assert.ok(patterns.length > 0, "images.remotePatterns is empty — the optimizer has no allowlist");
+
+  const offenders: string[] = [];
+  for (const pattern of patterns) {
+    const host = pattern.hostname ?? "";
+    // A wildcard host (or a bare `*`) lets the optimizer fetch any origin.
+    if (!host || host.includes("*")) {
+      offenders.push(`hostname ${JSON.stringify(pattern.hostname)}`);
+      continue;
+    }
+    // The protocol must be pinned to https; `http`/omitted allows plaintext.
+    if (pattern.protocol !== "https") {
+      offenders.push(`${host} protocol ${JSON.stringify(pattern.protocol)}`);
+      continue;
+    }
+    // A non-empty port/search is fine, but a wildcard path is not a narrowing.
+    if (pattern.pathname === undefined) {
+      offenders.push(`${host} has no pathname (matches any path)`);
+    }
+  }
+
+  assert.deepEqual(
+    offenders,
+    [],
+    `image remote patterns that are not narrowed to an exact https host: ${offenders.join("; ")}`,
+  );
+});
+
+test("no image remote pattern points at a private or loopback host", () => {
+  const patterns = config.images?.remotePatterns ?? [];
+  const offenders = patterns
+    .map((pattern) => pattern.hostname ?? "")
+    .filter((host) =>
+      /^(localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/i.test(host) ||
+      host.startsWith("[") ||
+      /\.(local|internal)$/i.test(host),
+    );
+  assert.deepEqual(offenders, [], `image remote patterns on internal hosts: ${offenders.join(", ")}`);
 });

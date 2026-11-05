@@ -363,3 +363,23 @@ iki yazma yolu (route + `savePushSubscription`) ve gönderim ucu onu çağırır
 - **#262 kapatılabilir.** Kalan `todo`'lar: #206 (throttle app-yolu IP),
   #102 (server-only).
 - **Bakılmayan:** yok — 13 test dosyası + 2 doküman.
+
+## Durum (2026-11-05, 15. tur) — görsel optimizasyon allowlist'i
+
+`next.config.ts`'i bir kez daha taradım; `security-headers.test.ts` başlıkları
+pinliyordu ama **`images.remotePatterns`** (sunucu tarafı görsel-fetch allowlist'i)
+**pinlenmiyordu**.
+
+- **Bulgu + düzeltme: görsel optimizasyon allowlist'i testsizdi.**
+  `images.remotePatterns`, Next.js'in `/ _next/image` optimizasyonunda sunucunun
+  hangi host'lardan görsel çekebileceğini belirler; çok geniş bir desen
+  (`hostname: "**"`) optimizasyonu bir SSRF/DoS vekiline çevirir. Hiçbir test onu
+  denetlemiyordu — yeni bir `**` host tüm kapılar yeşilken yayınlanabilirdi.
+  `security-headers.test.ts`'e iki test eklendi: (a) her desen **tam bir https host
+  + `protocol: "https"` + bir `pathname`** olmalı (wildcard host reddedilir);
+  (b) hiçbir desen private/loopback/metadata (`.local`/`.internal` dâhil) host'a
+  işaret etmemeli.
+- **Kanıt (mutation):** (a) `hostname: "**"` ekle → kırmızı; (b) `hostname:
+  "169.254.169.254"` yap → kırmızı; (c) bir desenden `protocol: "https"`'i kaldır →
+  kırmızı.
+- **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #206, #102.

@@ -168,6 +168,11 @@ issue açar.
   kapalıdır; Vercel alias host'u `noindex, nofollow` alır.
   `tests/security/security-headers.test.ts` **gerçek config'i import edip**
   `headers()`'ı çağırarak bunları doğrular (metin grep'i değil).
+- **Görsel optimizasyon allowlist'i:** `images.remotePatterns` sunucu tarafında
+  `/ _next/image`'ın hangi host'lardan görsel çekebileceğini belirler; her desen
+  **tam bir https host + https protokol** olmalı, private/loopback/metadata host
+  yasak. Aynı test dosyası bunu da `config.images` üzerinden denetler (wildcard
+  host veya `protocol`'suz desen testi kırmızı yapar).
 - **Açık yönlendirme kapalı:** `sanitizeNextPath` normalizasyon sonrası çıktıyı
   yeniden doğruluyor (`//`, `\`, şema reddi). Denetimde bulunan `"/..//host"`
   bypass'ı sahibi tarafından kapatıldı; `tests/security/open-redirect.test.ts`
