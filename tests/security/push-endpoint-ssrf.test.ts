@@ -54,6 +54,34 @@ function allSql(): string {
     .join("\n");
 }
 
+/**
+ * Every source file that writes a push endpoint, discovered by looking for the
+ * `register_push_subscription` call rather than naming files by hand. There are
+ * two today — the API route the service worker posts to, and the server action
+ * the install page calls — and a third would silently escape a hard-coded list.
+ */
+function pushWritePaths(): string[] {
+  const roots = ["src/app/api/push", "src/features/pwa", "src/features"];
+  const found = new Set<string>();
+  for (const root of roots) {
+    const dir = new URL(`../../${root}/`, import.meta.url);
+    let entries: string[];
+    try {
+      entries = readdirSync(dir, { recursive: true }) as string[];
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (!/\.(ts|tsx)$/.test(entry)) continue;
+      const source = readFileSync(new URL(entry, dir), "utf8");
+      if (/register_push_subscription/.test(source)) {
+        found.add(`${root}/${entry}`);
+      }
+    }
+  }
+  return [...found].sort();
+}
+
 /** Hosts that are legitimate web-push services. */
 const pushServiceHosts = [
   "fcm.googleapis.com",
@@ -62,18 +90,35 @@ const pushServiceHosts = [
   "push.apple.com",
 ];
 
-test("the push endpoint is only required to be an https URL today (documents the gap)", () => {
+test("every push-endpoint write path is discovered (self-test)", () => {
+  // Guards the guard: if a new writer appears, the `todo` below must still scan
+  // it. This asserts at least the two known writers are found.
+  const paths = pushWritePaths();
+  assert.ok(
+    paths.length >= 2,
+    `expected at least the route and the server action, found: ${paths.join(", ") || "(none)"}`,
+  );
+  assert.ok(
+    paths.some((p) => p.includes("app/api/push/subscriptions")),
+    `the API route was not discovered: ${paths.join(", ")}`,
+  );
+  assert.ok(
+    paths.some((p) => p.includes("features/pwa/actions")),
+    `the pwa server action was not discovered: ${paths.join(", ")}`,
+  );
+});
+
+test("every push write path only requires an https URL today (documents the gap)", () => {
   // This is the *current* contract, stated so the test below can assert the
-  // missing part rather than the present one.
-  const route = readFileSync(
-    new URL("../../src/app/api/push/subscriptions/route.ts", import.meta.url),
-    "utf8",
-  );
-  assert.match(
-    route,
-    /endpoint:\s*z\.string\(\)\.url\(\)\.min\(12\)\.max\(1024\)\.startsWith\("https:\/\/"\)/,
-    "the route's endpoint validation changed — re-read the finding above",
-  );
+  // missing part rather than the present one. Both writers share the same shape.
+  for (const relative of pushWritePaths()) {
+    const source = readFileSync(new URL(`../../${relative}`, import.meta.url), "utf8");
+    assert.match(
+      source,
+      /endpoint:\s*z\.string\(\)\.url\(\)\.min\(12\)\.max\(1024\)\.startsWith\("https:\/\/"\)/,
+      `${relative}: the endpoint validation changed — re-read the finding above`,
+    );
+  }
 });
 
 test("the dispatch path sends to the stored endpoint with no host check", () => {
@@ -103,10 +148,13 @@ test(
   },
   () => {
     // When the owners add a host allowlist, it should live at the registration
-    // boundary (route + `register_push_subscription`) and/or the send sink. This
-    // asserts *some* allowlist exists and names the real push services.
+    // boundary — *every* writer (the route and the server action) and/or the RPC
+    // and the send sink. This asserts *some* allowlist exists and names the real
+    // push services.
     const sources = [
-      readFileSync(new URL("../../src/app/api/push/subscriptions/route.ts", import.meta.url), "utf8"),
+      ...pushWritePaths().map((relative) =>
+        readFileSync(new URL(`../../${relative}`, import.meta.url), "utf8"),
+      ),
       readFileSync(new URL("../../src/server/push/vapid.ts", import.meta.url), "utf8"),
       allSql(),
     ].join("\n");

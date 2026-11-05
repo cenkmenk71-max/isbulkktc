@@ -311,3 +311,19 @@ tarandı; **gerçek ve daha önce bildirilmemiş bir SSRF** bulundu.
   (`supabase/**`) → **#262** (`agent:handoff`).
 - **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Diğer iki `todo` yürürlükte
   (#206 throttle app-yolu IP, #102 `server-only`).
+
+## Durum (2026-11-05, 12. tur) — SSRF kapısındaki ikinci yazma yolu
+
+Bir önceki turda eklediğim SSRF testini kendi katmanım açısından denetledim:
+`push-endpoint-ssrf.test.ts` yazma yollarını **dosya adıyla** listeliyordu, oysa
+endpoint'i kaydeden **iki** yol var.
+
+- **Bulgu + düzeltme: kendi guard'ım ikinci yazma yolunu kaçırıyordu.**
+  `src/features/pwa/actions.ts` `savePushSubscription` de
+  `register_push_subscription`'ı çağırıyor ve aynı zayıf `endpoint` kontrolünü
+  (`url().min(12).max(1024).startsWith("https://")`) kullanıyor — ama test yalnız
+  `app/api/push/subscriptions/route.ts`'i tarıyordu. Test artık yazma yollarını
+  **dosya adıyla değil** `register_push_subscription` çağrısından keşfediyor;
+  yeni bir yazar sessizce kaçamaz (self-test: üçüncü bir yazar eklenince kırmızı).
+- **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #262 (SSRF
+  allowlist), #206 (throttle app-yolu IP), #102 (server-only).
