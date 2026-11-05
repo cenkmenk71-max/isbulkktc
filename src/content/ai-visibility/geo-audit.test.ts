@@ -18,7 +18,12 @@ import {
   buildOrganizationGraph,
 } from "@/content/ai-visibility/structured-data";
 import { getGuides } from "@/content/guides";
-import { SITE_NAME } from "@/content/ai-visibility/site";
+import {
+  COUNTRY_CODE,
+  buildPostalAddress,
+  SITE_NAME,
+  regionNames,
+} from "@/content/ai-visibility/site";
 import { routing, type AppLocale } from "@/i18n/routing";
 
 /**
@@ -293,4 +298,106 @@ test("every index page emits a two-step CollectionPage breadcrumb", () => {
       );
     }
   }
+});
+
+test("the country code is declared once and used everywhere", () => {
+  // The code appears in the postal address, the organization graph and the
+  // per-vacancy JobPosting. A second literal in any of them is how one graph
+  // silently diverges from the others, so the graph must carry the shared value.
+  assert.equal(buildPostalAddress(BASE_URL).addressCountry, COUNTRY_CODE);
+
+  const organization = buildOrganizationGraph(BASE_URL)["@graph"].find(
+    (node) => node["@type"] === "Organization",
+  )! as Record<string, unknown>;
+  const areas = organization.areaServed as Record<string, unknown>[];
+  assert.equal(areas[0].identifier, COUNTRY_CODE);
+  for (const area of areas.slice(1)) {
+    assert.equal(
+      (area.containedInPlace as { identifier: string }).identifier,
+      COUNTRY_CODE,
+    );
+  }
+
+  const district = buildDistrictPageStructuredData({
+    locale: "tr",
+    baseUrl: BASE_URL,
+    districtSlug: "girne",
+    districtName: "Girne",
+    jobsLabel: "İş İlanları",
+    homeLabel: SITE_NAME,
+  })["@graph"][0] as Record<string, unknown>;
+  assert.equal(
+    ((district.about as Record<string, unknown>).containedInPlace as {
+      identifier: string;
+    }).identifier,
+    COUNTRY_CODE,
+  );
+
+  // A value check alone cannot tell the shared constant from a re-typed
+  // literal — both render "CY". Reading the producers is what actually pins
+  // single-source ownership, so a second literal fails even though the output
+  // is unchanged. `job-posting-structured-data.ts` is `server-only` (pulls in
+  // the app URL) and cannot be executed here, so it is source-checked only.
+  const producers = {
+    "src/content/ai-visibility/structured-data.ts": readFileSync(
+      path.join(REPO_ROOT, "src/content/ai-visibility/structured-data.ts"),
+      "utf8",
+    ),
+    "src/features/jobs/job-posting-structured-data.ts": readFileSync(
+      path.join(REPO_ROOT, "src/features/jobs/job-posting-structured-data.ts"),
+      "utf8",
+    ),
+  };
+  for (const [file, source] of Object.entries(producers)) {
+    assert.ok(
+      !/["']CY["']/.test(source),
+      `${file} re-types the country code; import COUNTRY_CODE instead`,
+    );
+    assert.ok(
+      !/const AREA_NAME = ["']/.test(source),
+      `${file} re-types the area name; derive it from regionNames`,
+    );
+    assert.match(
+      source,
+      /import \{[^}]*COUNTRY_CODE[^}]*\} from "@\/content\/ai-visibility\/site"/,
+      `${file} must import COUNTRY_CODE from the shared site data`,
+    );
+  }
+});
+
+test("the brief describes the structured data the site actually emits", () => {
+  const brief = buildLlmsBrief(BASE_URL);
+  const section = brief
+    .split("## Yapılandırılmış veri")[1]
+    .split("## Kaynaklar")[0];
+  const normalized = section.replace(/\s+/g, " ");
+
+  // Every family the producers emit must be named, or an answer engine reading
+  // the brief forms a wrong map of the site's markup.
+  for (const type of [
+    "Organization",
+    "WebSite",
+    "FAQPage",
+    "CollectionPage",
+    "BreadcrumbList",
+    "Article",
+    "JobPosting",
+  ]) {
+    assert.ok(
+      new RegExp(`\\b${type}\\b`).test(normalized),
+      `the brief omits ${type} from its structured-data map`,
+    );
+  }
+
+  // `/sss` renders the same FAQPage as `/about`; naming only one understates it.
+  assert.ok(normalized.includes("/sss"), "the brief omits the /sss FAQ page");
+
+  // The families are named by their real route shape, not a made-up one.
+  for (const route of ["/jobs", "/companies", "/rehber", "/blog", "/is-ilanlari/", "/is-turleri/"]) {
+    assert.ok(normalized.includes(route), `the brief omits ${route}`);
+  }
+  assert.ok(
+    regionNames.tr.length > 0,
+    "the region name is the area the organization graph names",
+  );
 });

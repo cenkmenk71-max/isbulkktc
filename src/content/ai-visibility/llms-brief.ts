@@ -184,7 +184,13 @@ ${faqBlock(routing.defaultLocale)}
 - Her sayfada \`schema.org/Organization\` ve \`WebSite\` düğümleri; kuruluşun
   adresi, coğrafi konumu, hizmet verdiği ilçeler ve doğrulanmış iletişim
   kanalları burada tanımlanır.
-- \`/about\` sayfasında \`schema.org/FAQPage\`; yukarıdaki soruların aynısı.
+- \`/about\` ve \`/sss\` sayfalarında \`schema.org/FAQPage\`; yukarıdaki
+  soruların aynısı.
+- \`/jobs\`, \`/companies\`, \`/rehber\` ve \`/blog\` indekslerinde, ayrıca
+  ilçe (\`/is-ilanlari/{ilçe}\`) ve istihdam türü (\`/is-turleri/{tür}\`)
+  sayfalarında \`schema.org/CollectionPage\` ve \`BreadcrumbList\`.
+- Her rehber ve güncel yazı sayfasında \`schema.org/Article\` ve
+  \`BreadcrumbList\`.
 - Her ilan detay sayfasında \`schema.org/JobPosting\`; işveren, ilçe ve
   istihdam türü Google Jobs ile uyumlu biçimde verilir.
 

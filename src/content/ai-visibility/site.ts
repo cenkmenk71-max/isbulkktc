@@ -13,6 +13,14 @@ export const SITE_NAME = "İşBul KKTC";
 export const SUPPORT_EMAIL = "info@isbulkktc.com";
 export const SUPPORT_PHONE_TEL = "+905391316421";
 
+/**
+ * ISO 3166-1 code the postal address, the organization graph and the per-vacancy
+ * `JobPosting` all use. Northern Cyprus has no code of its own, so the island's
+ * `CY` is the only value Google's geo lookup resolves; declaring it once keeps
+ * the three graphs from drifting apart.
+ */
+export const COUNTRY_CODE = "CY";
+
 /** Municipality the operator publishes as its location ("Alsancak, KKTC"). */
 export const LOCATION_LOCALITY = "Alsancak";
 export const LOCATION_DISTRICT = "Girne";
@@ -147,7 +155,7 @@ export function buildPostalAddress(baseUrl: URL) {
     "@type": "PostalAddress",
     addressLocality: LOCATION_LOCALITY,
     addressRegion: LOCATION_DISTRICT,
-    addressCountry: "CY",
+    addressCountry: COUNTRY_CODE,
     url: baseUrl.toString(),
   };
 }

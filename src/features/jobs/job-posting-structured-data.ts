@@ -1,3 +1,4 @@
+import { COUNTRY_CODE, regionNames } from "@/content/ai-visibility/site";
 import { routing } from "@/i18n/routing";
 import { getLocalizedPageUrl } from "@/lib/seo";
 import type { PublicJobListing } from "@/server/dal/jobs";
@@ -19,10 +20,9 @@ const REMOTE_WORKPLACE_MODE = "remote";
 
 // Northern Cyprus is not an ISO 3166-1 country code, so the postal address
 // carries the district as both locality and region and names the area in the
-// address text; Google Jobs needs a country code, and "CY" is the only value
-// that resolves the island for the geo lookup.
-const COUNTRY_CODE = "CY";
-const AREA_NAME = "Kuzey Kıbrıs Türk Cumhuriyeti";
+// address text. The country code and the area name come from the shared site
+// data so this graph cannot disagree with the organization graph.
+const AREA_NAME = regionNames.tr;
 
 function buildPostalAddress(district: string | null) {
   return {

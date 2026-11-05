@@ -264,3 +264,42 @@ Dört indeks route'una `<JsonLd>` + yeni üretici çağrısı; ayrıca
 `lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (496 test,
 +2 yeni: indeks breadcrumb'ı + `pageName`) · `pageName` guard'ı için kırmızı→yeşil
 kanıtlandı · `JSON.stringify` ile 6 dil × 4 indeks çıktısı gözle doğrulandı.
+
+---
+
+## Rapor — micro-denetim turu 3 (issue #126), branch `lane/geo`
+
+**Durum:** düzeltmeler branch'te, CI bekliyor.
+
+### Denetlenen dosyalar (`git ls-files`)
+
+| Glob | N | Bakıldı |
+|---|---|---|
+| `src/content/**` | 23 | 23 (hepsi) |
+| `src/app/llms.txt/**` | 1 | 1 |
+| `public/llms*` | 0 | — (dosya yok) |
+| `src/features/**/structured-data*.ts` | 1 | 1 |
+| `src/features/jobs/job-posting-structured-data.ts` | 1 | 1 |
+
+Not: LANE-İÇERİK eklendikten sonra `src/content/**` **metin** tarafı onun;
+buradaki denetim **JSON-LD/llms üreticileri** ve `site.ts` (operatör verisi
+modülü, kullanıcı metni değil) üzerindedir — ikisi de GEO.
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/content/ai-visibility/llms-brief.ts:182` | tutarlılık / GEO | Brief'in "Yapılandırılmış veri" bölümü yalnız `Organization`/`WebSite`/`FAQPage`/`JobPosting` sayıyor; site artık ayrıca `/sss` FAQPage, 4 indeks + 2 koleksiyon ailesinde `CollectionPage`+`BreadcrumbList`, rehber/yazıda `Article` yayınlıyor | brief, yayınlanan tüm aileleri adlandırmalı | AI motoru sitenin yapısal veri haritasını eksik/yanlış kurar | **düzeltildi** |
+| 2 | `src/content/ai-visibility/site.ts`, `structured-data.ts`, `src/features/jobs/job-posting-structured-data.ts` | tutarlılık (tek kaynak) | `"CY"` üç dosyada, bölge adı iki dosyada ayrı literal; biri değişince diğerleri sessizce sapar | ülke kodu tek yerde (`COUNTRY_CODE`), bölge adı `regionNames.tr`'den | yapısal veri grafikleri arasında sessiz tutarsızlık | **düzeltildi** (çıktı bit bit aynı) |
+
+**Doğru bulunanlar (bulgu yok):** `Article`/`JobPosting` zorunlu alanları tam;
+ilçe adları 6 dilde `HomeJobSearch.districts` ile birebir; brief'teki 135 URL'nin
+tamamı gerçek rotaya çözülüyor; FAQ JSON-LD görünen metinle aynı kaynaktan;
+`JobPosting.directApply` yalnız platform ilanında `true`; `hiringOrganization.sameAs`
+schema.org'a uygun (işverenin kendi sitesi); rehber/yazı içeriği 6 dilde yapısal
+olarak sağlam (kopya slug/açıklama, boş bölüm yok).
+
+### Kapılar
+`lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (509 test,
++2 yeni) · iki guard için kırmızı→yeşil kanıtlandı · refactor sonrası grafik
+çıktısı `diff` boş (geriye dönük uyumlu).

@@ -7,6 +7,7 @@ import {
 } from "@/content/ai-visibility/faq";
 import {
   buildPostalAddress,
+  COUNTRY_CODE,
   getConfiguredSocialProfiles,
   regionNames,
   SITE_NAME,
@@ -79,7 +80,7 @@ export function buildOrganizationGraph(baseUrl: URL) {
           {
             "@type": "Country",
             name: regionNames.tr,
-            identifier: "CY",
+            identifier: COUNTRY_CODE,
           },
           ...servedDistricts.map((district) => ({
             "@type": "AdministrativeArea",
@@ -88,7 +89,7 @@ export function buildOrganizationGraph(baseUrl: URL) {
             containedInPlace: {
               "@type": "Country",
               name: regionNames.tr,
-              identifier: "CY",
+              identifier: COUNTRY_CODE,
             },
           })),
         ],
@@ -343,7 +344,7 @@ export function buildDistrictPageStructuredData({
       containedInPlace: {
         "@type": "Country",
         name: regionNames[locale],
-        identifier: "CY",
+        identifier: COUNTRY_CODE,
       },
     },
     jobsLabel,
