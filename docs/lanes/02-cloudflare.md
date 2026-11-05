@@ -118,3 +118,14 @@ tutuluyor; çerez/`Accept-Language` gövdeyi değiştirmiyor; 404/401/400 hata y
 yerler doğru bölüm adı **`[auth.email.smtp]`** olarak güncellendi (LANE-SUPABASE
 PR #239 kanıtı). IPv6 bu sandbox'ta doğrulanamadı → "bakılmadı". Detay:
 `docs/cloudflare.md` → "Edge mikro-denetim tur 7".
+
+### Yönlendirme / host kanonikleştirme tur 8 — 2026-11-05
+
+Brief 1. maddesi + AUDIT "yönlendirme zinciri" tazelendi. **Açık yönlendirme
+yok** (`//evil.com` → göreli `/evil.com`; `/\`, `/%5C`, `/%2F%2F`, `../..` → 404);
+`http→https` ve `www→apex` yol+sorguyu koruyor; zincir ≤2 hop; host case 200; HSTS
+yalnız TLS'te. **Yeni bulgu (R-01, düşük):** sondaki noktalı apex host
+`https://isbulkktc.com./` → **404** (`/jobs` de), ama `www.isbulkktc.com.` → 308 ve
+`isbulkktc.com./en` → 200 (tutarsız). Hata **Vercel/Next** host eşleştirmesinde
+(`x-vercel-id` dolu) → `lane:infra` handoff. Detay: `docs/cloudflare.md` →
+"Yönlendirme / host kanonikleştirme denetimi".

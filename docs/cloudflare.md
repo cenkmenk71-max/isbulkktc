@@ -508,3 +508,62 @@ referans düzeltildi.
 - **IPv6 (T-10):** sandbox'ta v6 çözümleyici yok → doğrulanamadı.
 - **CF zone API** (`CF_API_TOKEN` yok) ve **Resend paneli** (`RESEND_API_KEY`
   geçersiz) — panel durumu okunamadı.
+
+---
+
+## Yönlendirme / host kanonikleştirme denetimi — tur 8 (2026-11-05)
+
+Brief 1. maddesi (DNS + `www` yönlendirmesi) ve AUDIT "yönlendirme zinciri"
+boyutu tazelendi. **Bir yeni bulgu (R-01)** var; gerisi temiz.
+
+### Ölçüm
+
+| # | Test | Gözlenen | Beklenen | Durum |
+|---|---|---|---|---|
+| R-01 | `https://isbulkktc.com./` (sondaki nokta, apex) | **404** (`x-matched-path: /[locale]/[...rest]`) — `/jobs`, `/companies` de 404; ama `/en` 200 | 301/308 apex'e | 🟠 **yeni bulgu (düşük)** |
+| R-02 | `https://www.isbulkktc.com./` | **308** → `https://isbulkktc.com/` | Kanonik | ✔ (tutarsız: www çalışıyor, apex çalışmıyor) |
+| R-03 | `http://` → `https://` (yol + sorgu) | 301, `Location: https://isbulkktc.com/jobs?q=kktc&page=2` | Yol+sorgu korunur | ✔ |
+| R-04 | `https://www` → apex (yol + sorgu) | 308, yol+sorgu korunur | Korunur | ✔ |
+| R-05 | Zincir: `http://www.../jobs?q=x` | 301 → `https://www...` → 308 → apex; **2 hop** | ≥3 hop olmamalı | ✔ |
+| R-06 | Host case: `ISBULKKTC.COM`, `IsbulkKtc.com` | **200**, apex içerik | 200 | ✔ |
+| R-07 | **Açık yönlendirme** | `//evil.com` → **`/evil.com`** (göreli, aynı origin); `/\evil.com`, `/%5Cevil.com`, `/%2F%2Fevil.com`, `/jobs/../../evil.com` → 404 | Asla harici host | ✔ **sızıntı yok** |
+| R-08 | `/https://evil.com` | 308 → `/https:/evil.com` (yol içinde) | Harici değil | ✔ |
+| R-09 | `/jobs//` | 308 → `/jobs/` | Kabul | ✔ |
+| R-10 | HSTS düz `http://` üzerinden | **gönderilmiyor** (RFC: yalnız TLS) | Gönderilmemeli | ✔ |
+| R-11 | Canonical ↔ servis edilen URL | `/`→`…/` , `/jobs`→`…/jobs` (sorgu düşer, doğru) | Tutarlı | ✔ |
+| R-12 | `hreflang` | 6 dil + `x-default` | Tam | ✔ |
+| R-13 | WAF / cache regresyon | 5/5 saldırı → 403; dinamik `DYNAMIC`, `_next` `HIT` | Değişmemeli | ✔ drift yok |
+
+### R-01 — sonlu noktalı apex host (yeni bulgu, düşük önem)
+
+**Kanıt:**
+```
+curl -sSI https://isbulkktc.com./      → HTTP/2 404   (x-matched-path: /[locale]/[...rest])
+curl -sSI https://isbulkktc.com./jobs  → HTTP/2 404
+curl -sSI https://isbulkktc.com./en    → HTTP/2 200
+curl -sSI https://www.isbulkktc.com./  → HTTP/2 308 → https://isbulkktc.com/
+```
+3/3 tekrarda **404**. TLS el sıkışması başarılı (SNI `isbulkktc.com.` sertifikayla
+eşleşir), CF 404'ü **origin'e** iletir (`x-vercel-id` dolu) → hata **Vercel/Next
+host eşleştirmesinde**, CF'de değil.
+
+**Etki (düşük):** `example.com.` geçerli bir FQDN'dir (RFC 1034/3986). Apex için
+404 dönerken `www` sürümü 308 yapıyor → **tutarsızlık**; DNS/SNI/redirect
+bekleyen istemciler veya bazı tarayıcı/HTTP-istemci kombinasyonları 404 görür.
+Yaygın değildir (çoğu istemci sondaki noktayı kırpar), bu yüzden öncelik düşük.
+
+**Öneri:** `next.config.ts`'te `trailingSlash`/host yönlendirmesi yerine, apex
+host'u sondaki nokta ile de normalize et — ya da Vercel domain ayarında
+`isbulkktc.com.` varyantını `www`/apex'e yönlendir. **CF dışı** (Vercel/app) →
+`lane:urun` (veya INFRA) handoff.
+
+### Açık yönlendirme — temiz (kanıt)
+
+`//evil.com` → `Location: /evil.com` **göreli** (tarayıcı `https://isbulkktc.com/evil.com`'a
+gider, harici host'a **değil**). Bu, `sanitizeNextPath`'in (bkz. #101) proxy
+katmanında da tutarlı olduğunu gösterir. CF ile Vercel alias'ı aynı davranıyor.
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` yok): yönlendirme kuralı (Redirect Rules) panel
+  durumu okunamadı; ölçüm canlı HTTP ile.
