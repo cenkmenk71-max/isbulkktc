@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
+import { getDefaultSocialImage, openGraphLocales } from "@/lib/seo";
 import { defaultInstallDestination, sanitizeNextPath } from "@/lib/pwa/destination";
 import { parseInstallCampaign } from "@/lib/pwa/campaign";
 import { getVapidPublicKey } from "@/server/push/vapid";
@@ -40,13 +41,41 @@ export async function generateMetadata({
   if (!locale) notFound();
 
   const t = await getTranslations({ locale, namespace: "InstallMeta" });
+  const title = t("title");
+  const description = t("description");
+  const siteUrl = getAppBaseUrl();
+  // An install landing page reached from a poster has no canonical duplicate
+  // to consolidate, and the page exists in every locale at its own URL.
+  const canonicalUrl = `${siteUrl.origin}${locale === "tr" ? "" : `/${locale}`}/install`;
+  const socialImage = getDefaultSocialImage(locale, siteUrl);
+
   return {
-    title: t("title"),
-    description: t("description"),
+    title,
+    description,
     robots: { index: false, follow: true },
-    // An install landing page reached from a poster has no canonical duplicate
-    // to consolidate, and the page exists in every locale at its own URL.
-    alternates: { canonical: `${getAppBaseUrl().origin}${locale === "tr" ? "" : `/${locale}`}/install` },
+    alternates: { canonical: canonicalUrl },
+    // Without an explicit block the page inherits the locale layout's generic
+    // home-page card, so a QR/poster link shared in a chat unfurls with the
+    // home title and description and no `og:url`. Build the social block from
+    // this page's own copy and canonical instead.
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: "İşBul KKTC",
+      type: "website",
+      locale: openGraphLocales[locale],
+      alternateLocale: routing.locales
+        .filter((otherLocale) => otherLocale !== locale)
+        .map((otherLocale) => openGraphLocales[otherLocale]),
+      images: [socialImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [{ url: socialImage.url, alt: socialImage.alt }],
+    },
   };
 }
 

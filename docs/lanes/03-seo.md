@@ -335,3 +335,90 @@ Ayrıca test edilemezdi: `src/lib/seo.ts` `@/server/config/app-url` üzerinden
 
 `lint ✅` `typecheck ✅` `check:frontend-source ✅` `test:unit ✅ (402/402)`
 
+## Micro-denetim raporu — tur 4 (#126 SEO meta, #127 link bütünlüğü)
+
+```
+Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
+Değişen dosyalar: src/lib/seo.ts,
+                  src/app/[locale]/layout.tsx,
+                  src/app/[locale]/install/page.tsx,
+                  docs/lanes/03-seo.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
+            test:unit ✅ (395/395)  test:security ✅ (22 pass, 2 belgeli todo)
+            build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone doğrulaması ✅
+Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
+```
+
+### Denetlenen dosyalar
+
+`git ls-files` ile LANE-SEO sahipliği: **42 dosya** — `src/lib/seo.ts`,
+`src/app/sitemap.ts`, `src/app/robots.ts`, `scripts/submit-indexnow.mjs` ve
+`src/app/[locale]/**` altındaki **37 route/layout** dosyası. Hepsi tarandı.
+Bakılmayan dosya: yok.
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/app/[locale]/install/page.tsx:35` | SEO meta | `generateMetadata` `openGraph`/`twitter` yayınlamıyordu; sayfa locale layout'un **genel ana sayfa kartını** miras alıyordu (`og:title` = ana sayfa başlığı) ve **`og:url` hiç yoktu** | sayfanın kendi `title`/`description`/`canonical`'ı ile tutarlı sosyal kart | Poster/QR ile paylaşılan `/install` linki sohbette yanlış başlık+açıklama ve `og:url`'siz unfurl ediyordu (6 dil) | düzeltildi |
+| 2 | `src/lib/seo.ts:33` + `src/app/[locale]/layout.tsx` | tutarlılık | `openGraphLocales` eşlemesi iki dosyada elle tekrarlanıyordu (biri `satisfies Record<AppLocale,string>`, diğeri `satisfies Record<(typeof routing.locales)[number],string>`) | tek kaynak | `og:locale` ↔ `alternateLocale` listesi sapabilir; drift sessiz | düzeltildi (tek export) |
+| 3 | `src/messages/*.json` `Legal` (48 anahtar × 5 dil) | SEO meta | `/privacy`,`/cookies`,`/terms` başlık+açıklaması **6 dilde aynı Türkçe**; gövde de çevrilmemiş | her dil kendi metni | 18 sayfa kopya meta + kopya gövde | devredildi → **#141** |
+| 4 | `(auth)/login/page.tsx`, `(auth)/register/page.tsx` | SEO meta | İkisi de layout'un genel `Meta.title`'ını taşıyor (`title`+`description` aynı) | rota-özel başlık | Her ikisi `noindex` olduğundan sıralama etkisi yok; yalnız paylaşım/sekme başlığı | devredildi (düşük öncelik, `src/messages/**` = LANE-URUN) |
+| 5 | 404 yanıtı (tüm diller) | SEO meta | SSR `<html>` `lang`/`dir` taşımıyor (`<html id="__next_error__">`), gövde boş (RSC ile hidrate oluyor); `<title>`/`og:*` dolu | `<html lang="…" dir="…">` | Dil/RTL sinyali yalnız istemci JS'ine bağlı; `fa` için `dir="rtl"` SSR'da yok | devredildi → issue (`agent:blocked`; kök neden `src/app/layout.tsx` yok = LANE-TASARIM/INFRA alanı) |
+
+### Kanıt (üretim standalone sunucusu, `curl`/`node`)
+
+- **Bulgu 1 (önce):** `curl /install` → `<title>Uygulamayı yükle · İşBul KKTC</title>`
+  ama `og:title=İşBul KKTC — KKTC ve Kuzey Kıbrıs İş İlanları`,
+  `og:description` = ana sayfa açıklaması, **`og:url` yok**; aynısı `/en/install`,
+  `/de/install`, `/fa/install` (6 dil).
+  **Sonra:** `og:title=Uygulamayı yükle`, `og:description` = sayfanın kendi
+  açıklaması, `og:url=http://…/install`, `og:image` 1200×630, `twitter:card`
+  `summary_large_image`; `robots: noindex, follow` ve self-canonical **değişmedi**.
+  Tüm 196 yol (186 sitemap + 10 ekstra) yeniden tarandı: **0 tutarsızlık**
+  (`og:title` = marka-soneksiz `title`, `og:description` = `description`,
+  `og:url` = `canonical`).
+- **Bulgu 2:** `grep -n openGraphLocales` → tek tanım; `/`,`/en`,`/de` çıktısı
+  `og:locale` `tr_TR`,`en_GB`,`de_DE` — layout kartı değişmedi.
+- **Bulgu 5:** `curl /en/nonexistent` → `<html id="__next_error__">` (lang yok),
+  gövde `<div hidden>`; `curl /en` → `<html lang="en" dir="ltr">`. Fark yalnız
+  404 yolunda; `src/app/layout.tsx` olmadığı için Next'in iç hata ağacı kullanılıyor.
+
+### Doğrulanan ve sağlam bulunanlar (bu tur, canlı)
+
+- **Sitemap:** 186 `<loc>`; hepsi **200**; hepsi **self-canonical**; her birinde
+  6 dil + `x-default` hreflang; **0 ölü URL**, **0 sitemap kaydı redirect**,
+  **0 tekrar eden `<loc>`**, 42 `<lastmod>` hepsi geçerli ISO tarih.
+- **hreflang karşılıklılık:** 186 sayfa × 6 dil hedefi tarandı → **0 ihlal**
+  (her `hreflang` hedefi kaynağa geri işaret ediyor).
+- **robots.txt:** `noindex` veren sayfaları `Disallow` **etmiyor**; yalnız
+  `/api/`, `/auth/`. 404 tek ve çelişkisiz `robots: noindex` taşıyor.
+- **Canonical:** hepsi mutlak string (`URL` instance tuzağı yok); `/jobs?page=2..999`
+  404, filtreli URL'ler `/jobs`'a canonical + `noindex, follow`; içe aktarılan
+  ilanlar tek (tr) canonical, hreflang yok.
+- **Link bütünlüğü (#127):** 425 benzersiz iç bağlantı hedefi tarandı →
+  **0 kırık**; 186 sitemap URL'sinde **0 yetim sayfa**; **0 boş/anlamsız anchor
+  metni** ("buraya tıkla" vb. yok). `target="_blank"` (2 kullanım) `noopener
+  noreferrer` taşıyor. Tüm iç fragment'lar (`#top`, `#overview`,
+  `#company-profile`, `#directory-listing`) karşılık gelen `id`'ye sahip.
+- **Sayfa hijyeni:** 186 sayfada tam **1 `<h1>`**, doğru `lang`, `<link
+  rel="canonical">`, `<meta name="viewport">` ve `alt`'sız `<img>` **0**.
+- **OG/Twitter:** `og-cover.webp` 1200×630 (~161 KB < 300 KB WhatsApp bütçesi),
+  6 dilde yerelleşmiş `og:image:alt`.
+- **GEO tarafı (LANE-GEO):** `llms.txt`/`llms-full.txt` 200; JSON-LD
+  `WebSite`+`SearchAction` (`?query=` ile eşleşiyor), `Organization`,
+  `BreadcrumbList`, `CollectionPage`, `FAQPage`, `JobPosting` tam. District
+  `CollectionPage.name`'in `"Kyrenia İş İlanları"` diye tr-ekli kalması GEO
+  alanına aittir (`src/content/**`) — bu lane dokunmadı, LANE-GEO'ya not.
+- **IndexNow:** çift endpoint fallback + Vercel alias mantığı korunuyor; anahtar
+  dosyası `public/isbulkktc….txt` içeriğiyle eşleşiyor.
+- **Env:** `NEXT_PUBLIC_{GOOGLE,BING,YANDEX}_SITE_VERIFICATION` — kod hazır,
+  Vercel'de değer girilince etiketler yayınlanır. **Hâlâ yok.**
+
+### Sonraki lane için notlar
+
+- Bulgu 5 (404 `lang`/`dir`) için `src/app/layout.tsx` eklenmesi gerekiyor —
+  LANE-SEO'nun sahipliğinde değil; issue açıldı.
+- `src/content/ai-visibility/structured-data.ts` `buildDistrictPageStructuredData`
+  içindeki `name: \`${districtName} İş İlanları\`` Türkçe eki taşıyor; yerelleşmiş
+  sayfada JSON-LD adı görünen `<h1>` ile uyuşmuyor → LANE-GEO.

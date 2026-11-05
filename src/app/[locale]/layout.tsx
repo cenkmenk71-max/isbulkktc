@@ -16,7 +16,7 @@ import { PwaRuntime } from "@/components/pwa/pwa-runtime";
 import { buildOrganizationGraph } from "@/content/ai-visibility/structured-data";
 import { JsonLd } from "@/content/ai-visibility/json-ld";
 import { isRightToLeftLocale, routing } from "@/i18n/routing";
-import { getDefaultSocialImage } from "@/lib/seo";
+import { getDefaultSocialImage, openGraphLocales } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import "@/styles/global.css";
 
@@ -60,14 +60,6 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "Meta" });
   const siteUrl = getAppBaseUrl();
   const socialImage = getDefaultSocialImage(locale, siteUrl);
-  const openGraphLocales = {
-    tr: "tr_TR",
-    en: "en_GB",
-    ru: "ru_RU",
-    el: "el_GR",
-    fa: "fa_IR",
-    de: "de_DE",
-  } satisfies Record<(typeof routing.locales)[number], string>;
 
   // Ownership proofs for the search consoles. Values come from the environment
   // so the tokens live in Vercel, not in the repository; a blank value omits its

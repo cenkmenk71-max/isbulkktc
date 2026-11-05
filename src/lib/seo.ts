@@ -31,6 +31,21 @@ export function getLocalizedSocialImageAlt(locale: AppLocale): string {
 }
 
 /**
+ * Open Graph locale codes, keyed by app locale. Shared by the locale layout and
+ * every page-level metadata builder so the two can never drift: a page whose
+ * `og:locale` disagrees with its layout's `alternateLocale` list is an
+ * inconsistent graph, and duplicating the map is how that happens.
+ */
+export const openGraphLocales = {
+  tr: "tr_TR",
+  en: "en_GB",
+  ru: "ru_RU",
+  el: "el_GR",
+  fa: "fa_IR",
+  de: "de_DE",
+} satisfies Record<AppLocale, string>;
+
+/**
  * Default social card for routes that carry no page-level metadata of their own
  * (auth pages, the 404 page). Those routes inherit the locale layout's
  * `generateMetadata`, so the layout must advertise the same light 1200x630 card
@@ -116,14 +131,6 @@ export function createLocalizedPageMetadata({
     pathnameFor(routing.defaultLocale),
     baseUrl,
   ).toString();
-  const openGraphLocales = {
-    tr: "tr_TR",
-    en: "en_GB",
-    ru: "ru_RU",
-    el: "el_GR",
-    fa: "fa_IR",
-    de: "de_DE",
-  } satisfies Record<AppLocale, string>;
   const imageUrl = new URL(socialImagePath, baseUrl).toString();
 
   return {
