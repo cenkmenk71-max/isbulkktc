@@ -96,3 +96,14 @@ sahibin onayı** (uygulanmadı). `[auth.smtp]` eksikliği `supabase/config.toml`
 = **LANE-SUPABASE** (repo okumasıyla doğrulandı, yazılmadı). Ayrıca CORS (preflight
 + simple GET) ve Set-Cookie bayrakları tarandı — temiz. Detay: `docs/cloudflare.md`
 → "DKIM sahiplik ayrımı".
+
+### DMARC `p=quarantine` dağıtımı (#170) — 2026-11-05
+
+Sahip #170'te teşhisi düzeltti ve bu lane'e **açık görev** verdi: "DMARC'i
+`p=quarantine`'a yükselt (LANE-CLOUDFLARE)". Uygulamadan **önce** hizalama
+ön-kontrolü yapıldı: Resend SES (`send.`), Resend Forge (`rsend.` →
+`send.forge.rmta.net`) ve DKIM `d=isbulkktc.com` — üçü de `isbulkktc.com` ile
+**relaxed align** → `p=quarantine` güvenli. Önerilen kayıt + iki fazlı rollout
+`docs/cloudflare.md` → "DMARC `p=quarantine` dağıtımı". **DNS yazma → sahibin
+onayı; değişiklik yapılmadı.** `rsend` CNAME'inin **dangling olmadığı** da
+doğrulandı. G-01 (email obfuscation) ve DKIM 1024-bit hâlâ açık.

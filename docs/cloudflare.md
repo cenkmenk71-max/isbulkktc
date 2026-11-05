@@ -394,3 +394,73 @@ CORS (preflight + simple GET, `Origin: https://evil.example`) → hiçbir `/api/
 uç noktası yansıtmıyor; yalnız `/api/build-info` statik `ACAO: *` (sır yok).
 Set-Cookie bayrakları → yalnız `NEXT_LOCALE=…; Path=/; SameSite=lax` (tercih
 çerezi, hassas veri yok). Yani edge/CORS/çerez eksenlerinde bulgu yok.
+
+---
+
+## DMARC `p=quarantine` dağıtımı — issue #170 (2026-11-05)
+
+Sahip #170'te teşhisi düzeltti ve bu lane'e **açık görev** verdi:
+> "DMARC'i `p=quarantine`'a yükselt (LANE-CLOUDFLARE)"
+
+Aşağıda **uygulamadan önce** yapılan doğrulama ve önerilen kayıt var. DNS yazma
+sahibin onayında (brief kuralı) → bu turda **değişiklik yapılmadı**.
+
+### Neden şimdi güvenli — hizalama ön-kontrolü (canlı DoH)
+
+`p=quarantine` yalnız **DMARC fail** eden postaları etkiler; meşru akışlar fail
+etmemeli. Üç gönderici ekseni de `isbulkktc.com` ile hizalı:
+
+| Gönderici | Return-Path / zarf domaini | SPF | Alignment |
+|---|---|---|---|
+| Resend (Amazon SES) | `send.isbulkktc.com` → `v=spf1 include:amazonses.com ~all` | pass | **relaxed** ✓ |
+| Resend Forge | `rsend.isbulkktc.com` CNAME → `send.forge.rmta.net` → `v=spf1 ip4:52.3.252.119 ip4:44.222.39.36 ip4:199.249.231.0/24 ~all` | pass | **relaxed** ✓ |
+| DKIM imzası | `d=isbulkktc.com` (`resend._domainkey`) | dkim pass | **relaxed** ✓ |
+
+DMARC relaxed (varsayılan) modda organizational domain eşleştiği için SPF **ve**
+DKIM ikisi de align olur. Kök MX (Cloudflare Email Routing) yalnız **inbound**,
+gönderim yapmaz → etkilenmez. **Sonuç: `p=quarantine` güvenli.**
+
+### Önerilen kayıt (sahibin onayıyla, Cloudflare DNS)
+
+Mevcut:
+```
+_dmarc.isbulkktc.com  TXT  "v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; fo=1"
+```
+**Faz 1 (önerilen, hemen):**
+```
+"v=DMARC1; p=quarantine; rua=mailto:dmarc@isbulkktc.com; ruf=mailto:dmarc@isbulkktc.com; fo=1; adkim=r; aspf=r; pct=100"
+```
+**Faz 2 (2–4 hafta rapor izlemeden sonra, temizse):**
+```
+"v=DMARC1; p=reject; rua=mailto:dmarc@isbulkktc.com; ruf=mailto:dmarc@isbulkktc.com; fo=1; adkim=r; aspf=r"
+```
+Notlar: `adkim`/`aspf` = `r` (relaxed) — alt alan adlı return-path'lerle uyum için
+gerekli; `s` (strict) seçilirse `send.`/`rsend.` **fail** eder, seçilmemeli.
+`pct=100` faz 1'de tam uygula; riskli bulunursa geçici `pct=25` ile başlanabilir.
+
+### Doğrulama (yayın sonrası)
+
+```bash
+dig +short TXT _dmarc.isbulkktc.com
+# bir Resend test postasında:
+#   Authentication-Results: ... spf=pass dkim=pass dmarc=pass
+```
+`dmarc=pass` görülene kadar `p=reject`'e geçilmez.
+
+### Bağlı görevler (başka lane)
+
+- **#187 (LANE-VERIFY):** mail-tester.com 10/10 + 3 gerçek adreste yerleşim.
+- **#171 (LANE-AUTH):** auth şablonlarına logo/satır içi stil.
+- **#195 / #227:** auth SMTP üretimde **zaten** Resend'e bağlı (sahip doğruladı);
+  kalan `[auth.smtp]` yalnız *yerel* config → LANE-SUPABASE.
+
+### Ayrıca bu turda doğrulananlar (drift yok)
+
+- **`rsend.isbulkktc.com`** (sahibin "send.forge.rmta.net" iddiası): `rsend` →
+  **CNAME** `send.forge.rmta.net`; hedefte TXT SPF + MX `10 feedback.forge.rmta.net`
+  var. **Dangling CNAME değil** — Resend Forge return-path'i, geçerli.
+- **G-01 (Email Obfuscation):** hâlâ açık (1× `email-decode.min.js`); önceki öneri
+  geçerli.
+- **DKIM:** hâlâ **1024-bit** (K-01) — rotasyon hâlâ onay bekliyor.
+- Cache (dinamik `private/no-store`, `/_next` immutable), WAF (6/6 saldırı → 403,
+  meşru → 200), DNSSEC (DS mevcut), CAA, TLS/HSTS — **değişmedi**.
