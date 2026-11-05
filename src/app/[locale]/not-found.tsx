@@ -5,14 +5,16 @@ import { useTranslations } from 'next-intl'
 import { buttonVariants } from '@/components/ui/button'
 import { Link } from '@/i18n/navigation'
 import { routing } from '@/i18n/routing'
+import { getDefaultSocialImage, openGraphLocales } from '@/lib/seo'
+import { getAppBaseUrl } from '@/server/config/app-url'
 
 /**
- * The 404 owns its own `title`.
+ * The 404 owns its own title and social card.
  *
- * Without this the response inherits the locale layout's `Meta.title`, so a
- * missing page advertised itself as the home page ("İşBul KKTC — KKTC ve Kuzey
- * Kıbrıs İş İlanları"). The layout also wraps the 404, so a page-level metadata
- * export is the only place that can override it.
+ * Without a page-level `metadata` export the response inherits the locale
+ * layout's, so a missing page advertised itself as the home page in the tab
+ * title *and* in every `og:`/`twitter:` tag. The layout also wraps the 404, so
+ * this file is the only place that can override it.
  *
  * No `robots` directive is set here: Next injects `<meta name="robots"
  * content="noindex">` for a 404 by itself, and declaring one as well emitted a
@@ -24,15 +26,38 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>
 }): Promise<Metadata> {
   const { locale: requestedLocale } = await params
-  const locale = routing.locales.find(
-    (supportedLocale) => supportedLocale === requestedLocale,
-  )
-  const t = await getTranslations({
-    locale: locale ?? routing.defaultLocale,
-    namespace: 'NotFound',
-  })
+  const locale =
+    routing.locales.find(
+      (supportedLocale) => supportedLocale === requestedLocale,
+    ) ?? routing.defaultLocale
+  const t = await getTranslations({ locale, namespace: 'NotFound' })
+  const title = t('title')
+  const siteUrl = getAppBaseUrl()
+  const socialImage = getDefaultSocialImage(locale, siteUrl)
 
-  return { title: t('title') }
+  return {
+    title,
+    // The social block is built from this page's own copy. Left to the layout it
+    // would carry the home-page title and description, so a broken link shared
+    // in a chat unfurled as the home page.
+    openGraph: {
+      title,
+      description: t('body'),
+      siteName: 'İşBul KKTC',
+      type: 'website',
+      locale: openGraphLocales[locale],
+      alternateLocale: routing.locales
+        .filter((otherLocale) => otherLocale !== locale)
+        .map((otherLocale) => openGraphLocales[otherLocale]),
+      images: [socialImage],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: t('body'),
+      images: [{ url: socialImage.url, alt: socialImage.alt }],
+    },
+  }
 }
 
 export default function NotFoundPage() {

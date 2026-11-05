@@ -966,3 +966,94 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
   H1 metni `src/messages/**` (sahipsiz; #141 URUN'e devretti) → #190 için not.
 - `/jobs?page=N` sayfaları sitemap'e **girmiyor**; Google sayfa dizisini iç
   bağlantıdan keşfeder ve sayfa 2'ye `/jobs`'tan `href` var (doğrulandı).
+
+---
+
+## Micro-denetim raporu — tur 11 (404 sosyal kartı)
+
+```
+Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
+Değişen dosyalar: src/app/[locale]/not-found.tsx, docs/lanes/03-seo.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
+            test:unit ✅ (527 pass, 4 belgeli todo)  test:security ✅ (47 pass, 2 todo)
+            build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone doğrulaması ✅
+Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
+```
+
+### Denetlenen dosyalar
+
+`git ls-files` ile LANE-SEO sahipliği: **41 dosya** — `src/lib/seo.ts`,
+`src/app/sitemap.ts`, `src/app/robots.ts`, `scripts/submit-indexnow.mjs` ve
+`src/app/[locale]/**` altındaki 37 route/layout. Hepsi tarandı; bakılmayan yok.
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/app/[locale]/not-found.tsx:23-36` | SEO meta / OG | Tur 8'de 404'e yalnız `title` eklendi; `og:title`, `og:description`, `twitter:title` ve `description` **hâlâ ana sayfanın** metnini taşıyordu (layout'tan miras). `/en/nonexistent` → `<title>Page not found</title>` ama `og:title="İşBul KKTC — Jobs and Vacancies in Northern Cyprus (TRNC)"` | 404'ün kendi yerelleştirilmiş başlığı + açıklaması | Kırık bir link sohbette paylaşıldığında **ana sayfa** kartı olarak unfurl ediliyordu; başlık ile kart çelişiyordu (6 dil) | **düzeltildi** |
+| 2 | `(auth)/login`, `(auth)/register`, `(auth)/forgot-password`, `(auth)/reset-password` | SEO meta | Bu dört rota `<title>`, `description`, `og:title`, `twitter:title` olarak **ana sayfa** metnini yayınlıyor (`noIndexMetadata` yalnız `robots` içeriyor) | rota-özel başlık/açıklama | `noindex` oldukları için sıralama etkisi yok; sekme/paylaşım başlığı yanlış | **devredildi** → #280 (LANE-AUTH) |
+| 3 | `src/messages/*.json` `Legal` | SEO meta | `/privacy`,`/cookies`,`/terms` meta 6 dilde aynı Türkçe | her dil kendi metni | 18 sayfa kopya meta+gövde | devredildi → #141 |
+| 4 | 404 `<html>` | SEO meta | 404'te `lang`/`dir` yok, SSR gövdesi boş | `<html lang dir>` | `fa` RTL sinyali yok | devredildi → #149 |
+| 5 | Bing/Yandex doğrulama | bulunabilirlik | `msvalidate.01`/`yandex-verification` üretimde yok | iki motor doğrulanmalı | indeksleme yavaş | devredildi → #173 |
+
+### Kanıt
+
+- **Bulgu 1 (önce, üretim standalone):**
+  ```
+  /en/nonexistent  <title>Page not found · İşBul KKTC
+                   <meta property="og:title" content="İşBul KKTC — Jobs and Vacancies in Northern Cyprus (TRNC)">
+                   <meta name="twitter:title" content="İşBul KKTC — Jobs and Vacancies in Northern Cyprus (TRNC)">
+                   <meta name="description" content="Browse current jobs, vacancies and career opportunities in Northern Cyprus (TRNC). …">
+  ```
+  **Sonra** (6 dil):
+  ```
+  /nope            og:title="Sayfa bulunamadı"          og:description="Aradığınız sayfa bulunamadı."
+  /en/nonexistent  og:title="Page not found"            og:description="We could not find the page you requested."
+  /de/nonexistent  og:title="Seite nicht gefunden"      og:description="Die angeforderte Seite konnte nicht gefunden werden."
+  /fa/nonexistent  og:title="صفحه پیدا نشد"              og:description="صفحه‌ای که درخواست کردید پیدا نشد."
+  ```
+  Değişmeyenler: durum **404**; `<meta name="robots">` **tek** (`noindex`);
+  `og:image` 1200×630 kart; RSS autodiscovery linki korunuyor; 404'te canonical
+  ve `og:url` **yok** (doğru — 404 kanonikleştirilmez).
+- **Bulgu 2 (önce):** `/login`, `/en/login`, `/de/register` → `<title>` ve
+  `og:title` ikisi de ana sayfa başlığı; `description` ana sayfa açıklaması.
+  Sahiplik: `src/app/[locale]/(auth)/**` hem LANE-SEO (`src/app/[locale]/**`) hem
+  LANE-AUTH satırında; `docs/lanes/06-auth.md` bu 4 route'u kendi envanterinde
+  sayıyor → çakışmamak için **devredildi**.
+
+### Doğrulanan ve sağlam bulunanlar
+
+- **JSON-LD:** 186 sayfanın tamamı geçerli (0 parse hatası); `WebSite`×186,
+  `Organization`×186, `CollectionPage`×96, `BreadcrumbList`×132, `Article`×36,
+  `FAQPage`×12; `/about` ve `/sss` `FAQPage` sorularının tamamı görünür metinde.
+- **Kopya `<head>` etiketi:** 186 sayfada **0** (title/description/canonical/
+  og:*/twitter:*/robots/viewport her biri tam 1).
+- **Sayfa hijyeni:** 1 `<h1>`/sayfa, doğru `lang`/`dir` (fa=rtl), canonical,
+  `og:image` + `og:image:alt`, `twitter:image:alt`, RSS autodiscovery;
+  `og:title`↔`title`, `og:url`↔`canonical`; rehber/blog `og:type=article`,
+  diğerleri `website`.
+- **hreflang/x-default karşılıklılık:** 186 sayfa → 0 ihlal; sitemap
+  `<xhtml:link>` seti ile sayfanın kendi `<link rel=alternate>` seti birebir aynı.
+- **Sitemap:** geçerli XML, 186 `<loc>`, 0 tekrar, hepsi 200, `noindex` URL yok,
+  ilçe/tür kayıtlarında doğrulanamayan `<lastmod>` yok; üretimde 207/207 → 200.
+- **Sayfalanmış liste (tur 10 düzeltmesi, üretimde canlı):**
+  `/jobs?page=2` → canonical `/jobs?page=2`, hreflang ve `x-default` de
+  `?page=2`'yi taşıyor; `/jobs` → `/jobs`.
+- **robots.txt:** `noindex` sayfaları disallow etmiyor; auth/admin/profile
+  sitemap'te **yok**.
+- **Link bütünlüğü:** 415 benzersiz iç hedef → 0 kırık; yetim 0; boş anchor 0.
+- **Kopya meta:** yalnız yasal sayfa aileleri (#141).
+
+### Düzeltilen / devredilen
+
+- **Düzeltildi:** #1 (404 sosyal kartı — `not-found.tsx`).
+- **Devredildi:** #2 (auth meta → #280, LANE-AUTH), #141, #149, #173.
+
+### Sonraki lane için notlar
+
+- `(auth)/**` sahipliği **çift**: `src/app/[locale]/**` (SEO) ile
+  `src/app/[locale]/(auth)/**` (AUTH). Çakışmayı önlemek için auth metadata
+  değişiklikleri LANE-AUTH'a bırakıldı (#280); orchestration tablosuna bir
+  dışlama (`!src/app/[locale]/(auth)/**`) eklenmesi bu belirsizliği kaldırır.
+- `not-found.tsx` içine metadata eklemek **çalışıyor** ve layout'u geçersiz
+  kılıyor — 404'e özel başka sinyal gerekirse yer burası.
