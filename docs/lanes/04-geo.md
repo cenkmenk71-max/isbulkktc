@@ -308,7 +308,7 @@ olarak sağlam (kopya slug/açıklama, boş bölüm yok).
 
 ## Rapor — micro-denetim turu 4 (issue #126), branch `lane/geo`
 
-**Durum:** düzeltmeler branch'te, CI bekliyor. Bir devir: LANE-SEO (#<TBD>).
+**Durum:** düzeltmeler branch'te, CI bekliyor. Bir devir: LANE-SEO (#251).
 
 ### Denetlenen dosyalar (`git ls-files`)
 
@@ -328,7 +328,7 @@ Not: LANE-İÇERİK `src/content/**` **metin** tarafının sahibi; bu denetim
 | # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
 |---|---|---|---|---|---|---|
 | 1 | `structured-data.ts:218`, `job-posting-structured-data.ts:69` | tutarlılık (tek kaynak) | Marka adı `"İşBul KKTC"` iki üreticide yeniden yazılmış; `SITE_NAME` (`site.ts`) zaten var | üreticiler `SITE_NAME` okumalı | bir yeniden adlandırma, grafiğin kendi içinde siteye iki ad verdirir (breadcrumb home etiketi + `JobPosting.identifier.name`) | **düzeltildi** |
-| 2 | `structured-data.ts:215` | doğruluk / GEO | `Article.datePublished` her zaman `updated`'dan geliyor; `Article` modelinde ayrı `published` alanı var ve hiçbir yerde okunmuyor | `datePublished` ilk yayın tarihi olmalı | bir yazı düzenlendiğinde Google'a "bu tarihte yayımlandı" denir; `ARTICLE_PUBLISHED` (2026-11-04) ile `updated` ayrıştığında yanlış olur | üretici **düzeltildi** (opsiyonel `published`, varsayılan `updated`); çağrı yeri **devredildi** (#<TBD>) |
+| 2 | `structured-data.ts:215` | doğruluk / GEO | `Article.datePublished` her zaman `updated`'dan geliyor; `Article` modelinde ayrı `published` alanı var ve hiçbir yerde okunmuyor | `datePublished` ilk yayın tarihi olmalı | bir yazı düzenlendiğinde Google'a "bu tarihte yayımlandı" denir; `ARTICLE_PUBLISHED` (2026-11-04) ile `updated` ayrıştığında yanlış olur | üretici **düzeltildi** (opsiyonel `published`, varsayılan `updated`); çağrı yeri **devredildi** (#251) |
 
 **Doğru bulunanlar (bulgu yok):** `Article`/`JobPosting` zorunlu alanları tam;
 ilçe adları 6 dilde `HomeJobSearch.districts` ile birebir; brief'teki 135 URL
