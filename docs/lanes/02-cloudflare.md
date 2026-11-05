@@ -129,3 +129,21 @@ yalnız TLS'te. **Yeni bulgu (R-01, düşük):** sondaki noktalı apex host
 `isbulkktc.com./en` → 200 (tutarsız). Hata **Vercel/Next** host eşleştirmesinde
 (`x-vercel-id` dolu) → `lane:infra` handoff. Detay: `docs/cloudflare.md` →
 "Yönlendirme / host kanonikleştirme denetimi".
+
+### Edge vs origin başlık karşılaştırması tur 9 — 2026-11-05
+
+Aynı isteği **edge (`isbulkktc.com`)** ve **origin (`isbulkktc-amber.vercel.app`)**
+üzerinden yapıp başlıkları diff'ledim. İki yeni bulgu (ikisi de **CF zone ayarı**):
+
+- **H-01:** CF, HSTS `max-age`'i **eziyor** — origin `63072000` (2 yıl,
+  `next.config.ts:36`) gönderirken edge `31536000` (1 yıl) gönderiyor. Preload
+  asgarisi 1 yıl olduğundan **preload engellenmez**, ama config'in 2 yıllık politikası
+  teslim edilmiyor → düşük etki, tutarsızlık. Düzeltme: CF'de HSTS'i kapat ya da
+  `max-age=63072000` yap.
+- **H-02:** CF **Browser Cache TTL** origin'in `max-age=0`'ını yükseltiyor —
+  `/robots.txt` ve `/images/*` → 30 gün, `/sitemap.xml` → 1 saat. Tazelik riski;
+  öneri: `Respect Existing Headers`.
+
+Detay: `docs/cloudflare.md` → "Edge vs origin başlık karşılaştırması". Panel
+değişikliği → sahibin onayında; kod değişmez. CSP/diğer güvenlik başlıkları
+edge'de **birebir** korunuyor.

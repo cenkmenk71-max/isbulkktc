@@ -567,3 +567,64 @@ katmanında da tutarlı olduğunu gösterir. CF ile Vercel alias'ı aynı davran
 
 - **CF zone API** (`CF_API_TOKEN` yok): yönlendirme kuralı (Redirect Rules) panel
   durumu okunamadı; ölçüm canlı HTTP ile.
+
+---
+
+## Edge vs origin başlık karşılaştırması — tur 9 (2026-11-05)
+
+Yeni yöntem: **aynı isteği hem Cloudflare üzerinden (`isbulkktc.com`) hem
+origin'den (`isbulkktc-amber.vercel.app`, CF bypass) yapıp başlıkları diff'lemek.**
+Bu, CF'nin origin başlıklarını **ezip ezmediğini** doğrudan gösterir. İki gerçek
+bulgu (H-01, H-02) çıktı; ikisi de **CF zone ayarı** (bu lane'in alanı).
+
+### Ölçüm — başlık diff'i
+
+| Başlık | Edge (CF) | Origin (Vercel) | Durum |
+|---|---|---|---|
+| **Strict-Transport-Security** | `max-age=**31536000**` | `max-age=**63072000**` | 🔴 **H-01 eziliyor** |
+| **Cache-Control (statik)** | `/robots.txt` `2628000`, `/sitemap.xml` `3600`, `/images/*` `2628000` | hepsi `max-age=0` | 🟠 **H-02 yükseltiliyor** |
+| Content-Security-Policy | aynı | aynı | ✔ |
+| X-Frame-Options / XCTO / Referrer / Permissions / COOP / CORP / X-Permitted / X-DNS-Prefetch | aynı | aynı | ✔ |
+| X-Robots-Tag | yok | `noindex, nofollow` (yalnız `*.vercel.app`) | ✔ beklenen |
+| cf-ray / cf-cache-status / nel / report-to / alt-svc | var | yok | ✔ CF'e özgü |
+
+### H-01 — CF, HSTS `max-age`'i eziyor (yeni bulgu)
+
+`next.config.ts:36-37` HSTS'i `max-age=63072000` (2 yıl) olarak tanımlar; origin
+bunu **birebir** gönderir (`isbulkktc-amber.vercel.app` → `63072000`). Ama edge
+`isbulkktc.com` → **`31536000`** (1 yıl) gönderir; 2/2 ölçümde tekrarlanır.
+
+**Etki (ölçülü, abartısız):** CF origin'in **2 yıllık** politikasını **1 yıla
+düşürüyor** → yapılandırılan daha güçlü ömür teslim edilmiyor. HSTS preload
+`pending`; resmî asgari **1 yıl** (`hstspreload.org`: "The max-age must be at least
+31536000 seconds (1 year)") olduğundan **preload engellenmez** — ama örnek/kabul
+edilen kayıt 2 yıldır ve `includeSubDomains` + `preload` birlikte istenir. Yani
+etki **düşük**: 1 yıl geçerli, ama config'in dediği 2 yıl değil.
+
+**Düzeltme (CF paneli → sahibin onayı):** SSL/TLS → Edge Certificates →
+**Enable HSTS**'i kapat (origin zaten gönderiyor) **veya** CF'deki `max-age`'i
+`63072000` + `includeSubDomains` + `preload` yap → config ile edge **tutarlı** olur.
+Kod değişmez.
+
+### H-02 — CF Browser Cache TTL, origin `max-age=0`'ı yükseltiyor (yeni bulgu)
+
+Origin statik varlıklar için `cache-control: public, max-age=0, must-revalidate`
+gönderir; edge bunu **yükseltir**: `/robots.txt` ve `/images/*` → `2628000` (≈30
+gün), `/sitemap.xml` → `3600` (1 saat). Bu, CF'nin **Browser Cache TTL** ayarının
+origin'de `max-age` yokken/0 iken devreye girmesindendir.
+
+**Etki:** Genelde **istenen** (edge cache'i besler), ama **tazelik** riski taşır:
+`robots.txt`'i 30 gün, `sitemap.xml`'i 1 saat istemci tarayıcıda tutar. `robots.txt`
+kuralı değişirse purge gerekir; `sitemap.xml` `revalidate=3600` (bkz.
+`src/app/sitemap.ts:17`) ile uyumlu.
+
+**Öneri (CF paneli → onay):** Caching → **Browser Cache TTL** = `Respect Existing
+Headers` yap → origin'in `max-age=0`'ı korunur; ya da bilinçli olarak 30 gün
+bırakılıp `robots.txt` değişiminde purge planı yazılır. **Kod değişmez.**
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` yok): Edge Certificates (HSTS) ve Caching
+  (Browser Cache TTL) panel durumu okunamadı; ölçüm edge↔origin diff ile.
+- **WAF/cache regresyon:** 5/5 saldırı → 403, meşru → 200; dinamik HTML `DYNAMIC`
+  + `private, no-store` — **drift yok**.
