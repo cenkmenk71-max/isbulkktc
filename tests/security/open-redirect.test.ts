@@ -14,28 +14,28 @@ import { sanitizeNextPath } from "@/lib/pwa/destination";
  * never begin with `//` (protocol-relative → host change), may never carry a
  * scheme, and may never contain a backslash.
  *
- * ## Finding (LANE-GÜVENLİK, open)
+ * ## Finding (LANE-GÜVENLİK — resolved)
  *
- * `sanitizeNextPath` rejects those shapes on its *input* but re-derives the
- * output with `new URL(value, "https://next-path.invalid")` and returns
- * `resolved.pathname + search + hash`. The WHATWG URL parser resolves `..` and
- * `.` segments *before* the leading-slash check can see them, so a path that
- * hides a second slash behind a dot segment normalises into a protocol-relative
- * URL:
+ * `sanitizeNextPath` once re-derived its output with
+ * `new URL(value, "https://next-path.invalid")` and returned
+ * `resolved.pathname + search + hash` without re-checking it. The WHATWG URL
+ * parser resolves `..` and `.` segments *before* the leading-slash check can see
+ * them, so a path that hid a second slash behind a dot segment normalised into a
+ * protocol-relative URL:
  *
- *     sanitizeNextPath("/..//evil.example")  ->  "//evil.example"
- *     sanitizeNextPath("/.//evil.example")   ->  "//evil.example"
+ *     sanitizeNextPath("/..//evil.example")  ->  "//evil.example"   (was)
+ *     sanitizeNextPath("/.//evil.example")   ->  "//evil.example"   (was)
  *
  * `new URL("//evil.example", "https://isbulkktc.com/install")` resolves to
- * `https://evil.example/`, so the "Continue to app" link on the install page
- * (a client-side `next-intl` `<Link href={destination}>`) becomes a cross-origin
- * navigation driven by a printed poster. This is a phishing vector: the poster
- * is branded, the victim taps "continue", and they land on an attacker host.
+ * `https://evil.example/`, so the "Continue to app" link on the install page (a
+ * client-side `next-intl` `<Link href={destination}>`) became a cross-origin
+ * navigation driven by a printed poster — a phishing vector.
  *
- * The bug is *not* in the guard clauses (they are correct) — it is that the
- * normalisation step is trusted as the final answer instead of being
- * re-validated. The fix belongs to the owner of `src/lib/pwa/destination.ts`.
- * See `docs/threat-model.md` and the tracking issue.
+ * The owner of `src/lib/pwa/destination.ts` fixed it by re-validating the
+ * normalised output (`normalized.startsWith("//") || normalized.includes("\\")
+ * || forbiddenScheme.test(normalized)`) and rejecting it. The two tests that
+ * used to carry a `todo` now assert the invariant as a gate. See
+ * `docs/threat-model.md`.
  */
 
 /** Shapes a returned continuation path must never take, whatever the input. */
@@ -92,62 +92,52 @@ test("the install route and non-page handlers are not valid continuations", () =
 });
 
 // ---------------------------------------------------------------------------
-// The invariant that is currently broken: the *output* must never be a host
-// change. Marked `todo` so the suite documents the open finding without failing
-// CI before the owning lane ships the fix. Once
-// `src/lib/pwa/destination.ts` re-validates its normalised output, this test
-// starts passing on its own and the `todo` can be dropped.
+// The invariant the sanitizer must hold: the *output* is never a host change.
+// Both tests used to carry a `todo` while the bug was open; the owning lane
+// re-validates the normalised output now, so they are gates.
 // ---------------------------------------------------------------------------
 
-test(
-  "the normalised output never becomes a protocol-relative or absolute URL",
-  { todo: "open redirect: /..// → //host (see docs/threat-model.md)" },
-  () => {
-    const bypasses = [
-      "/..//evil.example",
-      "/.//evil.example",
-      "/%2e//evil.example",
-      "/%2e%2e//evil.example",
-      "/.///evil.example",
-      "/././/evil.example",
-    ];
+test("the normalised output never becomes a protocol-relative or absolute URL", () => {
+  const bypasses = [
+    "/..//evil.example",
+    "/.//evil.example",
+    "/%2e//evil.example",
+    "/%2e%2e//evil.example",
+    "/.///evil.example",
+    "/././/evil.example",
+  ];
 
-    for (const raw of bypasses) {
-      const result = sanitizeNextPath(raw);
-      if (result === null) continue;
-      assert.ok(
-        !isHostChanging(result),
-        `sanitizeNextPath(${JSON.stringify(raw)}) returned ${JSON.stringify(result)}, ` +
-          `which resolves to ${new URL(result, installPage).href} — off-origin`,
-      );
-      assert.ok(
-        !resolvesOffOrigin(result, installPage),
-        `sanitizeNextPath(${JSON.stringify(raw)}) escapes the origin`,
-      );
-    }
-  },
-);
+  for (const raw of bypasses) {
+    const result = sanitizeNextPath(raw);
+    if (result === null) continue;
+    assert.ok(
+      !isHostChanging(result),
+      `sanitizeNextPath(${JSON.stringify(raw)}) returned ${JSON.stringify(result)}, ` +
+        `which resolves to ${new URL(result, installPage).href} — off-origin`,
+    );
+    assert.ok(
+      !resolvesOffOrigin(result, installPage),
+      `sanitizeNextPath(${JSON.stringify(raw)}) escapes the origin`,
+    );
+  }
+});
 
-test(
-  "a fuzzed corpus of dot-and-slash prefixes never yields a host change",
-  { todo: "open redirect: normalisation can emit `//host` (see docs/threat-model.md)" },
-  () => {
-    const segments = ["", ".", "..", "%2e", "%2e%2e", "a", "%2f"];
-    const seeds = ["//evil.example", "https://evil.example"];
-    const offenders: string[] = [];
+test("a fuzzed corpus of dot-and-slash prefixes never yields a host change", () => {
+  const segments = ["", ".", "..", "%2e", "%2e%2e", "a", "%2f"];
+  const seeds = ["//evil.example", "https://evil.example"];
+  const offenders: string[] = [];
 
-    for (const a of segments) {
-      for (const b of segments) {
-        for (const seed of seeds) {
-          const raw = `/${a}/${b}/${seed}`;
-          const result = sanitizeNextPath(raw);
-          if (result !== null && resolvesOffOrigin(result, installPage)) {
-            offenders.push(`${JSON.stringify(raw)} -> ${JSON.stringify(result)}`);
-          }
+  for (const a of segments) {
+    for (const b of segments) {
+      for (const seed of seeds) {
+        const raw = `/${a}/${b}/${seed}`;
+        const result = sanitizeNextPath(raw);
+        if (result !== null && resolvesOffOrigin(result, installPage)) {
+          offenders.push(`${JSON.stringify(raw)} -> ${JSON.stringify(result)}`);
         }
       }
     }
+  }
 
-    assert.deepEqual(offenders, [], `inputs that escaped the origin: ${offenders.join("; ")}`);
-  },
-);
+  assert.deepEqual(offenders, [], `inputs that escaped the origin: ${offenders.join("; ")}`);
+});

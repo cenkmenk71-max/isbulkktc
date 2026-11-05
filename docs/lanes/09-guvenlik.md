@@ -37,3 +37,24 @@ işaretlersin.
 - Bulguyu **kanıtlamadan** raporlama; "olabilir" değil "şu istek şunu döndürdü".
 - `main`'e push YOK; `lane/guvenlik` dalı + PR.
 - Skill: `security`, `code-review`.
+
+## Durum (2026-11-05) — micro-denetim turu
+
+Brief "tests/security/** BOŞ" diyor; artık değil. Katman 6 dosya ve `static` CI
+işinde `bun run test:security` adımı olarak koşuyor (`package.json` +
+`.github/workflows/ci.yml` = LANE-INFRA). Bu turda yapılanlar:
+
+- **Kapıya terfi:** `open-redirect.test.ts` iki `todo`'su düzeltildi
+  (`sanitizeNextPath` çıktıyı yeniden doğruluyor), `anonymous-write-surface`
+  form kontrolü testi de `todo`'dan kapıya geçti (`src/features/abuse/**`).
+- **Yeni bulgu + kanıt:** `tests/security/anonymous-rpc-throttle.test.ts`.
+  `submit_feedback` / `submit_sales_lead` `anon`'a grant'li ve `security definer`;
+  hız sınırı yalnız server action'da, yani RPC'nin üstünde. Doğrudan
+  `POST /rest/v1/rpc/submit_feedback` çağıran limiter'ı atlar → tablolara sınırsız
+  satır. Mail gönderilemez (fan-out action'da). Sahibi: LANE-SUPABASE (DB
+  throttle) + LANE-URUN. `todo` işaretli, issue açıldı.
+- **Kanıtla kapatıldı:** 13/13 `admin_*` RPC `has_platform_role` çağırıyor;
+  83 `security definer` jetonunun 5'i yorum (guard regex'i temiz);
+  `getAppBaseUrl` host header'a güvenmiyor (env'e bağlı, HTTPS zorunlu).
+- **Değişmeyen açık bulgu:** `unsubscribe-token-core.ts` `server-only` eksik
+  (LANE-URUN, #102).

@@ -11,15 +11,14 @@ import test from "node:test";
  * email: `submitFeedback` mails the submitted address a receipt and the team a
  * copy, and `submitSalesLead` does the same for a lead. That combination is the
  * classic anonymous-mail vector, so this suite records the *structure* (who can
- * call what) and pins the missing control as an open finding.
+ * call what) and asserts the control the forms carry.
  *
- * The auth forms already carry a Cloudflare Turnstile widget; the feedback and
- * sales forms do not, and neither the server actions nor the RPCs rate-limit.
- * A scripted caller can therefore drive `POST /contact` (and the sales form)
- * to send unsolicited mail to an arbitrary address and to flood the team inbox,
- * without ever proving it is a human. The fix — a captcha token and/or a
- * per-IP/per-address throttle — belongs to the owner of
- * `src/features/feedback/**` and `src/features/sales/**`.
+ * The actions were originally unprotected. They now throttle per client address
+ * and per submitted address (`src/features/abuse/**`), which is what the third
+ * test pins. That closes the form-level vector — a scripted caller driving
+ * `POST /contact` is bounded. It does **not** close the endpoint: the same RPCs
+ * are directly callable with the publishable key, above the limiter. That
+ * residual gap is tracked in `anonymous-rpc-throttle.test.ts`.
  */
 
 const migrationsDir = new URL("../../supabase/migrations/", import.meta.url);
@@ -59,21 +58,21 @@ test("the anonymous write RPCs are not readable by clients", () => {
   }
 });
 
-test(
-  "the anonymous mail-sending forms carry an abuse control",
-  { todo: "no captcha/rate limit on feedback & sales forms (see docs/threat-model.md)" },
-  () => {
-    const guards = ["src/features/feedback/actions.ts", "src/features/sales/actions.ts"].map(
-      (relative) => readFileSync(new URL(`../../${relative}`, import.meta.url), "utf8"),
-    );
+test("the anonymous mail-sending forms carry an abuse control", () => {
+  // The actions throttle per client address and per submitted address before the
+  // RPC and the mail it triggers. This is a gate, not a `todo`: it was promoted
+  // once `src/features/abuse/**` shipped. The *endpoint* is still open — see
+  // `anonymous-rpc-throttle.test.ts` — but the form itself must stay protected.
+  const guards = ["src/features/feedback/actions.ts", "src/features/sales/actions.ts"].map(
+    (relative) => readFileSync(new URL(`../../${relative}`, import.meta.url), "utf8"),
+  );
 
-    for (const [index, source] of guards.entries()) {
-      const hasCaptcha = /captcha|turnstile/i.test(source);
-      const hasRateLimit = /rate.?limit|throttle/i.test(source);
-      assert.ok(
-        hasCaptcha || hasRateLimit,
-        `${["feedback", "sales"][index]} action has neither captcha nor rate limiting`,
-      );
-    }
-  },
-);
+  for (const [index, source] of guards.entries()) {
+    const hasCaptcha = /captcha|turnstile/i.test(source);
+    const hasRateLimit = /rate.?limit|throttle/i.test(source);
+    assert.ok(
+      hasCaptcha || hasRateLimit,
+      `${["feedback", "sales"][index]} action has neither captcha nor rate limiting`,
+    );
+  }
+});

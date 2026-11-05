@@ -122,11 +122,11 @@ policy, rate-limit sağlayıcısı, backup planı ve olay alarm endpoint'i
 yapılandırılmamıştır. Bunlar bilinçli planlama blokajlarıdır; implemented
 kontroller gibi varsayılmamalıdır.
 
-## LANE-GÜVENLİK — saldırgan denetim (dalga 0)
+## LANE-GÜVENLİK — saldırgan denetim
 
-Bu bölüm, `tests/security/**` katmanının ilk turunda yapılan düşman gözüyle
-denetimin sonucudur. Denetçi bulduğu açığı **düzeltmez**; kanıtı ve öneriyi
-buraya yazar, sahibi lane'e issue açar.
+Bu bölüm, `tests/security/**` katmanının düşman gözüyle denetiminin sonucudur.
+Denetçi bulduğu açığı **düzeltmez**; kanıtı ve öneriyi buraya yazar, sahibi lane'e
+issue açar.
 
 ### Doğrulanan güçlü kontroller (kanıtlı)
 
@@ -135,7 +135,7 @@ buraya yazar, sahibi lane'e issue açar.
   authenticated` ile eşleşiyor. `tests/security/sql-hardening.test.ts` bunu her
   migration'da statik olarak zorlar ve pgTAP ratchet whitelist'i ile
   karşılaştırır (isim + argüman sayısı), böylece Docker beklemeden sapma yakalanır.
-- **`SECURITY DEFINER` hijyeni:** 82 definer fonksiyonun hepsi `set search_path
+- **`SECURITY DEFINER` hijyeni:** 82 definer fonksiyonunun hepsi `set search_path
   = ''` ile sabitlenmiş ve gövdeleri tam nitelikli (`pg_catalog.*`, `public.*`)
   referans kullanıyor.
 - **Yönetici RPC'leri:** 13 `admin_*` fonksiyonunun tamamı gövdesinde
@@ -149,44 +149,61 @@ buraya yazar, sahibi lane'e issue açar.
   (`tests/security/client-boundary.test.ts`).
 - **Unsubscribe imzası:** HMAC-SHA256 + `timingSafeEqual`, anahtar yoksa
   imzalama kapalı; açık uç nokta yalnız servis rolüyle yazar.
+- **Açık yönlendirme kapalı:** `sanitizeNextPath` normalizasyon sonrası çıktıyı
+  yeniden doğruluyor (`//`, `\`, şema reddi). Denetimde bulunan `"/..//host"`
+  bypass'ı sahibi tarafından kapatıldı; `tests/security/open-redirect.test.ts`
+  artık iki `todo` yerine iki gerçek kapı çalıştırıyor.
+- **Hız sınırı (form):** `submitFeedback` ve `submitSalesLead` RPC'den ve
+  tetikledikleri e-postadan **önce** istemci adresi ve gönderilen adres başına
+  sabit-pencere hız sınırı uygular (`src/features/abuse/**`). Böylece form
+  üzerinden istenmeyen e-posta ve gelen kutusu boğma vektörü kapandı.
 
 ### Açık bulgular (sahibine bildirildi, düzeltme bekliyor)
 
-1. **Açık yönlendirme — `sanitizeNextPath` normalizasyon bypass'ı** (sahibi:
-   `src/lib/pwa/destination.ts`, LANE-URUN). `/[locale]/install?next=` girdisi,
-   WHATWG URL çözümlemesi `..`/`.` segmentlerini **önce** işlediği için, ikinci
-   slash'ı bir nokta segmentinin arkasına saklayan bir yol protokol-göreli URL'ye
-   dönüşüyor:
-   `sanitizeNextPath("/..//evil.example") → "//evil.example"` ve
-   `new URL("//evil.example", "https://isbulkktc.com/install").origin ===
-   "https://evil.example"`. Sonuç: posterden taranan QR, "Uygulamaya devam et"
-   bağlantısını (`next-intl` `<Link href={destination}>`) **başka bir host'a**
-   yönlendirebiliyor — markalı poster üzerinden phishing. Guard'lar doğru;
-   kusur, normalize edilen çıktının yeniden doğrulanmadan döndürülmesi.
-   Düzeltme: çıktıyı `//`, `\` ve şema içermediği için yeniden kontrol et veya
-   `pathname`'i segmentlere ayırıp `..`/`.` sonrası oluşan çift slash'ı reddet.
-   Kanıt: `tests/security/open-redirect.test.ts` (`todo` işaretli iki test).
+1. **Anonim RPC'de hız sınırı yalnız action'da; endpoint açık** (sahibi:
+   `supabase/**` -> LANE-SUPABASE, `src/features/**` -> LANE-URUN).
+   `submit_feedback` ve `submit_sales_lead` `security definer` ve **`anon`'a
+   grant'li**, dolayısıyla publishable anahtarı olan biri `POST
+   /rest/v1/rpc/submit_feedback` ile server action'ı tamamen atlar. Tek abuse
+   kontrolü (`src/features/abuse/**`) action'ın *içinde*, yani RPC'nin üstünde
+   çalışır; doğrudan PostgREST çağıran bu sınırı görmez. Etki:
+   `feedback_submissions` ve `sales_leads` tablolarına sınırsız satır
+   (saldırganın seçtiği adres + serbest metin) yazılabilir; iki tabloda da
+   yaş/temizleme işi yok, dolayısıyla sınırsız büyüme ve PII birikimi. **Mail
+   gönderilemez** — e-posta fan-out'u RPC'de değil action'da
+   (`sendFeedbackEmails` / `sendSalesLeadEmails`) — bu yüzden doğrudan çağıran
+   için mail-flood kapalı. Önerilen düzeltme: saldırganın kullandığı sınırda,
+   yani veritabanında bir sayaç (trigger veya `pg_cron` ile adres başına
+   throttle), ya da `anon` grant'ini kaldırıp yazmayı limiter'ı yeniden uygulayan
+   bir route üzerinden proxy'lemek. Kanıt:
+   `tests/security/anonymous-rpc-throttle.test.ts` (`todo`).
 2. **`server-only` sınırı eksik** (sahibi: `src/server/email/**`, LANE-URUN).
    `src/server/email/unsubscribe-token-core.ts` `ENGAGEMENT_UNSUBSCRIBE_SECRET`
    ve `RESEND_API_KEY` okuyor ama `import "server-only"` taşımıyor. `src/server`
    altındaki diğer tüm sır-okuyan modüller bu işareti taşıyor; eksik olan, yanlış
    bir istemci içe aktarımını derleme hatası yerine sessiz bir sızıntıya çevirir.
    Kanıt: `tests/security/client-boundary.test.ts` (`todo`).
-3. **Anonim yazma yollarında istismar kontrolü yok** (sahibi:
-   `src/features/feedback/**`, `src/features/sales/**`, LANE-URUN).
-   `submit_feedback` ve `submit_sales_lead` `anon`'a açık (tasarım gereği) ve
-   her ikisi de dış e-posta gönderiyor: gönderen adrese makbuz, ekibe kopya.
-   Ne formlarda captcha var ne server action'da/RPC'de hız sınırı; script'li bir
-   çağıran `POST /contact` ile keyfi adrese istenmeyen e-posta gönderebilir ve
-   ekip gelen kutusunu boğabilir. Düzeltme: Turnstile token'ı ve/veya
-   adres/IP başına hız sınırı. Kanıt:
-   `tests/security/anonymous-write-surface.test.ts` (`todo`).
+
+### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
+
+- **Açık yönlendirme — `sanitizeNextPath` normalizasyon bypass'ı** (sahibi:
+  `src/lib/pwa/destination.ts`, LANE-URUN). `/[locale]/install?next=` girdisi,
+  WHATWG URL çözümlemesi `..`/`.` segmentlerini **önce** işlediği için, ikinci
+  slash'ı bir nokta segmentinin arkasına saklayan bir yol protokol-göreli URL'ye
+  dönüşüyordu: `sanitizeNextPath("/..//evil.example") -> "//evil.example"` ve
+  `new URL("//evil.example", "https://isbulkktc.com/install").origin ===
+  "https://evil.example"`. Posterden taranan QR, "Uygulamaya devam et"
+  bağlantısını başka bir host'a yönlendirebiliyordu (markalı poster üzerinden
+  phishing). Düzeltme normalize edilen çıktıyı yeniden doğruluyor;
+  `tests/security/open-redirect.test.ts` iki testi artık `todo` değil, kapı.
+- **Anonim formlarda istismar kontrolü yok** (sahibi: `src/features/feedback/**`,
+  `src/features/sales/**`, LANE-URUN). Ne captcha ne hız sınırı vardı. Şimdi
+  `src/features/abuse/**` action'da adres/IP başına throttle uyguluyor;
+  `tests/security/anonymous-write-surface.test.ts`'teki test `todo`'dan kapıya
+  terfi etti. (Endpoint'in kendisi hâlâ açık — yukarıdaki 1. bulgu.)
 
 ### Katmanın CI'a bağlanması
 
-`tests/security/**` şu an hiçbir CI işi tarafından toplanmıyor (`test:unit` globu
-yalnız `tests/unit/**` ve `src/**`). Katman yerelde
-`bunx tsx --test "tests/security/**/*.test.ts"` ile çalışır ve yeşildir
-(17 pass / 4 todo / 0 fail). `static` işine bağlanması **LANE-INFRA**'nın
-dosyalarında (`.github/workflows/**`, `package.json`) yapılmalıdır; bu yüzden
-buraya TODO olarak yazıldı, LANE-GÜVENLİK kendi sahiplik dışına yazmadı.
+`tests/security/**` artık `bun run test:security` ile `static` CI işinde kendi
+adımı olarak koşuyor (`package.json` + `.github/workflows/ci.yml` = LANE-INFRA).
+Bu kapatıldı; katman yerelde `bun run test:security` ile yeşildir.

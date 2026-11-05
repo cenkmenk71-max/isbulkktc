@@ -6,18 +6,16 @@ finding is filed against the lane that owns the code and marked `agent:blocked`.
 
 ## How it runs
 
-These are `node:test` files executed by `tsx`, so they run inside
-`bun run test:unit` (the `tests/unit/**/*.test.ts` glob does **not** reach here —
-the `test:unit` script only globs `tests/unit/**` and `src/**`, so this directory
-is currently collected by nothing). Until the layer is wired into a CI job it is
-a documented, runnable suite rather than a gate:
+These are `node:test` files executed by `tsx`. They are collected by the
+`test:security` script (`tsx --test "tests/security/**/*.test.ts"`), which runs as
+its own step in the `static` CI job:
 
 ```bash
-bunx tsx --test "tests/security/**/*.test.ts"
+bun run test:security
 ```
 
-Wiring it into the `static` CI job is **LANE-INFRA**'s file (`.github/workflows/**`,
-`package.json`), so it is reported there rather than done here.
+It is a separate step from `bun run test:unit` (whose globs do not reach here) so
+a boundary regression is attributable at a glance.
 
 ## What is covered
 
@@ -27,7 +25,8 @@ Wiring it into the `static` CI job is **LANE-INFRA**'s file (`.github/workflows/
 | `sql-hardening.test.ts` | RLS on every table, pinned `search_path`, grant/revoke pairing, pgTAP ratchet drift |
 | `client-boundary.test.ts` | no client module imports server code or reads secrets; `server-only` markers |
 | `notification-worker-auth.test.ts` | the edge worker authenticates before it inspects configuration |
-| `anonymous-write-surface.test.ts` | the anon write RPCs and their missing abuse controls |
+| `anonymous-write-surface.test.ts` | the anon write RPCs and the control the forms carry |
+| `anonymous-rpc-throttle.test.ts` | the throttle is in the action, but the anon RPC is directly callable |
 
 ## Findings
 
@@ -38,10 +37,11 @@ the test passes on its own — remove the `todo` option to promote it to a gate.
 
 | Finding | Owner | Status |
 |---|---|---|
-| Open redirect via dot-segment normalisation in `sanitizeNextPath` | LANE-URUN (`src/lib/pwa/destination.ts`) | open |
+| Open redirect via dot-segment normalisation in `sanitizeNextPath` | LANE-URUN (`src/lib/pwa/destination.ts`) | **fixed** (output re-validated) |
 | `src/server/email/unsubscribe-token-core.ts` lacks `import "server-only"` | LANE-URUN (`src/server/**`) | open |
-| No captcha / rate limit on the feedback & sales mail-sending forms | LANE-URUN (`src/features/feedback/**`, `src/features/sales/**`) | open |
-| `tests/security/**` not collected by any CI job | LANE-INFRA (`.github/workflows/**`) | open |
+| `tests/security/**` not collected by any CI job | LANE-INFRA (`.github/workflows/**`) | **fixed** (`test:security` step) |
+| Anon feedback/sales forms had no captcha or rate limit | LANE-URUN (`src/features/**`) | **fixed** (rate limiter in the actions) |
+| The throttle is action-only; the `anon` RPC is directly callable | LANE-SUPABASE (`supabase/**`) + LANE-URUN (`src/features/**`) | open |
 
 ## Rules
 
