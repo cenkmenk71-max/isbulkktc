@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { getLocalePrefix, routing, type AppLocale } from "@/i18n/routing";
@@ -33,26 +33,36 @@ function isFreshAccount(createdAt: string | undefined): boolean {
  * Greeting a new account is best-effort: the session is already established, so
  * a mail problem (or a misconfigured app URL) must never break the callback and
  * strand the user without a redirect.
+ *
+ * It is also off the critical path: the send is an outbound HTTPS call to the
+ * mail provider (hundreds of milliseconds, seconds when the provider is slow),
+ * and awaiting it here delayed the redirect the visitor is waiting on. `after`
+ * runs it once the response has been sent, so the visitor lands on their
+ * dashboard first and the greeting arrives afterwards. The callback is a route
+ * handler, so the send keeps its request context (cookies, headers) inside the
+ * deferred task.
  */
-async function greetNewAccount(input: {
+function scheduleWelcomeEmail(input: {
   email: string;
   audience: WelcomeAudience;
   locale: AppLocale;
   user: { id: string; user_metadata?: Record<string, unknown> | null };
-}): Promise<void> {
-  try {
-    await sendWelcomeEmail({
-      to: input.email,
-      audience: input.audience,
-      locale: input.locale,
-      name: deriveDisplayName(input.user.user_metadata),
-      userId: input.user.id,
-    });
-  } catch (mailError) {
-    console.error("Welcome email could not be sent.", {
-      error: mailError instanceof Error ? mailError.message : "unknown_error",
-    });
-  }
+}): void {
+  after(async () => {
+    try {
+      await sendWelcomeEmail({
+        to: input.email,
+        audience: input.audience,
+        locale: input.locale,
+        name: deriveDisplayName(input.user.user_metadata),
+        userId: input.user.id,
+      });
+    } catch (mailError) {
+      console.error("Welcome email could not be sent.", {
+        error: mailError instanceof Error ? mailError.message : "unknown_error",
+      });
+    }
+  });
 }
 
 function redirectAndClearOAuthIntent(url: URL): NextResponse {
@@ -218,7 +228,7 @@ export async function GET(request: NextRequest) {
         }
 
         if (user.email) {
-          await greetNewAccount({
+          scheduleWelcomeEmail({
             email: user.email,
             audience,
             locale,
@@ -232,7 +242,7 @@ export async function GET(request: NextRequest) {
     // resolves its session. The freshness window keeps this to genuine
     // sign-ups.
     createdAccount = true;
-    await greetNewAccount({
+    scheduleWelcomeEmail({
       email: user.email,
       audience,
       locale,

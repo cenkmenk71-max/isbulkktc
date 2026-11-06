@@ -945,3 +945,56 @@ geri eklenince yeşil.
 
 ### Sahibin yapması gerekenler
 - **#271** (transactional e-posta `lang`/`dir`) ve **#227** (auth SMTP + DKIM) devirde.
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (micro-denetim turu 8)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Aldığı issue: yok (yeni sahipsiz lane:auth issue'su yok) → micro-denetim
+              (bulgu #161'in "gecikme" başlığının kalan kök nedeni)
+Değişen dosyalar:
+  src/app/[locale]/auth/callback/route.ts        (welcome maili `after()`'a alındı)
+  src/features/identity/callback-mail-timing.test.ts (yeni, 2 test)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (610, 2'si yeni) / test:security ✅ (78 pass, 3 todo, 0 fail) /
+  test:integration ✅ (48) / production build ✅
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration/şablon değişmedi)
+```
+
+### Denetlenen dosyalar (micro-denetim)
+`git ls-files 'src/features/identity/**'` (39) + 5 `(auth)`/callback route +
+7 şablon → **51 dosya**; hepsine bakıldı. Bakılmayan dosya yok.
+
+### Bulgular
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `auth/callback/route.ts:221,235` | performans / mantık | Yeni hesabın hoş geldin maili (`sendWelcomeEmail` → Resend HTTPS çağrısı) redirect'ten **önce `await`** ediliyordu | yanıt gönderildikten sonra (`after()`) çalışmalı | Sağlayıcı yavaşken kullanıcı panoya gitmeden önce saniyelerce bekler — #161'in "gecikmeli" semptomunun kalan kök nedeni | düzeltildi |
+| 2 | `displayNameSchema` | doğruluk/sınır | zod `min/max`'ı **kod noktası** sayar (PG `char_length` gibi); astral isimlerde uyumsuzluk yok | — | sorun yok | bilgi |
+| 3 | 7 şablon | tutarlılık | Etiket dengesi temiz, tek paylaşılan stylesheet, RTL-aware boşluk | — | sorun yok | bilgi |
+
+### Düzeltilen (#1)
+`greetNewAccount` (async) → `scheduleWelcomeEmail` (senkron, `after()` ile
+sarar). İki çağrı yeri de güncellendi. `after()` Next'in route handler'larda
+desteklediği API; yanıt gönderildikten sonra çalışır, hata yakalama ve
+best-effort davranışı korunur.
+
+### Kanıt
+- `callback-mail-timing.test.ts` (statik bekçi): GET handler içinde
+  `await sendWelcomeEmail`/`await greetNewAccount` **yasak**, `scheduleWelcomeEmail`
+  çağrısı zorunlu, `after()` içinde send var, scheduler senkron. Düzeltme geri
+  alınınca test kırmızı olur (mutasyonla doğrulandı).
+- Production standalone sunucu: `/en/auth/callback?flow=oauth&next=candidate`
+  → `307 /en/login?error=oauth&audience=candidate` (davranış korundu);
+  build ✅.
+
+### Güvenlik değerlendirmesi (security skill)
+- Yalnız zamanlama; yetki/oturum/DB yolu değişmedi. `after()` yanıt sonrası
+  çalışır ama request bağlamını (cookies/headers) korur — route handler'da
+  desteklenir.
+- Mail hatası yine yutulur (yanıt sonrası task'tan throw etmez).
+
+### Sahibin yapması gerekenler
+- **#161**'in "gerçek hesapla üretimde doğrulama" kalemi hâlâ insan gerektiriyor.
+- **#271** (transactional e-posta `lang`/`dir`) ve **#227** (auth SMTP + DKIM) devirde.
