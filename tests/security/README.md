@@ -35,6 +35,7 @@ a boundary regression is attributable at a glance.
 | `push-endpoint-ssrf.test.ts` | the push-endpoint host allowlist (`isAllowedPushEndpoint`): rejects loopback/link-local/RFC1918/metadata/decimal-IP/local names, every writer wires it, the send sink re-checks it, and the registration route requires a session before it parses the body |
 | `anonymous-rpc-throttle.test.ts` | the action throttles before the RPC and the mail fan-out (ordering, not presence); the throttle also lives inside the anon RPC bodies (a gate); the action-path IP dimension is still one shared bucket |
 | `session-cookie-flags.test.ts` | the Supabase session cookie's `HttpOnly`/`Secure`/`SameSite` flags, the OAuth-intent cookie's flags, and the controls around them |
+| `locale-cookie-flags.test.ts` | the `NEXT_LOCALE` locale cookie's flags, driven through the real middleware with the app's own `routing.ts` (a `todo` pins the missing `Secure`; the `HttpOnly` question is answered in the file) |
 
 ## Findings
 
@@ -52,6 +53,7 @@ the test passes on its own — remove the `todo` option to promote it to a gate.
 | The throttle is action-only; the `anon` RPC is directly callable (#139) | LANE-SUPABASE (`supabase/**`) | **fixed** (DB throttle inside the RPC; now a gate) |
 | The DB throttle's IP dimension is one shared bucket on the app path (the action sends no visitor IP) | LANE-URUN (`src/features/**`) + LANE-SUPABASE (`supabase/**`) | open (handoff #206) |
 | Supabase session cookie keeps `@supabase/ssr` defaults (`httpOnly:false`, no `Secure`) | LANE-AUTH (`src/features/identity/**`, session lifecycle) | **fixed** (PR #201; now a gate) |
+| `NEXT_LOCALE` locale cookie has no `Secure` flag (issue #418 §6) | LANE-İÇERİK (`src/i18n/routing.ts`) | open (`locale-cookie-flags.test.ts`; `HttpOnly` is not possible — the language switcher writes it from JS) |
 | `package-lock.json` is a stale second lockfile and the only manifest Dependabot audits | LANE-INFRA (`package.json`, lockfiles) | open (handoff #188) |
 
 ### Guard self-tests

@@ -292,6 +292,21 @@ issue açar.
    hattı yok — `list_engagement_recipients` tam bir mailing-list dump'ıdır. Kanıt:
    `tests/security/sql-hardening.test.ts` → "every service-role-only RPC re-checks
    auth.role() in its own body" (`todo`).
+4. **`NEXT_LOCALE` çerezi `Secure` bayrağını taşımıyor** (sahibi:
+   `src/i18n/routing.ts`, LANE-İÇERİK). Yerel middleware her belge gezinmesinde
+   `Set-Cookie: NEXT_LOCALE=de; Path=/; SameSite=lax` yazıyor — `Secure` yok.
+   `HttpOnly` **eklenemez**: dil değiştirici bu çerezi istemciden yazıyor
+   (`src/components/layout/site-header.tsx` `<Link … locale={code}>` → next-intl
+   `syncLocaleCookie` → `document.cookie`), ve `document.cookie` `HttpOnly`
+   bayrağını **atayamaz** — yani sunucu tarafında tek satırlık bir ekleme değil,
+   önce istemci yazım yolunun değişmesi gerekir.
+   `Secure` için böyle bir çelişki yok. Üretim HTTPS-only (HSTS
+   `includeSubDomains; preload`) olduğu için değer bugün telde açıkta değil; ama
+   bir HTTP downgrade'i ya da mixed-content gömme aynı değeri düz metin gönderir.
+   Uygulamanın yazdığı diğer tüm çerezler (oturum, OAuth-intent, consent) üretimde
+   `Secure` taşıyor, yani bu çerez tutarsız. Kanıt:
+   `tests/security/locale-cookie-flags.test.ts` (`todo`; gerçek middleware, gerçek
+   `routing.ts` ile sürülür).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
 
