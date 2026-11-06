@@ -53,7 +53,7 @@ Kanıt kısaltmaları: `HTTP` = `curl -D -` başlıkları, `DoH` = `cloudflare-d
 | F-11 | HSTS | `max-age=31536000; includeSubDomains; preload` | Doğru | `HTTP` |
 | F-12 | HSTS preload | `hstspreload.org` → **`status: pending`** | `preloaded` olana kadar bekle; kaydı geri çekme | hstspreload API |
 | F-13 | DNSSEC | Açık — DS `2371 13 2 36e0…775b`, apex+çoğu alt alan `AD=true`; **`rsend` CNAME'i `rmta.net`'e gidiyor (DS yok) → `AD=false`** (bkz. tur 18, D-01) | Apex doğru; kısmi kapsam bilinmeli | DoH DS + `AD` |
-| F-14 | Cache — dinamik HTML | `/`, `/jobs`, `/companies`, tüm dil önekleri: `cache-control: private, no-cache, no-store…`, `cf-cache-status: DYNAMIC` | Dinamik asla cache'lenmemeli — **doğru, düzeltme gerekmez** | `HTTP` |
+| F-14 | Cache — dinamik HTML | `/`, `/jobs`, `/companies`, tüm dil önekleri: `cache-control: private, no-cache, no-store…`, `cf-cache-status: DYNAMIC` | Dinamik asla cache'lenmemeli — **doğru**; ama **prerender** rotalar (`/blog`, `/contact`, `/freelance`, `/about`, `/privacy`, `/terms`) `public, max-age=0` + `Set-Cookie` döner (tur 19, P-01) | `HTTP` |
 | F-15 | Cache — statik | `/_next/static/*`: `public, max-age=31536000, immutable`, `cf-cache-status: HIT`; edge'de `Vary` **yok** (tur 18 düzeltmesi) | Doğru | `HTTP` |
 | F-16 | Cache — `robots.txt` | `public, max-age=2628000` (≈30 gün), `REVALIDATED` | Kabul; ama `noindex` kuralı **`Disallow` etmiyor** (SEO lane) | `HTTP` |
 | F-17 | Cache — `sitemap.xml` | `public, max-age=3600`, `EXPIRED`/`REVALIDATED` | 1 saat TTL makul; `<lastmod>` tazeliği SEO lane'de | `HTTP` |
@@ -487,7 +487,7 @@ ve hata-yolu boyutu eklendi. **Yeni açık yok; bir doküman düzeltmesi var.**
 | T-04 | Hata yolu | `GET /definitely-not-a-page-xyz123` | **404**, `private, no-store`, `DYNAMIC`; gövdede stack/`node_modules`/`/home/`/`eyJ` **yok** | ✔ |
 | T-05 | Hata yolu | `POST /api/push/dispatch` (token yok/yanlış) | **401** JSON, `cache-control: public, max-age=0, must-revalidate`, `DYNAMIC`, gövde 26 B | ✔ |
 | T-06 | Hata yolu | `GET /api/email/unsubscribe` (param yok) | **400** `text/plain`, `max-age=0`, `DYNAMIC` | ✔ |
-| T-07 | TLS | min sürüm | TLS 1.0/1.1 **reddedilir**, 1.2/1.3 çalışır | ✔ |
+| T-07 | TLS | min sürüm | **SSL Labs: 4/4 `A+`, yalnız 1.2+1.3** (sandbox istemcisinde 1.0/1.1 derlenmemiş → `no protocols available` **sunucu kanıtı değil**; bkz. tur 17 düzeltmesi) | ✔ |
 | T-08 | TLS | sertifika SAN | `*.isbulkktc.com, isbulkktc.com` — tüm alt alanları kapsıyor | ✔ |
 | T-09 | HTTP/3 | `alt-svc` | `h3=":443"; ma=86400` | ✔ |
 | T-10 | IPv6 | AAAA var; bu sandbox'tan v6 | **çözümlenemedi** (ortamda v6 çözümleyici yok) | **bakılmadı** |
@@ -1562,3 +1562,82 @@ edge-cache'lenmiyor; cacheable statiklere yazma 405; CORS yalnız
 - **E-posta teslimi:** gönderim yapılmadı.
 - **DNSSEC uçtan uca doğrulama:** yalnız DoH `AD` bayrağı okundu; bağımsız
   doğrulayıcı (Unbound/knot) koşturulmadı.
+
+## Edge mikro-denetim tur 19 — TLS/cipher derinliği + prerender cache başlıkları (2026-11-06)
+
+Canlı build: `/api/build-info` → **`7b0f7170`** (tur 18 ile aynı). Salt-okuma.
+
+### Düzeltmeler
+
+| # | Yer | Boyut | Gözlenen (önce) | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| D-04 | `docs/cloudflare.md:490` (T-07) | Doğruluk | "TLS 1.0/1.1 **reddedilir**" — tur 17'de F-09/T-15 için düzeltilen **istemci-taraflı** kanıt T-07'de kalmıştı | SSL Labs kanıtı (4/4 `A+`, yalnız 1.2+1.3) | Yanlış kanıt iddiası | **düzeltildi** |
+| D-05 | `docs/cloudflare.md:56` (F-14) | Doğruluk | "tüm dinamik HTML `private, no-store` — düzeltme gerekmez" | **prerender** rotalar `public, max-age=0` + `Set-Cookie` (bkz. P-01) | Eksik kapsam | **düzeltildi** |
+
+### P-01 — prerender rotalarda `public` + `Set-Cookie` (bilgi / orta)
+
+`x-vercel-cache: HIT` dönen **prerender** rotalar (`/blog`, `/contact`,
+`/freelance`, `/about`, `/privacy`, `/terms`) `cache-control: public, max-age=0,
+must-revalidate` **ve** `set-cookie: NEXT_LOCALE=…` döner; dinamik rotalar (`/`,
+`/jobs`, `/companies`, `/en`,`/de`,`/fa`, `/login`) ise `private, no-cache,
+no-store`. Ölçüm: `set-cookie` her ikisinde de var (dil middleware'i), `cf-cache-status`
+her ikisinde de `DYNAMIC`.
+
+**Neden şimdilik zararsız (üç bağımsız bariyer):**
+
+1. **CF edge cache'lemiyor.** `cf-cache-status: DYNAMIC` — Cloudflare HTML'i
+   `cf-cache-status`/`Age` üretmeden origin'e geçiriyor; `public` burada edge
+   cache'ini açmıyor. Ayrıca CF HTML'i yanıt başına yeniden yazıyor
+   (`__CF$cv$params`, G-01 e-posta obfuscation) → gövde deterministik değil
+   (aynı istekte bile md5 farklı), dolayısıyla paylaşımlı cache için uygun değil.
+2. **Vercel cache'i cookie-ayrımlı.** Prerender gövdesi dil middleware'i
+   (`NEXT_LOCALE`) ile **istek-başına farklı**: aynı cookie ile bile md5 değişiyor
+   (`__CF$cv$params`); farklı cookie'de `<html lang>`/title gövdede birebir aynı
+   (HTML sunucuda dil-nötr). Yani kullanıcıya özel veri sızmıyor.
+3. **`must-revalidate` + `max-age=0`** paylaşımlı cache'te bayat yanıt riskini
+   azaltır.
+
+**Neden yine de izlenmeli:** `public` + `Set-Cookie` + `Vary`'da `Cookie` yok
+kombinasyonu, HTML cache kuralı değişirse (ör. `Edge Cache TTL`, Cache Rule
+genişlemesi) tek kullanıcının dil içeriğini başkasına servis etme riskine açılır.
+Origin `Cache-Control`'ü prerender rotalarda da `private, no-store`'a çekilmeli
+**veya** dil bilgisi `Vary: Cookie` ile bildirilmeli. Bu bir **origin/Next**
+ayarıdır (`next.config.ts`, `lane:guvenlik` sahipliğinde) — CF panelinden
+düzeltilemez. → **LANE-GÜVENLİK'e handoff.**
+
+### Tur 19 canlı ölçümleri (yeni/derinleştirilmiş)
+
+| # | Test | Gözlenen | Durum |
+|---|---|---|---|
+| W-19-1 | SSL Labs tam analiz (4/4 EP) | hepsi `A+`, `isExceptional: true`, `hasWarnings: false` | ✔ |
+| W-19-2 | Protokol | yalnız `TLS 1.2` + `TLS 1.3` | ✔ |
+| W-19-3 | Sertifika anahtarı | **ECDSA** (`sigAlg: SHA384withECDSA`), LE `YE2`, SAN `*.isbulkktc.com, isbulkktc.com` | ✔ |
+| W-19-4 | Forward secrecy | `forwardSecrecy: 4` (en yüksek sınıf), `supportsAead: true` | ✔ |
+| W-19-5 | Zayıf kripto | `supportsRc4: false`, `compressionMethods: 0`, `ticketbleed`/`heartbleed` yok | ✔ |
+| W-19-6 | Renegotiation | `renegSupport: 2` (güvenli/secure renegotiation) | ✔ |
+| W-19-7 | Named group (PQC) | `X25519MLKEM768` (PQC hibrit) + x25519/secp256r1/384/521 | ✔ |
+| W-19-8 | Canlı KEX | `/cdn-cgi/trace` → `kex=X25519MLKEM768`, `tls=TLSv1.3` | ✔ |
+| W-19-9 | HTTP/3 | `curl --http3` → `http_version=3`, `200`; `alt-svc: h3=":443"; ma=86400` (apex + `www` + `/cdn-cgi/speculation`) | ✔ |
+| W-19-10 | ALPN | `h2`, `http/1.1` | ✔ |
+| W-19-11 | OCSP stapling | `no response sent` (CF Free'de beklenen; stapling yok) | ℹ️ |
+| W-19-12 | HSTS preload | `hstspreload.org/api/v2/status` → **`pending`** | ℹ️ |
+| W-19-13 | Prerender cache başlıkları | `/blog`…`/terms` → `public, max-age=0` + `Set-Cookie`, `DYNAMIC` | ⚠️ P-01 |
+| W-19-14 | Dinamik cache başlıkları | `/`, `/jobs`, `/companies`, `/en`… → `private, no-store`, `DYNAMIC` | ✔ |
+| W-19-15 | `Vary` kapsamı | HTML'de `rsc, next-router-*` + `accept-encoding`; `Cookie` **yok** | ℹ️ |
+| W-19-16 | `/cdn-cgi/speculation` | `cf-speed-brain` prefetch kuralları (`eagerness: conservative`) | ℹ️ |
+| W-19-17 | IPv6 bağlantısı | `curl -6` → `http_code=000` (sandbox'ta v6 yolu yok) | **bakılmadı** |
+
+### Drift (tur 19 — değişmedi)
+
+H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08 açık. Dinamik HTML edge-cache'lenmiyor;
+cacheable statiklere yazma 405; DKIM CF `cf2024-1` 2048-bit, Resend `resend._domainkey`
+1024-bit; DMARC `p=none`; HSTS preload `pending`.
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` yok): WAF ruleset / Cache Rules / Browser Cache
+  TTL / Bot Management / Analytics okunamadı — ölçüm edge↔origin diff + DoH +
+  SSL Labs ile yapıldı.
+- **IPv6 bağlantısı:** sandbox'ta v6 yolu yok.
+- **OCSP stapling uçtan uca:** yalnız "no response sent" gözlendi.
+- **Gerçek tarayıcı:** HTTP/3 tarayıcı davranışı, SW güncellemesi sürülmedi.

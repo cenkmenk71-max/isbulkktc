@@ -9,7 +9,7 @@ Hedef: Cloudflare yapılandırmasını **noktası noktasına** doğrulayıp eksi
 - **Kanıtlanmış gerçekler:** WAF AÇIK (Managed Free Ruleset, 38 kural). Custom WAF 4 kural (ruleset `e2951dca01da47b8882fa120d5fbc308`): `/api/devtools/` bloğu, TRACE/TRACK, VCS/dotfile/secret yolları, CMS/exploit-scanner yolları. Free plan `matches` operatörünü reddeder (`contains`/`in`/`lower()` kullan).
 - **Free plan = tam 1 `http_ratelimit` kuralı**, "Leaked credential check" için harcanmış. Auth brute-force koruması bunu **değiştirmeyi** gerektirir → önce sor.
 - **GitHub runner egress'ini Cloudflare `cf-mitigated: challenge` ile her yolda engelliyor** (ana sayfa dahil). Custom WAF skip bunu kaldırmıyor. Bu yüzden IndexNow Vercel alias'tan okuyor.
-- Cache doğru: dinamik HTML `private, no-cache, no-store`; yalnız `/robots.txt` ve `/images/*` edge-cached. **"Düzeltme".**
+- Cache doğru: dinamik HTML `private, no-cache, no-store`; edge-cached: `/_next/static/*` (immutable), `/robots.txt` (~30 gün), `/sitemap.xml` (1 saat), `/images/*`. **Not (tur 19):** **prerender** rotalar (`/blog`, `/contact`, `/freelance`, `/about`, `/privacy`, `/terms`) `public, max-age=0` + `Set-Cookie` döner; CF yine de `DYNAMIC` (cache'lemiyor) → bilgi, origin düzeltmesi LANE-GÜVENLİK'te (P-01).
 
 ## Sahip olduğun yollar
 Repo dışı CF API; gerekirse yeni `docs/cloudflare.md` (kendi dosyan).
@@ -368,3 +368,30 @@ bot UA'ları 200, yönlendirme/açık-yönlendirme temiz, TLS A+ 4/4, HSTS prelo
 
 **Açık kalan (değişmedi):** H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08.
 Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 18".
+
+### Edge mikro-denetim (tur 19) — TLS/cipher derinliği + prerender cache (2026-11-06)
+
+Salt-okuma. Canlı build `7b0f7170`. SSL Labs tam analiz + HTTP/3 + cache başlık
+taraması.
+
+- **D-04 (doğruluk):** `docs/cloudflare.md:490` (T-07) hâlâ "TLS 1.0/1.1
+  **reddedilir**" diyordu — tur 17'de F-09/T-15 için düzeltilen istemci-taraflı
+  kanıt T-07'de kalmıştı. SSL Labs kanıtıyla düzeltildi.
+- **D-05 (doğruluk):** F-14 "tüm dinamik HTML `private, no-store`" iddiası
+  eksikti; **prerender** rotalar `public, max-age=0` döner. Düzeltildi.
+- **P-01 (bilgi/orta):** `/blog`, `/contact`, `/freelance`, `/about`, `/privacy`,
+  `/terms` → `cache-control: public, max-age=0, must-revalidate` **+**
+  `set-cookie: NEXT_LOCALE=…`; `Vary`'da `Cookie` yok. Şimdilik zararsız (CF
+  `DYNAMIC` + CF HTML'i yeniden yazıyor → gövde deterministik değil; Vercel
+  cache'i cookie-ayrımlı; `must-revalidate`). HTML cache kuralı değişirse
+  dil-içeriği sızma riski → **LANE-GÜVENLİK'e handoff** (`next.config.ts`).
+
+**Yeni temiz doğrulananlar:** SSL Labs 4/4 `A+` `isExceptional`, yalnız TLS
+1.2/1.3, **ECDSA** sertifika (`SHA384withECDSA`), forward secrecy 4, AEAD açık,
+RC4/compression/ticketbleed/heartbleed yok, secure renegotiation, PQC named
+group `X25519MLKEM768` (canlı `kex=X25519MLKEM768`), HTTP/3 `--http3` → 200,
+ALPN `h2/http1.1`, HSTS preload hâlâ `pending`, OCSP stapling yok (Free'de
+beklenen).
+
+**Açık kalan (değişmedi):** H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08.
+Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 19".
