@@ -601,3 +601,31 @@ dedektörü `Authorization` başlığını **küçük harfli** literalle arıyor
   bağlı; başlık haritasını farklı adlı bir değişkene kopyalayan bir rota
   (`const h = new Headers(request.headers); h.get(…)`) keşfedilmez. Bugün böyle
   bir rota yok; çıkarsa bağ genişletilir.
+
+### Katmanın kendi dedektörleri (34. tur — log güvenliği: #418 §7 kapısız madde)
+
+#418 §7'nin **"Log: şifre/token loglanmıyor"** maddesi, hesap güvenliği
+kapsamındaki tek kapısız maddeydi: çerez bayrakları, auth sıralaması ve yanıt
+yüzeyi kapılıydı, ama bir `console.error("giriş başarısız", { password })` —
+kimliğin bir log toplayıcısına düşmesinin en yaygın yolu — her kapı yeşilken
+gönderilebilirdi. `tests/security/log-safety.test.ts` eklendi.
+
+- **Kural 1 — ilk argüman etiket olmalı.** Çıplak nesne/`Error` ilk argüman, bir
+  SDK hata gövdesinin (istek gövdesi dâhil) log'a taşınmasına izin verir. İzin
+  verilen: string/şablon literali veya paylaşılan olay adı (`EMAIL_HEALTH_EVENT`).
+  Ölçüm: kod tabanında **1** istisna var, o da onaylı `EMAIL_HEALTH_EVENT`.
+- **Kural 2 — argümanlarda kimlik ifadesi olmamalı.** İki katman: (a) değer
+  biçimleri (`process.env.*_SECRET|TOKEN|KEY`, `formData.get("password")`,
+  `.access_token`, `api_key`, `service_role`); (b) dize literalleri **ayıklandıktan
+  sonra** çıplak kimlik kelimesi (`password|token|secret|credential|authorization`).
+  Ayıklama şart: `"Supabase password update failed."` bir *etiket*, bulgu değil;
+  `{ email, password }` bir *değer*, bulgudur. Ölçüm: **0** kimlik ifadesi.
+- **Kanıt (mutation).** `console.error("sign-in failed", { email, password })`
+  + `console.error(error)` içeren bir probe dosyası: kural 1 `console.error(error)`
+  satırını, kural 2 `password (bare value)`'yu kırmızıya çevirdi. Probe temizlendi.
+  **İlk sürüm kural 2 yalnız değer biçimlerini tarıyordu ve çıplak `password`
+  değişkenini kaçırdı** — bu yanlış-negatif mutation sırasında ölçüldü ve dize
+  ayıklamalı kelime taraması eklendi.
+- **Bilinçli sınır (sessiz değil).** Kaynak-metin taraması; bir kimliği önce
+  yerel değişkene alıp sonra loglayan bir zincir (`const p = …; console.error(l, p)`)
+  görülmez. Bugün böyle bir zincir yok.

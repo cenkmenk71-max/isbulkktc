@@ -1080,3 +1080,58 @@ Bu turda tam taranan: `cron-route-auth.test.ts`, `notification-worker-auth.test.
 `docs/threat-model.md`, `tests/security/README.md`, `docs/lanes/09-guvenlik.md`.
 `tests/security/**` kalan 16 dosya bu turda **bakılmadı** — önceki turlarda
 denetlendi, CI yeşil. Açık `todo`'lar değişmedi: #298, #206, #102, #418 §6.
+
+## Tur — micro-denetim: #418 §7 log güvenliği kapısı (kapısız madde kapatıldı)
+
+**Lane:** GÜVENLİK · **Branch:** `lane/guvenlik`
+
+#418 §7'nin yedi maddesinden altısı kapılıydı (çerez bayrakları ×2, auth
+sıralaması ×2, yanıt yüzeyi, CSRF/oturum bayrakları). **Yedincisi — "Log:
+şifre/token loglanmıyor" — kapısızdı.** `console.error("giriş başarısız", { password })`
+her kapı yeşilken gönderilebilirdi.
+
+### Bulgu (kanıtlı)
+
+| Boyut | Gözlenen | Beklenen | Etki |
+|---|---|---|---|
+| Log sızıntısı | `console.*` çağrılarını denetleyen **hiçbir** test yok (`grep -rl console tests/security` → yalnız ilgisiz 2 dosya) | her çağrı etiket loglar, kimlik ifadesi içermez | şifre/token bir log toplayıcısına düşer — hesap devri |
+
+Kod tabanı **bugün temiz** (ölçüldü): 91 `console.*` çağrısı, 0 kimlik ifadesi,
+1 izinli istisna (`EMAIL_HEALTH_EVENT` sabiti ilk argüman). Yani kapı bir
+**ratchet**: temizliği korur, gerilemeyi kırmızıya çevirir.
+
+### Düzeltme — `tests/security/log-safety.test.ts` (yeni, 5 test)
+
+- **Kural 1:** ilk argüman string/şablon literali veya paylaşılan olay adı
+  (`SCREAMING_SNAKE`); çıplak nesne/`Error` yasak.
+- **Kural 2:** argümanlarda kimlik ifadesi yasak — (a) değer biçimleri
+  (`process.env.*_SECRET|TOKEN|KEY`, `formData.get("password")`, `.access_token`,
+  `api_key`, `service_role`), (b) dize literalleri ayıklandıktan sonra çıplak
+  kimlik kelimesi. Ayıklama, `"Supabase password update failed."` gibi
+  **etiketleri** bulgu saymamak için şart.
+
+### Kanıt (mutation)
+
+| Enjekte edilen | Kural 1 | Kural 2 |
+|---|---|---|
+| `console.error("sign-in failed", { email, password })` | — | **kırmızı** (`password (bare value)`) |
+| `console.error(error)` | **kırmızı** (çıplak `Error`) | — |
+
+Probe temizlendi; 5/5 yeşil. **İlk sürüm kural 2 çıplak `password` değişkenini
+kaçırdı**; bu yanlış-negatif mutation sırasında ölçülüp dize-ayıklamalı kelime
+taraması eklendi (dedektörün kendi körlüğü de kanıtla kapatıldı).
+
+### Kapılar
+
+`lint` / `typecheck` / `check:frontend-source` temiz.
+`test:security` **130 test / 126 pass / 0 fail / 4 todo** (125→130).
+`test:unit` **739 / 737 pass / 2 todo** (değişmedi).
+
+### Bakılmayan
+
+Bu turda tam taranan: `log-safety.test.ts` (yeni), `session-cookie-flags.test.ts`,
+`locale-cookie-flags.test.ts`, `oauth-signup-intent.ts`,
+`src/features/identity/actions.ts`, `src/server/email/mailer.ts`,
+`docs/threat-model.md`, `tests/security/README.md`. `tests/security/**` kalan
+dosyalar bu turda **bakılmadı**. Açık `todo`'lar değişmedi: #298, #206, #102,
+#418 §6, #424 (M-01/M-03/M-04 → #434 ile kapılı; M-02 → #435 LANE-INFRA).
