@@ -848,3 +848,78 @@ sayımı). `test:unit` değişmedi.
 denetlendi, CI yeşil). Bu turda tam taranan: yeni test +
 `tests/security/README.md` + `docs/threat-model.md`. Açık `todo`'lar değişmedi:
 #298, #206, #102, #418 §6.
+
+## Durum (2026-11-06) — micro-denetim: canlı destek (#398) anon-yazma yüzeyi
+
+Sahip canlı destek istiyor (#398). LANE-URUN widget'ı (`src/features/support/**`)
+yazıyor; o widget **anonim** bir yazma RPC'si (`submit_support_message` benzeri)
+ve bir tablo (`support_messages`) getirecek. Bu tur, o değişikliğin güvenlik
+kapısını önceden sağlamlaştırdı.
+
+### Bulgu — yapısal yanlış negatif (kendi dosyam)
+
+`tests/security/anonymous-write-surface.test.ts` içindeki "the anonymous write
+RPCs are not readable by clients" testi tabloları **elle listeliyordu**:
+
+```ts
+for (const table of ["feedback_submissions", "sales_leads"]) { … }
+```
+
+Bu, bu dosyanın kendi sınıfındaki klasik yanlış negatiftir: **üçüncü** bir anon
+yazma RPC'si (tam da #398'in canlı destek mesajı gibi) bu kontrolün hiç
+bakmadığı bir tabloya yazar; o tablo `anon`/`authenticated`'tan revoke
+edilmezse — yani doğrudan PostgREST'ten okunabilirse — test **yeşil** kalırdı.
+`anonymous-rpc-throttle.test.ts` bu sınıf için keşif tabanlı bir kapıya zaten
+geçmişti; bu test geride kalmıştı.
+
+**Kanıt (mutation).** Geçici bir probe migration yazıldı: `anon`'a grant'li
+`submit_support_message_probe(text)` fonksiyonu, `public.support_messages_probe`
+tablosuna `insert` ediyor ve o tablo **revoke edilmemiş**.
+
+| Durum | `anonymous-write-surface` |
+|---|---|
+| probe **var** | **kırmızı** — `actual: [feedback_submissions, sales_leads, support_messages_probe]` |
+| probe **yok** | yeşil — 4 pass |
+
+Yani kapı, canlı desteğin ekleyeceği tam şekli yakalıyor.
+
+### Düzeltme
+
+`anonymousWriteTables()` eklendi: `anon`'a grant'li fonksiyonları grant
+ifadelerinden keşfeder, her birinin **son** (`create or replace`) gövdesini
+okur, gövdedeki `insert into public.X` hedeflerini toplar. Test artık keşfedilen
+kümenin `["feedback_submissions","sales_leads"]` olmasını **ve** her birinin
+`revoke all on table public.X from public, anon, authenticated` taşımasını
+birlikte ister. Bir **self-test** keşfin iki bilinen yazarı bulduğunu ve
+salt-okunur public RPC'lerin tablosunu (jobs/companies/job_source_imports)
+dışarıda bıraktığını kanıtlar.
+
+Over-approximation bilinçli: grant'ı sonradan revoke edilmiş bir fonksiyon da
+taranır ve tablosu yine "revoke edilmiş olmalı" diye denetlenir — bir anonim
+yazarın dokunduğu tablo için doğru son durum budur.
+
+### Devir
+
+Yok — bulgu ve düzeltme kendi dosyamda (`tests/security/**`). Canlı destek
+widget'ı LANE-URUN'un; RPC/tablo LANE-SUPABASE'in. #398'e orkestratör notu
+düşüldü.
+
+### Kapılar
+
+`lint` temiz, `typecheck` temiz, `check:frontend-source` geçti.
+`test:security` **120 test / 116 pass / 0 fail / 4 todo** (önceki 119/115 →
++1 yeni self-test). `test:unit` **739 test / 737 pass / 2 todo** (değişmedi).
+
+### Bakılmayan
+
+Bu turda tam taranan: `anonymous-write-surface.test.ts` (düzeltildi),
+`anonymous-rpc-throttle.test.ts`, `cron-route-auth.test.ts`,
+`session-cookie-flags.test.ts`, `locale-cookie-flags.test.ts`,
+`security-headers.test.ts`, `client-boundary.test.ts`,
+`api-response-surface.test.ts` (önceki tur) ve `docs/threat-model.md`.
+`tests/security/**` 18 dosyanın kalanı (auth-redirect, push-endpoint-ssrf,
+open-redirect, sql-hardening, ci-workflow-permissions, notification-worker-auth,
+auth-captcha-wiring, unsubscribe-route-auth) bu turda **bakılmadı** — önceki
+turlarda denetlendi, CI yeşil. Açık `todo`'lar değişmedi: #298, #206, #102,
+#418 §6 ve LANE-SUPABASE'in `list_engagement_recipients`/`opt_out_engagement`
+auth.role() guard'ı (sql-hardening).

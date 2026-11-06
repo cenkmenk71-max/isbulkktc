@@ -48,15 +48,87 @@ test("the anonymous write RPCs are granted to anon (by design)", () => {
   }
 });
 
+/**
+ * The body of the last `create [or replace] function public.<name>(…)` in the
+ * migration set — the definition that actually wins, since every migration is
+ * replayed in order.
+ */
+function latestFunctionBody(name: string): string | null {
+  const re = new RegExp(
+    `create\\s+(?:or\\s+replace\\s+)?function\\s+public\\.${name}\\s*\\([\\s\\S]*?\\)\\s*[\\s\\S]*?\\bas\\s+\\$[A-Za-z_0-9]*\\$([\\s\\S]*?)\\$[A-Za-z_0-9]*\\$`,
+    "gi",
+  );
+  const matches = [...sql.matchAll(re)];
+  return matches.length > 0 ? matches[matches.length - 1][1] : null;
+}
+
+/**
+ * Every table an `anon`-granted function inserts into, **discovered** from the
+ * grant statements and the winning function bodies — not listed by hand.
+ *
+ * The earlier version hard-coded `["feedback_submissions", "sales_leads"]`. That
+ * is a false negative by construction: a third anon write RPC (a new contact
+ * form, a live-support message) would insert into a table this check never
+ * inspects, so a table left readable by `anon`/`authenticated` would ship green.
+ * Discovery closes that hole; the self-test below proves the scan finds the two
+ * reviewed tables.
+ *
+ * Over-approximation is deliberate and safe: a function whose grant was later
+ * revoked is still scanned, and its table is still asserted revoked — which is
+ * the correct end state for a table an anonymous writer ever touched.
+ */
+function anonymousWriteTables(): string[] {
+  const tables = new Set<string>();
+  for (const match of sql.matchAll(
+    /grant\s+execute\s+on\s+function\s+(?:public\.)?([a-z_0-9]+)\s*\([^)]*\)\s*to[^;]*\banon\b/gi,
+  )) {
+    const body = latestFunctionBody(match[1]);
+    if (!body) continue;
+    for (const insert of body.matchAll(/insert\s+into\s+public\.([a-z_0-9]+)/gi)) {
+      tables.add(insert[1]);
+    }
+  }
+  return [...tables].sort();
+}
+
+/** The two reviewed anon write RPCs — the discovery must always find these. */
+const reviewedAnonymousWriteRpcs = [
+  "submit_feedback",
+  "submit_sales_lead",
+];
+
 test("the anonymous write RPCs are not readable by clients", () => {
   // The tables are service-role-only; the RPC returns the new id and nothing else.
-  for (const table of ["feedback_submissions", "sales_leads"]) {
+  const tables = anonymousWriteTables();
+  assert.deepEqual(
+    tables,
+    ["feedback_submissions", "sales_leads"],
+    "the discovered anon-write table set drifted from the reviewed two",
+  );
+  for (const table of tables) {
     const pattern = new RegExp(
       `revoke\\s+all\\s+on\\s+table\\s+public\\.${table}\\s+from\\s+public,\\s*anon,\\s*authenticated`,
       "i",
     );
     assert.match(sql, pattern, `public.${table} is not revoked from client roles`);
   }
+});
+
+test("the anon-write table discovery sees the two reviewed RPCs (self-test)", () => {
+  // Guards the guard: a scan that silently stops finding the reviewed writers
+  // would make the gate above pass vacuously. Both must be discovered, and a
+  // read-only public RPC must not drag its table in.
+  const discovered = anonymousWriteTables();
+  for (const table of ["feedback_submissions", "sales_leads"]) {
+    assert.ok(discovered.includes(table), `${table} was not discovered: ${discovered.join(", ")}`);
+  }
+  for (const name of reviewedAnonymousWriteRpcs) {
+    assert.ok(latestFunctionBody(name) !== null, `${name} no longer has a discoverable definition`);
+  }
+  assert.ok(
+    !discovered.some((table) => /^(jobs|companies|job_source_imports)$/.test(table)),
+    "a read-only public RPC's table was misclassified as an anon write target",
+  );
 });
 
 test("the anonymous mail-sending forms carry an abuse control", () => {
