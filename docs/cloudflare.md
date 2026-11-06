@@ -1093,11 +1093,19 @@ eskiye döner.
 **✅ GÜNCELLEME (tur 14.1): #364 → PR #365 ile DÜZELTİLDİ (merge).** LANE-GÜVENLİK
 `next.config.ts` `headers()`'a `/sw.js` için `Cache-Control: no-cache, no-store,
 must-revalidate` ekledi. Origin artık `no-cache` döndüğü için CF edge zone'un
-Browser Cache TTL'inden bağımsız her istekte revalidate eder. **Canlı ölçüm
-(tur 14.1, deploy sonrası bekleniyor):** edge hâlâ `max-age=2628000` + `age: 0` +
-`REVALIDATED` gösteriyor — bu, #365'in **henüz canlıya deploy edilmediğini**
-gösterir (`/api/build-info` → `1d804b6`, #365 `1d804b6`'dan sonra). Deploy
-sonrası `/sw.js` başlığı yeniden ölçülmeli.
+Browser Cache TTL'inden bağımsız her istekte revalidate eder.
+
+**✅ KAPANDI (tur 16, canlı doğrulama):** #365 artık **deploy edildi** (canlı build
+`d154e44`, `/api/build-info`). Edge ölçümü düzeldi:
+```
+edge  : curl -sSI https://isbulkktc.com/sw.js
+        cache-control: no-cache, no-store, must-revalidate   ← artık CF yükseltmiyor
+        cf-cache-status: BYPASS   age: 0
+origin: cache-control: no-cache, no-store, must-revalidate
+```
+`no-cache` origin başlığı CF'in Browser Cache TTL ezişini etkisiz kıldı →
+SW-01 **kapandı**. (tur 14.1 notu: o an canlı build `1d804b6`'ydı ve #365 henüz
+deploy edilmemişti; tur 16'da deploy doğrulandı.)
 
 **Öneri (CF paneli → sahibin onayı):** H-02 ile aynı düzeltme — Caching →
 **Browser Cache TTL = Respect Existing Headers**; ya da Cache Rules'ta
@@ -1257,3 +1265,87 @@ tarandı; bakılmayan dosya yok (AUDIT.md boyutları).
   ve DKIM "verified" durumu panelden doğrulanamadı.
 - **Gerçek e-posta teslimi (Gmail/Outlook):** gönderim yapılmadı (spam skoru
   yalnız SPF/DKIM/DMARC durumundan çıkarıldı).
+
+---
+
+## Edge mikro-denetim tur 16 — SW-01 kapandı + tam drift taraması (2026-11-06)
+
+**Amaç.** Deploy ilerledi (`/api/build-info` → `d154e44`); tur 14/15'te "deploy
+bekliyor" denen düzeltmelerin canlı durumu yeniden ölçüldü ve brief'in 1–7.
+maddeleri (DNS, TLS, cache, WAF, bot, rate-limit, analytics) drift tablosuyla
+tazelendi.
+
+### ✅ Kapanan: SW-01 (tur 14'te açılmıştı)
+
+`/sw.js` edge'de artık **`no-cache, no-store, must-revalidate`** + `BYPASS`
+(önceden `max-age=2628000` + `REVALIDATED`). #365 (`next.config.ts` `headers()`)
+deploy edildi. CF Browser Cache TTL ezişi `no-cache` origin başlığıyla etkisiz
+kaldı. **Kapandı.**
+
+### Drift tablosu (tur 16 — canlı)
+
+| Bulgu | Durum | Canlı kanıt (2026-11-06) |
+|---|---|---|
+| **SW-01** — `/sw.js` edge 30 gün cache | ✅ **KAPANDI** | edge `no-cache, no-store, must-revalidate` + `BYPASS` |
+| H-01 — CF HSTS `max-age`'i eziyor | ⚠️ **açık** | edge `31536000` vs origin `63072000` (`next.config.ts:36`) |
+| H-02 — Browser Cache TTL origin `max-age=0`'ı yükseltiyor | ⚠️ **açık** | `/robots.txt` → `2628000`, `/sitemap.xml` → `3600`, `/images/*.webp` → `2628000` (origin hepsi `max-age=0`) |
+| R-01 — sonlu noktalı apex (`isbulkktc.com.`) | ⚠️ **açık** | apex `/` → **404**; `www.` varyantı → 308 (tutarsız) |
+| G-01 — Email Address Obfuscation açık | ⚠️ **açık** | `/` ve `/en` gövdesinde footer `mailto:` → `/cdn-cgi/l/email-protection#…` |
+| N-01 — `/_next/static` var olmayan dosya 404'ü 1 yıl cache | ⚠️ **açık** | `/_next/static/<yok>.js` → 404 + `max-age=31536000` |
+| W-01 — WAF kodlanmış yolda nokta-yolu kuralını atlıyor | ⚠️ **açık** | `/.git%2fconfig` CF'i geçip Vercel origin 404'üne düşüyor |
+| F-08 — Vercel alias CF zone'unu atlıyor | ⚠️ **açık** | alias `/` → 200 (`noindex`); alias + `Host: isbulkktc.com` → **421** |
+| A-01c — `/_next/image` çift-kodlama | ✅ **KAPALI** | `%2Fimages%2F%252e%252e%2Fblog` → **400** |
+| DKIM — Resend `resend._domainkey` | ℹ️ 1024-bit | `p=MIGf…` (`openssl rsa -pubin` → 1024) |
+| DMARC | ℹ️ `p=none` | `v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; fo=1` |
+
+### Bu turda doğrulananlar (temiz)
+
+| # | Test | Gözlenen | Durum |
+|---|---|---|---|
+| U-01 | Dinamik HTML asla edge-cache'lenmiyor | `/`,`/jobs`,`/companies`,`/en`,`/de`,`/ru`,`/fa` → `private, no-cache, no-store` + `DYNAMIC` | ✔ |
+| U-02 | İçerik sayfaları edge'de tutulmuyor | `/rehber`,`/blog`,`/freelance`,`/packages`,`/sss` → `public, max-age=0` + `DYNAMIC` | ✔ |
+| U-03 | Özel rotalar auth'a yönleniyor | `/profile/dashboard`,`/company/dashboard` → 307 + `private, no-store` | ✔ |
+| U-04 | Desteklenmeyen dil | `/ar` → **404** (locales: `tr,en,ru,el,fa,de`) | ✔ |
+| U-05 | Cacheable statikte yazma reddi | `/robots.txt` POST/PUT/DELETE → **405** | ✔ |
+| U-06 | CORS kilitli | yalnız `/api/build-info` → `ACAO: *` (`OPTIONS, GET, HEAD`); `/api/qr`,`/api/email/unsubscribe`,`/api/push/*` → ACAO **yok** | ✔ |
+| U-07 | `/.well-known/security.txt` | var; `Contact: mailto:info@…`, `Expires` 2027-09-02 | ✔ |
+| U-08 | Yönlendirmeler | `/tr` → 308 → `/` (`as-needed`, tek sıçrama); `www` → 308 apex | ✔ |
+| U-09 | CF → Vercel zinciri | `server: cloudflare` + `cf-ray` + `x-vercel-id` aynı yanıtta | ✔ |
+| U-10 | CAA | 5 issuer (`comodoca`,`digicert`,`letsencrypt`,`pki.goog`,`ssl.com`) + `issuewild` | ✔ |
+| U-11 | DNSSEC | DoH tüm kayıtlarda `AD=true` | ✔ |
+| U-12 | WAF saldırı UA'sı | `sqlmap` → 403 | ✔ |
+| U-13 | Bot UA'ları | Googlebot/Bingbot/YandexBot/DuckDuckBot/AhrefsBot → 200, `cf-mitigated` yok | ✔ |
+
+### DNS gözlemleri (tur 16, DoH)
+
+- **Apex TXT** ikisi de `google-site-verification` olan **iki farklı token** taşıyor
+  (`1zuidCsJ2…` ve `7YbjG-3INgSrdkIKFG0inLGNgD0BX4P8mf1oIDtJehU`) + `yandex-verification`
+  + SPF. İkinci token **bayat olabilir** (hijyen, düşük etki) — sahibi hangisinin
+  güncel olduğunu panelde teyit etmeli; **silmek yıkıcı DNS işi → onay bekler**.
+- **Apex SPF** `include:_spf.mx.cloudflare.net` — Resend return-path'i `send.`
+  subdomaininde olduğu için apex'e `amazonses` **gerekmiyor** (tur 4 teşhisi geçerli).
+- **MTA-STS / TLS-RPT yok** (`_mta-sts`, `_smtp._tls` → NXDOMAIN): e-posta
+  sertleştirme fırsatı (sahibin onayı; #170 kapsamı).
+
+### Micro-denetim (sahip olunan dosyalar)
+
+`git ls-files` ile LANE-CLOUDFLARE sahipliği **2 dosya**: `docs/cloudflare.md`,
+`docs/lanes/02-cloudflare.md`. İkisi de bu turda satır satır tarandı; bakılmayan
+dosya yok.
+
+| # | Dosya | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `docs/cloudflare.md` (SW-01) | Doğruluk | "#365 deploy bekliyor" | canlı `d154e44` → `no-cache` | eski durum | **düzeltildi** |
+| 2 | `docs/cloudflare.md` (tur 16) | Doğruluk | drift tablosu tazelendi | 12 madde canlı ölçüldü | güncel | **eklendi** |
+| 3 | her iki dosya | Link | 22+ tekil `#NNN` | hepsi çözülür | kırık yok | **doğrulandı** |
+| 4 | her iki dosya | Tutarlılık | tur 14/15 durumları | tur 16 ile uyumlu | çelişki yok | **doğrulandı** |
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` yok): WAF ruleset / Cache Rules / **Browser Cache
+  TTL** / Bot Management / Edge Certificates / Analytics panel durumu okunamadı;
+  ölçüm edge↔origin diff + DoH ile yapıldı.
+- **Gerçek tarayıcı ölçümü:** SW güncelleme yayılımı canlı tarayıcıda sürülmedi;
+  SW-01 kapanışı yalnızca edge `cache-control`/`cf-cache-status` ile kanıtlandı.
+- **IPv6 bağlantısı:** sandbox'ta v6 çözümleyici yok (AAAA DoH ile var).
+- **E-posta teslimi (Gmail/Outlook):** gönderim yapılmadı.

@@ -258,3 +258,36 @@ bot UA'ları (Googlebot/Bingbot/YandexBot/DuckDuckBot/AhrefsBot) hepsi **200**,
 kanıt:** Vercel alias'a `Host: isbulkktc.com` ile gidilince **421 Misdirected**
 (F-08: alias CF zone'undan geçmiyor, kesinleşti). Detay: `docs/cloudflare.md`
 → "Edge mikro-denetim tur 15".
+
+### Edge mikro-denetim tur 16 — SW-01 kapandı + tam drift taraması (2026-11-06)
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS değiştirilmedi)
+Sahibin yapması gerekenler: H-01 (CF HSTS max-age) · H-02/N-01 (Browser Cache TTL
+            = Respect Existing Headers) · G-01 (Email Obfuscation OFF) · R-01
+            (Vercel host eşleştirme) · W-01 (WAF normalizasyon) · F-08 (Vercel
+            Deployment Protection) · apex TXT'teki yinelenen google-site-verification
+            token'ı panelde teyit · MTA-STS/TLS-RPT ekle (#170) · DKIM 2048 (#227)
+Sonraki lane için notlar: canlı build ilerledikçe (/api/build-info) SW-01 gibi
+            "deploy bekliyor" notlarını yeniden ölç; tur 16'da SW-01 kapandı.
+```
+
+**✅ Kapanan (SW-01).** `/sw.js` edge artık `no-cache, no-store, must-revalidate`
++ `BYPASS` (önceden `max-age=2628000` + `REVALIDATED`). #365 deploy edildi (canlı
+`d154e44`). CF Browser Cache TTL ezişi `no-cache` origin başlığıyla etkisiz kaldı.
+
+**Drift (canlı, 2026-11-06):** H-01, H-02, R-01, G-01, N-01, W-01, F-08 hâlâ
+**açık**; A-01c **kapalı**; DKIM 1024-bit, DMARC `p=none`. Dinamik HTML hiç
+edge-cache'lenmiyor (`DYNAMIC` + `private, no-store`), cacheable statikte yazma
+405, CORS yalnız `/api/build-info`'da açık, `security.txt` var, CAA 5 issuer,
+DNSSEC `AD=true`, WAF `sqlmap` → 403, bot UA'ları → 200.
+
+**Yeni DNS gözlemi:** apex TXT **iki farklı `google-site-verification` token'ı**
+taşıyor (`1zuidCsJ2…` + `7YbjG-3INgSrdkIKFG0inLGNgD0BX4P8mf1oIDtJehU`) —
+hangisinin güncel olduğu panelden teyit edilmeli (silme yıkıcı → onay bekler).
+`_mta-sts` / `_smtp._tls` **yok** (e-posta sertleştirme fırsatı, #170).
+
+Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 16".
