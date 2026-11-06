@@ -395,3 +395,48 @@ beklenen).
 
 **Açık kalan (değişmedi):** H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08.
 Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 19".
+
+---
+
+## Tur 20 (2026-11-06) — HSTS preload hazırlığı + CNAME hedef çözünürlüğü
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS değiştirilmedi)
+Sahibin yapması gerekenler: H-01 (CF HSTS max-age) · H-02/N-01 (Browser Cache TTL
+            = Respect Existing Headers) · G-01 (Email Obfuscation OFF) · R-01
+            (Vercel host eşleştirme) · W-01 + V-20 (WAF ifadesini genişlet) ·
+            F-08 (Vercel Deployment Protection) · apex TXT yinelenen
+            google-site-verification teyidi · HSTS preload (W-20-4) · MTA-STS/
+            TLS-RPT (#170) · DKIM 2048 (#227)
+Sonraki lane için notlar: bir CNAME'in "dangling değil" kanıtı hedefin KENDİ
+            A/AAAA'sı olmalı — MX hedefinin A'sını delil göstermek yanlış (D-06).
+            HSTS preload eligibility için includeSubDomains altındaki her ismi
+            HTTPS açısından tek tek ölç.
+```
+
+**Bu tur ne buldu.** İki eksen: (1) HSTS preload **hazırlığı** — `includeSubDomains`
+altındaki her isim HTTPS sunmalı; (2) `rsend` CNAME hedefinin **kendi** adres
+kaydı. Bulgular:
+
+- **D-06 (doğruluk):** T-22/W-18-5 "`rsend`→`send.forge.rmta.net` çözülüyor →
+  dangling değil" iddiası **yanlış kanıt** taşıyordu. Hedefte **A/AAAA yok**;
+  delil gösterilen `3.231.87.173` MX hedefi `feedback.forge.rmta.net`'in adresi.
+  CNAME hedefi adreslenemiyor (subdomain-devralma riski yok — hedef sağlayıcının
+  imzasız bölgesi, adres yayınlamıyor). Üç yerde düzeltildi.
+- **W-20-4 (bilgi/düşük):** `includeSubDomains` altında `send`, `rsend`,
+  `autodiscover`, `mta-sts` **HTTPS sunmuyor** (mail-only, A/AAAA yok) → HSTS
+  preload denetiminde `pending`'i açıklayabilecek tek bulgu. Bugün kırılma yok
+  (bu isimler tarayıcı trafiği almıyor).
+
+**Temiz doğrulananlar:** apex+`www` HSTS `max-age=31536000; includeSubDomains;
+preload`; `www` 308→apex (SAN kapsıyor); `http://www` 301→`https://www`→apex
+(yol+sorgu korunur); apex/`www` AAAA CF; HTTP/3 200 + `kex=X25519MLKEM768`;
+güvenlik başlıkları tam; `/_next/static` immutable+HIT; root MX Cloudflare Email
+Routing; WAF negatif 5/5→403, V-20 boşluğu 404 origin; bot UA 200 / `sqlmap` 403;
+meşru rotalar + 6 dil 200.
+
+**Açık kalan (değişmedi):** H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08.
+Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 20".

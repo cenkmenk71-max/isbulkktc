@@ -462,7 +462,9 @@ dig +short TXT _dmarc.isbulkktc.com
 
 - **`rsend.isbulkktc.com`** (sahibin "send.forge.rmta.net" iddiası): `rsend` →
   **CNAME** `send.forge.rmta.net`; hedefte TXT SPF + MX `10 feedback.forge.rmta.net`
-  var. **Dangling CNAME değil** — Resend Forge return-path'i, geçerli.
+  var ama **A/AAAA yok** → hedef adreslenemiyor. SPF/DKIM MX+SPF üzerinden
+  çalışır, HTTP gerekmez; ancak "dangling değil" iddiasının kanıtı yanlıştı
+  (tur 18'de A kaydı MX hedefinden okunmuştu). Bkz. tur 20, D-06.
 - **G-01 (Email Obfuscation):** hâlâ açık (1× `email-decode.min.js`); önceki öneri
   geçerli.
 - **DKIM:** hâlâ **1024-bit** (K-01) — rotasyon hâlâ onay bekliyor.
@@ -965,7 +967,7 @@ kontrol et. Regresyon testine `%252e%252e` ve `%25252e` varyantlarını ekle
 | T-19 | Bot | UA: curl/python/Googlebot/HeadlessChrome/Chrome → 200; `sqlmap` → **403**; `cf-mitigated` yok | ✔ |
 | T-20 | Rate limit | 30× `/`, 20× `/login`, 15× optimizer bypass | hepsi 200 — throttle yok (F-26) | ℹ️ |
 | T-21 | E-posta | SPF lookup bütçesi: apex `include:_spf.mx.cloudflare.net` = **1**, `send` `include:amazonses.com` = **1** (limit 10) | ✔ |
-| T-22 | E-posta | `rsend` → CNAME `send.forge.rmta.net` (**dangling değil**), MX `feedback.forge.rmta.net` çözülür | ✔ |
+| T-22 | E-posta | `rsend` → CNAME `send.forge.rmta.net`; hedefte MX+TXT var ama **A/AAAA yok** (adres kaydı yalnız MX hedefi `feedback.forge.rmta.net`'te, `3.231.87.173`) — bkz. tur 20, D-06 | ⚠️ hedef adreslenemiyor |
 | T-23 | DNS | CAA (comodo/digicert/letsencrypt/pki.goog/ssl.com), DNSSEC `AD=true`, `security.txt` RFC 9116 | ✔ |
 | T-24 | Bilgi | `/api/build-info` = `1b1bf26…` = `main` HEAD → **#319 donması bu turda yok** | ✔ |
 | T-25 | Sızıntı | `/_next/image` allowlist dışı host / `http:` / port / sorgu | 400 | ✔ |
@@ -1522,7 +1524,7 @@ Canlı build: `/api/build-info` → **`7b0f7170`**.
 | W-18-2 | SPF include-ağacı | apex `include:_spf.mx.cloudflare.net` (2 lookup), `send` `include:amazonses.com` (2 lookup) → limit **10**'un çok altında | ✔ |
 | W-18-3 | CAA | 5 issuer + 5 `issuewild` (10 kayıt) | ✔ |
 | W-18-4 | DNSSEC | apex `AD=true`; **`rsend` `AD=false`** (bkz. D-01) | ⚠️ kısmi |
-| W-18-5 | Dangling CNAME | `rsend`→`send.forge.rmta.net` **çözülüyor** (feedback A `3.231.87.173`) → dangling değil | ✔ |
+| W-18-5 | Dangling CNAME | `rsend`→`send.forge.rmta.net`; **hedefte A/AAAA yok** → adres kaydı yok (tur 18'deki "çözülüyor" iddiası yanlıştı; A kaydı MX hedefi `feedback.forge.rmta.net`'teydi) — bkz. tur 20, D-06 | ⚠️ |
 | W-18-6 | WAF negatif (21 yol) | `/.git/config`,`/.env`,`/.svn/entries`,`/.aws/credentials`,`/wp-login.php`,`/xmlrpc.php`,`/composer.json`,`/.DS_Store`… → **403** | ✔ |
 | W-18-7 | WAF pozitif (22 yol + 6 dil) | hepsi **200** (yalnız `/tr`→308 as-needed) | ✔ |
 | W-18-8 | V-20 boşluğu (teyit) | `/config.php`,`/shell.php`,`/actuator/env`,`/server-status`,`/phpinfo.php`,`/Dockerfile` → **404 origin**, `DYNAMIC`+`no-store`, cache'lenmiyor | ⚠️ açık |
@@ -1640,4 +1642,83 @@ cacheable statiklere yazma 405; DKIM CF `cf2024-1` 2048-bit, Resend `resend._dom
   SSL Labs ile yapıldı.
 - **IPv6 bağlantısı:** sandbox'ta v6 yolu yok.
 - **OCSP stapling uçtan uca:** yalnız "no response sent" gözlendi.
+- **Gerçek tarayıcı:** HTTP/3 tarayıcı davranışı, SW güncellemesi sürülmedi.
+
+## Edge mikro-denetim tur 20 — HSTS preload hazırlığı + CNAME hedef çözünürlüğü (2026-11-06)
+
+Canlı build: `/api/build-info` → **`8de37c8`**. Salt-okuma. `CF_API_TOKEN` bu
+sandbox'ta yok → zone API denetimi yine yapılamadı; ölçüm canlı HTTP + DoH +
+hstspreload API ile.
+
+### Düzeltmeler
+
+| # | Yer | Boyut | Gözlenen (önce) | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| D-06 | `docs/cloudflare.md:968,1525,463` (T-22/W-18-5/§) | Doğruluk | "`rsend`→`send.forge.rmta.net` **çözülüyor** (feedback A `3.231.87.173`) → dangling değil" | Hedefin **kendi** A/AAAA'sı yok; `3.231.87.173` MX hedefi `feedback.forge.rmta.net`'in adresi | Yanlış kanıt iddiası | **düzeltildi** |
+
+### D-06 — `send.forge.rmta.net` adreslenemiyor (bilgi / düşük)
+
+DoH kanıtı (Cloudflare + Google aynı fikirde):
+
+```
+send.forge.rmta.net   A=[]  AAAA=[]  CNAME=[]  TXT=[v=spf1 ip4:52.3.252.119 …]  MX=[10 feedback.forge.rmta.net.]
+rsend.isbulkktc.com   CNAME=send.forge.rmta.net.
+feedback.forge.rmta.net  A=[3.231.87.173, 98.83.16.149]
+```
+
+Yani `rsend`'in hedefi **MX barındıran** bir isim ama **kendi adres kaydı yok**.
+E-posta (Resend Forge return-path) MX + SPF üzerinden çalıştığı için işlevsel;
+ama tur 18'de "dangling değil" savunusu, **başka** bir ismin A kaydını delil
+gösteriyordu — geçersiz kanıt. Gerçek durum: CNAME hedefi adreslenemiyor.
+Subdomain-devralma riski **yok** (hedef `rmta.net` sağlayıcının kendi bölgesi,
+adres yayınlamıyor → ele geçirilecek kayıt yok). Bkz. W-20-4.
+
+### W-20 — HSTS preload hazırlığı (yeni boyut)
+
+`hstspreload.org` → **`status: pending`**. Preload iki şart arar: (1) HSTS
+`includeSubDomains` + `preload` + `max-age ≥ 1 yıl`, (2) **alt alanların
+tamamı HTTPS sunmalı**. Canlı ölçüm:
+
+| # | Test | Gözlenen | Durum |
+|---|---|---|---|
+| W-20-1 | HSTS preload durumu | `pending` | ℹ️ |
+| W-20-2 | HSTS başlığı (apex + `www`) | `max-age=31536000; includeSubDomains; preload` | ✔ |
+| W-20-3 | `www` HTTPS | 308 → apex, sertifika `CN=isbulkktc.com` (SAN kapsıyor) | ✔ |
+| W-20-4 | `includeSubDomains` HTTPS kapsamı | `send`, `rsend`, `autodiscover`, `mta-sts` → **HTTPS yok** (`000`, sertifika yok); bunlar mail-only (MX/TXT), A/AAAA yok | ⚠️ |
+| W-20-5 | Apex/`www` AAAA | ikisi de CF IPv6 (`2606:4700:…`) | ✔ |
+| W-20-6 | IPv6 bağlantısı | sandbox'ta v6 yolu yok (`curl -6` → 000) | **bakılmadı** |
+| W-20-7 | `http://www` → `https://www` → apex | 301 → 308 → apex, yol+sorgu korunur | ✔ |
+| W-20-8 | HTTP/3 + KEX | `curl --http3` → 200/3; `/cdn-cgi/trace` `kex=X25519MLKEM768`, `tls=TLSv1.3` | ✔ |
+| W-20-9 | Güvenlik başlıkları (apex) | CSP, HSTS, COOP, CORP, `nosniff`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` tam | ✔ |
+| W-20-10 | `/_next/static/*` | `public, max-age=31536000, immutable`, `HIT`, `age=655020` | ✔ |
+| W-20-11 | Root MX (inbound) | Cloudflare Email Routing `route1/2/3.mx.cloudflare.net`, `AD=true` | ✔ |
+| W-20-12 | Apex TXT | 2× `google-site-verification` (yinelenen), `yandex-verification`, SPF | ℹ️ |
+| W-20-13 | `cf-mitigated` | `/api/devtools/` → 403, `cf-mitigated` **yok** (WAF kuralı, challenge değil) | ✔ |
+
+**Yorum (W-20-4).** Preload'un `includeSubDomains` şartı **her** alt alanın HTTPS
+sunmasını ister; `send`/`rsend`/`autodiscover`/`mta-sts` yalnız e-posta için
+yayınlanıyor ve HTTPS sunmuyor. Bu isimler **kullanıcı trafiği almıyor**
+(adres kaydı yok), yani bugün **kırılma yok**; ama preload denetimi (Google)
+bunları gördüğünde `pending`'de takılabilir. İki seçenek: (a) mail-only isimleri
+`includeSubDomains` kapsamı dışına almak mümkün değil (HSTS alt-alan kapsamı
+bölünemez) → HTTPS'i tüm isimlere açmak, ya da (b) preload'u bekletmek. `www`
+dışında tarayıcıya çıkan alt alan olmadığından etki **düşük**.
+
+### Drift (tur 20 — değişmedi)
+
+H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08 açık. WAF negatif 5/5 → 403
+(`.git/config`, `.env`, `wp-login.php`, `.aws/credentials`, `xmlrpc.php`);
+V-20 boşluğu (`config.php`,`shell.php`,`actuator/env`,`phpinfo.php`,`Dockerfile`)
+→ 404 origin; bot UA'ları (Googlebot/Bingbot/GPTBot/curl) → 200, `sqlmap` → 403;
+meşru rotalar + 6 dil → 200; dinamik HTML `DYNAMIC`+`private,no-store`; DMARC
+`p=none`; Resend DKIM 1024-bit; CF Email Routing DKIM 2048-bit; CAA 10 kayıt;
+DNSSEC apex `AD=true`, `rsend` `AD=false`.
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` yok): WAF ruleset / Cache Rules / Browser Cache
+  TTL / Bot Management / Analytics okunamadı.
+- **IPv6 bağlantısı:** sandbox'ta v6 yolu yok (yalnız AAAA DoH ile).
+- **`includeSubDomains` alt alan tam envanteri:** crt.sh bu sandbox'ta yanıt
+  vermedi; 32 yaygın ad + sahibin bilinen mail isimleri tarandı.
 - **Gerçek tarayıcı:** HTTP/3 tarayıcı davranışı, SW güncellemesi sürülmedi.
