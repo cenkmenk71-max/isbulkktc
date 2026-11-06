@@ -182,3 +182,39 @@ chunk akışı etkilenmiyor (`immutable`+`HIT`). **Etki düşük** (hash'li chun
 yeniden kullanılmaz; gövde 9 B `Not Found`, sır yok). Düzeltme H-02 ile aynı:
 Caching → Browser Cache TTL = **Respect Existing Headers** (sahibin onayı).
 Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 12".
+
+### Edge mikro-denetim tur 13 — `images.localPatterns` çift-kodlama (2026-11-06)
+
+Tur 11'in **A-01**'i `next.config.ts` `images.localPatterns` ile düzeltilmişti;
+düzeltme **eksik** çıktı (**A-01b**): matcher kodlanmış yolu görür, optimizer
+içeriği çözer → `/images/%2e%2e/blog` tipi **çift-kodlama** allowlist'i atlayıp
+`/blog`'a ulaşıyordu (tek-kodlama 400, çift-kodlama 200). Kaynak
+`next.config.ts` + `tests/security/**` = **LANE-GÜVENLİK** → devredildi, issue
+#356 açıldı. Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 13".
+
+### Edge mikro-denetim tur 14 — #359 denetimi + WAF normalizasyon + SW-01 (2026-11-06)
+
+**A-01b canlıda HÂLÂ AÇIK:** PR #359 desenlere görsel uzantısı şartı getirdi
+(`next.config.ts:79-82`) ve kod doğru, ama **deploy edilmedi** — canlı build
+`ee58dad` (#359 öncesi). Canlı kanıt: `/_next/image?url=%2Fimages%2F%252e%252e%2Fblog`
+→ **200 text/html** (`<title>…</title>`, 142 KB); tek-kodlama → 400. Sızan içerik
+yalnız **herkese açık ön-render HTML** (`/blog`,`/about`,`/contact`,`/rehber`,
+`/packages`,`/freelance`,`/sss`, `/blog/<slug>`); `/jobs`,`/companies`,`/api/*`,
+`/login`,`/llms.txt` → 400. CSP `sandbox`+`script-src 'none'`, `DYNAMIC` → **etki
+düşük** ama canlı↔main sapması var. Eylem: #359 build'i canlıya alınmalı (#319
+donması). Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 14" (A-01c).
+
+**Yeni bulgular:**
+- **SW-01 (orta):** `/sw.js` origin'de `max-age=0` iken CF edge **30 gün**
+  (`2628000`) cache'liyor → SW güncelleme yayılımı kırılgan (şu an `REVALIDATED`).
+  H-02 (Browser Cache TTL) sınıfının aynısı; düzeltme = `Respect Existing Headers`.
+- **W-01 (düşük):** WAF 4. kuralı kodlanmış yolda nokta-yolu kuralını atlıyor
+  (`/.git%2fconfig`, `/api/devtools%2f` → CF geçip **Vercel origin** 404 döner;
+  `x-vercel-id` kanıt). Origin'de `.git`/`/api/devtools` yok → sızıntı yok, ama
+  normalizasyon farkı origin değişince risk.
+
+**Drift:** H-01 (HSTS), H-02 (Browser Cache TTL), R-01 (noktalı apex), G-01 (email
+obfuscation), N-01 (`_next/static` 404 cache), F-08 (alias CF'i atlıyor) hâlâ
+açık. DNS/TLS/CAA/DNSSEC/SPF temiz; Resend DKIM **1024-bit**, DMARC `p=none`.
+WAF yanlış pozitif yok (meşru rotalar + 6 dil 200). Detay: `docs/cloudflare.md`
+→ "Edge mikro-denetim tur 14".

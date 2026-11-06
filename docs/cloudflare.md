@@ -979,3 +979,196 @@ kontrol et. Regresyon testine `%252e%252e` ve `%25252e` varyantlarını ekle
 - **IPv6:** sandbox'ta v6 çözümleyici yok (AAAA DoH ile doğrulandı, bağlantı denenmedi).
 - **`next.config.ts` / `tests/security/**`:** bu lane'in dosyası değil → **A-01b**
   düzeltmesi yapılmadı, LANE-GÜVENLİK'e devredildi (issue açıldı).
+
+---
+
+## Edge mikro-denetim tur 14 — #359 düzeltme denetimi + WAF normalizasyon + SW-01 (2026-11-06)
+
+Tur 13'te bulunan **A-01b** (`/_next/image` allowlist'i çift-kodlama ile
+atlatılıyor) için **LANE-GÜVENLİK** PR #359'u açtı (issue #356) — kod `main`'de
+düzeltildi ama **canlıya deploy edilmedi**. Bu turda (a) canlı build'in gerçekten
+düzeltilip düzeltilmediği saldırgan gözüyle sınandı, (b) WAF'ın
+kodlama/normalizasyon davranışı yeniden tarandı ve (c) canlı Cloudflare edge
+yeniden ölçüldü.
+
+### A-01c — #359 kodu düzeltiyor, ama **canlıya deploy edilmedi** (canlı hâlâ savunmasız)
+
+Tur 13'te bulunan **A-01b** için **LANE-GÜVENLİK** PR #359'u açtı (issue #356):
+yerel desenler artık bir **görsel uzantısı** şart koşuyor
+(`/images/**/*.@(webp|png|jpg|jpeg|avif|svg)`, `next.config.ts:79-82`). Ama
+**canlı production hâlâ eski, savunmasız build'i servis ediyor** — çift-kodlanmış
+nokta-segmenti allowlist'i atlayıp **ön-render edilmiş rotanın gövdesini** döndürüyor.
+
+**Kanıt — canlı build kimliği:** `/api/build-info` → `commit: ee58dad6…` (#359
+`main`'de `97afb54`'ten sonra; deploy edilen sürüm #359'u **içermiyor**).
+
+**Kanıt — canlı atlatma (edge):**
+```
+# tek-kodlama: matcher normalleştirir → reddedilir
+curl -sS 'https://isbulkktc.com/_next/image?url=%2Fimages%2F%2e%2e%2Fblog&w=256&q=75'
+→ 400 text/plain
+
+# çift-kodlama: matcher kodlanmış görür, optimizer bir kez daha çözer → GEÇER
+curl -sS 'https://isbulkktc.com/_next/image?url=%2Fimages%2F%252e%252e%2Fblog&w=256&q=75'
+→ 200 text/html · 142604 bayt · <title>Kuzey Kıbrıs iş ve kariyer gündemi · İşBul KKTC</title>
+→ cache-control: public, max-age=0, must-revalidate · cf-cache-status: DYNAMIC
+→ content-security-policy: script-src 'none'; frame-src 'none'; sandbox;
+→ x-content-type-options: nosniff
+```
+
+**Sızdırılan hedef kapsamı (canlı):** çift-kodlamalı traversal, `isValidRoute`
+filtresini geçen **statik/ön-render HTML rotalarında** içerik döndürüyor:
+
+| Hedef | Canlı sonuç |
+|---|---|
+| `/blog`, `/about`, `/contact`, `/rehber`, `/packages`, `/freelance`, `/sss` | **200 text/html** |
+| `/blog/<slug>` (ör. `kktc-is-piyasasi-guncel-gorunum`) | **200 text/html** |
+| `/jobs`, `/companies`, `/is-ilanlari`, `/jobs/<slug>` | 400 (ön-render değil / filtre) |
+| `/api/build-info`, `/llms.txt`, `/robots.txt`, `/login`, `/profile/dashboard`, `/api/email/unsubscribe` | 400 |
+
+Üçlü kodlama (`%25252e`) da aynı şekilde 200 veriyor (matcher literal görür, fetch
+tek çözer). Yani **canlı atlatma açık**; düzeltme yalnızca kodda.
+
+**Kod tarafı (main, post-#359) — düzeltme doğru ve test edilmiş:**
+- `next.config.ts:79-82` uzantı koşulu; `tests/security/security-headers.test.ts:267-292`
+  "her yerel desen görsel uzantısı şart koşar" **self-test**'i ile ratchet'lenmiş
+  (yeni desen eklenirse kırmızı olur).
+- 344 yerel görselin uzantısı `webp/png/jpg/jpeg` (hepsi küçük-harf) → sıkılaştırma
+  hiçbir gerçek görseli düşürmüyor (regresyon yok, doğrulandı).
+- Matcher↔fetch decode farkı (`match-local-pattern.js` `URL.pathname` vs
+  `image-optimizer.js` `parseReqUrl`) **kök neden olarak duruyor**; #359 bunu
+  yalnızca **uzantı koşuluyla** sınıf olarak kapatıyor — yeni bir desen eklenirse
+  tuzak geri gelir.
+
+**Etki (düşük):** sızan içerik **herkese açık, ön-render edilmiş HTML** (gizli
+veri/PII yok); yanıt `sandbox` + `script-src 'none'` + `nosniff` taşır, `DYNAMIC`
+(cache'lenmez). Yine de bir "içerik karıştırma / optimizer üzerinden rota okuma"
+yüzeyi ve **canlı↔main sapması**.
+
+**Yerleşim:** kod `next.config.ts` + `tests/security/**` = **LANE-GÜVENLİK** (PR
+#359 açık/kapalı, kod hazır); **deploy** = LANE-TESLİMAT/INFRA (#319 donması).
+Bu lane yalnızca **canlı kanıtı** kaydeder; kod düzeltmesi yapmaz. Eylem: #359
+build'i **canlıya alınmalı** (donma çözülünce) — aksi hâlde canlı açık kalır.
+
+### SW-01 — `/sw.js` CF edge'de 30 gün cache'leniyor (yeni bulgu, orta)
+
+Service worker `/sw.js` origin'de `cache-control: public, max-age=0,
+must-revalidate` dönerken **Cloudflare edge `max-age=2628000` (30 gün)** ile
+cache'liyor. Kayıt `updateViaCache: "none"` kullanıyor ama CF edge'i origin'in
+`max-age=0`'ını ezip 30 güne yükselttiği için "none" **edge katmanını**
+atlayamaz; tarayıcı `REVALIDATED` ile etag alır, ama edge her seferinde origin'e
+gider (aşağıda kanıt).
+
+**Kanıt (canlı):**
+```
+edge  : curl -sSI https://isbulkktc.com/sw.js
+        cache-control: public, max-age=2628000, must-revalidate   ← CF yükseltiyor
+        cf-cache-status: REVALIDATED (her istekte)
+origin: curl -sSI https://isbulkktc-amber.vercel.app/sw.js
+        cache-control: public, max-age=0, must-revalidate          ← origin doğru
+```
+- `age: 0` + `REVALIDATED` → CF origin'e revalidate ediyor ama edge kopyasını
+  **30 güne kadar** `max-age`'li tutuyor.
+- `/robots.txt` (origin `max-age=0`) ve `/images/*.webp` (origin `max-age=0`) da
+  aynı 30 gün edge TTL'ini alıyor → **H-02** (Browser Cache TTL) sınıfının aynısı.
+- `/offline.html` (origin `max-age=0`) ise **DYNAMIC** (cache'lenmiyor) → kural
+  uzantı tabanlı (`*.js`, `*.webp`), `/offline.html`'i kapsamıyor.
+
+**Etki (orta):** `sw.js` bir gün edge'den `max-age`'i **taze** sayılıp origin
+kontrolü atlanırsa, yeni bir SW sürümü (ör. `CACHE_VERSION` artışı) günlerce
+yayılmaz; PWA kullanıcıları eski SW ile takılı kalır. Şu an `REVALIDATED` olduğu
+için tazelik korunuyor, ama bu **kırılgan**: CF cache davranışı değişirse sessizce
+eskiye döner.
+
+**Öneri (CF paneli → sahibin onayı):** H-02 ile aynı düzeltme — Caching →
+**Browser Cache TTL = Respect Existing Headers**; ya da Cache Rules'ta
+`/sw.js` (ve `/robots.txt`) için `Edge TTL = Respect origin`. Alternatif (repo
+tarafı, `public/**` → LANE-INFRA): `/sw.js`'e `Cache-Control: no-cache`
+origin başlığı eklemek.
+
+### W-01 — WAF, yüzde-kodlanmış yolda nokta-yolu kuralını atlıyor (yeni bulgu, düşük)
+
+Custom WAF 4. kuralı (VCS/dotfile/secret yolları) **kodlanmış** yol varyantlarını
+tutmuyor; istek CF'yi geçip **Vercel origin'e** ulaşıyor (404 döner — origin'de
+`.git` yok). WAF ve origin **aynı normalizasyonu** uygulamadığı için klasik
+"WAF bypass" yüzeyi oluşuyor.
+
+| İstek | Gözlenen | Not |
+|---|---|---|
+| `/.git/config` | **403** | WAF bloklar |
+| `/.git%2fconfig` | **404** | CF geçti → origin 404 |
+| `/api/devtools` (eğik çizgisiz) | **404** | WAF yalnız `/api/devtools/`'i tutuyor |
+| `/api/devtools%2f` | **404** | CF geçti → origin 404 |
+| `/.git/config%00` | **400** | origin reddediyor |
+| `/telescope/requests`, `/_ignition/execute-solution` | **404** | kural bu imzaları hiç içermiyor |
+
+**Kanıt (origin'e ulaştığının ispatı):** yanıt `x-vercel-id` + `x-vercel-cache:
+MISS` + `<title>Sayfa bulunamadı</title>` taşır (CF'nin 403 sayfası değil).
+
+**Etki (düşük — bu origin'de):** origin statik-only Vercel; `.git`/`.env` servis
+etmiyor, `/api/devtools` **yok** (`git ls-files src/app/api` → yalnız
+build-info/email/push/qr). Yani 404 ile sonuçlanıyor, veri sızmıyor. Risk,
+**origin değişince** (yeni bir `/api/devtools`, panel ya da statik sunucu
+eklenirse) artar.
+
+**Öneri (CF paneli → sahibin onayı):** kural ifadesini normalizasyona duyarlı yap —
+Free plan operatörleriyle `lower(http.request.uri.path) contains "/.git"` ve
+`contains "/api/devtools"` (eğik çizgi koşulu olmadan) + `%2f`/`%00` varyantları
+için `url_decode(http.request.uri.path)` üzerinden ikinci bir `matches`-benzeri
+kontrol. (Free plan `matches` operatörünü reddediyor → `contains`/`in`/`lower()`
+ile ifade edilmeli.) **WAF kuralı değişikliği yıkıcıdır → sahibin onayı.**
+
+### Drift tablosu (tur 14)
+
+| Bulgu | Durum | Kanıt |
+|---|---|---|
+| H-01 — CF HSTS `max-age`'i eziyor | **hâlâ açık** | edge `31536000` vs origin `63072000` |
+| H-02 — CF Browser Cache TTL origin `max-age=0`'ı yükseltiyor | **hâlâ açık** | `/robots.txt`, `/images/*.webp` → `2628000` |
+| R-01 — sonlu noktalı apex (`isbulkktc.com.`) | **hâlâ açık** | `404` |
+| G-01 — Email Address Obfuscation açık | **hâlâ açık** | `/` ve `/contact` gövdesinde `cdn-cgi/l/email-protection` |
+| A-01b — `/_next/image` çift-kodlama | **canlıda AÇIK** (kod #359'da düzeltildi, deploy edilmedi) | `url=%2Fimages%2F%252e%252e%2Fblog` → 200 text/html |
+| N-01 — `/_next/static` 404'ü 1 yıl cache | **hâlâ açık** | `MISS → HIT`, `max-age=31536000` |
+| F-08 — Vercel alias CF'i atlıyor | **hâlâ açık** | alias doğrudan 200 |
+| DKIM — Resend `resend._domainkey` | **1024-bit** | `openssl rsa -pubin` → `Public-Key: (1024 bit)` |
+| DMARC | `p=none` | `v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; fo=1` |
+| DNSSEC | açık | DoH `AD=true` |
+| Apex A / AAAA | var | `104.21.29.3`, `172.67.171.53` / `2606:4700:3034::ac43:ab35` |
+| SPF (apex + send) | tek include | apex `_spf.mx.cloudflare.net`, `send` `amazonses.com` |
+| CAA / TLS | var / LE `YE2` | SAN `*.isbulkktc.com`, geçerlilik 2026-09-19 → 2026-12-18 |
+| HTTP→HTTPS / www→apex | 301 / 308 | tek sıçrama |
+
+### Bu turda doğrulananlar (temiz)
+
+| # | Test | Gözlenen | Durum |
+|---|---|---|---|
+| T-30 | WAF negatif (saldırı yolları) | 26/33 → **403**; 7 istisna (bkz. W-01: `%2f`/`%00` kodlaması ve imzasız yollar) | ⚠️ |
+| T-31 | WAF pozitif (meşru rotalar) | `/`,`/blog`,`/companies`,`/contact`,`/about`,`/sss`,`/rehber`,`/packages`,`/freelance`,`/login`,`/register` → **200**; `/tr` → 308 (`as-needed`), `/en`,`/de`,`/ru`,`/fa` → 200; `/ar` → 404 (desteklenmeyen dil, doğru) | ✔ yanlış pozitif yok |
+| T-32 | Kötü UA | `sqlmap` → 403; `nikto`/`masscan`/`zgrab` → 200 (imza yok) | ℹ️ |
+| T-33 | Bot UA | Googlebot/bingbot/GitHub-Hookshot → **200**, `cf-mitigated` yok | ✔ |
+| T-34 | İçerik sayfası cache'i | `/blog/<slug>`,`/rehber/<slug>` → `cf-cache-status: DYNAMIC` (edge'de tutulmuyor), `age` sabit; iki ardışık fetch aynı uzunluk (143882 B) | ✔ |
+| T-35 | Dinamik/kişisel rota cache'i | `/`,`/jobs`,`/login` → `private, no-cache, no-store`/`DYNAMIC`; `/profile/dashboard`→307 `/login`, `/company/dashboard`→307 `/login?audience=employer` | ✔ |
+| T-36 | Negatif cache (statik) | `/images/missing.webp`, `/icons/missing.png`, `/videos/…/missing.mp4` → `BYPASS`, `private, no-store` | ✔ |
+| T-37 | Sorgu-dizesi cache anahtarı | `/images/x.webp`, `?cb=1`, `?cb=2` → ayrı edge girdileri (farklı `age`), gövde aynı | ✔ |
+| T-38 | Range isteği (cache'li) | `/images/Girne.webp` + `Range: bytes=0-99` → `206`, `content-range: bytes 0-99/1962250`, `cf-cache-status: REVALIDATED` | ✔ |
+| T-39 | Accept-Encoding varyantı | `identity` vs `gzip, br` → aynı gövde; `Vary: accept-encoding` (önceki tur) | ✔ |
+| T-40 | `/_next/image` Accept mutabakatı | `image/webp`→`image/webp`, `image/png`/`text/html`→`image/jpeg`, `Vary: Accept`, `DYNAMIC` | ✔ |
+| T-41 | `/_next/image` allowlist dışı | tek-kodlama → **400**; **çift/üçlü-kodlama → 200 text/html** (canlı, bkz. A-01c) | ✖ canlıda açık |
+| T-42 | Eğik-çizgi normalizasyonu | `/is-ilanlari/`→308 `/is-ilanlari`; `/jobs/`→308; `//blog`→308 `/blog` | ✔ |
+| T-43 | İkon meta verisi | `icon-light/dark-32x32`, `apple-touch-icon`, `maskable-192/512` → **200** | ✔ |
+| T-44 | Dotfile sızıntısı | origin 404; `git ls-files` yalnız `.env.example` (örnek) | ✔ |
+| T-45 | `x-matched-path` | `/_next/static/chunks/nope-xyz.js` 404 → `x-matched-path: /_next/static/not-found.txt` | ✔ |
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` bu sandbox'ta tanımlı değil): WAF ruleset
+  (W-01 ifadesi panelde doğrulanamadı), Cache Rules, **Browser Cache TTL** (SW-01
+  ve H-02'nin ayar adı panelden okunamadı), Edge Certificates (HSTS), Bot
+  Management, Rate limit, Analytics/Logpush panel durumu okunamadı; ölçüm
+  **edge↔origin diff** ile yapıldı.
+- **IPv6:** sandbox'ta v6 çözümleyici yok; AAAA kaydı DoH ile doğrulandı,
+  bağlantı **denenmedi**.
+- **Gerçek tarayıcı ölçümü (SW-01):** SW güncelleme yayılımı canlı tarayıcıda
+  sürülmedi; bulgu yalnızca edge/origin `cache-control` diff'i ile kanıtlandı.
+- **`next.config.ts` / `tests/security/**` / `public/**` / `src/lib/pwa/**`:**
+  bu lane'in dosyası değil → yalnız **doğrulama** yapıldı (A-01c), düzeltme
+  yapılmadı. SW-01 için repo-tarafı öneri LANE-INFRA'ya devredilebilir.
