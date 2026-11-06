@@ -20,6 +20,8 @@ Rule 4 of the lane brief: **every merge is recorded — what, when, verified liv
 | 2026-11-06T01:28Z | `f7a10fd6` | `f7a10fd6` | ✅ in sync | Three consecutive `build-info` reads over ~50 min all returned `f7a10fd6`, the `main` tip after PR #301 merged. |
 | 2026-11-06T01:54Z | `f7a10fd6` | `f7a10fd6` | ✅ in sync | Fresh read after this lane's PR #307 opened. `main` unchanged; no merge landed between the two checkpoints. |
 | 2026-11-06T02:17Z | `c6e15b18` | `c406b397` | ⚠️ **behind by 2** | 🔴 **Production is frozen.** `live` is an ancestor of `main` (not diverged): `c9d932f7` (#307, this lane) and `c6e15b18` (#315) merged but never deployed — both carry `Vercel: Deployment rate limited — retry in 24 hours`. `c406b397` (#314) is the last successful production build. Handoff: issue #319. |
+| 2026-11-06T02:55Z | `5d026376` | `5d026376` | ✅ **recovered** | The freeze cleared on its own: the rate-limit window reset and the backlog deployed, so `live` caught up to `main`. Verified with `verify-production-deployment.mjs --expect 5d026376` → exit 0, 5/5 smoke routes 200. This is the first checkpoint where the two agree after 02:17Z. |
+| 2026-11-06T03:08Z | `8b45b72` | `5d026376` | ⚠️ **behind by 5** | 🔴 **Frozen again.** `live` is again an ancestor of `main` (behind, not diverged) — five merges landed since the recovery and none deployed: `a9e6b07` (#325), `77ca734` (#326), `e102567` (#330), `eae8633` (#328), `8b45b72` (#323). Every one carries `Vercel: Deployment rate limited — retry in 24 hours`. Same cause as 02:17Z (issue #319): the rate-limit window is shorter than the merge rate, so production oscillates between caught-up and 5+ behind. |
 
 Earlier in the session the task context reported `main` at `ef6caed3` while the
 live site served `48ff9b78`; `48ff9b78` is an ancestor of `main` (5 commits
@@ -96,3 +98,29 @@ context, not as a measurement.
    runner image, so a leftover `54322` listener from a sibling shard can collide.
    Re-running the failed job cleared it. Infra-owned (`ci.yml`); worth a
    `supabase stop` / unique-port guard, but not blocking.
+
+7. **`approve-pending-runs.mjs` let a blank token shadow a valid one.** The
+   `gh()` helper built its child environment as `{ ...process.env, GH_TOKEN:
+   GITHUB_PERSONAL_ACCESS_TOKEN ?? GH_TOKEN }`. `??` only falls through on
+   `null`/`undefined`, so when `GITHUB_PERSONAL_ACCESS_TOKEN` was the empty
+   string — what an unset CI secret interpolates to — it won over a valid
+   `GH_TOKEN` and `gh` ran with an empty token. Measured with a recording fake
+   `gh`: `GITHUB_PERSONAL_ACCESS_TOKEN="" GH_TOKEN="ghs_real"` → old code passed
+   `GH_TOKEN=[]`, new code passes `GH_TOKEN=[ghs_real]`. (The *missing* case was
+   already fine: Node drops an `undefined` env entry, so no `"undefined"` was
+   ever sent — an earlier note here claimed otherwise and was wrong.) Effect: the
+   script could report `no runs are waiting for approval` and approve nothing,
+   the "PR stuck at BLOCKED forever" failure it exists to prevent (#178). Fixed
+   in this PR (`ghEnv()` uses `||` + trim, and drops the key entirely when no
+   token remains) with a regression test. The same helper is also made importable
+   by moving the body into a guarded `main()`.
+
+8. **`approve-pending-runs.mjs` was the only owned script without a
+   direct-run guard.** `prune-vercel-deployments.mjs` and
+   `verify-production-deployment.mjs` both gate `main()` behind
+   `import.meta.url === pathToFileURL(process.argv[1]).href`, but
+   `approve-pending-runs.mjs` called its top-level `gh api` at module scope, so a
+   static import would have run the approval immediately. Added in this PR: the
+   body moved into an exported `main()`, guarded the same way. This is now
+   load-bearing — the new regression test imports `ghEnv` from the module, which
+   would otherwise fire a real `gh` call on import.

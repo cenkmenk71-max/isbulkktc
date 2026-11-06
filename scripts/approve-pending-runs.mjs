@@ -14,57 +14,86 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
-const dryRun = process.argv.includes('--dry-run');
 
-function gh(args) {
-  return execFileSync('gh', args, {
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      GH_TOKEN:
-        process.env.GITHUB_PERSONAL_ACCESS_TOKEN ?? process.env.GH_TOKEN,
-    },
-  }).trim();
+/**
+ * The environment to hand `gh`. Only set `GH_TOKEN` when a token actually
+ * exists, so a blank variable never shadows `gh`'s stored auth or a real token.
+ * `source.GITHUB_PERSONAL_ACCESS_TOKEN ?? source.GH_TOKEN` is not enough:
+ * `??` falls through on `null`/`undefined` only, so a *blank* personal token
+ * (`""`, what an unset CI secret interpolates to) won over a valid `GH_TOKEN`
+ * and `gh` ran with an empty token. Whitespace is trimmed for the same reason.
+ */
+export function ghEnv(source = process.env) {
+  const env = { ...source };
+  // Trim each candidate *before* choosing: a whitespace-only value is truthy,
+  // so `a || b` would keep it and then trim it down to nothing.
+  const token =
+    [source.GITHUB_PERSONAL_ACCESS_TOKEN, source.GH_TOKEN]
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .find(Boolean) ?? "";
+  if (token) env.GH_TOKEN = token;
+  else delete env.GH_TOKEN;
+  return env;
 }
 
-const raw = gh([
-  'api',
-  `repos/${REPO}/actions/runs?status=action_required&per_page=50`,
-  '--jq',
-  '.workflow_runs[] | "\\(.id)\\t\\(.name)\\t\\(.head_branch)"',
-]);
-
-if (!raw) {
-  console.log('no runs are waiting for approval');
-  process.exit(0);
+function gh(args, env = ghEnv()) {
+  return execFileSync('gh', args, { encoding: 'utf8', env }).trim();
 }
 
-const rows = raw
-  .split('\n')
-  .filter(Boolean)
-  .map((line) => {
-    const [id, name, branch] = line.split('\t');
-    return { id, name, branch };
+export async function main(argv = process.argv.slice(2)) {
+  const dryRun = argv.includes('--dry-run');
+
+  const raw = gh([
+    'api',
+    `repos/${REPO}/actions/runs?status=action_required&per_page=50`,
+    '--jq',
+    '.workflow_runs[] | "\\(.id)\\t\\(.name)\\t\\(.head_branch)"',
+  ]);
+
+  if (!raw) {
+    console.log('no runs are waiting for approval');
+    return;
+  }
+
+  const rows = raw
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const [id, name, branch] = line.split('\t');
+      return { id, name, branch };
+    });
+
+  console.log(`${rows.length} run(s) waiting for approval`);
+  let approved = 0;
+  for (const run of rows) {
+    if (dryRun) {
+      console.log(`  would approve ${run.id} ${run.name} (${run.branch})`);
+      continue;
+    }
+    try {
+      gh(['api', '-X', 'POST', `repos/${REPO}/actions/runs/${run.id}/approve`]);
+      approved += 1;
+      console.log(`  approved ${run.id} ${run.name} (${run.branch})`);
+    } catch (error) {
+      console.error(
+        `  could not approve ${run.id}: ${String(error.message).split('\n')[0]}`,
+      );
+    }
+  }
+
+  if (!dryRun) console.log(`approved ${approved}/${rows.length}`);
+}
+
+// Only run when invoked directly, so the helpers stay importable in tests.
+// Compare via `pathToFileURL`, not a hand-built `file://` string: on a path with
+// a space or `#` the naive form never equals `import.meta.url` and the guard
+// would silently skip `main()`.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(String(error.message).split('\n')[0]);
+    process.exitCode = 1;
   });
-
-console.log(`${rows.length} run(s) waiting for approval`);
-let approved = 0;
-for (const run of rows) {
-  if (dryRun) {
-    console.log(`  would approve ${run.id} ${run.name} (${run.branch})`);
-    continue;
-  }
-  try {
-    gh(['api', '-X', 'POST', `repos/${REPO}/actions/runs/${run.id}/approve`]);
-    approved += 1;
-    console.log(`  approved ${run.id} ${run.name} (${run.branch})`);
-  } catch (error) {
-    console.error(
-      `  could not approve ${run.id}: ${String(error.message).split('\n')[0]}`,
-    );
-  }
 }
-
-if (!dryRun) console.log(`approved ${approved}/${rows.length}`);
