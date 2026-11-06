@@ -582,16 +582,36 @@ function looksLikeRoleOrCompany(line: string): boolean {
 }
 
 /**
+ * A line that is a whole entry by itself: a date range plus two or more labelled
+ * fields ("Role | Employer | 2019 - 2023"). It carries its own header, so a
+ * short line immediately above it belongs to the *previous* entry, not to this
+ * one — the shape a bulleted description ("React ve Node.js ile ürün
+ * geliştirme") was misread as the next role (#208).
+ */
+function isSelfContainedEntry(line: string): boolean {
+  const dates = extractDateRange(line);
+  if (!dates) return false;
+  // Count parts the same way `parseExperience` does, so the two agree on
+  // whether the line is a whole entry.
+  return splitEntryParts(stripDateRange(line, dates)).length >= 2;
+}
+
+/**
  * True when a new entry begins within the next few lines.
  *
  * After a complete entry, a role line is only distinguishable from a prose line
  * by what follows it: an entry's header is one or two short lines followed by a
  * date range. Looking ahead for that date is what stops "Software Engineer" from
  * being appended to the previous job's description.
+ *
+ * The lookahead must skip a *self-contained* entry: when the date sits on a line
+ * that already carries its own role and employer, the current short line is the
+ * previous entry's prose, not a header (#208).
  */
 function nextEntryStartsAt(records: string[], index: number): boolean {
   for (let look = index + 1; look <= index + 3 && look < records.length; look += 1) {
-    if (extractDateRange(records[look])) return true;
+    if (!extractDateRange(records[look])) continue;
+    return !isSelfContainedEntry(records[look]);
   }
   return false;
 }
@@ -692,6 +712,50 @@ function orderRoleAndOrganization(
   return { role: first, organization: second };
 }
 
+// A word that names a school rather than a degree. Used to tell which of two
+// education fields is the institution when the CV lists the degree first
+// ("Bilgisayar Mühendisliği | Doğu Akdeniz Üniversitesi"). Suffixes match by
+// prefix ("universitesi" → "universite"); "lise" is deliberately absent, since
+// it is a prefix of "lisans" (a degree) and would read the degree as a school.
+const educationInstitutionMarkers = [
+  "universite",
+  "university",
+  "college",
+  "institute",
+  "institut",
+  "akademi",
+  "academy",
+  "fakulte",
+  "okul",
+  "school",
+];
+
+function looksLikeEducationInstitution(value: string): boolean {
+  return normalizeHeading(value)
+    .split(" ")
+    .some((word) =>
+      educationInstitutionMarkers.some((marker) => word.startsWith(marker)),
+    );
+}
+
+/**
+ * Puts the institution in `institution` and the degree in `qualification`,
+ * whichever order the CV used. Unlike a role, a degree carries no marker, so the
+ * institution is identified by its own name ("… Üniversitesi") and swapped when
+ * it comes second — a degree-first entry otherwise wrote the field of study into
+ * the institution box (#208).
+ */
+function orderInstitutionAndQualification(
+  first: string,
+  second: string,
+): { institution: string; qualification: string } {
+  if (!second) return { institution: first, qualification: "" };
+  if (looksLikeEducationInstitution(second) && !looksLikeEducationInstitution(first)) {
+    return { institution: second, qualification: first };
+  }
+  return { institution: first, qualification: second };
+}
+
 function parseExperience(lines: string[]): CandidateExperience[] {
   const records = lines.map(cleanLine).filter(Boolean);
   if (records.length === 0) return [];
@@ -757,15 +821,23 @@ function parseEducation(lines: string[]): CandidateEducation[] {
       let leftover: string[] = [];
 
       if (parts.length >= 2) {
-        institution = parts[0] ?? "";
-        qualification = parts[1] ?? "";
+        const ordered = orderInstitutionAndQualification(
+          parts[0] ?? "",
+          parts[1] ?? "",
+        );
+        institution = ordered.institution;
+        qualification = ordered.qualification;
         field = parts[2] ?? "";
         leftover = parts.slice(3);
         if (!block.dates) leftover = [...leftover, ...block.headerLines.slice(1)];
       } else {
         // One short line per row: institution, then qualification, then field.
-        institution = parts[0] ?? "";
-        qualification = block.headerLines[1] ?? "";
+        const ordered = orderInstitutionAndQualification(
+          block.headerLines[0] ?? "",
+          block.headerLines[1] ?? "",
+        );
+        institution = ordered.institution;
+        qualification = ordered.qualification;
         field = block.headerLines[2] ?? "";
         leftover = block.headerLines.slice(3);
       }
