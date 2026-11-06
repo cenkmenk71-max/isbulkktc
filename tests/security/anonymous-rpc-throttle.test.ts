@@ -76,13 +76,86 @@ const anonymousWriteRpcs = [
   "submit_sales_lead(text, text, text, text, text, integer, text, text)",
 ];
 
+/** A statement that mutates a table, as opposed to a read-only select. */
+const writeStatement =
+  /\b(?:insert\s+into|update\s+public\.|delete\s+from\s+public\.)\b/i;
+
+function stripSqlComments(sql: string): string {
+  return sql.replace(/--[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+}
+
+/**
+ * Every function `anon` may execute, discovered from the grant statements —
+ * not listed by hand. `callableByAnon` resolves the last-writer-wins state, so a
+ * function a later migration revoked drops out.
+ */
+function anonGrantedSignatures(): string[] {
+  const candidates = new Set<string>();
+  for (const match of allSql.matchAll(
+    /grant\s+execute\s+on\s+function\s+public\.([a-z_0-9]+)\s*\(([^)]*)\)\s*to[^;]*\banon\b/gi,
+  )) {
+    candidates.add(`${match[1]}(${match[2].replace(/\s+/g, " ").trim()})`);
+  }
+  return [...candidates].filter(callableByAnon).sort();
+}
+
+/**
+ * The anon-granted functions whose body mutates a table — the ones that need a
+ * throttle at the boundary the attacker reaches. A read-only `search_public_*`
+ * RPC is excluded.
+ *
+ * The earlier version of the throttle gate iterated the two-entry literal
+ * above. That is a false negative by construction: a third anon write RPC (a
+ * new contact form, a copy of `submit_feedback`) would be reachable over
+ * PostgREST with no test asserting it is bounded. Discovery closes that hole;
+ * the self-test below proves the scan finds the two known writers.
+ *
+ * Limitation (documented, not silent): a write RPC that hides its mutation
+ * behind a helper with no `insert`/`update`/`delete` of its own would not be
+ * classified here. Both known writers insert directly, so the scan is exact
+ * today; a future indirection would need this predicate widened.
+ */
+function discoverAnonymousWriteRpcs(): string[] {
+  return anonGrantedSignatures().filter((signature) => {
+    const name = signature.slice(0, signature.indexOf("("));
+    const body = latestFunctionBody(name);
+    return body !== null && writeStatement.test(stripSqlComments(body));
+  });
+}
+
 test("the anonymous write RPCs are directly callable with the publishable key", () => {
-  for (const signature of anonymousWriteRpcs) {
+  const discovered = discoverAnonymousWriteRpcs();
+  assert.deepEqual(
+    discovered,
+    anonymousWriteRpcs.slice().sort(),
+    "the discovered set of anon-write RPCs drifted from the reviewed two",
+  );
+  for (const signature of discovered) {
     assert.ok(
       callableByAnon(signature),
       `${signature} is expected to be anon-callable by design`,
     );
   }
+});
+
+test("the anon-write discovery sees the two known RPCs and rejects read-only ones (self-test)", () => {
+  // Guards the guard: if the predicate narrows, the throttle gate below silently
+  // stops covering a writer. The two reviewed RPCs must always be found, and a
+  // read-only public search RPC must not be dragged in.
+  const discovered = discoverAnonymousWriteRpcs();
+  for (const expected of anonymousWriteRpcs) {
+    assert.ok(
+      discovered.includes(expected),
+      `${expected} was not discovered as an anon-write RPC: ${discovered.join(", ") || "(none)"}`,
+    );
+  }
+  assert.ok(
+    !discovered.some((signature) => signature.startsWith("search_public_")),
+    "a read-only search RPC was misclassified as a write",
+  );
+  // The classifier reads the body, not the name: a body with no write is a read.
+  assert.equal(writeStatement.test("select * from public.jobs"), false);
+  assert.equal(writeStatement.test("insert into public.jobs (id) values (1)"), true);
 });
 
 test("the server action applies a throttle before it calls the RPC", () => {
@@ -132,7 +205,8 @@ test("the direct PostgREST path is throttled inside the RPC, not just the form",
   // *body of each RPC*, not just somewhere in the migration text. A loose
   // `/throttle/i` match over all SQL would pass on a comment, which is how this
   // class of regression hides.
-  for (const name of ["submit_feedback", "submit_sales_lead"]) {
+  for (const signature of discoverAnonymousWriteRpcs()) {
+    const name = signature.slice(0, signature.indexOf("("));
     const body = latestFunctionBody(name);
     assert.ok(body, `${name} has no definition in the migrations`);
     assert.match(

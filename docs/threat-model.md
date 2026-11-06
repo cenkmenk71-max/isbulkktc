@@ -439,3 +439,68 @@ Ders: bir guard'ın regex'i ne kadar dar olursa koruduğu sınır o kadar delikt
 her yeni biçim (YAML flow/dizi, SQL paren'siz imza, CSP açık host) için önce
 self-test yaz — ve bir "yasakla" kontrolünü "sabitle" kontrolüyle eşleştir;
 yasak liste yalnız bildiği kötü biçimi görür, sabit liste bilinmeyeni de durdurur.
+
+### Katmanın kendi dedektörleri (31. tur — sabit liste yerine keşif)
+
+Aynı sınıf (guard'ın körlüğü) bir kez daha tarandı, bu kez **konu keşfi** (subject
+discovery) boyutunda: bir dedektör neyi denetleyeceğini **sabit bir listeden**
+alıyorsa, o listeye girmeyen yeni bir dosya/rota/fonksiyon sınırın dışında kalır
+ve guard yeşil kalır. **Altı** dedektör bu yüzden yanlış-negatif veriyordu; altısı
+da kendi konusunu tarayarak keşfedecek şekilde düzeltildi.
+
+- **`cron-route-auth.test.ts` iki rotayı literal diziden okuyordu.** Yeni bir
+  `src/app/api/**/route.ts` (üçüncü bir cron worker'ı ya da kopyalanmış bir rota)
+  bearer deseniyle eşleşse bile **hiç taranmıyordu**; bu suite'in var oluş sebebi
+  olan "config okuması auth'tan önce" hatası yeni rotada yeşil geçerdi. Kanıt:
+  `createSupabaseServiceClient()`'ı `Authorization` kontrolünden **önce** çağıran
+  bir `src/app/api/probe-cron/route.ts` eklenince eski hali 0 kırmızı verdi.
+  Rotalar artık `src/app/api/**` ağacından bearer-imzası (`authorization` başlığı +
+  `Bearer ${…}` + `*_SECRET|*_TOKEN` env) ile keşfediliyor; self-test hem imzayı
+  hem near-miss'leri (`NEXT_PUBLIC_TOKEN`, yalnız-secret, yalnız-header) sınıyor.
+  (Mutation: probe-cron → "authenticates before it inspects its configuration"
+  kırmızı; eski listede yeşil kalırdı.)
+- **`session-cookie-flags.test.ts` iki çağrı noktasını literal diziden okuyordu.**
+  Üçüncü bir `createServerClient(...)` çağrısı (yeni proxy, rota yardımcısı) hiç
+  denetlenmezdi; `httpOnly:false`/`Secure` yok varsayılanlarıyla yazılan bir oturum
+  çerezi yeşil geçerdi. Kanıt: `src/server/db/probe-client.ts` (flagsiz çağrı)
+  eklenince eski hali 0 kırmızı verdi. Çağrı noktaları artık `src/**` içinden
+  `createServerClient(?:<…>)?(` deseniyle keşfediliyor. (Mutation: probe-client →
+  "session cookies without HttpOnly/Secure/SameSite" kırmızı.)
+- **`notification-worker-auth.test.ts` tek worker'ı yol ile sabitliyordu.** İkinci
+  bir `verify_jwt = false` edge fonksiyonu (yeni webhook alıcısı) config'te
+  açılsa bile, kimlik doğruladığını iddia eden **hiçbir test** koşmazdı. Kanıt:
+  config'e `[functions.probe-webhook] verify_jwt = false` + sırası bozuk bir
+  `index.ts` eklenince eski hali 0 kırmızı verdi. Fonksiyonlar artık
+  `supabase/config.toml`'dan `verify_jwt = false` tabloları taranarak keşfediliyor;
+  self-test hem bildirimi hem `verify_jwt = true` near-miss'ini sınıyor.
+  (Mutation: probe-webhook → "authenticates before it inspects its configuration"
+  kırmızı.)
+- **`anonymous-rpc-throttle.test.ts` throttle kapısını iki RPC adıyla
+  döndürüyordu.** Üçüncü bir `anon`'a grant'li yazma RPC'si (yeni iletişim formu,
+  `submit_feedback` kopyası) PostgREST'ten çağrılabilir olur ama gövdesinde
+  throttle olup olmadığı **denetlenmezdi**. Kanıt: throttle'sız
+  `submit_probe_lead` migration'ı eklenince eski hali bu kapıyı yeşil bıraktı.
+  Yazma RPC'leri artık grant taramalarından keşfediliyor, gövdesi
+  `insert/update/delete` içerenler seçiliyor; self-test iki bilinen yazarı bulup
+  salt-okur `search_public_*`'ı dışladığını kanıtlıyor. (Mutation: probe migration →
+  hem "discovered set drifted" hem "inserts without a per-caller throttle" kırmızı.)
+- **`auth-captcha-wiring.test.ts` tek dosyayı ve yalnız ilk çağrıyı okuyordu.**
+  Token ileri-aktarımı yalnız `src/features/identity/actions.ts` içinde ve
+  `authCallBlock` yalnız **ilk** `supabase.auth.<call>(` bloğunu döndürüyordu. İki
+  yanlış-negatif: (a) yeni bir identity dosyasındaki captcha-korumalı çağrı hiç
+  taranmazdı; (b) aynı dosyada ikinci bir `signUp` token'ı düşürse ilk çağrı
+  sayesinde yeşil kalırdı. Kanıt: token'sız `src/features/identity/probe-second-form.ts`
+  eski halde yeşil kalırdı. Dosyalar `src/features/identity/**`'tan keşfediliyor;
+  `authCallBlocks` **tüm** çağrıları döndürüyor; self-test iki-çağrı near-miss'ini
+  sınıyor. (Mutation: probe-second-form → "does not pass captchaToken" kırmızı.)
+- **`anonymous-write-surface.test.ts` guard dosyalarını iki adla listeliyordu.**
+  `submit_feedback`/`submit_sales_lead`'i çağıran **üçüncü** bir action (yeni
+  iletişim formu) captcha/throttle taşımasa bile denetlenmezdi. Kanıt: guard'sız
+  `src/features/feedback/probe-third-form.ts` eski halde yeşil kalırdı. Formlar
+  artık `src/features/**` içinde RPC çağrısıyla keşfediliyor. (Mutation:
+  probe-third-form → "has neither captcha nor rate limiting" kırmızı.)
+
+Ortak ders: **bir guard konusunu listelemek yerine taramalı.** Sabit liste bugünü
+korur, yarını değil; her yeni dosya/rota/fonksiyon sessizce kapsam dışı kalır.
+Keşif predicate'i de bir guard'dır — bu yüzden her biri için self-test (hem
+pozitif hem near-miss) eklendi.

@@ -96,16 +96,43 @@ test("the proxy verifies claims rather than trusting the raw session", () => {
 //    open; it is a gate now, so a regression re-opening the cookie fails CI.
 // ---------------------------------------------------------------------------
 
-const sessionClientFiles = ["src/proxy.ts", "src/server/db/supabase-server.ts"];
+/**
+ * Every module that creates a Supabase server client with
+ * `createServerClient(...)` — **discovered**, not listed by hand.
+ *
+ * The earlier version hard-coded `["src/proxy.ts",
+ * "src/server/db/supabase-server.ts"]`. That is a false-negative by
+ * construction: a third `createServerClient` call site — a new proxy, a route
+ * helper, a copied client — would never be inspected, so a session cookie
+ * written with `@supabase/ssr`'s defaults (`httpOnly: false`, no `Secure`)
+ * shipped green. Discovery by the call shape closes that hole; the self-test
+ * below proves the predicate sees it and that a probe call site is found.
+ */
+function sessionClientFiles(): string[] {
+  return sourceFiles
+    .filter((path) => isCreateServerClientCall(read(path)))
+    .map(relative)
+    .sort();
+}
+
+/**
+ * True for a real `createServerClient` *call*. The generic form
+ * `createServerClient<Database>(…)` is what both call sites use, so the type
+ * argument is allowed between the name and the paren. The import line
+ * (`import { createServerClient } from …`) has neither a type argument nor a
+ * `(`, so it does not match.
+ */
+function isCreateServerClientCall(source: string): boolean {
+  return /\bcreateServerClient\s*(?:<[^>]*>)?\s*\(/.test(source);
+}
 
 /**
  * The flags have to reach the Supabase client that writes the session cookie.
- * Both call sites create exactly one such client, and the only reason to set
- * `cookieOptions` in either file is to harden it, so the whole file is
- * inspected. (An earlier version matched `/createServerClient<[\s\S]*?\);/`,
- * which captured only the client's `setAll` callback body — the flags live in
- * the third argument, so the match would have reported a false negative even
- * after the fix landed.)
+ * The only reason to set `cookieOptions` in such a module is to harden it, so
+ * the whole file is inspected. (An earlier version matched
+ * `/createServerClient<[\s\S]*?\);/`, which captured only the client's `setAll`
+ * callback body — the flags live in the third argument, so the match would have
+ * reported a false negative even after the fix landed.)
  *
  * `sameSite` is checked too: `@supabase/ssr` defaults it to `"lax"` (see
  * `node_modules/@supabase/ssr/dist/main/utils/constants.js`), which is what keeps
@@ -133,9 +160,28 @@ function isHardened(source: string): {
   };
 }
 
+test("every Supabase server-client call site is discovered (self-test)", () => {
+  // Guards the guard: a call site the predicate cannot see is a session cookie
+  // whose flags are never checked. The two reviewed sites must always be found.
+  const discovered = sessionClientFiles();
+  for (const expected of ["src/proxy.ts", "src/server/db/supabase-server.ts"]) {
+    assert.ok(
+      discovered.includes(expected),
+      `${expected} was not discovered by the createServerClient scan: ${discovered.join(", ")}`,
+    );
+  }
+  // The import alone is not a call site.
+  assert.equal(
+    isCreateServerClientCall('import { createServerClient } from "@supabase/ssr";'),
+    false,
+  );
+  // The generic call form — the one both real sites use — is seen.
+  assert.equal(isCreateServerClientCall("createServerClient<Database>(url, key, {})"), true);
+});
+
 test("the Supabase session cookie is HttpOnly, Secure and SameSite", () => {
   const offenders: string[] = [];
-  for (const file of sessionClientFiles) {
+  for (const file of sessionClientFiles()) {
     const source = read(new URL(`../../${file}`, import.meta.url).pathname);
     const { httpOnly, secure, sameSite } = isHardened(source);
     if (!httpOnly || !secure || !sameSite) {

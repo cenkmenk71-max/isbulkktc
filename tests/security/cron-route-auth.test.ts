@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 /**
@@ -21,42 +21,83 @@ import test from "node:test";
  * source of both routes.
  */
 
-const routes = [
-  {
-    file: "src/app/api/push/dispatch/route.ts",
-    secret: "PUSH_CRON_SECRET",
-    // The first configuration read after the guard.
-    configRead: "createSupabaseServiceClient()",
-  },
-  {
-    file: "src/app/api/email/engagement-digest/route.ts",
-    secret: "ENGAGEMENT_CRON_SECRET",
-    configRead: "createSupabaseServiceClient()",
-  },
-] as const;
+const apiDir = new URL("../../src/app/api/", import.meta.url);
 
 function source(file: string): string {
   return readFileSync(new URL(`../../${file}`, import.meta.url), "utf8");
 }
 
-for (const route of routes) {
-  const code = source(route.file);
+/**
+ * True when a route module authenticates with a bearer built from a shared
+ * secret env var — the exact shape `/api/push/dispatch` and
+ * `/api/email/engagement-digest` use, and the marker of the class this suite
+ * exists to cover:
+ *
+ *   - it reads the `Authorization` header,
+ *   - it compares against a `Bearer ${…}` string, and
+ *   - the token comes from a non-public env var (`*_SECRET` / `*_TOKEN`).
+ *
+ * All three must hold: a route that merely *reads* the header (to log it, say)
+ * is not a bearer-authenticated worker, and a route that reads a secret but
+ * never compares the header is not authenticating with it.
+ */
+function isBearerSecretGuard(code: string): boolean {
+  return (
+    /headers\.get\(\s*["']authorization["']\s*\)/.test(code) &&
+    /Bearer\s*\$\{/.test(code) &&
+    /process\.env\.(?!NEXT_PUBLIC_)[A-Z0-9_]*(?:SECRET|TOKEN)\b/.test(code)
+  );
+}
 
+/**
+ * Every route under `src/app/api/**` that authenticates with a bearer secret,
+ * **discovered** rather than listed by hand.
+ *
+ * The earlier version named the two routes in a literal array. That is a
+ * false-negative by construction: a third cron route — a new worker, or the
+ * same two copied — was simply never scanned, so a config read placed above its
+ * bearer check (the ordering bug this suite exists to catch) shipped green. The
+ * probe used to prove it: a `route.ts` reading `createSupabaseServiceClient()`
+ * before `Authorization` passed every test here. Discovery by the guard shape
+ * closes that hole; the self-test below proves the predicate sees the shape.
+ */
+function bearerGuardedRoutes(): string[] {
+  const entries = readdirSync(apiDir, { recursive: true }) as string[];
+  return entries
+    .filter((entry) => entry.endsWith("route.ts"))
+    .map((entry) => `src/app/api/${entry}`)
+    .filter((file) => isBearerSecretGuard(source(file)))
+    .sort();
+}
+
+/** The first configuration probe a route makes, if any. */
+const configProbes = ["createSupabaseServiceClient(", "isUnsubscribeSigningConfigured("];
+
+const routes = bearerGuardedRoutes().map((file) => {
+  const code = source(file);
+  const secret = /process\.env\.([A-Z0-9_]*(?:SECRET|TOKEN))\b/.exec(code)![1];
+  const probeIndex = configProbes
+    .map((probe) => code.indexOf(probe))
+    .filter((index) => index > -1)
+    .sort((a, b) => a - b)[0];
+  return { file, secret, code, probeIndex };
+});
+
+for (const route of routes) {
   test(`${route.file} reads its cron secret from the environment`, () => {
     assert.match(
-      code,
+      route.code,
       new RegExp(`process\\.env\\.${route.secret}\\b`),
       `the route no longer reads ${route.secret}`,
     );
   });
 
   test(`${route.file} authenticates before it inspects its configuration`, () => {
-    const authIndex = code.indexOf('request.headers.get("authorization")');
-    const configIndex = code.indexOf(route.configRead);
+    const authIndex = route.code.indexOf('request.headers.get("authorization")');
     assert.ok(authIndex > -1, "the bearer comparison was not found");
-    assert.ok(configIndex > -1, `the configuration read (${route.configRead}) was not found`);
+    if (route.probeIndex === -1) return; // no configuration probe to order against
     assert.ok(
-      authIndex < configIndex,
+      authIndex < route.probeIndex,
       "configuration is read before authentication, so an anonymous caller can " +
         "probe whether the endpoint is configured",
     );
@@ -64,12 +105,12 @@ for (const route of routes) {
 
   test(`${route.file} fails closed when the secret is unset`, () => {
     // The guard must reject when no secret is configured, not skip the
-    // comparison — `!secret ||` is the fail-closed shape.
+    // comparison — `!secret || … !== \`Bearer ${secret}\`` is the fail-closed
+    // shape. The variable name is back-referenced so a rename cannot make the
+    // check vacuous (it would otherwise match any `!x ||` guard).
     assert.match(
-      code,
-      new RegExp(
-        `!secret\\s*\\|\\|\\s*request\\.headers\\.get\\("authorization"\\)\\s*!==\\s*\`Bearer \\$\\{secret\\}\``,
-      ),
+      route.code,
+      /!\s*(\w+)\s*\|\|\s*request\.headers\.get\(\s*["']authorization["']\s*\)\s*!==\s*`Bearer \$\{\1\}`/,
       "the guard must reject when the secret is missing, not skip the comparison",
     );
   });
@@ -77,26 +118,57 @@ for (const route of routes) {
   test(`${route.file} never reflects the secret or the service client to the caller`, () => {
     // Every response body is a fixed string; the secret must not appear in one.
     assert.ok(
-      !/Response\.json\([^)]*secret/.test(code),
+      !/Response\.json\([^)]*secret/.test(route.code),
       "the cron secret must never be echoed into a response body",
     );
     assert.ok(
-      !/JSON\.stringify\([^)]*secret/.test(code),
+      !/JSON\.stringify\([^)]*secret/.test(route.code),
       "the cron secret must never be serialised into a response body",
     );
   });
 }
 
-test("both cron routes are discovered by the bearer pattern (self-test)", () => {
-  // Guards the guard: if a route renamed its secret env var, the loop above would
-  // silently stop covering it. This asserts the set is exactly the two known
-  // routes by re-scanning the api tree for the guard shape.
-  const expected = new Set(routes.map((route) => route.file));
-  for (const route of routes) {
+test("the bearer-guard predicate sees the route shape and rejects near-misses (self-test)", () => {
+  // Guards the guard: discovery is only as good as this predicate. A route it
+  // cannot recognise is a route whose ordering is never checked.
+  assert.equal(
+    isBearerSecretGuard(
+      'const secret = process.env.PUSH_CRON_SECRET;' +
+        'if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {}',
+    ),
+    true,
+  );
+  // A route that reads a secret but never compares the header is not a bearer guard.
+  assert.equal(
+    isBearerSecretGuard("const secret = process.env.PUSH_CRON_SECRET; return secret;"),
+    false,
+  );
+  // A route that reads the header but has no secret-backed bearer is not one either.
+  assert.equal(
+    isBearerSecretGuard('const h = request.headers.get("authorization"); return h;'),
+    false,
+  );
+  // A `NEXT_PUBLIC_` token is not a server secret.
+  assert.equal(
+    isBearerSecretGuard(
+      'const t = process.env.NEXT_PUBLIC_TOKEN; if (!t || request.headers.get("authorization") !== `Bearer ${t}`) {}',
+    ),
+    false,
+  );
+});
+
+test("both known cron routes are discovered, not listed (self-test)", () => {
+  // Guards the guard: if a route renamed its secret env var the loop above would
+  // silently stop covering it. The two reviewed workers must always be found by
+  // the discovery scan — this fails loudly if the predicate narrows.
+  const discovered = routes.map((route) => route.file);
+  for (const expected of [
+    "src/app/api/push/dispatch/route.ts",
+    "src/app/api/email/engagement-digest/route.ts",
+  ]) {
     assert.ok(
-      expected.has(route.file),
-      `${route.file} is no longer in the covered set`,
+      discovered.includes(expected),
+      `${expected} was not discovered by the bearer-guard scan: ${discovered.join(", ")}`,
     );
-    assert.match(source(route.file), /request\.headers\.get\("authorization"\)/);
   }
 });

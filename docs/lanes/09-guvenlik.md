@@ -692,3 +692,44 @@ yanlış-negatif veriyordu, kanıtladım ve düzelttim.
   kapatılan şey onları koruyan guard'ın körlüğü. `threat-model.md`'ye işlendi.
 - **Bakılmayan:** yok — 15 dosya (`tests/security/**` 14 + `next.config.ts`) +
   3 doküman. Açık `todo`'lar değişmedi: #298, #206, #102.
+
+## Durum (2026-11-06, 30. tur) — sabit liste yerine konu keşfi
+
+Brief'in "dedektörlerin kendisi" hattında yeni bir yanlış-negatif **sınıfı**
+bulundu: bir guard denetleyeceği konuyu (rota, çağrı noktası, fonksiyon) **sabit
+listeden** alıyorsa, listeye girmeyen yeni bir dosya sınırın dışında kalır ve
+guard yeşil kalır. Altı dedektör böyleydi; altısı da kendi konusunu tarayacak
+şekilde düzeltildi, her birine self-test eklendi.
+
+- **`cron-route-auth.test.ts`** iki rotayı literal diziden okuyordu → `src/app/api/**`
+  ağacından bearer-imzasıyla (`authorization` + `Bearer ${…}` + `*_SECRET|*_TOKEN`)
+  keşfediyor. `isBearerSecretGuard` `NEXT_PUBLIC_TOKEN` near-miss'ini reddediyor.
+- **`session-cookie-flags.test.ts`** iki çağrı noktasını literal diziden okuyordu →
+  `src/**` içinden `createServerClient(?:<…>)?(` çağrı yerlerini keşfediyor.
+- **`notification-worker-auth.test.ts`** tek worker'ı yolla sabitliyordu →
+  `supabase/config.toml`'dan `verify_jwt = false` fonksiyonlarını keşfediyor.
+- **`anonymous-rpc-throttle.test.ts`** throttle kapısını iki RPC adıyla
+  döndürüyordu → `anon`'a grant'li fonksiyonları grant taramasından keşfediyor,
+  gövdesi `insert/update/delete` içerenleri (yazar) seçiyor.
+- **`auth-captcha-wiring.test.ts`** tek dosyayı + yalnız ilk çağrıyı okuyordu →
+  `src/features/identity/**`'tan keşfediyor, `authCallBlocks` **tüm** çağrıları
+  döndürüyor (ikinci bir `signUp` token'ı düşürse görülür).
+- **`anonymous-write-surface.test.ts`** guard dosyalarını iki adla listeliyordu →
+  `submit_feedback`/`submit_sales_lead`'i çağıran action'ları `src/features/**`
+  içinde RPC çağrısıyla keşfediyor.
+
+**Kanıt (mutation, her biri eski halde yeşil kalırdı):** (a) config-okuması
+auth'tan önce olan `src/app/api/probe-cron/route.ts`; (b) flagsiz
+`src/server/db/probe-client.ts`; (c) `verify_jwt = false` + sırası bozuk
+`supabase/functions/probe-webhook/`; (d) throttle'sız `submit_probe_lead`
+migration'ı; (e) token'sız `src/features/identity/probe-second-form.ts`;
+(f) guard'sız `src/features/feedback/probe-third-form.ts`. Altısı da artık
+kırmızı; probe dosyaları temizlendi.
+
+**Dış sınır değişmedi:** mevcut rota/çerez/worker/throttle kontrolleri zaten
+doğruydu; kapatılan şey onları koruyan dedektörün körlüğü. `threat-model.md` ve
+`tests/security/README.md`'ye işlendi.
+
+- **Bakılmayan:** yok — `tests/security/**` 15 dosya + `next.config.ts` +
+  `docs/threat-model.md` + `tests/security/README.md`. Açık `todo`'lar değişmedi:
+  #298, #206, #102.

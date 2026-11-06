@@ -61,6 +61,17 @@ access forms it claims to (`client-boundary`, `sql-hardening`,
 `session-cookie-flags`). A guard is only as wide as its matcher; the self-test
 fails when a matcher is narrowed, so a silent hole cannot be reintroduced.
 
+Detectors also **discover their subject** rather than listing it by hand — a
+hand-written list of routes, clients or RPCs silently stops covering the next
+one added. `cron-route-auth` scans `src/app/api/**` for the bearer-guard shape,
+`session-cookie-flags` scans `src/**` for `createServerClient(...)`,
+`notification-worker-auth` scans `supabase/config.toml` for `verify_jwt = false`,
+`anonymous-rpc-throttle` scans the grants for `anon`-callable writers,
+`auth-captcha-wiring` scans `src/features/identity/**` for captcha-protected
+calls (every occurrence, not just the first), and `anonymous-write-surface`
+scans `src/features/**` for the anonymous mail-sending RPC calls. Each carries a
+self-test that both the known subject is found and a near-miss is rejected.
+
 ## Rules
 
 - Attack only this sandbox and its local test data. No load, no DoS, no access to
