@@ -692,3 +692,88 @@ G-01) hâlâ açık.**
 - **CF zone API** (`CF_API_TOKEN` yok): Edge Certificates / Caching / Bot Fight Mode
   panel durumu okunamadı; ölçüm canlı HTTP ile.
 - **IPv6:** sandbox'ta v6 çözümleyici yok.
+
+---
+
+## Edge mikro-denetim tur 11 — `/_next/image` beklenmeyen içerik eşlemesi (2026-11-05)
+
+Brief 3 (cache) kapsamında görsel optimizasyon uç noktasını (`/_next/image`)
+incelerken **öngörülmeyen bir davranış** bulundu (A-01). Düşük etkili; düzeltme
+bu lane'in dosyasında değil → `lane:guvenlik`'e handoff.
+
+### A-01 — `/_next/image?url=<göreli aynı-origin yol>` bazı rotaların içeriğini döndürüyor
+
+Normalde `/_next/image` yalnız **görsel** döndürmeli; görsel olmayan bir hedefte
+`400 INVALID_IMAGE_OPTIMIZE_REQUEST` vermeli. Ama `url` parametresi **göreli bir
+aynı-origin yol** olduğunda, bir dizi rota kendi içeriğini **döndürüyor**:
+
+| `url=` | Edge yanıtı | İçerik tipi |
+|---|---|---|
+| `/blog` | **200** | `text/html` |
+| `/about` | **200** | `text/html` |
+| `/contact` | **200** | `text/html` |
+| `/api/build-info` | **200** | `application/json` |
+| `/llms.txt` | **200** | `text/plain` |
+| `/feed.xml` | **200** | `application/rss+xml` |
+| `/.well-known/security.txt` | **200** | `text/plain` |
+| `/`, `/jobs`, `/en` | 400 | — |
+| `/profile/dashboard`, `/company/dashboard`, `/login` | 400 | — |
+| `/robots.txt`, `/sitemap.xml` | 400 | — |
+| `/.env`, `/.git/config`, `/wp-login.php` | 400 | — |
+
+**Tetikleyici:** yalnız **göreli** yol. Mutlak URL (`https://isbulkktc.com/blog`)
+→ **400**. Yani `/_next/image?url=/blog&w=64&q=75` → 200 `text/html`.
+
+**Kanıt (canlı, 2026-11-05):**
+```
+curl -sS -D - -o /dev/null 'https://isbulkktc.com/_next/image?url=%2Fblog&w=64&q=75'
+# HTTP/2 200 · content-type: text/html · x-vercel-cache: HIT
+# x-matched-path: /tr/blog · CSP: script-src 'none'; frame-src 'none'; sandbox;
+# <title>Kuzey Kıbrıs iş ve kariyer gündemi · İşBul KKTC</title>
+```
+3/3 taze istekte (benzersiz `cb=`) tekrarlandı; **Vercel alias'ında da aynı**
+(`isbulkktc-amber.vercel.app/_next/image?url=%2Fblog`) → **Vercel/Next**, CF değil
+(`cf-cache-status: DYNAMIC`; yanıt origin'den geliyor).
+
+### Etki (ölçülü — düşük)
+
+- **Sır/PII sızıntısı yok:** erişilebilen tüm yollar **zaten public ve
+  prerender**. Oturum gerektiren rotalar (`/profile/dashboard`,
+  `/company/dashboard`, `/login`), WAF-bloklu yollar (`/.env`, `/.git/config`,
+  `/wp-login.php`) ve `/robots.txt`/`/sitemap.xml` **400** döner.
+- **XSS/script yok:** yanıt katı bir CSP taşır —
+  `Content-Security-Policy: script-src 'none'; frame-src 'none'; sandbox;` —
+  ve `X-Content-Type-Options: nosniff`. Sayfanın normal CSP'si yerine bu geçer.
+- **SEO zararı yok:** yanıtta `X-Robots-Tag` yok ama HTML doğru canonical'ı taşır
+  (`<link rel="canonical" href="https://isbulkktc.com/blog"/>`).
+- **Kalan risk:** beklenmeyen **URL → içerik** eşlemesi (görsel uç noktası HTML/JSON
+  döndürüyor). Yanlış yapılandırılmış bir alt sistemde içerik-tipi karışıklığına
+  zemin olabilir; normal sayfa CSP'si yerine "sandbox" CSP'si uygulanır. Bu yüzden
+  **kapatılması önerilir**, ama öncelik **düşük**.
+
+### Nerede düzeltilir
+
+`next.config.ts` (hiçbir lane'in sahiplik tablosunda yok; `lane:guvenlik` onu
+`tests/security/security-headers.test.ts` ile denetliyor) ve/veya Vercel platform
+davranışı. Bu lane repo dosyası tutmaz → **`lane:guvenlik` + `agent:handoff`**
+issue açıldı.
+
+### Bu turda ayrıca doğrulananlar (temiz)
+
+| # | Test | Gözlenen | Durum |
+|---|---|---|---|
+| A-02 | Optimizer remote allowlist (`images.remotePatterns`) | allowlist dışı host → **400**; `pathname` kısıtı (`/api/employer/logo/**` dışı → 400); `http://` → 400; `:8080` port → 400 | ✔ |
+| A-03 | Optimizer parametre kirliliği (çift `url`/`w`/`q`) | hepsi **400** | ✔ |
+| A-04 | Optimizer `w`/`q` sınırları | `w` ∈ {0,1,-1,99999,abc} → 400; `q` yalnız {75,85,90,95,100} → diğerleri 400 (`qualities` config'i) | ✔ |
+| A-05 | WAF bypass (optimizer üzerinden bloklu yollar) | `/.env` vb. → **400**; `/phpmyadmin/`,`/api/devtools/` → 308 (yalnız trailing-slash normalizasyonu, final istek yine WAF'a girer → 403/404) | ✔ bypass yok |
+| A-06 | Cookie/auth/XFF ile cache varyansı (`/robots.txt`, `/images/*`) | gövde md5 **değişmiyor** | ✔ |
+| A-07 | `/images/*` `Accept` varyansı | hep `image/webp`, aynı girdi | ✔ |
+| A-08 | Optimizer yerel görsel yolu | 200 `image/jpeg` + `content-disposition` + `vary: Accept` | ✔ |
+| A-09 | WAF/cache regresyon | 3/3 saldırı → 403; `/` `DYNAMIC` | ✔ drift yok |
+| A-10 | Önceki bulgular (H-01, H-02, R-01, G-01) | hepsi hâlâ açık | ℹ️ |
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` yok) ve **Vercel platform davranışı** (A-01
+  origin'de oluşuyor) — panel/ayar okunamadı; ölçüm canlı HTTP ile.
+- **IPv6:** sandbox'ta v6 çözümleyici yok.

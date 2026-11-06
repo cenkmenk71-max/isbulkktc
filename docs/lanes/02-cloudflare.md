@@ -157,3 +157,16 @@ metodlarda** 307 `/login`; cacheable statiklere yazma 405. Sahte
 `X-Forwarded-*`/`Forwarded` canonical'ı değiştirmiyor; absolute-form 403, `%00`
 400, CRLF yansımıyor. `sqlmap` 403, diğer botlar 200. Önceki bulgular (H-01, H-02,
 R-01, G-01) hâlâ açık. Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 10".
+
+### Edge mikro-denetim tur 11 — `/_next/image` içerik eşlemesi (2026-11-05)
+
+Görsel optimizasyon uç noktasını incelerken **A-01** bulundu: `/_next/image?url=<göreli
+aynı-origin yol>` bazı rotaların **kendi içeriğini** döndürüyor (`/blog`,`/about`,
+`/contact` → 200 `text/html`; `/api/build-info` → 200 JSON; `/llms.txt`,`/feed.xml`,
+`/.well-known/security.txt` → 200 metin). Yalnız **göreli** yol tetikler (mutlak URL
+→ 400). Oturum-gerektiren rotalar, WAF-bloklu yollar ve `/robots.txt`/`/sitemap.xml`
+→ **400**. Yanıt katı CSP (`script-src 'none'; sandbox;`) + `nosniff` taşır; sır/PII
+sızıntısı **yok** → **düşük etki**. Vercel alias'ında da aynı → **Vercel/Next** (CF
+değil). Düzeltme `next.config.ts`'te → **`lane:guvenlik` handoff**. Optimizer
+allowlist/parametre/sınır testleri temiz (A-02…A-09). Detay: `docs/cloudflare.md` →
+"Edge mikro-denetim tur 11".
