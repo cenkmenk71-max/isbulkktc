@@ -931,3 +931,85 @@ gerektirir. Tur 6 yapılandırma hatasını sinyale bağladı ama **gönderim**
 hatasını bağlamadı; alarm yarı kör kaldı. Ve SDK'nın hata sözleşmesini
 okumadan `try/catch`'i "ana hata yolu" sanmak yanıltıcı: `resend` fırlatmaz,
 döner.
+
+---
+
+## Tur 18 — #208 sürdürme: unvan sahte-pozitifi + `year.month` tarih formatı
+
+### Alınan iş
+Kuyrukta `lane:urun`/`agent:backend` + `agent:handoff` etiketli **#208** (kök
+issue). Brief'teki hedef (CV'den doğru çıkarım, tarihler doğru kutuya) sürdürüldü.
+Önceki turda (Tur 14/16) kapatılanların üstüne, sahip olduğum `resume-parser.ts`
+üzerinde **iki gerçek hata** bulundu ve düzeltildi. #367 (bölüm-başlığı sızıntısı)
+hâlâ açık: düzeltmesi LANE-QA sahipli testi kırıyor → devretti (aşağıda).
+
+### Bulgu 1 — kişisel-veri kelimesi içeren gerçek unvan tarihlerini kaybediyordu
+`isPersonalDataLine` satırın **herhangi** bir kelimesini kişisel-veri köküyle
+eşleştiriyordu. "Adres Doğrulama Uzmanı", "Telefon Satış Temsilcisi", "Doğum
+Kliniği Hemşiresi" gerçek unvanlardır; bu satırlar kişisel veri sayılıp
+`extractDateRange` erken döndüğü için **iş dönemi tamamen kayboluyordu**.
+
+| Girdi | Önce | Sonra |
+|---|---|---|
+| `Acme - Adres Doğrulama Uzmanı - 2019 - 2022` | `startDate:""` | `startDate:"2019"`, `endDate:"2022"` |
+| `Beta - Telefon Satış Temsilcisi - 2018 - 2020` | `startDate:""` | `startDate:"2018"` |
+| `Gamma - Doğum Kliniği Hemşiresi - 2015 - 2017` | `startDate:""` | `startDate:"2015"` |
+
+Düzeltme **konumsal**: bir satır kişisel veridir ancak ilk alanı **yalnızca**
+kişisel-veri token'ıysa ("`Telefon: 0533…`", "`Adres | Lefkoşa`") veya satırda
+güçlü alan ayırıcısı (`| · — – •` ya da ` - `) hiç yoksa ("`1995-2000 doğumlu`").
+Unvan kelimeyi *sonraki* alanda taşır → tarih korunur. `,` ayırıcı sayılmaz:
+kişisel satır virgülle **değer** listeler ("Telefon: 0533, 0534"), alan değil.
+
+### Bulgu 2 — `year.month` tarih formatı yanlış kutulara sızıyordu
+`dateToken` yalnız `month.year` ("03.2019") biçimini tanıyordu. Eşit sıklıkta
+kullanılan `year.month` ("2019.03") tanınmayınca regex çıplak yıla düşüyor,
+**ay kırıntısı** başka kutuya yazılıyordu.
+
+| Girdi | Önce | Sonra |
+|---|---|---|
+| `Acme - Dev - 2019.03 - 2021.05` | `location:".03"`, `endDate:""`, `description:"05"` | `startDate:"2019.03"`, `endDate:"2021.05"`, `location:""` |
+| `ODTÜ - Mühendislik - 2010.09 - 2014.06` | `field:".09"`, `endDate:""` | `field:""`, `startDate:"2010.09"`, `endDate:"2014.06"` |
+| `AWS \| Amazon \| 2021.06` | `issueDate:"2021"` | `issueDate:"2021.06"` |
+
+Düzeltme: `dateToken`'a `year.month` alternatifi eklendi, **yıl-önce alternatifi
+başa** alındı (regex ilk eşleşmeyi alır; yoksa çıplak-yıl dalı "2021"de durup
+".05"i bırakır). Ay token'ı `(?:0?[1-9]|1[0-2])(?!\d)` ile **sınırlandı**: bu
+sayede "2019-03" tarih, "2019-2021" aralık kalır ve "1999-2000" "1999-2"+"000"
+diye bölünmez.
+
+### Non-vacuousness (mutasyon kanıtı)
+- Bulgu 1: `isPersonalDataLine` kelime-herhangi kuralına geri alınınca yeni
+  testler **kırmızı** (`a real title…`, `a role-first record…`); pozitif yarı
+  `return false` yapılınca `a personal detail still reaches no field` kırmızı.
+- Bulgu 2: `dateToken` düzeltmesi geri alınınca `a year-month range…` +
+  `a certification issue date…` **kırmızı**.
+
+### Micro-denetim tablosu (Tur 18, sahip olunan `src/features/candidates/**`)
+
+| Dosya | Doğruluk | Hata yolu | Yetki | Erişilebilirlik | Sınır girdi | Sonuç |
+|---|---|---|---|---|---|---|
+| `resume-parser.ts` | ⚠️ **2 bulgu → düzeltildi** | ✅ `isPersonalDataLine` korur | ✅ sunucu-taraflı saf | — | ✅ 80k kesme, 2000 satır, `,,` boş | düzeltildi |
+| `resume-profile-draft.ts` | ✅ | ✅ | ✅ | — | ✅ 12/40 limit, `skipped` | temiz |
+| `resume-file-extractor.ts` | ✅ | ✅ `DocumentImportError` | ✅ | — | ✅ `empty` yolu | temiz |
+| `actions.ts` | ✅ | ✅ `try/catch` + `message` | ✅ `getCurrentUser`+`status` | — | ✅ 50k JSON kesme | temiz |
+| `schemas.ts` | ✅ | ✅ zod `.strict()` | ✅ | — | ✅ 140/160/2600 sınır | temiz |
+| `candidate-profile-form.tsx` | ✅ | ✅ `role="alert"/"status"` | — | ✅ sarmalı `<label>`, `<fieldset>/<legend>`, `aria-live`, `aria-label` silme, `aria-busy` | ✅ maxLength, 12 limit, `disabled` | temiz |
+| `resume-date-context.test.ts` | ✅ (URUN sahipli, 12 test) | — | — | — | — | genişletildi |
+| `resume-location-merge.test.ts` | ✅ | — | — | — | — | temiz |
+
+**Bakılmayan:** yok — `src/features/candidates/**` tamamen tarandı.
+
+### Kapılar
+lint/typecheck/check:frontend-source temiz; `test:unit` **686/686**, 0 fail, 0
+todo (+6 test). Canlıya dokunulmadı (secret/DB/migration yok).
+
+### Devredilen (LANE-QA) — #367
+Bölüm başlığı altındaki etiketsiz kişisel-veri satırı (ör.
+`DENEYİM\nTelefon: 0533…`) hâlâ `description`/`institution`/`name`/`skills`
+alanına sızıyor; `|` tabular biçimde `structured` yolundan `Adres | Lefkoşa` →
+`role:"Adres"` oluyor. Kök neden **bölüm-düzeyi** filtre eksikliği:
+`inferSections`/`buildBlocks`'a "kişisel-veri satırını atla" kapısı gerekiyor.
+Ama `tests/unit/resume-date-context.test.ts` (LANE-QA sahipli) "a personal-data
+line contributes no date to work experience" sözleşmesini pinliyor ve kapı
+eklenince **kırılıyor** (Tur 14 örneği). Kararı LANE-QA'ya bırakıldı (#367 açık).

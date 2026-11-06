@@ -336,7 +336,17 @@ const monthNames = [
 
 const monthPattern = monthNames.join("|");
 const yearToken = "(?:19|20)\\d{2}";
-const dateToken = `(?:\\d{1,2}[./-])?(?:(?:${monthPattern})[a-zçğıöşü]*[ .]*)?${yearToken}`;
+// A numeric month (01-12). Bounding it is what lets the year-first form below
+// read "2019-03" as a date while "2019-2021" stays a year range — an unbounded
+// "month" would swallow the second year. The `(?!\d)` keeps a bare year range
+// like "1999-2000" from being read as "1999-2" + "000".
+const monthNumberToken = "(?:0?[1-9]|1[0-2])(?!\\d)";
+// `month.year` ("03.2019") and `year.month` ("2019.03") are both common. Only
+// the first was supported, so "2019.03 - 2021.05" matched the bare years and
+// the month fragments leaked into `location`/`description` (#208). The
+// year-first form is listed first: regex alternation takes the first match, and
+// the bare-year branch would otherwise stop at "2021" and strand ".05".
+const dateToken = `(?:${yearToken}[./-]${monthNumberToken}|(?:\\d{1,2}[./-])?(?:(?:${monthPattern})[a-zçğıöşü]*[ .]*)?${yearToken})`;
 // Longer alternatives first: "devam ediyor" must win over "devam", or the
 // regex stops at "devam" and leaves "ediyor" as a stray location (#208).
 const ongoingPattern =
@@ -397,16 +407,55 @@ const personalDataWords = new Set([
   "ehliyet",
 ]);
 
-function isPersonalDataLine(line: string): boolean {
-  const words = line
+/** True when a single word is a personal-data token or stem. */
+function isPersonalDataToken(word: string): boolean {
+  return (
+    personalDataWords.has(word) ||
+    personalDataStems.some((stem) => word.startsWith(stem))
+  );
+}
+
+function wordsOf(value: string): string[] {
+  return value
     .toLocaleLowerCase("tr-TR")
     .split(/[^\p{L}\p{N}]+/u)
     .filter(Boolean);
-  return words.some(
-    (word) =>
-      personalDataWords.has(word) ||
-      personalDataStems.some((stem) => word.startsWith(stem)),
-  );
+}
+
+// The shapes a CV uses *between* the fields of one record. A comma is
+// deliberately absent: a personal line comma-separates values ("Telefon: 0533,
+// 0534"), not fields, so a comma must not promote it to a record.
+const strongEntrySeparatorSource = "\\s+(?:\\||·|—|–|•)\\s+|\\s+[-]\\s+";
+const strongEntrySeparatorPattern = new RegExp(strongEntrySeparatorSource, "u");
+
+/**
+ * True when the line carries the shapes a CV uses *between* the fields of one
+ * record.
+ */
+function hasStrongEntrySeparator(line: string): boolean {
+  return strongEntrySeparatorPattern.test(line);
+}
+
+/**
+ * Whether a line is the candidate's personal data rather than content.
+ *
+ * A personal-data word alone cannot decide: a job title can contain one — "Adres
+ * Doğrulama Uzmanı", "Telefon Satış Temsilcisi", "Doğum Kliniği Hemşiresi" are
+ * all real roles. Reading those as personal data made `extractDateRange` bail,
+ * so the entry silently lost its dates (#367). A detail, by contrast, names
+ * itself in the line's *first* field as a label that is nothing but the token
+ * ("Telefon: 0533…", "Adres: Lefkoşa - 2019", "Adres | Lefkoşa"), or as a bare
+ * line with no entry separator at all ("1995-2000 doğumlu"). A title that merely
+ * contains the word is a later field of a separated record.
+ */
+function isPersonalDataLine(line: string): boolean {
+  const [firstField = ""] = splitEntryParts(line);
+  const words = wordsOf(firstField);
+  if (!words.some(isPersonalDataToken)) return false;
+  const labelWords = wordsOf(firstField.split(/[:：]/)[0]);
+  const labelIsTokenOnly =
+    labelWords.length > 0 && labelWords.every(isPersonalDataToken);
+  return labelIsTokenOnly || !hasStrongEntrySeparator(line);
 }
 
 /**
@@ -458,9 +507,13 @@ function stripDateRange(line: string, range?: DateRange | null): string {
     .trim();
 }
 
+// Field splitting also treats a comma/semicolon as a separator — a labelled
+// entry ("Role, Company, 2019") uses one — unlike `hasStrongEntrySeparator`.
+const entryPartsPattern = new RegExp(`${strongEntrySeparatorSource}|\\s*[;,]\\s*`, "u");
+
 function splitEntryParts(line: string): string[] {
   return line
-    .split(/\s+(?:\||·|—|–|•)\s+|\s*[;,]\s*|\s+[-]\s+/u)
+    .split(entryPartsPattern)
     .map(cleanLine)
     .filter(Boolean);
 }
