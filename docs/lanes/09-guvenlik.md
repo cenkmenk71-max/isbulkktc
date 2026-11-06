@@ -6,7 +6,7 @@ bulgusunu düzeltmez).
 
 ## Bağlam (önce oku)
 - Repo: `cenkmenk71-max/isbulkktc`. Oku: `docs/lanes/00-orchestration.md`, `AGENTS.md`.
-- `tests/security/**` **şu an BOŞ** (yalnız `.gitkeep`). Bu katman sıfırdan kurulacak.
+- `tests/security/**` katmanı **kuruldu** (15 dosya; `bun run test:security` `static` CI işinde). Bu dosya o katmanın durumunu tutar — aşağıya bak.
 - Bilinen yüzey: Supabase RLS + `service_role`, auth oturumları, Turnstile,
   e-posta şablonları, Edge Function'lar, Vercel/Cloudflare edge, push (VAPID).
 
@@ -733,3 +733,41 @@ doğruydu; kapatılan şey onları koruyan dedektörün körlüğü. `threat-mod
 - **Bakılmayan:** yok — `tests/security/**` 15 dosya + `next.config.ts` +
   `docs/threat-model.md` + `tests/security/README.md`. Açık `todo`'lar değişmedi:
   #298, #206, #102.
+
+## Tur — #418 §6: `NEXT_LOCALE` `Secure` bulgusu (PR #422, 2026-11-06)
+
+**Lane:** GÜVENLİK · **Branch:** `lane/guvenlik` · **PR:** #422
+
+**Kapsam.** Öncelik issue #418 (hesap kayıt + tüm hesap işlemleri + çerezler,
+uçtan uca denetim) alındı; §6 çerez denetimi uygulandı. `agent:test` etiketli
+açık issue yoktu (o etiket LANE-QA/VERIFY'ın).
+
+**Bulgu (tek gerçek eksik).** Üretim `NEXT_LOCALE` çerezi `Secure` taşımıyor.
+Gerçek `next-intl` middleware'i + dev sunucu + **üretim standalone** üçünde de
+birebir aynı:
+
+```
+NEXT_LOCALE=de; Path=/; SameSite=lax      ← Secure YOK
+```
+
+`HttpOnly` **eklenemez**: dil değiştirici çerezi istemciden yazıyor
+(`site-header.tsx` `<Link … locale={code}>` → next-intl `BaseLink` →
+`syncLocaleCookie` → `document.cookie`), `document.cookie` `HttpOnly` atayamaz.
+
+**Devir (düzeltilmedi — görev ayrılığı).** Sahibi LANE-İÇERİK
+(`src/i18n/routing.ts`). Düzeltme: `defineRouting({ … })` içine
+`localeCookie: { secure: process.env.NODE_ENV === "production" }`. #418'e
+`agent:handoff` yorumu bırakıldı.
+
+**Test.** `tests/security/locale-cookie-flags.test.ts` (yeni): pozitif kontrol +
+üretim drive self-testi + `todo` kapı. Mutation ile doğrulandı: düzeltme enjekte
+edilince 4/4 geçti, geri alınınca `todo`'ya döndü.
+
+**Kanıt (kapılar).** `lint`, `typecheck`, `check:frontend-source` temiz;
+`test:security` 108 pass / 0 fail / 4 todo; `test:unit` 727 pass / 0 fail /
+2 todo.
+
+**Bakılmayan.** `tests/security/**` 18 dosyanın 15'i bu turda **bakılmadı**
+(önceki turlarda denetlendi, CI yeşil). Bu turda tam taranan: yeni test +
+`tests/security/README.md` + `docs/threat-model.md`. Açık `todo`'lar değişmedi:
+#298, #206, #102, #418 §6.
