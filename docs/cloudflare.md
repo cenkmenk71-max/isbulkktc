@@ -851,3 +851,131 @@ Existing Headers` (H-02 ile aynı düzeltme). Böylece origin'in `max-age=0`'ı
 - **CF zone API** (`CF_API_TOKEN` yok): Caching (Browser Cache TTL) / Cache Rules
   panel durumu okunamadı; ölçüm edge↔origin diff ile.
 - **IPv6:** sandbox'ta v6 çözümleyici yok.
+
+---
+
+## Edge mikro-denetim tur 13 — `images.localPatterns` çift-kodlama ile atlatılıyor (2026-11-06)
+
+Tur 11'de bulunan **A-01** (`/_next/image?url=<göreli yol>` görsel olmayan içerik
+döndürüyor) `next.config.ts`'e `images.localPatterns` eklenerek **düzeltildi**
+(PR #333, issue #324 kapandı). Bu tur düzeltmenin **eksiksiz olup olmadığı**
+sınandı; **hâlâ atlatılabilir** olduğu bulundu (A-01b). Düzeltme `next.config.ts`
++ `tests/security/**` içinde → **LANE-GÜVENLİK** alanı; bu lane dokunmaz, devreder.
+
+### A-01b — çift-kodlanmış nokta segmenti allowlist'i atlıyor
+
+Allowlist eşleşmesi **kodlanmış** yolu görür; ama optimizer içerik için yolu
+**çözüp** (decode + normalizasyon) origin'e fetch eder. Araya bir fazla
+yüzde-kodlama konunca matcher `true` der, fetch ise hedef rotaya gider:
+
+| İstek (query `url=`) | Gözlenen | Beklenen |
+|---|---|---|
+| `/images/blog` | **400** | 400 |
+| `/images/../blog` | **400** | 400 |
+| `/images/%2e%2e/blog` | **400** | 400 |
+| `/images/%252e%252e/blog` | **200 `text/html`** | 400 |
+| `/images/%25252e%25252e/blog` | **200 `text/html`** | 400 |
+
+Yalnız **nokta kodlaması** değişiyor; eğik çizgiler ham. `%25` = `%` olduğundan
+tek fazla kodlama, `%2e`'yi matcher'a `%2e` (sabit, `**` ile eşleşir) olarak
+bırakıp fetch'te gerçek `..`'ye çeviriyor.
+
+**Kanıt (canlı, `isbulkktc.com`, 2026-11-06):**
+```
+# 400 — çift nokta kodlaması yok
+curl -sS -o /dev/null -w '%{http_code}\n' --path-as-is \
+  'https://isbulkktc.com/_next/image?url=/images/%2e%2e/blog&w=64&q=75'          # 400
+# 200 — bir fazla kodlama
+curl -sS -o /dev/null -w '%{http_code} %{content_type}\n' --path-as-is \
+  'https://isbulkktc.com/_next/image?url=/images/%252e%252e/blog&w=64&q=75'      # 200 text/html
+# gövde gerçek blog sayfası
+curl -sS --path-as-is \
+  'https://isbulkktc.com/_next/image?url=/images/%252e%252e/blog&w=64&q=75' \
+  | grep -oE '<title>[^<]*'   # <title>Kuzey Kıbrıs iş ve kariyer gündemi · İşBul KKTC
+```
+`/images/%252e%252e/rehber` → **200** (blog + rehber, prerender HTML). Oturum
+rotaları (`/profile/dashboard`), WAF-bloklu yollar (`.env`, `.git/config`,
+`wp-login.php`) ve `robots.txt`/`sitemap.xml` yine **400** — yani **yeni
+erişilebilir yüzey yok**, yalnız A-01'in kapattığı yüzey geri açılıyor.
+
+**Kök neden — Next matcher'ı (yerelde doğrulandı):**
+```
+node_modules/next/dist/shared/lib/match-local-pattern.js
+  hasLocalMatch(patterns, urlPathAndQuery):
+    const url = new URL(urlPathAndQuery, 'http://n');   // pathname NORMALİZE eder
+    localPatterns.some(p => matchLocalPattern(p, url))  // picomatch(pattern.pathname, url.pathname)
+
+bun ile matcher'a doğrudan girdi:
+  "/images/%252e%252e/blog"  -> hasLocalMatch = true   (URL.pathname = "/images/%252e%252e/blog")
+  "/images/%2e%2e/blog"      -> hasLocalMatch = false  (URL.pathname = "/blog")
+  "/images/../blog"          -> hasLocalMatch = false  (URL.pathname = "/blog")
+```
+Tek fazla kodlama `URL.pathname`'i değiştirmiyor → `**` eşleşiyor; optimizer'ın
+fetch katmanı ise yolu çözünce `/blog`'a gidiyor. Yani **matcher ile fetch aynı
+girdiyi farklı yorumluyor** (asimetri).
+
+**Etki (düşük–orta):** A-01 ile aynı sınıf — görsel uç noktası keyfî (prerender)
+rotanın HTML'ini, sayfa CSP'si yerine `sandbox` CSP'siyle döndürüyor. Sır/PII/XSS
+yok; ama **düzeltmenin kapattığı sanılan yüzey açık** ve regresyon testi
+(`tests/security/security-headers.test.ts` → `hasLocalMatch`) bu varyantı
+kapsamıyor, o yüzden CI yeşil kalıyor.
+
+**Düzeltme (LANE-GÜVENLİK):** `url` parametresini matcher'a vermeden **önce
+çöz/normalize et** ve öyle eşleştir; ya da Next sürümünde düzeltilmiş
+`match-local-pattern` (normalize edilmiş `url.pathname` + kod çözme) var mı
+kontrol et. Regresyon testine `%252e%252e` ve `%25252e` varyantlarını ekle
+(matcher girdisi olarak; kırmızıdan yeşile kanıtla).
+
+### Önceki bulgular — drift tablosu (tur 13)
+
+| Bulgu | Durum | Kanıt (bu tur) |
+|---|---|---|
+| **A-01** optimizer göreli yolu döndürüyor | **DÜZELTİLDİ** (#333) — ama **A-01b** ile hâlâ atlatılabilir | `%2Fblog`→400, `%252e%252e`→200 |
+| **N-01** `/_next/static/**` 404'ü 1 yıl cache'leniyor | **açık** | 404 `max-age=31536000`, 2. istek `HIT` |
+| **H-01** CF HSTS `max-age`'i eziyor | **açık** | edge `31536000` vs origin `63072000` |
+| **H-02** CF Browser Cache TTL yükseltiyor | **açık** | `/images/*` edge `2628000` vs origin `0` |
+| **R-01** trailing-dot apex 404 | **açık** (#261) | `isbulkktc.com./` → 404; `www…./` → 308 |
+| **G-01** CF Email Obfuscation | **açık** | `email-decode.min.js` + `__cf_email__` 1× |
+| DMARC `p=none` | **açık** (#170 onay) | `_dmarc` TXT |
+| DKIM `resend._domainkey` 1024-bit | **açık** (#227 onay) | DER 162 B ≈ 1024-bit |
+| HSTS preload | **`pending`** | hstspreload API |
+
+### Bu turda doğrulananlar (temiz — regresyon yok)
+
+| # | Boyut | Test | Gözlenen | Durum |
+|---|---|---|---|---|
+| T-01 | WAF | 11 saldırı yolu (`/.env`, `/.git/config`, `wp-login.php`, `phpmyadmin`, `xmlrpc`, `/api/devtools/`, `backup.sql` …) | **403** (config.json 404) | ✔ |
+| T-02 | WAF | Normalizasyon/kaçış (`/.ENV`, `/.env.`, `/.env%20`, `//.env`, `/.git//config`, `%2f` varyantları) | 403 (veya güvenli 404/400) | ✔ |
+| T-03 | WAF | Yanlış pozitif: `q=o'brien`, `union select`, `drop table`, `<script>`, `../../etc/passwd`, `1 or 1=1` | hepsi **200** | ✔ |
+| T-04 | WAF | Kodlanmış traversal **query**'de (`%2e%2e%2f`, `%252e%252e%252f`) | 200 (origin işler, yansıtmaz) | ✔ bilgi |
+| T-05 | Cache | Dinamik HTML `/`, `/jobs`, `/companies`, `/en`… | `private, no-store`, `DYNAMIC` | ✔ |
+| T-06 | Cache | `/_next/static/**` gerçek varlık | `immutable` + `HIT` | ✔ |
+| T-07 | Cache | `/robots.txt` gzip/identity/br + `Vary: accept-encoding` | ayrı girdi, doğru kodlama | ✔ |
+| T-08 | Cache | `/sitemap.xml` gzip/identity | `Vary: accept-encoding`, 4027 vs 153112 B | ✔ |
+| T-09 | Cache | `/_next/image` gerçek görsel | 200 `image/jpeg`, `immutable`, `vary: Accept` | ✔ |
+| T-10 | Cache | Negatif cache — diğer önekler (`/images/**`, `/_next/**` 404) | `no-store`/`BYPASS` | ✔ |
+| T-11 | Yetki | `/profile/dashboard`, `/company/dashboard` tüm metodlarda | 307 `/login` | ✔ |
+| T-12 | Cache-key | RSC/prefetch (`RSC: 1`, `Next-Router-Prefetch`) | `DYNAMIC` + `private, no-store` | ✔ |
+| T-13 | Zehirleme | `Host: evil.com` / `X-Forwarded-Host: evil.com` | **403** / canonical değişmiyor | ✔ |
+| T-14 | Zehirleme | `/robots.txt` `Host: isbulkktc.com` | 200 `REVALIDATED` | ✔ |
+| T-15 | TLS | min sürüm | TLS 1.0/1.1 `no protocols available`; 1.2+1.3 OK | ✔ |
+| T-16 | TLS | ALPN + sertifika | `h2`, `CN=isbulkktc.com`, SAN `*.isbulkktc.com`, LE `YE2` | ✔ |
+| T-17 | HTTP/3 | `alt-svc: h3=":443"; ma=86400` + AAAA | var | ✔ |
+| T-18 | Yönlendirme | `http apex`→301, `http www`→301, `https www`→308 apex (yol+sorgu korunur) | tek sıçrama, sızıntı yok | ✔ |
+| T-19 | Bot | UA: curl/python/Googlebot/HeadlessChrome/Chrome → 200; `sqlmap` → **403**; `cf-mitigated` yok | ✔ |
+| T-20 | Rate limit | 30× `/`, 20× `/login`, 15× optimizer bypass | hepsi 200 — throttle yok (F-26) | ℹ️ |
+| T-21 | E-posta | SPF lookup bütçesi: apex `include:_spf.mx.cloudflare.net` = **1**, `send` `include:amazonses.com` = **1** (limit 10) | ✔ |
+| T-22 | E-posta | `rsend` → CNAME `send.forge.rmta.net` (**dangling değil**), MX `feedback.forge.rmta.net` çözülür | ✔ |
+| T-23 | DNS | CAA (comodo/digicert/letsencrypt/pki.goog/ssl.com), DNSSEC `AD=true`, `security.txt` RFC 9116 | ✔ |
+| T-24 | Bilgi | `/api/build-info` = `1b1bf26…` = `main` HEAD → **#319 donması bu turda yok** | ✔ |
+| T-25 | Sızıntı | `/_next/image` allowlist dışı host / `http:` / port / sorgu | 400 | ✔ |
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` bu sandbox'ta tanımlı değil; `/user/tokens/verify`
+  → `1000 Invalid API Token`): WAF ruleset, Cache Rules, Browser Cache TTL, Edge
+  Certificates (HSTS), Bot Management, Rate limit, Analytics/Logpush panel durumu
+  okunamadı. Tüm ölçüm **canlı uçtan** (HTTP/DNS) yapıldı.
+- **IPv6:** sandbox'ta v6 çözümleyici yok (AAAA DoH ile doğrulandı, bağlantı denenmedi).
+- **`next.config.ts` / `tests/security/**`:** bu lane'in dosyası değil → **A-01b**
+  düzeltmesi yapılmadı, LANE-GÜVENLİK'e devredildi (issue açıldı).
