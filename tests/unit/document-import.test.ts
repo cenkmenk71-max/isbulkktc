@@ -75,19 +75,14 @@ test("a UTF-16 little-endian file (BOM) decodes to its characters", async () => 
   assert.equal(await extractTextDocument(textFile(le, "cv.txt")), "AB");
 });
 
-test(
-  "a UTF-16 big-endian file (BOM) decodes to its characters",
-  {
-    todo: "utf-16 decode is little-endian only; a BE-BOM file yields mojibake (#310, LANE-URUN)",
-  },
-  async () => {
-    // FE FF + "AB" in UTF-16BE. `extractPlainText` detects both BOMs but always
-    // decodes with the label "utf-16", which the WHATWG encoding standard
-    // defines as little-endian only, so a big-endian CV becomes "\uFFFE\u4100".
-    const be = new Uint8Array([0xfe, 0xff, 0x00, 0x41, 0x00, 0x42]);
-    assert.equal(await extractTextDocument(textFile(be, "cv.txt")), "AB");
-  },
-);
+test("a UTF-16 big-endian file (BOM) decodes to its characters", async () => {
+  // FE FF + "AB" in UTF-16BE. `extractPlainText` reads the BOM and picks the
+  // label: the WHATWG `utf-16` label is little-endian only, so a big-endian file
+  // needs `utf-16be`. Before #321 the code always used "utf-16", turning this
+  // input into "\uFFFE\u4100" mojibake.
+  const be = new Uint8Array([0xfe, 0xff, 0x00, 0x41, 0x00, 0x42]);
+  assert.equal(await extractTextDocument(textFile(be, "cv.txt")), "AB");
+});
 
 test("a .pdf without a %PDF- header is unreadable, not empty", async () => {
   await expectCode(textFile("this is not a pdf", "cv.pdf"), "unreadable");
