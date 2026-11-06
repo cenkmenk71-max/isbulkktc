@@ -768,3 +768,39 @@ test("a template value lands verbatim, whatever characters it contains", () => {
   })["@graph"][0] as Record<string, unknown>;
   assert.equal(district.name, "A$B İş İlanları");
 });
+
+test("the brief describes the product, not the internal pipeline", () => {
+  // `docs/lanes/12-icerik.md` bans the internal system vocabulary on any
+  // user-facing surface. The brief is read by people and answer engines alike,
+  // so "how the data is fed" does not belong in it — only what the platform
+  // offers. #347 was exactly this leak.
+  const brief = buildLlmsBrief(BASE_URL);
+  const full = buildLlmsFullBrief(BASE_URL);
+
+  const banned = [
+    "provenans",
+    "kaynak listelerinden derlenir",
+    "kaynaktan gelen",
+    "içe aktarma",
+    "senkron",
+    "veritabanı",
+    "şube sayısı",
+    "hariç tutulur",
+    "dahil edilmez",
+  ];
+  for (const phrase of banned) {
+    assert.ok(
+      !brief.includes(phrase),
+      `the short brief leaks the internal phrase "${phrase}"`,
+    );
+    assert.ok(
+      !full.includes(phrase),
+      `the full brief leaks the internal phrase "${phrase}"`,
+    );
+  }
+
+  // The meaningful note survives the cleanup: a reader still learns the
+  // listing language and that the default-locale URL is the canonical one.
+  assert.ok(brief.includes("ilan metinleri Türkçedir"));
+  assert.ok(brief.includes("varsayılan dildeki URL kanoniktir"));
+});

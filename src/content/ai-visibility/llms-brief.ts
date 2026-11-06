@@ -221,8 +221,8 @@ export function buildLlmsBrief(baseUrl: URL): string {
 - Hizmet verilen ilçeler: ${districtLine(routing.defaultLocale)}
 - Arayüz dilleri: ${localeNames} (varsayılan: ${routing.defaultLocale})
 - Para birimi: TRY (₺)
-- İlan verisi: platformun kendi ilanları ve kamuya açık kaynak işveren
-  listelerinden derlenir; kaynak ilanlar için provenans kaydı tutulur.
+- İlanlar: iş arayanlar için arama ve başvuru ücretsizdir; her ilan
+  işverenini ve istihdam türünü gösterir.
 - Son güncelleme: ${AI_VISIBILITY_UPDATED}
 
 ## Öne çıkan sayfalar (varsayılan dil)
@@ -234,8 +234,8 @@ başına dil kodu eklenerek elde edilir (ör. ${origin}/en/jobs). Rehber
 bağlantıları bu kuralın istisnasıdır: bir rehberin slug'ı her dilde
 çevrildiği için adresi dil kodunu eklemekle değil, o dildeki karşılığını
 yazmakla elde edilir (bkz. \`/llms-full.txt\`). Arayüz metni çevrilir;
-kaynaktan gelen ilan metinleri Türkçedir ve altı önek altında aynı içeriği
-taşır, bu yüzden yalnızca varsayılan dildeki URL kanoniktir.
+ilan metinleri Türkçedir ve altı önek altında aynı içeriği taşır, bu yüzden
+yalnızca varsayılan dildeki URL kanoniktir.
 
 ## Sıkça sorulan sorular
 

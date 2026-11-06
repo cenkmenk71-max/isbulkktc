@@ -623,3 +623,57 @@ tüketici (üretici doğru davranıyor, çeviri eksik).
 `lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (637 test,
 +1 yeni guard) · guard kırmızı→yeşil kanıtlandı (string replacement geri konunca
 `fillTemplate mangled "$&"` ile kırmızı).
+
+---
+
+## Rapor — issue #347 (LANE-İÇERİK devri), branch `lane/geo`
+
+**Durum:** düzeltmeler branch'te, CI bekliyor.
+
+### Denetlenen dosyalar (`git ls-files`)
+
+| Glob | N | Bakıldı |
+|---|---|---|
+| `src/content/**` | 26 | 26 (hepsi) |
+| `src/app/llms.txt/**` | 1 | 1 |
+| `public/llms*` | 0 | — (dosya yok) |
+| `src/features/**/structured-data*.ts` | 1 | 1 |
+| `src/features/jobs/job-posting-structured-data.ts` | 1 | 1 |
+
+### Bulgu (LANE-İÇERİK'ten devredildi, #347)
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `llms-brief.ts:224-225` | kullanıcı dili / GEO | Brief, iç veri hattını anlatıyordu: "platformun kendi ilanları ve kamuya açık kaynak işveren **listelerinden derlenir**; kaynak ilanlar için **provenans kaydı** tutulur" | okuyucunun gördüğü şey anlatılmalı (`docs/lanes/12-icerik.md`: iç sistem sözlüğü yüzeye girmez) | AI motoru ve insan okuyucu, sitenin sunduğu değeri değil nasıl beslendiğini okuyor; #308/#276 ile temizlenen sınıfın kapsam dışı kalanı | **düzeltildi** |
+| 2 | `llms-brief.ts:237` | kullanıcı dili | "**kaynaktan gelen** ilan metinleri Türkçedir" | "ilan metinleri Türkçedir" | aynı sözlük sızıntısı; anlamlı uyarı (Türkçe + kanonik URL) korunur | **düzeltildi** |
+
+**Yeni metin (doğrulanabilir iki olguya dayanıyor):**
+
+```
+- İlanlar: iş arayanlar için arama ve başvuru ücretsizdir; her ilan
+  işverenini ve istihdam türünü gösterir.
+```
+
+- "arama ve başvuru ücretsizdir" → ürünün kendi FAQ'unda yazıyor
+  (`faq.ts:35`, brief'in aynı dosyada yayımladığı cevap).
+- "her ilan işverenini ve istihdam türünü gösterir" → ilan detay sayfası
+  işveren adını (`JobDetail.companyLabel`) ve istihdam türünü
+  (`searchCopy(getJobTypeMessageKey(...))`) render ediyor.
+
+### Doğru bulunanlar (bulgu yok)
+
+`JsonLd`'nin `<` kaçışı `</script>` enjeksiyonunu engelliyor;
+`getConfiguredSocialProfiles` yalnız `https?://` kabul ediyor; üretici
+varsayılanları katalogdan geliyor (tur 9); `fillTemplate` değeri birebir
+yerleştiriyor (tur 10); brief'teki tüm URL'ler gerçek rotaya çözülüyor;
+`faqByLocale` ile `seed-managed-content.sql` birebir aynı (6×6); `#327` (de
+başlıklar) PR #345 ile kapanmış — katalogda `de` `DistrictPage.title` =
+"Stellenangebote in {district}", `JobTypePage.title` = "{type}-Stellenangebote".
+
+Okunan ama yazılmayan (sahiplik): `src/messages/**` (LANE-İÇERİK),
+`src/app/[locale]/**` (LANE-SEO), `tests/**` (LANE-QA).
+
+### Kapılar
+`lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (661 test,
++1 yeni guard) · guard kırmızı→yeşil kanıtlandı (eski metin geri konunca
+`the short brief leaks the internal phrase "provenans"` ile kırmızı).
