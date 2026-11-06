@@ -185,12 +185,20 @@ export class FakeSupabase {
       recorded.supabase.push({ kind: "auth", method: "signUp" });
       return { data: { user: null, session: null }, error: this.script.authError ?? null };
     },
-    resend: async () => {
+    resend: async (credentials: { email?: string; options?: Record<string, unknown> } = {}) => {
       recorded.supabase.push({ kind: "auth", method: "resend" });
+      authCalls.resend = {
+        email: credentials.email ?? "",
+        options: credentials.options ?? {},
+      };
       return { data: null, error: this.script.authError ?? null };
     },
-    resetPasswordForEmail: async () => {
+    resetPasswordForEmail: async (
+      email: string,
+      options: Record<string, unknown> = {},
+    ) => {
       recorded.supabase.push({ kind: "auth", method: "resetPasswordForEmail" });
+      authCalls.resetPasswordForEmail = { email, options };
       return { data: null, error: this.script.authError ?? null };
     },
     updateUser: async () => {
@@ -230,6 +238,20 @@ export const recorded: Recorded = {
   redirects: [],
 };
 
+/**
+ * The arguments the auth methods were called with, for the two flows whose
+ * observable behaviour is the *link they email* rather than a row they write:
+ * a password reset and a confirmation resend. The recorder above proves a method
+ * was reached; this proves it was asked to send the recipient somewhere specific.
+ */
+export const authCalls: {
+  resetPasswordForEmail: { email: string; options: Record<string, unknown> } | null;
+  resend: { email: string; options: Record<string, unknown> } | null;
+} = {
+  resetPasswordForEmail: null,
+  resend: null,
+};
+
 // Reassigned by `resetBoundary`/`setRequestHeaders` below and read by the module
 // mocks, so the boundary always sees the current value. Kept private: tests drive
 // them through those functions and assert on `recorded`.
@@ -242,6 +264,8 @@ export function resetBoundary(script: FakeSupabaseScript = {}): FakeSupabase {
   recorded.revalidated.length = 0;
   recorded.revalidatedTags.length = 0;
   recorded.redirects.length = 0;
+  authCalls.resetPasswordForEmail = null;
+  authCalls.resend = null;
   mailFailures.clear();
   requestHeaders = new Headers();
   fakeSupabase = new FakeSupabase(script);
