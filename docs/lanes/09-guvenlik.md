@@ -573,3 +573,22 @@ günlerce ulaşmıyor.
   kırmızı.)
 - **#364 kapatılabilir.** Kalan `todo`'lar: #298, #206, #102.
 - **Bakılmayan:** yok — 14 test dosyası + 2 doküman.
+
+## Durum (2026-11-06, 25. tur) — başlık değerleri eksik pinlenmişti
+
+`security-headers.test.ts`'in başlık değerlerini ne kadar sıkı denetlediğini
+sınadım.
+
+- **Bulgu: `Permissions-Policy` ve HSTS yalnız kısmen pinlenmişti.** Test
+  `permissions-policy` için yalnız `camera=()` arıyordu, `strict-transport-security`
+  için yalnız `max-age=\d{6,}`. Kanıtlandı: altı direktiften beşini (`microphone`,
+  `geolocation`, `payment`, `usb`, `interest-cohort`) düşürmek **veya** HSTS'ten
+  `includeSubDomains; preload`'u kaldırmak testi **yeşil bırakıyordu** — yani bir
+  düzenleme sessizce API'leri yeniden açabilir / alt alan adlarını downgrade'e
+  açabilirdi.
+- **Düzeltme:** `permissions-policy` artık altı direktifin **tamamını** sırayla
+  eşler; `strict-transport-security` `max-age` **+** `includeSubDomains` **+**
+  `preload` şart koşar.
+- **Kanıt (mutation):** beş direktifi düşür → kırmızı; HSTS'i zayıflat → kırmızı.
+- **Bakılmayan:** yok — 14 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
+  #102.

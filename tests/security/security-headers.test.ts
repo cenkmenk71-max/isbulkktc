@@ -51,12 +51,18 @@ test("the global group sends the full defensive header set", () => {
     "x-content-type-options": /^nosniff$/i,
     "x-frame-options": /^(sameorigin|deny)$/i,
     "referrer-policy": /strict-origin-when-cross-origin/i,
-    "strict-transport-security": /max-age=\d{6,}/i,
+    // The full HSTS policy, not just a max-age: dropping `includeSubDomains`
+    // re-exposes subdomains to downgrade and `preload` removes the domain from
+    // the browser preload list. Both are easy to lose in a value edit.
+    "strict-transport-security": /max-age=\d{6,}[^;]*;\s*includeSubDomains[^;]*;\s*preload/i,
     "content-security-policy": /default-src/i,
     "cross-origin-opener-policy": /^same-origin$/i,
     "cross-origin-resource-policy": /^same-origin$/i,
     "x-permitted-cross-domain-policies": /^none$/i,
-    "permissions-policy": /camera=\(\)/i,
+    // Every directive is a deliberate deny; a shortened value silently re-enables
+    // an API the app does not use.
+    "permissions-policy":
+      /camera=\(\),\s*microphone=\(\),\s*geolocation=\(\),\s*payment=\(\),\s*usb=\(\),\s*interest-cohort=\(\)/i,
   };
 
   const missing: string[] = [];

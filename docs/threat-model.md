@@ -174,8 +174,9 @@ issue açar.
   eder) kablolamanın sessizce kopması başka hiçbir testi kırmaz —
   `tests/security/auth-captcha-wiring.test.ts` bunu sabitler.
 - **Yanıt başlıkları:** `next.config.ts` global grubu CSP (wildcard/bare-scheme
-  yok, `unsafe-eval` yok), HSTS, `X-Frame-Options`, `X-Content-Type-Options`,
-  `Referrer-Policy`, COOP/CORP, `Permissions-Policy` gönderir; `X-Powered-By`
+  yok, `unsafe-eval` yok), HSTS (`max-age` + `includeSubDomains` + `preload`),
+  `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, COOP/CORP,
+  `Permissions-Policy` (altı direktifin hepsi deny) gönderir; `X-Powered-By`
   kapalıdır; Vercel alias host'u `noindex, nofollow` alır. `/sw.js` için
   **`Cache-Control: no-cache, no-store, must-revalidate`** verilir: aksi hâlde
   Cloudflare edge origin'in `max-age=0`'ını 30 güne yükseltiyor ve yeni bir
