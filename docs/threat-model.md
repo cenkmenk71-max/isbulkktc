@@ -167,6 +167,12 @@ issue açar.
   `@/server/**` içe aktarmıyor (**statik `from`**, **dinamik `import()`** veya
   **`require()`** — üç biçim de) veya `NEXT_PUBLIC_` olmayan bir env okumuyor
   (`tests/security/client-boundary.test.ts`).
+- **Turnstile (captcha) kablolaması:** captcha korumalı dört auth akışı
+  (giriş, kayıt, doğrulama yeniden gönder, şifre sıfırlama) `cf-turnstile-response`
+  alanını okuyup Supabase çağrısına `options: { captchaToken }` olarak geçirir;
+  token isteğe bağlı olduğu için (Supabase koruma kapalıyken eksik token'ı kabul
+  eder) kablolamanın sessizce kopması başka hiçbir testi kırmaz —
+  `tests/security/auth-captcha-wiring.test.ts` bunu sabitler.
 - **Yanıt başlıkları:** `next.config.ts` global grubu CSP (wildcard/bare-scheme
   yok, `unsafe-eval` yok), HSTS, `X-Frame-Options`, `X-Content-Type-Options`,
   `Referrer-Policy`, COOP/CORP, `Permissions-Policy` gönderir; `X-Powered-By`

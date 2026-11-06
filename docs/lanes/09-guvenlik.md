@@ -533,3 +533,23 @@ yüzde-kodlama ile hâlâ atlatılıyordu.
   `/images/**`'a dön → ikisi de kırmızı.)
 - **#356 kapatılabilir.** Kalan `todo`'lar: #298, #206, #102.
 - **Bakılmayan:** yok — 13 test dosyası + 2 doküman.
+
+## Durum (2026-11-06, 23. tur) — Turnstile (captcha) kablolaması
+
+Auth yüzeyini tararken captcha kablolamasını denetledim: `readCaptchaToken` form
+alanını okuyup Supabase çağrısına `options: { captchaToken }` olarak geçiriyor,
+ama **hiçbir test bunu sabitlemiyordu**.
+
+- **Bulgu: captcha kablolaması pinlenmemişti.** Dört captcha-korumalı akış (giriş,
+  kayıt, doğrulama yeniden gönder, şifre sıfırlama) token'ı okuyup Supabase'e
+  geçirir. Token **isteğe bağlı** olduğu için (Supabase koruma kapalıyken eksik
+  token'ı kabul eder) kablolamanın sessizce kopması **başka hiçbir testi kırmaz** —
+  yani captcha tüm auth formlarında sessizce devre dışı kalabilirdi.
+- **Yeni test:** `auth-captcha-wiring.test.ts` — dört akışın da token'ı
+  Supabase çağrısına geçirdiğini (dengeli argüman bloğu çıkarımıyla), her akışın
+  token'ı widget alanından okuduğunu ve `readCaptchaToken`'ın alan adının
+  `turnstileResponseField` ile aynı olduğunu doğrular.
+- **Kanıt (mutation):** bir akıştan `captchaToken`'ı kaldır → kırmızı; alan adını
+  `cf-turnstile-token` yap → kırmızı.
+- **Bakılmayan:** yok — 14 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
+  #102.
