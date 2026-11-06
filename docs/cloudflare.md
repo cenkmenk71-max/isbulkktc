@@ -47,7 +47,7 @@ Kanıt kısaltmaları: `HTTP` = `curl -D -` başlıkları, `DoH` = `cloudflare-d
 | F-05 | Mail (CF Email Routing) | MX `route{1,2,3}.mx.cloudflare.net`; SPF `v=spf1 include:_spf.mx.cloudflare.net ~all`; DKIM `cf2024-1._domainkey` (2048-bit) | OK | DoH MX/TXT |
 | F-06 | DMARC | `v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; fo=1` | `p=none` izleme modunda — **zorlamaya geçiş planı yok** | DoH TXT |
 | F-07 | CAA | `0 issue` comodoca/digicert/letsencrypt/pki.goog/ssl.com + `issuewild` aynıları | Geniş ama geçerli | DoH CAA |
-| F-08 | **Origin doğrudan erişim** | `https://isbulkktc-amber.vercel.app` CF'yi **tamamen atlıyor**: `server: Vercel`, `cf-ray` yok, `.env`→404, `/api/devtools/`→404, rate-limit yok | Vercel Deployment Protection (Vercel Authentication / Protection Bypass) veya alias'ı public bırakma | `HTTP` alias |
+| F-08 | **Origin doğrudan erişim** | `https://isbulkktc-amber.vercel.app` CF'yi **tamamen atlıyor**: `server: Vercel`, `cf-ray` yok, `.env`→404, `/api/devtools/`→404, rate-limit yok (tur 23'te de teyit: `POST /login` 12/12 200, apex'te aynı seri 429) | Vercel Deployment Protection (Vercel Authentication / Protection Bypass) veya alias'ı public bırakma | `HTTP` alias |
 | F-09 | TLS min sürüm | **SSL Labs (tur 17): 4/4 endpoint grade `A+`, yalnız TLS 1.2 + 1.3 sunuluyor** (1.0/1.1 yok). Sandbox `openssl`'de 1.0/1.1 istemci tarafı da yok, o yüzden "`no protocols available`" **sunucu reddi kanıtı DEĞİL** (bkz. tur 17 düzeltmesi) | Min TLS 1.2 — doğru | SSL Labs API + Python `ssl` |
 | F-10 | Sertifika | Let's Encrypt `YE2`, SAN `*.isbulkktc.com, isbulkktc.com`, geçerlilik 2026-09-19 → 2026-12-18 | OK (CF Universal SSL) | `openssl x509` |
 | F-11 | HSTS | `max-age=31536000; includeSubDomains; preload` | Doğru | `HTTP` |
@@ -65,7 +65,7 @@ Kanıt kısaltmaları: `HTTP` = `curl -D -` başlıkları, `DoH` = `cloudflare-d
 | F-23 | WAF — kaçış (bypass) denemeleri | `/.git%2fconfig`, `/api/devtools%2f`, `/api/devtools` (slash yok) → **404** (WAF tetiklenmiyor ama origin de sunmuyor) | Savunma derinliği: origin 404 verdiği için istismar edilemez | `HTTP` |
 | F-24 | WAF — yanlış pozitif | Meşru arama: `/jobs?q=o'brien`, `union+select`, `drop+table`, `<script>alert(1)</script>`, `../../etc/passwd` → hepsi **200** | Meşru trafiği engellemiyor — **iyi** | `HTTP` |
 | F-25 | Bot koruması | Bot UA `sqlmap/1.7` → **403**; `curl` UA → 200 | Yönetilen bot koruması aktif | `HTTP` |
-| F-26 | Rate limit | 30× hızlı `GET /` → hepsi **200**; 15× `/login` → hepsi **200**; hiç throttle yok | Free plan tek `http_ratelimit` kuralı leak-check'e harcanmış (brief) → auth brute-force **korumasız** | `HTTP` |
+| F-26 | Rate limit | **tur 23 — önceki iddia çürütüldü.** CF auth **POST**'larını limitliyor: `POST /login` hızlı seri → ~10 istekte **429** (`error code: 1015`, `retry-after: 10`), kova `/login`+`/register`+`/forgot-password`+`/reset-password` arasında **paylaşımlı**; `GET /login` ve `POST /` limite **girmez**. `isbulkktc-amber.vercel.app` alias'ı (CF'siz) aynı seride 12/12 **200** → limit **CF'ye ait** | Auth brute-force edge'de **korumalı**. Eski "hiç throttle yok" iddiası **yalnız GET** ölçtüğü için yanlıştı (D-12) | `HTTP` |
 | F-27 | Analytics/Logpush | API scope yok → okunamadı | `Zone → Analytics → Read` ekle | — |
 
 ## WAF bypass / skip deliği değerlendirmesi
@@ -75,7 +75,7 @@ Kanıt kısaltmaları: `HTTP` = `curl -D -` başlıkları, `DoH` = `cloudflare-d
 
 ## Onay bekleyen değişiklikler (uygulanmadı)
 
-1. **Rate limit kuralını yeniden tahsis et (F-26).** Free plan tek `http_ratelimit` harcıyor. Öneri: kuralı `/auth/*`, `/login`, `/signup`, `/api/*` üzerinde **auth brute-force** için kullan (örn. 60 sn'de 20 istek/IP → challenge/block). Leak-credential kontrolü zaten şifre sızıntısını yakalıyor; brute-force koruması daha yüksek getirili. **Değişiklik yıkıcı → sahibin onayı gerekli.**
+1. ~~Rate limit kuralını yeniden tahsis et (F-26).~~ **tur 23'te geçersiz — premise yanlıştı.** CF auth POST'larını zaten limitliyor (~10 istek/~10 sn, `error code: 1015`); kural "leak-check'e harcanmış, brute-force korumasız" değil. Geriye kalan **doğrulama** işi (acil değil): (a) eşik yeterli mi (10/~10 sn makul ama gevşek; sıkılaştırma istenirse `Zone → WAF → Rate limiting` panelinden), (b) limit **yalnız POST** olduğundan GET tabanlı hesap-numaralandırma açık kalır (brute-force değil, keşif). **Yıkıcı değişiklik yok; mevcut koruma yeterli.**
 2. **Origin doğrudan erişimi kapat (F-08).** Vercel Deployment Protection / alias kısıtı. CF dışı → Vercel/INFRA onayı.
 3. **DMARC'ı güçlendir (F-06).** `p=none` → önce `p=quarantine`, raporları izledikten sonra `p=reject`. Mail akışı CF Email Routing + Resend üzerinden; geçiş planı gerekir.
 4. **HSTS preload (F-12).** Durum `pending`; preload listesine girene kadar bekle, DNS/TLS'i değiştirme.
@@ -970,7 +970,7 @@ kontrol et. Regresyon testine `%252e%252e` ve `%25252e` varyantlarını ekle
 | T-17 | HTTP/3 | `alt-svc: h3=":443"; ma=86400` + AAAA | var | ✔ |
 | T-18 | Yönlendirme | `http apex`→301, `http www`→301, `https www`→308 apex (yol+sorgu korunur) | tek sıçrama, sızıntı yok | ✔ |
 | T-19 | Bot | UA: curl/python/Googlebot/HeadlessChrome/Chrome → 200; `sqlmap` → **403**; `cf-mitigated` yok | ✔ |
-| T-20 | Rate limit | 30× `/`, 20× `/login`, 15× optimizer bypass | hepsi 200 — throttle yok (F-26) | ℹ️ |
+| T-20 | Rate limit | 30× `/`, 20× `/login` (**GET**) | GET'te 200 — **ama** tur 23'te CF'nin auth **POST**'larını ~10 istekte 429'ladığı bulundu (F-26); bu satırın ölçümü yalnız GET'i kapsıyordu | ⚠️→ℹ️ (tur 23) |
 | T-21 | E-posta | SPF lookup bütçesi: apex `include:_spf.mx.cloudflare.net` = **1**, `send` `include:amazonses.com` = **1** (limit 10) | ✔ |
 | T-22 | E-posta | `rsend` → CNAME `send.forge.rmta.net`; hedefte MX+TXT var ama **A/AAAA yok** (adres kaydı yalnız MX hedefi `feedback.forge.rmta.net`'te, `3.231.87.173`) — bkz. tur 20, D-06 | ⚠️ hedef adreslenemiyor |
 | T-23 | DNS | CAA (comodo/digicert/letsencrypt/pki.goog/ssl.com), DNSSEC `AD=true`, `security.txt` RFC 9116 | ✔ |
@@ -1442,13 +1442,17 @@ Canlı build: `/api/build-info` → **`d154e44`**.
 
 ### Rate-limit gözlemi (brief 6)
 
-- `/login`'e 20 hızlı istek → **20/20 200**; CF katmanında görünür bir rate-limit
-  **yok** (tek `http_ratelimit` kuralı "leaked credential check"e harcanmış, brief
-  doğrulandı).
+- `/login`'e 20 hızlı istek (**GET**) → **20/20 200**; CF katmanında görünür bir
+  rate-limit **yok** ~~(tek `http_ratelimit` kuralı "leaked credential check"e
+  harcanmış, brief doğrulandı)~~ — **bu satır geçersiz, aşağıdaki D-12'ye bak.**
+- **tur 23 düzeltmesi (D-12):** bu gözlem **yalnız GET** ile yapılmıştı ve
+  yanıltıcıydı. `POST /login` hızlı serisi ~10 istekte **429** (`error code: 1015`,
+  `retry-after: 10`) döner; kova `/login`/`/register`/`/forgot-password`/
+  `/reset-password` arasında paylaşımlı; `GET /login` ve `POST /` limite girmez.
+  CF'siz alias aynı seride 200 → limit CF'nin. Yani auth brute-force edge'de
+  **korumalı**; F-26 ve "onay bekleyen" 1. madde buna göre düzeltildi.
 - `/api/email/unsubscribe` POST → **405** (anon; yöntem yok) → CF rate-limit'i
   tetikleyecek bir anon yüzey yok.
-- **Öneri (değişmeden):** tek kural auth brute-force'a tahsis edilsin mi? (sahibin
-  onayı; `/login` 20/20 200 bunun açık olduğunu gösteriyor.)
 
 ### Micro-denetim (sahip olunan dosyalar)
 
@@ -1545,7 +1549,7 @@ Canlı build: `/api/build-info` → **`7b0f7170`**.
 | W-18-18 | TLS | SSL Labs 4/4 `A+`, yalnız TLS 1.2+1.3; sertifika `*.isbulkktc.com` (LE `YE2`, 2026-09-19→12-18) | ✔ |
 | W-18-19 | HSTS | edge `max-age=31536000; includeSubDomains; preload`; origin `63072000` → **H-01 teyit** | ⚠️ H-01 |
 | W-18-20 | HSTS preload | hstspreload API → `pending` | ℹ️ |
-| W-18-21 | Rate limit | `/login` 30× → 30/30 200; `/api/build-info` 30× → 200 | ⚠️ yok |
+| W-18-21 | Rate limit | `/login` 30× **GET** → 30/30 200; `/api/build-info` 30× → 200. **tur 23 düzeltmesi:** yalnız GET ölçülmüştü; `POST /login` serisi ~10'da 429 (`error code: 1015`) | ⚠️→✔ (CF POST'u limitliyor; F-26/D-12) |
 | W-18-22 | `cdn-cgi` yüzeyi | `/cdn-cgi/trace` 200, `/cdn-cgi/robots/x` 404 | ℹ️ |
 | W-18-23 | `X-Robots-Tag` | site genelinde yok | ✔ |
 | W-18-24 | `security.txt` | `Contact`/`Expires 2027-09-02`/`Canonical`/`Preferred-Languages` tam | ✔ |
@@ -1970,6 +1974,11 @@ normalizasyon/tarayıcı yolu), F-08 (alias CF'i atlıyor) **açık** — deği�
 **Kapandı:** P-01 (#403). **Yeni:** SR-01 (CF Speed Brain `speculation-rules`,
 bilgi). Canlı `build-info` `3f5a654` = `main` HEAD → **prod drift YOK**.
 
+> **tur 23 güncellemesi:** canlı `build-info` `b221f17` = `main` HEAD **değil**
+> (3 commit geride; #319 deploy donması). F-26 ("rate limit yok") **çürütüldü**
+> — CF auth POST'larını limitliyor (D-12). Açık küme: H-01, H-02, N-01, R-01,
+> G-01, W-01/V-20, F-08, SR-01 (F-26 artık **kapalı**).
+
 ### Bakılmayan
 
 - **CF zone API** (`CF_API_TOKEN` yok): WAF ruleset / Cache Rules / Browser Cache
@@ -1982,3 +1991,85 @@ bilgi). Canlı `build-info` `3f5a654` = `main` HEAD → **prod drift YOK**.
   brief'teki "her yolda `cf-mitigated: challenge`" gözlemi bu egress'te
   **yeniden üretilemedi** (drift veya IP-sınıfı farkı olabilir; panelden teyit
   gerekir).
+
+---
+
+## Edge mikro-denetim tur 23 — rate-limit iddiasının çürütülmesi (2026-11-06)
+
+Salt-okuma. Canlı `build-info` `b221f17` = `main` HEAD **değil** (3 commit geride;
+#319 deploy donması — lane dışı, LANE-INFRA).
+
+**Amaç.** Brief 6. maddesi (tek `http_ratelimit` kuralının nereye harcanması
+gerektiği) hâlâ "onay bekleyen" tek somut yapılandırma sorusuydu; önceki turlar
+bu kararı **"CF'de throttle yok"** ölçümüne dayandırmıştı. Bu tur o ölçümü
+**yöntem düzeyinde** yeniden ele aldı.
+
+### D-12 (doğruluk, orta) — "rate limit yok" iddiası yalnız GET ile ölçülmüştü
+
+**Gözlenen.** `POST /login` hızlı serisi ~10 istekte **429** döner:
+
+```
+HTTP/2 429
+content-type: text/plain; charset=UTF-8
+content-length: 17
+retry-after: 10
+server: cloudflare
+cf-ray: a564ef45fcbcc88f-ORD
+# gövde: error code: 1015
+```
+
+Kontroller:
+
+| Ölçüm | Sonuç |
+|---|---|
+| `POST /login` hızlı seri (taze pencere) | ~**10** istek sonra 429 (10,13,7,9,6 → ~10) |
+| `POST /` (ana sayfa) 12× | 12/12 **200** |
+| `GET /login` 12× | 12/12 **200** |
+| `POST /nonexistent-xyz` 10× | 10/10 **404** (limite girmez) |
+| `POST /signup` 10× | 10/10 **404** (rota yok) |
+| `POST /register`,`/forgot-password`,`/reset-password`,`/tr/login` | hepsi ~6'da 429 |
+| `/login` tüket → `POST /register` | **429** (kova paylaşımlı) |
+| `/login` tüket → `GET /login` | **200** (GET etkilenmez) |
+| `POST /login` 12× **alias** (`isbulkktc-amber.vercel.app`, CF'siz) | 12/12 **200** |
+| 429 sonrası 12 sn bekle → `POST /login` | **200** (pencere sıfırlanır) |
+
+**Beklenen.** Önceki doküman "hiç throttle yok" diyordu (F-26, T-20, W-18-21,
+"Rate-limit gözlemi", "onay bekleyen" 1).
+
+**Etki.** (1) **Güvenlik açısından iyi haber:** auth brute-force edge'de zaten
+limitli; "tek kuralı auth'a tahsis et" önerisinin **premise'i yanlıştı** ve
+öneri gereksizdi. (2) **Doküman doğruluğu:** dört ayrı yerde yanlış iddia
+düzeltildi. (3) **Kalan (düşük):** limit yalnız **POST**'ta; GET tabanlı
+hesap-numaralandırma açık (brute-force değil, keşif). Eşik ~10/~10 sn — makul
+ama istenirse panelden sıkılaştırılabilir.
+
+**Kanıt yöntemi notu (D-10'un devamı).** Önceki ölçümler `GET`/`curl -I` ile
+yapıldığı için CF'nin **metod-duyarlı** limitini göremedi. Bir throttle iddiasını
+**her zaman ilgili metodun kendisiyle** (burada `POST`) ve mümkünse CF'siz
+alias kontrolüyle ölç: iki yüzeyin farkı limitin sahibini (CF mi origin mi)
+kesinleştirir.
+
+### Bu turda yeniden doğrulananlar (temiz)
+
+- **F-08:** alias `server: Vercel`, `x-vercel-id` var, `cf-ray` yok; `POST /login`
+  12/12 200 → CF'yi atlıyor (tur 23 teyidi).
+- **H-01 (açık):** edge HSTS `max-age=31536000` vs origin `63072000`.
+- **G-01 (açık):** ana sayfada `email-protection` **1** span (görünür `mailto:`);
+  JSON-LD/RSC'de düz e-posta değişmedi.
+- **SR-01 (açık):** `speculation-rules: "/cdn-cgi/speculation"` tüm HTML'de.
+- **R-01 (açık):** `isbulkktc.com./` → **404**.
+- **N-01 (açık):** `/_next/static/<yok>.js` → 404 + `max-age=31536000` + `MISS`.
+- **W-01/V-20 (açık):** `/config.php`,`/actuator/env`,`/Dockerfile` → **404**
+  (CF 403 değil).
+- **WAF pozitif:** `/.env`,`/.git/config`,`/wp-login.php` → **403**.
+- **Cache:** `robots.txt` `max-age=2628000` `REVALIDATED` (`vary` yok);
+  `sitemap.xml` `max-age=3600` `REVALIDATED` + `vary: accept-encoding` (D-08
+  ayrımı sürüyor).
+- **`cf-mitigated`:** ana sayfada **yok** (bu egress'ten challenge üretilemedi).
+
+### Drift (tur 23)
+
+**Kapandı:** F-26 (rate limit var — 429/`error 1015`). **Açık:** H-01, H-02,
+N-01, R-01, G-01, W-01/V-20, F-08, SR-01. Canlı build `main`'in 3 commit
+gerisinde (#319). Detay: F-26 satırı, "Onay bekleyen" 1, T-20, W-18-21,
+"Rate-limit gözlemi".

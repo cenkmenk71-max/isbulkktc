@@ -519,3 +519,45 @@ Salt-okuma. Canlı build `3f5a654` = `main` HEAD (drift yok).
 
 **Açık kalan (tur 22 sonrası):** H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08,
 **SR-01 (yeni)**. Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 22".
+
+---
+
+## Tur 23 (2026-11-06) — rate-limit iddiasının çürütülmesi (D-12)
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF değiştirilmedi)
+Sahibin yapması gerekenler: H-01 (CF HSTS max-age) · H-02/N-01 (Browser Cache TTL
+            = Respect Existing Headers) · G-01 (Email Obfuscation OFF) · R-01
+            (Vercel host eşleştirme) · W-01 + V-20 (WAF ifadesini genişlet) ·
+            F-08 (Vercel Deployment Protection) · HSTS preload · MTA-STS/TLS-RPT
+            (#170) · DKIM 2048 (#227). **F-26 kuralı kalktı — aksiyon gerekmez.**
+Sonraki lane için notlar: bir throttle/eşik iddiasını **her zaman ilgili metodun
+            kendisiyle** ölç (GET'e bakıp "limit yok" deme); CF'siz alias
+            kontrolü limitin sahibini (CF mi origin mi) kesinleştirir.
+```
+
+**Bu tur ne buldu.** Brief 6. maddesinin dayanağı olan "CF'de rate limit yok"
+ölçümü **çürütüldü**. Önceki turlar `GET /login` (ve `curl -I`) ile ölçmüştü; CF
+limiti **metod-duyarlı**:
+
+- **D-12 (doğruluk, orta):** `POST /login` hızlı serisi ~**10** istekte **429**
+  (`error code: 1015`, `retry-after: 10`, `server: cloudflare`). Kova
+  `/login`+`/register`+`/forgot-password`+`/reset-password` arasında **paylaşımlı**;
+  `GET /login` ve `POST /` limite **girmez**; CF'siz alias aynı seride **12/12 200**
+  → limit **CF'nin**. Yani **auth brute-force edge'de korumalı** ve "tek
+  `http_ratelimit` kuralını auth'a tahsis et" önerisinin premise'i **yanlıştı**.
+- **Kalan (düşük):** limit yalnız POST'ta; GET tabanlı hesap-numaralandırma açık
+  (brute-force değil, keşif). Eşik ~10/~10 sn — makul.
+
+Doküman doğruluğu: **F-26**, "Onay bekleyen" 1. madde, **T-20**, **W-18-21** ve
+tur 19 "Rate-limit gözlemi" düzeltildi.
+
+**Temiz doğrulananlar:** WAF pozitif 403 / gap 404; cache (`robots.txt` vary yok,
+`sitemap.xml` vary var); N-01; R-01; G-01; SR-01; F-08; `cf-mitigated` yok.
+
+**Açık kalan:** H-01, H-02, N-01, R-01, G-01, W-01/V-20, F-08, SR-01.
+**Kapandı:** F-26. Canlı build `main`'in 3 commit gerisinde (#319). Detay:
+`docs/cloudflare.md` → "Edge mikro-denetim tur 23".
