@@ -30,6 +30,13 @@ import { mergeResumeDraft } from "../../src/features/candidates/resume-profile-d
  * hold are asserted directly, and the markers left are re-measured against the
  * current build, not the build they were written on.
  *
+ * Re-reconciled after LANE-URUN's #331 (four more defects: address→location, the
+ * tabular `|` date, "Devam ediyor", and a future-date rule). The four markers
+ * that #331 fixed are now contracts. The single marker left is re-measured and
+ * is a *different* case from the fixed one: a *labelled* personal line
+ * ("Adres: Lefkoşa - 2019") is now filtered, but an *unlabelled* birth line
+ * ("1995-2000 doğumlu") is still read as the headline.
+ *
  * Owner of the source: LANE-URUN. Owner of this test: LANE-QA. Every "observed"
  * value below was produced by running the parser, not read off the source.
  */
@@ -188,56 +195,99 @@ test("a university named 'Doğu Akdeniz' is not filtered as a birth line", () =>
 });
 
 // ---------------------------------------------------------------------------
-// Open defects from #208 (source: LANE-URUN). Each fails today; when the parser
-// is fixed the assertion starts holding and `node:test` reports the todo. Each
-// was re-measured against the current build after #217, so none of them is the
-// already-fixed bug.
+// Contracts shipped by LANE-URUN's #331. Each was a `todo` marker until #331
+// landed; a regression in any of them must go red. Measured on main after the
+// merge, not read off the source.
+// ---------------------------------------------------------------------------
+
+test("a labelled address line is dropped, not read as a location", () => {
+  // #331 moved "adres"/"address"/"ikametgah" into `ignoredSectionLabels`, so the
+  // whole line is consumed and neither the year nor "Lefkoşa - 2019" survives.
+  const draft = parseResumeText(["AHMET YILMAZ", "Adres: Lefkoşa - 2019"].join("\n"));
+  assert.deepEqual(draft, {});
+});
+
+test("a future date range is rejected", () => {
+  // #331 added the future-date rule on top of #217's forwards-and-≤60-years one.
+  assert.deepEqual(experienceOf("Acme - Dev - 2030 - 2035"), []);
+});
+
+test("an ongoing marker keeps its full phrase and no stray location", () => {
+  // #331 ordered the `ongoingPattern` alternatives longest-first, so "devam
+  // ediyor" no longer stops at "devam" and leaves "ediyor" as the location.
+  const [entry] = experienceOf("Acme - Dev - 2019 - Devam ediyor");
+  assert.equal(entry?.endDate, "Devam ediyor");
+  assert.equal(entry?.location, "");
+});
+
+test("a tabular pipe layout keeps the trailing date on the entry", () => {
+  // #331 made `|` a date-range separator, so the fourth field is the end year.
+  const [entry] = experienceOf("Acme Corp | Senior Engineer | 2019 | 2023");
+  assert.equal(entry?.organization, "Acme Corp");
+  assert.equal(entry?.role, "Senior Engineer");
+  assert.equal(entry?.startDate, "2019");
+  assert.equal(entry?.endDate, "2023");
+  assert.equal(entry?.location, "");
+});
+
+// ---------------------------------------------------------------------------
+// The date shapes the round-trip test above does not already pin — the ongoing
+// markers and the year-only hyphen form — plus the location dimension. The
+// issue asks for the date shapes to be pinned (#208 §B5); each was measured.
+// ---------------------------------------------------------------------------
+
+test("ongoing markers and year-only hyphens keep both dates and no stray location", () => {
+  const shapes: Array<[string, string, string]> = [
+    ["2019 - Present", "2019", "Present"],
+    ["2019-2022", "2019", "2022"],
+    ["2019 - Devam ediyor", "2019", "Devam ediyor"],
+  ];
+
+  for (const [span, startDate, endDate] of shapes) {
+    const [entry] = experienceOf(`Acme - Dev - ${span}`);
+    assert.deepEqual(
+      [entry?.startDate, entry?.endDate, entry?.location],
+      [startDate, endDate, ""],
+      `${span} must keep both dates and no location`,
+    );
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Personal data must reach no profile field — the negative half of #208 §B6,
+// asserted field by field rather than only as "no date appeared".
+// ---------------------------------------------------------------------------
+
+test("personal lines reach no profile field", () => {
+  const personal = [
+    ["phone", "Telefon: 0533 123 45 67"],
+    ["mobile", "Cep: 0533-1234567"],
+    ["gsm", "GSM: 05331112233"],
+    ["id", "TC: 12345678901"],
+    ["address", "Adres: Lefkoşa - 2019"],
+    ["birth", "Doğum Tarihi: 03/1995"],
+  ] as const;
+
+  for (const [label, line] of personal) {
+    const draft = parseResumeText(["AHMET YILMAZ", line].join("\n"));
+    assert.deepEqual(draft, {}, `${label} line must not become any profile field`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Open defect from #208 (source: LANE-URUN). This is NOT the address case #331
+// fixed — that line is labelled ("Adres: …") and is now consumed as an ignored
+// heading. This one is unlabelled: a bare birth line has no heading for the
+// ignored-label path to catch, so it falls through to headline inference.
+// Measured on main: {"headline":"1995-2000 doğumlu"}.
 // ---------------------------------------------------------------------------
 
 test(
-  "an address line does not become the profile location",
-  { todo: "the personal section is still inferred as headline/location (#208, LANE-URUN)" },
+  "an unlabelled birth line does not become the headline",
+  { todo: "an unlabelled personal-data line still infers as headline (#208, LANE-URUN)" },
   () => {
-    // Measured: headline "1995-2000 doğumlu", location "Lefkoşa - 2019"; the
-    // merge then keeps "Lefkoşa". #217 filtered the *date* on the line but the
-    // line itself is still read as a location.
-    const draft = parseResumeText(["AHMET YILMAZ", "Adres: Lefkoşa - 2019"].join("\n"));
-    assert.equal(draft.headline, "AHMET YILMAZ");
-    assert.equal(draft.location, "");
-  },
-);
-
-test(
-  "a future date is rejected",
-  { todo: "resume-parser.ts has no future-date check (#208, LANE-URUN)" },
-  () => {
-    // Measured: 2030 - 2035 is kept. #217 added the span rule but not a
-    // future-date rule, so a date that has not happened yet still parses.
-    assert.deepEqual(experienceOf("Acme - Dev - 2030 - 2035"), []);
-  },
-);
-
-test(
-  "an ongoing marker keeps its full phrase",
-  { todo: "dateToken matches the 'devam' prefix and leaves 'ediyor' as a location (#208, LANE-URUN)" },
-  () => {
-    const [entry] = experienceOf("Acme - Dev - 2019 - Devam ediyor");
-    // Measured: endDate "Devam", location "ediyor".
-    assert.equal(entry?.endDate, "Devam ediyor");
-    assert.equal(entry?.location, "");
-  },
-);
-
-test(
-  "a tabular pipe layout keeps the trailing date on the entry",
-  { todo: "the trailing pipe field is dropped into location, so the date is lost (#208, LANE-URUN)" },
-  () => {
-    const [entry] = experienceOf("Acme Corp | Senior Engineer | 2019 | 2023");
-    // Measured: location "| 2023", endDate "".
-    assert.equal(entry?.organization, "Acme Corp");
-    assert.equal(entry?.role, "Senior Engineer");
-    assert.equal(entry?.startDate, "2019");
-    assert.equal(entry?.endDate, "2023");
-    assert.equal(entry?.location, "");
+    const draft = parseResumeText(["AHMET YILMAZ", "1995-2000 doğumlu"].join("\n"));
+    assert.equal(draft.headline, undefined);
+    assert.equal(draft.location, undefined);
   },
 );
