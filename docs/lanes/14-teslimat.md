@@ -60,3 +60,49 @@ Diğer lane'ler **değişiklik üretir**. Kimse **teslim** etmezse:
 - Çakışan PR ya rebase edilir ya devredilir — sessiz kalmaz
 - Deploy kotası taşmaz
 - Her merge canlıda doğrulanır
+
+---
+
+## Tur 1 — 2026-11-06 (lane/teslimat)
+
+**Kapsam.** Sahip olunan 5 dosya denetlendi: `scripts/prune-vercel-deployments.mjs`,
+`scripts/approve-pending-runs.mjs`, `scripts/verify-production-deployment.mjs`,
+`docs/lanes/14-teslimat.md`, `docs/deploy-log.md` (yeni). Bulgular PR gövdesinde
+tablo hâlinde; burada yalnızca tura özgü notlar.
+
+**En önemli bulgu — teslim döngüsü karanlık.** `isbulkktc CI` ve
+`Verify production deployment` `on: push: branches: [main]` ile tetiklenir, ama
+`event=push` için en yeni run **2026-11-05T20:29Z** (`c8fe7d4e`, *insan* merge).
+O saatten sonraki bütün merge'ler `app/github-actions` imzalı. Sebep
+`agent-pr-automation.yml`: PR'ı `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` ile
+`gh pr merge --squash --auto` çalıştırarak merge ediyor; GitHub'ın **varsayılan
+Actions token'ıyla yapılan push, `push` workflow'unu tetiklemez.** Sonuç: hiçbir
+otomatik merge sonrası deploy doğrulaması koşmadı. `main` ucundaki tek check'ler
+*zamanlanmış* workflow'lardan (`Health check`, `Send pending push notifications`).
+Çözüm INFRA'nın (PAT/App token ile merge, ve/veya verifier'a `schedule:` yedeği);
+`agent:handoff` ile açıldı.
+
+**Kendi dosyamda düzeltilen iki gerçek hata (`verify-production-deployment.mjs`).**
+
+1. **Boş env → `NaN` deadline → sonsuz döngü.** `DEPLOY_TIMEOUT_SEC=""` iken
+   `Number.parseInt("")` = `NaN`; `deadline` `NaN` olur ve `Date.now() >= NaN`
+   asla true olmaz. Ölçüm: 10 sn'de **8034** "waiting" satırı (beklenen: 0–1).
+   Workflow `vars.X || '900'` ile korunuyor ama script kendini savunmuyor.
+   `parsePositiveInt()` eklendi.
+2. **Doğrudan-çalıştırma koruması boşlukta/`#`'te sessiz no-op.** Eski koruma
+   `import.meta.url === \`file://${process.argv[1]}\`` idi; yol boşluk ya da `#`
+   içeriyorsa eşleşmez ve script **0 çıkış koduyla hiçbir şey doğrulamadan**
+   biter. Ölçüm: `/tmp/probe lane#dir/` içinde çalıştırıldı → çıktı yok, exit 0.
+   `pathToFileURL(...).href` ile düzeltildi; regresyon testi eklendi
+   (`scripts/verify-production-deployment.test.mjs`, test kopyayı boşluk+`#`'li
+   dizine koyup gerçekten çalıştığını doğrular).
+
+**Kapsam dışı bırakılanlar (sahibi başka lane).** `scripts/enable-oauth-provider.mjs:102`,
+`scripts/set-turnstile-secret.mjs:177`, `scripts/spawn-lanes.mjs:114` aynı bozuk
+korumayı taşıyor; `scripts/lane-autopilot.mjs:563` ve `:581` `approve-pending-runs.mjs`'i
+**iki kez** çağırıyor (birebir aynı blok). Hepsi LANE-INFRA'nın (`scripts/**`);
+dokunulmadı, `agent:handoff` ile bildirildi.
+
+**Ölçüm.** Kapılar: `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅,
+`test:unit` **597 test / 0 fail / 4 todo**. Canlı: `main` = `f7a10fd6`, canlı =
+`f7a10fd6` (senkron).

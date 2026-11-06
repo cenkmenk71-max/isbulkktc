@@ -33,6 +33,7 @@
 // GITHUB_STEP_SUMMARY is set.
 
 import { appendFile } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 
 const API = "https://api.vercel.com";
 
@@ -144,6 +145,19 @@ export function decideVerification({ vercel, http }) {
     verified: false,
     reason: `vercel: ${vercel.reason}; http: ${http.reason}`,
   };
+}
+
+/**
+ * Parse a strictly positive integer from an environment variable, falling back
+ * to the default when the value is absent, blank, non-numeric or non-positive.
+ * A blank string is the trap: `Number.parseInt("")` is `NaN`, and a `NaN`
+ * timeout makes the poll deadline `NaN`, so `Date.now() >= deadline` is never
+ * true and the loop spins forever instead of giving up. Blank is common — an
+ * unset repository variable interpolates to `""` in the workflow `env:` block.
+ */
+export function parsePositiveInt(value, fallback) {
+  const parsed = Number.parseInt(value ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function sleep(seconds) {
@@ -283,8 +297,8 @@ async function main() {
     process.env.PRODUCTION_URL ??
     "https://isbulkktc.com"
   ).replace(/\/$/, "");
-  const timeoutSec = Number.parseInt(process.env.DEPLOY_TIMEOUT_SEC ?? "900", 10);
-  const pollSec = Number.parseInt(process.env.DEPLOY_POLL_SEC ?? "20", 10);
+  const timeoutSec = parsePositiveInt(process.env.DEPLOY_TIMEOUT_SEC, 900);
+  const pollSec = parsePositiveInt(process.env.DEPLOY_POLL_SEC, 20);
   const token = process.env.VERCEL_TOKEN;
 
   if (!normalizeCommit(expectedCommit)) {
@@ -401,7 +415,10 @@ async function main() {
 }
 
 // Only run when invoked directly, so the pure helpers stay importable in tests.
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+// Compare via `pathToFileURL`, not a hand-built `file://` string: on a path with
+// a space or `#` the naive form never equals `import.meta.url`, so the guard
+// silently skipped `main()` and the script exited 0 having verified nothing.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
     console.error(error.message);
     process.exitCode = 1;
