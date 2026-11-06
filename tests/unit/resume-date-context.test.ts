@@ -31,11 +31,10 @@ import { mergeResumeDraft } from "../../src/features/candidates/resume-profile-d
  * current build, not the build they were written on.
  *
  * Re-reconciled after LANE-URUN's #331 (four more defects: address→location, the
- * tabular `|` date, "Devam ediyor", and a future-date rule). The four markers
- * that #331 fixed are now contracts. The single marker left is re-measured and
- * is a *different* case from the fixed one: a *labelled* personal line
- * ("Adres: Lefkoşa - 2019") is now filtered, but an *unlabelled* birth line
- * ("1995-2000 doğumlu") is still read as the headline.
+ * tabular `|` date, "Devam ediyor", and a future-date rule) and #343 (the
+ * residue of #339: an *unlabelled* personal line, plus a district list read as a
+ * headline). Every marker this file once carried has now become a contract;
+ * there is no open `todo` left. The file exists to keep them that way.
  *
  * Owner of the source: LANE-URUN. Owner of this test: LANE-QA. Every "observed"
  * value below was produced by running the parser, not read off the source.
@@ -275,19 +274,26 @@ test("personal lines reach no profile field", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Open defect from #208 (source: LANE-URUN). This is NOT the address case #331
-// fixed — that line is labelled ("Adres: …") and is now consumed as an ignored
-// heading. This one is unlabelled: a bare birth line has no heading for the
-// ignored-label path to catch, so it falls through to headline inference.
-// Measured on main: {"headline":"1995-2000 doğumlu"}.
+// Contracts shipped by LANE-URUN's #343 (the residue of #339). Both were `todo`
+// markers / open defects until it landed; a regression in either must go red.
 // ---------------------------------------------------------------------------
 
-test(
-  "an unlabelled birth line does not become the headline",
-  { todo: "an unlabelled personal-data line still infers as headline (#208, LANE-URUN)" },
-  () => {
-    const draft = parseResumeText(["AHMET YILMAZ", "1995-2000 doğumlu"].join("\n"));
-    assert.equal(draft.headline, undefined);
-    assert.equal(draft.location, undefined);
-  },
-);
+test("an unlabelled birth line does not become the headline", () => {
+  // #343 dropped the label requirement: `isPersonalDataLine` now also guards the
+  // `index === bodyStart` headline branch, so a bare birth line is skipped.
+  const draft = parseResumeText(["AHMET YILMAZ", "1995-2000 doğumlu"].join("\n"));
+  assert.deepEqual(draft, {});
+});
+
+test("a birth line after the real headline is skipped, not appended", () => {
+  const draft = parseResumeText(["AHMET YILMAZ", "Yazılım Geliştirici", "1995 doğumlu"].join("\n"));
+  assert.equal(draft.headline, "Yazılım Geliştirici");
+});
+
+test("a comma-separated district list is a location, not a headline", () => {
+  // #343's `looksLikeDistrictList`: a multi-district list resolves to `null` as
+  // a whole through `resolveNorthernCyprusDistrict`, so it needs its own rule.
+  const draft = parseResumeText(["AHMET YILMAZ", "Girne, Lefkoşa, Mağusa"].join("\n"));
+  assert.equal(draft.location, "Girne, Lefkoşa, Mağusa");
+  assert.equal(draft.headline, undefined);
+});
