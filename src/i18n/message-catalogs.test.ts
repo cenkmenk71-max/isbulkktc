@@ -247,6 +247,45 @@ test("landing page titles are authored per locale, not copied from English", () 
   }
 });
 
+// Persian renders digits in the Persian numbering system (۰-۹), but ICU only
+// applies it to typed placeholders: a bare `{count}` interpolates the raw Latin
+// string. `fa` shipped "906 ورودی شرکت" beside "۹۰۶ شرکت پیدا شد" from the plural
+// form — two numeral systems on one page. Every numeric placeholder must be
+// typed `{x, number}` (or sit inside a `plural`), except the deferred
+// `HomePage.sector*` templates: those are rendered with a literal "{count}"
+// string, so typing them would format a non-number (see the LANE-TASARIM handoff).
+const NUMERIC_PLACEHOLDERS = new Set([
+  "count",
+  "total",
+  "current",
+  "completed",
+  "percent",
+  "value",
+  "minutes",
+  "pages",
+  "page",
+  "number",
+  "year",
+]);
+const FA_DEFERRED_PLACEHOLDERS = new Set([
+  "HomePage.sectorTotalCount",
+  "HomePage.sectorResultCountSingular",
+  "HomePage.sectorResultCountPlural",
+]);
+
+test("Persian numbers use the Persian numeral system, not bare Latin placeholders", () => {
+  const messages = flatten(readMessages("fa"));
+  for (const [key, message] of Object.entries(messages)) {
+    if (FA_DEFERRED_PLACEHOLDERS.has(key)) continue;
+    for (const match of message.matchAll(/\{([a-zA-Z][\w]*)\}/g)) {
+      assert.ok(
+        !NUMERIC_PLACEHOLDERS.has(match[1]),
+        `fa.${key} interpolates {${match[1]}} without a number format; type it as {${match[1]}, number}`,
+      );
+    }
+  }
+});
+
 // The four catalogs that render the six district labels must agree. The company
 // directory, the candidate profile and the employer dashboard previously carried
 // their own glossed variants ("Kyrenia (Girne)", "Никосия" beside "Лефкоша"), so

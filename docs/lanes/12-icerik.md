@@ -222,3 +222,56 @@ Her yeni ratchet, hedeflediği regresyon enjekte edilerek kırmızı→yeşil ka
 - **`src/content/ai-visibility/llms-brief.ts:247-248`** iç sözlük ("kamuya açık
   **kaynak** işveren listelerinden derlenir; **provenans kaydı** tutulur") —
   GEO'nun üreticisi, PR #337 o dizinde açık → LANE-GEO'ya devir.
+
+## Tur 4 — mikro-denetim: Farsça rakam sistemi (2026-11-05)
+
+**Issue:** yok (#327 zaten düzeltilmiş — aşağıda doğrulandı). Brief'ten en yüksek
+etkili hedef seçildi: **`fa` karışık rakam sistemi**. Sahip olunan yollar
+`git ls-files 'src/messages/*' 'src/i18n/*' 'src/content/*'` → **6 + 5 + 26 = 37
+dosya**; hepsine bakıldı.
+
+### Bulgu (gerçek, canlıda doğrulandı)
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/messages/fa.json` (23 anahtar) | doğruluk/yerelleştirme | Aynı sayfada iki rakam sistemi: `۹۰۶ شرکت پیدا شد` (plural → Farsça) ama `906 ورودی شرکت`, `21 شرکت`, `1 آگهی باز`, `2 موقعیت`, `صفحه 1 از 38` (çıplak `{count}` → Latin) | Tüm sayılar Farsça rakamla | ICU `{x, number}` yalnız *tipli* yer tutucuya uygulanır; çıplak `{count}` ham Latin dizesini geçirir. Canlı `/fa/companies` + `/fa` çıktısında birebir görüldü | düzeltildi: 23 anahtar `{x, number}` (yıl: `::group-off`) |
+| 2 | `src/i18n/message-catalogs.test.ts` | ölü kod / eksik ratchet | Farsça rakam kuralı için guard yok | Kural testle sabitlenmeli | Regresyon sessizce geri gelebilir | düzeltildi: yeni test (kırmızı→yeşil kanıtlı) |
+| 3 | `src/components/home/{sector-explorer,home-experience}.tsx:79,100,354-361` | mantık/tutarlılık | Bileşen çeviriyi `{ count: "{count}" }` dizesiyle çağırıp sonra `.replace("{count}", …)` yapıyor | Sayıyı gerçek `number` geçir, biçimlendirmeyi ICU'ya bırak | `HomePage.sector*` anahtarları bu yüzden tiplenemiyor (tiplenirse `ناعدد` render eder — kanıtlandı); sayfada Latin rakam kalır | **devredildi** → LANE-TASARIM (issue) |
+
+### Neden 23 anahtar, `HomePage.sector*` hariç
+
+`Footer.rights` yılı `::group-off` ile tiplendi; `{year, number}` Farsça'da
+`۲٬۰۲۶` (grup ayraçlı) üretir, telif satırı için yanlış. Diğer 22 anahtar
+`{x, number}` ile Farsça rakam üretir ve çağrı yerlerinin hepsi gerçek `number`
+geçirir (doğrulandı: `site-footer.tsx:93`, `candidate-profile-form.tsx:783`,
+`company-profile-form.tsx:455`, `feedback-form.tsx:49`, `admin/packages/page.tsx:140`,
+blog/rehber `readMinutes`). `HomePage.sector*` üçlüsü *ertelenmiş* dize yolu
+yüzünden çıplak bırakıldı ve testte açıkça muaf tutuldu.
+
+### Boyut taraması (AUDIT.md)
+
+| Alan | Sonuç |
+|---|---|
+| Anahtar paritesi (6 dil) | 0 eksik/fazla |
+| ICU sözdizimi (6 dil, tüm yapraklar) | 0 hata |
+| Boş değer | 18 (`AdminPackages/AdminContent/JobApplication.messages.idle` × 6 dil) — kasten boş ("mesaj yok") |
+| Baştaki/sondaki boşluk | yalnız `CandidateDashboard.completionOf` (`/ {total}` → ` از {total}`), RTL'de doğru; flag yok |
+| İç sistem sözlüğü | 0 |
+| `en` ile birebir aynı anahtar | tr 7 / ru 7 / el 10 / fa 6 / de 34 — hepsi marka (`İşBul KKTC`, `WhatsApp`, `—`), e-posta, ya da meşru ödünç sözcük (`Website`, `Cookies`, `Email`, `Marketing`, `Famagusta`…) |
+| Ölü anahtar | 0 (kaynak taraması: her yaprak referanslı) |
+| Legal (#141) | katalog tarafı düzeltilmiş; yalnız `contactEmail` aynı (adres) |
+| `fa` içerik dosyaları rakam | Farsça (`guides/fa.ts` → ۱…۶, ۲۰٪) — konvansiyon doğru |
+
+### Doğrulama
+
+- Canlı kanıt: `curl /fa/companies` → `۹۰۶ شرکت پیدا شد` **yanında** `906 ورودی شرکت`.
+- Yerel render: `next-intl` `createTranslator("fa")` ile 23 anahtarın hepsi Farsça rakam üretti.
+- Ratchet kırmızı→yeşil: `CompanyDirectory.totalLabel` çıplak yapılınca test kırmızı, geri alınca yeşil.
+- Kapılar: lint ✅, typecheck ✅, check:frontend-source ✅, test:unit 661/661 ✅.
+
+### Devir
+
+- **LANE-TASARIM (issue):** `sector-explorer.tsx` + `home-experience.tsx`
+  ertelenmiş `{count}` dize yolunu bırakmalı; gerçek sayı geçilmeli. O zaman
+  `HomePage.{sectorTotalCount,sectorResultCountSingular,sectorResultCountPlural}`
+  anahtarları da tiplenebilir (bu lane'in işi) ve test muafiyeti kaldırılır.
