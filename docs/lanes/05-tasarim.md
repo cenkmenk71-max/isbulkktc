@@ -562,3 +562,67 @@ LCP/CLS kısmı tarandı.
 - **#191 e-posta tarafı** hâlâ `lane:urun` + `agent:handoff` (tur 4).
 - Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
   `docs/lanes/05-tasarim.md`. Hepsi bu lane'in kapsamında.
+
+---
+
+## LANE-TASARIM çalışma notları (2026-11-05, tur 8)
+
+Branch: `lane/tasarim`. Taban: `origin/main` @ `f7a10fd`. Kuyrukta `lane:tasarim`
+etiketli tek iş yine **#191** (e-posta tarafı sahiplik çelişkisinde, devirde). Bu
+turda brief'te henüz taranmamış **WCAG 1.4.4 (200% zoom)** ve **1.4.12 (metin
+aralığı)** boyutları ölçüldü.
+
+### Bulgu 8 — Sektör/ilan başlıkları 1.4.12 metin aralığında kırpılıyordu (düzeltildi)
+
+- **Belirti:** Kullanıcı satır aralığını 1.5, harf aralığını 0.12em, kelime
+  aralığını 0.16em yaptığında (WCAG 1.4.12 bookmarklet değerleri) iki başlık
+  taşmak yerine **kırpılıyordu**:
+  - `.company-directory-card h2` → "Akacan International Univercity & Akacan
+    British College" 54px'lik kutuda 81px gerektiriyordu (üçüncü satır gizli).
+  - `.home-job-preview h4` → uzun ilan başlığı 45px'lik kutuda 68px gerektiriyordu.
+- **Kök neden:** `-webkit-line-clamp: 2` (+ `display: -webkit-box; overflow:
+  hidden`). Clamp büyümek yerine sessizce kırpar.
+- **Neden hiçbir guard görmedi:** ne `check:frontend-source` ne axe 1.4.12'yi
+  ölçüyordu; clamp varsayılan aralıkta zararsız (iki satıra sığıyor).
+- **Düzeltme:** iki başlıktan da clamp kaldırıldı; başlık büyüyor. Kart düzeni
+  güvenli: `.company-directory-card` `min-height: 330px` + flex column, aşırı uzun
+  ad bile karta taşmıyor (ölçüldü: 71px başlık, kart 345px sabit).
+- **Kanıt (piksel, `deviceScaleFactor: 2`, sharp diff):** varsayılan aralıkta
+  öncesi↔sonrası **kart ızgarası 0/15152400 px**, **ilan önizleme ızgarası
+  0/527360 px** — yani normal görünüm birebir aynı; değişiklik yalnızca 1.4.12
+  koşulunda görünür.
+- **Kanıt (1.4.12):** düzeltmeden sonra 3 rota × 3 dil (tr/de/fa) taramasında
+  kırpılan clamp'li başlık **0**.
+- **Guard:** `tests/unit/design-tokens.test.ts` — "clamped headings do not
+  truncate (WCAG 1.4.12)": `.company-directory-card h2`, `.home-job-preview h4`
+  ve `.jobs-card h3` için `-webkit-line-clamp` yasak. Negatif test edildi.
+  (Gövde özetleri — `jobs-card-summary`, `company-workspace-preview-description`
+  — kapsam dışı: oradaki clamp kasıtlı kısaltma, 1.4.12 paragrafın tamamını
+  istemiyor.)
+
+### Bulgu 9 (temiz) — 200% zoom taşma yok
+
+- 15 public rota × 3 dil (tr/de/fa), 640px efektif viewport (1280px @ %200):
+  **0 yatay taşma**. WCAG 1.4.4 karşılanıyor.
+
+### Micro-denetim (bu tur)
+
+- **1.4.12 metin aralığı:** 15 rota × 3 dil → tek kırpma sınıfı yukarıdaki iki
+  başlık; düzeltildi.
+- **1.4.4 zoom:** 45 kombinasyon → 0 taşma.
+- Önceki turlardaki kontroller (etkileşimli durum axe taraması, klavye/odak,
+  yinelenen id/boş ad, 3D graceful degradation, RTL okları) `main`'de yeşil.
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅
+- `bun run test:unit` ✅ (605 test, +1 yeni guard)
+- `tests/e2e/company-directory.spec.ts` + `home.spec.ts` ✅
+
+### Sahibin yapması gerekenler
+
+- **#191 e-posta tarafı** hâlâ `lane:urun` + `agent:handoff` (tur 4).
+- Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
+  `docs/lanes/05-tasarim.md`. Hepsi bu lane'in kapsamında.

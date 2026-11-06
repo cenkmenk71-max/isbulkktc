@@ -7004,8 +7004,6 @@ html:dir(rtl) .company-workspace-action-link:hover > svg {
     0 8px 18px rgba(25, 68, 53, 0.04);
 }
 .home-job-preview h4 {
-  display: -webkit-box;
-  overflow: hidden;
   margin: 0;
   color: var(--green-deep);
   font-size: 15px;
@@ -7013,8 +7011,6 @@ html:dir(rtl) .company-workspace-action-link:hover > svg {
   letter-spacing: -0.025em;
   line-height: 1.4;
   overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 .home-job-preview p {
   overflow: hidden;
@@ -9562,8 +9558,6 @@ main :where(p) {
   white-space: nowrap;
 }
 .company-directory-card h2 {
-  display: -webkit-box;
-  overflow: hidden;
   min-height: 52px;
   margin: 19px 0 6px;
   color: var(--ink);
@@ -9572,8 +9566,6 @@ main :where(p) {
   line-height: 1.32;
   letter-spacing: -0.04em;
   text-wrap: pretty;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 .company-directory-secondary-category {
   display: -webkit-box;

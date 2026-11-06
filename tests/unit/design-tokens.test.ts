@@ -520,3 +520,35 @@ test("back-navigation and mobile-menu arrows mirror under RTL", () => {
     );
   }
 });
+
+/**
+ * WCAG 1.4.12 (Text Spacing) requires that a user who increases line-height to
+ * 1.5, letter-spacing to 0.12em and word-spacing to 0.16em loses no content.
+ * `-webkit-line-clamp` silently truncates instead of growing, so a clamped
+ * *heading* fails that criterion the moment a long value wraps onto a third
+ * line. `.company-directory-card h2` did exactly that ("Akacan International
+ * Univercity & Akacan British College" rendered 54px of an 81px box). Body
+ * summaries (`jobs-card-summary`, `company-workspace-preview-description`) are
+ * exempt: a clamp there is the intended truncation and 1.4.12 does not require
+ * a paragraph to be shown in full, only that no *heading* or control label is
+ * cut. Guard the headings specifically.
+ */
+test("clamped headings do not truncate (WCAG 1.4.12)", () => {
+  const headings = [
+    ".company-directory-card h2",
+    ".home-job-preview h4",
+    ".jobs-card h3",
+  ];
+  for (const selector of headings) {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const match = new RegExp(
+      `(?:^|\\n)\\s*${escaped}\\s*\\{([^}]*)\\}`,
+    ).exec(css);
+    if (!match) continue; // the heading may not exist on this revision
+    assert.doesNotMatch(
+      match[1],
+      /-webkit-line-clamp\s*:/,
+      `${selector} clamps its lines, so a long value is silently truncated when the reader raises text spacing (WCAG 1.4.12). Let the heading grow instead.`,
+    );
+  }
+});
