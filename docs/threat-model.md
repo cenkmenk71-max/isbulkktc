@@ -519,3 +519,53 @@ Ortak ders: **bir guard konusunu listelemek yerine taramalı.** Sabit liste bug�
 korur, yarını değil; her yeni dosya/rota/fonksiyon sessizce kapsam dışı kalır.
 Keşif predicate'i de bir guard'dır — bu yüzden her biri için self-test (hem
 pozitif hem near-miss) eklendi.
+
+### #424 — API yanıt yüzeyi: platform davranışı ve kendi kapımız (32. tur)
+
+LANE-CLOUDFLARE tur 25'in canlı ölçümüyle açtığı **#424** devralındı (devir, engel
+değil). Dört bulgu da **yeniden üretildi**; üçü origin'in değil **Vercel
+platformunun** davranışı çıktı. Ayırt edici ölçüm: aynı istek yerel üretim
+standalone sunucusunda (`node server.js`, platform katmanı yok) **hiç** o başlığı
+döndürmüyor. Kapsam notu M-01'in gerçek sahibinin "büyük olasılıkla Vercel"
+olduğunu söylüyordu; ölçüm bunu **kanıta** çevirdi.
+
+| # | Gözlenen (canlı) | Yerel standalone | Kaynak | Sınıf |
+|---|---|---|---|---|
+| M-01 | `/api/build-info` → `access-control-allow-origin: *` | **ACAO yok** | `dynamic = "force-static"` → Vercel statik katmanı | platform |
+| M-02 | `PUT`/`DELETE`/`PATCH /`, `/jobs` → 200 | 200 (framework) | Next.js sayfa yönlendirmesi | framework |
+| M-03 | API hata yolları → `public, max-age=0, must-revalidate` | **CC yok** | Vercel dinamik fn varsayılanı | platform |
+| M-04 | `/_next/static/<yok>` 404 → `max-age=31536000` | `private, no-cache, no-store` | Vercel statik katmanı | platform |
+
+- **M-01 (düşük, kabul).** `access-control-allow-origin: *` depoda **hiç** yok
+  (`grep -r access-control-allow-origin src/ next.config.ts` → 0); aynı başlık
+  `/robots.txt`, `/sitemap.xml`, `/_next/static/*.css`'te de var, HTML sayfalarında
+  ve `force-dynamic` rotalarda **yok** — yani Vercel prerender/statik yanıtlara
+  ekliyor. Gövde `{"commit":"<40hex>","environment":"production"}`. **Etki düşük:**
+  depo **public**, commit SHA zaten kamuya açık; sömürülebilir gizli veri yok.
+  Gerçek risk payload'ın büyümesi: `{ ...process.env }` gibi bir gerileme, bir
+  sürüm parmak izini her origin'den okunabilir bir sır sızıntısına çevirir.
+  **Kapı:** `tests/security/api-response-surface.test.ts` — gövde **birebir**
+  `{commit, environment}` (fazladan anahtar kırmızı), `commit` `unknown|hex`,
+  `environment` kısa token, rota kendi `no-store`'unu korur.
+- **M-02 (düşük, devir).** Sayfa rotaları yazma yöntemlerine 200 dönüyor
+  (framework dokümanı sunar). **Dikkat:** "sayfa rotalarında non-GET'i reddet"
+  şeklindeki bariz düzeltme **Server Actions**'ı kırar — action'lar bir sayfa
+  yoluna `Next-Action` başlığıyla **POST** eder (ölçüldü: `POST /de/blog`
+  `Next-Action` ile → 400, başlıksız → 200). Cache zehirlenmesi zaten #390 kuralı
+  (`private, no-cache, no-store`) ile kapalı: `PUT /de/blog` bu başlığı döndürüyor.
+  Düzeltme kararı `src/proxy.ts` sahibinde; sahibi **yok** (aşağıda).
+- **M-03/M-04 (düşük, platform).** `max-age=0, must-revalidate` her istekte
+  yeniden doğrular; statik 404'ler içerik-adresli hash'lerle sunulur, `must-revalidate`
+  ile bayat-404 riski yok. CF bugün bu yolları cache'lemiyor. Depo-tarafı düzeltme
+  yok; bir CF Cache Rule eklenirse N-01 sınıfı risk yeniden doğar (LANE-CLOUDFLARE
+  izliyor).
+- **Yapısal boşluk (devir: LANE-INFRA).** `src/proxy.ts` (oturum/çerez/locale
+  güvenlik sınırı) ve `src/app/api/build-info/**` **hiçbir** lane'in sahiplik
+  tablosunda yok. Sahipsiz güvenlik-kritik yüzey = kimsenin düzeltmediği yüzey.
+  Sahiplik tablosunun sahibi LANE-INFRA.
+
+**Kapı (bu tur).** `tests/security/api-response-surface.test.ts` (yeni, 7 test):
+build-info yalnız sürüm kimliği + `no-store`; depoda/konfigde **hiç** ACAO yok
+(M-01 platform-only kaldığı sürece); her `src/app/api/**/route.ts` `dynamic`
+bildirir; her `force-static` rota `no-store` taşır. Üç self-test guard'ın
+görmediği biçimi göstermesi için (mutasyonla kanıtlandı).

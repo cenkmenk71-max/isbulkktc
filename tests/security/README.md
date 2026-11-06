@@ -36,6 +36,7 @@ a boundary regression is attributable at a glance.
 | `anonymous-rpc-throttle.test.ts` | the action throttles before the RPC and the mail fan-out (ordering, not presence); the throttle also lives inside the anon RPC bodies (a gate); the action-path IP dimension is still one shared bucket |
 | `session-cookie-flags.test.ts` | the Supabase session cookie's `HttpOnly`/`Secure`/`SameSite` flags, the OAuth-intent cookie's flags, and the controls around them |
 | `locale-cookie-flags.test.ts` | the `NEXT_LOCALE` locale cookie's flags, driven through the real middleware with the app's own `routing.ts` (a `todo` pins the missing `Secure`; the `HttpOnly` question is answered in the file) |
+| `api-response-surface.test.ts` | the App Router API response surface (#424): `/api/build-info` returns exactly `{commit, environment}` and its own `no-store`; no source or config file adds `Access-Control-Allow-Origin` (the live header is Vercel platform behaviour, proven absent on the local standalone); every `src/app/api/**/route.ts` declares `dynamic`; every `force-static` route pairs it with `no-store` |
 
 ## Findings
 
@@ -54,6 +55,7 @@ the test passes on its own — remove the `todo` option to promote it to a gate.
 | The DB throttle's IP dimension is one shared bucket on the app path (the action sends no visitor IP) | LANE-URUN (`src/features/**`) + LANE-SUPABASE (`supabase/**`) | open (handoff #206) |
 | Supabase session cookie keeps `@supabase/ssr` defaults (`httpOnly:false`, no `Secure`) | LANE-AUTH (`src/features/identity/**`, session lifecycle) | **fixed** (PR #201; now a gate) |
 | `NEXT_LOCALE` locale cookie has no `Secure` flag (issue #418 §6) | LANE-İÇERİK (`src/i18n/routing.ts`) | open (`locale-cookie-flags.test.ts`; `HttpOnly` is not possible — the language switcher writes it from JS) |
+| `/api/build-info` is cross-origin readable (`ACAO: *`), page routes answer write methods, error paths cache (#424) | platform / framework (Vercel + Next.js); no repo file owns it | **triaged** — M-01/M-03/M-04 are Vercel platform behaviour (absent on the local standalone); M-02 is Next.js page handling and a non-GET reject would break Server Actions. Gates in `api-response-surface.test.ts`; ownership gap handed to LANE-INFRA |
 | `package-lock.json` is a stale second lockfile and the only manifest Dependabot audits | LANE-INFRA (`package.json`, lockfiles) | open (handoff #188) |
 
 ### Guard self-tests

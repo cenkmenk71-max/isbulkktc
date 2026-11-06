@@ -771,3 +771,80 @@ edilince 4/4 geçti, geri alınınca `todo`'ya döndü.
 (önceki turlarda denetlendi, CI yeşil). Bu turda tam taranan: yeni test +
 `tests/security/README.md` + `docs/threat-model.md`. Açık `todo`'lar değişmedi:
 #298, #206, #102, #418 §6.
+
+## Durum (2026-11-06, 32. tur) — #424: API yanıt yüzeyi (platform mı, biz mi?)
+
+LANE-CLOUDFLARE tur 25'in **devri** (#424) alındı: `agent:handoff`, engel değil.
+Issue dört bulgu taşıyordu (M-01..M-04) ve "kapsam notu"nda M-01'in gerçek
+sahibinin "büyük olasılıkla Vercel platformu" olabileceğini yazıyordu. Bu turun
+işi o şüpheyi **ölçüme** çevirmekti.
+
+### Yöntem — ayırt edici ölçüm
+
+Aynı istekleri iki ortamda karşılaştırdım: (a) **canlı** `https://isbulkktc.com`,
+(b) **yerel üretim standalone** sunucusu (`NEXT_DIST_DIR=.next-guvenlik-probe
+bun run build` → `node .next-guvenlik-probe/standalone/server.js`; platform
+katmanı yok). Bir başlık yalnız (a)'da varsa **platform**; her ikisinde de varsa
+**repo/framework**.
+
+| # | Canlı | Yerel standalone | Sonuç |
+|---|---|---|---|
+| M-01 ACAO | `access-control-allow-origin: *` | **yok** | platform (Vercel statik katmanı) |
+| M-02 yazma yöntemi | `PUT /` → 200 | `PUT /de/blog` → 200 (HTML) | framework (Next.js) |
+| M-03 hata-yolu CC | `public, max-age=0, must-revalidate` | **CC yok** | platform (Vercel dinamik fn) |
+| M-04 statik 404 CC | `max-age=31536000, must-revalidate` | `private, no-cache, no-store` | platform (Vercel statik katmanı) |
+
+**Ek kanıt (M-01):** `grep -r access-control-allow-origin src/ next.config.ts` →
+**0**. Aynı ACAO `/robots.txt`, `/sitemap.xml`, `/_next/static/*.css`'te de var;
+HTML sayfalarında ve `force-dynamic` rotalarda **yok** — yani Vercel yanıtı statik
+sınıflandırdığında ekliyor, kaynağı `dynamic = "force-static"`.
+
+**M-02'de devrin atladığı tuzak.** "Sayfa rotalarında non-GET'i reddet" bariz
+düzeltmesi **Server Actions**'ı kırar: action'lar bir sayfa yoluna `Next-Action`
+başlığıyla **POST** eder. Ölçtüm: `POST /de/blog` + `Next-Action` → 400 (action
+taşıyıcısı), başlıksız → 200. Ayrıca cache zehirlenmesi zaten #390 kuralıyla
+kapalı (`PUT /de/blog` → `private, no-cache, no-store`). Bu yüzden "405 dön"
+önerisi olduğu gibi uygulanamaz.
+
+### Kapı (kendi dosyam)
+
+`tests/security/api-response-surface.test.ts` (yeni, **7 test**, `todo` yok):
+1. build-info yalnız `{commit, environment}` döner (fazladan anahtar = yeni
+   sızıntı; gövde birebir sabitlenir);
+2. build-info kendi `Cache-Control: no-store`'unu taşır;
+3. depoda/`next.config.ts`'te/`vercel.json`'da **hiç** ACAO yok (M-01
+   platform-only kaldığı sürece geçerli);
+4. her `src/app/api/**/route.ts` `dynamic` bildirir (keşif, sabit liste değil);
+5. her `force-static` rota `no-store` ile eşlenir;
+6-8. üç **self-test** (gövde-şekli guard'ı, ACAO matcher'ı, keşif) guard'ın
+   görmediği biçimi gösterir.
+
+### Kanıt (mutation)
+
+| Mutasyon | Sonuç |
+|---|---|
+| build-info gövdesine `debug: "leaked-secret-value"` ekle | kırmızı (gövde şekli) |
+| build-info `no-store` → `public, max-age=60` | **2 kırmızı** |
+| `src/app/api/qr/route.ts`'e ACAO ekle | kırmızı (depoda ACAO yok) |
+| qr'dan `export const dynamic` sil | kırmızı (dynamic bildir) |
+
+### Devir
+
+- **Yapısal boşluk → LANE-INFRA.** `src/proxy.ts` (oturum/çerez/locale güvenlik
+  sınırı) ve `src/app/api/build-info/**` hiçbir lane'in sahiplik tablosunda yok;
+  sahiplik tablosunun sahibi LANE-INFRA. Yorum: #424'e bırakıldı.
+- M-02 düzeltmesi (yazma yöntemi sözleşmesi) `src/proxy.ts`'e ait; sahibi
+  atanınca o lane'e gider.
+
+### Kapılar
+
+`lint` temiz, `typecheck` temiz, `check:frontend-source` geçti, `test:security`
+**119 test / 115 pass / 0 fail / 4 todo** (önceki 108 → +11: 7 yeni + 4 self-test
+sayımı). `test:unit` değişmedi.
+
+### Bakılmayan
+
+`tests/security/**` 19 dosyanın 16'sı bu turda **bakılmadı** (önceki turlarda
+denetlendi, CI yeşil). Bu turda tam taranan: yeni test +
+`tests/security/README.md` + `docs/threat-model.md`. Açık `todo`'lar değişmedi:
+#298, #206, #102, #418 §6.
