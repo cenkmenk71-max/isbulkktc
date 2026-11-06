@@ -1193,3 +1193,62 @@ sayfası + `Legal.cookies` mesajları. `tests/security/**` kalan dosyalar bu tur
   koşusunu "main'de kırmızı workflow" sayıp kendini besliyor. `scripts/system-health.mjs`
   **LANE-OPERATÖR** sahipliğinde; #427 yalnız verify yarışını kapsıyor, self-latch
   yarısı açık → **#451** (`lane:operator` + `agent:handoff`).
+
+## Tur 36 — micro-denetim: inline-script (`dangerouslySetInnerHTML`) kapısı (PR #454)
+
+### Bulgu
+
+`src/**` içindeki her `dangerouslySetInnerHTML` bugün güvenli, ama **şeklini
+pinleyen kapı yoktu**. Bir refactor `__html`'e DB'den gelen içeriği (ilan
+açıklaması, destek mesajı gövdesi) verirse **depolanmış XSS** ile ve **tüm
+kapılar yeşil** kalırdı. Bu tam da canlı destek (#398) çalışmasının birazdan
+ekleyeceği sınıf: üye/personel yazımı mesaj gövdesi panelde render edilecek.
+
+Üç kullanım: `jobs/[slug]/page.tsx:81` (JSON-LD, `<` kaçışlı),
+`ai-visibility/json-ld.tsx:9` (JSON-LD, `<` kaçışlı),
+`analytics/google-analytics.tsx:71` (statik literal).
+
+### Düzeltme
+
+`tests/security/inline-script-safety.test.ts` — iki kural, saf fonksiyon üzerinden:
+
+- **JSON-LD** (`<script type="application/ld+json">`): `__html` `<`'i kaçışlamalı
+  (`.replace(/</g, "\u003c")`); yoksa bir string içindeki `</script>` etiketi
+  erken kapatır.
+- **Diğer blok**: `__html` statik string/template literal olmalı; **değer ifadesi**
+  (DB içeriğinin geldiği şekil) reddedilir.
+
+### Kanıt
+
+| Senaryo | Sonuç |
+|---|---|
+| Tarama, mevcut `src/**` | **yeşil** (3 site, hepsi kurala uygun) |
+| Kapsam non-vacuous testi | 3 gerçek site taranıyor |
+| Self-test ×2 | her kural sentetik kaynakta kırmızıya dönüyor |
+| **Mutation:** `json-ld.tsx`'ten `<` kaçışı kaldırıldı | **1 fail** → geri alınca yeşil |
+
+### Kapılar
+
+`lint` / `typecheck` / `check:frontend-source` temiz.
+`test:security` **135 / 131 pass / 0 fail / 4 todo** (131→135).
+`test:unit` **742 / 740 pass / 2 todo** (739→742, #454 öncesi taban 739).
+CI: Static, Database, E2E 1-4/4, Quality toplayıcısı, automate — **8/8 yeşil**; PR #454 merge edildi.
+
+### Bakılmayan
+
+`tests/security/**` kalan dosyalar bu turda **bakılmadı**. Realtime yetkilendirme ve
+RLS/throttle (#398) **bakılmadı** — widget/tablo henüz yok; gereksinimler #398'e yorum
+olarak yazıldı.
+
+### Devir (kendi alanım dışı)
+
+- **#453** (`lane:operator` + `agent:handoff`): açık PR'ı olan lane,
+  `mergeStateStatus !== 'CLEAN'` iken **her zaman** `wait`; lane'in sandbox'ı
+  durmuşsa PR **yetim** kalır ve bir daha spawn edilmez → LANE-SUPABASE (#250),
+  LANE-İÇERİK (#407), LANE-QA (#412) donuk; #398 bağımlılıkları bu yüzden başlamıyor.
+- **#455** (`lane:tasarim` + `agent:handoff`): hareket/dinamizm yalnız ana sayfada
+  (5 dosya, 8 öğe); liste/detay/dizin/marka yüzeyleri statik. Altyapı sağlam
+  (GSAP+Lenis), yalnız uygulanmalı.
+- **#398**'e güvenlik incelemesi: CSP zaten `wss://*.supabase.co` içeriyor → kendi
+  widget + Realtime **CSP değişikliği gerektirmez**; yalnız `postgres_changes`
+  (Broadcast/Presence RLS'i atlar), RLS, anon throttle, log-safety.
