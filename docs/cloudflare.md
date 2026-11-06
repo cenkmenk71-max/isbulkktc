@@ -1050,6 +1050,13 @@ yüzeyi ve **canlı↔main sapması**.
 Bu lane yalnızca **canlı kanıtı** kaydeder; kod düzeltmesi yapmaz. Eylem: #359
 build'i **canlıya alınmalı** (donma çözülünce) — aksi hâlde canlı açık kalır.
 
+**✅ GÜNCELLEME (2026-11-06, aynı gün, tur 14.1): A-01c canlıda KAPANDI.** Deploy
+donması çözülüp canlı build ilerledi: `/api/build-info` → **`1d804b6`** (#359'u
+içerir). Aynı PoC'ler yeniden ölçüldü — **hepsi 400**:
+`blog`,`about`,`contact`,`rehber`,`packages`,`freelance`,`sss`,`jobs`,`login`,
+`llms.txt`,`api/build-info` → **400 text/plain**. Yani canlı↔main sapması
+kapandı, #359 artık üretimde. (SW-01 için bkz. aşağıdaki #365 güncellemesi.)
+
 ### SW-01 — `/sw.js` CF edge'de 30 gün cache'leniyor (yeni bulgu, orta)
 
 Service worker `/sw.js` origin'de `cache-control: public, max-age=0,
@@ -1082,6 +1089,15 @@ eskiye döner.
 
 **Devir:** issue **#364** (`lane:guvenlik` + `agent:handoff`) — repo-tarafı
 `next.config.ts` `headers()` düzeltmesi.
+
+**✅ GÜNCELLEME (tur 14.1): #364 → PR #365 ile DÜZELTİLDİ (merge).** LANE-GÜVENLİK
+`next.config.ts` `headers()`'a `/sw.js` için `Cache-Control: no-cache, no-store,
+must-revalidate` ekledi. Origin artık `no-cache` döndüğü için CF edge zone'un
+Browser Cache TTL'inden bağımsız her istekte revalidate eder. **Canlı ölçüm
+(tur 14.1, deploy sonrası bekleniyor):** edge hâlâ `max-age=2628000` + `age: 0` +
+`REVALIDATED` gösteriyor — bu, #365'in **henüz canlıya deploy edilmediğini**
+gösterir (`/api/build-info` → `1d804b6`, #365 `1d804b6`'dan sonra). Deploy
+sonrası `/sw.js` başlığı yeniden ölçülmeli.
 
 **Öneri (CF paneli → sahibin onayı):** H-02 ile aynı düzeltme — Caching →
 **Browser Cache TTL = Respect Existing Headers**; ya da Cache Rules'ta
@@ -1129,7 +1145,7 @@ ile ifade edilmeli.) **WAF kuralı değişikliği yıkıcıdır → sahibin onay
 | H-02 — CF Browser Cache TTL origin `max-age=0`'ı yükseltiyor | **hâlâ açık** | `/robots.txt`, `/images/*.webp` → `2628000` |
 | R-01 — sonlu noktalı apex (`isbulkktc.com.`) | **hâlâ açık** | `404` |
 | G-01 — Email Address Obfuscation açık | **hâlâ açık** | `/` ve `/contact` gövdesinde `cdn-cgi/l/email-protection` |
-| A-01b — `/_next/image` çift-kodlama | **canlıda AÇIK** (kod #359'da düzeltildi, deploy edilmedi) | `url=%2Fimages%2F%252e%252e%2Fblog` → 200 text/html |
+| A-01b — `/_next/image` çift-kodlama | **canlıda KAPANDI** (build `1d804b6`, #359 deploy edildi) | 11 hedef PoC → **400** (tur 14.1) |
 | N-01 — `/_next/static` 404'ü 1 yıl cache | **hâlâ açık** | `MISS → HIT`, `max-age=31536000` |
 | F-08 — Vercel alias CF'i atlıyor | **hâlâ açık** | alias doğrudan 200 |
 | DKIM — Resend `resend._domainkey` | **1024-bit** | `openssl rsa -pubin` → `Public-Key: (1024 bit)` |

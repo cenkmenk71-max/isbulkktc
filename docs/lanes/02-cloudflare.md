@@ -200,13 +200,21 @@ Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
 Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅ (671/671)
             test:db ✅ (CI)  test:e2e ✅ (4/4 shard)  build ✅ (CI standalone)
 Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok, CF paneli değiştirilmedi)
-Sahibin yapması gerekenler: #364 (LANE-GÜVENLİK, /sw.js başlığı) · #319 (deploy donması,
-            LANE-INFRA) · CF paneli SW-01/H-02/W-01 (hesap sahibi onayı)
-Sonraki lane için notlar: CF API token'sız zone-API denetimi yapılamıyor; A-01c canlıda
-            açık kalır ta ki #319 çözülüp #359 build'i deploy edilene dek.
+Sahibin yapması gerekenler: #319 (deploy donması, LANE-INFRA) · CF paneli H-01/H-02/
+            G-01/W-01 (hesap sahibi onayı). (SW-01 #364→#365 ile kapandı; A-01c deploy
+            sonrası canlıda doğrulandı: 400.)
+Sonraki lane için notlar: CF API token'sız zone-API denetimi yapılamıyor; canlı build
+            ilerledikçe (/api/build-info) bu turdaki bulguların deploy durumu yeniden ölçülmeli.
 ```
 
-**A-01b canlıda HÂLÂ AÇIK:** PR #359 desenlere görsel uzantısı şartı getirdi
+**✅ Tur 14.1 (aynı gün): A-01b canlıda KAPANDI.** Canlı build `1d804b6`'ya
+ilerledi (#359 deploy edildi); aynı 11 hedef PoC artık **hepsi 400**. Ayrıca
+**SW-01 → #364 → PR #365** (LANE-GÜVENLİK) ile `next.config.ts`'e `/sw.js`
+`no-cache` başlığı eklendi (henüz deploy edilmedi; deploy sonrası `/sw.js`
+başlığı yeniden ölçülmeli).
+
+**Tur 14 (deploy öncesi anlık görüntü) — A-01b o zaman canlıda açıktı:** PR #359
+desenlere görsel uzantısı şartı getirdi
 (`next.config.ts:79-82`) ve kod doğru, ama **deploy edilmedi** — canlı build
 `ee58dad` (#359 öncesi). Canlı kanıt: `/_next/image?url=%2Fimages%2F%252e%252e%2Fblog`
 → **200 text/html** (`<title>…</title>`, 142 KB); tek-kodlama → 400. Sızan içerik
@@ -220,7 +228,8 @@ donması). Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 14" (A-01c).
 - **SW-01 (orta):** `/sw.js` origin'de `max-age=0` iken CF edge **30 gün**
   (`2628000`) cache'liyor → SW güncelleme yayılımı kırılgan (şu an `REVALIDATED`).
   H-02 (Browser Cache TTL) sınıfının aynısı; düzeltme = `Respect Existing Headers`.
-  Repo-tarafı (`next.config.ts`) → **#364** (`lane:guvenlik` + `agent:handoff`).
+  Repo-tarafı (`next.config.ts`) → **#364** → **#365** ile düzeltildi (`/sw.js`
+  `no-cache`; deploy bekliyor).
 - **W-01 (düşük):** WAF 4. kuralı kodlanmış yolda nokta-yolu kuralını atlıyor
   (`/.git%2fconfig`, `/api/devtools%2f` → CF geçip **Vercel origin** 404 döner;
   `x-vercel-id` kanıt). Origin'de `.git`/`/api/devtools` yok → sızıntı yok, ama
