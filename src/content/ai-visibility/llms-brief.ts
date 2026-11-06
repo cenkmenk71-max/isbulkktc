@@ -9,30 +9,7 @@ import { regionNames, servedDistricts, SITE_NAME } from "@/content/ai-visibility
 import { districtSlug } from "@/features/locations/northern-cyprus-districts";
 import { jobTypeKeys, jobTypeSlugs } from "@/features/jobs/job-type-slugs";
 import { getGuides } from "@/content/guides";
-
-import de from "@/messages/de.json";
-import el from "@/messages/el.json";
-import en from "@/messages/en.json";
-import fa from "@/messages/fa.json";
-import ru from "@/messages/ru.json";
-import tr from "@/messages/tr.json";
-
-/**
- * The interface catalogs, so the brief names a page exactly as the page and the
- * navigation name it. The brief is generated for all six locales, so a label it
- * renders in English (or Turkish) inside a German or Persian section would
- * contradict the product's own copy. Reading the catalog is the single source of
- * truth; no copy is authored here.
- */
-const catalogs = { tr, en, de, ru, el, fa } as const satisfies Record<
-  AppLocale,
-  unknown
->;
-
-/** Fills a catalog template like `{type} Jobs` / `{district} İş İlanları`. */
-function fillTemplate(template: string, value: string): string {
-  return template.replace(/\{[^}]+\}/g, value);
-}
+import { catalogs, fillTemplate } from "@/content/ai-visibility/interface-catalog";
 
 /**
  * The canonical page list the brief advertises. These are the same routes the

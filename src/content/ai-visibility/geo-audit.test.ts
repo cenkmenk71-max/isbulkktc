@@ -658,3 +658,88 @@ test("the JobPosting producer formats its description through the helper", () =>
     "the raw description must not be used directly",
   );
 });
+
+test("omitting the optional label still names the page in the reader's language", () => {
+  const catalogs = Object.fromEntries(
+    routing.locales.map((locale) => [
+      locale,
+      JSON.parse(
+        readFileSync(path.join(REPO_ROOT, `src/messages/${locale}.json`), "utf8"),
+      ),
+    ]),
+  ) as Record<
+    AppLocale,
+    {
+      DistrictPage: { title: string };
+      JobTypePage: { title: string };
+      HomeJobSearch: { districts: Record<string, string>; jobTypes: Record<string, string> };
+      Nav: { jobs: string; blog: string };
+      Footer: { links: { guides: string } };
+    }
+  >;
+
+  for (const locale of routing.locales) {
+    const catalog = catalogs[locale];
+
+    // A caller that omits `pageName` must still get the catalog's own title
+    // template, not the historical Turkish "… İş İlanları" suffix.
+    const district = buildDistrictPageStructuredData({
+      locale,
+      baseUrl: BASE_URL,
+      districtSlug: "girne",
+      districtName: catalog.HomeJobSearch.districts.girne,
+      jobsLabel: catalog.Nav.jobs,
+      homeLabel: SITE_NAME,
+    })["@graph"][0] as Record<string, unknown>;
+    assert.equal(
+      district.name,
+      catalog.DistrictPage.title.replace(
+        /\{[^}]+\}/g,
+        catalog.HomeJobSearch.districts.girne,
+      ),
+      `${locale} district default name`,
+    );
+
+    const jobType = buildJobTypePageStructuredData({
+      locale,
+      baseUrl: BASE_URL,
+      typeSlug: "staj",
+      typeName: catalog.HomeJobSearch.jobTypes.internship,
+      jobsLabel: catalog.Nav.jobs,
+      homeLabel: SITE_NAME,
+    })["@graph"][0] as Record<string, unknown>;
+    assert.equal(
+      jobType.name,
+      catalog.JobTypePage.title.replace(
+        /\{[^}]+\}/g,
+        catalog.HomeJobSearch.jobTypes.internship,
+      ),
+      `${locale} job-type default name`,
+    );
+
+    // Same for the article breadcrumb's section label.
+    const blog = buildGuideStructuredData({
+      locale,
+      baseUrl: BASE_URL,
+      slug: "s",
+      title: "T",
+      description: "D",
+      updated: "2026-11-04",
+      pathname: "/blog",
+    });
+    assert.equal(breadcrumb(blog)[1].name, catalog.Nav.blog, `${locale} blog section`);
+    const guide = buildGuideStructuredData({
+      locale,
+      baseUrl: BASE_URL,
+      slug: "s",
+      title: "T",
+      description: "D",
+      updated: "2026-11-04",
+    });
+    assert.equal(
+      breadcrumb(guide)[1].name,
+      catalog.Footer.links.guides,
+      `${locale} guide section`,
+    );
+  }
+});

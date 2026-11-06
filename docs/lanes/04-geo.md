@@ -522,3 +522,60 @@ doc-comment'i de yeni kuralı anlatacak şekilde güncellendi.
 `lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (594 test,
 +1 genişletilmiş guard) · guard kırmızı→yeşil kanıtlandı (tur 7'deki hatalı
 regex geri konunca test kırmızı).
+
+---
+
+## Rapor — micro-denetim turu 9 (issue #126), branch `lane/geo`
+
+**Durum:** düzeltmeler branch'te, CI bekliyor. Devir yok.
+
+### Denetlenen dosyalar (`git ls-files`)
+
+| Glob | N | Bakıldı |
+|---|---|---|
+| `src/content/**` | 26 | 26 (hepsi) |
+| `src/app/llms.txt/**` | 1 | 1 |
+| `public/llms*` | 0 | — (dosya yok) |
+| `src/features/**/structured-data*.ts` | 1 | 1 |
+| `src/features/jobs/job-posting-structured-data.ts` | 1 | 1 |
+
+### Bulgu
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `structured-data.ts:170` (`sectionName`), `:253-290` (`pageName`) | tutarlılık / çok dillilik | `buildGuideStructuredData`'nın `sectionName` varsayılanı sabit `"Rehber"`/`"Blog"`, `buildCollectionPageGraph`'ın `pageName` varsayılanı sabit `` `${subjectName} İş İlanları` `` idi. Bu parametreleri **atlayan** bir çağrı, `en`/`de`/`fa` sayfada Türkçe etiket üretiyordu (ölçüldü: `district(en)` → `"Kyrenia İş İlanları"`, `jobtype(de)` → `"Praktikum İş İlanları"`, `guide(fa)` → `"Blog"`). Kod, parametreyi geçmeyi unutmanın cezalandırılmadığı bir yol bırakıyordu — #179/#230'da düzeltilen hatanın aynısı | varsayılan, ürünün kendi kataloğundan gelmeli | bir gelecek çağrı yeri sessizce Türkçe etiket yayınlar | **düzeltildi** |
+
+**Doğru bulunanlar (bulgu yok):** `Organization.geo` koordinatları (35.3394, 33.1961)
+Nominatim'in resmî kaydıyla birebir (`35.3394085, 33.1960746`); `article`/`guide`
+içeriğinde 6 dilde kopya başlık/gövde/liste öğesi yok (React key çakışması yok);
+`/logos` altındaki 316 yerel dosya adı `resolveLogoSrc` deseniyle %100 uyumlu;
+seed'deki 22 işveren logo URL'si `curl -L` ile 200; brief'teki tüm URL'ler gerçek
+rotaya çözülüyor; `faqByLocale` ile `seed-managed-content.sql` birebir aynı (6×6);
+CSP `script-src 'unsafe-inline'` içerdiği için inline JSON-LD engellenmiyor;
+`/llms.txt` ve `/llms-full.txt` `force-static` ve `robots.txt`'in `Disallow`
+listesinde değil (taranabilir).
+
+Değerlendirilip **bulgu sayılmayanlar:** `FaqSection` girdileri `question` ile
+key'leniyor ama admin RPC'si kopya soru engellemiyor — SSR'da gözlemlenebilir bir
+arıza üretilemedi (denendi: kopya girdiyle render'da uyarı yok) ve paketli
+katalogda kopya yok; yönetici verisiyle sınırlı, düşük etkili bir kenar durumu.
+
+### Ne yapıldı
+
+Yeni `src/content/ai-visibility/interface-catalog.ts`: altı arayüz kataloğunu
+(`src/messages/*.json`) tek yerden sunar (`catalogs`, `fillTemplate`). Hem
+`llms-brief.ts` hem `structured-data.ts` buradan okuyor (önce brief kendi kopyasını
+tutuyordu). Üreticilerin varsayılanları artık katalogdan türetiliyor:
+
+- `pageName` → `DistrictPage.title` / `JobTypePage.title` + konu adı;
+- `sectionName` → `Nav.blog` / `Footer.links.guides`.
+
+**Geriye dönük uyumluluk:** parametreleri açıkça geçen mevcut çağrı yerlerinin
+çıktısı bit bit aynı (`diff` boş). Yeni modül yalnız sunucu modülleri tarafından
+import ediliyor (iki `force-static` route + sunucu bileşenlerinden mount edilen
+üreticiler), istemci paketine sızmıyor.
+
+### Kapılar
+`lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (630 test,
++1 yeni guard) · guard kırmızı→yeşil kanıtlandı (eski sabit varsayılanlar geri
+konunca test kırmızı).

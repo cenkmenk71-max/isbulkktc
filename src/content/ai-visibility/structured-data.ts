@@ -5,6 +5,7 @@ import {
   faqByLocale,
   type FaqEntry,
 } from "@/content/ai-visibility/faq";
+import { catalogs, fillTemplate } from "@/content/ai-visibility/interface-catalog";
 import {
   buildPostalAddress,
   COUNTRY_CODE,
@@ -169,7 +170,7 @@ export function buildGuideStructuredData({
   updated,
   published = updated,
   pathname = "/rehber",
-  sectionName = pathname === "/blog" ? "Blog" : "Rehber",
+  sectionName,
 }: {
   locale: AppLocale;
   baseUrl: URL;
@@ -188,12 +189,10 @@ export function buildGuideStructuredData({
   /** The section the article lives under (`/rehber` or `/blog`). */
   pathname?: string;
   /**
-   * The localized label of that section, for the breadcrumb. The call site owns
-   * the copy — the product already renders `Nav.blog` and the footer's guide
-   * label in every language, so passing one of those keeps the breadcrumb from
-   * naming a section in a language the page does not use. The default is the
-   * historical Turkish/Latin label, kept only so a caller that has not been
-   * updated yet still type-checks; pass the localized label.
+   * The localized label of that section, for the breadcrumb. Defaults to the
+   * catalog's own label for the section (`Nav.blog` or the footer's guide
+   * label), so a caller that omits it still gets the reader's language rather
+   * than the historical Turkish/Latin label.
    */
   sectionName?: string;
 }) {
@@ -201,6 +200,11 @@ export function buildGuideStructuredData({
   const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
   const url = `${siteUrl}${prefix}${pathname}/${slug}`;
   const sectionUrl = `${siteUrl}${prefix}${pathname}`;
+  const resolvedSectionName =
+    sectionName ??
+    (pathname === "/blog"
+      ? catalogs[locale].Nav.blog
+      : catalogs[locale].Footer.links.guides);
 
   return {
     "@context": "https://schema.org",
@@ -225,7 +229,7 @@ export function buildGuideStructuredData({
         "@id": `${url}#breadcrumb`,
         itemListElement: [
           { "@type": "ListItem", position: 1, name: SITE_NAME, item: `${siteUrl}${prefix}` },
-          { "@type": "ListItem", position: 2, name: sectionName, item: sectionUrl },
+          { "@type": "ListItem", position: 2, name: resolvedSectionName, item: sectionUrl },
           { "@type": "ListItem", position: 3, name: title, item: url },
         ],
       },
@@ -251,7 +255,7 @@ function buildCollectionPageGraph({
   baseUrl,
   collectionPath,
   subjectName,
-  pageName = `${subjectName} İş İlanları`,
+  pageName,
   about,
   jobsLabel,
   homeLabel,
@@ -263,10 +267,9 @@ function buildCollectionPageGraph({
   /** The collection's own name, e.g. `Girne` or `Tam zamanlı`. */
   subjectName: string;
   /**
-   * The page's localized visible `<h1>`, e.g. `Jobs in Kyrenia`. The default is
-   * the historical Turkish-suffixed label, kept only so a caller that has not
-   * been updated yet still type-checks; pass the localized title so the
-   * structured data names the page the way the reader sees it.
+   * The page's localized visible title, e.g. `Jobs in Kyrenia`. Defaults to the
+   * catalog's own title template for the family, so a caller that omits it still
+   * gets the reader's language rather than a Turkish-suffixed label.
    */
   pageName?: string;
   about: Record<string, unknown>;
@@ -277,6 +280,14 @@ function buildCollectionPageGraph({
   const prefix = locale === routing.defaultLocale ? "" : `/${locale}`;
   const jobsUrl = `${siteUrl}${prefix}/jobs`;
   const collectionUrl = `${siteUrl}${prefix}${collectionPath}`;
+  const resolvedPageName =
+    pageName ??
+    fillTemplate(
+      collectionPath.startsWith("/is-turleri/")
+        ? catalogs[locale].JobTypePage.title
+        : catalogs[locale].DistrictPage.title,
+      subjectName,
+    );
 
   return {
     "@context": "https://schema.org",
@@ -285,7 +296,7 @@ function buildCollectionPageGraph({
         "@type": "CollectionPage",
         "@id": `${collectionUrl}#webpage`,
         url: collectionUrl,
-        name: pageName,
+        name: resolvedPageName,
         inLanguage: locale,
         isPartOf: { "@id": `${siteUrl}/#website` },
         about,
@@ -336,7 +347,7 @@ export function buildDistrictPageStructuredData({
   baseUrl: URL;
   districtSlug: string;
   districtName: string;
-  /** The page's localized visible title (`DistrictPage.title`). */
+  /** Defaults to the catalog's `DistrictPage.title` for this locale. */
   pageName?: string;
   jobsLabel: string;
   homeLabel: string;
@@ -383,7 +394,7 @@ export function buildJobTypePageStructuredData({
   baseUrl: URL;
   typeSlug: string;
   typeName: string;
-  /** The page's localized visible title (`JobTypePage.title`). */
+  /** Defaults to the catalog's `JobTypePage.title` for this locale. */
   pageName?: string;
   jobsLabel: string;
   homeLabel: string;
