@@ -165,3 +165,33 @@ hata düzeltildi, bir yapısal eksik kapatıldı, canlı ölçüm iki kez yapıl
 **Merge kuyruğu (görev 1).** Açık PR'lar: #331 (lane/urun-208, BLOCKED, taze), #329/#250/#237 (UNKNOWN). #237 `.github/**` değiştiriyor → **iki fren** gereği merge edilmedi (insan). #250 `Database` = gerçek pgTAP hatası (sahibi LANE-SUPABASE). Zorunlu kontrolü geçen ve çakışmayan bir PR bu turda yoktu; `lane-collisions` temiz.
 
 **Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅, `test:unit` **632 test / 0 fail / 5 todo** (yeni: `scripts/approve-pending-runs.test.mjs` 4 test).
+
+---
+
+## Tur 4 — 2026-11-06 (lane/teslimat)
+
+**Kapsam.** Sahip olunan 6 dosya (yeni test dosyaları dahil) AUDIT boyutlarıyla
+yeniden denetlendi. İki gerçek hata düzeltildi, biri kapasite (test) eksiği
+kapatıldı, canlı ölçüm yapıldı, bir bulgu LANE-INFRA'ya devredildi.
+
+**Bulgular.**
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `scripts/verify-production-deployment.mjs` (eski `main()` `vercel` init) | hata yolu / doğruluk | `VERCEL_TOKEN` **set ama geçersiz** iken `configured:false`, reason `VERCEL_TOKEN not set` | sağlanan token "set" sayılmalı; neden gerçek sebep olmalı | Operatöre zaten set ettiği secret'ı "set et" deniyor; `decideVerification` "blocked + unconfigured" dalını yanlış kullanıyor | **düzeltildi** (`initialVercelState()` + regresyon testi) |
+| 2 | `scripts/prune-vercel-deployments.mjs` (yok) | kapasite / test | Üretim deployment'ını **silen** karar fonksiyonunun hiç testi yok | Sınır davranışı pinlenmeli | Canlıyı silme hatası sessizce geçebilir | **düzeltildi** — 8 test eklendi |
+| 3 | `scripts/prune-vercel-deployments.mjs:91` | hata yolu | `fetch`'te timeout yok, workflow'da `timeout-minutes` yok | istek sınırlanmalı | Takılan bağlantı 6 saatlik job limitine kadar döner; prune durunca backlog geri büyür | **düzeltildi** (20s `AbortSignal.timeout` → 599, retry'a girer) |
+| 4 | `scripts/lane-autopilot.mjs:563,581` | ölü kod | Aynı onay bloğu **iki kez** (yorum dahil birebir) | tek çağrı | `gh` trafiği ikiye katlanıyor (#218 hedefi) | **devredildi** — LANE-INFRA |
+| 5 | `scripts/approve-pending-runs.mjs`, `verify-production-deployment.mjs`, `docs/deploy-log.md`, `docs/lanes/14-teslimat.md` | tüm boyutlar | Tur 3'te denetlendi, bu turda regresyon yok | — | — | ✅ bakıldı, sorun yok |
+
+**Bakılmayan dosya yok** — sahip olunan 6 dosyanın hepsi tarandı.
+
+**Kanıt (bulgu 1).** `VERCEL_TOKEN=invalid_token_xyz DEPLOY_TIMEOUT_SEC=1 node scripts/verify-production-deployment.mjs --expect 5b1923d0` → **eski**: `Vercel API: ⏭️ VERCEL_TOKEN not set`. **yeni**: `Vercel API: ❌ Vercel API unreachable: no team with slug "orijin1"`. Doğru sınıflandırma: token sağlanmış (`configured:true`), sorun erişilebilirlikte.
+
+**Canlı ölçüm (görev 3).** 03:48Z: `main`=`9ea1aaf`, canlı=`5b1923d0` (2 geride, donma sürüyor). 04:50Z: `main` = canlı = `1b1bf26` ✅ — limit penceresi yine açıldı, backlog deploy oldu (commit status `Vercel: success`). Günün **üçüncü** donma→toparlanma döngüsü; #319'un tarif ettiği salınım kararlı durum.
+
+**Kota bekçisi (kural 5).** Kök neden değişmedi: Vercel **build** rate limiti. Yeni kanıt: bu PR'ın kendi preview build'i de `Deployment rate limited` aldı → PR `mergeStateStatus: UNSTABLE` (zorunlu CI yeşil). Kalıcı çözüm seçenekleri #319'da; bu lane'in yapabileceği kısım `prune`'un sağlamlığı (bulgu 2–3).
+
+**Merge kuyruğu (görev 1).** Açık PR'lar taze (hepsi <30 dk) ve hepsinde zorunlu `Quality, database and E2E` hâlâ koşuyor; #250 zorunlu `Database`'te gerçek pgTAP hatasıyla duruyor (auto-merge açık, doğru davranış). Bu turda merge edilebilir durumda bekleyen PR yoktu.
+
+**Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅, `test:unit` **650 test / 645 pass / 0 fail / 5 todo** (yeni: `prune-vercel-deployments.test.mjs` 8 test, `verify-production-deployment.test.mjs` +1).

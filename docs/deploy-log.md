@@ -22,6 +22,8 @@ Rule 4 of the lane brief: **every merge is recorded — what, when, verified liv
 | 2026-11-06T02:17Z | `c6e15b18` | `c406b397` | ⚠️ **behind by 2** | 🔴 **Production is frozen.** `live` is an ancestor of `main` (not diverged): `c9d932f7` (#307, this lane) and `c6e15b18` (#315) merged but never deployed — both carry `Vercel: Deployment rate limited — retry in 24 hours`. `c406b397` (#314) is the last successful production build. Handoff: issue #319. |
 | 2026-11-06T02:55Z | `5d026376` | `5d026376` | ✅ **recovered** | The freeze cleared on its own: the rate-limit window reset and the backlog deployed, so `live` caught up to `main`. Verified with `verify-production-deployment.mjs --expect 5d026376` → exit 0, 5/5 smoke routes 200. This is the first checkpoint where the two agree after 02:17Z. |
 | 2026-11-06T03:08Z | `8b45b72` | `5d026376` | ⚠️ **behind by 5** | 🔴 **Frozen again.** `live` is again an ancestor of `main` (behind, not diverged) — five merges landed since the recovery and none deployed: `a9e6b07` (#325), `77ca734` (#326), `e102567` (#330), `eae8633` (#328), `8b45b72` (#323). Every one carries `Vercel: Deployment rate limited — retry in 24 hours`. Same cause as 02:17Z (issue #319): the rate-limit window is shorter than the merge rate, so production oscillates between caught-up and 5+ behind. |
+| 2026-11-06T03:48Z | `9ea1aaf` | `5b1923d0` | ⚠️ **behind by 2** | Still catching up: `c989838` (#334, this lane) and `9ea1aaf` (#333) had merged but not deployed. Read directly (the verifier polls for 15 min by default, so a quick check uses `DEPLOY_TIMEOUT_SEC=1`). |
+| 2026-11-06T04:50Z | `1b1bf26` | `1b1bf26` | ✅ **recovered** | The rate-limit window reset again and the whole backlog deployed: `main` advanced through `#341`, `#343`, `#344`, `#345`, `#348` and production is serving the tip `1b1bf26` (its commit status is `Vercel: success — Deployment has completed`). Third recovery of the day — the freeze/recover cycle in #319 is the steady state until the build limit is raised or preview builds are cut. |
 
 Earlier in the session the task context reported `main` at `ef6caed3` while the
 live site served `48ff9b78`; `48ff9b78` is an ancestor of `main` (5 commits
@@ -124,3 +126,40 @@ context, not as a measurement.
    body moved into an exported `main()`, guarded the same way. This is now
    load-bearing — the new regression test imports `ghEnv` from the module, which
    would otherwise fire a real `gh` call on import.
+
+9. **`verify-production-deployment.mjs` blamed a missing token for a bad one.**
+   When `VERCEL_TOKEN` was set but `resolveVercelContext` failed (invalid token,
+   unknown team slug, API blip), the loop kept `configured: false` with reason
+   `VERCEL_TOKEN not set`. Measured with `VERCEL_TOKEN=invalid_token_xyz`: the
+   summary printed `Vercel API: ⏭️ VERCEL_TOKEN not set` and the verdict
+   `vercel: VERCEL_TOKEN not set; …`, so the operator is told to set a secret
+   they already set, and `decideVerification` can no longer take its "blocked and
+   unconfigured" branch to explain a genuinely blocked probe. Fixed in this PR by
+   the extracted `initialVercelState(token, context, error)` helper: a supplied
+   token that fails to resolve now reports `Vercel API unreachable: <cause>` and
+   `configured: true`. Regression test added.
+
+10. **`prune-vercel-deployments.mjs` — the one script that deletes production
+    deployments — had no test.** `selectDeploymentsToDelete` decides what is
+    removed irreversibly, and nothing pinned it. Added
+    `scripts/prune-vercel-deployments.test.mjs` (8 cases): the live deployment is
+    never deleted even when it is the oldest; newest-N production / newest-M
+    preview are kept; deletions are oldest-first; the min-age safety window holds;
+    a missing `created` is treated as oldest rather than kept by a `NaN`
+    comparison; negative keep counts clamp to zero; and only `*.vercel.app`
+    hostnames are disposable. Writing it caught a wrong expectation of my own
+    (ordering), which is the point.
+
+11. **`prune-vercel-deployments.mjs` could hang the scheduled job.** Its
+    `fetch` had no timeout and the workflow sets no `timeout-minutes`, so a
+    stalled connection would spin until the six-hour job cap — and a hung prune
+    is what lets the deployment backlog grow back into the build rate limit. Added
+    a 20 s `AbortSignal.timeout`, reported as HTTP 599 so the existing
+    `apiRequestWithRetry` retries it like any transient 5xx instead of crashing
+    the run.
+
+12. **`lane-autopilot.mjs` runs the approval block twice** (lines 563 and 581
+    are byte-identical, comment and all). Harmless today (the second pass finds no
+    pending runs) but it doubles the `gh` traffic that #218 is trying to cut.
+    `lane-autopilot.mjs` is LANE-INFRA's file, so it is handed off, not edited
+    here.

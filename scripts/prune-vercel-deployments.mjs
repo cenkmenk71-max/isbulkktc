@@ -88,11 +88,24 @@ export function selectDeploymentsToDelete(deployments, options) {
   return stale;
 }
 
+// Bound every request so a stalled connection cannot hang the run. The workflow
+// sets no `timeout-minutes`, so an unbounded fetch would spin until the six-hour
+// job cap. Node's fetch has no default timeout.
+const REQUEST_TIMEOUT_MS = 20_000;
+
 async function apiRequest(token, path, method = "GET") {
-  const response = await fetch(`${API}${path}`, {
-    method,
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  let response;
+  try {
+    response = await fetch(`${API}${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    // Report a timeout/abort as a 5xx so `apiRequestWithRetry` retries it like
+    // any other transient failure instead of the whole run crashing on it.
+    return { status: 599, body: { error: error.message } };
+  }
   const text = await response.text();
   let body = {};
   if (text) {

@@ -148,6 +148,25 @@ export function decideVerification({ vercel, http }) {
 }
 
 /**
+ * The starting Vercel-channel state. `configured` means "a token was supplied",
+ * not "the API answered" — a set-but-unreachable token (bad token, unknown team
+ * slug, API blip) must not be reported as `VERCEL_TOKEN not set`, or the operator
+ * is told to set a secret they already set and `decideVerification` blames the
+ * missing token instead of the real cause.
+ */
+export function initialVercelState(token, context, error) {
+  if (!token) return { configured: false, ok: false, reason: "VERCEL_TOKEN not set" };
+  if (!context) {
+    return {
+      configured: true,
+      ok: false,
+      reason: `Vercel API unreachable: ${error ?? "unknown error"}`,
+    };
+  }
+  return { configured: true, ok: false, reason: "not checked yet" };
+}
+
+/**
  * Parse a strictly positive integer from an environment variable, falling back
  * to the default when the value is absent, blank, non-numeric or non-positive.
  * A blank string is the trap: `Number.parseInt("")` is `NaN`, and a `NaN`
@@ -323,6 +342,7 @@ async function main() {
   }
 
   let context = null;
+  let contextError = null;
   if (token) {
     try {
       context = await resolveVercelContext(
@@ -331,6 +351,7 @@ async function main() {
         process.env.VERCEL_PROJECT ?? "isbulkktc",
       );
     } catch (error) {
+      contextError = error.message;
       console.warn(`Vercel API unavailable (${error.message}); falling back to HTTP only.`);
     }
   }
@@ -338,10 +359,7 @@ async function main() {
   console.log(`Verifying ${origin} serves ${expectedCommit.slice(0, 8)}…`);
 
   const deadline = Date.now() + timeoutSec * 1000;
-  let vercel =
-    token && context
-      ? { configured: true, ok: false, reason: "not checked yet" }
-      : { configured: false, ok: false, reason: "VERCEL_TOKEN not set" };
+  let vercel = initialVercelState(token, context, contextError);
   let http = { ok: false, blocked: false, reason: "not checked yet" };
 
   for (;;) {

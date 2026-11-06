@@ -6,7 +6,28 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { parsePositiveInt } from "./verify-production-deployment.mjs";
+import { initialVercelState, parsePositiveInt } from "./verify-production-deployment.mjs";
+
+test("a token that fails to resolve is not reported as 'not set'", () => {
+  // Set but unreachable (bad token, unknown team slug, API blip): the old code
+  // collapsed this to "VERCEL_TOKEN not set", so the operator was told to set a
+  // secret they had already set and `decideVerification` blamed the missing
+  // token instead of the real cause.
+  const absent = initialVercelState(undefined, null, null);
+  assert.equal(absent.configured, false);
+  assert.match(absent.reason, /not set/);
+
+  const unreachable = initialVercelState("tok", null, 'no team with slug "orijin1"');
+  assert.equal(unreachable.configured, true);
+  assert.equal(unreachable.ok, false);
+  assert.doesNotMatch(unreachable.reason, /not set/);
+  assert.match(unreachable.reason, /unreachable/);
+  assert.match(unreachable.reason, /orijin1/);
+
+  const ready = initialVercelState("tok", { teamId: "t", projectId: "p" }, null);
+  assert.equal(ready.configured, true);
+  assert.equal(ready.reason, "not checked yet");
+});
 
 test("a blank timeout falls back to the default instead of becoming NaN", () => {
   // The regression: `Number.parseInt("")` is NaN, a NaN deadline is never
