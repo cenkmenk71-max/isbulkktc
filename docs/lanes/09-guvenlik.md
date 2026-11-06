@@ -667,3 +667,28 @@ yeri `next.config.ts` (bu lane'e devredilmiş).
 - **Bakılmayan:** yok — 15 dosya (`tests/security/**` 14 + `next.config.ts`) +
   3 doküman. Açık `todo`'lar değişmedi: #298 (SQL), #206 (`unsubscribe-token-core`
   `server-only`), #139 (anon RPC IP boyutu).
+
+## Durum (2026-11-06, 29. tur) — CI izinleri + service-role grant dedektörleri
+
+Kendi katmanımın iki dedektörünü düşman gözüyle taradım; ikisi de gerçek
+yanlış-negatif veriyordu, kanıtladım ve düzelttim.
+
+- **Bulgu + düzeltme: `ci-workflow-permissions.test.ts` yalnız blok biçimli
+  `permissions:` görüyordu.** `permissionsBlocks` regex'i `permissions:`'tan
+  sonra satır sonu ve girintili satır bekliyordu; job düzeyinde
+  `permissions: { contents: write }` (flow-map) ve `permissions: write-all`
+  (bare scalar) **hiç görünmüyordu** (kanıt: ikisi de `[]`). Bir job'a bu
+  biçimlerle yazma jetonu verip testi yeşil bırakmak mümkündü. `permissionsSpecs`
+  artık üç biçimi de, her girintide okuyor; self-test üçünü de doğruluyor.
+- **Bulgu + düzeltme: `sql-hardening.test.ts` `serviceRoleOnlySignatures` yalnız
+  `grant execute` görüyordu.** `grantedToClients` `grant (execute|all)`'a
+  genişletilmişken bu kardeş fonksiyon `grant all on function … to service_role`
+  biçimini kaçırıyordu → öyle verilmiş worker RPC guard denetiminden muaf kalıyordu.
+  İki tarayıcı hizalandı; `public` de client-grant sayılıyor. Self-test eklendi.
+- **Kanıt (mutation):** (a) `ci.yml` `static` job'una flow-map yazma → kırmızı,
+  geri alınca yeşil; (b) scratch `grant all … to service_role` + guardsız definer
+  → service-role testi kırmızı (eski tarayıcıda yeşil kalırdı).
+- **Dış sınır değişmedi:** mevcut header/CSP/grant kontrolleri zaten doğruydu;
+  kapatılan şey onları koruyan guard'ın körlüğü. `threat-model.md`'ye işlendi.
+- **Bakılmayan:** yok — 15 dosya (`tests/security/**` 14 + `next.config.ts`) +
+  3 doküman. Açık `todo`'lar değişmedi: #298, #206, #102.

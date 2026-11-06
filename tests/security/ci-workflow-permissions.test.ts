@@ -42,22 +42,58 @@ function workflows(): Workflow[] {
 const all = workflows();
 
 /**
- * The block under *every* `permissions:` key — top-level (column 0) and any
- * job-level (indented) one. A job-level block overrides the top-level one, so
- * both must be inspected.
+ * Every `permissions:` spec at any indent, in the three forms YAML allows:
+ *
+ *  - block form — `permissions:\n  contents: read` (what the repo uses today);
+ *  - flow-map form — `permissions: { contents: write }`;
+ *  - bare-scalar form — `permissions: write-all` / `read-all`.
+ *
+ * The earlier scanner only saw the block form: its regex required a newline
+ * after `permissions:` and then indented continuation lines. A job-level
+ * `permissions: { contents: write }` or `permissions: write-all` was therefore
+ * **invisible** to the write check — a workflow could silently grant itself a
+ * write token and this suite stayed green (proven: both forms yielded `[]`).
+ * Each match records its own indent so the "top-level only" check still works.
  */
-function permissionsBlocks(yaml: string): string[] {
-  const blocks: string[] = [];
-  for (const match of yaml.matchAll(/^([ \t]*)permissions:[ \t]*\n((?:\1[ \t]+.*\n?)*)/gm)) {
-    blocks.push(match[2]);
+function permissionsSpecs(yaml: string): { text: string; topLevel: boolean }[] {
+  const lines = yaml.split("\n");
+  const specs: { text: string; topLevel: boolean }[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(/^([ \t]*)permissions:[ \t]*(.*)$/);
+    if (!match) continue;
+    const indent = match[1].length;
+    const inline = match[2].trim();
+    if (inline.length > 0) {
+      specs.push({ text: inline, topLevel: indent === 0 });
+      continue;
+    }
+    // Block form: the following lines indented deeper than the key itself.
+    const block: string[] = [];
+    for (let next = index + 1; next < lines.length; next += 1) {
+      const line = lines[next];
+      if (line.trim() === "") {
+        block.push("");
+        continue;
+      }
+      if (line.match(/^[ \t]*/)![0].length <= indent) break;
+      block.push(line);
+    }
+    specs.push({ text: block.join("\n"), topLevel: indent === 0 });
   }
-  return blocks;
+  return specs;
 }
 
-/** The top-level (`^permissions:`) block only, for the "declares permissions" check. */
+/** The permission specs that can widen the token (`write`, incl. `write-all`). */
+function writeSpecs(yaml: string): string[] {
+  return permissionsSpecs(yaml)
+    .map((spec) => spec.text)
+    .filter((text) => /\bwrite\b/.test(text));
+}
+
+/** The top-level (`permissions:` at column 0) spec, for the "declares" check. */
 function topLevelPermissions(yaml: string): string | null {
-  const match = yaml.match(/^permissions:[ \t]*\n((?:[ \t]+.*\n?)*)/m);
-  return match ? match[1] : null;
+  const spec = permissionsSpecs(yaml).find((entry) => entry.topLevel);
+  return spec ? spec.text : null;
 }
 
 test("every workflow that runs on a pull request declares top-level permissions", () => {
@@ -84,13 +120,12 @@ test("only the reviewed auto-merge workflow grants write on pull_request", () =>
   for (const workflow of all) {
     if (!workflow.onPullRequest) continue;
     if (writeAllowlist.has(workflow.name)) continue;
-    // Check *every* permissions block, not just the top-level one: a job-level
-    // `contents: write` overrides the top-level read and would otherwise be
+    // Check *every* permissions spec, not just the top-level block: a
+    // job-level `contents: write`, a flow-map `{ contents: write }`, or a bare
+    // `write-all` overrides the top-level read and would otherwise be
     // invisible here.
-    for (const block of permissionsBlocks(workflow.yaml)) {
-      if (/:\s*write\b/.test(block)) {
-        offenders.push(`${workflow.name} [${block.replace(/\s+/g, " ").trim()}]`);
-      }
+    for (const spec of writeSpecs(workflow.yaml)) {
+      offenders.push(`${workflow.name} [${spec.replace(/\s+/g, " ").trim()}]`);
     }
   }
   assert.deepEqual(
@@ -100,10 +135,10 @@ test("only the reviewed auto-merge workflow grants write on pull_request", () =>
   );
 });
 
-test("the permissions scanner sees a job-level block too (self-test)", () => {
-  // Guards the guard: a job-level block overrides the top-level one, so a
-  // scanner that only looked at column 0 would miss the widening.
-  const yaml = [
+test("the permissions scanner sees every YAML form, at any indent (self-test)", () => {
+  // Guards the guard: a form the scanner cannot read is a write grant it never
+  // reports. Block, flow-map and bare-scalar, top-level and job-level.
+  const jobBlock = [
     "permissions:",
     "  contents: read",
     "jobs:",
@@ -112,13 +147,32 @@ test("the permissions scanner sees a job-level block too (self-test)", () => {
     "    permissions:",
     "      contents: write",
   ].join("\n");
-  const blocks = permissionsBlocks(yaml);
-  assert.equal(blocks.length, 2, `expected two permissions blocks, got ${blocks.length}`);
   assert.ok(
-    blocks.some((block) => /:\s*write\b/.test(block)),
-    "the job-level write block was not seen",
+    writeSpecs(jobBlock).some((text) => /contents:\s*write/.test(text)),
+    "the job-level block write was not seen",
   );
-  assert.equal(topLevelPermissions(yaml)!.includes("write"), false);
+  assert.equal(topLevelPermissions(jobBlock)!.includes("write"), false);
+
+  // The two forms the earlier scanner missed entirely.
+  const jobFlowMap = ["jobs:", "  build:", "    permissions: { contents: write }"].join("\n");
+  assert.ok(
+    writeSpecs(jobFlowMap).some((text) => /\bwrite\b/.test(text)),
+    "a job-level flow-map write was not seen",
+  );
+
+  const jobWriteAll = ["jobs:", "  build:", "    permissions: write-all"].join("\n");
+  assert.ok(
+    writeSpecs(jobWriteAll).some((text) => /\bwrite\b/.test(text)),
+    "a job-level `permissions: write-all` was not seen",
+  );
+
+  // The top-level flow-map must still satisfy the "declares permissions" check.
+  assert.ok(
+    topLevelPermissions("permissions: { contents: read }") !== null,
+    "a top-level flow-map was not recognised as declaring permissions",
+  );
+  // And a top-level bare scalar is recognised too.
+  assert.equal(topLevelPermissions("permissions: read-all"), "read-all");
 });
 
 test("no workflow uses the pull_request_target trigger", () => {

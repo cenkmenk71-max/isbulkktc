@@ -359,3 +359,33 @@ kapatıldı ve her biri bir self-test ile sabitlendi:
 `tests/security/**` artık `bun run test:security` ile `static` CI işinde kendi
 adımı olarak koşuyor (`package.json` + `.github/workflows/ci.yml` = LANE-INFRA).
 Bu kapatıldı; katman yerelde `bun run test:security` ile yeşildir.
+
+### Katmanın kendi dedektörleri (29. tur — CI izinleri + service-role grant)
+
+Bu turda dış yüzey yerine yine **dedektörlerin kendisi** düşman gözüyle tarandı;
+iki gerçek yanlış-negatif bulundu, kanıtlandı ve düzeltildi.
+
+- **`ci-workflow-permissions.test.ts` `permissions:` tarayıcısı yalnız blok
+  biçimini görüyordu.** `permissionsBlocks` regex'i `permissions:`'tan sonra
+  satır sonu + girintili satır şart koşuyordu; bu yüzden job düzeyinde
+  `permissions: { contents: write }` (flow-map) ve `permissions: write-all`
+  (bare scalar) biçimleri **görünmüyordu**. Kanıt: iki biçim de `[]` döndürdü.
+  Yani bir workflow job'una flow-map/scalar ile yazma jetonu verip testi yeşil
+  bırakabilirdi — tedarik-zinciri sınırı delikti. `permissionsSpecs` artık her
+  üç biçimi, her girintide okuyor; `topLevelPermissions` üst-düzey flow-map'i
+  de "bildirilmiş" sayıyor. (Mutation: `ci.yml` `static` job'una
+  `permissions: { contents: write }` → kırmızı, geri alınca yeşil.)
+- **`sql-hardening.test.ts` `serviceRoleOnlySignatures` yalnız `grant execute`
+  görüyordu.** Kardeşi `grantedToClients` `grant (execute|all)`'a genişletilmişti
+  ama bu fonksiyon `grant all on function … to service_role` biçimini
+  kaçırıyordu; öyle verilmiş bir worker RPC `service_role`-only kümesine hiç
+  girmiyor, dolayısıyla gövdesindeki `auth.role()` guard'ı **denetlenmiyordu** —
+  bu suite'in önlemek için var olduğu tam yanlış-negatif. İki tarayıcı artık aynı
+  biçimi okuyor; `public` rolü de client-grant sayılıp "service-role-only"
+  dışında bırakılıyor. (Mutation: `grant all … to service_role` yazan scratch
+  definer + guardsız gövde → test kırmızı, eski tarayıcıda yeşil kalırdı.)
+
+Her ikisi için self-test eklendi (blok/flow-map/scalar; `grant all`/`grant
+execute`/`to public`), böylece tarayıcı bir daha daraltılırsa CI kırmızı olur.
+Bu tur **hiçbir dış sınırı değiştirmedi** — mevcut kontroller zaten doğruydu;
+kapatılan şey onları koruyan guard'ın körlüğüydü.

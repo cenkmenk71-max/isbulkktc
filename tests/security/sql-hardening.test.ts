@@ -384,16 +384,23 @@ test("the admin-guard ratchet reads the last definition, not the first (self-tes
 // ---------------------------------------------------------------------------
 
 /** The signatures granted to `service_role` (with their argument lists). */
-function serviceRoleOnlySignatures(): string[] {
+function serviceRoleOnlySignatures(sql: string = allSql): string[] {
   const grantedToClients = new Set<string>();
   const grantedToService = new Set<string>();
+  // `grant all` also grants EXECUTE, so it must be read exactly as
+  // `grantedToClients` reads it. With only `grant execute` here, a worker RPC
+  // handed to `service_role` via `grant all on function … to service_role`
+  // never entered this set, so its missing `auth.role()` guard was never
+  // checked — the precise false-negative this suite exists to prevent.
   const re =
-    /grant\s+execute\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*\(([^)]*)\)\s+to\s+([^;]+);/gi;
-  for (const match of allSql.matchAll(re)) {
+    /grant\s+(?:execute|all)\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*\(([^)]*)\)\s+to\s+([^;]+);/gi;
+  for (const match of sql.matchAll(re)) {
     const roles = match[3].toLowerCase();
     const signature = `${match[1]}(${normalizeArgs(match[2])})`;
     if (/\bservice_role\b/.test(roles)) grantedToService.add(signature);
-    if (/\banon\b|\bauthenticated\b/.test(roles)) grantedToClients.add(signature);
+    // `public` (implicit everyone) is a client grant too, so such a function is
+    // not service-role-*only*.
+    if (/\b(?:anon|authenticated|public)\b/.test(roles)) grantedToClients.add(signature);
   }
   return [...grantedToService].filter((signature) => !grantedToClients.has(signature)).sort();
 }
@@ -415,6 +422,31 @@ test("the service-role guard matcher reads the latest body and ignores comments 
   assert.equal(
     serviceRoleGuard.test(stripSqlComments("begin -- auth.role() <> 'service_role'\n return; end;")),
     false,
+  );
+});
+
+test("the service-role grant scanner sees `grant all` and excludes client grants (self-test)", () => {
+  // Guards the guard: with only `grant execute` the scanner returned `[]` for a
+  // `grant all` line, so a worker RPC handed out that way was never checked.
+  assert.deepEqual(
+    serviceRoleOnlySignatures(
+      "grant all on function public.worker_a(text) to service_role;",
+    ),
+    ["worker_a(text)"],
+  );
+  assert.deepEqual(
+    serviceRoleOnlySignatures(
+      "grant execute on function public.worker_b(integer) to service_role;",
+    ),
+    ["worker_b(integer)"],
+  );
+  // A function also reachable by clients (anon/authenticated/public) is not
+  // service-role-*only* and must not be reported here.
+  assert.deepEqual(
+    serviceRoleOnlySignatures(
+      "grant all on function public.shared(text) to service_role, public;",
+    ),
+    [],
   );
 });
 
