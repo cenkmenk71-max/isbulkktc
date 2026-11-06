@@ -823,3 +823,111 @@ Canlıya dokunulmadı.
 Bayat not: `resolveJobDateModified("garbage", P)` **artık** `P`'ye düşüyor
 (dosya zaten korumalı); o bulgu geçersizdi.
 
+
+---
+
+## Tur 17 — e-posta gönderim hatası sağlık sinyali üretmiyordu (#186, 2. madde)
+
+### Alınan issue
+`gh issue list --state open --label agent:backend` → sahibi LANE-URUN olan üç açık
+kayıt vardı: **#186** (Resend anahtarı), **#208** (CV, devam eden), **#367**
+(LANE-QA'ya devredilmiş). #186'ın 1. ve 3. maddesi insan/panel işi; **2. madde
+("sessiz başarısızlığı kaldır") açıkça LANE-URUN'a yazılmış.** Tur 6 bunun
+*anahtar* yarısını yapmıştı; bu tur **gönderim** yarısını kapattı.
+
+### Doğrulanan kanıt (gerçek mailer, ağ yok)
+`globalThis.fetch` stub'lanıp gerçek `deliver()` sürüldü. Tur 6 sonrası durum:
+
+| Resend yanıtı | Basılan log |
+|---|---|
+| 401 geçersiz anahtar | `error "Outbound email was rejected by Resend." {code:"validation_error"}` |
+| 403 alan adı doğrulanmamış | aynı — **statusCode yok** |
+| 422 geçersiz alıcı | aynı — **statusCode yok** |
+| 429 hız sınırı | `{code:"rate_limit_exceeded"}` — statusCode yok |
+| 500 sağlayıcı hatası | `{code:"internal_server_error"}` — statusCode yok |
+| ağ hatası | `{code:"application_error"}` — statusCode yok |
+
+Üç kusur birden:
+1. **Sinyal anahtarı tutarsız.** Tur 6 bozuk anahtarı `email_health` altında
+   bildiriyordu; gönderim reddi düz bir cümleydi. `email_health`'e bağlanan bir
+   alarm aynı arızanın **ikinci yarısını hiç görmez.**
+2. **`statusCode` düşüyordu.** Yanlış anahtar / yanlış alıcı / kısıtlama ayrımı
+   kayboluyordu.
+3. **`catch` ölü yol.** Resend SDK'sı (`resend@6.35.0`, `fetchRequest`)
+   hatayı **fırlatmaz**, `{data:null, error}` **döner** — her hata dalı
+   `return` ile çıkar. Yani `try/catch` pratikte yalnız `getResend()`
+   patlamasını yakalar; gerçek reddi `if (result.error)` yakalar.
+
+### Düzeltme (yalnız sahip olduğum/atandığım yüzey)
+- **Yeni `src/server/email/delivery-health.ts`** (saf, env/IO yok):
+  `EMAIL_HEALTH_EVENT`, `DELIVERY_FAILURE_EVENT`, `describeDeliveryFailure`
+  (SDK şekli `{name, message, statusCode}` → `{event, code, statusCode}`;
+  **`message` bilinçli olarak dışarıda** — Resend mesajı alıcı adresini
+  içerebiliyor, sinyal sızıntı yeri değil), `reportDeliveryFailure` (log
+  enjekte edilebilir → çağrı yeri test edilebilir).
+- **`mailer.ts` `deliver`:** `if (result.error)` artık `reportDeliveryFailure`
+  çağırır; bozuk-anahtar dalı da paylaşılan `EMAIL_HEALTH_EVENT` sabitini
+  kullanır. Tek anahtar, tek şekil.
+- `src/server/email/**` sahiplik tablosunda **sahipsiz**; #186 bu yarıyı
+  LANE-URUN'a veriyor, başka lane dosyaya dokunmuyor (açık PR'lar + 
+  `lane-collisions.mjs` → **0 çakışma**).
+
+### Fonksiyonel doğrulama (düzeltme sonrası, aynı probe)
+```
+401 -> error email_health {event:"email_delivery_failed", code:"validation_error", statusCode:401}
+403 -> error email_health {… code:"validation_error",   statusCode:403}
+422 -> error email_health {… code:"validation_error",   statusCode:422}
+429 -> error email_health {… code:"rate_limit_exceeded",statusCode:429}
+500 -> error email_health {… code:"internal_server_error",statusCode:500}
+ağ  -> error email_health {… code:"application_error",  statusCode:null}
+başarı -> (log yok)
+```
+**Mutasyon kanıtı:** çağrı yeri eski cümleye geri alınınca probe yine sinyalsiz
+`"Outbound email was rejected by Resend."` bastı → test/kanıt boş değil.
+
+### Eklenen test
+`src/server/email/delivery-health.test.ts` (6 test): sinyal şekli, `statusCode`'un
+`null` dahil korunması, bozuk/eksik koda `unknown_error` düşüşü, **alıcının
+sinyale hiç girmemesi**, `email_health` anahtarıyla **emission sözleşmesi**,
+şekilsiz fırlatmada çökmeme.
+
+### Micro-denetim tablosu (Tur 17, sahip olunan yüzey)
+
+| Dosya | Doğruluk | Hata yolu | Yetki | Sızıntı | Sınır girdi | Sonuç |
+|---|---|---|---|---|---|---|
+| `src/server/email/mailer.ts` | ⚠️ **bulgu → düzeltildi** | ⚠️ ölü `catch` yolu belgelendi | ✅ | ✅ `message` loglanmıyor | ✅ | düzeltildi |
+| `src/server/email/delivery-health.ts` | — (yeni) | ✅ | ✅ saf | ✅ alıcı yok | ✅ | yeni |
+| `src/server/email/email-headers.ts` | ✅ | ✅ | ✅ | ✅ | ✅ bozuk URL → başlık yok | temiz |
+| `src/server/email/unsubscribe-token-core.ts` | ✅ | ✅ | ✅ | ✅ | ✅ | temiz (#102 `server-only` ayrı) |
+| `src/server/config/resend-key.ts` | ✅ | ✅ | ✅ | ✅ | ✅ | temiz |
+| `src/server/config/app-url.ts` | ✅ | ✅ prod'da fırlatır | ✅ | ✅ | ✅ | temiz |
+| `src/server/push/vapid.ts` | ✅ | ✅ `push_health`+`event` | ✅ | ✅ | ✅ | temiz (referans desen) |
+| `src/server/push/push-endpoint.ts` | ✅ | ✅ | ✅ SSRF allowlist | ✅ | ✅ IPv4/creds reddi | temiz |
+| `src/features/{candidates,feedback,jobs,sales}/actions.ts` | ✅ | ✅ best-effort `catch` | ✅ | ✅ yalnız `message` | ✅ | temiz (mailer'ı `try/catch` ile sarıyor — sözleşmeye uygun) |
+| `src/features/documents/text-document-extractor.ts` | ✅ | ✅ `DocumentImportError` | ✅ | ✅ | ✅ UTF-16 BE/LE | temiz |
+| `src/features/companies/*`, `src/lib/pwa/*`, `src/features/jobs/source-job-*.ts` | ✅ | ✅ | ✅ | ✅ | ✅ | temiz |
+| `src/features/candidates/**` (parser, draft, form) | ✅ | ✅ | ✅ | ✅ | ✅ | Tur 16'da denetlendi |
+
+**Bakılmayan:** `src/lib/analytics/**` bu turda açılmadı (önceki turlarda
+denetlendi; bu değişiklikle kesişmiyor). `src/features/editorial/**` aynı
+şekilde — bu bulgu sınıfıyla ilgisi yok.
+
+### Kapılar
+lint/typecheck/check:frontend-source/test:unit (**680**, 0 fail, 0 todo) → hepsi
+yeşil. Canlıya dokunulmadı (secret yazımı yok, DB yok, migration yok).
+
+### Devredilen / kapsam dışı
+- **#186 1. ve 3. maddesi** → insan (panel): doğru `re_…` anahtarı girilip
+  `curl … https://api.resend.com/domains` ile doğrulanmalı. Lane yapamaz.
+- **#102** (`unsubscribe-token-core.ts` `server-only`) → LANE-QA/INFRA handoff
+  (değişmedi).
+- **`src/server/email/**` hâlâ sahiplik tablosunda sahipsiz.** Öneri (Tur 6'da da
+  yazıldı): LANE-INFRA tabloya `src/server/email/**` için sahip tanımlasın;
+  aksi hâlde her e-posta düzeltmesi "sahipsiz dosya" tartışmasıyla başlıyor.
+
+### Ders
+Bir "sessiz hata"yı kapatmak, o hatanın **tüm çıkış yollarını** kapatmayı
+gerektirir. Tur 6 yapılandırma hatasını sinyale bağladı ama **gönderim**
+hatasını bağlamadı; alarm yarı kör kaldı. Ve SDK'nın hata sözleşmesini
+okumadan `try/catch`'i "ana hata yolu" sanmak yanıltıcı: `resend` fırlatmaz,
+döner.

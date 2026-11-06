@@ -19,6 +19,7 @@ import {
 } from "../../../supabase/functions/_shared/email-render.ts";
 import { resolveEmailLocale } from "../../../supabase/functions/_shared/email-copy.ts";
 import { buildEmailHeaders, type EmailHeaders } from "./email-headers";
+import { EMAIL_HEALTH_EVENT, reportDeliveryFailure } from "./delivery-health";
 
 /**
  * Node-side transactional mailer for emails that originate in a Next.js server
@@ -47,7 +48,7 @@ function getResend(): Resend | null {
     // Present but not a Resend key (a copied Supabase token, a truncated value).
     // Reporting it as "not configured" hid the real cause for months (#186), so
     // name it distinctly; a health signal keyed on `event` can alert on it.
-    console.error("email_health", {
+    console.error(EMAIL_HEALTH_EVENT, {
       event: "resend_key_malformed",
       message: "RESEND_API_KEY is set but is not a Resend key (expected `re_…`).",
     });
@@ -115,9 +116,11 @@ async function deliver(
       { idempotencyKey },
     );
     if (result.error) {
-      console.error("Outbound email was rejected by Resend.", {
-        code: result.error.name,
-      });
+      // Reported under `email_health` so the same alert covers a rejected send
+      // and the malformed-key case above (#186). The SDK returns errors rather
+      // than throwing, so this — not the `catch` — is the path a real rejection
+      // takes; the `catch` only covers an unexpected throw.
+      reportDeliveryFailure(result.error);
     }
   } catch (error) {
     console.error("Outbound email delivery failed.", {
