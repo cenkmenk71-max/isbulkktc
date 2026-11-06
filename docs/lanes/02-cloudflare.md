@@ -488,3 +488,34 @@ OG `og-cover.webp` 1200×630, unicode varlık yolları 200.
 
 **Açık kalan (değişmedi):** H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08.
 Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 21".
+
+## Tur 22 özeti (2026-11-06)
+
+Salt-okuma. Canlı build `3f5a654` = `main` HEAD (drift yok).
+
+- **P-01 KAPANDI** (#403, `lane:guvenlik`): prerender rotalar (`/blog`,`/contact`,
+  `/freelance`,`/about`,`/privacy`,`/terms` + dil önekleri) artık
+  `private, no-cache, no-store, max-age=0, must-revalidate`; `public, max-age=0`
+  kalmadı. F-14 satırı güncellendi.
+- **D-10 (düzeltme):** tur 21 D-07'nin "edge `Vary` ekler" gözlemi doğru ama
+  `Vary` **yalnız GET'te** görünür; `curl -I` (HEAD) cache HIT'te göstermez →
+  ölçüm yöntemi notu eklendi (F-15'e çapraz referans).
+- **D-11 (düzeltme):** G-01 adres bağlamları tek tek sayıldı (2× JSON-LD, 1×
+  `contactEmail`, 2× RSC JSON-LD kopyası, `mailto:` href, footer değeri = 7×);
+  önceki "2+5" toplu ifadesi netleştirildi. Öneri değişmedi: Email Obfuscation OFF.
+- **SR-01 (yeni, bilgi):** CF Speed Brain `speculation-rules:
+  "/cdn-cgi/speculation"` tüm HTML yanıtlarında enjekte ediliyor (origin'de yok);
+  `eagerness: conservative`, `prefetch`. Panel önerisi: kullanılmıyorsa kapat.
+- **Yeniden doğrulanan (temiz):** WAF negatif 11/12×403 (+`/.env%2f`403), pozitif
+  yanlış-pozitif yok; metodlar TRACE 405/TRACK 403/CONNECT 400; smuggling CL+TE
+  400 (GET+POST), çift CL 400; başlık sahteleme CF-Connecting-IP 403/`error 1000`,
+  `Host: evil.com` 403, absolute-form 403; yönlendirmeler 301/308 zincirsiz;
+  trailing-dot R-01 teyit; cache-deception 404 `no-store`; N-01 teyit; A-01c
+  kapalı (400); bot UA sqlmap 403 / iyi botlar 200; HTTP/3 200; DNS (DMARC
+  `p=none`, DKIM 2048/1024, `_mta-sts` yok, DNSSEC apex AD=true) — hepsi değişmedi.
+- **Brief ile çelişki:** "her yolda `cf-mitigated: challenge`" gözlemi bu sandbox
+  egress'inden (GCP) **yeniden üretilemedi** (0 challenge); panel/gerçek GH-runner
+  teyidi gerekir → "Bakılmayan" notu.
+
+**Açık kalan (tur 22 sonrası):** H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08,
+**SR-01 (yeni)**. Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 22".

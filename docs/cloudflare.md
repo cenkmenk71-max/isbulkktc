@@ -53,8 +53,8 @@ Kanıt kısaltmaları: `HTTP` = `curl -D -` başlıkları, `DoH` = `cloudflare-d
 | F-11 | HSTS | `max-age=31536000; includeSubDomains; preload` | Doğru | `HTTP` |
 | F-12 | HSTS preload | `hstspreload.org` → **`status: pending`** | `preloaded` olana kadar bekle; kaydı geri çekme | hstspreload API |
 | F-13 | DNSSEC | Açık — DS `2371 13 2 36e0…775b`, apex+çoğu alt alan `AD=true`; **`rsend` CNAME'i `rmta.net`'e gidiyor (DS yok) → `AD=false`** (bkz. tur 18, D-01) | Apex doğru; kısmi kapsam bilinmeli | DoH DS + `AD` |
-| F-14 | Cache — dinamik HTML | `/`, `/jobs`, `/companies`, tüm dil önekleri: `cache-control: private, no-cache, no-store…`, `cf-cache-status: DYNAMIC` | Dinamik asla cache'lenmemeli — **doğru**; ama **prerender** rotalar (`/blog`, `/contact`, `/freelance`, `/about`, `/privacy`, `/terms`) `public, max-age=0` + `Set-Cookie` döner (tur 19, P-01) | `HTTP` |
-| F-15 | Cache — statik | `/_next/static/*`: `public, max-age=31536000, immutable`, `cf-cache-status: HIT`; **metin varlıklarında (CSS/JS) edge `vary: accept-encoding` ekler, fontta eklemez** (tur 21, D-07) | Doğru | `HTTP` |
+| F-14 | Cache — dinamik HTML | `/`, `/jobs`, `/companies`, tüm dil önekleri: `cache-control: private, no-cache, no-store…`, `cf-cache-status: DYNAMIC`. **Prerender** rotalar (`/blog`, `/contact`, `/freelance`, `/about`, `/privacy`, `/terms` + dil-önekli varyantlar) da artık `private, no-cache, no-store, max-age=0, must-revalidate` (tur 22 — P-01 #403 ile **kapandı**) | Dinamik ve prerender asla cache'lenmemeli — **doğru** | `HTTP` |
+| F-15 | Cache — statik | `/_next/static/*`: `public, max-age=31536000, immutable`, `cf-cache-status: HIT`; **metin varlıklarında (CSS/JS) edge `vary: accept-encoding` ekler, fontta eklemez** (tur 21, D-07; **ölçüm yöntemi:** yalnız GET'te görünür, `curl -I` göstermez — tur 22, D-10) | Doğru | `HTTP` |
 | F-16 | Cache — `robots.txt` | `public, max-age=2628000` (≈30 gün), `REVALIDATED` | Kabul; ama `noindex` kuralı **`Disallow` etmiyor** (SEO lane) | `HTTP` |
 | F-17 | Cache — `sitemap.xml` | `public, max-age=3600`, `EXPIRED`/`REVALIDATED` | 1 saat TTL makul; `<lastmod>` tazeliği SEO lane'de | `HTTP` |
 | F-18 | Cache — `/images/*` | `public, max-age=2628000`, `MISS`→`REVALIDATED`, ETag var | Görseller edge-cache'leniyor, OK | `HTTP` |
@@ -1838,3 +1838,147 @@ LANE-INFRA kapsamı).
 - **IPv6 bağlantısı:** sandbox'ta v6 yolu yok.
 - **Gerçek tarayıcı:** `email-decode.min.js` çalışma-anı davranışı ve Turnstile
   iframe'i sürülmedi.
+
+---
+
+## Edge mikro-denetim tur 22 — P-01 canlı kapanışı + `Vary` ölçüm yöntemi + spec-rules (2026-11-06)
+
+Salt-okuma. Canlı build `/api/build-info` → **`3f5a654`** = `main` HEAD (drift yok).
+
+### Düzeltmeler (sahip olunan dokümanlarda)
+
+| # | Dosya:satır | Boyut | Gözlenen (önce) | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| D-09 | `docs/cloudflare.md:56` (F-14) | Doğruluk | prerender rotalar `public, max-age=0` | `private, no-store` | Bayat bilgi | **düzeltildi** (P-01 kapandı) |
+| D-10 | `docs/cloudflare.md:1744` (D-07) | Doğruluk | "edge metin varlıklarına `Vary` **ekler**" — yöntem belirsiz | Yalnız **GET + MISS**'te gözlenir; `curl -I` (HEAD) `Vary`'yi göstermez | Yanlış ölçüm yöntemi | **düzeltildi** (aşağıda) |
+| D-11 | `docs/cloudflare.md:1774` (G-01) | Doğruluk | "2× JSON-LD + 5× RSC payload" | 2× JSON-LD + **1×** `contactEmail` + **2×** JSON-LD kopyası + `mailto:` href + footer değeri | Eksik/toplu sayım | **düzeltildi** (aşağıda) |
+
+### P-01 canlıda KAPANDI (tur 19→22)
+
+Tur 19'da `lane:guvenlik`e devredilen P-01 (`next.config.ts`), PR **#403** ile
+main'e girdi ve canlıya alındı (`build-info` `3f5a654` = main HEAD). Ölçüm:
+
+```
+/blog /contact /freelance /about /privacy /terms /en/blog
+→ cache-control: private, no-cache, no-store, max-age=0, must-revalidate
+→ cf-cache-status: DYNAMIC   (Set-Cookie: NEXT_LOCALE hâlâ var — dil middleware'i)
+```
+
+Artık **prerender rotalar da `private, no-store`** döner; `public, max-age=0`
+kalmadı. Paylaşımlı cache'e bayat/kullanıcı-özel içerik sızma yüzeyi kapandı.
+`set-cookie` varlığı (dil middleware'i) ayrı ve bilinen bir durum; `Vary`'da
+`Cookie` yokluğu **artık risk değil** (yanıt `no-store`).
+
+### D-10 — `Vary` ölçümü yönteme bağlı: HEAD vs GET (bilgi, düşük)
+
+D-07'nin "edge `Vary` ekliyor" gözlemi **doğru**, ama `Vary` yalnız **GET**'te ve
+çoğunlukla **cache MISS**'te döner. `curl -I` (HEAD) aynı URL'de `Vary`'yi
+**göstermez**:
+
+| İstek | `cf-cache-status` | `vary: accept-encoding` |
+|---|---|---|
+| `HEAD /_next/static/chunks/275n0961ffgrc.css` | HIT | **yok** |
+| `GET  /_next/static/chunks/275n0961ffgrc.css` | HIT | **var** |
+
+MISS'te ise hem HEAD hem GET'te var (tur 21 bunu `?cb=` ile görmüş). Yani
+`Vary`'nin varlığı **metod + cache durumu** ile değişir; `curl -I` ile ölçülen
+"yok" sonucu yanıltıcıdır. **Kodlama yine de doğru**: HIT'te `Accept-Encoding:
+identity` → düz gövde (11 767 B), `gzip`/`br` → sıkıştırılmış; yanlış kodlanmış
+gövde gözlenmedi. Ders: başlık "var/yok" iddiasını **GET** ile ve cache
+durumunu not ederek ölç.
+
+### D-11 — G-01 adres bağlamları (bilgi/orta, öneri değişmedi)
+
+`info@isbulkktc.com` tek yanıtta **7×** düz metin; bağlamlar (ham HTML, sırayla):
+
+1. JSON-LD `Organization.email`
+2. JSON-LD `ContactPoint.email`
+3. RSC `contactEmail`
+4. RSC JSON-LD kopyası (`Organization`)
+5. RSC JSON-LD kopyası (`ContactPoint`)
+6. RSC footer `mailto:` href (`href:"mailto:info@…"`)
+7. RSC footer görünen değer (`footer-support-value`)
+
+CF Email Obfuscation yalnız **görünür `mailto:` link metnini** `__cf_email__`
+span'ına çevirir (sayfada 1 span); JSON-LD + RSC'deki 7 düz kopya kalır →
+obfuscation'ın pratik etkisi **~sıfır**. Öneri: Scrape Shield → Email
+Obfuscation **OFF** (kod değişmez). `/cdn-cgi/l/email-protection` doğrudan GET →
+**404** (yalnız istemci-taraflı çözülür).
+
+### Yeni gözlem — CF Speculation Rules enjeksiyonu (bilgi, düşük)
+
+Edge, **origin'de olmayan** bir `speculation-rules: "/cdn-cgi/speculation"`
+başlığı ekliyor (tüm HTML rotaları: `/`, `/jobs`, `/blog`, `/en`). İçerik:
+
+```json
+{"tag":"cf-speed-brain","prefetch":[{"eagerness":"conservative",
+ "source":"document","where":{"and":[{"href_matches":"/*","relative_to":"document"}]}}]}
+```
+
+CF Speed Brain (spekulatif prefetch) **açık**. Etki düşük: `eagerness:
+conservative` (yalnız işaretçi hover'ında), aynı-origin, `prefetch` (render
+değil). Risk: gereksiz prefetch → origin'e ek trafik; `/login` gibi rotalar için
+kullanıcı hover'ında ön-getirme. Öneri (panel, düşük öncelik): kullanılmıyorsa
+Speed Brain'i kapat; kullanılıyorsa `/login`,`/auth/*` `where`'den hariç tut.
+`speculation-rules` yalnız HTML yanıtlarında; JSON/`robots.txt`'te yok.
+
+### Bu turda yeniden doğrulananlar (temiz)
+
+- **WAF negatif:** 11/12 yol → **403**; `/config.json` → 404 (beklenen);
+  `/.env%2f` → **403**; kodlanmış `/.git%2fconfig`,`/.git%252fconfig`,`/api/devtools%2f`
+  → 404 (W-01 normalizasyon farkı, sızıntı yok).
+- **WAF pozitif:** meşru SQLi-benzeri aramalar (`o'brien`,`union+select`,`drop+table`,
+  `<script>`,`../../etc/passwd`), 5 dil öneki → **200**; yanlış pozitif yok.
+- **Metodlar:** `TRACE` → **405**, `TRACK` → **403**, `CONNECT` → **400**;
+  GET-özel yollara yazma 405.
+- **Smuggling:** `CL+TE` (GET **ve** POST) → **400**; yinelenen `Content-Length`
+  → **400**; yalnız `TE: chunked` → 200.
+- **Başlık sahteleme:** `CF-Connecting-IP` spoof → **403 `error code: 1000`**;
+  `X-Forwarded-For` spoof → 200 (yansıma yok); `Host: evil.com` → **403**;
+  absolute-form `GET http://evil.com/` → **403**; `%0d%0a` → yansıma yok.
+- **Yönlendirme:** `http`→apex **301**, `http www`→**301**, `https www`→apex
+  **308**, yol+sorgu korunuyor; `//evil.com` → göreli `/evil.com`; `%5C`,`%2F%2F`
+  → 404, `..%2F` → 400; locale `as-needed` (`/en/`→308 `/en`, `/tr`→308 `/`).
+- **Trailing-dot (R-01 teyit):** `isbulkktc.com./jobs` → **404**; `www.…./jobs`
+  → **308**; `isbulkktc.com./en` → 200 (Vercel host eşleştirme; `lane:infra`).
+- **Cache-deception:** `/jobs/x.css`,`/api/build-info.css`,`/profile/dashboard.png`
+  → **404** + `private,no-store` + `BYPASS`.
+- **Negatif cache (N-01 teyit):** `/_next/static/<yok>.js` → **404**,
+  `max-age=31536000`, `MISS→HIT` (origin `max-age=0`).
+- **Header injection / cookie poisoning:** farklı `Cookie`/`Accept-Language`
+  ile gövde boyutu **sabit** (278 012 B), `DYNAMIC`.
+- **A-01c (kapalı):** `/_next/image` tek/çift-kodlama + `/blog` → **400**.
+- **Bot UA:** `sqlmap` → 403; Googlebot/Bingbot/YandexBot/GPTBot/ClaudeBot/curl
+  → 200; datacenter egress'imden (GCP `34.70.174.52`) `cf-mitigated` **yok**
+  (bkz. "Bakılmayan" — bu gözlem brief'teki GH-runner challenge'ıyla çelişir).
+- **TLS/sertifika:** HTTP/3 → 200 (`version=3`); cert `CN=isbulkktc.com`,
+  Let's Encrypt `YE2`, SAN `*.isbulkktc.com, isbulkktc.com`, 2026-09-19→12-18.
+- **DNS:** DMARC `p=none; rua=…; fo=1`; apex TXT 2× `google-site-verification`
+  + `yandex-verification` + SPF; `_mta-sts`/`_smtp._tls` **yok**; DKIM
+  `cf2024-1` 2048 / `resend` 1024; DNSSEC apex `AD=true`, `rsend` `AD=false`;
+  CAA 10 kayıt.
+- **`security.txt`:** 200, `Expires 2027-09-02`, canonical doğru.
+- **Sitemap:** tek host `https://isbulkktc.com`; `robots.txt` `noindex`
+  sayfaları `Disallow` **etmiyor** (AUDIT kuralı — doğru).
+- **HSTS preload:** API → `pending` (değişmedi).
+
+### Drift (tur 22)
+
+H-01 (CF HSTS `max-age`), H-02 (Browser Cache TTL), N-01 (`_next/static` 404
+cache), R-01 (trailing-dot), G-01 (email obfuscation), W-01/V-20 (WAF
+normalizasyon/tarayıcı yolu), F-08 (alias CF'i atlıyor) **açık** — değişmedi.
+**Kapandı:** P-01 (#403). **Yeni:** SR-01 (CF Speed Brain `speculation-rules`,
+bilgi). Canlı `build-info` `3f5a654` = `main` HEAD → **prod drift YOK**.
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` yok): WAF ruleset / Cache Rules / Browser Cache
+  TTL / Speed Brain ayarı / Bot Management / Analytics okunamadı.
+- **IPv6 bağlantısı:** sandbox'ta v6 yolu yok.
+- **Gerçek tarayıcı:** `email-decode.min.js` çalışma-anı davranışı, Turnstile
+  iframe'i ve Speed Brain prefetch davranışı sürülmedi.
+- **GH-runner egress challenge (brief):** sandbox'ta GitHub Actions runner'ı
+  çalıştırılamadı; kendi datacenter egress'imde (GCP) challenge **gözlenmedi** —
+  brief'teki "her yolda `cf-mitigated: challenge`" gözlemi bu egress'te
+  **yeniden üretilemedi** (drift veya IP-sınıfı farkı olabilir; panelden teyit
+  gerekir).
