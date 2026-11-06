@@ -757,3 +757,64 @@ tarandı.
 - **#191 e-posta tarafı** hâlâ `lane:urun` + `agent:handoff` (tur 4).
 - Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
   `docs/lanes/05-tasarim.md`. Hepsi bu lane'in kapsamında.
+
+---
+
+## LANE-TASARIM çalışma notları (2026-11-05, tur 11)
+
+Branch: `lane/tasarim`. Taban: `origin/main` @ `1b1bf26`. Kuyrukta `lane:tasarim`
+etiketli tek iş yine **#191** (e-posta tarafı sahiplik çelişkisinde, devirde). Bu
+turda brief'in 2. (responsive) ve 3. (erişilebilirlik kapsamı) maddeleri ile
+sınır girdiler tarandı.
+
+### Bulgu 12 — axe guard'ı `/jobs/[slug]` (ilan detay) rotasını hiç taramıyordu (düzeltildi)
+
+- **Belirti:** `tests/e2e/accessibility.spec.ts` `publicRoutes` listesi `/jobs`
+  (liste) rotasını tarıyor ama **`/jobs/[slug]` (ilan detay)** hiç taranmıyordu.
+  Detay rotası liste sayfasının göstermediği bölümleri basıyor: işveren kartı,
+  olgu satırı ve `platform` ilanlarında **başvuru formu**.
+- **Neden önemli:** iki başka spec (`jobs.spec.ts`, `seo.spec.ts`) bu rotaya
+  güveniyor (`/tr/jobs/source-iskibris-garson`), yani rota CI'da canlı; ama
+  erişilebilirlik guard'ı onu hiç görmüyordu. Başvuru formunda bir kontrast/hedef
+  regresyonu kimse görmeden yayınlanabilirdi.
+- **Düzeltme:** `publicRoutes`'a `{ path: "/jobs/source-iskibris-garson",
+  name: "job-detail" }` eklendi. Slug, `seed-source-jobs.sql`'de gerçek bir
+  `source_site` satırı (id `…0001`, başlık "Garson") ve iki spec'in zaten
+  kullandığı slug. İçe aktarılan ilanlar her önek altında aynı Türkçe slug'ı
+  taşıdığı için **tek slug altı dilin hepsini** kapsıyor.
+- **Kapsam:** test sayısı **180 → 189** (+9: tr/en/ru/el/fa/de mobil + tr/de/fa
+  masaüstü).
+- **Doğrulama:** test koleksiyonu `--list` ile doğrulandı (`job-detail` ×9).
+  Yerelde tohum (seed) verisi ve Docker olmadığı için koşulamadı; CI'da `db:start`
+  tohumu yükler ve E2E ondan sonra koşar, yani rota deterministik.
+
+### Micro-denetim (bu tur)
+
+- **Yatay/dikey döndürme (landscape 844×390):** 7 public rota → **0 yatay taşma**;
+  çerez kartı header'ı örtmüyor.
+- **Sınır girdiler (uzun/unicode):** `.sector-card-copy`, `.home-journey-link`,
+  `.language-option` içine uzun Türkçe ad, tekrarlı çok uzun kelime ve emoji
+  dizisi enjekte edildi → **0 taşma**, eleman kabından taşmıyor.
+- **Vend sahnesi durum makinesi:** aç → teslim → kapat → yeniden aç döngüsü 3
+  kez, her tier için doğru `data-selected-package` + panel başlığı; **0 sayfa
+  hatası**. Panel açıkken farklı bir tier düğmesine basmak seçimi değiştirmiyor —
+  bu `timeline.ts` `press()`'in kasıtlı davranışı (yalnızca `idle` fazında kabul
+  eder), hata değil.
+- **`aria-label`'lı geri bildirim yıldızları** (`src/features/feedback/**`,
+  LANE-URUN) doğru `ratingValue` etiketi taşıyor.
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅
+- `bun run test:unit` ✅ (660 test)
+- `tests/e2e/accessibility.spec.ts --list` ✅ 189 test (job-detail ×9 dahil)
+
+### Sahibin yapması gerekenler
+
+- **LANE-QA → #349:** `home-search` baseline'ı 44px düzeltmesinden dolayı hâlâ
+  yenilenmeli (tur 10 devri).
+- **#191 e-posta tarafı** hâlâ `lane:urun` + `agent:handoff` (tur 4).
+- Değişen dosyalar: `tests/e2e/accessibility.spec.ts`,
+  `docs/lanes/05-tasarim.md`. İkisi de bu lane'in kapsamında.

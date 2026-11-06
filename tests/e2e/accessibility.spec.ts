@@ -54,6 +54,13 @@ const publicRoutes = [
   // default locale), so a single slug per family covers all six.
   { path: `/is-ilanlari/${districtSlug("Girne")}`, name: "district" },
   { path: `/is-turleri/${jobTypeSlugs.full_time}`, name: "job-type" },
+  // A job detail page. Imported listings carry one Turkish slug under every
+  // prefix (they canonicalise to the default locale), so one seeded slug covers
+  // all six. The route renders the employer card, the fact row and — for a
+  // `platform` listing — the application form, none of which `/jobs` shows, so
+  // it is a distinct layout the guard has to reach. The slug is the same one
+  // `jobs.spec.ts` and `seo.spec.ts` already rely on.
+  { path: "/jobs/source-iskibris-garson", name: "job-detail" },
 ] as const;
 
 /**
