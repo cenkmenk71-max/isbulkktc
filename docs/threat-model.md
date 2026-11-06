@@ -629,3 +629,22 @@ gönderilebilirdi. `tests/security/log-safety.test.ts` eklendi.
 - **Bilinçli sınır (sessiz değil).** Kaynak-metin taraması; bir kimliği önce
   yerel değişkene alıp sonra loglayan bir zincir (`const p = …; console.error(l, p)`)
   görülmez. Bugün böyle bir zincir yok.
+
+### 35. tur — log güvenliği kapsamı: `scripts/**` (kendi alanını tarama)
+
+34. turdaki kapı `src` + `supabase/functions` tarıyordu. Ama CI'da **en ayrıcalıklı**
+token'larla koşan yüzey `scripts/**`'tır: `GH_TOKEN`, `VERCEL_TOKEN`,
+`SUPABASE_ACCESS_TOKEN`. Bir deploy script'inde `console.error(\`… ${process.env.GH_TOKEN}\`)`
+eski kapsamda **sessizce yeşil** kalıyordu (ölçüldü: probe eklendiğinde eski ROOTS
+0 kırmızı, yeni ROOTS 1 kırmızı).
+
+- **Kapsam kararı, ölçümle.** Kural 2 (kimlik ifadesi) `scripts/**`'e genişletildi:
+  ölçüm **0** yanlış-pozitif (kod tabanında `scripts`'te hiçbir `console.*` çağrısı
+  kimlik ifadesi içermiyor). Kural 1 (ilk argüman etiketi) genişletil**medi**: `scripts`
+  CLI'ları bilinçli olarak `error.message` / `JSON.stringify(findings)` yazıyor —
+  11 yanlış-pozitif, teşhis amaçlı, kimlik değil. İki kuralın kapsamı bu yüzden ayrı
+  (`literalFirstArgumentFiles`).
+- **Kanıt (mutation).** `scripts/probe-token-leak.mjs` (`console.error(\`auth failed
+  with ${process.env.GH_TOKEN}\`)`): eski ROOTS → 0 kırmızı; yeni ROOTS → kural 2
+  kırmızı (`process.env.GH_TOKEN`). Probe silindi; 6/6 yeşil. Bir self-test ROOTS'un
+  `scripts`'i içerdiğini ve kural 1'in içermediğini ratchet'ler.

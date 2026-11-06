@@ -1135,3 +1135,61 @@ Bu turda tam taranan: `log-safety.test.ts` (yeni), `session-cookie-flags.test.ts
 `docs/threat-model.md`, `tests/security/README.md`. `tests/security/**` kalan
 dosyalar bu turda **bakılmadı**. Açık `todo`'lar değişmedi: #298, #206, #102,
 #418 §6, #424 (M-01/M-03/M-04 → #434 ile kapılı; M-02 → #435 LANE-INFRA).
+
+---
+
+## Tur 35 — log güvenliği kapsamı `scripts/**` (#418 §7)
+
+### Bulgu
+
+| # | Dosya:satır | Gözlenen | Beklenen | Etki |
+|---|---|---|---|---|
+| G-1 | `tests/security/log-safety.test.ts:30` (eski `ROOTS`) | Tarama yalnız `src` + `supabase/functions` | CI'da en ayrıcalıklı token'larla (`GH_TOKEN`, `VERCEL_TOKEN`, `SUPABASE_ACCESS_TOKEN`) koşan `scripts/**` da kimlik sızıntısı için taranmalı | Bir deploy script'inde token loglanırsa kapı **sessizce yeşil** kalır |
+
+**Neden kapsam dışıydı:** 34. tur kapısı `console.*` çağrılarını yalnız uygulama
+kaynağında arıyordu. Ama `scripts/prune-vercel-deployments.mjs`,
+`scripts/approve-pending-runs.mjs`, `scripts/system-health.mjs` CI'da gerçek
+token'larla koşar; sızıntı oradadır.
+
+### Düzeltme (ölçülü kapsam kararı)
+
+- **Kural 2** (kimlik ifadesi) `scripts/**`'e genişletildi. Ölçüm: kod tabanında
+  `scripts`'te hiçbir `console.*` argümanı kimlik ifadesi içermiyor → **0
+  yanlış-pozitif**.
+- **Kural 1** (ilk argüman etiketi) genişletil**medi**: `scripts` CLI'ları bilinçli
+  olarak `error.message` / `JSON.stringify(findings)` yazar (11 adet). Bunlar
+  teşhis, kimlik değil. Kapsamlar bu yüzden ayrı tutuldu
+  (`literalFirstArgumentFiles`).
+
+### Kanıt (mutation, iki yönlü)
+
+| Senaryo | Eski `ROOTS` | Yeni `ROOTS` |
+|---|---|---|
+| `scripts/probe-token-leak.mjs`: `console.error(\`… ${process.env.GH_TOKEN}\`)` | **0 kırmızı** (kör) | **kural 2 kırmızı** (`process.env.GH_TOKEN`) |
+
+Probe silindi. Bir self-test ROOTS'un `scripts`'i içerdiğini, kural 1'in
+içermediğini ve kural 1'in hâlâ `src`/`supabase/functions`'ı kapsadığını ratchet'ler.
+
+### Kapılar
+
+`lint` / `typecheck` / `check:frontend-source` temiz.
+`test:security` **131 test / 127 pass / 0 fail / 4 todo** (130→131).
+`test:unit` **739 / 737 pass / 2 todo** (değişmedi).
+
+### Bakılmayan
+
+Bu turda taranan: `log-safety.test.ts`, `session-cookie-flags.test.ts`,
+`auth-captcha-wiring.test.ts`, `anonymous-write-surface.test.ts`, `scripts/*.mjs`
+(kimlik kapsamı), `src/features/identity/actions.ts` (hata eşleme), çerez politikası
+sayfası + `Legal.cookies` mesajları. `tests/security/**` kalan dosyalar bu turda
+**bakılmadı**.
+
+### Devir (kendi alanım dışı)
+
+- **`System health` kendini besleyen kırmızı döngü.** Kanıt: 18:58Z koşusu (id
+  `42275551449`, #425 sonrası ilk) → `FAIL main CI: 1 workflow(s) red: Verify
+  production deployment`. 19:56Z koşusu (id `42283969887`) → `2 workflow(s) red:
+  System health, Verify production deployment`. Yani kontrol, kendi önceki kırmızı
+  koşusunu "main'de kırmızı workflow" sayıp kendini besliyor. `scripts/system-health.mjs`
+  **LANE-OPERATÖR** sahipliğinde; #427 yalnız verify yarışını kapsıyor, self-latch
+  yarısı açık → **#451** (`lane:operator` + `agent:handoff`).

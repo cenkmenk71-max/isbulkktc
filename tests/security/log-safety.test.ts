@@ -22,23 +22,33 @@ import test from "node:test";
  *   2. the argument list mentions no credential-bearing expression.
  *
  * This is a **ratchet**: the codebase is clean today (measured: 0 credential
- * expressions in any `console.*` call, 1 non-literal first argument — the
- * sanctioned `EMAIL_HEALTH_EVENT`). The gate keeps it clean.
+ * expressions in any `console.*` call across `src`, `supabase/functions` and
+ * `scripts`, 1 non-literal first argument — the sanctioned `EMAIL_HEALTH_EVENT`).
+ * The gate keeps it clean.
  */
 
-const ROOTS = ["src", "supabase/functions"];
+const ROOTS = ["src", "supabase/functions", "scripts"];
 
 function walk(directory: string): string[] {
   const files: string[] = [];
   for (const entry of readdirSync(directory)) {
     const path = `${directory}/${entry}`;
     if (statSync(path).isDirectory()) files.push(...walk(path));
-    else if (/\.(ts|tsx)$/.test(entry) && !/\.test\./.test(entry)) files.push(path);
+    else if (/\.(ts|tsx|mjs)$/.test(entry) && !/\.test\./.test(entry)) files.push(path);
   }
   return files;
 }
 
 const sourceFiles = ROOTS.flatMap((root) => walk(root));
+
+/**
+ * Rule 1 is not enforced on `scripts/`: those CLI tools deliberately print a
+ * `error.message` or a `JSON.stringify(findings)` first, which is a diagnostic,
+ * not a credential. Rule 2 (below) *is* enforced there — the scripts run in CI
+ * with `GH_TOKEN`, `VERCEL_TOKEN` and `SUPABASE_ACCESS_TOKEN`, so a leaked token
+ * is the credential at risk, and the argument scan reads it.
+ */
+const literalFirstArgumentFiles = sourceFiles.filter((file) => !file.startsWith("scripts/"));
 
 /** The argument text of every `console.<method>(…)` call, parens balanced. */
 function consoleArguments(code: string): string[] {
@@ -129,7 +139,7 @@ function stripStringLiterals(text: string): string {
 
 test("every console call logs a label, not a raw object", () => {
   const offenders: string[] = [];
-  for (const file of sourceFiles) {
+  for (const file of literalFirstArgumentFiles) {
     for (const args of consoleArguments(readFileSync(file, "utf8"))) {
       const first = firstArgument(args);
       if (!isLoggableFirstArgument(first)) offenders.push(`${file}: ${first.slice(0, 80)}`);
@@ -177,6 +187,25 @@ test("the first-argument rule accepts a label and rejects a raw object (self-tes
   assert.equal(isLoggableFirstArgument("{ email, password }"), false);
   assert.equal(isLoggableFirstArgument("error"), false);
   assert.equal(isLoggableFirstArgument("await response.text()"), false);
+});
+
+test("the scan covers scripts/ for the credential rule but not the label rule (self-test)", () => {
+  // Rule 2 (the credential scan) must reach the CI scripts — they hold the
+  // tokens. Rule 1 (the label rule) deliberately does not: those tools print a
+  // diagnostic first argument. A regression that dropped `scripts` from ROOTS
+  // would silently un-guard the deploy scripts.
+  assert.ok(
+    sourceFiles.some((file) => file.startsWith("scripts/")),
+    "the credential scan must include scripts/",
+  );
+  assert.ok(
+    literalFirstArgumentFiles.every((file) => !file.startsWith("scripts/")),
+    "the label rule must not run on scripts/",
+  );
+  assert.ok(
+    literalFirstArgumentFiles.length > 0,
+    "the label rule must still cover src/ and supabase/functions/",
+  );
 });
 
 test("the credential-expression rule catches the real leak shapes (self-test)", () => {
