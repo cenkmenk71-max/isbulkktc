@@ -489,3 +489,76 @@ maddesinin *animasyon ortası kontrast* kısmı tarandı.
 - **#191 e-posta tarafı** hâlâ `lane:urun` + `agent:handoff` (tur 4).
 - Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
   `docs/lanes/05-tasarim.md`. Hepsi bu lane'in kapsamında.
+
+---
+
+## LANE-TASARIM çalışma notları (2026-11-05, tur 7)
+
+Branch: `lane/tasarim`. Taban: `origin/main` @ `c4fb2e4`. Kuyrukta `lane:tasarim`
+etiketli tek iş yine **#191** (e-posta tarafı sahiplik çelişkisinde, devirde). Bu
+turda brief'in 2. (RTL) ve 3. (klavye/odak) maddeleri ile 4. maddesinin
+LCP/CLS kısmı tarandı.
+
+### Bulgu 7 — "Geri" okları ve mobil menü okları RTL'de aynalanmıyordu (düzeltildi)
+
+- **Belirti:** `dir="rtl"` altında geri-navigasyon okları hâlâ sola bakıyordu.
+  Geri bağlantısı LTR'de sola, RTL'de **sağa** bakmalı.
+- **Kanıt (piksel, glif karşılaştırması):** `.editorial-back-link svg` glifi
+  `fa`'da `tr` ile **birebir aynı** (mirror diff 77522 > direct diff 59694) —
+  yani aynalanmamış. Düzeltmeden sonra `fa` glifi `rotate(180deg)`
+  (`matrix(-1,0,0,-1,0,0)`) alıyor.
+- **Etkilenenler (6 seçici):** `.editorial-back-link`, `.job-detail-back`,
+  `.legal-page-back a`, `.vend-panel-back` (geri okları) ve `.mobile-nav a` /
+  `.mobile-nav-primary` (ileri ok — mobil menü satır sonu).
+- **Kök neden:** repo yönlü okları zaten aynalıyor
+  (`html[dir="rtl"] .home-job-search-pagination svg`,
+  `.home-journey-link svg`, `html:dir(rtl) .company-workspace-action-link > svg`),
+  ama bu altı seçici hiç eklenmemişti.
+- **Düzeltme:** `src/styles/global.css` — tek bir `html[dir="rtl"]` kuralında
+  altı seçicinin `svg`'si `rotate(180deg)`.
+- **Kanıt (piksel, 7 rota × tr/fa, DPR 1, sharp diff):**
+  - **LTR (`tr`) öncesi↔sonrası: 0/8064000 px (%0.00), maxDelta ≤1** → LTR hiç
+    etkilenmedi.
+  - **RTL (`fa`):** sayfa başına yalnızca ~48-56 px (glifin kendisi) değişti.
+- **Guard:** `tests/unit/design-tokens.test.ts` — "back-navigation and
+  mobile-menu arrows mirror under RTL": altı seçicinin her biri için
+  `html[dir="rtl"]` bloğunda `rotate(180deg)` şart koşar (virgüllü seçici
+  listelerini de çözer). Negatif test edildi.
+
+### Micro-denetim (bu tur)
+
+- **CLS (brief 4):** 8 rota × 3 dil (tr/de/fa), mobil 390px — hepsi **< 0.1**
+  hedefi içinde (en yüksek `fa/` 0.0859; dev sunucusu; overlay'ler dahil).
+- **Canlı kontrast:** 15 public rota, masaüstü — düz renkli arka plan üzerindeki
+  her metin **AA üstü** (foto-hero metni hariç; onu axe gerçek piksellerle
+  tarıyor). Monogram tonları (`company-mark.ts`) beyaz baş harflerle en kötü
+  **4.69:1**.
+- **Vend paneli kapalıyken (`aria-hidden="true"`):** `visibility: hidden` sayesinde
+  içindeki 5 kontrol Tab sırasına **girmiyor** (0 durak) — doğru.
+- **Etkileşimli durumlar axe ile tarandı** (mobil menü açık, sektör dizini açık,
+  consent kartı + politika paneli, dil menüsü açık) × 6 dil → **0 ihlal**.
+- **Klavye/odak:** ana sayfada 24 durak; hepsinde görünür odak halkası, hedef
+  ≥44px.
+- **Yinelenen `id` / boş erişilebilir ad:** 18 rota × 6 dil → **0 bulgu**.
+- **3D graceful degradation:** WebGL engellendi → yedek mesaj + 4 kontrol,
+  0 canvas, 0 sayfa hatası.
+- **Ölü kod (not):** `card-in`/`fade-in`/`modal-in`/`toast-in` keyframe'lerinin
+  kullanıcısı yok (`.job-card` hiçbir bileşende basılmıyor). Ayrı iş; bu PR'a
+  alınmadı.
+- **Sandbox notu:** `NEXT_DIST_DIR` ile üretim standalone sunucusu bu turda
+  chunk'ları 404 verdi (eksik `_next/static` kopyası); ölçümler **dev sunucusunda**
+  yapıldı ve durum ayrıca `getComputedStyle` ile çapraz doğrulandı.
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅
+- `bun run test:unit` ✅ (567 test, +1 yeni guard)
+- `tests/e2e/accessibility.spec.ts` + `responsive-locales.spec.ts` (fa/locale) ✅
+
+### Sahibin yapması gerekenler
+
+- **#191 e-posta tarafı** hâlâ `lane:urun` + `agent:handoff` (tur 4).
+- Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
+  `docs/lanes/05-tasarim.md`. Hepsi bu lane'in kapsamında.

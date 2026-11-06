@@ -483,3 +483,40 @@ test("direction-sensitive declarations use logical properties", () => {
     `These direction-sensitive declarations use physical left/right and will not mirror under RTL. Use the logical property (margin-inline-start, border-inline-end, text-align: start/end, padding-inline: …) or add the value to an html[dir="rtl"] block:\n${offenders.join("\n")}`,
   );
 });
+
+/**
+ * Back-navigation glyphs point left in LTR and must point right in RTL. The repo
+ * mirrors several directional arrows (`home-job-search-pagination`,
+ * `home-journey-link`, `company-workspace-action-link`) but the back links and
+ * the mobile menu's trailing chevron were left pointing the LTR way, so an RTL
+ * reader saw the wrong direction. Pin the set: every selector here must have an
+ * `html[dir="rtl"]` rule that rotates its `svg` 180deg.
+ */
+test("back-navigation and mobile-menu arrows mirror under RTL", () => {
+  const selectors = [
+    ".editorial-back-link",
+    ".job-detail-back",
+    ".legal-page-back a",
+    ".vend-panel-back",
+    ".mobile-nav a",
+    // Anchor-qualified: the sign-out <button> shares `mobile-nav-primary` but its
+    // only icon is a leading LogOut, which must not be rotated.
+    "a.mobile-nav-primary",
+  ];
+  // Collect every RTL override rule as (selector list, body) so a selector that
+  // shares a rule with siblings (comma-separated) is still found.
+  const rtlRules = [...css.matchAll(/html\[dir="rtl"\]([^{]*)\{([^}]*)\}/g)].map(
+    (match) => ({ selectorList: match[1], body: match[2] }),
+  );
+  for (const selector of selectors) {
+    const mirrored = rtlRules.some(
+      (rule) =>
+        rule.selectorList.includes(selector) &&
+        /rotate\(\s*180deg\s*\)/.test(rule.body),
+    );
+    assert.ok(
+      mirrored,
+      `${selector} must mirror its arrow under RTL: add it to an html[dir="rtl"] rule whose body sets transform: rotate(180deg).`,
+    );
+  }
+});

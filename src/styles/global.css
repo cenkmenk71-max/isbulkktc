@@ -7072,6 +7072,22 @@ html:dir(rtl) .company-workspace-action-link:hover > svg {
 html[dir="rtl"] .home-job-search-pagination svg {
   transform: rotate(180deg);
 }
+/* Directional navigation glyphs must mirror under RTL. A "back" link points
+   left in LTR and right in RTL; the mobile menu's trailing chevron is a forward
+   affordance and flips the same way. The codebase already mirrors the pagination
+   and journey-link arrows; these back links and the mobile-nav rows were left
+   pointing the LTR way, so an RTL reader saw the wrong direction.
+   `a.mobile-nav-primary` is deliberately anchor-qualified: the sign-out control
+   shares the class but is a `<button>` whose only icon is a *leading* LogOut,
+   which must not be rotated. */
+html[dir="rtl"] .editorial-back-link > svg,
+html[dir="rtl"] .job-detail-back > svg,
+html[dir="rtl"] .legal-page-back a > svg,
+html[dir="rtl"] .vend-panel-back > svg,
+html[dir="rtl"] .mobile-nav a > svg:last-child,
+html[dir="rtl"] a.mobile-nav-primary > svg:last-child {
+  transform: rotate(180deg);
+}
 @media (max-width: 1120px) {
   .home-job-search-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
