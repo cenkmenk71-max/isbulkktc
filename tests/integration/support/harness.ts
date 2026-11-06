@@ -21,12 +21,8 @@
  * production code.
  *
  * Requires Node's experimental module mocking, which the `node:test` runner only
- * exposes behind a flag. The layer therefore runs with:
- *
- *     tsx --experimental-test-module-mocks --test "tests/integration/**\/*.test.ts"
- *
- * `package.json` (LANE-INFRA) must add that script and a CI step for the layer to
- * be a gate; until then it is a documented, runnable suite. See the README.
+ * exposes behind a flag. The layer therefore runs through `bun run
+ * test:integration`, which passes it, and is a gate in the `static` CI job.
  */
 
 import { mock } from "node:test";
@@ -37,7 +33,18 @@ import { mock } from "node:test";
 
 export type SupabaseCall =
   | { kind: "from"; table: string; ops: string[] }
-  | { kind: "rpc"; name: string; args: Record<string, unknown> }
+  | {
+      kind: "rpc";
+      name: string;
+      args: Record<string, unknown>;
+      /**
+       * Request headers set on the builder via `setHeader` before it settled.
+       * The app path sets `x-client-ip` on the anonymous-write RPCs so the DB
+       * throttle can key on the visitor address (#206); recording it on the same
+       * entry as `args` lets a test assert *where* the address was sent.
+       */
+      headers?: Record<string, string>;
+    }
   | { kind: "auth"; method: string };
 
 export type MailCall = { template: string; payload: Record<string, unknown> };
@@ -179,11 +186,32 @@ export class FakeSupabase {
   }
 
   rpc(name: string, args: Record<string, unknown> = {}) {
-    recorded.supabase.push({ kind: "rpc", name, args });
+    const call: Extract<SupabaseCall, { kind: "rpc" }> = { kind: "rpc", name, args };
+    recorded.supabase.push(call);
     const outcome = this.script.rpcs?.[name];
-    const result: QueryResult =
-      typeof outcome === "function" ? outcome(args) : outcome ?? { data: null, error: null };
-    return Promise.resolve(result);
+
+    // The real `supabase.rpc(...)` returns a `PostgrestBuilder`: a thenable with
+    // a chainable `setHeader`. The app path calls `.rpc(...).setHeader(
+    // "x-client-ip", …)` (#206), and a plain `Promise` has no `setHeader` — so
+    // the fake must reproduce the builder surface or the real code dies here.
+    // Header writes are recorded on the same entry so a test can assert both
+    // that the header was sent and what value it carried.
+    const builder = {
+      setHeader: (headerName: string, value: string) => {
+        call.headers = { ...call.headers, [headerName]: value };
+        return builder;
+      },
+      then: <TResult1 = QueryResult, TResult2 = never>(
+        onFulfilled?: ((value: QueryResult) => TResult1 | PromiseLike<TResult1>) | null,
+        onRejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+      ) => {
+        const result: QueryResult =
+          typeof outcome === "function" ? outcome(args) : outcome ?? { data: null, error: null };
+        return Promise.resolve(result).then(onFulfilled, onRejected);
+      },
+    };
+
+    return builder;
   }
 
   auth = {

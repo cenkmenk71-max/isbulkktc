@@ -15,8 +15,9 @@
  * be a running production build: the dev overlay is a fixed element that lands
  * inside tall crops and is not part of the shipped UI.
  *
- * Not wired into a CI job yet — `package.json` and `.github/workflows/**` belong
- * to LANE-INFRA. See `tests/visual/README.md` for the handover.
+ * Wired into the `E2E (1/4)` CI job as an advisory step (`continue-on-error`);
+ * it becomes required once the committed baselines match the runner. See
+ * `tests/visual/README.md`.
  */
 
 import { mkdir } from "node:fs/promises";

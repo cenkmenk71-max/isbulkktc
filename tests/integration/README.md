@@ -25,23 +25,20 @@ The suite uses Node's experimental module mocking, which `node:test` only expose
 behind a flag:
 
 ```bash
-tsx --experimental-test-module-mocks --test "tests/integration/**/*.test.ts"
+bun run test:integration
 ```
 
-> **Not yet a gate.** `package.json` and `.github/workflows/**` belong to
-> LANE-INFRA, so this layer is not wired into a script or a CI job yet. Until it
-> is, it is a documented, runnable suite rather than a gate. The wiring is tracked
-> in the issue linked from the PR that added this directory.
-
-`tsx --test <glob>` that matches nothing exits 0, so when the script is added,
-confirm from the CI step output that the tests actually ran (a green step that
-collected zero tests is the failure mode this note guards against).
+The script (`package.json`) passes the flag; the `Integration tests` step in the
+`static` CI job runs it, so the layer is a gate. Because `tsx --test <glob>` that
+matches nothing exits 0, the step's value depends on it actually collecting
+tests — a green step that ran zero tests is the failure mode to watch for.
 
 ## Files
 
 | File | What it proves |
 |---|---|
 | `support/harness.ts` | The faked boundary: a recording Supabase/GoTrue client, a recording mailer, and the `next/*` replacements. Not a test file. |
+| `harness-builder.test.ts` | The fake `rpc(...)` reproduces the real `PostgrestBuilder` surface — a thenable with a chainable `setHeader` whose value is recorded — so an action that sets `x-client-ip` (#206) runs here instead of dying with `TypeError`. |
 | `authorization-boundary.test.ts` | Every protected action refuses an anonymous caller and a wrong-role caller **before** it reaches the database; positive controls prove the guard admits the caller it should. |
 | `data-path.test.ts` | The write goes to the right table bound to the caller's own id; a database error is surfaced, not swallowed; mail is best-effort. |
 | `abuse-throttle.test.ts` | The actions actually call the rate limiter, keyed per address and per victim mailbox, before the RPC and its mail. |

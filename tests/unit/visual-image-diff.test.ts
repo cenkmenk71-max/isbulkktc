@@ -6,9 +6,8 @@ import { diffRgba, renderDiff, type RawImage } from "../visual/support/image-dif
 /**
  * The visual layer's diff engine is the one part that decides pass/fail, so it
  * is exercised here in the fast unit gate. The browser-driven runner in
- * `tests/visual/**` is not wired into CI yet (it belongs to LANE-INFRA), but this
- * file already protects the threshold arithmetic that a regression would have to
- * get past.
+ * `tests/visual/**` runs as an advisory CI step; this file protects the
+ * threshold arithmetic in the fast gate, independent of that run.
  */
 
 /** A fixed RGBA raster, built directly so the test never needs an image codec. */
