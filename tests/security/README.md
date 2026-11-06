@@ -38,6 +38,7 @@ a boundary regression is attributable at a glance.
 | `locale-cookie-flags.test.ts` | the `NEXT_LOCALE` locale cookie's flags, driven through the real middleware with the app's own `routing.ts` (a `todo` pins the missing `Secure`; the `HttpOnly` question is answered in the file) |
 | `log-safety.test.ts` | no `console.*` call logs a credential (#418 §7). The label rule (first argument is a string/template literal or a shared event name, never a raw object/`Error`) runs on `src` + `supabase/functions`; the credential rule (`process.env.*_SECRET`, a bare `password`/`token`/`secret` value) also runs on `scripts/**`, which execute in CI with `GH_TOKEN`/`VERCEL_TOKEN`/`SUPABASE_ACCESS_TOKEN`. A ratchet — clean today, 6 self-tests pin the rules |
 | `api-response-surface.test.ts` | the App Router API response surface (#424): `/api/build-info` returns exactly `{commit, environment}` and its own `no-store`; no source or config file adds `Access-Control-Allow-Origin` (the live header is Vercel platform behaviour, proven absent on the local standalone); every `src/app/api/**/route.ts` declares `dynamic`; every `force-static` route pairs it with `no-store` |
+| `inline-script-safety.test.ts` | every `dangerouslySetInnerHTML` in `src/**` keeps the shape that makes it safe: a JSON-LD block escapes `<` (`.replace(/</g, "\u003c")`), any other block is a static string literal — a value expression (the shape DB-backed content arrives in) is rejected. Guards the stored-XSS class the live-support work (#398) introduces |
 
 ## Findings
 
