@@ -33,8 +33,13 @@ import { mergeResumeDraft } from "../../src/features/candidates/resume-profile-d
  * Re-reconciled after LANE-URUN's #331 (four more defects: address→location, the
  * tabular `|` date, "Devam ediyor", and a future-date rule) and #343 (the
  * residue of #339: an *unlabelled* personal line, plus a district list read as a
- * headline). Every marker this file once carried has now become a contract;
- * there is no open `todo` left. The file exists to keep them that way.
+ * headline). Those markers all became contracts.
+ *
+ * Re-reconciled again for #367: a personal-data line *under an explicit section
+ * heading* still reached a profile field (`sectionLines` pushed it into the
+ * active section without the `isPersonalDataLine` filter). The source fix is
+ * LANE-URUN's; this file pins the target as `todo` markers and keeps the
+ * neighbouring contracts asserted directly, so LANE-URUN's PR does not start red.
  *
  * Owner of the source: LANE-URUN. Owner of this test: LANE-QA. Every "observed"
  * value below was produced by running the parser, not read off the source.
@@ -159,9 +164,85 @@ test("parse then merge puts each extracted field in its own profile box", () => 
 
 test("a personal-data line contributes no date to work experience", () => {
   // #217's context filter. Before it, "1995-2000 doğumlu" was a job period.
+  //
+  // Deliberately narrow: *no date* may come from such a line. That invariant
+  // holds before and after #367 — today the entry survives with empty dates,
+  // after the fix there is no entry at all — so this test does not couple
+  // LANE-URUN's fix to a LANE-QA edit. The stronger §B6 contract is pinned as a
+  // `todo` below.
   for (const line of ["1995-2000 doğumlu", "Yaş: 29 (1995)", "TC: 2019"]) {
-    const dates = experienceOf(line).map((entry) => [entry.startDate, entry.endDate]);
-    assert.deepEqual(dates, [["", ""]], `${line} must not carry a date`);
+    const dated = experienceOf(line).filter((entry) => entry.startDate || entry.endDate);
+    assert.deepEqual(dated, [], `${line} must not carry a date`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// #367 residue — open in `resume-parser.ts` (LANE-URUN). The unlabelled path
+// was filtered by #343, but a personal-data line *under an explicit section
+// heading* bypassed the filter and the field parsers wrote it straight into the
+// draft, so a phone number reached the profile. §B6 asks the line to reach no
+// field at all; the fix is one line in `sectionLines`' `activeSection` branch,
+// which LANE-QA does not own. Pinned here as `todo` markers so the day the
+// parser is fixed they turn into real failures, exactly as the #217/#331
+// markers did — and so LANE-URUN's fix is not blocked by a red QA test.
+// ---------------------------------------------------------------------------
+
+test(
+  "a personal-data line reaches no field, labelled or not",
+  { todo: "#367 — `sectionLines` must skip `isPersonalDataLine` under an active section" },
+  () => {
+    // Measured on main. Unlabelled, the line still survives as an entry with the
+    // raw text in `description`; under a heading it is written into the section's
+    // own field (experience.description / education.institution /
+    // certifications.name / languages.name / skills).
+    for (const line of ["1995-2000 doğumlu", "Yaş: 29 (1995)", "TC: 2019"]) {
+      assert.deepEqual(experienceOf(line), [], `${line} must not become an experience entry`);
+    }
+
+    for (const heading of ["DENEYİM", "EĞİTİM", "SERTİFİKALAR", "DİLLER", "BECERİLER"]) {
+      const draft = parseResumeText([heading, "Telefon: 0533 123 45 67"].join("\n"));
+      assert.deepEqual(draft, {}, `${heading}: a phone line must reach no field`);
+    }
+  },
+);
+
+test(
+  "a personal-data line is dropped without disturbing its neighbours",
+  { todo: "#367 — the filter must remove only the offending line, not the section" },
+  () => {
+    const draft = parseResumeText(
+      [
+        "DENEYİM",
+        "Acme - Dev - 2019 - 2022",
+        "Telefon: 0533 123 45 67",
+        "Beta - QA - 2020 - 2022",
+      ].join("\n"),
+    );
+
+    assert.deepEqual(draft.experience, [
+      { role: "Acme", organization: "Dev", location: "", startDate: "2019", endDate: "2022", description: "" },
+      { role: "Beta", organization: "QA", location: "", startDate: "2020", endDate: "2022", description: "" },
+    ]);
+  },
+);
+
+test("a real role whose title carries a personal-data word is kept", () => {
+  // The boundary #367 draws, and the guard against a naive "drop any line with a
+  // personal-data word" fix: these are ordinary job titles, so the fix must keep
+  // them. This contract already holds — it exists to go red if the #367 fix
+  // over-reaches.
+  const titles: Array<[string, string, string]> = [
+    ["Acme - Adres Doğrulama Uzmanı - 2019 - 2022", "2019", "2022"],
+    ["Beta - Telefon Satış Temsilcisi - 2018 - 2020", "2018", "2020"],
+    ["Gamma - Doğum Kliniği Hemşiresi - 2015 - 2017", "2015", "2017"],
+    ["Delta - Nüfus Müdürlüğü Memuru - 2010 - 2014", "2010", "2014"],
+  ];
+
+  for (const [line, startDate, endDate] of titles) {
+    const [entry] = experienceOf(line);
+    assert.ok(entry, `${line} must still produce an experience entry`);
+    assert.equal(entry?.startDate, startDate, `${line} must keep its start year`);
+    assert.equal(entry?.endDate, endDate, `${line} must keep its end year`);
   }
 });
 
