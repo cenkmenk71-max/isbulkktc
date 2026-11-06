@@ -176,9 +176,12 @@ issue açar.
 - **Yanıt başlıkları:** `next.config.ts` global grubu CSP (wildcard/bare-scheme
   yok, `unsafe-eval` yok), HSTS, `X-Frame-Options`, `X-Content-Type-Options`,
   `Referrer-Policy`, COOP/CORP, `Permissions-Policy` gönderir; `X-Powered-By`
-  kapalıdır; Vercel alias host'u `noindex, nofollow` alır.
-  `tests/security/security-headers.test.ts` **gerçek config'i import edip**
-  `headers()`'ı çağırarak bunları doğrular (metin grep'i değil).
+  kapalıdır; Vercel alias host'u `noindex, nofollow` alır. `/sw.js` için
+  **`Cache-Control: no-cache, no-store, must-revalidate`** verilir: aksi hâlde
+  Cloudflare edge origin'in `max-age=0`'ını 30 güne yükseltiyor ve yeni bir
+  service worker (`CACHE_VERSION` artışı) PWA kullanıcısına günlerce ulaşmıyor
+  (edge audit tur-14, SW-01). `tests/security/security-headers.test.ts`
+  **gerçek config'i import edip** `headers()`'ı çağırarak bunları doğrular.
 - **Görsel optimizasyon allowlist'i:** `images.remotePatterns` sunucu tarafında
   `/ _next/image`'ın hangi host'lardan görsel çekebileceğini belirler; her desen
   **tam bir https host + https protokol** olmalı, private/loopback/metadata host

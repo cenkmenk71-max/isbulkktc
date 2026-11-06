@@ -149,6 +149,18 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // The service worker must never be cached stale. The origin already
+        // sends `public, max-age=0, must-revalidate` for `/sw.js` (a Next public
+        // asset), but Cloudflare's edge raised it to 30 days
+        // (`max-age=2628000`) because the origin header is not "no-cache" — so a
+        // new service worker (a `CACHE_VERSION` bump) could take days to reach a
+        // PWA user, who keeps running the old one. `no-cache` makes the edge
+        // revalidate on every request regardless of the zone's Browser Cache TTL
+        // setting. See `docs/cloudflare.md` SW-01.
+        source: "/sw.js",
+        headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
+      },
+      {
         source: "/(.*)",
         headers: securityHeaders,
       },

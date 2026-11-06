@@ -553,3 +553,23 @@ ama **hiçbir test bunu sabitlemiyordu**.
   `cf-turnstile-token` yap → kırmızı.
 - **Bakılmayan:** yok — 14 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
   #102.
+
+## Durum (2026-11-06, 24. tur) — `/sw.js` no-cache (#364)
+
+`lane:guvenlik`'e devredilen **#364**'ü (edge audit tur-14, SW-01) aldım: `/sw.js`
+origin'de `max-age=0, must-revalidate` dönüyor ama Cloudflare edge bunu **30 güne**
+yükseltiyor; yeni bir service worker (`CACHE_VERSION` artışı) PWA kullanıcısına
+günlerce ulaşmıyor.
+
+- **Düzeltme (`next.config.ts`):** `headers()`'a `/sw.js` için
+  `Cache-Control: no-cache, no-store, must-revalidate` kuralı eklendi. `no-cache`
+  edge'i her istekte revalidate etmeye zorlar; böylece zone'un Browser Cache TTL
+  ayarından bağımsız çalışır. Diğer public varlıklar (`/robots.txt` vb.) değişmedi.
+- **Kanıt (uçtan uca, production standalone):** `curl -I /sw.js` →
+  `Cache-Control: no-cache, no-store, must-revalidate`; `/robots.txt` hâlâ
+  `public, max-age=0, must-revalidate`.
+- **Yeni test:** `security-headers.test.ts` — `/sw.js` grubunun `no-cache`
+  içerdiğini ve pozitif `max-age` taşımadığını doğrular. (Mutation: kuralı kaldır →
+  kırmızı.)
+- **#364 kapatılabilir.** Kalan `todo`'lar: #298, #206, #102.
+- **Bakılmayan:** yok — 14 test dosyası + 2 doküman.

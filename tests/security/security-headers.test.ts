@@ -128,6 +128,37 @@ test("the Vercel alias group keeps the app out of search indexes", () => {
 });
 
 // ---------------------------------------------------------------------------
+// The service worker's cache header.
+//
+// `/sw.js` is served from `public/`, so the origin's `public, max-age=0,
+// must-revalidate` was raised by Cloudflare's edge to 30 days
+// (`max-age=2628000`) — the zone's Browser Cache TTL overrides an origin
+// `max-age=0`. A new service worker (a `CACHE_VERSION` bump) would then take
+// days to reach a PWA user, who keeps running the old one. `no-cache` makes the
+// edge revalidate on every request. See `docs/cloudflare.md` SW-01.
+// ---------------------------------------------------------------------------
+
+test("the service worker is served no-cache", () => {
+  const swGroup = groups.find((group) => group.source === "/sw.js" && !group.has);
+  assert.ok(swGroup, "no `/sw.js` header rule — the edge can cache the service worker stale");
+
+  const cacheControl = swGroup!.headers.find(
+    (header) => header.key.toLowerCase() === "cache-control",
+  );
+  assert.ok(cacheControl, "the `/sw.js` rule sets no Cache-Control");
+  assert.match(
+    cacheControl!.value,
+    /\bno-cache\b/i,
+    "the service worker Cache-Control must include `no-cache` so the edge revalidates",
+  );
+  assert.doesNotMatch(
+    cacheControl!.value,
+    /max-age\s*=\s*[1-9]/i,
+    "the service worker must not carry a positive max-age (the edge raises it to 30 days)",
+  );
+});
+
+// ---------------------------------------------------------------------------
 // The Next.js image optimizer's remote allowlist.
 //
 // `images.remotePatterns` is the server-side allowlist for `/ _next/image`:
