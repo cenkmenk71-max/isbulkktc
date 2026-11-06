@@ -30,6 +30,13 @@ test("the helper carries title, description, robots, canonical and both cards", 
     /canonical:\s*(new URL|getLocalizedPageUrl)/,
     "canonical must not be a URL instance or a resolved helper",
   );
+  // Next replaces `alternates` wholesale, so declaring the canonical here would
+  // silently drop the layout's RSS autodiscovery link unless it is re-declared.
+  assert.match(
+    src,
+    /types:\s*\{\s*"application\/rss\+xml":\s*"\/feed\.xml"\s*\}/,
+    "must re-declare the RSS autodiscovery link beside the canonical",
+  );
   // The social block must be the page's own copy, not the layout's.
   assert.match(src, /openGraph:\s*\{[\s\S]*?title,/, "openGraph must use the page title");
   assert.match(src, /twitter:\s*\{[\s\S]*?title,/, "twitter must use the page title");

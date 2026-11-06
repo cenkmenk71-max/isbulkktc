@@ -897,3 +897,51 @@ YOK), login'in audience'a göre başlık üretmesi.
   doğrula (yerel standalone'da doğrulandı).
 - **#271** (transactional e-posta `lang`/`dir`) ve **#277** (`weak_password`) devirde.
 - **#227** (auth SMTP + DKIM) LANE-SUPABASE + LANE-CLOUDFLARE bekliyor.
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (micro-denetim turu 7)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Aldığı issue: yok (yeni sahipsiz lane:auth issue'su yok) → micro-denetim
+Değişen dosyalar:
+  src/features/identity/auth-metadata.ts       (RSS autodiscovery geri eklendi)
+  src/features/identity/auth-metadata.test.ts  (+1 assert)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (594) / test:security ✅ (77 pass, 2 todo, 0 fail) /
+  test:integration ✅ (48) / production build ✅
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration/şablon değişmedi)
+```
+
+### Denetlenen dosyalar (micro-denetim)
+`git ls-files 'src/features/identity/**'` (39) + 5 `(auth)`/callback route +
+7 şablon → **51 dosya**; hepsine bakıldı. Bakılmayan dosya yok.
+
+### Bulgular
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `auth-metadata.ts:45` | link bütünlüğü / regresyon | Önceki turda eklediğim `alternates: { canonical }` — Next `alternates`'i **bütünüyle** değiştirir, layout'un RSS autodiscovery `<link>`'i auth sayfalarından düşer | canonical + `types: {"application/rss+xml": "/feed.xml"}` | Auth sayfalarından feed keşfi kaybolur (önceki turda layout sağlıyordu) | düzeltildi |
+| 2 | 7 şablon | RTL/tutarlılık | Yönlü boşluk `{{ if $rtl }}padding-right{{ else }}padding-left{{ end }}`; tek paylaşılan stylesheet | — | sorun yok | bilgi |
+| 3 | `oauth-providers.ts` | doğruluk | `resolveEnabledOAuthProviders` bozuk env'i boş listeye indirir | — | sorun yok | bilgi |
+
+### Düzeltilen (#1)
+`createAuthPageMetadata` artık `alternates`'i `{ canonical, types: { "application/rss+xml": "/feed.xml" } }`
+olarak veriyor — layout'un sağladığı RSS keşif bağlantısını korur.
+
+### Kanıt (production standalone sunucu + mutasyon)
+```
+BEFORE (canonical only):  /en/login  → RSS <link> YOK
+AFTER  (canonical+types): /en/login  → <link rel="alternate" type="application/rss+xml" href="https://isbulkktc.com/feed.xml"/>
+                          canonical = https://isbulkktc.com/en/login
+                          robots = noindex, nofollow (+ googlebot noimageindex)   (korundu)
+```
+`auth-metadata.test.ts` mutasyonla doğrulandı: `types` kaldırılınca test kırmızı,
+geri eklenince yeşil.
+
+### Güvenlik değerlendirmesi (security skill)
+- `noindex, nofollow, noimageindex` aynen korundu.
+- Yalnız `<head>` metadata'sı; yetki/oturum/DB yolu değişmedi.
+
+### Sahibin yapması gerekenler
+- **#271** (transactional e-posta `lang`/`dir`) ve **#227** (auth SMTP + DKIM) devirde.

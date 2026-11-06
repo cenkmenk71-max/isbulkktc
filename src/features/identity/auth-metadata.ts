@@ -42,7 +42,13 @@ export function createAuthPageMetadata(input: {
     // `noIndexMetadata` only carries `robots`, which is why the rest of the
     // metadata used to fall through to the layout.
     robots: noIndexMetadata.robots,
-    alternates: { canonical: canonicalUrl },
+    // Next replaces `alternates` wholesale at the deepest segment that declares
+    // it, so declaring `canonical` here would otherwise drop the layout's RSS
+    // autodiscovery link from every auth page. Re-declare it beside the canonical.
+    alternates: {
+      canonical: canonicalUrl,
+      types: { "application/rss+xml": "/feed.xml" },
+    },
     openGraph: {
       title,
       description: input.description,
