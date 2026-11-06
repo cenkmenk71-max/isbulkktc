@@ -923,3 +923,83 @@ auth-captcha-wiring, unsubscribe-route-auth) bu turda **bakılmadı** — öncek
 turlarda denetlendi, CI yeşil. Açık `todo`'lar değişmedi: #298, #206, #102,
 #418 §6 ve LANE-SUPABASE'in `list_engagement_recipients`/`opt_out_engagement`
 auth.role() guard'ı (sql-hardening).
+
+## Tur — deploy kotası: Vercel build-rate limiti bir daha dolmasın (#319)
+
+**Lane:** GÜVENLİK (orkestratör) · **Branch:** `lane/guvenlik`
+
+### Ölçülen durum — iki katmanlı kök neden
+
+Sahip "siteye giriyorum, canlı destek yok" dedi. Canlı sitede ölçüm:
+
+| Ölçüm | Değer |
+|---|---|
+| `https://isbulkktc.com/api/build-info` | `commit 3336de5`, `production` |
+| `origin/main` ucu | `6e93629` |
+| `3336de5` main'in atası mı? | **evet** (canlı geride, ayrışmış değil) |
+| son 3 main merge'inin Vercel durumu | `failure — Deployment rate limited — retry in 24 hours` |
+| Vercel hedef URL'i | `vercel.com/orijin1?upgradeToPro=build-rate-limit` |
+
+Yani **her merge 24 saat boyunca canlıya çıkmıyor**; Hobby planı *build sayısını*
+sayıyor ve on iki aktif lane'in her push'u kendi preview build'ini yaratıp kotayı
+tüketiyor. `prune-vercel-deployments` depolamayı temizler ama **build** sayacını
+sıfırlamaz — bu yüzden kotayı açan şey değil.
+
+### Bulgu — iptal edilen build de kotaya sayılıyor
+
+Vercel dokümanı (Ignored Build Step): *"Canceled builds are counted as full
+deployments as they execute a build command in the build step… any canceled
+builds initiated using the ignore build step will still count towards your
+deployment quotas."* Yani `ignoreCommand` **yanlış kaldıraçtır** — build'i iptal
+eder ama kotadan düşmez. Kotayı korumanın tek yolu deployment'ı **hiç
+yaratmamaktır**.
+
+### Düzeltme
+
+Kök `vercel.json` → `git.deploymentEnabled` (minimatch, Vercel'in resmî anahtarı):
+
+```json
+{ "git": { "deploymentEnabled": { "**": false, "main": true } } }
+```
+
+Kural: bir branch, eşleşen en az bir kural `true` ise deploy eder; eşleşmeyen
+branch varsayılan `true`. `**` tüm branch'leri kapatır, `main` tek istisnadır →
+**yalnız `main` build yaratır**, her `lane/*`/`fix/*`/dependabot/renovate push'u
+deployment bile oluşturmaz.
+
+**Merge'i engellemez:** Vercel zorunlu check değil; branch protection yalnız
+"Quality, database and E2E" istiyor (ölçüldü). Preview build'i kaybetmek hiçbir
+CI adımını kırmaz — repo hiçbir yerde preview URL'ine bağlı değil
+(`isbulkktc-amber.vercel.app` bir **production** alias, build-info ile doğrulandı).
+
+### Kapı (kendi dosyam)
+
+`tests/security/vercel-deploy-gate.test.ts` (yeni, 5 test, `todo` yok): `main`
+deploy eder; 8 örnek lane/fix/bot branch'i **etmez**; eşleşmeyen branch varsayılan
+`true`; glob semantiği segment-farkında (minimatch); gönderilen config **tam
+olarak iki kural** (daha genişi kırmızı).
+
+**Kanıt (mutation).** `deploymentEnabled` → `{"**":true,"main":true}` yapınca
+**2 kırmızı**; geri alınca **5 yeşil**.
+
+### Devir
+
+- **Yapısal boşluk → LANE-INFRA.** Kök `vercel.json` hiçbir lane'in sahiplik
+  tablosunda yok (tıpkı `src/proxy.ts` ve `src/app/api/build-info/**` gibi).
+  Sahiplik tablosunun sahibi LANE-INFRA; `vercel.json` satırının eklenmesi için
+  not bırakıldı.
+- LANE-TESLİMAT: `prune-vercel-deployments.mjs` build sayacını sıfırlamıyor —
+  bu turun bulgusu, davranış değişikliği istemiyor, ama doküman notu hak ediyor.
+
+### Kapılar
+
+`lint` temiz, `typecheck` temiz, `check:frontend-source` geçti.
+`test:security` **125 test / 121 pass / 0 fail / 4 todo** (önceki 120/116 → +5).
+`test:unit` **739 test / 737 pass / 2 todo** (değişmedi).
+
+### Bakılmayan
+
+Bu turda tam taranan: `vercel.json` (yeni), `tests/security/vercel-deploy-gate.test.ts`
+(yeni), `.github/workflows/prune-vercel-deployments.yml`, `docs/lanes/09-guvenlik.md`.
+`tests/security/**` kalan 19 dosya bu turda **bakılmadı** — önceki turlarda
+denetlendi, CI yeşil. Açık `todo`'lar değişmedi: #298, #206, #102, #418 §6.
