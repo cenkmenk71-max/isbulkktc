@@ -654,3 +654,60 @@ mi" diye **sahiplendir** — statik katman (Vercel) ACAO ekler, config eklemez;
 (2) `PUT/DELETE` ile sayfa rotasını dene, 200 beklenmezse origin davranışını
 alias'tan çapraz doğrula; (3) preload "engeli" iddiasını yalnız **DNS kaydı olan**
 alt alan üzerinden kur.
+
+## Tur 26 (2026-11-06) — WAF `%2F` izolasyonu + H-01'in imkânsızlığı + nokta-noktasına denetim
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (tur 26, bu tur açılıyor)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Çalıştırılan kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF değiştirilmedi)
+Sahibin yapması gerekenler: (1) N-01 WAF ifadesini url_decode ile kur (yıkıcı → onay);
+  (2) H-01r HSTS politika kararı (1–12 ay tavanı); (3) H-02 Browser Cache TTL;
+  (4) R-01 trailing-dot apex; (5) G-01 Email Obfuscation OFF; (6) F-08 Vercel alias kapat;
+  (7) #227 Resend DKIM 2048-bit.
+Sonraki lane için notlar: (1) WAF boşluğunu "kodlanmış yol" diye bırakma — kodlamayı izole et
+  (burada tek kaçan %2F); (2) "Normalize incoming URLs'ı aç" bu boşluğu KAPATMAZ (RFC 3986
+  rezerve / çözülmez); (3) CF HSTS max-age'i 1–12 ay ile sınırlı → origin'in 2 yılını
+  "hizalama" önerisi geçersiz.
+```
+
+**Bu tur ne buldu (hepsi canlı `curl`/DoH/SSL Labs kanıtlı, `docs/cloudflare.md` → "tur 26"):**
+
+- **N-01 (orta — yeni, izolasyon):** tur 14'ten beri "kodlanmış yol" denen WAF
+  boşluğu **yalnız `%2F`** ile açılıyor. `%2E`/`%2D`/harf-kodlaması, çift-kodlama,
+  ters bölü, `//`, nokta-segmentleri ve case **hepsi doğru yakalanıyor**; kaçan tek
+  varyant eğik çizginin `%2F`'si. Üç kategoride de (VCS, dotfile, CMS/api-devtools)
+  aynı. Origin'e ulaşma `x-vercel-id`+`DYNAMIC` ile ispatlı (CF 403 sayfası değil).
+  **Düzeltme:** ifadeyi `url_decode(http.request.uri.path)` (veya `raw.`) üzerinden
+  kur. **Yıkıcı → sahibin onayı.**
+- **N-02 (bilgi — öneri düzeltmesi):** "Normalize incoming URLs'ı aç" bu boşluğu
+  **kapatmaz** — CF'nin RFC 3986 normalizasyonu rezerve `/`'yi **çözmez**, `%2F`
+  normalizasyondan sonra da `%2F`'dir. Doğru çözüm ifade, ayar değil.
+- **N-03 (düşük — repo):** `/api%2F*` yolları origin'de **500** (Next.js
+  rotalayamıyor; `qr`/`push`/`unsubscribe`), `build-info` 200. Origin alias da aynı
+  → CF değil. Sızıntı yok (jenerik `/500` gövdesi). Sahip: `src/app/api/**`.
+- **N-04 (bilgi):** `robots.txt` `Disallow: /api/` `%2F`'yi tutmuyor; robots
+  güvenlik kontrolü değil → aksiyon yok.
+- **H-01r (düzeltme — orta):** tur 9'un "H-01: CF edge HSTS'i origin'in 2 yılına
+  hizala" önerisi **imkânsız** — CF HSTS `Max Age Header` **1–12 ay** ile sınırlı
+  (resmî doküman); `63072000` panelde girilemez. H-01 "açık bulgu" değil,
+  **politika kararı** (origin'i 12 aya indir / CF HSTS'i kapat / bırak).
+- **N-05 (devir):** `AGENTS.md:82-83` "`tr` sunulan URL'de ön-ekli" ↔ canlı
+  `/tr/jobs` → **308** ön-eksiz. `robots.txt` doğru (yalnız varsayılan-olmayan
+  diller listeli). AGENTS.md bu lane'in değil → devir **#437** (`lane:infra` + `agent:handoff`).
+
+**Teyit edilen (temiz):** SSL Labs **`A+`** 4/4, yalnız TLS 1.2+1.3; `http://` → 301;
+apex+`www` CF anycast + `www` → 308 apex; WAF saldırı **12/12 → 403**, meşru
+**18/18 → 200**, `sqlmap` 403; güvenlik başlıkları edge=origin **birebir** (tek
+fark HSTS); `alt-svc: h3`; dinamik HTML hiç cache'lenmiyor.
+
+**Açık (değişmedi):** H-02, N-01 (eski W-01/V-20), R-01, G-01, F-08, SR-01.
+**Düzeltildi:** H-01 → H-01r (imkânsız öneri, politika kararına çevrildi).
+**Yeni açık:** N-01, N-03. **Devir:** N-05 → `lane:infra` (issue **#437**); N-03 → `src/app/api/**`.
+
+**Sonraki lane için notlar:** (1) WAF boşluğunu "kodlanmış yol" diye bırakma,
+kodlamayı **tek tek** izole et (burada tek kaçan `%2F`); (2) "Normalize incoming
+URLs'ı aç" önerisini **test etmeden** yazma — RFC 3986 rezerve `/`'yi çözmez;
+(3) CF panel tavanlarını (HSTS `max-age` 1–12 ay) resmî dokümandan doğrula,
+yoksa "hizala" önerisi imkânsız çıkar.

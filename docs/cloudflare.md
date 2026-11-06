@@ -2353,3 +2353,221 @@ M-05, M-06 bilgi/düzeltme.
 - **Gerçek tarayıcı:** çift-çerez davranışı tarayıcıda (hangi değer kazanır) ve
   PUT sonrası ön-yüz etkisi sürülmedi.
 - **Gerçek posta `Authentication-Results`:** #170 için hâlâ ölçülemedi.
+
+---
+
+## Edge mikro-denetim tur 26 — WAF `%2F` kaçışının izolasyonu + H-01'in imkânsızlığı + nokta-noktasına denetim (2026-11-06)
+
+**Amaç.** Brief'in 1–7. maddeleri noktası noktasına yeniden ölçüldü; tur 14'ten
+beri "açık" duran **W-01/V-20** WAF-boşluğu **hangi kodlamanın** kaçtığına kadar
+izole edildi ve **H-01** düzeltmesinin CF tarafında **imkânsız** olduğu resmî
+dokümanla kanıtlandı. Sahip olunan iki doküman AUDIT boyutlarıyla tarandı.
+
+### Özet bulgu tablosu
+
+| # | Bulgu | Boyut | Şiddet | Durum |
+|---|---|---|---|---|
+| **N-01** | WAF dot-path kuralı **yalnız `%2F`** kodlamasıyla atlanıyor (üç kategoride de) | Yetki | 🟠 orta | **yeni** — izole edildi |
+| **N-02** | CF **URL normalizasyonu bu açığı KAPATMAZ** (RFC 3986 rezerve `/`'yi çözmez) | Doğruluk | ℹ️ | **yeni** — öneri düzeltmesi |
+| **N-03** | `/api%2F*` yolları origin'de **500** döner (Next.js rotalayamıyor) | Hata yolu | 🟡 düşük | **yeni** — repo-tarafı |
+| **N-04** | `robots.txt` `Disallow: /api/` kodlanmış yolu tutmuyor | Mantık | ℹ️ | **yeni** — bilgi |
+| **H-01r** | H-01 düzeltmesi **imkânsız**: CF HSTS `max-age` **1–12 ay** ile sınırlı | Doğruluk | 🟠 orta | **düzeltme** |
+| **N-05** | `AGENTS.md:82-83` "`tr` sunulan URL'de ön-ekli" ↔ canlı **308** çelişkisi | Doğruluk | ℹ️ | **devir** (AGENTS.md sahipsiz) |
+
+### N-01 — WAF dot-path kuralı yalnız `%2F` ile atlanıyor (izolasyon, orta)
+
+Tur 14 (W-01) "kodlanmış yol" diyordu; tur 26 **tek tek kodlama** denedi. Sonuç
+kesin: kaçan **tek varyant `%2F`** (eğik çizginin yüzde-kodlanmış hâli). Nokta
+(`%2E`), tire (`%2D`), harf (`%64`/`%74`), çift-kodlama (`%252F`), ters bölü,
+çift eğik çizgi ve nokta-segmentleri **hepsi doğru** yakalanıyor.
+
+| İstek | Sonuç | Yorum |
+|---|---|---|
+| `/api/devtools/x` | **403** | WAF tutuyor |
+| `/api%2Fdevtools/x` · `/api%2fdevtools/x` | **404** | 🔴 **atlandı** → origin |
+| `/api%2Fdevtools%2Fx` | **404** | 🔴 atlandı |
+| `/api/%64evtools/x` · `/api/dev%74ools/x` | **403** | `%2E`/harf çözülüyor ✔ |
+| `/api/devtools%2Fx` | **404** | 🔴 atlandı |
+| `/API/devtools/x` | **403** | case-insensitive ✔ |
+| `/api/devtools/x/../y` · `/api//devtools/x` · `/api/./devtools/x` | **403** | dot-segment/`//` ✔ |
+| `/api\devtools\x` | **403** | ters bölü ✔ |
+| `/api%252Fdevtools%252Fx` | **404** | çift-kodlama çözülmüyor (origin 404, kural değil) |
+| `/.git/config` · `/.env` · `/.env/` | **403** | VCS/dotfile kuralı |
+| `/.git%2Fconfig` · `/.git%2fconfig` | **404** | 🔴 atlandı |
+| `/%2Egit/config` · `/.%67it/config` · `/%2Eenv` | **403** | ✔ |
+| `/wp-admin` · `/wp%2Dadmin` | **403** | CMS kuralı |
+| `/wp%2Fadmin` | **404** | 🔴 atlandı |
+| `/.gitignore` · `/telescope/requests` · `/actuator/env` · `/Dockerfile` | **404** | kural imzayı hiç içermiyor (V-20) |
+
+**Origin'e ulaştığının ispatı (CF 403'ü değil):** yanıt `x-vercel-id` +
+`cf-cache-status: DYNAMIC` taşır ve gövde Next.js/`/500` veya Vercel 404'üdür —
+CF'nin 403 sayfası (`<html class="no-js ie6 oldie">`) değil.
+
+```
+curl -sD- --path-as-is https://isbulkktc.com/api%2Fdevtools/x | head -1   -> HTTP/2 404
+   server: cloudflare · x-vercel-id: cle1::iad1::… · cf-cache-status: DYNAMIC
+curl -sD- --path-as-is https://isbulkktc.com/api/devtools/x  | head -1   -> HTTP/2 403  (CF)
+```
+
+**Etki (orta).** Bugün `.git`/`.env`/`/api/devtools` origin'de **yok** → 404, sızıntı
+yok (tur 14'teki "düşük" etki bu origin için hâlâ geçerli). Ama kural **sınıfı**
+çöküyor: origin'e bir gün `.env`, bir panel, bir `/api/devtools` veya statik
+sunucu eklenirse WAF onu **görmez**. Kodlanmış yol, kuralın *tüm* kategorilerinde
+(VCS, dotfile, CMS, api/devtools) aynı boşluğu açıyor → şiddet **orta**'ya çekildi.
+
+**Düzeltme (CF paneli → sahibin onayı).** Kural ifadesini **ham alan** üzerinden
+kur — `raw.http.request.uri.path` (CF Rules dilinde dönüşümsüz orijinal yol) ya da
+`url_decode(...)` ile çöz. Free plan `matches` operatörünü reddettiğinden
+`contains`/`in`/`lower()` ile:
+
+```
+lower(url_decode(http.request.uri.path)) contains "/.git"
+lower(url_decode(http.request.uri.path)) contains "/.env"
+lower(url_decode(http.request.uri.path)) contains "/api/devtools"
+lower(url_decode(http.request.uri.path)) contains "/wp-admin"
+```
+
+`url_decode` `%2F`'yi `/`'ye çözer → kodlanmış varyant artık eşleşir. **WAF kuralı
+değişikliği yıkıcıdır → sahibin onayı.** (Kanıt: CF Rules dil dokümanı
+`url_decode`, `raw.http.request.uri.path`.)
+
+### N-02 — CF URL normalizasyonu bu açığı KAPATMAZ (öneri düzeltmesi)
+
+Yaygın düzeltme önerisi "Rules → Overview → Normalize incoming URLs'ı aç" olurdu.
+**Kanıtla çürütüldü.** CF'nin RFC 3986 normalizasyonu **rezerve karakterleri
+çözmez** — `: / ? # [ ] @ ! $ & ' ( ) * + , ; =` **kodlanmış hâlde kalır**
+(resmî "How URL normalization works"). Yani `%2F` normalizasyondan **sonra da**
+`%2F`'dir; kural yine tutmaz.
+
+| Normalizasyon | `%2F` üzerindeki etkisi | Kuralı düzeltir mi? |
+|---|---|---|
+| RFC 3986 | rezerve `/` **çözülmez** | ❌ hayır |
+| Cloudflare (ek: `\`→`/`, `//`→`/`) | yalnız eğik çizgi birleştirme; `%2F`'ye dokunmaz | ❌ hayır |
+
+**Sonuç:** doğru düzeltme normalizasyon ayarı **değil**, N-01'deki **ifade**
+(`url_decode`/`raw.`). Bu, tur 14'ün "WAF ve origin aynı normalizasyonu uygulamıyor"
+teşhisini doğrular; çözümü ise normalizasyonda değil, ifadenin kendisindedir.
+
+### N-03 — `/api%2F*` origin'de 500 (repo-tarafı, düşük)
+
+`%2F` ile kodlanmış API yolları CF'i geçtikten sonra origin'de **500** döner
+(Next.js bu yolu rotalayamıyor):
+
+| Yol | Düz | `%2F` kodlu |
+|---|---|---|
+| `/api/build-info` | 200 | **200** (statik, her yolu yakalıyor) |
+| `/api/qr` | 200 | **500** |
+| `/api/push/subscriptions` | 405 | **500** |
+| `/api/email/unsubscribe` | 400 | **500** |
+
+Origin (Vercel alias) da aynı **500**'ü verir → **CF değil, repo-tarafı**.
+**Sızıntı yok:** gövde jenerik `<html id="__next_error__">` `/500` sayfası,
+`x-matched-path: /500`; yığın izi/commit yok. Etki düşük (gereksiz 5xx gürültüsü,
+log kirliliği). Sahip: `src/app/api/**` (LANE-URUN/GÜVENLİK) — bu lane düzeltmez.
+
+### N-04 — `robots.txt` `Disallow: /api/` kodlanmış yolu tutmuyor (bilgi)
+
+`robots.txt` `Disallow: /api/` **literal** eşleşir; `/api%2Fbuild-info` bu kalıba
+**girmez** (robots eşleşmesi `%2F`'yi çözmez). Aynı boşluk `/auth/` için de var.
+Etki **bilgi** düzeyinde: robots `noindex` zorlamaz, yalnız iyi-niyetli tarayıcı
+yönlendirmesidir; `X-Robots-Tag` yok. `api%2F` yollarının 500 dönmesi (N-03)
+tarama yüzeyini ayrıca daraltır. Aksiyon: gerek yok (robot kuralı güvenlik
+kontrolü değildir) — yalnız kayda geçti.
+
+### H-01r — H-01 düzeltmesi imkânsız: CF HSTS `max-age` 1–12 ay (düzeltme)
+
+Tur 9'dan beri **H-01** şöyle yazılıydı: *"CF panelde edge HSTS `max-age`'i origin
+(2 yıl = `63072000`) ile hizala."* Bu **uygulanamaz**: CF'nin HSTS yapılandırması
+`Max Age Header` alanını **"Disable, or a range from 1 to 12 months"** ile
+sınırlar (resmî "HTTP Strict Transport Security (HSTS)" dokümanı, canlı 2026-11-06).
+`63072000` (24 ay) **aralık dışı** → panelde girilemez.
+
+| | Değer | Kaynak |
+|---|---|---|
+| Origin (`next.config.ts:36`) | `max-age=63072000` (24 ay) | repo |
+| Edge (CF) | `max-age=31536000` (12 ay) | canlı |
+| CF izin verilen aralık | **1–12 ay** | CF dokümanı |
+
+**Sonuç:** H-01 bir "CF'yi origin'e hizala" işi **değil**, bir **politika kararı**.
+Üç seçenek (sahip seçer):
+
+1. **Origin'i 12 aya indir** (`next.config.ts` → `31536000`) → iki taraf tutarlı,
+   CF kuralı korunur. *Repo değişikliği → LANE-GÜVENLİK (#424 sınıfı).*
+2. **CF HSTS'i kapat** → edge origin başlığını geçirir, `63072000` teslim edilir.
+   ⚠️ **Güvenlik notu:** CF panelindeki "HSTS'i kapat" (`Max Age = 0`) edge'de
+   `max-age=0` yayar ve **tarayıcıdaki HSTS politikasını temizler** → politika
+   origin'in başlığına kalır ama geçiş penceresinde downgrade koruması zayıflar.
+   Yalnız origin'in her yanıtta HSTS gönderdiği **kanıtlanmışsa** kabul edilebilir.
+3. **Olduğu gibi bırak** → 12 ay zaten HSTS preload asgarisinin (1 yıl) **üstünde**
+   ve SSL Labs `A+`; "tutarsızlık" yalnız config ↔ edge arasında, **güvenlik
+   açığı değil**. (Tur 9'daki "düşük etki" değerlendirmesi geçerli.)
+
+**Bu tur H-01'i "açık bulgu" olarak yeniden sınıflandırdı:** *düzeltilemez çünkü
+önerilen düzeltme geçersiz*; doğru çerçeve bir **uyum/politika** kararıdır.
+
+### N-05 — `AGENTS.md` `tr` ön-ek çelişkisi (devir, AGENTS.md sahipsiz)
+
+`AGENTS.md:82-83` der: *"The default locale (`tr`) is unprefixed in
+canonical/`x-default` output but **prefixed in the served URL**."* Canlı ölçüm
+bunu **çürütüyor**: `/tr/*` **308 ile ön-eksize** yönlendiriliyor.
+
+```
+/tr/jobs  -> 308  https://isbulkktc.com/jobs
+/tr/auth  -> 308  https://isbulkktc.com/auth
+/jobs     -> 200
+```
+
+Yani `tr` sunulan URL'de **ön-eksiz** (kanonik/`x-default` ile aynı). `robots.txt`
+de bunu doğru yansıtıyor: yalnız **varsayılan-olmayan** diller için
+`/en|ru|el|fa|de/auth/` listelenir, `/tr/auth/` listelenmez (gereksiz olurdu).
+**Etki:** yalnız doküman doğruluğu; işlevsel açık yok. `AGENTS.md` bu lane'in
+sahipliğinde **değil** → `lane:infra` + `agent:handoff` ile devredilecek
+(sahiplik tablosunda AGENTS.md görünmüyor; en yakın sahip `docs/lanes/**` ile
+LANE-INFRA).
+
+### Nokta-noktasına denetim (brief 1–7) — tur 26 durumu
+
+| # | Alan | Ölçüm | Durum |
+|---|---|---|---|
+| 1 | DNS: A/proxied/TTL/`www`/mail | apex+`www` → CF anycast (`104.21.29.3`, `172.67.171.53`), proxied; `www` → **308** apex; SPF/DKIM/DMARC/CAA/DNSSEC değişmedi | ✔ |
+| 2 | SSL/TLS: mod/min/HSTS/AlwaysUseHTTPS | SSL Labs **`A+`** 4/4, yalnız **TLS 1.2+1.3**; `http://` → **301**; HSTS+`includeSubDomains`+`preload`; **H-01r** (12 ay tavanı) | ⚠️ H-01r |
+| 3 | Cache Rules / `Vary` / dinamik yollar | statik `immutable`+`HIT`; dinamik HTML `private, no-store`; **H-02** (Browser Cache TTL: `/robots.txt` 30 gün, `/sitemap.xml` 1 saat) hâlâ açık | ⚠️ H-02 |
+| 4 | WAF: 4 kural + managed; bypass | saldırı **12/12 → 403**; meşru **18/18 → 200**; `sqlmap` **403**; **N-01** (`%2F`) açık | ⚠️ N-01 |
+| 5 | Bot koruması | Googlebot/bingbot 200, `cf-mitigated` yok (#163 halkası kopuk değil); GH runner challenge'ı bilinçli trade-off | ✔ |
+| 6 | Rate limit | tek Free kuralı leak-check'te (F-26 kapalı); auth brute-force tahsisi **onay bekliyor** | ℹ️ |
+| 7 | Analytics/logpush | `CF_API_TOKEN` sandbox'ta yok → zone API okunamadı; gereken scope: `zone.analytics.read` | ⚠️ token |
+
+**Güvenlik başlıkları (edge vs origin, tur 26):** CSP, X-Frame-Options,
+X-Content-Type-Options, Referrer-Policy, Permissions-Policy, COOP, CORP,
+X-Permitted-Cross-Domain-Policies, X-DNS-Prefetch-Control → **edge ve origin
+birebir aynı** (CF ezmiyor). Tek fark **HSTS** (H-01r). `alt-svc: h3` (HTTP/3 açık).
+
+### Bakılmayan (dürüst işaretleme)
+
+- **CF zone API** (`CF_API_TOKEN` yok): WAF ruleset ifadesi, Cache Rules, Browser
+  Cache TTL, Bot Management, Analytics **okunamadı** → N-01 düzeltmesinin
+  paneldeki mevcut ifadeyle birebir eşleştiği doğrulanamaz.
+- **IPv6 yolu:** sandbox'ta v6 yok (yalnız DoH AAAA + SSL Labs IPv6 endpoint).
+- **Gerçek tarayıcı:** HSTS `max-age=0` geçiş penceresinin tarayıcıdaki etkisi
+  sürülmedi (N-05/H-01r için politika kararı).
+- **`Authentication-Results`:** #170 için hâlâ ölçülemedi (posta teslimi).
+
+### Drift (tur 26)
+
+**Yeni:** N-01 (`%2F` izolasyonu), N-02 (normalizasyon çare değil), N-03 (`%2F`
+API → 500), N-04 (robots boşluğu), N-05 (`tr` çelişkisi — devir).
+**Düzeltildi:** H-01 → **H-01r** (imkânsız düzeltme; politika kararına çevrildi).
+**Açık (değişmedi):** H-02, N-01 (eski W-01/V-20), R-01, G-01, F-08, SR-01.
+**Devir:** N-05 → `lane:infra` + `agent:handoff`; N-03 → `src/app/api/**` sahibi.
+
+### Sahibin (CF paneli) yapması gerekenler (tur 26 güncel)
+
+1. **N-01 (orta):** Custom WAF 4. kuralını `url_decode(http.request.uri.path)`
+   üzerinden kur (bkz. N-01 ifade örneği). **Yıkıcı → onay.**
+2. **H-01r:** HSTS'i "2 yıla hizala" **yapılamaz** (1–12 ay tavanı). Politika seç:
+   origin'i 12 aya indir **veya** CF HSTS'i kapat (güvenlik notuna bak) **veya** bırak.
+3. **H-02:** Caching → Browser Cache TTL = `Respect Existing Headers`.
+4. **R-01:** `isbulkktc.com.` (trailing-dot) → apex 301/308.
+5. **G-01:** Scrape Shield → Email Obfuscation OFF (hâlâ açık, `/`'da 1 eşleşme).
+6. **F-08:** Vercel Deployment Protection aç.
+7. **#227:** Resend DKIM'i 2048-bit'e çevir (DKIM panel/DNS yarısı bu lane).
