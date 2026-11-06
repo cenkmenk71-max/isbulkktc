@@ -618,14 +618,14 @@ Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF değiştirilmedi)
 
 **Bu tur ne buldu (hepsi canlı `curl`/DoH kanıtlı, `docs/cloudflare.md` → "tur 25"):**
 
-- **M-01 (düşük — #423, LANE-GÜVENLİK):** `/api/build-info` `force-static`
+- **M-01 (düşük — #424, LANE-GÜVENLİK):** `/api/build-info` `force-static`
   olduğu için Vercel statik katmanı `access-control-allow-origin: *` ekliyor →
   canlı commit SHA herhangi bir origin'den `fetch()` ile okunabilir. Aynı ACAO
   `/robots.txt`, `/sitemap.xml`, `/_next/static/*`'te var; **HTML ve dinamik
   API'de yok**. `next.config.ts` ile ilgisi yok — atıf düzeltildi.
-- **M-02 (düşük — #423):** sayfa rotaları `PUT/DELETE/PATCH` → **200** (tam HTML);
+- **M-02 (düşük — #424):** sayfa rotaları `PUT/DELETE/PATCH` → **200** (tam HTML);
   `/api/*` doğru şekilde **405**. Origin (Vercel alias) da aynı → repo-tarafı.
-- **M-03/M-04 (düşük — #423):** API hata yolları (405/400/404) ve
+- **M-03/M-04 (düşük — #424):** API hata yolları (405/400/404) ve
   `/_next/static/<yok>` 404'ü `public, max-age=0|31536000, must-revalidate`
   alıyor → `no-store` olmalı. CF bugün `DYNAMIC`/`BYPASS` tuttuğu için
   sömürülemez; Cache Rule eklenirse N-01 sınıfı yinelenir.
@@ -641,8 +641,8 @@ Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF değiştirilmedi)
 `immutable` + `HIT`; canlı build `00c665b` (`main` 1 commit geride — teslimat).
 
 **Açık kalan (değişmedi):** H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08.
-**Kapandı:** W-20-4 (geçersiz çıktı — M-06). **Yeni açık:** M-01..M-04 → **#423**.
-**Devir:** M-01..M-04 `lane:guvenlik` + `agent:handoff` ile **#423** açıldı.
+**Kapandı:** W-20-4 (geçersiz çıktı — M-06). **Yeni açık:** M-01..M-04 → **#424**.
+**Devir:** M-01..M-04 `lane:guvenlik` + `agent:handoff` ile **#424** açıldı.
 
 **Sonraki lane için notlar:** (1) origin başlıklarını "CF mi, Vercel mi, config
 mi" diye **sahiplendir** — statik katman (Vercel) ACAO ekler, config eklemez;

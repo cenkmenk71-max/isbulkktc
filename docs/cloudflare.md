@@ -2249,7 +2249,7 @@ CF paneli (onay bekleyen) tarafında; **hiçbiri CF edge'inde değil**.
 
 ### Özet
 
-**Yeni bulgular (hepsi LANE-GÜVENLİK'e devredildi — #423):**
+**Yeni bulgular (hepsi LANE-GÜVENLİK'e devredildi — #424 (devir issue)):**
 
 | # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki |
 |---|---|---|---|---|---|
@@ -2331,14 +2331,14 @@ R-01 (trailing-dot apex 404; `www` 308), G-01 (Email Obfuscation), N-01
 (`/_next/static` 404 1 yıl), W-01 (`%2f` normalizasyon), V-20 (tarayıcı yolu WAF
 boşluğu), F-08 (Vercel alias CF'i atlar), **W-20-4 → geçersiz (M-06)**.
 
-**Yeni açık:** M-01, M-02, M-03, M-04 (repo; #423 ile LANE-GÜVENLİK'e devir).
+**Yeni açık:** M-01, M-02, M-03, M-04 (repo; #424 ile LANE-GÜVENLİK'e devir).
 M-05, M-06 bilgi/düzeltme.
 
 ### Sahibin (CF paneli) yapması gerekenler (değişmedi + yeni)
 
 1. **H-01:** SSL/TLS → Edge Certificates → HSTS'i kapat (origin gönderiyor) **veya**
    `max-age=63072000` yap. *(Repo alternatifi: `next.config.ts`'te HSTS'i
-   `/api/**` dışı tüm yollara tek-kaynak ver → edge origin'i ezmez — #423'te.)*
+   `/api/**` dışı tüm yollara tek-kaynak ver → edge origin'i ezmez — #424'te.)*
 2. **H-02:** Caching → Browser Cache TTL = `Respect Existing Headers`.
 3. **F-08:** Vercel Deployment Protection aç.
 4. **G-01:** Scrape Shield → Email Obfuscation OFF.
