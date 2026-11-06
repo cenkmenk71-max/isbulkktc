@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, X } from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import {
   SectorCard,
@@ -19,9 +20,6 @@ type SectorExplorerProps = {
     filterLabel: string;
     allLabel: string;
     totalLabel: string;
-    totalCount: string;
-    resultCountSingular: string;
-    resultCountPlural: string;
     clearSearch: string;
     emptyTitle: string;
     emptyDescription: string;
@@ -43,6 +41,8 @@ export function SectorExplorer({
   categories,
   labels,
 }: SectorExplorerProps) {
+  const copy = useTranslations("HomePage");
+  const format = useFormatter();
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<
     SectorCategory | "all"
@@ -71,13 +71,11 @@ export function SectorExplorer({
         .length,
     ]),
   );
-  const resultCountTemplate =
+  const resultCount = copy(
     visibleSectors.length === 1
-      ? labels.resultCountSingular
-      : labels.resultCountPlural;
-  const resultCount = resultCountTemplate.replace(
-    "{count}",
-    String(visibleSectors.length),
+      ? "sectorResultCountSingular"
+      : "sectorResultCountPlural",
+    { count: visibleSectors.length },
   );
   const hasActiveFilters = query.length > 0 || selectedCategory !== "all";
 
@@ -96,12 +94,9 @@ export function SectorExplorer({
         </div>
         <span
           className="sector-explorer-total"
-          aria-label={labels.totalCount.replace(
-            "{count}",
-            String(sectors.length),
-          )}
+          aria-label={copy("sectorTotalCount", { count: sectors.length })}
         >
-          <strong>{sectors.length}</strong>
+          <strong>{format.number(sectors.length)}</strong>
           <span>{labels.totalLabel}</span>
         </span>
       </div>
@@ -145,7 +140,7 @@ export function SectorExplorer({
             onClick={() => setSelectedCategory("all")}
           >
             {labels.allLabel}
-            <span>{searchedSectors.length}</span>
+            <span>{format.number(searchedSectors.length)}</span>
           </button>
           {categories.map((category) => (
             <button
@@ -156,7 +151,7 @@ export function SectorExplorer({
               onClick={() => setSelectedCategory(category.key)}
             >
               {category.label}
-              <span>{categoryCounts.get(category.key) ?? 0}</span>
+              <span>{format.number(categoryCounts.get(category.key) ?? 0)}</span>
             </button>
           ))}
         </div>

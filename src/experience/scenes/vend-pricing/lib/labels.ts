@@ -179,7 +179,7 @@ function drawStrip(g: CanvasRenderingContext2D, p: Plan, labels: SceneLabels) {
   g.textAlign = "right";
   const quantity = p.listingCount === null
     ? labels.quote
-    : `${p.listingCount} ${labels.listing}`;
+    : `${new Intl.NumberFormat(labels.locale).format(p.listingCount)} ${labels.listing}`;
   g.fillText(quantity.toLocaleUpperCase(labels.locale), w - h * 0.4, h * 0.54, w * 0.55);
   g.shadowBlur = 0;
 }

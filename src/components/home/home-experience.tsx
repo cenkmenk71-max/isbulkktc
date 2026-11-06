@@ -351,15 +351,6 @@ export async function HomeExperience({
                 filterLabel: copy("sectorFilterLabel"),
                 allLabel: copy("sectorAllLabel"),
                 totalLabel: copy("sectorTotalLabel"),
-                totalCount: copy("sectorTotalCount", { count: "{count}" }),
-                resultCountSingular: copy(
-                  "sectorResultCountSingular",
-                  { count: "{count}" },
-                ),
-                resultCountPlural: copy(
-                  "sectorResultCountPlural",
-                  { count: "{count}" },
-                ),
                 clearSearch: copy("sectorClearSearch"),
                 emptyTitle: copy("sectorEmptyTitle"),
                 emptyDescription: copy("sectorEmptyDescription"),

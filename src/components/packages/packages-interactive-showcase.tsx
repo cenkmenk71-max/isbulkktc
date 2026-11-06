@@ -305,6 +305,7 @@ export function PackagesInteractiveShowcase({
           ctaLabel={ctaLabel}
           ctaTitle={ctaTitle}
           heading={headingRef}
+          locale={labelCopy.locale}
           onClose={closePanel}
           packageContentsLabel={packageContentsLabel}
           durationLabel={durationLabel}

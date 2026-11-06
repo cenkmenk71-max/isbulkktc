@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
+import { useFormatter } from "next-intl";
 import { useEffect, useState, type ReactNode } from "react";
 
 type SectorDirectoryProps = {
@@ -19,6 +20,7 @@ export function SectorDirectory({
   closeLabel,
 }: SectorDirectoryProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const format = useFormatter();
 
   // The explorer panel mounts hidden, so its cards were never measured by the
   // motion layer. Announce the new layout once it is in the DOM so GSAP can
@@ -41,7 +43,9 @@ export function SectorDirectory({
         onClick={() => setIsOpen((current) => !current)}
       >
         <span>{isOpen ? closeLabel : openLabel}</span>
-        <span className="sector-directory-count">{itemCount}</span>
+        <span className="sector-directory-count">
+          {format.number(itemCount)}
+        </span>
         <ChevronDown size={17} aria-hidden="true" />
       </button>
       <div className="sector-featured-grid" hidden={isOpen}>

@@ -2,10 +2,12 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import type { Ref } from "react";
 import { accentInk } from "@/components/packages/package-tiers";
+import type { AppLocale } from "@/i18n/routing";
 import type { ListingDuration, Plan } from "../lib/plans";
 
 type Props = {
   plan: Plan;
+  locale: AppLocale;
   packageContentsLabel: string;
   durationLabel: string;
   durationGroupLabel: string;
@@ -31,6 +33,7 @@ type Props = {
 
 export function Panel({
   plan,
+  locale,
   packageContentsLabel,
   durationLabel,
   durationGroupLabel,
@@ -78,7 +81,12 @@ export function Panel({
         <ul>
           {plan.features.map((feature, index) => (
             <li key={feature}>
-              <span aria-hidden="true">{`0${index + 1}`}</span>
+              <span aria-hidden="true">
+                {new Intl.NumberFormat(locale, {
+                  minimumIntegerDigits: 2,
+                  useGrouping: false,
+                }).format(index + 1)}
+              </span>
               <span>{feature}</span>
             </li>
           ))}
@@ -105,7 +113,7 @@ export function Panel({
           ) : (
             <>
               <strong data-testid="vend-panel-price-amount">
-                ₺{new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(selectedPrice)}
+                ₺{new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(selectedPrice)}
               </strong>
               <span>{priceSummary}</span>
             </>
