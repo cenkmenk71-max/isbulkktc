@@ -240,3 +240,21 @@ obfuscation), N-01 (`_next/static` 404 cache), F-08 (alias CF'i atlıyor) hâlâ
 açık. DNS/TLS/CAA/DNSSEC/SPF temiz; Resend DKIM **1024-bit**, DMARC `p=none`.
 WAF yanlış pozitif yok (meşru rotalar + 6 dil 200). Detay: `docs/cloudflare.md`
 → "Edge mikro-denetim tur 14".
+
+### Edge mikro-denetim tur 15 — açık issue'ların canlı doğrulaması (2026-11-06)
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (yalnızca okuma; CF paneli/DNS değiştirilmedi)
+Sahibin yapması gerekenler: #163 Bing doğrulama (LANE-SEO/panel) · #170 SPF+DMARC · #227 DKIM 2048 (panel/DNS)
+Sonraki lane için notlar: CF halkası #163 için hâlâ kopuk değil; kopuk halka Bing mülk doğrulaması.
+```
+
+Açık üç issue (#163, #170, #227) **canlı** yeniden ölçüldü — drift yok:
+bot UA'ları (Googlebot/Bingbot/YandexBot/DuckDuckBot/AhrefsBot) hepsi **200**,
+`cf-mitigated` yok; `sqlmap` **403**; kök SPF/DMARC/DKIM değişmemiş. **Yeni
+kanıt:** Vercel alias'a `Host: isbulkktc.com` ile gidilince **421 Misdirected**
+(F-08: alias CF zone'undan geçmiyor, kesinleşti). Detay: `docs/cloudflare.md`
+→ "Edge mikro-denetim tur 15".

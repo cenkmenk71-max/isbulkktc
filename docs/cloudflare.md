@@ -1147,7 +1147,7 @@ ile ifade edilmeli.) **WAF kuralı değişikliği yıkıcıdır → sahibin onay
 | G-01 — Email Address Obfuscation açık | **hâlâ açık** | `/` ve `/contact` gövdesinde `cdn-cgi/l/email-protection` |
 | A-01b — `/_next/image` çift-kodlama | **canlıda KAPANDI** (build `1d804b6`, #359 deploy edildi) | 11 hedef PoC → **400** (tur 14.1) |
 | N-01 — `/_next/static` 404'ü 1 yıl cache | **hâlâ açık** | `MISS → HIT`, `max-age=31536000` |
-| F-08 — Vercel alias CF'i atlıyor | **hâlâ açık** | alias doğrudan 200 |
+| F-08 — Vercel alias CF'i atlıyor | **hâlâ açık** (tur 15: `Host` override → **421**) | alias doğrudan 200 (`noindex`) |
 | DKIM — Resend `resend._domainkey` | **1024-bit** | `openssl rsa -pubin` → `Public-Key: (1024 bit)` |
 | DMARC | `p=none` | `v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; fo=1` |
 | DNSSEC | açık | DoH `AD=true` |
@@ -1191,3 +1191,69 @@ ile ifade edilmeli.) **WAF kuralı değişikliği yıkıcıdır → sahibin onay
 - **`next.config.ts` / `tests/security/**` / `public/**` / `src/lib/pwa/**`:**
   bu lane'in dosyası değil → yalnız **doğrulama** yapıldı (A-01c), düzeltme
   yapılmadı. SW-01 repo-tarafı öneri **#364** (`lane:guvenlik`) ile devredildi.
+
+---
+
+## Edge mikro-denetim tur 15 — açık issue'ların canlı doğrulaması + F-08 netleştirmesi (2026-11-06)
+
+**Amaç.** Lane'e açık üç issue (#163, #170, #227) çoğunlukla **DNS/panel** işi
+(sandbox'ta CF token yok, panel erişimi yok). Bu turda hepsinin **canlı kanıtı
+salt-okuma ile yeniden ölçüldü** — drift var mı, ve CF halkası gerçekten kopuk mu?
+
+**Canlı kimlik:** `/api/build-info` → `1d804b6` (tur 14.1 ile aynı; #359 deploy
+edildi, **A-01c canlıda kapalı**).
+
+### Ölçüm (canlı, 2026-11-06)
+
+| # | Test | Sonuç | Beklenen | Kaynak |
+|---|---|---|---|---|
+| V-01 | Googlebot/Bingbot/YandexBot/DuckDuckBot/AhrefsBot `/` | hepsi **200**, `cf-mitigated` **yok** | 200 | HTTP |
+| V-02 | çıplak `curl/8.0` `/` | **103** (Early Hints), challenge değil | — | HTTP |
+| V-03 | `sqlmap/1.7` `/` (WAF regresyon) | **403** | 403 | HTTP |
+| V-04 | `google-site-verification` meta (üretim HTML) | **var** | var | HTTP |
+| V-05 | `msvalidate.01` meta + `/BingSiteAuth.xml` | meta yok · **404** | var | HTTP |
+| V-06 | `www.` → apex | **308** → apex | 308 | HTTP |
+| V-07 | Vercel alias `/` (doğrudan) | 200 + `x-robots-tag: noindex, nofollow` | noindex | HTTP |
+| V-08 | Vercel alias + `Host: isbulkktc.com` | **421 Misdirected** | — | HTTP |
+| V-09 | kök SPF | `include:_spf.mx.cloudflare.net` (**amazonses yok**) | Resend eklenmeli | DoH |
+| V-10 | `_dmarc` | `p=none` | `quarantine` | DoH |
+| V-11 | `resend._domainkey` | **1024-bit** RSA | 2048 | DoH |
+| V-12 | `send.isbulkktc.com` TXT/MX | `spf include:amazonses.com` · `feedback-smtp.eu-west-1.amazonses.com` | doğru | DoH |
+
+### Değerlendirme
+
+- **#163 (bulunabilirlik):** CF halkası **hâlâ kopuk değil** (V-01/V-02/V-03/V-04
+  tur-4/2026-11-05 bulgularıyla birebir aynı; drift **yok**). Kopuk halka **Bing
+  mülk doğrulaması** (V-05, değişmedi) → **LANE-SEO**; sahibin aksiyonu panel.
+- **#170 (spam) ve #227 (DKIM):** DNS tarafı **değişmedi** (V-09/V-10/V-11).
+  SPF'e Resend/amazonses ekleme + DMARC `quarantine` + DKIM 2048-bit rotasyonu
+  **hesap sahibinin panel/DNS onayına** bağlı (bu lane yıkıcı DNS değişikliği
+  yapmaz). `[auth.smtp]` = **LANE-SUPABASE** (#227).
+- **F-08 netleştirmesi (yeni kanıt):** Vercel alias doğrudan 200 ama
+  `Host: isbulkktc.com` ile **421 Misdirected Request** döner (V-08). Bu, alias'ın
+  CF zone'undan **geçmediğini** kesinleştirir: CF, `Host`'u tanımadığı için isteği
+  yanlış origin'e yönlendirmiyor; Vercel da tanımadığı `Host`'u 421 ile reddediyor.
+  Yani alias'a düşen `Host: isbulkktc.com` trafiği **hiçbir katmanda** CF/WAF
+  denetiminden geçmez — ama alias `noindex` olduğu için SEO etkisi yok (V-07).
+
+### Micro-denetim (sahip olunan dosyalar)
+
+`git ls-files` ile LANE-CLOUDFLARE sahipliği: **2 dosya** —
+`docs/cloudflare.md`, `docs/lanes/02-cloudflare.md`. İkisi de bu turda satır satır
+tarandı; bakılmayan dosya yok (AUDIT.md boyutları).
+
+| # | Dosya | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `docs/cloudflare.md` (tur 14) | Doğruluk | A-01b "canlıda AÇIK" | build `1d804b6` → 400 | yanlış durum | **düzeltildi** (tur 14.1) |
+| 2 | `docs/cloudflare.md` (SW-01) | Tutarlılık | "#364 açık" | #365 düzeltmesi | sahip eylemi değişti | **düzeltildi** (tur 14.1) |
+| 3 | her iki dosya | Link | 22 tekil `#NNN` | hepsi çözülür | kırık referans yok | **doğrulandı** |
+| 4 | `docs/cloudflare.md` (tur 15) | Doğruluk | F-08 "alias CF'i atlıyor" gerekçesiz | V-08 `Host` override → 421 | kanıt eklendi | **düzeltildi** |
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` yok): WAF/Cache Rules/Bot Management/Edge
+  Certificates panel durumu okunamadı; ölçüm edge↔origin diff + DoH ile yapıldı.
+- **Search Console / Bing Webmaster / Resend paneli:** erişim yok → indeks sayısı
+  ve DKIM "verified" durumu panelden doğrulanamadı.
+- **Gerçek e-posta teslimi (Gmail/Outlook):** gönderim yapılmadı (spam skoru
+  yalnız SPF/DKIM/DMARC durumundan çıkarıldı).
