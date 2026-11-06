@@ -1,6 +1,9 @@
 import type { CandidateProfileValues } from "./schemas";
 import type { CandidateResumeDraft } from "./resume-parser";
-import { resolveNorthernCyprusDistrict } from "@/features/locations/northern-cyprus-districts";
+import {
+  resolveNorthernCyprusDistrict,
+  type NorthernCyprusDistrict,
+} from "@/features/locations/northern-cyprus-districts";
 
 export type CandidateProfileDraft = Omit<CandidateProfileValues, "skills"> & {
   headline: string;
@@ -16,6 +19,30 @@ export type ResumeDraftMergeResult = {
 
 const sectionLimit = 12;
 const skillsLimit = 40;
+
+/**
+ * The single district to store for a CV location.
+ *
+ * `resolveNorthernCyprusDistrict` returns `null` when a value names several
+ * districts, so that a *company* address is never guessed at. A candidate's own
+ * location line is different — the parser only emits it as a location, so the
+ * first district listed is the primary one. Reading it strictly dropped the
+ * location the CV stated ("too little is extracted", #208).
+ */
+function resolveFirstDistrict(
+  value: string | null | undefined,
+): NorthernCyprusDistrict | null {
+  if (!value) return null;
+
+  const direct = resolveNorthernCyprusDistrict(value);
+  if (direct) return direct;
+
+  for (const segment of value.split(/[,;/|]+/)) {
+    const resolved = resolveNorthernCyprusDistrict(segment);
+    if (resolved) return resolved;
+  }
+  return null;
+}
 
 function normalize(value: string): string {
   return value
@@ -90,8 +117,8 @@ export function mergeResumeDraft(
   const certifications = mergeEntries(current.certifications, draft.certifications);
   const headline = current.headline.trim() ? current.headline : draft.headline ?? "";
   const location =
-    resolveNorthernCyprusDistrict(current.location) ??
-    resolveNorthernCyprusDistrict(draft.location) ??
+    resolveFirstDistrict(current.location) ??
+    resolveFirstDistrict(draft.location) ??
     "";
 
   return {

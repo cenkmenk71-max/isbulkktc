@@ -770,3 +770,56 @@ become the headline"`) `origin/main`'de **yoktu** (4 `todo` var, bu değil).
 `tests/**` onların olduğu için eklemedim; kaynak düzeldiğine göre marker'ı
 ekleyip yeşil raporlayabilirler. #208'in kalan bayat `headline` assertion'ı da
 hâlâ onların kararında.
+
+---
+
+## Tur 16 — çok-ilçeli CV konumu profile hiç yazılmıyordu (#208, "az bilgi")
+
+### Alınan iş
+Açık `agent:backend` issue yoktu; #208'in "CV'den az bilgi çekiliyor" yarısından
+en yüksek etkili, kendi dosyamdaki bulgu seçildi.
+
+### Doğrulanan kanıt (gerçek modül, önce → sonra)
+```
+parseResumeText("AHMET YILMAZ\nGirne, Lefkoşa, Mağusa")  location="Girne, Lefkoşa, Mağusa"   (parser doğru)
+mergeResumeDraft({location:""}, {location:"Girne, Lefkoşa, Mağusa"})
+  önce: profile.location=""  added=0      sonra: profile.location="Girne"  added=1
+```
+
+### Kök neden
+`resolveNorthernCyprusDistrict("Girne, Lefkoşa")` **null** döner (çok-ilçeli
+dizge şirket adresinde tahmin edilmesin diye). `mergeResumeDraft` bu `null`'ı
+"konum yok" sayıp atıyordu; profil şeması zaten tek ilçe tutuyor. Yani CV'nin
+açıkça yazdığı konum kayboluyordu.
+
+### Düzeltme
+`resolveFirstDistrict`: önce tüm dizgeyi dener, olmazsa `[,;/|]+` ile bölüp ilk
+çözülen ilçeyi alır (parser'ın `looksLikeDistrictList` ayırıcı kümesiyle aynı).
+`current` ve `draft` konumunun ikisi de bu kuralla çözülür. `undefined` konum
+için korumalı (`location` alanı opsiyonel olabiliyor — ilk denemede testler
+`split of undefined` ile kırmızıya döndü, düzeltildi).
+
+### Korunan sözleşmeler
+- Tek ilçe (`"Girne"`) → `"Girne"`; bilinmeyen (`"Somewhere outside…"`) → `""`.
+- `tests/unit/resume-profile-draft.test.ts` ve `tests/unit/resume-date-context.test.ts`
+  (LANE-QA) yeşil kaldı — hiçbirine dokunulmadı.
+- Yeni URUN testi: `src/features/candidates/resume-location-merge.test.ts`.
+
+### Devredilen (LANE-QA) — **#367**
+Açık bölüm başlığı altındaki kişisel-veri satırı hâlâ profile sızıyor
+(`DENEYİM` altında `Telefon: …` → `description`; `EĞİTİM`/`SERTİFİKALAR`/
+`DİLLER`/`BECERİLER` altında aynı). Kaynak benim ama düzeltme
+`tests/unit/resume-date-context.test.ts:160`'ı kırıyor (o test satırın **tek
+kayıt olarak hayatta kalmasını** sabitliyor); `tests/**` onların. Ayrıca naif
+"PII kelimesi varsa satırı at" filtresi gerçek unvanları siliyor
+(`"Adres Doğrulama Uzmanı"`, `"Telefon Satış Temsilcisi"`, `"Doğum Kliniği
+Hemşiresi"`). Sınır kararı onlarda; `agent:handoff` + `lane:qa` ile #367 açıldı.
+
+### Kapılar
+lint/typecheck/check:frontend-source/test:unit (663, 0 fail) → hepsi yeşil.
+Canlıya dokunulmadı.
+
+### Not (kendime)
+Bayat not: `resolveJobDateModified("garbage", P)` **artık** `P`'ye düşüyor
+(dosya zaten korumalı); o bulgu geçersizdi.
+
