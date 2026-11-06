@@ -1776,9 +1776,9 @@ istemciye servis edebilir). Origin ikisinde de `Vary` göndermiyor → `Vary`
 Tur 21'de ham HTML ayrıştırıldı; `info@isbulkktc.com` **tek** yanıtta **7 kez**
 düz metin olarak geçiyor:
 
-- 2× JSON-LD (`Organization` + `ContactPoint.email`)
-- 3× RSC payload (`self.__next_f`) — `contactEmail`, footer `mailto:` ve
-  `footer-support-value`
+- 2× JSON-LD (`Organization.email` + `ContactPoint.email`)
+- 5× RSC payload (`self.__next_f`) — `contactEmail`, JSON-LD kopyası (2×),
+  footer `mailto:` ve `footer-support-value`
 
 CF Email Obfuscation yalnız **görünür `mailto:`**'u `__cf_email__` span'ına
 çeviriyor; JSON-LD ve RSC payload'daki düz adres olduğu gibi kalıyor → kazınabilir,
