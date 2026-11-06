@@ -210,7 +210,7 @@
   },
   "BlogMeta": {
     "title": "Work and careers in Northern Cyprus",
-    "description": "Follow current Northern Cyprus employment, workplace and career headlines with links to their publishers."
+    "description": "İşBul KKTC editorial writing on working life, hiring and careers in Northern Cyprus: job-market, application and employer guides."
   },
   "ContactMeta": {
     "title": "Contact",
@@ -389,7 +389,7 @@
     },
     "realityKicker": "WHERE THINGS STAND",
     "realityTitle": "We are clear about what is available and what is still being built.",
-    "realityBody": "The company directory makes records from supplied source files searchable; a listing does not mean İşBul KKTC has verified that company. Explore packages on the site; payment is arranged by IBAN outside the website, with instructions shared privately by email or WhatsApp after package terms are discussed.",
+    "realityBody": "The company directory makes records searchable; a listing does not mean İşBul KKTC has verified that company. Explore packages on the site; payment is arranged by IBAN outside the website, with instructions shared privately by email or WhatsApp after package terms are discussed.",
     "packagesLink": "See the current package status",
     "closingKicker": "BUILT TOGETHER",
     "closingTitle": "Every strong local network grows through good dialogue.",
@@ -398,14 +398,11 @@
   "BlogPage": {
     "eyebrow": "İŞBUL KKTC · LOCAL BRIEFING",
     "title": "Work and careers in Northern Cyprus.",
-    "lead": "Follow current headlines shaping employment, working life and careers in Northern Cyprus, with links to their publishers.",
+    "lead": "Here you will find our editorial writing on hiring, applications and careers in Northern Cyprus.",
     "feedAsideLabel": "LATEST BRIEFING",
-    "feedAsideBody": "Headlines related to local working life, published in the last 30 days.",
+    "feedAsideBody": "Current editorial headlines on local working life.",
     "feedKicker": "LIVE HEADLINES",
-    "feedTitle": "Work and career updates",
-    "emptyTitle": "There are no headlines to show right now.",
-    "metaTitle": "Northern Cyprus Work and Career Journal | İşBul KKTC",
-    "metaDescription": "The Northern Cyprus job market, a guide to posting a job for employers, and career tips for graduates. İşBul KKTC editorial."
+    "feedTitle": "Work and career updates"
   },
   "ContactPage": {
     "eyebrow": "İŞBUL KKTC · CONTACT",
@@ -428,7 +425,7 @@
     "messageGuidance": "To help us respond usefully, briefly mention the reason for your enquiry.",
     "nextKicker": "EXPLORE MORE",
     "nextTitle": "Explore the company directory.",
-    "nextBody": "Search Northern Cyprus company records by name, business type and location. Directory entries come from source data and are not verified company profiles.",
+    "nextBody": "Search Northern Cyprus company records by name, business type and location. A listing does not mean the company has a verified profile.",
     "directoryLink": "Visit the company directory",
     "feedbackKicker": "FEEDBACK",
     "feedbackTitle": "Share your thoughts",
@@ -911,7 +908,7 @@
     "totalLabel": "{count} company listings",
     "jobEmployersEyebrow": "CURRENT LISTINGS",
     "jobEmployersTitle": "Companies hiring now",
-    "jobEmployersDescription": "Companies with currently open positions in the source listings.",
+    "jobEmployersDescription": "Companies with currently open positions.",
     "jobEmployersCount": "{count} companies",
     "activeJobCount": "{count} open listings",
     "jobEmployersVerificationNote": "Appearing here does not mean that a company has been verified by İşBul KKTC.",

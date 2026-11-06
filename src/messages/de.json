@@ -210,7 +210,7 @@
   },
   "BlogMeta": {
     "title": "Arbeit und Karriere in Nordzypern",
-    "description": "Verfolgen Sie aktuelle Meldungen zu Beschäftigung und Arbeitsleben in Nordzypern mit Links zu den Herausgebern."
+    "description": "Redaktionelle Beiträge von İşBul KKTC zu Arbeitsleben, Einstellung und Karriere in Nordzypern: Ratgeber zu Arbeitsmarkt, Bewerbung und Arbeitgebern."
   },
   "ContactMeta": {
     "title": "Kontakt",
@@ -430,7 +430,7 @@
     },
     "realityKicker": "AKTUELLER STAND",
     "realityTitle": "Wir zeigen klar, was verfügbar ist und woran noch gearbeitet wird.",
-    "realityBody": "Das Unternehmensverzeichnis macht Einträge aus bereitgestellten Quelldateien durchsuchbar; ein Eintrag bedeutet nicht, dass İşBul KKTC das Unternehmen geprüft hat. Pakete können auf der Website angesehen werden; die Zahlung per IBAN erfolgt außerhalb der Website. IBAN und Zahlungsanweisungen werden nach Besprechung der Konditionen privat per E-Mail oder WhatsApp mitgeteilt.",
+    "realityBody": "Das Unternehmensverzeichnis macht Einträge durchsuchbar; ein Eintrag bedeutet nicht, dass İşBul KKTC das Unternehmen geprüft hat. Pakete können auf der Website angesehen werden; die Zahlung per IBAN erfolgt außerhalb der Website. IBAN und Zahlungsanweisungen werden nach Besprechung der Konditionen privat per E-Mail oder WhatsApp mitgeteilt.",
     "packagesLink": "Aktuellen Paketstatus ansehen",
     "closingKicker": "GEMEINSAM ENTWICKELT",
     "closingTitle": "Jedes starke lokale Netzwerk wächst durch guten Austausch.",
@@ -439,14 +439,11 @@
   "BlogPage": {
     "eyebrow": "İŞBUL KKTC · LOKALER ÜBERBLICK",
     "title": "Arbeit und Karriere in Nordzypern.",
-    "lead": "Verfolgen Sie aktuelle Meldungen zu Beschäftigung und Arbeitsleben in Nordzypern mit Links zu den Herausgebenden.",
+    "lead": "Hier finden Sie unsere redaktionellen Beiträge zu Einstellung, Bewerbung und Karriere in Nordzypern.",
     "feedAsideLabel": "DIE NEUESTEN MELDUNGEN",
-    "feedAsideBody": "Meldungen zum lokalen Arbeitsleben aus den vergangenen 30 Tagen.",
+    "feedAsideBody": "Aktuelle redaktionelle Meldungen zum lokalen Arbeitsleben.",
     "feedKicker": "AKTUELLE MELDUNGEN",
-    "feedTitle": "Neuigkeiten zu Arbeit und Karriere",
-    "emptyTitle": "Zurzeit gibt es keine Meldungen.",
-    "metaTitle": "Arbeits- und Karrierejournal Nordzypern | İşBul KKTC",
-    "metaDescription": "Der Arbeitsmarkt Nordzyperns, ein Leitfaden für Arbeitgeber und Karrieretipps für Absolventen. İşBul KKTC."
+    "feedTitle": "Neuigkeiten zu Arbeit und Karriere"
   },
   "ContactPage": {
     "eyebrow": "İŞBUL KKTC · KONTAKT",
@@ -469,7 +466,7 @@
     "messageGuidance": "Damit wir gezielt helfen können, nennen Sie bitte kurz den Grund Ihrer Anfrage.",
     "nextKicker": "MEHR ENTDECKEN",
     "nextTitle": "Unternehmensverzeichnis entdecken.",
-    "nextBody": "Durchsuchen Sie Unternehmenseinträge in Nordzypern nach Name, Branche und Standort. Die Einträge stammen aus Quelldaten und sind keine geprüften Unternehmensprofile.",
+    "nextBody": "Durchsuchen Sie Unternehmenseinträge in Nordzypern nach Name, Branche und Standort. Ein Eintrag bedeutet nicht, dass ein geprüftes Unternehmensprofil vorliegt.",
     "directoryLink": "Zum Unternehmensverzeichnis",
     "feedbackKicker": "FEEDBACK",
     "feedbackTitle": "Teilen Sie Ihre Meinung",
@@ -911,7 +908,7 @@
     "totalLabel": "{count} Unternehmenseinträge",
     "jobEmployersEyebrow": "AKTUELLE ANZEIGEN",
     "jobEmployersTitle": "Unternehmen mit offenen Stellen",
-    "jobEmployersDescription": "Unternehmen mit aktuell offenen Stellen in den Quellanzeigen.",
+    "jobEmployersDescription": "Unternehmen mit aktuell offenen Stellen.",
     "jobEmployersCount": "{count} Unternehmen",
     "activeJobCount": "{count} offene Stellen",
     "jobEmployersVerificationNote": "Die Anzeige in diesem Abschnitt bedeutet nicht, dass İşBul KKTC das Unternehmen verifiziert hat.",

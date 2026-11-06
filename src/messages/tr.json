@@ -210,7 +210,7 @@
   },
   "BlogMeta": {
     "title": "Kuzey Kıbrıs iş ve kariyer gündemi",
-    "description": "KKTC’de istihdam, çalışma hayatı ve kariyerle ilgili güncel haber başlıklarını yayıncı kaynaklarıyla takip edin."
+    "description": "KKTC’de çalışma hayatı, işe alım ve kariyer üzerine İşBul KKTC editoryal yazıları: iş piyasası, başvuru ve işveren rehberleri."
   },
   "ContactMeta": {
     "title": "İletişim",
@@ -389,7 +389,7 @@
     },
     "realityKicker": "BUGÜNÜN DURUMU",
     "realityTitle": "Ne sunduğumuzu, neyin henüz hazır olmadığını açıkça anlatıyoruz.",
-    "realityBody": "Şirket rehberi, sağlanan kaynaklardaki kayıtları aramaya açar; listelenmek şirketin İşBul KKTC tarafından doğrulandığı anlamına gelmez. Paketler sitede incelenir; ödeme web sitesinde alınmaz. IBAN ve ödeme talimatı, paket koşulları görüşüldükten sonra e-posta veya WhatsApp gibi kanallardan özel olarak iletilir.",
+    "realityBody": "Şirket rehberi kayıtları aramaya açar; listelenmek, şirketin İşBul KKTC tarafından doğrulandığı anlamına gelmez. Paketler sitede incelenir; ödeme web sitesinde alınmaz. IBAN ve ödeme talimatı, paket koşulları görüşüldükten sonra e-posta veya WhatsApp gibi kanallardan özel olarak iletilir.",
     "packagesLink": "Paketlerin güncel durumunu görün",
     "closingKicker": "BİRLİKTE GELİŞELİM",
     "closingTitle": "Her güçlü yerel ağ, iyi bir diyalogla büyür.",
@@ -398,14 +398,11 @@
   "BlogPage": {
     "eyebrow": "İŞBUL KKTC · YEREL GÜNDEM",
     "title": "Kuzey Kıbrıs’ta iş ve çalışma hayatı.",
-    "lead": "KKTC’de istihdamı, çalışma hayatını ve kariyer gündemini etkileyen güncel haber başlıklarını yayıncı kaynaklarına ulaşarak takip edin.",
+    "lead": "KKTC’de işe alım, başvuru ve kariyer üzerine hazırladığımız editoryal yazıları burada bulabilirsiniz.",
     "feedAsideLabel": "SON GÜNDEM",
-    "feedAsideBody": "Son 30 günde yayımlanan, yerel çalışma hayatıyla ilgili başlıklar.",
+    "feedAsideBody": "Yerel çalışma hayatına dair güncel editoryal başlıklar.",
     "feedKicker": "GÜNCEL AKIŞ",
-    "feedTitle": "İş ve kariyer gündemi",
-    "emptyTitle": "Şu an gösterilecek haber başlığı yok.",
-    "metaTitle": "KKTC İş ve Kariyer Gündemi | İşBul KKTC",
-    "metaDescription": "Kuzey Kıbrıs iş piyasası, işverenler için ilan rehberi ve yeni mezunlar için kariyer ipuçları. İşBul KKTC editoryal yazıları."
+    "feedTitle": "İş ve kariyer gündemi"
   },
   "ContactPage": {
     "eyebrow": "İŞBUL KKTC · İLETİŞİM",
@@ -428,7 +425,7 @@
     "messageGuidance": "Size daha iyi yardımcı olabilmemiz için mesajınızda iletişim nedeninizi kısaca belirtin.",
     "nextKicker": "DAHA FAZLASINI KEŞFEDİN",
     "nextTitle": "Şirket rehberini inceleyin.",
-    "nextBody": "Kuzey Kıbrıs şirket rehberinde kayıtları şirket adına, faaliyet alanına ve konuma göre arayabilirsiniz. Rehber kayıtlarının kaynak veriden geldiğini ve doğrulanmış şirket profili olmadığını unutmayın.",
+    "nextBody": "Kuzey Kıbrıs şirket rehberinde kayıtları şirket adına, faaliyet alanına ve konuma göre arayabilirsiniz. Listelenmek, şirketin doğrulanmış profili olduğu anlamına gelmez.",
     "directoryLink": "Şirket rehberine gidin",
     "feedbackKicker": "GERİ BİLDİRİM",
     "feedbackTitle": "Görüşünüzü paylaşın",
@@ -911,7 +908,7 @@
     "totalLabel": "{count} şirket kaydı",
     "jobEmployersEyebrow": "GÜNCEL İLANLAR",
     "jobEmployersTitle": "İşe alım yapan firmalar",
-    "jobEmployersDescription": "Kaynak ilanlarında şu anda açık pozisyonu bulunan firmalar.",
+    "jobEmployersDescription": "Şu anda açık pozisyonu bulunan firmalar.",
     "jobEmployersCount": "{count} firma",
     "activeJobCount": "{count} açık ilan",
     "jobEmployersVerificationNote": "Bu bölümde görünmek, şirketin İşBul KKTC tarafından doğrulandığı anlamına gelmez.",

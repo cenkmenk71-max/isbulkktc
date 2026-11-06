@@ -98,6 +98,9 @@ const RETIRED_KEYS = [
   "BlogPage.editorialNoteBody",
   "BlogPage.photoLicense",
   "BlogPage.sourceLabel",
+  "BlogPage.emptyTitle",
+  "BlogPage.metaTitle",
+  "BlogPage.metaDescription",
   "CompanyDirectory.sourceProfileLink",
   "CompanyDirectory.sourceListingLink",
   "CompanyDirectory.categoryPlaceholder",
@@ -132,6 +135,9 @@ test("no catalog keeps a message key whose rendering code was removed", () => {
 // system, not a legitimate user action like importing one's own CV.
 const FORBIDDEN_INTERNAL_PHRASES = [
   "kaynak koordinat",
+  "kaynak veri",
+  "kaynak ilan",
+  "sağlanan kaynak",
   "şube sayısı",
   "dahil edilmez",
   "hariç tutul",
@@ -145,6 +151,52 @@ test("Turkish catalog keeps internal pipeline vocabulary off the visitor surface
         false,
         `tr.${key} leaks internal vocabulary "${phrase}"; reword it as the user's own action`,
       );
+    }
+  }
+});
+
+// The ratchet above guards only the source language, so a translator can
+// reintroduce the same leak in a target language unnoticed. These are the
+// per-locale renderings of the internal phrases the brief forbids on the
+// visitor surface: the "source coordinates" wording #220/#276 removed from
+// `CompanyDirectory.sourceNote`, and "source data" / "source listings" /
+// "supplied source files" — the pipeline's own names for the directory feed,
+// which leaked in `ContactPage.nextBody`, `CompanyDirectory.jobEmployersDescription`
+// and `AboutPage.realityBody` in all six locales. Each describes how the system
+// is fed rather than the visitor's own action, so the list stays narrow enough
+// not to flag ordinary copy.
+const FORBIDDEN_SOURCE_VOCABULARY: Record<string, readonly string[]> = {
+  tr: ["kaynak koordinat", "kaynak veri", "kaynak ilan", "sağlanan kaynak"],
+  en: [
+    "source coordinate",
+    "source data",
+    "source listing",
+    "supplied source",
+  ],
+  de: ["quellkoordinat", "quelldaten", "quellanzeigen", "quellendatei"],
+  ru: [
+    "координат источника",
+    "координаты источника",
+    "исходных данных",
+    "исходные данные",
+    "исходных объявлен",
+    "предоставленных источник",
+  ],
+  el: ["συντεταγμένες πηγής", "δεδομένων πηγής", "αγγελίες της πηγής"],
+  fa: ["مختصات منبع", "داده‌های منبع", "آگهی‌های منبع", "فایل‌های منبع"],
+};
+
+test("no locale reintroduces the forbidden source vocabulary", () => {
+  for (const locale of locales) {
+    const messages = flatten(readMessages(locale));
+    for (const [key, value] of Object.entries(messages)) {
+      for (const phrase of FORBIDDEN_SOURCE_VOCABULARY[locale] ?? []) {
+        assert.equal(
+          value.toLowerCase().includes(phrase),
+          false,
+          `${locale}.${key} leaks internal vocabulary "${phrase}"`,
+        );
+      }
     }
   }
 });
