@@ -26,7 +26,7 @@ function listHtml(items: string[]): string {
   const rows = items
     .map(
       (item, index) =>
-        `<tr><td style="vertical-align:top;padding:0 10px 10px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#e2ece5;color:#0D5C3A;font-size:12px;font-weight:700;">${
+        `<tr><td style="vertical-align:top;padding:0 10px 10px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#e2ece5;color:#0D5C3A;font-size:13px;font-weight:700;">${
           index + 1
         }</span></td><td style="vertical-align:top;padding:0 0 10px;font-size:15px;line-height:1.55;color:#1A1A1A;">${escapeHtml(
           item,

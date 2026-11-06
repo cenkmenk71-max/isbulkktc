@@ -19,11 +19,64 @@ export const BRAND = {
   /** Canonical brand green — matches the app's `--green` token. */
   green: "#0D5C3A",
   greenDark: "#194435",
+  greenSoft: "#E2ECE5",
   ink: "#1A1A1A",
   inkSoft: "#5B6572",
   line: "#E6E4DE",
   surface: "#F5F2EB",
   white: "#FFFFFF",
+  /** Warm neutral for the footer, one step below surface. */
+  footer: "#FBFAF8",
+} as const;
+
+/**
+ * The design scale.
+ *
+ * Every template read its sizes from a handful of hand-picked numbers — eight
+ * font sizes, three radii, and paddings of 16, 20, 22, 26, 28 and 32 — which is
+ * what made the set look flat and unordered. These tokens replace the ad-hoc
+ * values so a template picks a step instead of inventing one.
+ *
+ * - Spacing is a 4px scale. Two steps are used per context, never an odd value.
+ * - Type is a 1.2 modular scale, so each step is visibly larger than the last.
+ * - Only two radii exist: a small control and the card.
+ */
+export const SPACE = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+} as const;
+
+export const TYPE = {
+  /** Footer and legal fine print. */
+  micro: 11,
+  /** Secondary lines, fallback URLs, notes. */
+  small: 13,
+  /** Body copy. */
+  body: 15,
+  /** Lead paragraph, slightly above body. */
+  lead: 17,
+  /** Section heading. */
+  h2: 20,
+  /** Email title. */
+  h1: 26,
+  /** The one-off verification code, the only display size. */
+  display: 34,
+} as const;
+
+export const RADIUS = {
+  control: 8,
+  card: 14,
+} as const;
+
+/** Line heights, paired with TYPE so text blocks are consistent. */
+export const LEADING = {
+  tight: 1.25,
+  normal: 1.6,
+  loose: 1.75,
 } as const;
 
 /** Absolute URL to the hosted brand mark, used as the email header logo. */
@@ -111,30 +164,33 @@ function preheaderBlock(text: string): string {
 }
 
 function headingBlock(heading: string): string {
-  return `<h1 style="margin:0 0 14px;font-size:20px;line-height:1.35;font-weight:700;color:${BRAND.ink};" class="ibk-h1">${escapeHtml(
+  // The title is the one element that should outrank the section headings. It
+  // was set to the h2 step, so a title and a section label looked identical —
+  // the flatness the owner reported.
+  return `<h1 style="margin:0 0 ${SPACE.md}px;font-size:${TYPE.h1}px;line-height:${LEADING.tight};font-weight:700;letter-spacing:-0.4px;color:${BRAND.ink};" class="ibk-h1">${escapeHtml(
     heading,
   )}</h1>`;
 }
 
 function introBlock(html: string | undefined): string {
   if (!html) return "";
-  return `<div style="font-size:15px;line-height:1.65;color:${BRAND.ink};">${html}</div>`;
+  return `<div style="font-size:${TYPE.body}px;line-height:${LEADING.normal};color:${BRAND.ink};">${html}</div>`;
 }
 
 function sectionBlock(section: EmailSection): string {
-  return `<div style="margin:22px 0 0;">
-<p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:${BRAND.green};">${escapeHtml(
+  return `<div style="margin:${SPACE.lg}px 0 0;">
+<p style="margin:0 0 8px;font-size:${TYPE.small}px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:${BRAND.green};">${escapeHtml(
     section.heading,
   )}</p>
-<div style="font-size:15px;line-height:1.65;color:${BRAND.ink};">${section.html}</div>
+<div style="font-size:${TYPE.body}px;line-height:${LEADING.normal};color:${BRAND.ink};">${section.html}</div>
 </div>`;
 }
 
 function buttonBlock(button: EmailButton | undefined): string {
   if (!button || !isSafeUrl(button.url)) return "";
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0 0;">
-<tr><td align="center" bgcolor="${BRAND.green}" style="border-radius:8px;">
-<a href="${escapeHtml(button.url)}" class="ibk-btn" style="display:inline-block;padding:14px 28px;color:${BRAND.white};text-decoration:none;font-weight:600;font-size:15px;border-radius:8px;">${escapeHtml(
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:${SPACE.lg}px 0 0;">
+<tr><td align="center" bgcolor="${BRAND.green}" style="border-radius:${RADIUS.control}px;">
+<a href="${escapeHtml(button.url)}" class="ibk-btn" style="display:inline-block;padding:${SPACE.md}px ${SPACE.lg}px;color:${BRAND.white};text-decoration:none;font-weight:600;font-size:${TYPE.body}px;border-radius:${RADIUS.control}px;">${escapeHtml(
     button.label,
   )}</a>
 </td></tr>
@@ -143,8 +199,8 @@ function buttonBlock(button: EmailButton | undefined): string {
 
 function codeBlock(code: string | undefined): string {
   if (!code) return "";
-  return `<div style="margin:22px 0 0;background:${BRAND.surface};border:1px solid ${BRAND.line};border-radius:10px;padding:20px;text-align:center;">
-<span class="ibk-code" style="font-size:32px;font-weight:700;letter-spacing:6px;color:${BRAND.ink};">${escapeHtml(
+  return `<div style="margin:${SPACE.lg}px 0 0;background:${BRAND.surface};border:1px solid ${BRAND.line};border-radius:${RADIUS.control}px;padding:${SPACE.lg}px;text-align:center;">
+<span class="ibk-code" style="font-size:${TYPE.display}px;font-weight:700;letter-spacing:6px;color:${BRAND.ink};">${escapeHtml(
     code,
   )}</span>
 </div>`;
@@ -152,7 +208,7 @@ function codeBlock(code: string | undefined): string {
 
 function linkFallbackBlock(text: string | undefined, url: string | undefined): string {
   if (!text || !url || !isSafeUrl(url)) return "";
-  return `<p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:${BRAND.inkSoft};word-break:break-all;">${escapeHtml(
+  return `<p style="margin:${SPACE.lg}px 0 0;font-size:${TYPE.small}px;line-height:${LEADING.normal};color:${BRAND.inkSoft};word-break:break-all;">${escapeHtml(
     text,
   )}<br><a href="${escapeHtml(url)}" style="color:${BRAND.green};text-decoration:underline;">${escapeHtml(
     url,
@@ -161,7 +217,7 @@ function linkFallbackBlock(text: string | undefined, url: string | undefined): s
 
 function noteBlock(note: string | undefined): string {
   if (!note) return "";
-  return `<div style="margin:24px 0 0;background:${BRAND.surface};border:1px solid ${BRAND.line};border-radius:8px;padding:16px;font-size:13px;line-height:1.6;color:${BRAND.inkSoft};">${escapeHtml(
+  return `<div style="margin:${SPACE.lg}px 0 0;background:${BRAND.surface};border:1px solid ${BRAND.line};border-radius:${RADIUS.control}px;padding:${SPACE.md}px;font-size:${TYPE.small}px;line-height:${LEADING.normal};color:${BRAND.inkSoft};">${escapeHtml(
     note,
   )}</div>`;
 }
@@ -172,7 +228,7 @@ function footerBlock(options: EmailLayoutOptions): string {
         options.unsubscribeLabel ?? "Abonelikten çık",
       )}</a>`
     : "";
-  return `<tr><td style="padding:22px 32px;background:#fbfbfa;border-top:1px solid ${BRAND.line};text-align:center;font-size:12px;line-height:1.7;color:${BRAND.inkSoft};">
+  return `<tr><td style="padding:${SPACE.lg}px ${SPACE.xl}px;background:#fbfbfa;border-top:1px solid ${BRAND.line};text-align:center;font-size:${TYPE.micro}px;line-height:${LEADING.loose};color:${BRAND.inkSoft};">
 <p style="margin:0 0 6px;">${escapeHtml(options.footerNote)}</p>
 <p style="margin:0;">© ${new Date().getUTCFullYear()} ${BRAND.name} · Kuzey Kıbrıs Türk Cumhuriyeti · <a href="${escapeHtml(
     options.siteUrl,
@@ -210,7 +266,7 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
   .ibk-btn:hover { background-color:${BRAND.greenDark} !important; }
   @media (max-width:600px) {
     .ibk-pad { padding-left:20px !important; padding-right:20px !important; }
-    .ibk-h1 { font-size:19px !important; }
+    .ibk-h1 { font-size:${TYPE.h2}px !important; }
   }
   @media (prefers-color-scheme:dark) {
     .ibk-bg { background:#111413 !important; }
@@ -223,21 +279,21 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
 </head>
 <body style="margin:0;padding:0;background:${BRAND.surface};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND.ink};">
 ${preheaderBlock(options.preheader)}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-bg" style="background:${BRAND.surface};padding:28px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-bg" style="background:${BRAND.surface};padding:${SPACE.xl}px ${SPACE.sm}px;">
 <tr><td align="center">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="ibk-card" style="max-width:600px;width:100%;background:${BRAND.white};border-radius:14px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.07);">
-<tr><td class="ibk-pad" style="background:${BRAND.green};padding:26px 32px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="ibk-card" style="max-width:600px;width:100%;background:${BRAND.white};border-radius:${RADIUS.card}px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.07);">
+<tr><td class="ibk-pad" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
 <td style="vertical-align:middle;">
 <img src="${LOGO_URL}" width="56" height="33" alt="" style="display:block;border:0;outline:none;text-decoration:none;" />
 </td>
 <td style="vertical-align:middle;padding-${dir === "rtl" ? "right" : "left"}:14px;">
-<div style="color:${BRAND.white};font-size:22px;font-weight:700;letter-spacing:-0.4px;line-height:1.1;">${BRAND.name}</div>
-<div style="color:rgba(255,255,255,0.85);font-size:12.5px;margin-top:3px;">${BRAND.tagline}</div>
+<div style="color:${BRAND.white};font-size:${TYPE.h1}px;font-weight:700;letter-spacing:-0.4px;line-height:1.1;">${BRAND.name}</div>
+<div style="color:rgba(255,255,255,0.85);font-size:${TYPE.micro}px;margin-top:3px;">${BRAND.tagline}</div>
 </td>
 </tr></table>
 </td></tr>
-<tr><td class="ibk-pad" style="padding:32px;">
+<tr><td class="ibk-pad" style="padding:${SPACE.xl}px;">
 ${body}
 </td></tr>
 ${footerBlock(options)}
