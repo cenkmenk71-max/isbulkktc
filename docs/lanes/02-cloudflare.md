@@ -323,3 +323,48 @@ brute-force'a tahsisi önerisi sahibin onayını bekliyor.
 **Açık kalan (değişmedi):** H-01, H-02, N-01, R-01, G-01, W-01, V-01, F-08.
 
 Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 17".
+
+---
+
+## Tur 18 (2026-11-06) — DNS kapsam taraması + doküman doğruluk düzeltmeleri
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS değiştirilmedi)
+Sahibin yapması gerekenler: H-01 (CF HSTS max-age) · H-02/N-01 (Browser Cache TTL
+            = Respect Existing Headers) · G-01 (Email Obfuscation OFF) · R-01
+            (Vercel host eşleştirme) · W-01 + V-20 (WAF ifadesini genişlet) ·
+            F-08 (Vercel Deployment Protection) · apex TXT yinelenen
+            google-site-verification teyidi · MTA-STS/TLS-RPT (#170) · DKIM 2048 (#227)
+Sonraki lane için notlar: "tüm kayıtlarda AD=true" gibi kapsam iddialarını tek tek
+            ad üzerinden doğrula; CNAME zinciri imzasız bir bölgeye (rmta.net) gidiyorsa
+            AD=false döner. Bulgu kimliklerini (V-*) çakıştırmadan ver.
+```
+
+**Bu tur ne buldu.** Brief 1–7 yeniden ölçüldü; odak **DNS kayıt-seti genişliği**
+ve **kendi dokümanlarımın canlı kanıta uygunluğu** oldu. Üç doküman kusuru
+kanıtla düzeltildi:
+
+- **D-01 (doğruluk):** F-13/T-23/U-11/V-12 "DNSSEC `AD=true`" iddiası **tüm**
+  kayıtlar için geçerli değil. `rsend.isbulkktc.com` bir **CNAME** →
+  `send.forge.rmta.net`; uç bölge **`rmta.net` DS yok → imzasız**, `AD=false`
+  (CF DoH + Google DoH teyit). Apex + `www` + `send` + `_dmarc` + DKIM +
+  `mta-sts` + `autodiscover` hepsi `AD=true`. Kapsam iddiası düzeltildi.
+  `TXT`/`MX`'te görünen CNAME+hedef kayıtlar **co-location değil** (RFC 2181
+  §10.1 ihlali yok) — CNAME zinciri çözülüyor; ayrı doğrulandı.
+- **D-02 (doğruluk):** F-15/T-02 `/_next/static/*` için "`vary: accept-encoding`"
+  diyordu; edge'de bu yolda `Vary` **yok** (gerçek hash'li chunk + font
+  ölçüldü). Düzeltildi.
+- **D-03 (tutarlılık):** İki farklı bulgu aynı `V-01` kimliğini taşıyordu
+  (tur 15 bot-UA ve tur 17 WAF-boşluğu). tur 15 → `V-19`, tur 17 → `V-20`.
+
+**Temiz doğrulananlar:** 32 subdomain (yalnız `www`; takeover yüzeyi yok), SPF
+include-ağacı 2 lookup (limit 10), CAA 10 kayıt, WAF poz (22+6 dil) / neg (21),
+cache zehirlenmesi ve cache-deception temiz, metod allowlist, A-01c kapalı,
+bot UA'ları 200, yönlendirme/açık-yönlendirme temiz, TLS A+ 4/4, HSTS preload
+`pending`, `security.txt` tam, sitemap tek host.
+
+**Açık kalan (değişmedi):** H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08.
+Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 18".

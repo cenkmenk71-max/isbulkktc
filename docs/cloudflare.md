@@ -52,9 +52,9 @@ Kanıt kısaltmaları: `HTTP` = `curl -D -` başlıkları, `DoH` = `cloudflare-d
 | F-10 | Sertifika | Let's Encrypt `YE2`, SAN `*.isbulkktc.com, isbulkktc.com`, geçerlilik 2026-09-19 → 2026-12-18 | OK (CF Universal SSL) | `openssl x509` |
 | F-11 | HSTS | `max-age=31536000; includeSubDomains; preload` | Doğru | `HTTP` |
 | F-12 | HSTS preload | `hstspreload.org` → **`status: pending`** | `preloaded` olana kadar bekle; kaydı geri çekme | hstspreload API |
-| F-13 | DNSSEC | Açık — DS `2371 13 2 36e0…775b`, `AD=true` | Doğru | DoH DS + `AD` |
+| F-13 | DNSSEC | Açık — DS `2371 13 2 36e0…775b`, apex+çoğu alt alan `AD=true`; **`rsend` CNAME'i `rmta.net`'e gidiyor (DS yok) → `AD=false`** (bkz. tur 18, D-01) | Apex doğru; kısmi kapsam bilinmeli | DoH DS + `AD` |
 | F-14 | Cache — dinamik HTML | `/`, `/jobs`, `/companies`, tüm dil önekleri: `cache-control: private, no-cache, no-store…`, `cf-cache-status: DYNAMIC` | Dinamik asla cache'lenmemeli — **doğru, düzeltme gerekmez** | `HTTP` |
-| F-15 | Cache — statik | `/_next/static/*`: `public, max-age=31536000, immutable`, `cf-cache-status: HIT`, `vary: accept-encoding` | Doğru | `HTTP` |
+| F-15 | Cache — statik | `/_next/static/*`: `public, max-age=31536000, immutable`, `cf-cache-status: HIT`; edge'de `Vary` **yok** (tur 18 düzeltmesi) | Doğru | `HTTP` |
 | F-16 | Cache — `robots.txt` | `public, max-age=2628000` (≈30 gün), `REVALIDATED` | Kabul; ama `noindex` kuralı **`Disallow` etmiyor** (SEO lane) | `HTTP` |
 | F-17 | Cache — `sitemap.xml` | `public, max-age=3600`, `EXPIRED`/`REVALIDATED` | 1 saat TTL makul; `<lastmod>` tazeliği SEO lane'de | `HTTP` |
 | F-18 | Cache — `/images/*` | `public, max-age=2628000`, `MISS`→`REVALIDATED`, ETag var | Görseller edge-cache'leniyor, OK | `HTTP` |
@@ -482,7 +482,7 @@ ve hata-yolu boyutu eklendi. **Yeni açık yok; bir doküman düzeltmesi var.**
 | # | Boyut | Test | Gözlenen | Durum |
 |---|---|---|---|---|
 | T-01 | Cache-key | `/robots.txt`, `/sitemap.xml` — `Accept-Encoding: gzip` vs `identity` | `Vary: accept-encoding` var; gzip'te `content-encoding: gzip`, identity'de gzip yok → **iki varyant ayrı cache'leniyor** | ✔ doğru |
-| T-02 | Cache-key | `/_next/static/*` | `immutable` + `HIT`; `vary: accept-encoding` | ✔ |
+| T-02 | Cache-key | `/_next/static/*` | `immutable` + `HIT`; edge'de `Vary` **yok** (tur 18 düzeltmesi) | ✔ |
 | T-03 | Kişiselleştirme sızıntısı | `/robots.txt`, `/sitemap.xml` — `Cookie: NEXT_LOCALE=de/fa`, `Accept-Language: de` | gövde md5 **değişmiyor**, `REVALIDATED` | ✔ sızıntı yok |
 | T-04 | Hata yolu | `GET /definitely-not-a-page-xyz123` | **404**, `private, no-store`, `DYNAMIC`; gövdede stack/`node_modules`/`/home/`/`eyJ` **yok** | ✔ |
 | T-05 | Hata yolu | `POST /api/push/dispatch` (token yok/yanlış) | **401** JSON, `cache-control: public, max-age=0, must-revalidate`, `DYNAMIC`, gövde 26 B | ✔ |
@@ -1215,7 +1215,7 @@ edildi, **A-01c canlıda kapalı**).
 
 | # | Test | Sonuç | Beklenen | Kaynak |
 |---|---|---|---|---|
-| V-01 | Googlebot/Bingbot/YandexBot/DuckDuckBot/AhrefsBot `/` | hepsi **200**, `cf-mitigated` **yok** | 200 | HTTP |
+| V-19 | Googlebot/Bingbot/YandexBot/DuckDuckBot/AhrefsBot `/` | hepsi **200**, `cf-mitigated` **yok** | 200 | HTTP |
 | V-02 | çıplak `curl/8.0` `/` | **103** (Early Hints), challenge değil | — | HTTP |
 | V-03 | `sqlmap/1.7` `/` (WAF regresyon) | **403** | 403 | HTTP |
 | V-04 | `google-site-verification` meta (üretim HTML) | **var** | var | HTTP |
@@ -1230,7 +1230,7 @@ edildi, **A-01c canlıda kapalı**).
 
 ### Değerlendirme
 
-- **#163 (bulunabilirlik):** CF halkası **hâlâ kopuk değil** (V-01/V-02/V-03/V-04
+- **#163 (bulunabilirlik):** CF halkası **hâlâ kopuk değil** (V-19/V-02/V-03/V-04
   tur-4/2026-11-05 bulgularıyla birebir aynı; drift **yok**). Kopuk halka **Bing
   mülk doğrulaması** (V-05, değişmedi) → **LANE-SEO**; sahibin aksiyonu panel.
 - **#170 (spam) ve #227 (DKIM):** DNS tarafı **değişmedi** (V-09/V-10/V-11).
@@ -1312,7 +1312,7 @@ kaldı. **Kapandı.**
 | U-08 | Yönlendirmeler | `/tr` → 308 → `/` (`as-needed`, tek sıçrama); `www` → 308 apex | ✔ |
 | U-09 | CF → Vercel zinciri | `server: cloudflare` + `cf-ray` + `x-vercel-id` aynı yanıtta | ✔ |
 | U-10 | CAA | 5 issuer (`comodoca`,`digicert`,`letsencrypt`,`pki.goog`,`ssl.com`) + `issuewild` | ✔ |
-| U-11 | DNSSEC | DoH tüm kayıtlarda `AD=true` | ✔ |
+| U-11 | DNSSEC | DoH apex+çoğu alt alanda `AD=true`; `rsend` (`rmta.net` CNAME, DS yok) `AD=false` | ⚠️ kısmi (tur 18) |
 | U-12 | WAF saldırı UA'sı | `sqlmap` → 403 | ✔ |
 | U-13 | Bot UA'ları | Googlebot/Bingbot/YandexBot/DuckDuckBot/AhrefsBot → 200, `cf-mitigated` yok | ✔ |
 
@@ -1373,7 +1373,7 @@ düzeltildi. **Ders:** bir istemci bir protokolü *kendisi* desteklemiyorsa, o
 protokolün sunucuda reddedildiği iddia edilemez; negatif iddiayı bağımsız bir
 tarayıcıyla (SSL Labs) doğrula.
 
-### Yeni bulgu: V-01 — WAF tarayıcı yollarında kapsam boşluğu (düşük)
+### Yeni bulgu: V-20 — WAF tarayıcı yollarında kapsam boşluğu (düşük)
 
 Tur 14'te **W-01** yalnız `%2f` kodlamasına odaklanmıştı. Bu tur WAF'ın
 **yüzde-kodlamasız** tarayıcı yollarını da kaçırdığını gösterdi:
@@ -1404,7 +1404,7 @@ Canlı build: `/api/build-info` → **`d154e44`**.
 | R-01 — sonlu noktalı apex | ⚠️ **açık** | `isbulkktc.com.` → **404**; `www.isbulkktc.com.` → 308 |
 | G-01 — Email Address Obfuscation | ⚠️ **açık** | `/`, `/en`, `/contact` gövdesinde `cdn-cgi/l/email-protection` |
 | W-01 — WAF kodlanmış nokta-yolu | ⚠️ **açık** | `/.git/config`→403 ama `/.git%2fconfig`→**404** (origin) |
-| V-01 — WAF tarayıcı yolu (yeni) | ⚠️ **açık** | `config.php`,`shell.php`,`actuator/env`,`server-status` → **404 origin** |
+| V-20 — WAF tarayıcı yolu (yeni) | ⚠️ **açık** | `config.php`,`shell.php`,`actuator/env`,`server-status` → **404 origin** |
 | F-08 — Vercel alias CF zone'unu atlıyor | ⚠️ **açık** | alias `server: Vercel` (cf-ray yok); alias+`Host` → **421** |
 | F-09/T-15 — TLS min kanıtı | ✅ **düzeltildi** | SSL Labs 4/4 `A+`, yalnız TLS 1.2+1.3 |
 | A-01c — `/_next/image` çift-kodlama | ✅ **kapalı** | tur 14.1'de 11 PoC → 400 |
@@ -1414,7 +1414,7 @@ Canlı build: `/api/build-info` → **`d154e44`**.
 
 | # | Test | Gözlenen | Durum |
 |---|---|---|---|
-| V-01 | WAF negatif (8 saldırı yolu) | 403 | ✔ |
+| V-20 | WAF negatif (8 saldırı yolu) | 403 | ✔ |
 | V-02 | WAF pozitif (17 meşru yol: 12 tr rotası + 5 dil öneki) | hepsi 200, yanlış pozitif yok | ✔ |
 | V-03 | Bot UA'ları (Googlebot/bingbot/YandexBot/facebookexternalhit/Twitterbot) | 200, `cf-mitigated` yok | ✔ |
 | V-04 | İmzasız istemciler (curl/python-requests/Go-http/boş UA) | 200 (agresif bot challenge yok) | ✔ |
@@ -1425,7 +1425,7 @@ Canlı build: `/api/build-info` → **`d154e44`**.
 | V-09 | Automatic HTTPS Rewrites | HTML'de `http://` referansı yok (mixed content yok) | ✔ |
 | V-10 | `security.txt` | `Contact: mailto:info@…`, `Expires` 2027-09-02 | ✔ |
 | V-11 | HSTS preload | hstspreload API → **`pending`** (değişmemiş) | ℹ️ |
-| V-12 | DNSSEC | DS `2371 13 2 36e0…775b`, tüm kayıtlarda `AD=true` | ✔ |
+| V-12 | DNSSEC | DS `2371 13 2 36e0…775b`; apex+çoğu alt alan `AD=true`, `rsend` `AD=false` (tur 18) | ⚠️ kısmi |
 | V-13 | CAA | 5 issuer + `issuewild` (10 kayıt) | ✔ |
 | V-14 | MX / CF Email Routing | `route{1,2,3}.mx.cloudflare.net` | ✔ |
 | V-15 | CF Email Routing DKIM `cf2024-1._domainkey` | **2048-bit** RSA (`MIIBIjAN…`, `h=sha256`) | ✔ |
@@ -1453,7 +1453,7 @@ Canlı build: `/api/build-info` → **`d154e44`**.
 | 1 | `docs/cloudflare.md:51` (F-09) | Doğruluk | "TLS 1.0/1.1 reddediliyor (`no protocols available`)" — istemci-taraflı hata, sunucu kanıtı değil | SSL Labs kanıtı | yanlış kanıt | **düzeltildi** |
 | 2 | `docs/cloudflare.md:961` (T-15) | Tutarlılık | Aynı yanlış iddia özet tabloda | F-09 ile hizalı | çelişki | **düzeltildi** |
 | 3 | `docs/cloudflare.md:994` (A-01c başlık) | Doğruluk | Başlık "canlı hâlâ savunmasız" | tur 14.1'de kapandı | eski durum | **düzeltildi** |
-| 4 | `docs/cloudflare.md` (tur 17) | Doğruluk | V-01 yeni WAF boşluğu + SSL Labs kanıtı | eklendi | güncel | **eklendi** |
+| 4 | `docs/cloudflare.md` (tur 17) | Doğruluk | V-20 yeni WAF boşluğu + SSL Labs kanıtı | eklendi | güncel | **eklendi** |
 | 5 | `docs/lanes/02-cloudflare.md` | Tutarlılık | tur 16 son satır | tur 17 ile uyumlu | güncel | **eklendi** |
 
 ### Bakılmayan
@@ -1469,3 +1469,96 @@ Canlı build: `/api/build-info` → **`d154e44`**.
   IPv6 endpoint'leri `A+` raporladı.
 - **E-posta teslimi (Gmail/Outlook):** gönderim yapılmadı.
 - **Analytics/Logpush (brief 7):** token yok → API ile doğrulanamadı.
+
+---
+
+## Edge mikro-denetim tur 18 — DNS kapsam taraması + doküman doğruluk düzeltmeleri (2026-11-06)
+
+**Amaç.** Brief'in 1–7. maddeleri yeniden ölçüldü; bu tur daha önce bakılmamış
+iki eksene odaklandı: **DNS kayıt-seti genişliği** (subdomain enumerasyonu,
+SPF include-ağacı, CAA/DNSSEC, dangling kayıt) ve **kendi dokümanlarımın canlı
+kanıta karşı doğruluğu** (AUDIT doğruluk/tutarlılık boyutları). İki doküman
+düzeltmesi ve bir yeni bilgi bulgusu çıktı.
+
+### Düzeltmeler (sahip olunan dokümanlarda)
+
+| # | Dosya:satır | Boyut | Gözlenen (önce) | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| D-01 | `docs/cloudflare.md:55,1315,1428` (F-13/T-23/U-11/V-12) | Doğruluk | "DNSSEC `AD=true`" **tüm** kayıtlar için iddia ediliyordu | Yalnız imzalı kapsam için doğru | Abartılı iddia | **düzeltildi** — `rsend` `AD=false` |
+| D-02 | `docs/cloudflare.md:57,485` (F-15/T-02) | Doğruluk | `/_next/static/*` için "`vary: accept-encoding`" | Edge'de `Vary` yok | Yanlış başlık iddiası | **düzeltildi** |
+| D-03 | `docs/cloudflare.md` (ID çakışması) | Tutarlılık | İki farklı bulgu **aynı `V-01`** kimliğini taşıyordu (tur 15 bot-UA **ve** tur 17 WAF-boşluğu) | Benzersiz kimlik | Karışıklık / atıf belirsizliği | **düzeltildi** — tur 15 → `V-19`, tur 17 → `V-20` |
+
+### D-01 — DNSSEC kısmi kapsam (bilgi, düşük)
+
+`rsend.isbulkktc.com` bir **CNAME**'dir: `send.forge.rmta.net` (Resend Forge).
+Zincirin uçtaki bölgesi **`rmta.net` DS kaydı yok → imzasız**; bu yüzden
+`rsend` çözümü `AD=false` döner (Cloudflare DoH **ve** Google DoH aynı fikirde):
+
+```
+rsend.isbulkktc.com   A/CNAME → 5 send.forge.rmta.net.   AD=false
+send.forge.rmta.net   A       → (yok; MX feedback.forge.rmta.net)
+feedback.forge.rmta.net A     → 3.231.87.173, 98.83.16.149   AD=false
+rmta.net              DS      → (yok)   net DS → var (37331 13 2 …)
+isbulkktc.com         DS      → 2371 13 2 …   AD=true
+```
+
+Not: `rsend` için `TXT`/`MX` sorgularında dönen CNAME + hedef kayıtlar
+**co-location DEĞİL** (RFC 2181 §10.1 ihlali yok) — yanıt zinciri CNAME hedefini
+çözdüğü için öyle görünüyor; hedef bölgede (`send.forge.rmta.net`) yalnız TXT/MX
+var, `rsend`'te A yok. `www`, `send`, `_dmarc`, DKIM selector'ları, `mta-sts`,
+`autodiscover` hepsi `AD=true`.
+
+**Etki (düşük):** apex ve birincil posta yolları imzalı; yalnız Resend Forge
+CNAME zinciri uçtan imzasız. DNSSEC kapalı değil, **kısmi**. Aksiyon: gerekiyorsa
+Forge CNAME'i yerine imzalı bir hedefe geç (sahip/panel); zorunlu değil.
+
+### Tur 18 ölçümleri (canlı, 2026-11-06)
+
+Canlı build: `/api/build-info` → **`7b0f7170`**.
+
+| # | Test | Gözlenen | Durum |
+|---|---|---|---|
+| W-18-1 | Subdomain enumerasyonu (32 yaygın ad) | yalnız `www` var (proxied CF); `api`,`admin`,`dev`,`staging`,`git`,`jenkins`… **NXDOMAIN** | ✔ takeover yüzeyi yok |
+| W-18-2 | SPF include-ağacı | apex `include:_spf.mx.cloudflare.net` (2 lookup), `send` `include:amazonses.com` (2 lookup) → limit **10**'un çok altında | ✔ |
+| W-18-3 | CAA | 5 issuer + 5 `issuewild` (10 kayıt) | ✔ |
+| W-18-4 | DNSSEC | apex `AD=true`; **`rsend` `AD=false`** (bkz. D-01) | ⚠️ kısmi |
+| W-18-5 | Dangling CNAME | `rsend`→`send.forge.rmta.net` **çözülüyor** (feedback A `3.231.87.173`) → dangling değil | ✔ |
+| W-18-6 | WAF negatif (21 yol) | `/.git/config`,`/.env`,`/.svn/entries`,`/.aws/credentials`,`/wp-login.php`,`/xmlrpc.php`,`/composer.json`,`/.DS_Store`… → **403** | ✔ |
+| W-18-7 | WAF pozitif (22 yol + 6 dil) | hepsi **200** (yalnız `/tr`→308 as-needed) | ✔ |
+| W-18-8 | V-20 boşluğu (teyit) | `/config.php`,`/shell.php`,`/actuator/env`,`/server-status`,`/phpinfo.php`,`/Dockerfile` → **404 origin**, `DYNAMIC`+`no-store`, cache'lenmiyor | ⚠️ açık |
+| W-18-9 | Kodlanmış kaçış (W-01) | `/.git%2fconfig`,`/api/devtools%2f` → **404 origin**; `/%2e%2e%2f…etc%2fpasswd` → **400** | ⚠️ açık |
+| W-18-10 | Cache zehirlenmesi | `X-Forwarded-Host`/`X-Host`/`X-Forwarded-Server`/`X-Original-URL` gövdeyi/`Location`'ı değiştirmiyor | ✔ |
+| W-18-11 | Cache-deception | `/jobs/x.css`,`/api/build-info.css`,`/profile/dashboard.css`,`/login.js` → `BYPASS`+`private,no-store` | ✔ |
+| W-18-12 | Metod allowlist | `/` ve `/jobs` **tüm** metodlarda 200 (GET-özel içerik); `/api/build-info` yazma → 405; `TRACE` → 405 | ℹ️ |
+| W-18-13 | `/_next/image` regresyon (A-01c) | çift-kodlama + düz `/blog` → **400** (kapalı kalıyor) | ✔ |
+| W-18-14 | Bot UA'ları | Googlebot/bingbot/YandexBot/facebookexternalhit/AhrefsBot/GPTBot/ClaudeBot → 200, `cf-mitigated` yok | ✔ |
+| W-18-15 | İmzasız istemciler | boş UA / `curl` / `python-requests` → 200 (agresif challenge yok) | ✔ |
+| W-18-16 | Yönlendirme | `http`→`https` 301, `www`→apex 308, sorgu korunuyor; `http://www` → 2 hop | ✔ |
+| W-18-17 | Açık yönlendirme | `//evil.com`,`/\`,`/%5C`,`/%2F%2F`,`/..//` hep `isbulkktc.com` altında | ✔ |
+| W-18-18 | TLS | SSL Labs 4/4 `A+`, yalnız TLS 1.2+1.3; sertifika `*.isbulkktc.com` (LE `YE2`, 2026-09-19→12-18) | ✔ |
+| W-18-19 | HSTS | edge `max-age=31536000; includeSubDomains; preload`; origin `63072000` → **H-01 teyit** | ⚠️ H-01 |
+| W-18-20 | HSTS preload | hstspreload API → `pending` | ℹ️ |
+| W-18-21 | Rate limit | `/login` 30× → 30/30 200; `/api/build-info` 30× → 200 | ⚠️ yok |
+| W-18-22 | `cdn-cgi` yüzeyi | `/cdn-cgi/trace` 200, `/cdn-cgi/robots/x` 404 | ℹ️ |
+| W-18-23 | `X-Robots-Tag` | site genelinde yok | ✔ |
+| W-18-24 | `security.txt` | `Contact`/`Expires 2027-09-02`/`Canonical`/`Preferred-Languages` tam | ✔ |
+| W-18-25 | Sitemap host tutarlılığı | 207 `<loc>`, **tek** host `isbulkktc.com` | ✔ |
+
+### Drift (tur 18 — değişmedi)
+
+H-01, H-02, N-01, R-01, G-01, W-01, **V-20**, F-08 açık. Dinamik HTML hiç
+edge-cache'lenmiyor; cacheable statiklere yazma 405; CORS yalnız
+`/api/build-info`; DKIM: CF `cf2024-1` **2048-bit**, Resend `resend._domainkey`
+**1024-bit**; DMARC `p=none`.
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` yok): WAF ruleset / Cache Rules / Browser Cache
+  TTL / Bot Management / Analytics okunamadı.
+- **TLS 1.0/1.1 sunucu reddi:** sandbox istemcisi bu protokolleri desteklemiyor →
+  SSL Labs sonucuna dayanıldı.
+- **Gerçek tarayıcı:** SW güncelleme yayılımı, CHIPS/`Set-Cookie` sürülmedi.
+- **IPv6 bağlantısı:** sandbox'ta v6 yolu yok.
+- **E-posta teslimi:** gönderim yapılmadı.
+- **DNSSEC uçtan uca doğrulama:** yalnız DoH `AD` bayrağı okundu; bağımsız
+  doğrulayıcı (Unbound/knot) koşturulmadı.
