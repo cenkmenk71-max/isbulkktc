@@ -1141,3 +1141,80 @@ issue'nun üçüncü deneyle de çözülemediği** oldu (#149).
   denendi, hiçbiri değiştirmiyor (#149).
 - SEO alanı bu turda **tamamen temiz**; yeni iş için yeni ürün yüzeyi (yeni rota
   veya yeni içerik ailesi) gerekir.
+
+---
+
+## Micro-denetim raporu — tur 13 (yeni commit'ler sonrası yeniden denetim)
+
+```
+Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
+Değişen dosyalar: docs/lanes/03-seo.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
+            test:unit ✅ (590 pass, 4 belgeli todo)  test:security ✅ (47 pass, 2 todo)
+            build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone doğrulaması ✅
+Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
+```
+
+### Denetlenen dosyalar
+
+`git ls-files` ile LANE-SEO sahipliği: **41 dosya** — `src/lib/seo.ts`,
+`src/app/sitemap.ts`, `src/app/robots.ts`, `scripts/submit-indexnow.mjs` ve
+`src/app/[locale]/**` altındaki 37 route/layout. Hepsi tarandı; bakılmayan yok.
+
+### Bu turda ne değişti
+
+`main` tur 12'den beri ilerledi; SEO yüzeyine **dolaylı** dokunan üç commit geldi
+ve üçü de doğrulandı:
+
+| Commit | Ne yaptı | LANE-SEO doğrulaması |
+|---|---|---|
+| `#288` (AUTH) | `(auth)` rotalarına kendi `title`/`description`/sosyal kartı | `/en/login` → `Return to your candidate profile · İşBul KKTC`; canonical + `og:url` rotaya işaret ediyor; `robots: noindex, nofollow` korunuyor |
+| `#290` (GEO) | `JobPosting.description` düz metinden `<p>`/`<ul><li>` HTML'e reflow | sınır girdiler denendi: düz satır, madde imleri, hazır HTML (pass-through), `<script>` (escape), boş, satır sonları — **hepsi doğru** |
+| `#291` (VERIFY) | `scripts/verify-indexing.mjs` + 13 test | araç yerelde çalıştı: `PASS robots/sitemap/pages/indexnow`, 0 fail; 13 test `test:unit` globuyla koşuyor |
+
+### Bulgular
+
+| # | Konu | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|
+| 1 | `docs/verification-log.md:146` → `npm run indexing:verify` | Belge bu komutu vaat ediyor ama `package.json`'da **yok**; `bun run indexing:verify` → `error: Script not found` | komut var olmalı (`auth:verify`, `db:verify`, `vercel:verify` ile simetrik) | Belgedeki tek satırlık komut çalışmıyor; aracı elle çalıştırmak gerekiyor | **zaten devredilmiş → #292** (LANE-INFRA; `package.json` sahibi). Kanıt aynı: `'indexing:verify' in scripts → False` |
+| 2 | Sitemap, canonical, hreflang, robots, OG/Twitter, JSON-LD, link bütünlüğü, slug çözümü, CWV | — | — | — | **0 bulgu** (aşağıdaki kanıt) |
+| 3 | `#149` 404 `<html lang/dir>` | üç deney de çözmedi (tur 12'de kanıtlandı) | — | — | devredildi, açık |
+| 4 | `#141` yasal sayfa çevirisi | main'de düzeldi (tur 12) | — | — | **main'de kapalı** |
+| 5 | `#280` auth meta | **main'de düzeldi** (#288) | — | — | **main'de kapalı** |
+
+### Kanıt (bu tur, canlı standalone + üretim)
+
+- **Rota kapsama matrisi:** 24 rota tek tek sınandı — 15 herkese açık rota
+  (sitemap'te **YES**), `/install`+3 auth rotası (`noindex`, sitemap'te **no**),
+  5 auth-gated rota (307, sitemap'te **no**). Çelişki yok.
+- **Sitemap:** geçerli XML, 186 `<loc>` (üretimde 207 = +21 ilan), **0 tekrar**,
+  hepsi 200, `noindex` URL yok; `<lastmod>` 42 kayıtta, ilçe/türde **0** (tur 9).
+- **Canonical/hreflang:** 186 sayfa → **0 ihlal**; sitemap `<xhtml:link>` seti ile
+  sayfanın kendi alternates seti **birebir aynı** (0 fark, 0 eksik).
+- **Kopya meta:** **0**; `title`↔`og:title`, `description`↔`og:description`,
+  `og:url`↔`canonical` tüm sayfalarda tutarlı.
+- **JSON-LD:** 186 sayfa geçerli (0 parse hatası, 0 LD'siz sayfa).
+- **Link bütünlüğü:** 415 benzersiz iç hedef → 0 kırık; yetim 0; boş anchor 0.
+- **`verify-indexing.mjs` (yeni araç):** yerel koşu → `PASS robots`, `PASS sitemap`
+  (186 URL, hepsi aynı-origin canonical, 186 tam hreflang), `PASS pages` (8 örnek
+  sayfa 200 + indekslenebilir + canonical eşleşiyor), `PASS indexnow`;
+  **0 failure / 0 warning / 0 skipped**.
+- **`JobPosting` (üretim):** `datePosted`/`dateModified`/`validThrough`/
+  `employmentType`/`addressCountry=CY` dolu; `directApply:false` içe aktarılan
+  ilan için doğru. (#290'un HTML reflow'u üretime henüz deploy edilmedi —
+  Vercel build kotası; yerel/`main` kodunda doğru.)
+
+### Düzeltilen / devredilen
+
+- **Düzeltildi:** yok (yeni, düzeltilebilir in-lane bulgu çıkmadı).
+- **Devredildi:** #292 (indexing:verify script'i, LANE-INFRA — **zaten açık**),
+  #149 (404 kabuğu), #173 (Bing/Yandex).
+
+### Sonraki lane için notlar
+
+- **Ölçüm aracı vaadi ile gerçeği ayrışabilir:** `docs/verification-log.md`
+  `npm run indexing:verify` diyor ama script yok. Bir araç eklerken `package.json`
+  başka lane'in ise, komutu **çalıştırıp** doğrula; belgeye yazmak yetmiyor.
+- `(auth)/**` sahipliği çift (SEO `src/app/[locale]/**` + AUTH); #288 ile auth
+  meta artık doğru, ama tabloya `!src/app/[locale]/(auth)/**` dışlaması eklenmeli.
+- SEO alanı bu turda da **temiz**; yeni iş için yeni ürün yüzeyi gerekiyor.
