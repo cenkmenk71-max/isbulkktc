@@ -25,11 +25,12 @@ type RemotePattern = {
   pathname?: string;
   search?: string;
 };
+type LocalPattern = { pathname?: string; search?: string };
 
 async function loadConfig(): Promise<{
   headers: () => Promise<HeaderGroup[]>;
   poweredByHeader: boolean;
-  images: { remotePatterns?: RemotePattern[] };
+  images: { remotePatterns?: RemotePattern[]; localPatterns?: LocalPattern[] };
 }> {
   const mod = await import(new URL("../../next.config.ts", import.meta.url).href);
   return mod.default;
@@ -177,4 +178,96 @@ test("no image remote pattern points at a private or loopback host", () => {
       /\.(local|internal)$/i.test(host),
     );
   assert.deepEqual(offenders, [], `image remote patterns on internal hosts: ${offenders.join(", ")}`);
+});
+
+// ---------------------------------------------------------------------------
+// The image optimizer's *local* allowlist.
+//
+// `/_next/image?url=` is fetched on the server. Without `images.localPatterns`
+// a relative same-origin path resolves to any route, so the optimizer returned
+// that route's content — `?url=%2Fblog` served HTML, `%2Fapi%2Fbuild-info`
+// JSON, `%2Fllms.txt` text (Cloudflare edge audit tur-11, issue #324). The
+// allowlist makes every non-image path a 400 `INVALID_IMAGE_OPTIMIZE_REQUEST`.
+// These tests drive Next's own matcher so they assert the decision the server
+// will make, not a re-implementation.
+// ---------------------------------------------------------------------------
+
+type LocalMatcher = {
+  hasLocalMatch: (
+    patterns: LocalPattern[] | undefined,
+    urlPathAndQuery: string,
+  ) => boolean;
+};
+
+async function loadLocalMatcher(): Promise<LocalMatcher> {
+  // Next's compiled matcher is the authority the image-optimizer route calls.
+  return import("next/dist/shared/lib/match-local-pattern.js");
+}
+
+const { hasLocalMatch } = await loadLocalMatcher();
+const localPatterns = config.images?.localPatterns;
+
+test("the optimizer only allows real local image paths", () => {
+  assert.ok(
+    localPatterns && localPatterns.length > 0,
+    "images.localPatterns is missing — the optimizer will serve any same-origin route",
+  );
+
+  // Real images the app renders must still be optimizable.
+  for (const allowed of [
+    "/images/Girne.webp",
+    "/images/about-hero.webp",
+    "/images/account-gallery/girne-night.webp",
+    "/logos/ChIJ-3DQ1Att3hQRrIITDNnXwtU.webp",
+  ]) {
+    assert.equal(
+      hasLocalMatch(localPatterns, allowed),
+      true,
+      `${allowed} must be allowed (a real image would break otherwise)`,
+    );
+  }
+
+  // Every non-image path the audit found must now be rejected.
+  for (const rejected of [
+    "/blog",
+    "/about",
+    "/contact",
+    "/api/build-info",
+    "/llms.txt",
+    "/feed.xml",
+    "/.well-known/security.txt",
+    "/",
+    "/jobs",
+    "/en",
+    "/profile/dashboard",
+    "/company/dashboard",
+    "/login",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/.env",
+    "/.git/config",
+    "/wp-login.php",
+  ]) {
+    assert.equal(
+      hasLocalMatch(localPatterns, rejected),
+      false,
+      `${rejected} must be rejected — the optimizer returned its content`,
+    );
+  }
+});
+
+test("the local allowlist rejects a query string on an image path", () => {
+  // `search: ""` pins an exact (empty) query, closing the enumeration surface
+  // Next 16 warns about. A versioned local image would need its own entry.
+  assert.equal(
+    hasLocalMatch(localPatterns, "/images/Girne.webp?v=1"),
+    false,
+    "a query string on a local image path must not be allowed",
+  );
+});
+
+test("the local matcher rejects everything when the allowlist is absent (self-test)", () => {
+  // Guards the premise: without the config, Next allows every local path — the
+  // bug. If this ever changed, the finding would need re-reading.
+  assert.equal(hasLocalMatch(undefined, "/blog"), true);
 });

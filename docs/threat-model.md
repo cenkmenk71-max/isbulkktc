@@ -172,8 +172,12 @@ issue açar.
 - **Görsel optimizasyon allowlist'i:** `images.remotePatterns` sunucu tarafında
   `/ _next/image`'ın hangi host'lardan görsel çekebileceğini belirler; her desen
   **tam bir https host + https protokol** olmalı, private/loopback/metadata host
-  yasak. Aynı test dosyası bunu da `config.images` üzerinden denetler (wildcard
-  host veya `protocol`'suz desen testi kırmızı yapar).
+  yasak. `images.localPatterns` ise aynı-origin **yerel** yolları sınırlar: onsuz
+  `?url=%2Fblog` gibi göreli bir yol o rotanın içeriğini (HTML/JSON/text)
+  döndürüyordu (edge audit tur-11, #324). Allowlist yalnız `/images/**` ve
+  `/logos/**`'a izin verir; her başka yol ve sorgu dizeli görsel yolu `400
+  INVALID_IMAGE_OPTIMIZE_REQUEST` alır. Aynı test dosyası ikisini de **gerçek
+  config'ten** ve Next'in kendi matcher'ıyla denetler.
 - **Açık yönlendirme kapalı:** `sanitizeNextPath` normalizasyon sonrası çıktıyı
   yeniden doğruluyor (`//`, `\`, şema reddi). Denetimde bulunan `"/..//host"`
   bypass'ı sahibi tarafından kapatıldı; `tests/security/open-redirect.test.ts`

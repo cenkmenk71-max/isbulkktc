@@ -442,3 +442,30 @@ yakalıyordu.
   aynı mutasyon **yeşil** kalıyordu.
 - **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
   #102.
+
+## Durum (2026-11-05, 19. tur) — `/_next/image` yerel allowlist'i (#324)
+
+`lane:guvenlik`'e devredilen **#324**'ü aldım: `/_next/image?url=<göreli yol>`
+görsel olmayan içerik döndürüyordu (`%2Fblog` → HTML, `%2Fapi%2Fbuild-info` →
+JSON, `%2Fllms.txt` → text). `next.config.ts` sahipsiz ve onu bu lane denetlediği
+için düzeltme bende.
+
+- **Kök neden:** `images.localPatterns` yoktu; Next göreli bir `url`'yi sunucuda
+  fetch edip o rotanın içeriğini döndürüyordu. Next 16 dokümanına göre
+  `localPatterns` tam da bunu kapatır.
+- **Düzeltme (`next.config.ts`):** `localPatterns: [{pathname:"/images/**",
+  search:""},{pathname:"/logos/**",search:""}]`. Uygulamanın optimize ettiği tüm
+  yerel görseller bu iki önektedir; statik import'lar `/_next/static/media/**`'a
+  çözülür ve Next onu ayrıca allowlist'ler (etkilenmez). `search:""` sorgu dizeli
+  görsel yolunu da reddeder (Next 16'nın işaret ettiği enumeration yüzeyi).
+- **Kanıt (uçtan uca):** throwaway `NEXT_DIST_DIR` ile production build →
+  standalone server → curl: `%2Fblog`, `%2Fabout`, `%2Fcontact`, `%2Fapi%2Fbuild-info`,
+  `%2Fllms.txt`, `%2Ffeed.xml`, `%2F.well-known%2Fsecurity.txt`, `%2Frobots.txt` →
+  hepsi **400**; `/images/Girne.webp` ve bir `/logos/*.webp` → **200 image/***;
+  `/images/Girne.webp?v=1` → **400**.
+- **Yeni test:** `security-headers.test.ts` Next'in **kendi** `hasLocalMatch`
+  matcher'ını sürer — gerçek görsel yolları kabul, 18 görsel-olmayan yolu ve
+  sorgu dizelini reddet; allowlist yokken her yolun kabul edildiğini doğrulayan
+  self-test. (Mutation: `localPatterns`'ı kaldır → kırmızı.)
+- **#324 kapatılabilir.** Kalan `todo`'lar: #298, #206, #102.
+- **Bakılmayan:** yok — 13 test dosyası + 2 doküman.

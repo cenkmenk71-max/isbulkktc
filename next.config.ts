@@ -59,6 +59,19 @@ const nextConfig: NextConfig = {
   images: {
     qualities: [75, 85, 90, 95, 100],
     formats: ["image/webp"],
+    // The optimizer fetches `?url=` on the server, so without an allowlist a
+    // relative same-origin path resolves to *any* route and the optimizer
+    // returns that route's content (`/_next/image?url=%2Fblog` served HTML,
+    // `%2Fapi%2Fbuild-info` JSON, `%2Fllms.txt` text). Every local image this app
+    // optimizes lives under `/images/**` or `/logos/**`, so anything else is
+    // rejected with 400 `INVALID_IMAGE_OPTIMIZE_REQUEST`. `search: ""` also
+    // rejects a query string, closing the enumeration surface Next 16 warns
+    // about. Statically imported images resolve to `/_next/static/media/**`,
+    // which Next allowlists separately, so they are unaffected.
+    localPatterns: [
+      { pathname: "/images/**", search: "" },
+      { pathname: "/logos/**", search: "" },
+    ],
     remotePatterns: [
       {
         protocol: "https",
