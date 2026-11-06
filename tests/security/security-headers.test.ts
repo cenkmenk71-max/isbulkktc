@@ -114,6 +114,57 @@ test("the CSP script-src does not allow a wildcard or a bare scheme", () => {
   assert.ok(!/'unsafe-eval'/.test(scriptSrc), `script-src allows unsafe-eval: ${scriptSrc}`);
 });
 
+test("the CSP directive set is complete and no directive is a bare wildcard", () => {
+  const csp = headerValue("content-security-policy")!;
+  const directives = new Map<string, string>();
+  for (const part of csp.split(";").map((s) => s.trim()).filter(Boolean)) {
+    const space = part.indexOf(" ");
+    if (space === -1) directives.set(part, "");
+    else directives.set(part.slice(0, space), part.slice(space + 1));
+  }
+
+  // Every directive the app relies on must be present, so none can be dropped
+  // silently. `upgrade-insecure-requests` is valueless.
+  const expected = [
+    "default-src",
+    "base-uri",
+    "object-src",
+    "frame-ancestors",
+    "form-action",
+    "script-src",
+    "style-src",
+    "img-src",
+    "font-src",
+    "media-src",
+    "worker-src",
+    "manifest-src",
+    "connect-src",
+    "frame-src",
+    "upgrade-insecure-requests",
+  ];
+  const missing = expected.filter((directive) => !directives.has(directive));
+  assert.deepEqual(missing, [], `CSP directives that went missing: ${missing.join(", ")}`);
+
+  // No directive may allow *any* host with a bare `*` — that is the widest
+  // possible source and always a mistake here.
+  const bareWildcards = [...directives]
+    .filter(([, sources]) => /(^|\s)\*(\s|$)/.test(sources))
+    .map(([directive]) => directive);
+  assert.deepEqual(bareWildcards, [], `CSP directives with a bare wildcard: ${bareWildcards.join(", ")}`);
+
+  // A bare `https:` scheme (any HTTPS host) is only justified for the two
+  // directives that load remote employer media; anywhere else it is a hole.
+  const schemeAllowed = new Set(["img-src", "media-src"]);
+  const bareScheme = [...directives]
+    .filter(([directive, sources]) => !schemeAllowed.has(directive) && /(^|\s)https:(\s|$)/.test(sources))
+    .map(([directive]) => directive);
+  assert.deepEqual(
+    bareScheme,
+    [],
+    `CSP directives allowing any https host outside ${[...schemeAllowed].join("/")}: ${bareScheme.join(", ")}`,
+  );
+});
+
 test("the framework does not advertise itself", () => {
   assert.equal(
     config.poweredByHeader,

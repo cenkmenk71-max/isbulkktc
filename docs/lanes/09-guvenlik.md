@@ -592,3 +592,19 @@ sınadım.
 - **Kanıt (mutation):** beş direktifi düşür → kırmızı; HSTS'i zayıflat → kırmızı.
 - **Bakılmayan:** yok — 14 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
   #102.
+
+## Durum (2026-11-06, 26. tur) — CSP direktif bütünlüğü
+
+`security-headers.test.ts`'in CSP'yi ne kadar kapsadığını sınadım: test yalnız
+`script-src`'i ve beş "yüksek-değer" direktifi denetliyordu.
+
+- **Bulgu: CSP'nin çoğu direktifi pinlenmemişti.** `frame-src` veya `connect-src`
+  `*`'a genişletilse (ya da `font-src` gibi bir direktif tümden düşürülse) test
+  **yeşil** kalıyordu (kanıtlandı) — yani CSP sessizce gevşetilebilirdi.
+- **Düzeltme:** yeni test on beş direktifin **hepsinin** mevcut olduğunu, hiçbirinde
+  çıplak `*` bulunmadığını ve çıplak `https:` şemasının yalnız uzak işveren
+  görselleri yükleyen `img-src`/`media-src`'de geçtiğini doğrular.
+- **Kanıt (mutation):** `frame-src *` → kırmızı; `connect-src *` → kırmızı;
+  `font-src` direktifini düşür → kırmızı.
+- **Bakılmayan:** yok — 14 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
+  #102.
