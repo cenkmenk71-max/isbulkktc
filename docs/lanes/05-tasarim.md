@@ -692,3 +692,68 @@ tarandı.
 - **#191 e-posta tarafı** hâlâ `lane:urun` + `agent:handoff` (tur 4).
 - Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
   `docs/lanes/05-tasarim.md`. Hepsi bu lane'in kapsamında.
+
+---
+
+## LANE-TASARIM çalışma notları (2026-11-05, tur 10)
+
+Branch: `lane/tasarim`. Taban: `origin/main` @ `5b1923d`. Kuyrukta `lane:tasarim`
+etiketli tek iş yine **#191** (e-posta tarafı sahiplik çelişkisinde, devirde). Bu
+turda brief'in 3. (dokunma hedefleri ≥44px) ve `forced-colors`/`2.5.3` boyutları
+tarandı.
+
+### Bulgu 11 — Altı kontrol 44px dokunma hedefinin altındaydı (düzeltildi)
+
+- **Belirti (390px, mobil):** `check:frontend-source`'un 44px kuralı yalnızca
+  sabit bir seçici listesini ölçüyor; bu altısı listede değildi ve **34-40px**
+  yüksekliğinde yayınlanmıştı:
+  | Seçici | Önce | Sonra |
+  |---|---|---|
+  | `.consent-btn` (çerez diyaloğu) | 40px | **44px** |
+  | `.company-directory-pagination button` | 38px | **44px** |
+  | `.packages-vend-sound` | 40px | **44px** |
+  | `.feedback-rating-star` | 40px | **44px** |
+  | `.home-job-search-clear` | 38px | **44px** |
+  | `.legal-page-back a` | 34px | **44px** |
+- **Kök neden:** liste tabanlı gate; kapsam dışı kontroller sessizce kayabiliyor.
+  Pagination'ın bir de **breakpoint override'ı** vardı (`min-height: 38px`), yani
+  temel kuralı düzeltmek yetmiyordu.
+- **Düzeltme:** altısı da `44px` tabanına çekildi (base + responsive override).
+- **Doğrulama:** canlı ölçüm (`getBoundingClientRect`) altısında da **44px**.
+  `.packages-vend-control-twin` 1×1 görsel olarak gizli ama `:focus-visible`'da
+  **82×44**'e açılıyor — kasıtlı, değiştirilmedi.
+- **Guard:** `tests/unit/design-tokens.test.ts` — "the fixed touch targets keep a
+  44px effective floor": altı seçicinin **etkin** `min-height`/`height`'ını medya
+  kaskadından çözer (390px'te), ≥44px şart koşar. Negatif test: hem temel kural
+  hem de breakpoint override'ı ayrı ayrı geri alınıp kırmızı görüldü.
+
+### Micro-denetim (bu tur)
+
+- **`forced-colors: active`:** 10 rota × 2 dil axe ile tarandı — 20 `color-contrast`
+  bulgusu **çıktı**, ama bunlar axe'ın bilinen sınırı: rapor ettiği renk
+  **yazılı** renk (`#fffdf8`), tarayıcının zorladığı sistem rengi değil. Gerçek
+  render ölçüldü (`getComputedStyle` → `rgb(0,0,159)`, piksel histogramı → koyu
+  glifler açık zeminde, 4049 koyu / 20099 açık piksel): **metin okunur**. Karar:
+  gerçek kusur yok; guard eklenmedi (yanlış-pozitif üretirdi).
+- **WCAG 2.5.3 (Label in Name):** 16 public rota — `aria-label` taşıyan her
+  etkileşimli öğenin erişilebilir adı görünen metnini içeriyor → **0 bulgu**.
+- **`target-size` (axe):** ana sayfa mobil → 0 ihlal (2.5.8 zaten geçiyor; asıl
+  açık projenin kendi 44px hedefiydi, yukarıda kapatıldı).
+- Önceki turların kontrolleri `main`'de yeşil.
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅
+- `bun run test:unit` ✅ (632 test, +1 yeni guard)
+- `tests/e2e/{consent,company-directory,packages,contact,accessibility}.spec.ts` ✅
+
+### Sahibin yapması gerekenler
+
+- **INFRA (öneri):** `check-frontend-source.mjs`'teki `touchTargetSelectors`
+  listesine bu altı seçici eklenmeli; `scripts/**` INFRA'nın olduğu için
+  dokunmadım. Guard şimdilik `tests/unit/design-tokens.test.ts`'te.
+- **#191 e-posta tarafı** hâlâ `lane:urun` + `agent:handoff` (tur 4).
+- Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
+  `docs/lanes/05-tasarim.md`. Hepsi bu lane'in kapsamında.

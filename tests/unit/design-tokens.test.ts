@@ -587,3 +587,74 @@ test("icons reserve their space on the same logical side under RTL", () => {
     );
   }
 });
+
+/**
+ * The 44px touch-target floor is a project invariant (`check-frontend-source`
+ * asserts it for a fixed selector list). Six controls were missing from that
+ * list and shipped at 34-40px: the consent dialog's buttons, the company
+ * directory pagination, the vend sound toggle, the feedback rating star, the
+ * home search "clear filters" link, and the legal-page back link. This resolves
+ * each control's *effective* `min-height`/`height` through the media cascade —
+ * a responsive override (the pagination shrank to 38px under a breakpoint) must
+ * not slip back under the floor.
+ */
+test("the fixed touch targets keep a 44px effective floor", () => {
+  const controls = [
+    ".consent-btn",
+    ".company-directory-pagination button",
+    ".packages-vend-sound",
+    ".feedback-rating-star",
+    ".home-job-search-clear",
+    ".legal-page-back a",
+  ];
+  // Minimal media-cascade resolver: walk top-level rules and @media blocks,
+  // collecting the last declaration of a property that applies at 390px.
+  function effective(selector: string, property: string): string | null {
+    const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+    let found: string | null = null;
+    const visit = (text: string) => {
+      let index = 0;
+      while (index < text.length) {
+        const open = text.indexOf("{", index);
+        if (open === -1) break;
+        const head = text.slice(index, open).trim();
+        let depth = 1;
+        let end = open + 1;
+        while (end < text.length && depth > 0) {
+          if (text[end] === "{") depth += 1;
+          else if (text[end] === "}") depth -= 1;
+          end += 1;
+        }
+        const body = text.slice(open + 1, end - 1);
+        const max = head.match(/max-width:\s*(\d+)px/);
+        const min = head.match(/min-width:\s*(\d+)px/);
+        const applies =
+          !head.startsWith("@media") ||
+          ((!max || 390 <= Number(max[1])) && (!min || 390 >= Number(min[1])));
+        if (head.startsWith("@")) {
+          if (applies) visit(body);
+        } else {
+          for (const one of head.split(",").map((part) => part.trim())) {
+            if (one !== selector) continue;
+            const decl = new RegExp(`(?:^|[\\s;])${property}\\s*:\\s*([^;]+);`).exec(body);
+            if (decl) found = decl[1].trim();
+          }
+        }
+        index = end;
+      }
+    };
+    visit(withoutComments);
+    return found;
+  }
+
+  for (const selector of controls) {
+    const size = effective(selector, "min-height") ?? effective(selector, "height");
+    assert.ok(size, `${selector} declares no min-height/height`);
+    const pixels = size.match(/^(\d+(?:\.\d+)?)px$/);
+    assert.ok(pixels, `${selector}'s size is not a px literal (${size})`);
+    assert.ok(
+      Number(pixels[1]) >= 44,
+      `${selector} must keep a 44px touch target at 390px, resolved ${size}.`,
+    );
+  }
+});
