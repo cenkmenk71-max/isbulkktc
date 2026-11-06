@@ -1292,3 +1292,81 @@ Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
 - **`alternates` bloğu yazan her rota `types`'ı yeniden bildirmeli** (Next en
   derin segmentte değiştirir) — #296'nın düzelttiği sınıf; yeni rota eklerken
   RSS linkini kontrol et.
+
+---
+
+## Micro-denetim raporu — tur 15 (Almanca H1 çevirisi)
+
+```
+Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
+Değişen dosyalar: docs/lanes/03-seo.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
+            test:unit ✅ (624 pass, 5 belgeli todo)  test:security ✅ (79 pass, 3 todo)
+            build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone + üretim doğrulaması ✅
+Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
+```
+
+### Denetlenen dosyalar
+
+`git ls-files` ile LANE-SEO sahipliği: **41 dosya** — `src/lib/seo.ts`,
+`src/app/sitemap.ts`, `src/app/robots.ts`, `scripts/submit-indexnow.mjs` ve
+`src/app/[locale]/**` altındaki 37 route/layout. Hepsi tarandı; bakılmayan yok.
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/messages/de.json` → `DistrictPage.title`, `JobTypePage.title` | i18n / SEO meta | İki şablon **İngilizce**'nin birebir kopyası (`"Jobs in {district}"`, `"{type} Jobs"`); ru/el/fa kendi şablonunu taşıyor | her dil kendi şablonu | Almanca sayfada görünür `<h1>` **İngilizce** (`Jobs in Kyrenia`, `Praktikum Jobs`) — meta başlık Almanca (`Stellenangebote in Kyrenia`), yani sayfa içi çelişki; `CollectionPage.name` `<h1>`'den türediği için JSON-LD de İngilizce; **12 sayfa** (6 ilçe + 6 tür) | **devredildi → #327** (LANE-İÇERİK; `src/messages/**`) |
+| 2 | Sitemap, canonical, hreflang, robots, OG/Twitter, JSON-LD, RSS, link bütünlüğü, CWV | — | — | — | — | **0 bulgu** (aşağıdaki kanıt) |
+| 3 | `#149` 404 `<html lang/dir>` | üç deney de çözmedi (tur 12) | — | — | — | devredildi, açık |
+| 4 | `#309` IndexNow anahtar seçimi | `entries.find()` hâlâ düzeltilmedi | — | — | — | devredildi, açık |
+| 5 | `#292` `indexing:verify` script'i | `package.json`'da yok | — | — | — | devredildi, açık |
+
+### Kanıt (bu tur)
+
+- **Almanca H1 (önce):** `/de/is-ilanlari/girne` → `<title>Stellenangebote in
+  Kyrenia | Nordzypern</title>` ama `<h1>Jobs in Kyrenia</h1>`;
+  `/de/is-turleri/staj` → `<h1>Praktikum Jobs</h1>` (`{type}="Praktikum"`, şablon
+  İngilizce). Katalog karşılaştırması: `de.DistrictPage.title === en.DistrictPage.title`
+  (`"Jobs in {district}"`), ru/el/fa farklı.
+- **Sitemap:** geçerli XML (ElementTree), 186 `<loc>`, **0 tekrar**, hepsi 200;
+  `<lastmod>` 42 kayıtta, ilçe/türde **0** (tur 9 kararı), biçimler ISO.
+- **hreflang:** 186 sayfa → **0 karşılıklılık ihlali**; sitemap `<xhtml:link>` seti
+  ile sayfanın kendi alternates seti **birebir aynı** (0 fark, 0 eksik).
+- **Kopya meta:** **0** (title/description/canonical/og:*/twitter:*/robots).
+- **JSON-LD:** 186 sayfa geçerli (0 parse hatası).
+- **Link bütünlüğü:** 415 benzersiz iç hedef → 0 kırık; yetim 0; boş anchor 0.
+- **robots.txt:** `noindex` veren 8 rota (`/login`, `/register`,
+  `/forgot-password`, `/reset-password`, `/admin`, `/profile`,
+  `/company/dashboard`, `/install`) `Disallow` **edilmiyor**; yalnız `/api/` +
+  6 `/auth/`.
+- **RSS autodiscovery:** tüm herkese açık rotalarda var (tur 14'te 23 rota).
+- **`verify-indexing.mjs` (üretim):** `PASS robots/sitemap/single-loc/pages/indexnow`
+  → **0 failure / 0 warning / 0 skipped**.
+- **Üretim sitemap:** 207 `<loc>`, hepsi 200, **0 yönlendirme**; `/` ve `/jobs`
+  `<lastmod>` = en yeni ilan (`2026-11-05T16:08:07Z`), 21 ilan kaydının hepsi
+  `<lastmod>` taşıyor.
+- **Üretim, önceki düzeltmeler:** 404 `og:title="Page not found"` (#281),
+  `/en/login` RSS (#296), `/en/privacy` "Privacy Policy" (#141),
+  `/jobs?page=2` self-canonical (#260).
+- **Doğrulama etiketleri:** üretimde yalnız `google-site-verification` var;
+  Bing/Yandex hâlâ yok (#173).
+- **Ölü kod:** sahipli dosyalarda `TODO`/`FIXME` **0**; `seo.ts` export'larının
+  hepsi kullanılıyor.
+
+### Düzeltilen / devredilen
+
+- **Düzeltildi:** yok (bulgu başka lane'in dosyasında — `src/messages/**`).
+- **Devredildi:** #327 (LANE-İÇERİK), #309, #292 (LANE-INFRA), #149, #173.
+
+### Sonraki lane için notlar
+
+- **Meta başlık ile görünür `<h1>` ayrı şablonlardan geliyor** (`metaTitle` vs
+  `title`). Bir dilde `title` çevrilmemişse sayfa içi çelişki doğar ve
+  `CollectionPage.name` da yanlış dile düşer. Yeni dil/rota eklerken ikisini
+  birlikte kontrol et.
+- **Katalog karşılaştırması hızlı bir denetim:** `de.json`'daki her değeri
+  `en.json`/`tr.json` ile karşılaştır; `en` ile birebir olan **cümle şablonları**
+  çeviri boşluğudur (özel adlar hariç).
+- `#309` (IndexNow anahtar seçimi) ve `#292` (script kaydı) hâlâ açık; ikisi de
+  LANE-INFRA'da.
