@@ -275,3 +275,83 @@ yüzünden çıplak bırakıldı ve testte açıkça muaf tutuldu.
   ertelenmiş `{count}` dize yolunu bırakmalı; gerçek sayı geçilmeli. O zaman
   `HomePage.{sectorTotalCount,sectorResultCountSingular,sectorResultCountPlural}`
   anahtarları da tiplenebilir (bu lane'in işi) ve test muafiyeti kaldırılır.
+
+## Tur 5 — mikro-denetim: içerik ilçe adı sürüklenmesi (2026-11-06)
+
+**Issue #327 durumu:** çekirdek düzeltme zaten **#345** (merge `6c78a54`) ile
+`main`'de. Doğrulandı: `origin/main` `DistrictPage.title = "Stellenangebote in
+{district}"`, `JobTypePage.title = "{type}-Stellenangebote"` (issue'nun istediği
+gibi); `tests/e2e/seo.spec.ts:201` hâlâ eski `HomeMeta.title`'ı pinliyor ama o
+anahtar `HomeMeta` ve `TRNC` içeriyor — bu turda **dokunulmadı** (aşağıda).
+
+Brief'ten en yüksek etkili hedef seçildi: **içerik paketindeki ilçe adı
+tutarlılığı**. Sahip olunan yollar `git ls-files 'src/messages/*' 'src/i18n/*'
+'src/content/*'` → **6 + 5 + 26 = 37 dosya**; hepsine bakıldı.
+
+### Bulgu (gerçek)
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/content/guides/fa.ts:17` | tutarlılık/yerelleştirme | `...مورفو (Güzelyurt)، تریکومو (İskele) و لفکا (Lefke).` — ilçe adları `تریکومو`, `لفکا` | arayüzün kanonik Farsça seti: `ترکومو`, `لفکه` (`fa.json` ×4 ad alanı, `faq.ts:126`, `site.ts:113/125`) | Farsça yüzeyde ilçe adı iki ayrı çevriyazı sistemine bölünüyordu; rehber sayfası `İskele`'yi `تریکومو` diye adlandırırken filtre/sayfa meta `ترکومو` diyordu | düzeltildi |
+| 2 | `src/content/editorial/fa.ts:18` | tutarlılık | `...پیرامون گیرنه و تریکومو.` — aynı `تریکومو` | `ترکومو` | aynı sınıf; editoryal yazı da sürüklenmişti | düzeltildi |
+| 3 | `src/i18n/message-catalogs.test.ts` | eksik ratchet | İçerik paketi (`guides`/`editorial`) ilçe adları için guard yoktu; #345 guard'ı yalnız `faq.ts` + `HomeJobSearch.districts`'i görüyordu | içerik paketi de kanonik sete bağlanmalı | sürüklenme sessizce geri gelebilirdi | düzeltildi: yeni test (kırmızı→yeşil kanıtlı, iki regresyon biçimi) |
+
+### Yön kararı (neden `terkumo`/`lafke` değil de arayüz seti)
+
+İki set de Farsça Vikipedi'de bir yere sahip: `تریکومو` ve `لفکا` madde başlığı;
+`ترکومو` ve `لفکه` madde değil. Yine de **arayüz seti** seçildi, çünkü:
+
+1. Arayüz seti zaten **kanonik**: `HomeJobSearch.districts` `fa.json`'da 4 ad
+   alanında (`CompanyDirectory`, `CandidateDashboard`, `CompanyManagement`,
+   `HomeJobSearch`) birebir, `faq.ts` ve `site.ts`'te de aynı. Bir içerik
+   dosyasını diğer 7 yüzeyle çelişmek yerine onlara hizalamak tek tutarlı seçenek.
+2. #345 tam bu kuralı koydu (`DISTRICT_ALIASES` + FAQ guard'ı) ve fa için
+   `ترکومو`/`لفکه`'yi kanonik ilan etti.
+3. Vikipedi madde başlıkları Farsça *Vikipedi'nin* yazım tercihidir, site
+   arayüzünün değil; site kendi içinde tutarlı olmalı.
+
+### Ratchet (`src/i18n/message-catalogs.test.ts`, 9 test → 10)
+
+- **Yeni:** `getGuides(locale)` + `getArticles(locale)` metni taranır.
+  - **Gloss anchor:** `NIKOZYA (Lefkoşa)` biçimindeki her ilçe parantezi,
+    parantez öncesi adı kanonik setle (`DISTRICT_ALIASES` dahil) karşılaştırır.
+  - **Yasak varyant listesi** (`FORBIDDEN_DISTRICT_VARIANTS.fa`): parantezsiz
+    cümlede geçen `تریکومو`/`لفکا`'yı yakalar (editoryal bulgu tam bu biçimdi;
+    gloss anchor tek başına kaçırırdı).
+- İki regresyon biçimi de enjekte edilerek kırmızı→yeşil kanıtlandı:
+  gloss (`guides/fa.ts`) → `fa content glosses "İskele" as "تریکومو", expected "ترکومو"`;
+  parantezsiz (`editorial/fa.ts`) → `fa content uses "تریکومو"; the interface uses "ترکومو"`.
+
+### Boyut taraması (AUDIT.md)
+
+| Alan | Sonuç |
+|---|---|
+| Anahtar paritesi (6 dil) | 0 eksik/fazla |
+| Yer tutucu paritesi | tek fark `CompanyDirectory.resultCount` — ru'nun çoğul kümesi meşru |
+| ICU sözdizimi (6 dil, tüm yapraklar) | 0 hata |
+| İçerik yapı paritesi (guides 3×6, editorial 3×6) | slug/`readMinutes`/başlık sayısı tutarlı |
+| İçerik ilçe adı tutarlılığı (6 dil) | fa 2 bulgu düzeltildi; diğer 5 dil temiz |
+| Çapraz-dil Türkçe ad sızıntısı (parantezsiz) | 0 |
+| İç sistem sözlüğü (içerik + katalog) | 0 (yalnız kod yorumu `import pipeline`, GEO üreticisi `GeoCoordinates` — kullanıcı yüzeyi değil) |
+| Baştaki/sondaki boşluk | yalnız `CandidateDashboard.completionOf` (ru/fa), RTL'de doğru |
+| Boş değer | 18 (`AdminPackages/AdminContent/JobApplication.messages.idle` ×6) — kasten boş |
+| Dışa link (içerik) | 0 (`http(s)://` yok; yalnız test dosyası) |
+| SEO uzunluk | 6 dilde başlık >60 / açıklama >165 karakter olan anahtarlar var; çoğu uzun-dil doğal (`de`, `el`) — **bulgu değil, gözlem**, ayrı iş |
+
+### Doğrulama
+
+- Kapılar: lint ✅, typecheck ✅, check:frontend-source ✅, test:unit 675/675 ✅.
+- Ratchet kırmızı→yeşil: iki regresyon biçimi de kanıtlandı (yukarıda).
+- Arayüz kanonik kanıtı: `fa.json` `HomeJobSearch.districts.iskele = "ترکومو"`,
+  `faq.ts:126`, `site.ts:113` birebir.
+
+### Devir
+
+- **`docs/lanes/03-seo.md` / LANE-SEO (gözlem, issue açılmadı):** `de` dahil 5
+  dilde `TRNC` İngilizce kısaltması meta metinde geçiyor (`de.json` 8 yer,
+  `tests/e2e/seo.spec.ts:201` pinli). Almanca kaynaklar `TRNZ` kullanıyor
+  (de Vikipedi: `TRNZ`=10, `TRNC`=3). Ancak bu **diller arası tutarlı bir marka
+  tercihi** (tr `KKTC`, en/ru/el/fa/de hepsi kendi kısaltması) ve bir e2e pinini
+  kırıyor; bu lane'in kararı değil — LANE-SEO/LANE-QA ile birlikte değerlendirilmeli.
+  Kanıt: `de.json` `Meta.description`, `HomeMeta.title/description`,
+  `JobsMeta.title`, `JobTypePage.metaTitle/intro/metaDescription`.

@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { faqByLocale } from "@/content/ai-visibility/faq";
+import { getArticles } from "@/content/editorial";
+import { getGuides } from "@/content/guides";
+import type { AppLocale } from "@/i18n/routing";
 
 const locales = ["tr", "en", "ru", "el", "fa", "de"] as const;
 const translatedLocales = ["en", "ru", "el", "fa", "de"] as const;
@@ -346,6 +349,85 @@ test("the FAQ names the districts as the interface does", () => {
       assert.ok(
         variants.some((variant) => text.includes(variant)),
         `${locale} FAQ must name "${label}" as the interface does`,
+      );
+    }
+  }
+});
+
+// The guides and editorial articles name the districts too. Two guards, because
+// a drifted name appears in two shapes: a gloss `نیکوزیا (Lefkoşa)`, anchored on
+// the Turkish name, and a bare mention in a sentence, which only an explicit
+// forbidden list catches. The FAQ has its own guard above and is excluded here
+// so a correct answer cannot mask a drifted guide.
+const TURKISH_TO_LEAF: Record<string, string> = {
+  Lefkoşa: "lefkosia",
+  Mağusa: "magusa",
+  Girne: "girne",
+  Güzelyurt: "guzelyurt",
+  İskele: "iskele",
+  Lefke: "lefke",
+};
+
+const FORBIDDEN_DISTRICT_VARIANTS: Record<string, Record<string, string>> = {
+  fa: { "تریکومو": "ترکومو", "لفکا": "لفکه" },
+};
+
+test("the content bundle names the districts as the interface does", () => {
+  const prefix = "HomeJobSearch.districts.";
+  for (const locale of locales) {
+    const messages = flatten(readMessages(locale));
+    const canonical: Record<string, string> = {};
+    for (const [key, value] of Object.entries(messages)) {
+      if (key.startsWith(prefix)) canonical[key.slice(prefix.length)] = value;
+    }
+    assert.ok(
+      Object.keys(canonical).length === 6,
+      `${locale} must define all six districts`,
+    );
+
+    const appLocale = locale as AppLocale;
+    const text = [
+      ...getGuides(appLocale).flatMap((guide) => [
+        guide.title,
+        guide.description,
+        guide.lead,
+        ...guide.sections.flatMap((section) => [
+          section.heading,
+          ...section.body,
+          ...(section.list ?? []),
+        ]),
+      ]),
+      ...getArticles(appLocale).flatMap((article) => [
+        article.title,
+        article.description,
+        ...article.sections.flatMap((section) => [
+          section.heading,
+          ...section.body,
+          ...(section.list ?? []),
+        ]),
+      ]),
+    ].join("\n");
+
+    for (const match of text.matchAll(/([^\s()،,;]+)\s*\(([^()]+)\)/g)) {
+      const leaf = TURKISH_TO_LEAF[match[2].trim()];
+      if (!leaf) continue;
+      const expected = canonical[leaf];
+      const accepted = [
+        expected,
+        ...(DISTRICT_ALIASES[locale]?.[expected] ?? []),
+      ];
+      assert.ok(
+        accepted.includes(match[1]),
+        `${locale} content glosses "${match[2].trim()}" as "${match[1]}", expected "${expected}"`,
+      );
+    }
+
+    for (const [variant, replacement] of Object.entries(
+      FORBIDDEN_DISTRICT_VARIANTS[locale] ?? {},
+    )) {
+      assert.ok(
+        !text.includes(variant),
+        `${locale} content uses "${variant}"; the interface uses "${replacement}"`,
       );
     }
   }
