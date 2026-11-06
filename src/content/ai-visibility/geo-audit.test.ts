@@ -18,6 +18,7 @@ import {
   buildOrganizationGraph,
 } from "@/content/ai-visibility/structured-data";
 import { getGuides } from "@/content/guides";
+import { fillTemplate } from "@/content/ai-visibility/interface-catalog";
 import { toJobDescriptionHtml } from "@/content/ai-visibility/job-description-html";
 import {
   COUNTRY_CODE,
@@ -742,4 +743,28 @@ test("omitting the optional label still names the page in the reader's language"
       `${locale} guide section`,
     );
   }
+});
+
+test("a template value lands verbatim, whatever characters it contains", () => {
+  // `String.replace` interprets `$&`, `$'`, `` $` `` and `$$` in a *string*
+  // replacement, so a district name or type name carrying a `$` would be
+  // substituted with match text instead of itself. The value is data.
+  for (const value of ["Girne", "A$B", "$&", "$'", "$$", "$1", "100$"]) {
+    assert.equal(
+      fillTemplate("{district} İş İlanları", value),
+      `${value} İş İlanları`,
+      `fillTemplate mangled ${JSON.stringify(value)}`,
+    );
+  }
+
+  // The producer path that consumes it must behave the same way.
+  const district = buildDistrictPageStructuredData({
+    locale: "tr",
+    baseUrl: BASE_URL,
+    districtSlug: "girne",
+    districtName: "A$B",
+    jobsLabel: "İş İlanları",
+    homeLabel: SITE_NAME,
+  })["@graph"][0] as Record<string, unknown>;
+  assert.equal(district.name, "A$B İş İlanları");
 });

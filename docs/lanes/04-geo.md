@@ -579,3 +579,47 @@ import ediliyor (iki `force-static` route + sunucu bileşenlerinden mount edilen
 `lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (630 test,
 +1 yeni guard) · guard kırmızı→yeşil kanıtlandı (eski sabit varsayılanlar geri
 konunca test kırmızı).
+
+---
+
+## Rapor — micro-denetim turu 10 (issue #126), branch `lane/geo`
+
+**Durum:** düzeltmeler branch'te, CI bekliyor. Devir yok.
+
+### Denetlenen dosyalar (`git ls-files`)
+
+| Glob | N | Bakıldı |
+|---|---|---|
+| `src/content/**` | 26 | 26 (hepsi) |
+| `src/app/llms.txt/**` | 1 | 1 |
+| `public/llms*` | 0 | — (dosya yok) |
+| `src/features/**/structured-data*.ts` | 1 | 1 |
+| `src/features/jobs/job-posting-structured-data.ts` | 1 | 1 |
+
+### Bulgu
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `interface-catalog.ts:77` (`fillTemplate`, tur 9'da eklediğim yardımcı) | doğruluk / sınır girdi | `String.replace`'e **string** replacement verilmişti; JS replacement string'inde `$&`, `` $` ``, `$'`, `$$`, `$1` özel anlam taşır. Ölçüldü: `fillTemplate("{district} Jobs", "$&")` → `"{district} Jobs"` (şablonun kendisi), `"$'"` → `" Jobs Jobs"`, `"$$"` → `"$ Jobs"`. Değer veri olduğu hâlde yorumlanıyordu | değer birebir yerleşmeli | ilçe/tür adı `$` içerirse yapısal veri ve breadcrumb bozulur; bugün katalogda `$` yok, ama girdi sınırda | **düzeltildi** |
+
+**Doğru bulunanlar (bulgu yok):** `JsonLd` `<` kaçışı `</script>` enjeksiyonunu
+engelliyor; `getConfiguredSocialProfiles` yalnız `https?://` değerleri kabul
+ediyor (şemasız değer düşüyor); `buildPostalAddress` tek kaynak (`COUNTRY_CODE`);
+brief'teki tüm URL'ler gerçek rotaya çözülüyor; `faqByLocale` ile
+`seed-managed-content.sql` birebir aynı (6×6); üretici varsayılanları katalogdan
+geliyor (tur 9); `/logos` altındaki 316 dosya adı renderer deseniyle uyumlu.
+
+Değerlendirilip **bulgu sayılmayanlar:** #327 (`de` `DistrictPage.title` /
+`JobTypePage.title` İngilizce kopya) `src/messages/**` içinde — LANE-İÇERİK'in
+sahipliğinde ve zaten `lane:icerik` + `agent:handoff` ile açılmış; GEO yalnız
+tüketici (üretici doğru davranıyor, çeviri eksik).
+
+### Ne yapıldı
+
+`fillTemplate` replacement'ı fonksiyona çevrildi (`() => value`), böylece değer
+`$` örüntüleri yorumlanmadan birebir yerleşiyor. Doc-comment gerekçeyi yazıyor.
+
+### Kapılar
+`lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (637 test,
++1 yeni guard) · guard kırmızı→yeşil kanıtlandı (string replacement geri konunca
+`fillTemplate mangled "$&"` ile kırmızı).

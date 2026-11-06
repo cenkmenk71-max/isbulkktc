@@ -65,7 +65,14 @@ export const catalogs = {
   },
 } as const satisfies Record<AppLocale, unknown>;
 
-/** Fills a catalog template like `{type} Jobs` / `{district} İş İlanları`. */
+/**
+ * Fills a catalog template like `{type} Jobs` / `{district} İş İlanları`.
+ *
+ * The replacement is a function on purpose: a string replacement is interpreted
+ * by `String.replace`, so a value containing `$&`, `$'`, `` $` `` or `$$` would
+ * be substituted with match text instead of itself. The value is data, so it
+ * must land verbatim.
+ */
 export function fillTemplate(template: string, value: string): string {
-  return template.replace(/\{[^}]+\}/g, value);
+  return template.replace(/\{[^}]+\}/g, () => value);
 }
