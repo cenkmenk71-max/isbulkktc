@@ -892,3 +892,83 @@ rakam/locale, RTL, `target=_blank`, ham hex, `aria-label`↔görünen metin,
 - `scripts/check-frontend-source.mjs` "kaynak birebir şu satırı içermeli" biçiminde
   pin yapıyor; bu satırı meşru biçimde değiştiren bir düzeltme gate'i kırar —
   önce gate'i güncelleyecek lane'e devret (#385).
+
+---
+
+## LANE-TASARIM çalışma notları (2026-11-06, tur 12)
+
+Branch: `lane/tasarim`. Taban: `origin/main` @ `732d8ea`. Kuyrukta `agent:frontend`
+etiketli açık issue yok (üç açık issue başka lane'lerin). Bu yüzden brief'in 3.
+(erişilebilirlik) ve RTL/rakam maddelerinden en yüksek etkili iki bulgu seçildi;
+ikisi de **dekoratif sayı yüzeyi**nin `/fa`'da Latin rakam basmasıydı — LANE-İÇERİK'in
+ICU sayaçları için kapattığı sınıfın (#360/#391) ICU'dan geçmeyen iki örneği.
+
+### Bulgu 13 — Yolculuk kartı adım işaretleri `/fa`'da Latin rakam basıyordu (düzeltildi)
+
+- **Belirti:** canlı `isbulkktc.com/fa` → `home-journey-step-number" aria-hidden="true">0<!-- -->1`.
+  İki kartın üçer adımı `01 02 03` gösteriyordu; Farsça metnin yanında yabancı sızıntı.
+- **Kök neden:** `home-journeys.tsx` işareti `0{index + 1}` **dize sabitiyle**
+  kuruyordu. `Intl`/ICU hiçbir yerinden geçmediği için yerel-farkında biçimlendirici
+  yakalayamaz — bu yüzden `fa.json` tiplenmiş olsa bile (#391) bu iki yüzey Latin kaldı.
+- **Düzeltme:** `formatStepNumber(locale, index)` (`Intl.NumberFormat(locale,
+  { minimumIntegerDigits: 2, useGrouping: false })`) eklendi; iki çağrı yeri
+  (satır ~66, ~116) ondan geçiyor. `fa` → `۰۱ ۰۲ ۰۳`, Latin diller `01` kalır.
+- **Kanıt:** üretim standalone build'de `/fa` `۰۱/۰۲/۰۳`, `tr/de/…` `01/02/03`.
+
+### Bulgu 14 — PWA kurulum adım rozeti her dilde ASCII rakam (düzeltildi)
+
+- **Belirti:** `.pwa-install-steps > li::before` kuralı `content: counter(pwa-step)`.
+  Çıplak `counter()` **her zaman** ASCII rakam basar, `lang`/`dir` ne olursa olsun;
+  `/fa` kurulum rehberi adımları `1 2 3` gösteriyordu.
+- **Düzeltme:** `html[lang="fa"] .pwa-install-steps > li::before { content: counter(pwa-step, persian) }`
+  geçersiz kılması. Numaralandırma sistemi **dile** bağlı, yöne değil — JS
+  tarafındaki `Intl.NumberFormat(locale)` ile aynı eksen. `dir` yerine `lang` seçildi
+  çünkü `tr`/`en`/… de RTL olmayan ama Farsça olmayan dilleri ayırmak gerekir.
+- **Kanıt:** üretilen CSS'te `html[lang=fa] .pwa-install-steps>li:before{content:counter(pwa-step, persian)}`;
+  Chromium'da (`deviceScaleFactor: 3`) `۱` genişliği `7.94px`, ASCII `1` `9.05px` — farklı rasterize.
+
+### Micro-denetim (bu tur, AUDIT.md)
+
+- **Envanter:** `git ls-files 'src/components/**' 'src/experience/**' 'src/styles/**'
+  'src/assets/**'` → **63 dosya** (60 üretim + 3 test). **Bakılmayan 0.**
+- **Tarama desenleri (0 bulgu):** `target="_blank"` (tek yer `site-footer.tsx`,
+  `rel="noopener noreferrer me"` ✅), brace-aware `<button>` `type` (0 eksik ✅),
+  `<img>/<Image>` `alt` (0 eksik ✅), `tabIndex={1..}` (0 ✅), hardcoded
+  `Intl.*('tr'|'en'|…)` (0 ✅), fiziksel `margin/padding-left|right` (0 ✅),
+  `<a>` `href`'siz (0 ✅), iç içe etkileşimli `<a><button>` (0 ✅), yinelenen statik
+  `id` (0 ✅), `aria-hidden="true"` içinde odaklanabilir öğe (0 ✅ — grep yalnız
+  ikonu işaretliyor, sarmalayıcı link değil).
+- **Rakam yüzeyi taraması:** `<ol>/<ul>` sayaçlarının tamamı tarandı; tek `counter()`
+  Bulgu 14'tü. `format.number()`/`Intl.NumberFormat` geçen yüzeyler zaten yerel.
+
+### Devir
+
+- **#385 → LANE-INFRA (açık, `lane:infra`, `agent:handoff`):** `scripts/check-frontend-source.mjs:623`
+  hâlâ `quoteEmailBody.replace("%DAYS%", String(selectedDuration))` satırını birebir
+  pinliyor; bu yüzden `src/experience/scenes/vend-pricing/components/Panel.tsx:60`
+  yerel-farkında biçime geçemiyor (`/fa` teklif e-postası `۳۰` olmalı). Benim
+  dosyam değil, dokunmadım. #385 merge olunca Panel.tsx düzeltilecek.
+- **#361 doğrulandı, kapalı:** PR #383 + #391 ile `fa.json` `{count, number}`
+  tiplendi; canlı `/fa` `…: ۱۶` gösteriyor. Ek iş yok.
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅ (41 token, kontrast+motion)
+- `bun run test:unit` ✅ **703 pass / 0 fail**
+- CI (PR #395) ✅ — Static, Database, E2E 1–4, "Quality, database and E2E" (10/10 yeşil)
+
+**Negatif test:** her iki düzeltme geri alınınca ilgili guard kırmızı düştü
+(`home-journeys.test.ts` ratchet FAIL; `design-tokens.test.ts` 14 pass/1 fail).
+
+**Sahibin yapması gerekenler.** #385 (LANE-INFRA) merge → sonra LANE-TASARIM
+`Panel.tsx:60`'ı `Intl.NumberFormat`'a çevirir.
+
+**Sonraki lane için notlar.**
+
+- Dekoratif ama **görünen** sayılar bir yüzeydir: `0{index+1}` gibi dize sabitleri
+  ve çıplak CSS `counter()` ICU'dan geçmez, `lang` değişse de Latin kalır. Yeni
+  sayaç/işaret eklerken `Intl.NumberFormat(locale)` veya `counter(x, <style>)` kullan.
+- CSS numaralandırma sistemini **`lang`'a** bağla, `dir`'a değil: RTL ile Farsça
+  aynı küme değil (`ar`/`he` RTL ama Latin rakam kullanır).
