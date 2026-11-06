@@ -611,6 +611,28 @@ test("a plain-text job description becomes HTML with paragraph breaks", () => {
   // A value that is already HTML is left alone.
   const already = "<p>Hazır</p><ul><li>madde</li></ul>";
   assert.equal(toJobDescriptionHtml(already), already);
+  assert.equal(toJobDescriptionHtml("<br>ilk satır"), "<br>ilk satır");
+
+  // Prose that merely mentions a tag is text, not markup: it must still be
+  // escaped, or a raw `&`/`<` reaches the JSON-LD. Matching a bare tag anywhere
+  // in the string would treat these as fragments and skip escaping.
+  for (const prose of [
+    "Küçüktür <div> işareti burada anlatılıyor",
+    "Satır sonu <br> burada literal olarak geçiyor",
+    "A & B <ul> deneme",
+    "<p>tek paragraf, kapanış yok",
+  ]) {
+    const out = toJobDescriptionHtml(prose);
+    // The only `<` left are the wrapper tags this module emits: every `<` and
+    // `&` from the prose itself became an entity.
+    assert.equal(
+      (out.match(/</g) ?? []).length,
+      2,
+      `prose mentioning a tag must be escaped, got ${out}`,
+    );
+    assert.ok(!/&(?!(amp|lt|gt);)/.test(out), `raw & leaked: ${out}`);
+    assert.ok(out.startsWith("<p>") && out.endsWith("</p>"));
+  }
 
   // Boundaries: an empty value stays empty (the caller falls back to summary).
   assert.equal(toJobDescriptionHtml(""), "");

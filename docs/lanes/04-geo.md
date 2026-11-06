@@ -474,3 +474,51 @@ Google'ın istediği biçimi alıyor.
 `lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (572 test,
 +2 yeni guard) · guard kırmızı→yeşil kanıtlandı · gerçek seed açıklamasıyla çıktı
 gözle doğrulandı (`<p>…</p><ul><li>…`).
+
+---
+
+## Rapor — micro-denetim turu 8 (issue #126), branch `lane/geo`
+
+**Durum:** düzeltmeler branch'te, CI bekliyor. Devir yok.
+
+### Denetlenen dosyalar (`git ls-files`)
+
+| Glob | N | Bakıldı |
+|---|---|---|
+| `src/content/**` | 25 | 25 (hepsi) |
+| `src/app/llms.txt/**` | 1 | 1 |
+| `public/llms*` | 0 | — (dosya yok) |
+| `src/features/**/structured-data*.ts` | 1 | 1 |
+| `src/features/jobs/job-posting-structured-data.ts` | 1 | 1 |
+
+### Bulgu
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/content/ai-visibility/job-description-html.ts:46` (tur 7'de eklenen modül) | hata yolu / doğruluk | Modülün sözleşmesi "metin escape edilir" diyor, ama passthrough dalı **herhangi bir yerde** blok-tag regex'i eşleşince tetikleniyordu. `"Satır sonu <br> burada literal"` ve `"Küçüktür <div> işareti…"` gibi düz metinler fragment sanılıp **escape'siz** geçiyordu; `&` ve `<` ham JSON-LD'ye giriyordu | yalnız **gerçek** HTML fragment'ı (tag ile başlayan + kapalı blok eleman veya `<br>`) geçmeli, gerisi escape edilmeli | ham `<`/`&` yapısal veriye sızar; sözleşme ile kod çelişir | **düzeltildi** |
+
+**Doğru bulunanlar (bulgu yok):** brief'teki tüm URL'ler gerçek rotaya çözülüyor
+(157 link, malformed 0); kısa brief hâlâ 22 bağlantı; `faqByLocale` ile
+`seed-managed-content.sql` birebir aynı (6×6); rehber/yazı slug'ları 6 dilde
+konumsal olarak eşleşiyor (hreflang çözülür); `JobPosting` zorunlu alanları tam;
+seed'deki 22 işveren logo URL'si `curl -L` ile **200** (403 yok); ilçe/indeks
+`pageName`/`pageLabel` mount'ları yerinde.
+
+Değerlendirilip **bulgu sayılmayanlar:** `LOCATION_LOCALITY`/`LOCATION_DISTRICT`
+yalnız kendi modülünde kullanılıyor ama operatör verisinin adlandırılmış parçası
+(silmek adresi isimsizleştirir) — bulgu değil. `llms-brief` içindeki
+`primaryPages.label` ile `Nav.*` etiketleri ayrışıyor (ör. "Kariyer gündemi" vs
+"İş Haberleri"); ikisi de ürünün kendi metni, sayfa başlığı ile gezinme etiketi
+farklı olabilir — kasıtlı.
+
+### Ne yapıldı
+
+`isHtmlFragment()` eklendi: değer `<` ile başlamıyorsa metin; başlıyorsa **kapalı**
+bir blok elemanı (`<p>…</p>`) ya da `<br>` içermesi gerekir. Böylece düz metin
+içinde geçen `<br>`/`<div>` artık markup sayılmıyor ve escape ediliyor. Modülün
+doc-comment'i de yeni kuralı anlatacak şekilde güncellendi.
+
+### Kapılar
+`lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` ✅ (594 test,
++1 genişletilmiş guard) · guard kırmızı→yeşil kanıtlandı (tur 7'deki hatalı
+regex geri konunca test kırmızı).

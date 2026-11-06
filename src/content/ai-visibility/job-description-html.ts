@@ -8,12 +8,29 @@
  * raw value is one long line that Google cannot render as a readable posting.
  *
  * The formatting is a reflow, never a rewrite: the text is escaped and its
- * existing paragraph/bullet boundaries become `<p>`/`<li>`. A value that already
- * contains block markup is passed through untouched.
+ * existing paragraph/bullet boundaries become `<p>`/`<li>`. A value that is
+ * already an HTML fragment (it starts with a tag and carries a closed block
+ * element or a `<br>`) is passed through untouched.
  */
 
-/** Block-level tags whose presence means the value is already HTML. */
-const HTML_BLOCK_TAG = /<(?:p|br|ul|ol|li|div|table|h[1-6])\b/i;
+/** A closed block element, e.g. `<p>…</p>` or `<ul>…</ul>`. */
+const HTML_BLOCK_ELEMENT = /<(p|ul|ol|li|div|table|h[1-6])\b[^>]*>[\s\S]*?<\/\1>/i;
+/** A real line break, which is valid HTML on its own. */
+const HTML_LINE_BREAK = /<br\s*\/?>/i;
+
+/**
+ * Whether the value is already an HTML fragment.
+ *
+ * The test is deliberately narrow. Matching a bare tag *anywhere* would treat
+ * prose that merely mentions `<br>` or `<div>` as markup and skip escaping,
+ * emitting raw `&`/`<` into the JSON-LD — the opposite of this module's
+ * contract. A fragment starts with a tag and carries a closed element (or a
+ * line break); anything else is text and gets escaped.
+ */
+function isHtmlFragment(value: string): boolean {
+  if (!value.startsWith("<")) return false;
+  return HTML_BLOCK_ELEMENT.test(value) || HTML_LINE_BREAK.test(value);
+}
 
 /** The bullet character the imported listings use as their list separator. */
 const BULLET = "•";
@@ -43,7 +60,7 @@ function splitDescriptionLines(value: string): string[] {
 export function toJobDescriptionHtml(value: string): string {
   const text = value.trim();
   if (!text) return text;
-  if (HTML_BLOCK_TAG.test(text)) return text;
+  if (isHtmlFragment(text)) return text;
 
   const lines = splitDescriptionLines(text);
   const prose: string[] = [];
