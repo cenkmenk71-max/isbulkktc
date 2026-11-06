@@ -1080,6 +1080,9 @@ yayılmaz; PWA kullanıcıları eski SW ile takılı kalır. Şu an `REVALIDATED
 için tazelik korunuyor, ama bu **kırılgan**: CF cache davranışı değişirse sessizce
 eskiye döner.
 
+**Devir:** issue **#364** (`lane:guvenlik` + `agent:handoff`) — repo-tarafı
+`next.config.ts` `headers()` düzeltmesi.
+
 **Öneri (CF paneli → sahibin onayı):** H-02 ile aynı düzeltme — Caching →
 **Browser Cache TTL = Respect Existing Headers**; ya da Cache Rules'ta
 `/sw.js` (ve `/robots.txt`) için `Edge TTL = Respect origin`. Alternatif (repo
@@ -1171,4 +1174,4 @@ ile ifade edilmeli.) **WAF kuralı değişikliği yıkıcıdır → sahibin onay
   sürülmedi; bulgu yalnızca edge/origin `cache-control` diff'i ile kanıtlandı.
 - **`next.config.ts` / `tests/security/**` / `public/**` / `src/lib/pwa/**`:**
   bu lane'in dosyası değil → yalnız **doğrulama** yapıldı (A-01c), düzeltme
-  yapılmadı. SW-01 için repo-tarafı öneri LANE-INFRA'ya devredilebilir.
+  yapılmadı. SW-01 repo-tarafı öneri **#364** (`lane:guvenlik`) ile devredildi.

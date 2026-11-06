@@ -208,6 +208,7 @@ donması). Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 14" (A-01c).
 - **SW-01 (orta):** `/sw.js` origin'de `max-age=0` iken CF edge **30 gün**
   (`2628000`) cache'liyor → SW güncelleme yayılımı kırılgan (şu an `REVALIDATED`).
   H-02 (Browser Cache TTL) sınıfının aynısı; düzeltme = `Respect Existing Headers`.
+  Repo-tarafı (`next.config.ts`) → **#364** (`lane:guvenlik` + `agent:handoff`).
 - **W-01 (düşük):** WAF 4. kuralı kodlanmış yolda nokta-yolu kuralını atlıyor
   (`/.git%2fconfig`, `/api/devtools%2f` → CF geçip **Vercel origin** 404 döner;
   `x-vercel-id` kanıt). Origin'de `.git`/`/api/devtools` yok → sızıntı yok, ama
