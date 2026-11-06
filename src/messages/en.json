@@ -923,12 +923,12 @@
     "locationLabel": "District",
     "locationAll": "All districts",
     "districts": {
-      "lefkosia": "Nicosia (Lefkoşa)",
+      "lefkosia": "Nicosia",
       "magusa": "Famagusta",
-      "girne": "Kyrenia (Girne)",
-      "guzelyurt": "Güzelyurt",
-      "iskele": "İskele (Trikomo)",
-      "lefke": "Lefke"
+      "girne": "Kyrenia",
+      "guzelyurt": "Morphou",
+      "iskele": "Trikomo",
+      "lefke": "Lefka"
     },
     "locationPlaceholder": "Select a district",
     "sortLabel": "Sort companies",
@@ -994,12 +994,12 @@
     "locationLabel": "District",
     "locationPlaceholder": "Select a district",
     "districts": {
-      "lefkosia": "Nicosia (Lefkoşa)",
+      "lefkosia": "Nicosia",
       "magusa": "Famagusta",
-      "girne": "Kyrenia (Girne)",
-      "guzelyurt": "Güzelyurt",
-      "iskele": "İskele (Trikomo)",
-      "lefke": "Lefke"
+      "girne": "Kyrenia",
+      "guzelyurt": "Morphou",
+      "iskele": "Trikomo",
+      "lefke": "Lefka"
     },
     "skillsLabel": "Skills",
     "skillsPlaceholder": "Separate skills with commas or new lines",
@@ -1186,12 +1186,12 @@
     "municipality": "District",
     "districtPlaceholder": "Select a district",
     "districts": {
-      "lefkosia": "Nicosia (Lefkoşa)",
+      "lefkosia": "Nicosia",
       "magusa": "Famagusta",
-      "girne": "Kyrenia (Girne)",
-      "guzelyurt": "Güzelyurt",
-      "iskele": "İskele (Trikomo)",
-      "lefke": "Lefke"
+      "girne": "Kyrenia",
+      "guzelyurt": "Morphou",
+      "iskele": "Trikomo",
+      "lefke": "Lefka"
     },
     "directoryTarget": "Existing directory company and branch",
     "directorySearchLabel": "Find your company in the directory",

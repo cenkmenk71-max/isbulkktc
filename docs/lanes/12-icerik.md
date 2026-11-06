@@ -165,3 +165,60 @@ dosyamda (`src/messages/**`, `src/i18n/**`).
   tam bu yüzden ayrı açıldı, `lane/icerik`'e force-push ile hizalandı).
 - Kanonik branch adı `lane/icerik`; `scripts/lane-collisions.mjs` başka adı
   "does not own it" diye işaretler.
+
+## Tur 3 — mikro-denetim (2026-11-05)
+
+**Issue #327** (agent:content) + kapsam taraması. Sahip olduğum yollar:
+`src/messages/**` (6), `src/i18n/**` (5), `src/content/**` (23). Tümüne bakıldı;
+`src/content/ai-visibility/{geo-audit.test.ts,interface-catalog.ts}` **PR #337
+(lane/geo, açık)** dosyaları — dokunulmadı.
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/messages/de.json:1423` `DistrictPage.title` | doğruluk/çeviri | `"Jobs in {district}"` (en ile birebir) | Almanca şablon | Almanca sayfada İngilizce `<h1>` + İngilizce `CollectionPage.name` JSON-LD | düzeltildi → `"Stellenangebote in {district}"` |
+| 2 | `src/messages/de.json:1434` `JobTypePage.title` | doğruluk/çeviri | `"{type} Jobs"` | Almanca şablon | aynı sınıf, 6 tür sayfası | düzeltildi → `"{type}-Stellenangebote"` |
+| 3 | `src/messages/{de,en,el,fa,ru}.json` `{CompanyDirectory,CandidateDashboard,CompanyManagement}.districts` | tutarlılık | ikincil kataloglar `"Kyrenia (Girne)"`, `"Nikosia (Lefkoşa)"`, `"Güzelyurt"`, `"Никосия"`/`"Лефкоша"`, `"لفکوشا"` gibi Türkçe-türevi/parantezli varyantlar taşıyordu | `HomeJobSearch.districts` kanonik uluslararası adları | aynı ilçe sayfaya göre farklı adla görünüyordu; AI/arama motoru için yerel varlık tutarsız | düzeltildi (4 katalog × 6 dil kanonik sete hizalandı) |
+| 4 | `src/content/ai-visibility/faq.ts:30..190` (6 dil) | iç sözlük | FAQ cevabı "**sağlanan kaynaklardaki** kayıtları" / "records from **supplied source files**" / "**bereitgestellten Quelldateien**" / "**παρεχόμενες πηγές**" | ziyaretçinin kendi eylemi | #308 `AboutPage.realityBody`'den bu dili çıkardı ama FAQ (DB'den servis edilir) aynı sızıntıyı taşıyordu | düzeltildi (6 dil) |
+| 5 | `src/content/ai-visibility/faq.ts:126` (`fa`) | tutarlılık | "لفکوشا، غازی‌ماغوسا، گوزلیورت، ایسکله" | arayüzle aynı çevriyazı (`fa.json` + `guides/fa.ts`: نیکوزیا، فاماگوستا، مورفو، ترکومو) | Farsça yüzeyde ilçe adları iki ayrı sisteme bölünmüştü | düzeltildi |
+
+### Ratchet genişletmesi (`src/i18n/message-catalogs.test.ts`, 5 test → 9)
+
+- `FORBIDDEN_SOURCE_VOCABULARY.el` → `"παρεχόμενες πηγές"` eklendi.
+- **Yeni:** FAQ metni de iç-sözlük yasağına tabi (`faqByLocale`, 6 dil) — katalog
+  taraması FAQ'yu görmez.
+- **Yeni:** `DistrictPage.title`/`JobTypePage.title` her dilde `en`'den farklı
+  olmalı (kopya-İngilizce şablon geri gelemez).
+- **Yeni:** `{CompanyDirectory,CandidateDashboard,CompanyManagement}.districts`
+  kanonik `HomeJobSearch.districts` ile birebir eşleşmeli.
+- **Yeni:** FAQ, altı ilçeyi arayüzle aynı adla anmalı (`DISTRICT_ALIASES`:
+  tr `Gazimağusa`, ru `Лефка`, el `Αμμόχωστο`, de `Lefka` — kabul edilen çekim).
+
+Her yeni ratchet, hedeflediği regresyon enjekte edilerek kırmızı→yeşil kanıtlandı.
+
+### Boyut taraması (AUDIT.md)
+
+| Alan | Sonuç |
+|---|---|
+| Anahtar paritesi (6 dil) | 0 eksik/fazla |
+| Yer tutucu paritesi | tek fark `CompanyDirectory.resultCount` — ru'nun çoğul kümesi (few/many) meşru |
+| ICU sözdizimi (6 dil, tüm yapraklar) | 0 hata |
+| JSON round-trip (`ensure_ascii=False`, 2-space) | 6/6 birebir |
+| İç sistem sözlüğü (senkron/veritabanı/koordinat/kaynak sayısı) | 0 (yalnız `resumeImport` meşru istisna) |
+| Suçlayıcı/belirsiz hata | 0 (admin + "kontrol edin" tipi yönlendirme meşru) |
+| Editorial/guides dışa link | 0 |
+| Slug paritesi | çevrilmiş (kasıtlı); yapı paritesi: guides'ta tr 2 paragraf → çeviriler 1'e indirmiş (uyarlama) |
+| `src/i18n/redirect.ts` açık yönlendirme | 0 (yol daima `/` ile köklenir; tüm çağrılar sabit literal) |
+| Legal bloğu (#141) | katalog tarafı zaten düzeltilmiş (yalnız `contactEmail` aynı) |
+
+### Devir
+
+- **FAQ seed'i:** `faq.ts` değişti ama `supabase/seed-managed-content.sql`
+  (`faq_entries`, 36 satır) hâlâ eski metni taşıyor; `getManagedFaq` DB'yi
+  önceler, yani canlıda eski cevap döner. `supabase/**` LANE-SUPABASE'in →
+  seed yeniden üretilmeli (`scripts/generate-managed-content-seed.ts`).
+  #141'in legal seed kısmı da hâlâ bu lane'in dışında.
+- **`src/content/ai-visibility/llms-brief.ts:247-248`** iç sözlük ("kamuya açık
+  **kaynak** işveren listelerinden derlenir; **provenans kaydı** tutulur") —
+  GEO'nun üreticisi, PR #337 o dizinde açık → LANE-GEO'ya devir.

@@ -923,11 +923,11 @@
     "locationLabel": "شهرستان",
     "locationAll": "همه شهرستان‌ها",
     "districts": {
-      "lefkosia": "لفکوشا",
+      "lefkosia": "نیکوزیا",
       "magusa": "فاماگوستا",
-      "girne": "کیرنیا",
-      "guzelyurt": "گوزلیورت",
-      "iskele": "ایسکله",
+      "girne": "گیرنه",
+      "guzelyurt": "مورفو",
+      "iskele": "ترکومو",
       "lefke": "لفکه"
     },
     "locationPlaceholder": "یک شهرستان انتخاب کنید",
@@ -994,11 +994,11 @@
     "locationLabel": "شهرستان",
     "locationPlaceholder": "یک شهرستان انتخاب کنید",
     "districts": {
-      "lefkosia": "لفکوشا",
+      "lefkosia": "نیکوزیا",
       "magusa": "فاماگوستا",
-      "girne": "کیرنیا",
-      "guzelyurt": "گوزلیورت",
-      "iskele": "ایسکله",
+      "girne": "گیرنه",
+      "guzelyurt": "مورفو",
+      "iskele": "ترکومو",
       "lefke": "لفکه"
     },
     "skillsLabel": "مهارت‌ها",
@@ -1186,11 +1186,11 @@
     "municipality": "شهرستان",
     "districtPlaceholder": "یک شهرستان انتخاب کنید",
     "districts": {
-      "lefkosia": "لفکوشا",
+      "lefkosia": "نیکوزیا",
       "magusa": "فاماگوستا",
-      "girne": "کیرنیا",
-      "guzelyurt": "گوزلیورت",
-      "iskele": "ایسکله",
+      "girne": "گیرنه",
+      "guzelyurt": "مورفو",
+      "iskele": "ترکومو",
       "lefke": "لفکه"
     },
     "directoryTarget": "شرکت و شعبه موجود در فهرست",

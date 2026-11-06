@@ -923,11 +923,11 @@
     "locationLabel": "Bezirk",
     "locationAll": "Alle Bezirke",
     "districts": {
-      "lefkosia": "Nikosia (Lefkoşa)",
+      "lefkosia": "Nikosia",
       "magusa": "Famagusta",
-      "girne": "Kyrenia (Girne)",
-      "guzelyurt": "Güzelyurt",
-      "iskele": "İskele (Trikomo)",
+      "girne": "Kyrenia",
+      "guzelyurt": "Morphou",
+      "iskele": "Trikomo",
       "lefke": "Lefke"
     },
     "locationPlaceholder": "Bezirk auswählen",
@@ -994,11 +994,11 @@
     "locationLabel": "Bezirk",
     "locationPlaceholder": "Bezirk auswählen",
     "districts": {
-      "lefkosia": "Nikosia (Lefkoşa)",
+      "lefkosia": "Nikosia",
       "magusa": "Famagusta",
-      "girne": "Kyrenia (Girne)",
-      "guzelyurt": "Güzelyurt",
-      "iskele": "İskele (Trikomo)",
+      "girne": "Kyrenia",
+      "guzelyurt": "Morphou",
+      "iskele": "Trikomo",
       "lefke": "Lefke"
     },
     "skillsLabel": "Fähigkeiten",
@@ -1186,11 +1186,11 @@
     "municipality": "Bezirk",
     "districtPlaceholder": "Bezirk auswählen",
     "districts": {
-      "lefkosia": "Nikosia (Lefkoşa)",
+      "lefkosia": "Nikosia",
       "magusa": "Famagusta",
-      "girne": "Kyrenia (Girne)",
-      "guzelyurt": "Güzelyurt",
-      "iskele": "İskele (Trikomo)",
+      "girne": "Kyrenia",
+      "guzelyurt": "Morphou",
+      "iskele": "Trikomo",
       "lefke": "Lefke"
     },
     "directoryTarget": "Unternehmen und Standort im bestehenden Verzeichnis",
@@ -1420,7 +1420,7 @@
   },
   "DistrictPage": {
     "eyebrow": "JOBS IN NORDZYPERN",
-    "title": "Jobs in {district}",
+    "title": "Stellenangebote in {district}",
     "metaTitle": "Stellenangebote in {district} | Nordzypern",
     "metaDescription": "Aktuelle Stellenangebote und Jobs in {district}, Nordzypern. Sehen Sie sich Angebote in {district} an und bewerben Sie sich mit İşBul KKTC.",
     "intro": "Aktuelle Stellenangebote und Jobs in {district}, Nordzypern. Filtern Sie nach Position, Beschäftigungsart und Arbeitsort und bewerben Sie sich.",
@@ -1431,7 +1431,7 @@
   },
   "JobTypePage": {
     "eyebrow": "JOBS IN NORDZYPERN",
-    "title": "{type} Jobs",
+    "title": "{type}-Stellenangebote",
     "metaTitle": "{type} Jobs | Nordzypern (TRNC)",
     "metaDescription": "{type} Stellenangebote und Jobs in Nordzypern (TRNC). Sehen Sie sich {type} Positionen an und bewerben Sie sich mit İşBul KKTC.",
     "intro": "Aktuelle {type} Stellenangebote in Nordzypern (TRNC). Filtern Sie nach Bezirk und Position und bewerben Sie sich.",

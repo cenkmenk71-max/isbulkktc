@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { faqByLocale } from "@/content/ai-visibility/faq";
 
 const locales = ["tr", "en", "ru", "el", "fa", "de"] as const;
 const translatedLocales = ["en", "ru", "el", "fa", "de"] as const;
@@ -182,7 +183,12 @@ const FORBIDDEN_SOURCE_VOCABULARY: Record<string, readonly string[]> = {
     "исходных объявлен",
     "предоставленных источник",
   ],
-  el: ["συντεταγμένες πηγής", "δεδομένων πηγής", "αγγελίες της πηγής"],
+  el: [
+    "συντεταγμένες πηγής",
+    "δεδομένων πηγής",
+    "αγγελίες της πηγής",
+    "παρεχόμενες πηγές",
+  ],
   fa: ["مختصات منبع", "داده‌های منبع", "آگهی‌های منبع", "فایل‌های منبع"],
 };
 
@@ -197,6 +203,111 @@ test("no locale reintroduces the forbidden source vocabulary", () => {
           `${locale}.${key} leaks internal vocabulary "${phrase}"`,
         );
       }
+    }
+  }
+});
+
+// The FAQ copy lives in `src/content/ai-visibility/faq.ts` (the text portion of
+// the content bundle), not in the message catalogs, so the ratchet above cannot
+// see it. All six languages shipped the pipeline's own "supplied source files"
+// wording (#308 removed it from the interface copy but not from the FAQ), so the
+// per-locale forbidden vocabulary is applied to the FAQ text as well.
+test("the FAQ copy keeps internal source vocabulary off the visitor surface", () => {
+  for (const locale of locales) {
+    for (const entry of faqByLocale[locale]) {
+      const text = `${entry.question}\n${entry.answer}`.toLowerCase();
+      for (const phrase of FORBIDDEN_SOURCE_VOCABULARY[locale] ?? []) {
+        assert.equal(
+          text.includes(phrase),
+          false,
+          `${locale} FAQ leaks internal vocabulary "${phrase}"`,
+        );
+      }
+    }
+  }
+});
+
+// #327: the `de` landing titles were exact copies of the English templates
+// ("Jobs in {district}", "{type} Jobs"), so the German H1 contradicted its own
+// German meta title while ru/el/fa carried their own. A visible landing title
+// must be authored per language, never inherited from English.
+test("landing page titles are authored per locale, not copied from English", () => {
+  const english = flatten(readMessages("en"));
+  const guarded = ["DistrictPage.title", "JobTypePage.title"];
+  for (const locale of translatedLocales) {
+    if (locale === "en") continue;
+    const messages = flatten(readMessages(locale));
+    for (const key of guarded) {
+      assert.notEqual(
+        messages[key],
+        english[key],
+        `${locale}.${key} is still the English template; translate it`,
+      );
+    }
+  }
+});
+
+// The four catalogs that render the six district labels must agree. The company
+// directory, the candidate profile and the employer dashboard previously carried
+// their own glossed variants ("Kyrenia (Girne)", "Никосия" beside "Лефкоша"), so
+// the same district read differently on different pages. `HomeJobSearch.districts`
+// is the canonical set — it also feeds the district landing metadata.
+test("every district label matches the canonical HomeJobSearch set", () => {
+  const namespaces = [
+    "CompanyDirectory",
+    "CandidateDashboard",
+    "CompanyManagement",
+  ];
+  const prefix = "HomeJobSearch.districts.";
+  for (const locale of locales) {
+    const messages = flatten(readMessages(locale));
+    const leaves = Object.keys(messages)
+      .filter((key) => key.startsWith(prefix))
+      .map((key) => key.slice(prefix.length));
+    assert.ok(leaves.length === 6, `${locale} must define all six districts`);
+    for (const namespace of namespaces) {
+      for (const leaf of leaves) {
+        assert.equal(
+          messages[`${namespace}.districts.${leaf}`],
+          messages[`${prefix}${leaf}`],
+          `${locale}.${namespace}.districts.${leaf} must match the canonical label`,
+        );
+      }
+    }
+  }
+});
+
+// The FAQ answer that lists the six districts is the one place the content
+// bundle and the interface both name them, so a second transliteration set can
+// drift in unnoticed — the Persian answer shipped the Turkish-derived names
+// (لفکوشا، غازی‌ماغوسا، گوزلیورت، ایسکله) while every other Persian surface used
+// نیکوزیا، فاماگوستا، مورفو، ترکومو. The Turkish, Russian and German answers
+// legitimately carry an inflected or alternate form, listed here so the ratchet
+// stays honest about which variants are accepted.
+const DISTRICT_ALIASES: Record<string, Record<string, string[]>> = {
+  tr: { "Mağusa": ["Gazimağusa"] },
+  ru: { "Лефке": ["Лефка"] },
+  el: { "Αμμόχωστος": ["Αμμόχωστο"] },
+  de: { "Lefke": ["Lefka"] },
+};
+
+test("the FAQ names the districts as the interface does", () => {
+  const prefix = "HomeJobSearch.districts.";
+  for (const locale of locales) {
+    const messages = flatten(readMessages(locale));
+    const labels = Object.entries(messages)
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([, value]) => value);
+    assert.ok(labels.length === 6, `${locale} must define all six districts`);
+    const text = faqByLocale[locale]
+      .map((entry) => `${entry.question}\n${entry.answer}`)
+      .join("\n");
+    for (const label of labels) {
+      const variants = [label, ...(DISTRICT_ALIASES[locale]?.[label] ?? [])];
+      assert.ok(
+        variants.some((variant) => text.includes(variant)),
+        `${locale} FAQ must name "${label}" as the interface does`,
+      );
     }
   }
 });

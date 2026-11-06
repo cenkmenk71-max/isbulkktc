@@ -7,8 +7,8 @@ import type { AppLocale } from "@/i18n/routing";
  * ship (`AboutPage.realityBody`, `PackagesMeta.description`,
  * `ContactPage.*`), and the remaining four languages were written directly in
  * that language. Nothing claims a feature the site does not have — payment
- * really is off-site by IBAN, the directory really is source data, and the
- * support channels are the ones the footer renders.
+ * really is off-site by IBAN, the directory really is a searchable record
+ * set, and the support channels are the ones the footer renders.
  *
  * The questions are the ones answer engines are actually asked about this site:
  * who runs it, what it does, where it operates, what it costs, and how to
@@ -37,7 +37,7 @@ export const faqByLocale: Record<AppLocale, readonly FaqEntry[]> = {
     {
       question: "Şirket rehberindeki kayıtlar doğrulanmış mı?",
       answer:
-        "Şirket rehberi, sağlanan kaynaklardaki kayıtları aramaya açar; listelenmek şirketin İşBul KKTC tarafından doğrulandığı anlamına gelmez.",
+        "Şirket rehberi kayıtları aramaya açar; listelenmek, şirketin İşBul KKTC tarafından doğrulandığı anlamına gelmez.",
     },
     {
       question: "İşBul KKTC'ye nasıl ulaşabilirim?",
@@ -69,7 +69,7 @@ export const faqByLocale: Record<AppLocale, readonly FaqEntry[]> = {
     {
       question: "Are the directory listings verified?",
       answer:
-        "The company directory makes records from supplied source files searchable; a listing does not mean İşBul KKTC has verified that company.",
+        "The company directory makes records searchable; a listing does not mean İşBul KKTC has verified that company.",
     },
     {
       question: "How can I contact İşBul KKTC?",
@@ -101,7 +101,7 @@ export const faqByLocale: Record<AppLocale, readonly FaqEntry[]> = {
     {
       question: "Sind die Verzeichniseinträge geprüft?",
       answer:
-        "Das Unternehmensverzeichnis macht Einträge aus bereitgestellten Quelldateien durchsuchbar; ein Eintrag bedeutet nicht, dass İşBul KKTC das Unternehmen geprüft hat.",
+        "Das Unternehmensverzeichnis macht Einträge durchsuchbar; ein Eintrag bedeutet nicht, dass İşBul KKTC das Unternehmen geprüft hat.",
     },
     {
       question: "Wie kann ich İşBul KKTC kontaktieren?",
@@ -123,7 +123,7 @@ export const faqByLocale: Record<AppLocale, readonly FaqEntry[]> = {
     {
       question: "این پلتفرم کدام مناطق را پوشش می‌دهد؟",
       answer:
-        "این پلتفرم شش شهرستان قبرس شمالی را پوشش می‌دهد: لفکوشا، غازی‌ماغوسا، گیرنه، گوزلیورت، ایسکله و لفکه.",
+        "این پلتفرم شش شهرستان قبرس شمالی را پوشش می‌دهد: نیکوزیا، فاماگوستا، گیرنه، مورفو، ترکومو و لفکه.",
     },
     {
       question: "ثبت آگهی یا درخواست هزینه دارد؟",
@@ -133,7 +133,7 @@ export const faqByLocale: Record<AppLocale, readonly FaqEntry[]> = {
     {
       question: "اطلاعات فهرست شرکت‌ها تأیید شده است؟",
       answer:
-        "فهرست شرکت‌ها امکان جست‌وجوی اطلاعات فایل‌های منبع را می‌دهد؛ ثبت یک شرکت به‌معنای تأیید آن توسط İşBul KKTC نیست.",
+        "فهرست شرکت‌ها امکان جست‌وجوی اطلاعات را می‌دهد؛ ثبت یک شرکت به‌معنای تأیید آن توسط İşBul KKTC نیست.",
     },
     {
       question: "چگونه می‌توانم با İşBul KKTC تماس بگیرم؟",
@@ -165,7 +165,7 @@ export const faqByLocale: Record<AppLocale, readonly FaqEntry[]> = {
     {
       question: "Проверены ли записи в каталоге?",
       answer:
-        "Каталог позволяет искать записи из предоставленных источников; наличие записи не означает, что İşBul KKTC проверил компанию.",
+        "Каталог позволяет искать записи; наличие записи не означает, что İşBul KKTC проверил компанию.",
     },
     {
       question: "Как связаться с İşBul KKTC?",
@@ -197,7 +197,7 @@ export const faqByLocale: Record<AppLocale, readonly FaqEntry[]> = {
     {
       question: "Οι εγγραφές του καταλόγου είναι επαληθευμένες;",
       answer:
-        "Ο κατάλογος εταιρειών επιτρέπει την αναζήτηση εγγραφών από παρεχόμενες πηγές· μια εγγραφή δεν σημαίνει ότι το İşBul KKTC έχει επαληθεύσει την εταιρεία.",
+        "Ο κατάλογος εταιρειών επιτρέπει την αναζήτηση εγγραφών· μια εγγραφή δεν σημαίνει ότι το İşBul KKTC έχει επαληθεύσει την εταιρεία.",
     },
     {
       question: "Πώς μπορώ να επικοινωνήσω με το İşBul KKTC;",

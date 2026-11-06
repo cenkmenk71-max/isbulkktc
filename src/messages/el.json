@@ -923,12 +923,12 @@
     "locationLabel": "Επαρχία",
     "locationAll": "Όλες οι επαρχίες",
     "districts": {
-      "lefkosia": "Λευκωσία (Lefkoşa)",
+      "lefkosia": "Λευκωσία",
       "magusa": "Αμμόχωστος",
-      "girne": "Κερύνεια (Girne)",
-      "guzelyurt": "Μόρφου (Güzelyurt)",
-      "iskele": "Τρίκωμο (İskele)",
-      "lefke": "Λεύκα (Lefke)"
+      "girne": "Κερύνεια",
+      "guzelyurt": "Μόρφου",
+      "iskele": "Τρίκωμο",
+      "lefke": "Λεύκα"
     },
     "locationPlaceholder": "Επιλέξτε επαρχία",
     "sortLabel": "Ταξινόμηση εταιρειών",
@@ -994,12 +994,12 @@
     "locationLabel": "Επαρχία",
     "locationPlaceholder": "Επιλέξτε επαρχία",
     "districts": {
-      "lefkosia": "Λευκωσία (Lefkoşa)",
+      "lefkosia": "Λευκωσία",
       "magusa": "Αμμόχωστος",
-      "girne": "Κερύνεια (Girne)",
-      "guzelyurt": "Μόρφου (Güzelyurt)",
-      "iskele": "Τρίκωμο (İskele)",
-      "lefke": "Λεύκα (Lefke)"
+      "girne": "Κερύνεια",
+      "guzelyurt": "Μόρφου",
+      "iskele": "Τρίκωμο",
+      "lefke": "Λεύκα"
     },
     "skillsLabel": "Δεξιότητες",
     "skillsPlaceholder": "Χωρίστε τις δεξιότητες με κόμμα ή αλλαγή γραμμής",
@@ -1186,12 +1186,12 @@
     "municipality": "Επαρχία",
     "districtPlaceholder": "Επιλέξτε επαρχία",
     "districts": {
-      "lefkosia": "Λευκωσία (Lefkoşa)",
+      "lefkosia": "Λευκωσία",
       "magusa": "Αμμόχωστος",
-      "girne": "Κερύνεια (Girne)",
-      "guzelyurt": "Μόρφου (Güzelyurt)",
-      "iskele": "Τρίκωμο (İskele)",
-      "lefke": "Λεύκα (Lefke)"
+      "girne": "Κερύνεια",
+      "guzelyurt": "Μόρφου",
+      "iskele": "Τρίκωμο",
+      "lefke": "Λεύκα"
     },
     "directoryTarget": "Υφιστάμενη εταιρεία και υποκατάστημα καταλόγου",
     "directorySearchLabel": "Βρείτε την εταιρεία σας στον κατάλογο",

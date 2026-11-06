@@ -923,11 +923,11 @@
     "locationLabel": "Район",
     "locationAll": "Все районы",
     "districts": {
-      "lefkosia": "Лефкоша",
+      "lefkosia": "Никосия",
       "magusa": "Фамагуста",
       "girne": "Кирения",
-      "guzelyurt": "Гюзельюрт",
-      "iskele": "Искеле",
+      "guzelyurt": "Морфу",
+      "iskele": "Трикомо",
       "lefke": "Лефке"
     },
     "locationPlaceholder": "Выберите район",
@@ -994,11 +994,11 @@
     "locationLabel": "Район",
     "locationPlaceholder": "Выберите район",
     "districts": {
-      "lefkosia": "Лефкоша",
+      "lefkosia": "Никосия",
       "magusa": "Фамагуста",
       "girne": "Кирения",
-      "guzelyurt": "Гюзельюрт",
-      "iskele": "Искеле",
+      "guzelyurt": "Морфу",
+      "iskele": "Трикомо",
       "lefke": "Лефке"
     },
     "skillsLabel": "Навыки",
@@ -1186,11 +1186,11 @@
     "municipality": "Район",
     "districtPlaceholder": "Выберите район",
     "districts": {
-      "lefkosia": "Лефкоша",
+      "lefkosia": "Никосия",
       "magusa": "Фамагуста",
       "girne": "Кирения",
-      "guzelyurt": "Гюзельюрт",
-      "iskele": "Искеле",
+      "guzelyurt": "Морфу",
+      "iskele": "Трикомо",
       "lefke": "Лефке"
     },
     "directoryTarget": "Компания и филиал из каталога",
