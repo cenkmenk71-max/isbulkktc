@@ -1013,3 +1013,118 @@ alanına sızıyor; `|` tabular biçimde `structured` yolundan `Adres | Lefkoşa
 Ama `tests/unit/resume-date-context.test.ts` (LANE-QA sahipli) "a personal-data
 line contributes no date to work experience" sözleşmesini pinliyor ve kapı
 eklenince **kırılıyor** (Tur 14 örneği). Kararı LANE-QA'ya bırakıldı (#367 açık).
+
+---
+
+## Tur 19 — #186 2. madde kapanışı: `catch` yolu da sağlık sinyali üretir (PR bekliyor)
+
+### Alınan issue
+`gh issue list --state open --label agent:backend` → sahibi LANE-URUN olan açık
+kayıtlar: **#186**, **#208**, **#367** (LANE-QA'ya devir), **#377** (e-posta
+şablonu görsel zayıflığı), **#282** (push allowlist handoff, LANE-QA).
+
+**#186 2. madde** ("sessiz başarısızlığı kaldır") yarı kapalıydı: Tur 6 anahtar
+yarısını, **#372** *dönen* hata dalını bağlamıştı. **`catch` dalı hâlâ düz bir
+`console.error("Outbound email delivery failed.", {error})` basıyordu** —
+`email_health` anahtarına bağlı bir alarm bu yolu hiç görmez. Bu tur o yarıyı
+kapattı.
+
+### Doğrulanan kanıt (gerçek `deliver()`, ağ yok)
+`globalThis.fetch` stub'lanıp gerçek mailer sürüldü
+(`tsx --conditions=react-server`, yani `server-only` gerçek modülde çözülür).
+
+| Senaryo | Düzeltme öncesi | Düzeltme sonrası |
+|---|---|---|
+| 429 hız sınırı | `error "Outbound email was rejected by Resend."` | `error email_health {event:"email_delivery_failed", code:"rate_limit_exceeded", statusCode:429}` |
+| 401 bozuk anahtar | aynı, `statusCode` yok | `{… code:"validation_error", statusCode:401}` |
+| ağ hatası (`fetch` reddi) | `{code:"application_error"}`, `statusCode` yok | `{… code:"application_error", statusCode:null}` |
+| başarılı gönderim | log yok | log yok |
+
+Ek olarak SDK kaynağı okundu (`node_modules/resend/dist/index.mjs:1684-1754`):
+`fetchRequest` **her** hatayı yakalayıp `{data:null, error}` **döner**; dış
+`catch` bile `application_error`/`statusCode:null` üretir. Yani:
+
+1. **Gerçek gönderim reddi** `if (result.error)` dalından geçer — bu dal artık
+   sinyal üretiyor (#372).
+2. Mailer'ın kendi `catch`'i bir **savunma ağı**: abort sinyali rethrow'u,
+   başlık kurma hatası ya da ileride SDK'nın fırlatmaya başlaması. Bu yol da
+   artık `reportDeliveryFailure` çağırıyor; yani "fırlatan" bir hata artık
+   sessiz kalmıyor.
+
+### Düzeltme (yalnız sahip olduğum/atandığım yüzey)
+- **`src/server/email/delivery-health.ts`:** `describeDeliveryFailure` artık kodu
+  `record.code` → `record.cause.code` → `name` sırasıyla çıkarır
+  (`extractErrorCode`). Fırlatılan bir `fetch` reddi `TypeError`dır; `name`'i
+  önce okumak her ağ arızasında aynı işe yaramaz değeri (`TypeError`, `Error`)
+  raporlardı. Artık `ECONNRESET`/`ENOTFOUND`/`UND_ERR_CONNECT_TIMEOUT` gibi
+  gerçek sistem kodu raporlanır; `name` yalnız dönen Resend hatası için
+  yedektir. `statusCode` korunur, `message` bilinçli olarak dışarıda (alıcı
+  adresi sızabilir).
+- **`src/server/email/mailer.ts`:** `catch` bloğu `console.error` yerine
+  `reportDeliveryFailure(error)` çağırır. Bozuk-anahtar dalı zaten paylaşılan
+  `EMAIL_HEALTH_EVENT` sabitini kullanıyor — tek anahtar, tek şekil.
+- `src/server/email/**` sahiplik tablosunda sahipsiz; #186 bu yarıyı LANE-URUN'a
+  veriyor, başka lane dosyaya dokunmuyor.
+
+### Eklenen/güçlendirilen testler
+- `delivery-health.test.ts`: "a thrown transport error reports its system code,
+  not the JS class" (yeni) — `TypeError`+`cause.code`, çıplak `code`, ve
+  boşluk-only `cause.code`'un `name`e düşmesi.
+- `mailer-delivery-signal.test.ts` (yeni, 3 test): `mailer.ts` `server-only`
+  arkasında olduğu için `deliver()` gövdesi tsx birim katmanından sürülemez;
+  bu dosya **kablolamayı** kaynak-metin guard'ıyla çiviler — hem dönen hem
+  fırlatılan yol `reportDeliveryFailure`'a gider, `catch`'te `console.error`
+  kalmaz.
+
+### Mutasyon kanıtı (boş değil)
+| Mutasyon | Beklenen | Gözlenen |
+|---|---|---|
+| `extractErrorCode` → yalnız `name` okusun | test kırmızı | ✖ kırmızı |
+| `catch` → eski `console.error` cümlesi | guard kırmızı | ✖ kırmızı (2 pass / 1 fail) |
+| `catch` → `reportDeliveryFailure` | yeşil | ✔ 3/3 yeşil |
+
+### Micro-denetim tablosu (Tur 19, sahip olunan yüzey)
+
+| Dosya | Doğruluk | Hata yolu | Yetki | Sızıntı | Erişilebilirlik | Sınır girdi | Sonuç |
+|---|---|---|---|---|---|---|---|
+| `src/server/email/mailer.ts` | ⚠️ **bulgu → düzeltildi** | ⚠️ `catch` artık sinyal üretiyor | ✅ | ✅ `message` loglanmıyor | — | ✅ | düzeltildi |
+| `src/server/email/delivery-health.ts` | ⚠️ **bulgu → düzeltildi** | ✅ | ✅ saf | ✅ alıcı yok | — | ✅ boşluk-only kod | düzeltildi |
+| `src/server/email/mailer-delivery-signal.test.ts` | — (yeni guard) | ✅ | — | ✅ | — | ✅ | yeni |
+| `src/server/email/email-headers.ts` | ✅ | ✅ | ✅ | ✅ | — | ✅ bozuk URL → başlık yok | temiz |
+| `src/server/email/unsubscribe-token-core.ts` | ✅ | ✅ | ✅ | ✅ | — | ✅ | temiz (#102 `server-only` ayrı) |
+| `src/server/config/resend-key.ts` | ✅ | ✅ | ✅ | ✅ | — | ✅ | temiz |
+| `src/server/config/app-url.ts` | ✅ | ✅ prod'da fırlatır | ✅ | ✅ | — | ✅ | temiz |
+| `src/server/config/oauth-providers.ts` | ✅ | ✅ | ✅ | ✅ | — | ✅ | temiz |
+| `src/server/push/vapid.ts` | ✅ | ✅ `push_health`+`event` | ✅ | ✅ | — | ✅ | temiz (referans desen) |
+| `src/server/push/push-endpoint.ts` | ✅ | ✅ | ✅ SSRF allowlist | ✅ | — | ✅ IPv4/creds reddi | temiz |
+| `src/server/push/notification-copy.ts` | ✅ | ✅ | ✅ | ✅ | — | ✅ | temiz |
+| `src/features/{candidates,feedback,jobs,sales,companies,pwa,editorial}/**` | ✅ | ✅ best-effort `catch` | ✅ | ✅ yalnız `message` | ✅ (TASARIM denetiminde) | ✅ | önceki turlarda denetlendi |
+| `src/lib/pwa/**` | ✅ | ✅ | ✅ | ✅ | — | ✅ | önceki turlarda denetlendi |
+
+**Bakılmayan:** `src/features/editorial/legal-pages.tsx` + `brand-pages.tsx` bu
+turda açılmadı (önceki turlarda denetlendi; bu bulgu sınıfıyla kesişmiyor).
+`src/features/**/structured-data*.ts` LANE-GEO sahipli, kapsam dışı.
+
+### Kapılar
+lint/typecheck/check:frontend-source temiz; `test:unit` **692/692**, 0 fail,
+0 todo (+3 test). `test:integration` 83/83. `test:security` 93 pass / 3 todo —
+kalan 3 kırmızı **canlı Supabase gerektirir** (`list_engagement_recipients` /
+`opt_out_engagement` grant'ı), bu değişiklikten **bağımsız** ve stash'li ağaçta
+da aynı; CI kapısı değil (bkz. MEMORY: #114 ile CI'a bağlandı ama yerelde
+canlı erişim yok). Canlıya dokunulmadı.
+
+### Devredilen / kapsam dışı
+- **#186 1. ve 3. maddesi** → insan (panel): doğru `re_…` anahtarı girilip
+  `curl … https://api.resend.com/domains` ile doğrulanmalı.
+- **#377** (e-posta şablonu görsel zayıflığı) → ayrı tur; `supabase/templates/**`
+  LANE-AUTH sahipli.
+- **`src/server/email/**` hâlâ sahiplik tablosunda sahipsiz.** Öneri (Tur 6 ve
+  17'de de yazıldı): LANE-INFRA tabloya `src/server/email/**` için sahip
+  tanımlasın.
+
+### Ders
+Bir "sessiz hata"yı kapatmak, o hatanın **tüm çıkış yollarını** kapatmayı
+gerektirir — ve bir kütüphanenin hata sözleşmesini (fırlatır mı, döner mi)
+okumadan "ölü yolu" kapatmak, canlı yolu açık bırakabilir. Burada `catch`
+gerçekten ölüydü ama **görünmezlik** yaratıyordu: bir gün SDK fırlatırsa
+alarm kör kalırdı. Ölü görünen savunma ağını da sinyale bağla.

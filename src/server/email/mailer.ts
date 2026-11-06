@@ -116,16 +116,20 @@ async function deliver(
       { idempotencyKey },
     );
     if (result.error) {
-      // Reported under `email_health` so the same alert covers a rejected send
-      // and the malformed-key case above (#186). The SDK returns errors rather
-      // than throwing, so this — not the `catch` — is the path a real rejection
-      // takes; the `catch` only covers an unexpected throw.
+      // The SDK returns errors rather than throwing, so this is the path a real
+      // rejection (a network failure too — `fetchRequest` turns it into
+      // `application_error`) takes. Reported under `email_health` so the same
+      // alert covers a rejected send and the malformed-key case above (#186).
       reportDeliveryFailure(result.error);
     }
   } catch (error) {
-    console.error("Outbound email delivery failed.", {
-      error: error instanceof Error ? error.message : "unknown_error",
-    });
+    // Defence in depth. `resend`'s `fetchRequest` catches its own failures and
+    // *returns* them (`{error}` above), so a thrown error here is unexpected —
+    // an abort-signal rethrow, a header-construction bug, or a future SDK
+    // change. It is still a delivery failure, so it is reported under the same
+    // `email_health` signal rather than a bare sentence a rule cannot match
+    // (#186).
+    reportDeliveryFailure(error);
   }
 }
 

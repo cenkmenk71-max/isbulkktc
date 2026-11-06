@@ -81,6 +81,40 @@ test("the failure is emitted under the email_health key the alert watches", () =
   assert.equal(signal.code, "validation_error");
 });
 
+test("a thrown transport error reports its system code, not the JS class", () => {
+  // A thrown `fetch` failure: a `TypeError` whose cause is the Node system error.
+  const fetchFailure = Object.assign(new TypeError("fetch failed"), {
+    cause: Object.assign(new Error("socket hang up"), { code: "ECONNRESET" }),
+  });
+  assert.deepEqual(describeDeliveryFailure(fetchFailure), {
+    event: "email_delivery_failed",
+    code: "ECONNRESET",
+    statusCode: null,
+  });
+
+  // A bare system error carries the code on the error itself.
+  assert.equal(
+    describeDeliveryFailure(Object.assign(new Error("getaddrinfo"), { code: "ENOTFOUND" }))
+      .code,
+    "ENOTFOUND",
+  );
+  // A whitespace-only cause code must not win over the real `name`.
+  assert.equal(
+    describeDeliveryFailure(Object.assign(new TypeError("fetch failed"), { cause: { code: "  " } }))
+      .code,
+    "TypeError",
+  );
+});
+
+test("the code precedence is system code, then cause code, then name", () => {
+  const both = Object.assign(new Error("x"), {
+    code: "UND_ERR_CONNECT_TIMEOUT",
+    name: "FetchError",
+    cause: { code: "ECONNREFUSED" },
+  });
+  assert.equal(describeDeliveryFailure(both).code, "UND_ERR_CONNECT_TIMEOUT");
+});
+
 test("a throw with no usable shape still emits a signal, never crashes", () => {
   for (const thrown of [new Error("ECONNRESET"), "boom", undefined]) {
     const calls: string[] = [];

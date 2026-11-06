@@ -21,21 +21,43 @@ export type DeliveryFailure = {
 };
 
 /**
- * Normalises a Resend send error into the `email_health` shape. Resend returns
- * `{ name, message, statusCode }` where `name` carries the error code
- * (`validation_error`, `rate_limit_exceeded`, `application_error`, …); a
+ * The most diagnostic error code available.
+ *
+ * A *returned* Resend error carries the API code in `name`
+ * (`validation_error`, `rate_limit_exceeded`, `application_error`, …). A thrown
+ * error is a different shape: `fetch` rejects with a `TypeError` whose real
+ * cause is a Node system error carrying a string `code` (`ECONNRESET`,
+ * `ENOTFOUND`, `UND_ERR_CONNECT_TIMEOUT`). Reading `name` first would report the
+ * JS constructor (`TypeError`, `Error`) — the same useless value for every
+ * network failure, which cannot be alerted on. So a real `code` (on the error or
+ * on its `cause`) wins, and `name` is the fallback.
+ */
+function extractErrorCode(record: Record<string, unknown>): string {
+  const direct = typeof record.code === "string" ? record.code.trim() : "";
+  if (direct) return direct;
+
+  const cause = record.cause;
+  if (cause && typeof cause === "object") {
+    const causeCode = (cause as Record<string, unknown>).code;
+    if (typeof causeCode === "string" && causeCode.trim()) return causeCode.trim();
+  }
+
+  const name = typeof record.name === "string" ? record.name.trim() : "";
+  return name || "unknown_error";
+}
+
+/**
+ * Normalises a Resend send error into the `email_health` shape, for both a
+ * returned `{ name, message, statusCode }` and a thrown transport error. A
  * network-level failure sets `statusCode` to `null`. Only the code and status
  * are kept — Resend's `message` can quote the recipient, and this signal is not
  * a place to leak an address.
  */
 export function describeDeliveryFailure(error: unknown): DeliveryFailure {
   const record = (error ?? {}) as Record<string, unknown>;
-  const rawName = record.name;
-  const code =
-    typeof rawName === "string" && rawName.trim() ? rawName : "unknown_error";
   const statusCode =
     typeof record.statusCode === "number" ? record.statusCode : null;
-  return { event: DELIVERY_FAILURE_EVENT, code, statusCode };
+  return { event: DELIVERY_FAILURE_EVENT, code: extractErrorCode(record), statusCode };
 }
 
 /**
