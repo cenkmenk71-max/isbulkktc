@@ -1128,3 +1128,26 @@ gerektirir — ve bir kütüphanenin hata sözleşmesini (fırlatır mı, döner
 okumadan "ölü yolu" kapatmak, canlı yolu açık bırakabilir. Burada `catch`
 gerçekten ölüydü ama **görünmezlik** yaratıyordu: bir gün SDK fırlatırsa
 alarm kör kalırdı. Ölü görünen savunma ağını da sinyale bağla.
+
+### Tur 19 — rapor bloğu
+
+```
+Lane: LANE-URUN        Branch: lane/urun        PR: #382
+Değişen dosyalar: src/server/email/mailer.ts,
+  src/server/email/delivery-health.ts,
+  src/server/email/delivery-health.test.ts,
+  src/server/email/mailer-delivery-signal.test.ts (yeni),
+  docs/lanes/07-urun.md
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit 692/692 ✅ / test:integration 83/83 ✅ /
+  test:security 93 pass-3 todo (canlı Supabase gerektirir, bağımsız) /
+  CI: Static ✅ Database ✅ E2E 4/4 ✅ "Quality, database and E2E" ✅
+Canlıya dokundu mu: hayır (secret yazımı yok, DB yok, migration yok)
+Sahibin yapması gerekenler: PR #382'i gözden geçirip merge et. Vercel deploy
+  rate-limit (issue #319) yüzünden preview kırmızı olabilir; kod kapıları yeşil.
+Sonraki lane için notlar: #186 madde 1/3 → insan (Resend paneli). #377 →
+  LANE-AUTH (`supabase/templates/**`). #386 → LANE-INFRA (e-posta sahipliği).
+```
+
+**Devir:** #386 açıldı (`lane:infra` + `agent:handoff`) — `src/server/email/**`
+sahiplik tablosunda sahipsiz; kod yazmadan sahiplik tanımı istendi.
