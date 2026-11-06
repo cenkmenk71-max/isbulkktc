@@ -42,9 +42,25 @@ export type SupabaseCall =
 
 export type MailCall = { template: string; payload: Record<string, unknown> };
 
+/**
+ * One promotional digest send, as the engagement-digest route issued it. Recorded
+ * separately from `MailCall` because its contract is richer than a template name:
+ * the *recipient*, the *unsubscribe link* and the *idempotency campaign id* are
+ * the things that must be right, and a generic payload recorder would hide them.
+ */
+export type EngagementMailCall = {
+  to: string;
+  locale: string | null | undefined;
+  name?: string | null;
+  jobs: { title: string; company: string; url?: string }[];
+  unsubscribeUrl: string;
+  campaignId: string;
+};
+
 export type Recorded = {
   supabase: SupabaseCall[];
   mail: MailCall[];
+  engagementMail: EngagementMailCall[];
   revalidated: string[];
   revalidatedTags: string[];
   redirects: string[];
@@ -233,6 +249,7 @@ export class FakeSupabase {
 export const recorded: Recorded = {
   supabase: [],
   mail: [],
+  engagementMail: [],
   revalidated: [],
   revalidatedTags: [],
   redirects: [],
@@ -256,11 +273,19 @@ export const authCalls: {
 // mocks, so the boundary always sees the current value. Kept private: tests drive
 // them through those functions and assert on `recorded`.
 let fakeSupabase = new FakeSupabase();
+// The `service_role` client the cron/unsubscribe routes reach for. `null` by
+// default, matching a deployment without the service key — a test that needs it
+// passes a script to `resetBoundary`'s second argument.
+let fakeServiceSupabase: FakeSupabase | null = null;
 let requestHeaders = new Headers();
 
-export function resetBoundary(script: FakeSupabaseScript = {}): FakeSupabase {
+export function resetBoundary(
+  script: FakeSupabaseScript = {},
+  serviceScript: FakeSupabaseScript | null = null,
+): FakeSupabase {
   recorded.supabase.length = 0;
   recorded.mail.length = 0;
+  recorded.engagementMail.length = 0;
   recorded.revalidated.length = 0;
   recorded.revalidatedTags.length = 0;
   recorded.redirects.length = 0;
@@ -269,6 +294,7 @@ export function resetBoundary(script: FakeSupabaseScript = {}): FakeSupabase {
   mailFailures.clear();
   requestHeaders = new Headers();
   fakeSupabase = new FakeSupabase(script);
+  fakeServiceSupabase = serviceScript ? new FakeSupabase(serviceScript) : null;
   return fakeSupabase;
 }
 
@@ -347,7 +373,9 @@ export function installBoundaryMocks(): void {
         return fakeSupabase;
       },
       createSupabasePublicClient: () => fakeSupabase,
-      createSupabaseServiceClient: () => null,
+      // `null` unless a test opted in, so the "not configured" 503 paths stay
+      // reachable; a route that runs with it must go through the same recorder.
+      createSupabaseServiceClient: () => fakeServiceSupabase,
     },
   });
 
@@ -361,6 +389,10 @@ export function installBoundaryMocks(): void {
       sendResumeReceivedEmail: async (payload: Record<string, unknown>) => recordMail("resume", payload),
       sendWelcomeEmail: async (payload: Record<string, unknown>) => recordMail("welcome", payload),
       sendJobPublishedEmail: async (payload: Record<string, unknown>) => recordMail("jobPublished", payload),
+      sendEngagementEmail: async (input: EngagementMailCall) => {
+        recordMail("engagement", input as unknown as Record<string, unknown>);
+        recorded.engagementMail.push(input);
+      },
       getFeedbackInbox: () => null,
     },
   });
