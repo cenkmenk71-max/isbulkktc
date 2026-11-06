@@ -141,7 +141,9 @@ issue açar.
   yakalanır.
 - **`SECURITY DEFINER` hijyeni:** 83 definer fonksiyonunun hepsi `set search_path
   = ''` ile sabitlenmiş ve gövdeleri tam nitelikli (`pg_catalog.*`, `public.*`)
-  referans kullanıyor.
+  referans kullanıyor. Denetleyici her iki yazımı (`= ''` ve `to ''`) kabul eder
+  ve boş olmayan bir yol (`set search_path = '' , public`) **reddeder** — aksi
+  hâlde pin gerçekte boş olmaz.
 - **Yönetici RPC'leri:** 13 `admin_*` fonksiyonunun tamamı gövdesinde
   `has_platform_role('platform_admin')` çağırıyor; bu da imzalı JWT'de `aal2`
   ister. İstemci bu fonksiyonları doğrudan çağırabilse bile yetki yükseltmesi yok.

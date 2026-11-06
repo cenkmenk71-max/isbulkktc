@@ -175,13 +175,22 @@ test("every public table is revoked from anon and authenticated", () => {
 // references (all 82 definer functions follow it today).
 // ---------------------------------------------------------------------------
 
+/**
+ * True when an option block pins `search_path` to the empty string *and nothing
+ * else*. Accepts both spellings Postgres allows (`= ''` and `to ''`) and
+ * rejects a path that keeps any schema — the earlier `/set\s+search_path\s*=\s*''/`
+ * matched `set search_path = '' , public` (a non-empty path, so the pin was not
+ * actually empty) and missed the valid `set search_path to ''`.
+ */
+const pinnedSearchPath = /set\s+search_path\s*(?:=|\bto\b)\s*''(?![ \t]*,)/i;
+
 test("every security definer function sets search_path = ''", () => {
   const offenders: string[] = [];
 
   for (const { name, sql } of files) {
     for (const match of definerFunctions(sql)) {
       if (!match.definer) continue;
-      if (!/set\s+search_path\s*=\s*''/i.test(match.options)) {
+      if (!pinnedSearchPath.test(match.options)) {
         offenders.push(`${name}: ${match.signature}`);
       }
     }
@@ -215,13 +224,26 @@ test("the definer matcher sees tagged dollar quotes and flags an unpinned body (
   );
   assert.equal(unpinned.length, 1);
   assert.equal(unpinned[0].definer, true);
-  assert.equal(/set\s+search_path\s*=\s*''/i.test(unpinned[0].options), false);
+  assert.equal(pinnedSearchPath.test(unpinned[0].options), false);
 
   const pinned = definerFunctions(
     "create function public.f() returns void language sql security definer set search_path = '' as $$ select 1 $$;",
   );
   assert.equal(pinned.length, 1);
-  assert.equal(/set\s+search_path\s*=\s*''/i.test(pinned[0].options), true);
+  assert.equal(pinnedSearchPath.test(pinned[0].options), true);
+});
+
+test("the search_path matcher accepts both spellings and rejects a kept schema (self-test)", () => {
+  // `to` is a valid synonym for `=` in `SET`, so both must count as pinned.
+  assert.equal(pinnedSearchPath.test("set search_path to ''"), true);
+  assert.equal(pinnedSearchPath.test("set search_path = ''"), true);
+  assert.equal(pinnedSearchPath.test("set search_path=''"), true);
+  // A path that keeps any schema is not an empty pin — the earlier pattern
+  // accepted this and left the function effectively unpinned.
+  assert.equal(pinnedSearchPath.test("set search_path = '' , public"), false);
+  assert.equal(pinnedSearchPath.test("set search_path = '', pg_temp"), false);
+  assert.equal(pinnedSearchPath.test("set search_path = 'public'"), false);
+  assert.equal(pinnedSearchPath.test("set search_path = public"), false);
 });
 
 // ---------------------------------------------------------------------------

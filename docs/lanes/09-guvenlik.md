@@ -488,3 +488,24 @@ Kendi `sql-hardening.test.ts`'imi denetledim: RLS ve tablo-revoke testleri tablo
   kalırdı.
 - **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
   #102.
+
+## Durum (2026-11-06, 21. tur) — `search_path` pin doğruluğu
+
+`sql-hardening.test.ts`'teki `search_path` denetimini inceledim: `/set\s+search_path\s*=\s*''/`
+idi.
+
+- **Bulgu 1 (yanlış negatif):** `set search_path = '' , public` **geçiyordu** —
+  yani pin gerçekte boş değil, `public` hâlâ yolda. Böyle bir definer fonksiyon
+  hijack'e açık kalır ama test onu "pinli" sayardı.
+- **Bulgu 2 (yanlış pozitif):** `set search_path to ''` — `TO`, `SET` için geçerli
+  bir eşanlamlı — **tanınmıyordu**; doğru yazılmış bir fonksiyon "pinlenmemiş"
+  diye işaretlenirdi.
+- **Düzeltme:** tek bir `pinnedSearchPath` =
+  `/set\s+search_path\s*(?:=|\bto\b)\s*''(?![ \t]*,)/i` — hem `=` hem `to`'yu kabul
+  eder, ardından virgülle başka şema gelirse reddeder. Self-test altı biçimi
+  doğrular; 84 gerçek definer fonksiyonun tamamı geçer (regresyon yok).
+- **Kanıt (mutation):** `set search_path = '' , public` yazan scratch definer →
+  **kırmızı** (eskiden yeşildi); `set search_path to ''` yazan → **yeşil** (eskiden
+  yanlış-pozitif).
+- **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
+  #102.
