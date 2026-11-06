@@ -42,18 +42,28 @@ const allSql = files.map((f) => f.sql).join("\n");
 // 1. RLS is enabled wherever a public table is created.
 // ---------------------------------------------------------------------------
 
+/**
+ * Matches every `create table public.<name>` in a migration, across the
+ * qualifiers Postgres accepts before `table`:
+ *
+ *   - `create table` / `create table if not exists`
+ *   - `create unlogged table` (a durable table, still needs RLS + revoke)
+ *   - `create temporary table` / `create temp table` / `create global temporary table`
+ *
+ * `[A-Za-z0-9_]+` captures a digit-suffixed name whole (`audit_log2`, which an
+ * earlier `[a-z_]+` truncated to `audit_log`), and the optional quotes capture a
+ * quoted identifier (`public."Audit_Log"`). The optional qualifier group is what
+ * the earlier pattern missed: `create unlogged table public.x` created a table
+ * this suite never saw, so its RLS and revoke were never checked.
+ */
+const createdTablePattern =
+  /create\s+(?:global\s+temporary\s+|temporary\s+|temp\s+|unlogged\s+)?table\s+(?:if\s+not\s+exists\s+)?public\."?([A-Za-z0-9_]+)"?/gi;
+
 test("every public table enables row level security", () => {
   const offenders: string[] = [];
 
   for (const { name, sql } of files) {
-    // `[a-z0-9_]+` so a digit-suffixed table name is captured whole; the earlier
-    // `[a-z_]+` truncated `audit_log2` to `audit_log`, and a `create table` with
-    // no matching `alter table … enable row level security` would then slip past
-    // because the truncated name was never checked. Quoted identifiers are
-    // captured too, so `public."Audit_Log"` is not invisible.
-    const created = [
-      ...sql.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?public\."?([A-Za-z0-9_]+)"?/gi),
-    ].map((m) => m[1]);
+    const created = [...sql.matchAll(createdTablePattern)].map((m) => m[1]);
     for (const table of created) {
       const enabled = new RegExp(
         `alter\\s+table\\s+public\\.\\s*"?${table}"?\\s+enable\\s+row\\s+level\\s+security`,
@@ -70,16 +80,18 @@ test("every public table enables row level security", () => {
   );
 });
 
-test("the RLS table matcher handles digits and quoting (self-test)", () => {
+test("the RLS table matcher handles digits, quoting and create qualifiers (self-test)", () => {
   // Guards the guard: a create-table form the regex cannot see is a table whose
   // missing RLS is never reported.
-  const captured = (sql: string) =>
-    [...sql.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?public\."?([A-Za-z0-9_]+)"?/gi)].map(
-      (m) => m[1],
-    );
+  const captured = (sql: string) => [...sql.matchAll(createdTablePattern)].map((m) => m[1]);
   assert.deepEqual(captured("create table public.audit_log2 (id int);"), ["audit_log2"]);
   assert.deepEqual(captured('create table public."Audit_Log" (id int);'), ["Audit_Log"]);
   assert.deepEqual(captured("create table if not exists public.t9 (id int);"), ["t9"]);
+  // The qualifier forms must be seen too, or a table could ship with no RLS.
+  assert.deepEqual(captured("create unlogged table public.probe (id int);"), ["probe"]);
+  assert.deepEqual(captured("create temporary table public.probe (id int);"), ["probe"]);
+  assert.deepEqual(captured("create temp table public.probe (id int);"), ["probe"]);
+  assert.deepEqual(captured("create global temporary table public.probe (id int);"), ["probe"]);
 });
 
 // ---------------------------------------------------------------------------
@@ -100,9 +112,7 @@ test("the RLS table matcher handles digits and quoting (self-test)", () => {
 function createdTables(): Set<string> {
   const tables = new Set<string>();
   for (const { sql } of files) {
-    for (const match of sql.matchAll(
-      /create\s+table\s+(?:if\s+not\s+exists\s+)?public\."?([A-Za-z0-9_]+)"?/gi,
-    )) {
+    for (const match of sql.matchAll(createdTablePattern)) {
       tables.add(match[1]);
     }
   }

@@ -23,7 +23,7 @@ a boundary regression is attributable at a glance.
 |---|---|
 | `open-redirect.test.ts` | `/[locale]/install?next=` continuation stays same-origin |
 | `auth-redirect-boundary.test.ts` | `/auth/callback` query values (`next`, `flow`, `sb_flow_id`) never become an off-origin path |
-| `sql-hardening.test.ts` | RLS on every table, every table revoked from the client roles, pinned `search_path`, function grant/revoke pairing, the `admin_*` role guard, the AAL2 gate on `has_platform_role`, the in-body `auth.role()` guard on every `service_role`-only RPC, pgTAP ratchet drift |
+| `sql-hardening.test.ts` | RLS on every table (any `create [unlogged\|temp] table` form), every table revoked from the client roles, pinned `search_path`, function grant/revoke pairing, the `admin_*` role guard, the AAL2 gate on `has_platform_role`, the in-body `auth.role()` guard on every `service_role`-only RPC, pgTAP ratchet drift |
 | `client-boundary.test.ts` | no client module imports server code (static, dynamic `import()` or `require()`) or reads secrets; `server-only` markers |
 | `ci-workflow-permissions.test.ts` | every `pull_request` workflow declares least-privilege permissions — **every** `permissions:` block, top-level and job-level; no `pull_request_target`; the auto-merge gate still refuses to merge a change to the workflows themselves |
 | `notification-worker-auth.test.ts` | the edge worker authenticates before it inspects configuration |

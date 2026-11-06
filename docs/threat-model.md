@@ -136,7 +136,9 @@ issue açar.
   revoke'lu. `tests/security/sql-hardening.test.ts` bu üçünü her migration'da
   statik olarak zorlar — fonksiyon grant'ını pgTAP ratchet whitelist'i ile
   karşılaştırır (isim + argüman sayısı), tablo revoke'unu ise (virgüllü çoklu
-  liste dâhil) doğrudan denetler — böylece Docker beklemeden sapma yakalanır.
+  liste dâhil) doğrudan denetler; tablo matcher'ı `create [unlogged|temp|global
+  temporary] table` biçimlerinin hepsini görür — böylece Docker beklemeden sapma
+  yakalanır.
 - **`SECURITY DEFINER` hijyeni:** 83 definer fonksiyonunun hepsi `set search_path
   = ''` ile sabitlenmiş ve gövdeleri tam nitelikli (`pg_catalog.*`, `public.*`)
   referans kullanıyor.

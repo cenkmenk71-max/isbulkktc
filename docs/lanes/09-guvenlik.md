@@ -469,3 +469,22 @@ için düzeltme bende.
   self-test. (Mutation: `localPatterns`'ı kaldır → kırmızı.)
 - **#324 kapatılabilir.** Kalan `todo`'lar: #298, #206, #102.
 - **Bakılmayan:** yok — 13 test dosyası + 2 doküman.
+
+## Durum (2026-11-06, 20. tur) — `create table` biçim varyantları
+
+Kendi `sql-hardening.test.ts`'imi denetledim: RLS ve tablo-revoke testleri tabloları
+`create table` biçimiyle arıyordu.
+
+- **Bulgu + düzeltme: `unlogged`/`temporary` tablolar görünmüyordu.**
+  Postgres `create unlogged table public.x` / `create temp[orary] table public.x` /
+  `create global temporary table public.x` biçimlerini kabul eder; eski matcher
+  (`create\s+table`) bunları **kaçırıyordu** (kanıtlandı: yalnız düz biçim
+  yakalanıyordu). Böyle bir tablo RLS'siz ve revoke'suz yayınlanıp iki testi de
+  yeşil bırakabilirdi. Tek bir `createdTablePattern` (isteğe bağlı
+  `global temporary|temporary|temp|unlogged` niteleyicisi) hem RLS hem revoke
+  testinde kullanılıyor; self-test dört biçimi de doğrular.
+- **Kanıt (mutation):** scratch `create unlogged table public.probe_unlogged` →
+  hem RLS hem tablo-revoke testi **kırmızı**; eski matcher'da ikisi de yeşil
+  kalırdı.
+- **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
+  #102.
