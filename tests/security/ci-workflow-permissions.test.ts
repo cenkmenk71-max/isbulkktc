@@ -26,6 +26,77 @@ const workflowsDir = new URL("../../.github/workflows/", import.meta.url);
 
 type Workflow = { name: string; yaml: string; onPullRequest: boolean };
 
+/**
+ * The event names a workflow's `on:` trigger declares, across every YAML form
+ * GitHub accepts:
+ *
+ *  - block form — `on:\n  pull_request:` (what this repo uses today);
+ *  - sequence form — `on: [push, pull_request]`;
+ *  - flow-map form — `on: { pull_request: {} }`;
+ *  - a block whose children are sequences — `on:\n  - pull_request`.
+ *
+ * The earlier check was `/^\s{0,4}pull_request:\s*$/m`, which only matches the
+ * block form. A `pull_request_target` declared as `on: [pull_request_target]` or
+ * `on: { pull_request_target: {} }` — or a `pull_request` trigger written the
+ * same way — was therefore **invisible**: the `pull_request_target` gate below
+ * and the "every pull_request workflow declares permissions" gate both stayed
+ * green while the trigger was present. A pull_request_target workflow runs with
+ * the base repo's token *and* secrets while checking out the untrusted PR head,
+ * so that is the exact privilege-escalation shape this suite exists to catch.
+ *
+ * No YAML parser is a dependency, so this is a small indentation scanner. It is
+ * only as good as its self-test (below), which drives every form for both event
+ * names.
+ */
+function triggerEvents(yaml: string): Set<string> {
+  const events = new Set<string>();
+  const lines = yaml.split("\n");
+
+  const addName = (raw: string) => {
+    const name = raw.trim().replace(/^["']|["']$/g, "");
+    if (/^[A-Za-z_]+$/.test(name)) events.add(name);
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const key = lines[index].match(/^["']?on["']?:[ \t]*(.*)$/);
+    if (!key) continue;
+    const inline = key[1].replace(/\s*#.*$/, "").trim();
+
+    if (inline.startsWith("[")) {
+      for (const part of inline.replace(/^\[|\]$/g, "").split(",")) addName(part);
+      continue;
+    }
+    if (inline.startsWith("{")) {
+      for (const part of inline.replace(/^\{|\}$/g, "").split(",")) addName(part.split(":")[0]);
+      continue;
+    }
+    if (inline.length > 0) {
+      addName(inline);
+      continue;
+    }
+
+    // Block form: the child lines deeper than the `on:` key.
+    let childIndent = -1;
+    for (let next = index + 1; next < lines.length; next += 1) {
+      const line = lines[next];
+      if (line.trim() === "" || line.trim().startsWith("#")) continue;
+      const indent = line.match(/^[ \t]*/)![0].length;
+      if (indent === 0) break;
+      if (childIndent === -1) childIndent = indent;
+      if (indent < childIndent) break;
+      if (indent > childIndent) continue;
+      const sequence = line.match(/^[ \t]*-[ \t]*([A-Za-z_]+)[ \t]*$/);
+      if (sequence) {
+        addName(sequence[1]);
+        continue;
+      }
+      const childKey = line.match(/^[ \t]*([A-Za-z_]+):/);
+      if (childKey) addName(childKey[1]);
+    }
+  }
+  return events;
+}
+
 function workflows(): Workflow[] {
   return readdirSync(workflowsDir)
     .filter((name) => /\.ya?ml$/.test(name))
@@ -34,7 +105,7 @@ function workflows(): Workflow[] {
       const yaml = readFileSync(new URL(name, workflowsDir), "utf8");
       // A `pull_request` trigger (not `pull_request_target`, which runs with the
       // base repo's token and is the dangerous variant).
-      const onPullRequest = /^\s{0,4}pull_request:\s*$/m.test(yaml);
+      const onPullRequest = triggerEvents(yaml).has("pull_request");
       return { name, yaml, onPullRequest };
     });
 }
@@ -178,15 +249,40 @@ test("the permissions scanner sees every YAML form, at any indent (self-test)", 
 test("no workflow uses the pull_request_target trigger", () => {
   // `pull_request_target` runs with the base repository's token *and* secrets,
   // while checking out (by default) the untrusted PR head — the classic
-  // privilege-escalation shape. None of these workflows need it.
+  // privilege-escalation shape. None of these workflows need it. The trigger is
+  // read through `triggerEvents`, so the sequence and flow-map spellings are
+  // seen too (the earlier block-only regex was blind to them).
   const offenders = all
-    .filter((workflow) => /^\s{0,4}pull_request_target:\s*$/m.test(workflow.yaml))
+    .filter((workflow) => triggerEvents(workflow.yaml).has("pull_request_target"))
     .map((workflow) => workflow.name);
   assert.deepEqual(
     offenders,
     [],
     `workflows using pull_request_target: ${offenders.join(", ")}`,
   );
+});
+
+test("the trigger scanner sees every YAML form of `on:` (self-test)", () => {
+  // Guards the guard: a trigger form the scanner cannot read is a
+  // pull_request_target (or a pull_request) that never reaches the gates above.
+  const has = (yaml: string, event: string) => triggerEvents(yaml).has(event);
+
+  assert.equal(has("on:\n  pull_request:\n  push:\n", "pull_request"), true);
+  assert.equal(has("on: [push, pull_request]\n", "pull_request"), true);
+  assert.equal(has("on: { pull_request: {} }\n", "pull_request"), true);
+  assert.equal(has("on:\n  - push\n  - pull_request\n", "pull_request"), true);
+
+  assert.equal(has("on:\n  pull_request_target:\n", "pull_request_target"), true);
+  assert.equal(has("on: [push, pull_request_target]\n", "pull_request_target"), true);
+  assert.equal(has("on: { pull_request_target: {} }\n", "pull_request_target"), true);
+  assert.equal(has("on:\n  pull_request_target:\n    types: [opened]\n", "pull_request_target"), true);
+
+  // A `#` comment or a string that merely mentions the name is not a trigger.
+  assert.equal(has("on:\n  push:\n# pull_request_target is banned\n", "pull_request_target"), false);
+  assert.equal(has("name: pull_request_target\non:\n  push:\n", "pull_request_target"), false);
+  // `pull_request` must not be confused with `pull_request_target`.
+  assert.equal(has("on:\n  pull_request_target:\n", "pull_request"), false);
+  assert.equal(has("on:\n  pull_request:\n", "pull_request_target"), false);
 });
 
 test("the lane auto-merge gate refuses to merge a change to the workflows themselves", () => {

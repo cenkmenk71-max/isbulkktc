@@ -389,3 +389,53 @@ Her ikisi için self-test eklendi (blok/flow-map/scalar; `grant all`/`grant
 execute`/`to public`), böylece tarayıcı bir daha daraltılırsa CI kırmızı olur.
 Bu tur **hiçbir dış sınırı değiştirmedi** — mevcut kontroller zaten doğruydu;
 kapatılan şey onları koruyan guard'ın körlüğüydü.
+
+### Katmanın kendi dedektörleri (30. tur — `on:` tetikleyici, paren'siz grant, script-src pin)
+
+Aynı sınıf (dar matcher) için kalan dedektörler tarandı; **üç** yanlış-negatif
+bulundu, kanıtlandı ve düzeltildi. Üçü de guard'ın körlüğüydü, dış sınır
+değişmedi.
+
+- **`ci-workflow-permissions.test.ts` `on:` tetikleyicisini yalnız blok
+  biçiminde okuyordu.** İki ayrı regex vardı: `/^\s{0,4}pull_request:\s*$/m`
+  (`onPullRequest` için) ve `/^\s{0,4}pull_request_target:\s*$/m` (`pull_request_target`
+  kapısı için). GitHub `on:`'u dizi (`on: [push, pull_request]`) ve flow-map
+  (`on: { pull_request: {} }`) biçimlerinde de kabul eder; ikisi de **hiç
+  görünmüyordu**. Kanıt: dört biçim denendi, yalnız blok biçimi `true` döndü.
+  Etki: `on: [pull_request_target]` yazan bir workflow (base repo jetonu + sırları
+  ile, üstelik güvenilmeyen PR head'i checkout ederek) `pull_request_target`
+  kapısından **geçerdi**; `on: { pull_request: {} }` yazan bir workflow ise
+  "top-level permissions bildirmeli" kapısından muaf kalırdı. YAML parser
+  bağımlılığı yok, bu yüzden `triggerEvents` adında küçük bir girinti tarayıcısı
+  eklendi: blok, dizi, flow-map ve blok-içi dizi biçimlerinin hepsini, ayrıca
+  `#` yorumunu atlayarak okur. Her iki event adı için self-test eklendi.
+  (Mutation: `on: { pull_request_target: {} }` yazan scratch workflow → kapı
+  kırmızı, eski regex'te yeşil kalırdı.)
+- **`sql-hardening.test.ts` grant/revoke tarayıcıları paren'siz sıfır-argüman
+  biçimini kaçırıyordu.** `grant execute on function public.f(text) to anon;`
+  görülüyordu ama Postgres'in kabul ettiği `grant execute on function public.f
+  to anon;` (sıfır argümanlı fonksiyon, argüman listesi atlanmış) **hiçbir** üç
+  tarayıcıda (`serviceRoleOnlySignatures`, `grantedToClients`,
+  `revokedFromClients`) eşleşmiyordu — çünkü hepsi `\(([^)]*)\)` şart koşuyordu.
+  Etki: paren'siz yazılmış bir `grant … to anon` "client grant" sayılmaz, onu
+  eşleştiren bir `revoke` aranmaz; yani bir fonksiyon revoke'suz istemciye
+  açılıp "her client grant bir revoke ile eşleşmeli" kapısını **yeşil
+  bırakabilirdi**. Argüman listesi artık isteğe bağlı (`(?:\(([^)]*)\))?`) ve
+  yokluğunda `()` (sıfır argüman) sayılıyor. İki self-test eklendi.
+  (Mutation: paren'siz `grant execute … to anon` yazan scratch migration →
+  "client-callable functions granted without a matching revoke" kırmızı; eski
+  regex satırda **0** eşleşme veriyordu.)
+- **`security-headers.test.ts` `script-src` yalnız çıplak joker/yasaklı token
+  arıyordu.** İki assertion `*` ve çıplak `https:`'i reddediyordu ama **yeni bir
+  açık host** eklemeyi hiç görmüyordu. Kanıt: `script-src … https://evil.example`
+  eklenince üç assertion da geçti (`true`). Etki: hangi origin'in script
+  çalıştırabileceğini belirleyen tek direktif, tek satırlık bir düzenlemeyle
+  genişletilip suite yeşil bırakılabilirdi — XSS sınırı sessizce açılırdı.
+  `script-src` kaynak listesi artık birebir sabitleniyor (pin); header ancak bu
+  listeyi değiştirerek değişebilir. (Mutation: `next.config.ts` `script-src`'ye
+  `https://evil.example` → pin kırmızı; eski assertion'larda yeşil kalırdı.)
+
+Ders: bir guard'ın regex'i ne kadar dar olursa koruduğu sınır o kadar deliktir;
+her yeni biçim (YAML flow/dizi, SQL paren'siz imza, CSP açık host) için önce
+self-test yaz — ve bir "yasakla" kontrolünü "sabitle" kontrolüyle eşleştir;
+yasak liste yalnız bildiği kötü biçimi görür, sabit liste bilinmeyeni de durdurur.

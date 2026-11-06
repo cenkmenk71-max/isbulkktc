@@ -115,6 +115,30 @@ test("the CSP script-src does not allow a wildcard or a bare scheme", () => {
   assert.ok(!/'unsafe-eval'/.test(scriptSrc), `script-src allows unsafe-eval: ${scriptSrc}`);
 });
 
+test("the CSP script-src host set is pinned, not merely wildcard-free", () => {
+  // The two checks above only reject a bare `*` or bare `https:`. They say nothing
+  // about an *added explicit host*: appending `https://evil.example` to script-src
+  // passed every assertion above, so the one directive that decides which origins
+  // may run script could be widened by a one-line edit and the suite stayed green.
+  // Pin the exact source list; the header can only change by changing this list.
+  const csp = headerValue("content-security-policy")!;
+  const scriptSrc = /(?:^|;\s*)script-src\s+([^;]*)/.exec(csp)?.[1] ?? "";
+  const sources = scriptSrc.trim().split(/\s+/).filter(Boolean);
+  assert.deepEqual(
+    sources,
+    [
+      "'self'",
+      "'unsafe-inline'",
+      "https://challenges.cloudflare.com",
+      "https://*.challenges.cloudflare.com",
+      "https://static.cloudflareinsights.com",
+      "https://www.googletagmanager.com",
+      "https://www.google-analytics.com",
+    ],
+    "script-src gained or lost a source; review it against docs/threat-model.md",
+  );
+});
+
 test("the CSP directive set is complete and no directive is a bare wildcard", () => {
   const csp = headerValue("content-security-policy")!;
   const directives = new Map<string, string>();

@@ -393,7 +393,7 @@ function serviceRoleOnlySignatures(sql: string = allSql): string[] {
   // never entered this set, so its missing `auth.role()` guard was never
   // checked — the precise false-negative this suite exists to prevent.
   const re =
-    /grant\s+(?:execute|all)\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*\(([^)]*)\)\s+to\s+([^;]+);/gi;
+    /grant\s+(?:execute|all)\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*(?:\(([^)]*)\))?\s+to\s+([^;]+);/gi;
   for (const match of sql.matchAll(re)) {
     const roles = match[3].toLowerCase();
     const signature = `${match[1]}(${normalizeArgs(match[2])})`;
@@ -493,20 +493,22 @@ const deliberatePublicRpcs = new Set([
   "submit_sales_lead(text, text, text, text, text, integer, text, text)",
 ]);
 
-function normalizeArgs(args: string): string {
-  return args.replace(/\s+/g, " ").trim();
+function normalizeArgs(args: string | undefined): string {
+  return (args ?? "").replace(/\s+/g, " ").trim();
 }
 
 function grantedToClients(sql: string): Set<string> {
   const granted = new Set<string>();
   // `grant (execute|all)` and a role list that names `anon`, `authenticated` *or*
   // `public`. The earlier `grant execute … to (anon|authenticated)` form missed
-  // two real exposures: `grant all on function …` (ALL includes EXECUTE) and
-  // `grant … to public` (the implicit-PUBLIC grant every role inherits). Both are
-  // exactly the shape the repository revokes; ignoring them would let a new
-  // migration hand a function to every caller and still pass.
+  // three real exposures: `grant all on function …` (ALL includes EXECUTE),
+  // `grant … to public` (the implicit-PUBLIC grant every role inherits), and the
+  // paren-less spelling of a zero-argument function (`grant execute on function
+  // public.f to anon;`, which Postgres accepts). All three are exactly the shape
+  // the repository revokes; ignoring any of them would let a new migration hand a
+  // function to every caller and still pass.
   const re =
-    /grant\s+(?:execute|all)\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*\(([^)]*)\)\s+to\s+([^;]+);/gi;
+    /grant\s+(?:execute|all)\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*(?:\(([^)]*)\))?\s+to\s+([^;]+);/gi;
   for (const match of sql.matchAll(re)) {
     if (/\b(?:anon|authenticated|public)\b/.test(match[3].toLowerCase())) {
       granted.add(`${match[1]}(${normalizeArgs(match[2])})`);
@@ -518,7 +520,7 @@ function grantedToClients(sql: string): Set<string> {
 function revokedFromClients(sql: string): Set<string> {
   const revoked = new Set<string>();
   const re =
-    /revoke\s+all\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*\(([^)]*)\)\s+from\s+([^;]+);/gi;
+    /revoke\s+all\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*(?:\(([^)]*)\))?\s+from\s+([^;]+);/gi;
   for (const match of sql.matchAll(re)) {
     const roles = match[3].toLowerCase();
     if (/\banon\b/.test(roles) && /\bauthenticated\b/.test(roles)) {
@@ -534,6 +536,20 @@ test("the grant matcher sees `grant all` and `to public` (self-test)", () => {
   assert.deepEqual(granted("grant all on function public.f(text) to anon;"), ["f(text)"]);
   assert.deepEqual(granted("grant execute on function public.f(text) to public;"), ["f(text)"]);
   assert.deepEqual(granted("grant execute on function public.f(text) to service_role;"), []);
+  // The paren-less form is valid for a zero-argument function and grants the
+  // same function. The earlier `\(([^)]*)\)`-only pattern did not see it, so a
+  // `grant execute on function public.f to anon;` was invisible to this check.
+  assert.deepEqual(granted("grant execute on function public.f to anon;"), ["f()"]);
+  assert.deepEqual(granted("grant all on function public.f to public;"), ["f()"]);
+});
+
+test("the revoke matcher sees the paren-less zero-argument form (self-test)", () => {
+  const revoked = (sql: string) => [...revokedFromClients(sql)];
+  assert.deepEqual(revoked("revoke all on function public.f() from public, anon, authenticated;"), ["f()"]);
+  // Valid for a zero-argument function; the earlier pattern required the empty
+  // `()` and so missed a revoke written without it.
+  assert.deepEqual(revoked("revoke all on function public.f from public, anon, authenticated;"), ["f()"]);
+  assert.deepEqual(revoked("revoke all on function public.f from anon;"), []);
 });
 
 test("every client EXECUTE grant is paired with an explicit anon+authenticated revoke", () => {
