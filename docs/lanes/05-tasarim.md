@@ -626,3 +626,69 @@ aralığı)** boyutları ölçüldü.
 - **#191 e-posta tarafı** hâlâ `lane:urun` + `agent:handoff` (tur 4).
 - Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
   `docs/lanes/05-tasarim.md`. Hepsi bu lane'in kapsamında.
+
+---
+
+## LANE-TASARIM çalışma notları (2026-11-05, tur 9)
+
+Branch: `lane/tasarim`. Taban: `origin/main` @ `b8d730f`. Kuyrukta `lane:tasarim`
+etiketli tek iş yine **#191** (e-posta tarafı sahiplik çelişkisinde, devirde). Bu
+turda brief'in 2. (RTL) ve 3. (klavye/`aria-*`) maddeleri ile link bütünlüğü
+tarandı.
+
+### Bulgu 10 — Mantıksal boşluk rezervi + fiziksel konum: RTL'de ikon yanlış tarafta (düzeltildi)
+
+- **Belirti (3 örnek, aynı sınıf):**
+  - `.editorial-password-toggle` `right: 7px` iken girdi
+    `padding-inline-end: 48px` rezerve ediyordu. RTL'de rezerv **sola** kayıyor,
+    düğme **sağda** kalıyordu → düğme metnin üstüne biniyordu
+    (ölçüm: `fa` düğme inline-start'tan 363px, rezerv inline-end'de).
+  - `.candidate-privacy-card > svg` `left: 24px` iken kart
+    `padding-inline-start: 55px` rezerve ediyordu → RTL'de ikon metinden uzak
+    köşede (svg inline-start'tan 1237px).
+  - `.language-menu` `right: 0` (mobilde `right: 16px`) iken RTL'de picker sol
+    kenara yakın → menü **viewport'tan taşıyordu** (`menuL: -3`, `clipped: true`).
+- **Kök neden:** rezerv mantıksal (`*-inline-*`), konum fiziksel (`left`/`right`);
+  `dir=rtl`'de ikisi zıt yöne gidiyor.
+- **Düzeltme:** üçü de mantıksal karşılığa çevrildi
+  (`inset-inline-end: 7px`, `inset-inline-start: 24px`, `inset-inline-end: 0/16px`).
+- **Kanıt (piksel, `deviceScaleFactor: 2`, sharp diff):**
+  - Şifre alanı: LTR **0/83232 px**, RTL **%0.96** (düğme taşındı).
+  - Dil menüsü: LTR **0/13024 px**, RTL **%19.3** (menü artık kırpılmıyor).
+- **İşlevsel doğrulama:** şifre göster/gizle düğmesi `tr` ve `fa`'da
+  `password → text` geçişini yapıyor; dil menüsü her iki yönde de viewport içinde.
+- **Guard:** `tests/unit/design-tokens.test.ts` — "icons reserve their space on the
+  same logical side under RTL": üç seçici için beklenen `inset-inline-*`
+  özelliğini şart koşar ve fiziksel `left`/`right`'ı yasaklar. Üçü de ayrı ayrı
+  negatif test edildi.
+
+### Micro-denetim (bu tur)
+
+- **`aria-*` kablolaması:** 13 public rota — `aria-labelledby`/`describedby`/
+  `controls` hedefi olmayan id yok, `role=switch` `aria-checked`'siz değil,
+  `aria-hidden` içinde odaklanabilir öğe yok → **0 bulgu**.
+- **Link bütünlüğü:** 16 rota — `target="_blank"` dış linkler `noopener noreferrer`
+  taşıyor, boş `href`, jenerik anchor metni, etiketsiz `mailto`/`tel` yok →
+  **0 bulgu**.
+- **Sektör araması:** Türkçe `toLocaleLowerCase("tr")` normalizasyonu tüm dillerde
+  doğru (de/tr'de `IT`/`it`/`It` aynı sonucu veriyor).
+- **Vend paneli klavyeyle:** 5 erişilebilir "twin" düğmesi; Enter ile panel
+  açılıyor (`data-open`, `--vend-p: 1`). Kapalıyken `visibility: hidden` sayesinde
+  Tab sırasına girmiyor.
+- **Sektör dizini Escape ile kapanmıyor** (not): disclosure bir `<button
+  aria-expanded>`; Escape desteği yok. Hata değil ama iyileştirme adayı — ayrı iş.
+- Önceki turların kontrolleri `main`'de yeşil.
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅
+- `bun run test:unit` ✅ (625 test, +1 yeni guard)
+- `tests/e2e/accessibility.spec.ts` (`fa`) + `packages.spec.ts` + `auth-flows.spec.ts` ✅
+
+### Sahibin yapması gerekenler
+
+- **#191 e-posta tarafı** hâlâ `lane:urun` + `agent:handoff` (tur 4).
+- Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
+  `docs/lanes/05-tasarim.md`. Hepsi bu lane'in kapsamında.

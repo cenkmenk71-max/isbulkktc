@@ -552,3 +552,38 @@ test("clamped headings do not truncate (WCAG 1.4.12)", () => {
     );
   }
 });
+
+/**
+ * A control whose reserved space is logical (`padding-inline-end: 48px`) but
+ * whose icon is pinned with a physical `right: 7px` drifts apart under RTL: the
+ * padding moves to the inline-start while the icon stays on the physical right,
+ * so the icon lands over the text instead of in the space carved out for it.
+ * The same applies to an inline-start reserve paired with `left`. These three
+ * shipped that way; pin the logical form so a future edit cannot reintroduce the
+ * physical one.
+ */
+test("icons reserve their space on the same logical side under RTL", () => {
+  const pairs = [
+    // [selector, expected logical property, note]
+    [".editorial-password-toggle", "inset-inline-end", "the password field reserves `padding-inline-end: 48px`"],
+    [".candidate-privacy-card > svg", "inset-inline-start", "the card reserves `padding-inline-start: 55px`"],
+    [".language-menu", "inset-inline-end", "the menu is anchored to the language picker's inline end"],
+  ];
+  for (const [selector, property, note] of pairs) {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const match = new RegExp(
+      `(?:^|\\n)\\s*${escaped}\\s*\\{([^}]*)\\}`,
+    ).exec(css);
+    assert.ok(match, `${selector} rule is missing from global.css`);
+    assert.match(
+      match[1],
+      new RegExp(`${property}\\s*:`),
+      `${selector} must use ${property} (${note}); a physical left/right does not mirror under RTL.`,
+    );
+    assert.doesNotMatch(
+      match[1],
+      /(?:^|[\s;])(?:left|right)\s*:/,
+      `${selector} must not also set a physical left/right (${note}).`,
+    );
+  }
+});

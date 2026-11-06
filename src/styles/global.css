@@ -3062,7 +3062,7 @@ a {
 .language-menu {
   position: absolute;
   top: calc(100% + 14px);
-  right: 0;
+  inset-inline-end: 0;
   z-index: 100;
   width: min(315px, calc(100vw - 32px));
   padding: 10px;
@@ -3169,7 +3169,7 @@ a {
   .language-menu {
     position: fixed;
     top: 82px;
-    right: 16px;
+    inset-inline-end: 16px;
     max-height: calc(100dvh - 98px);
     overflow-y: auto;
   }
@@ -3922,7 +3922,7 @@ a {
 .editorial-password-toggle {
   position: absolute;
   top: 50%;
-  right: 7px;
+  inset-inline-end: 7px;
   display: grid;
   width: 36px;
   height: 36px;
@@ -4646,7 +4646,7 @@ a {
 .candidate-privacy-card > svg {
   position: absolute;
   top: 24px;
-  left: 24px;
+  inset-inline-start: 24px;
   color: var(--green-mid);
 }
 .candidate-privacy-card h2 {
