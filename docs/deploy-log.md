@@ -19,6 +19,7 @@ Rule 4 of the lane brief: **every merge is recorded — what, when, verified liv
 |---|---|---|---|---|
 | 2026-11-06T01:28Z | `f7a10fd6` | `f7a10fd6` | ✅ in sync | Three consecutive `build-info` reads over ~50 min all returned `f7a10fd6`, the `main` tip after PR #301 merged. |
 | 2026-11-06T01:54Z | `f7a10fd6` | `f7a10fd6` | ✅ in sync | Fresh read after this lane's PR #307 opened. `main` unchanged; no merge landed between the two checkpoints. |
+| 2026-11-06T02:17Z | `c6e15b18` | `c406b397` | ⚠️ **behind by 2** | 🔴 **Production is frozen.** `live` is an ancestor of `main` (not diverged): `c9d932f7` (#307, this lane) and `c6e15b18` (#315) merged but never deployed — both carry `Vercel: Deployment rate limited — retry in 24 hours`. `c406b397` (#314) is the last successful production build. Handoff: issue #319. |
 
 Earlier in the session the task context reported `main` at `ef6caed3` while the
 live site served `48ff9b78`; `48ff9b78` is an ancestor of `main` (5 commits
@@ -59,9 +60,24 @@ context, not as a measurement.
    (`https://vercel.com/orijin1?upgradeToPro=build-rate-limit`). Preview builds
    are refused until the window resets or the plan is raised. `Vercel` is **not**
    a required check, so it never blocks a merge — but preview deploys are dead
-   meanwhile. Needs the owner (plan upgrade) or ~24 h.
+   meanwhile. Needs the owner (plan upgrade) or ~24 h. **Confirmed in round 2 to
+   be a *build* limit, not the storage quota**: the scheduled `Prune Vercel
+   deployments` job ran cleanly (`deleted=21 failed=0 remaining=10`) yet merges
+   still fail to build — so pruning cannot clear it.
 
-4. **PR #250's `Database` job fails a real pgTAP assertion — it is not a flake.**
+4. **🔴 Production is frozen — `main` advances, the live site does not.**
+   At 2026-11-06T02:17Z, `main` = `c6e15b18` but `build-info` returned
+   `c406b397`, an *ancestor* of `main` (behind, not diverged). The two commits in
+   between — `c9d932f7` (this lane's PR #307) and `c6e15b18` (#315) — both merged
+   but their production builds were refused by the rate limit. The last
+   successfully deployed commit is `c406b397` (#314). Consequence: the live site
+   serves an older release than `main`, so "fixed" work is not actually shipped;
+   `verify-production-deployment.mjs --expect <main tip>` correctly fails against
+   this state. Root cause and fix options are in issue #319 (LANE-INFRA). This is
+   the one finding that most directly breaks the lane's acceptance criterion
+   ("every merge verified live").
+
+5. **PR #250's `Database` job fails a real pgTAP assertion — it is not a flake.**
    Job `127550318504` shows `supabase/tests/database/table_privileges.test.sql`
    test 7, *"anonymous visitors keep the public catalogue reads"*, failing
    (`Tests: 8 Failed: 1`), so the aggregator inherits the red. A
@@ -72,7 +88,7 @@ context, not as a measurement.
    because a red `Database` on an open PR is exactly what the deploy ledger exists
    to surface.
 
-5. **E2E shards flake on a Docker port collision, not on the change.**
+6. **E2E shards flake on a Docker port collision, not on the change.**
    PR #307's first run: `E2E (2/4)` failed in *Start the seeded local Supabase
    stack* with `failed to bind host port for 0.0.0.0:54322 … address already in
    use`, while `E2E (1/4)`, `(3/4)`, `(4/4)`, `Static checks` and `Database` all

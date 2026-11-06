@@ -106,3 +106,38 @@ dokunulmadı, `agent:handoff` ile bildirildi.
 **Ölçüm.** Kapılar: `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅,
 `test:unit` **597 test / 0 fail / 4 todo**. Canlı: `main` = `f7a10fd6`, canlı =
 `f7a10fd6` (senkron).
+
+---
+
+## Tur 2 — 2026-11-06 (lane/teslimat)
+
+**Kapsam.** PR #307 (bu lane'in düzeltmeleri) merge edildi ve **canlı ölçüm**
+yapıldı. Görev 2 (deploy sağlığı) ve görev 3 (yayın doğrulaması) uygulandı.
+
+**Bulgu — 🔴 üretim donmuş (kabul ölçütünü doğrudan kıran tek şey).**
+`main` = `c6e15b18`, canlı = `c406b397`. Canlı, `main`'in **atası** (geride,
+ayrışmış değil). Aradaki iki merge (`c9d932f7` = PR #307, `c6e15b18` = PR #315)
+land edildi ama üretime **çıkmadı**: ikisinin de Vercel status'ü
+`Deployment rate limited — retry in 24 hours`. Son başarılı production build
+`c406b397` (#314).
+
+**Kota bekçisi çalışıyor ama yetmiyor.** `Prune Vercel deployments`
+(run `42144384416`, 01:31Z) başarılı: `deleted=21 failed=0 remaining=10`. Depolama
+kotası temiz; kırmızı olan **build limiti**. Yani `prune` bu tıkanıklığı açmaz —
+kısıt depolama değil, build sayısı. Lane kuralı 5 gereği sınır belgelendi ve
+çözüm önerileriyle **issue #319** açıldı (LANE-INFRA: `vercel.json`/deploy config,
+`.github/**`). Çözümün bir parçası (plan yükseltmesi) **insan/owner** kararı.
+
+**Merge kuyruğu (görev 1).** Açık PR'lar: #307 (bu lane, merge edildi ✅),
+#250 (lane/supabase, BLOCKED — `Database` job'u **gerçek** pgTAP hatası:
+`table_privileges.test.sql` test 7; sahibinin işi), #237 (lane/infra, `agent:blocked`,
+dokunulmadı). `lane-collisions` temiz. #307 CI'ı tüm zorunlu kontrollerde yeşil;
+`Vercel` kırmızısı zorunlu olmadığı için merge'i engellemedi (brief'teki `UNSTABLE`
+durumu).
+
+**Ölçüm.** `verify-production-deployment.mjs` canlıya karşı: 5/5 smoke route 200,
+`--expect <canlı sha>` ✅. Ama `--expect <main tip>` **kırmızı** — doğru sinyal,
+çünkü canlı gerçekten geride.
+
+**Devredilenler.** #319 (üretim donmuş), #305 (push workflow'ları auto-merge'de
+koşmuyor), #306 (bozuk guard ×3 + çift çağrı). Hepsi `agent:handoff`.
