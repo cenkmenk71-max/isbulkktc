@@ -610,10 +610,15 @@ challenge'ı "site geneli" sanma — temiz egress ile çapraz doğrula; (3) SPF/
 ## Tur 25 (2026-11-06) — origin başlık sahipliği + yöntem semantiği + preload blocker düzeltmesi
 
 ```
-Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: #423 (tur 25) — MERGED
 Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
-Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Çalıştırılan kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅ (729/727/0)
+                          CI: Static ✅  Database ✅  4×E2E ✅  aggregator ✅  (yalnız Vercel: #319 rate limit)
 Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF değiştirilmedi)
+Sahibin yapması gerekenler: (1) CF panelde H-01 edge HSTS max-age'i origin (2 yıl) ile hizala;
+  (2) H-02 Browser Cache TTL; (3) R-01 trailing-dot apex; (4) G-01 Email Obfuscation OFF;
+  (5) W-01 %2f normalizasyon; (6) V-20 tarayıcı-yolu WAF kuralı; (7) F-08 Vercel alias'ı kapat;
+  (8) #227 Resend DKIM'i 2048-bit'e çevir.
 ```
 
 **Bu tur ne buldu (hepsi canlı `curl`/DoH kanıtlı, `docs/cloudflare.md` → "tur 25"):**
