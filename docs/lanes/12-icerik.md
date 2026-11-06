@@ -119,3 +119,49 @@ maddi uyarı (resmî sınır değil; listeleme ≠ tescil) korundu.
   türer. `resumeImport.title` gibi meşru "içe aktar" ifadeleri listeye alınmadı.
 - Lane PR otomasyonu yeşil PR'ı otomatik merge ediyor; PR açıldıktan sonra gelen
   commit'ler yeni branch + PR ister (bu yüzden #276 ayrı açıldı).
+
+## Tur 2 — mikro-denetim (2026-11-06)
+
+**PR #308** (merge `9f79c01`). Altı bulgu sınıfı kapatıldı; hepsi kendi
+dosyamda (`src/messages/**`, `src/i18n/**`).
+
+### Bulgular
+
+| # | Anahtar | Boyut | Gözlenen (tr / en) | Düzeltme |
+|---|---|---|---|---|
+| 1 | `AboutPage.realityBody` | iç sözlük | "kayıtlar **sağlanan kaynaklardaki**…" / "records from **supplied source files**" | Pipeline'ın kendi adı çıkarıldı; ziyaretçinin eylemi anlatılıyor |
+| 2 | `CompanyDirectory.jobEmployersDescription` | iç sözlük | "**Kaynak ilanlarında** açık pozisyonu bulunan firmalar" / "in the **source listings**" | "Şu anda açık pozisyonu bulunan firmalar." |
+| 3 | `BlogMeta.description`, `BlogPage.lead` | bayat metin | "haber başlıklarını **yayıncı kaynaklarıyla** takip edin" / "**links to their publishers**" | Bölüm özgün editoryal yazı; metin bunu anlatıyor |
+| 4 | `BlogPage.feedAsideBody` | doğruluk | "**Son 30 günde yayımlanan**… başlıklar" | Renderer filtre uygulamıyor → "güncel editoryal başlıklar" |
+| 5 | `ContactPage.nextBody` | iç sözlük | "kayıtların **kaynak veriden** geldiği" / "**source data**" | "Listelenmek, doğrulanmış profil anlamına gelmez." |
+| 6 | `BlogPage.emptyTitle/metaTitle/metaDescription` | ölü anahtar | Çağıran yok | Silindi + `RETIRED_KEYS` |
+
+### Ratchet genişletmesi
+
+`src/i18n/message-catalogs.test.ts`:
+- `RETIRED_KEYS`'e üç `BlogPage` anahtarı eklendi.
+- `FORBIDDEN_INTERNAL_PHRASES` (tr): `kaynak veri`, `kaynak ilan`, `sağlanan kaynak`.
+- **Yeni `FORBIDDEN_SOURCE_VOCABULARY`:** iç-sözlük yasağı artık **6 dilde** koşar
+  (önceki tur yalnız tr'yi tarıyordu; çevirmen sızıntıyı hedef dilde geri
+  getirebilirdi). `en`e "source listings" enjekte edilerek kırmızı→yeşil kanıtlandı.
+
+### Boyut taraması (AUDIT.md)
+
+| Alan | Sonuç |
+|---|---|
+| Anahtar paritesi (6 dil) | 0 eksik/fazla |
+| Yer tutucu paritesi | 0 uyumsuz |
+| Çevrilmemiş dize | yalnız meşru (marka `İşBul KKTC`, `WhatsApp`, `Lefke`/`Güzelyurt`, `—`) |
+| İç sözlük (kaynak koordinat/veri/ilan, senkron, veritabanı, şube sayısı) | 0 eşleşme |
+| Dışa link (`src/content/editorial|guides`) | 0 (`http(s)://` yok — RSS dönemi izi temiz) |
+| Slug paritesi (editorial 3×6, guides 3×6) | tutarlı, çevrilmiş |
+| `readMinutes` (5–7) | diller arası tutarlı |
+| `src/content/ai-visibility/*` | **bakılmadı** — JSON-LD üreticisi GEO'nun |
+
+### Notlar
+
+- Lane PR otomasyonu yeşil PR'ı anında merge ediyor; **tüm commit'ler PR
+  açılmadan önce olmalı**, yoksa sonraki commit yeni branch + PR ister (#308
+  tam bu yüzden ayrı açıldı, `lane/icerik`'e force-push ile hizalandı).
+- Kanonik branch adı `lane/icerik`; `scripts/lane-collisions.mjs` başka adı
+  "does not own it" diye işaretler.
