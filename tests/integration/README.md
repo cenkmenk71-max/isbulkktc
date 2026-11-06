@@ -42,6 +42,9 @@ tests — a green step that ran zero tests is the failure mode to watch for.
 | `authorization-boundary.test.ts` | Every protected action refuses an anonymous caller and a wrong-role caller **before** it reaches the database; positive controls prove the guard admits the caller it should. |
 | `data-path.test.ts` | The write goes to the right table bound to the caller's own id; a database error is surfaced, not swallowed; mail is best-effort. |
 | `abuse-throttle.test.ts` | The actions actually call the rate limiter, keyed per address and per victim mailbox, before the RPC and its mail. |
+| `push-preference-boundary.test.ts` | The read half of the push feature: the configured/unconfigured and session/no-session branches, and the coercion of an untyped preference reply. Also pins that the VAPID env helper restores an absent key by `delete`, not by writing the string `"undefined"`. |
+| `push-subscription-actions.test.ts` | The write half: `savePushSubscription`/`removePushSubscription`/`savePushPreferences` call the right RPC with the caller's own keys, forward a truncated user-agent, and surface a database rejection instead of a silent `{ ok: true }`. |
+| `push-subscription-route.test.ts` | `POST /api/push/subscriptions`: the session gate answers 401 before the body is read, a non-JSON body is 400, the endpoint allowlist/schema is 422, a valid body writes through `register_push_subscription`, and a write failure is 502 without reflecting the database error. |
 
 ## Rules
 

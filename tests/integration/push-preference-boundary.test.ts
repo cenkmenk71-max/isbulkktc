@@ -32,34 +32,38 @@ const VAPID = {
 
 const pwaActions = () => import("@/features/pwa/actions");
 
+const VAPID_KEYS = ["VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT"] as const;
+
+/**
+ * Restores the VAPID triple exactly as it was found. An absent variable must be
+ * restored by `delete`, not by assigning `undefined`: `process.env` coerces that
+ * to the *string* `"undefined"`, which would outlive the test and be visible to
+ * every later test in the process.
+ */
+function restoreVapid(saved: Partial<Record<(typeof VAPID_KEYS)[number], string>>): void {
+  for (const key of VAPID_KEYS) {
+    const value = saved[key];
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+}
+
+function withVapidEnv<T>(env: Partial<Record<(typeof VAPID_KEYS)[number], string>>, body: () => Promise<T>): Promise<T> {
+  const saved = Object.fromEntries(VAPID_KEYS.map((key) => [key, process.env[key]]));
+  for (const key of VAPID_KEYS) {
+    const value = env[key];
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+  return body().finally(() => restoreVapid(saved));
+}
+
 function withVapid<T>(body: () => Promise<T>): Promise<T> {
-  const saved = {
-    publicKey: process.env.VAPID_PUBLIC_KEY,
-    privateKey: process.env.VAPID_PRIVATE_KEY,
-    subject: process.env.VAPID_SUBJECT,
-  };
-  Object.assign(process.env, VAPID);
-  return body().finally(() => {
-    process.env.VAPID_PUBLIC_KEY = saved.publicKey;
-    process.env.VAPID_PRIVATE_KEY = saved.privateKey;
-    process.env.VAPID_SUBJECT = saved.subject;
-  });
+  return withVapidEnv(VAPID, body);
 }
 
 function withoutVapid<T>(body: () => Promise<T>): Promise<T> {
-  const saved = {
-    publicKey: process.env.VAPID_PUBLIC_KEY,
-    privateKey: process.env.VAPID_PRIVATE_KEY,
-    subject: process.env.VAPID_SUBJECT,
-  };
-  delete process.env.VAPID_PUBLIC_KEY;
-  delete process.env.VAPID_PRIVATE_KEY;
-  delete process.env.VAPID_SUBJECT;
-  return body().finally(() => {
-    process.env.VAPID_PUBLIC_KEY = saved.publicKey;
-    process.env.VAPID_PRIVATE_KEY = saved.privateKey;
-    process.env.VAPID_SUBJECT = saved.subject;
-  });
+  return withVapidEnv({}, body);
 }
 
 test("an unconfigured deployment reports unsupported without opening a session", async () => {
@@ -140,4 +144,20 @@ test("no subscriptions means not subscribed and no preference row means null", a
   assert.equal(state.authenticated, true);
   assert.equal(state.subscribed, false);
   assert.equal(state.preferences, null);
+});
+
+test("the VAPID env is restored exactly, so an absent key does not leak as 'undefined'", async () => {
+  // The bug this pins: assigning `process.env.X = undefined` stores the string
+  // "undefined", so a test that ran with VAPID unset would leave every later
+  // test in the process seeing a configured deployment. The helper must `delete`
+  // an absent key instead.
+  const before = VAPID_KEYS.map((key) => [key, process.env[key]] as const);
+
+  await withoutVapid(async () => {});
+  await withVapid(async () => {});
+
+  for (const [key, value] of before) {
+    assert.equal(process.env[key], value, `${key} was not restored to its pre-call value`);
+    assert.notEqual(process.env[key], "undefined", `${key} leaked as the literal string "undefined"`);
+  }
 });
