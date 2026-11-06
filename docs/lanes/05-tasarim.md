@@ -972,3 +972,93 @@ ICU sayaçları için kapattığı sınıfın (#360/#391) ICU'dan geçmeyen iki 
   sayaç/işaret eklerken `Intl.NumberFormat(locale)` veya `counter(x, <style>)` kullan.
 - CSS numaralandırma sistemini **`lang`'a** bağla, `dir`'a değil: RTL ile Farsça
   aynı küme değil (`ar`/`he` RTL ama Latin rakam kullanır).
+
+---
+
+## LANE-TASARIM çalışma notları (2026-11-06, tur 13)
+
+Branch: `lane/tasarim`. Karşılaştırma tabanı: `origin/main` @ `3f5a654`.
+
+Kuyrukta `lane:tasarim` etiketli üç issue vardı (#436, #361, #191). #361 zaten
+`main`'de çözülmüş (#383/#391 — `sector-explorer.tsx` artık gerçek `number`
+geçiyor, `fa.json` üç anahtarı `{count, number}` yapmış); yalnız kalan ertelenmiş
+dize yolu yorumu ve testteki geçici `fa` yaması temizlendi. #191 (e-posta paleti)
+LANE-URUN/İÇERİK dosyalarında, bana devredilecek bir şey yok. Bu turun asıl işi
+**dokunma hedefi (44px) süpürmesi** ve **#436'nın kök neden analizi** oldu.
+
+### Bulgu 1 — 12 etkileşimli kontrol 44px tabanının altındaydı (düzeltildi)
+
+- **Belirti:** `src/styles/global.css`'te metin-stilli (yalnız `padding` ile
+  boyutlanan) kontroller 24–40px yüksekliğindeydi. WCAG 2.5.8 (target-size) ve
+  lane brief'inin "dokunma hedefleri ≥44px" kuralı ihlali.
+- **Düzeltme:** 12 seçiciye `min-height: 44px` (+ gereken yerde
+  `display: inline-flex; align-items: center`) verildi: `.sector-search-clear`,
+  `.sector-filters-reset`, `.jobs-clear-link`, `.packages-hero-link`,
+  `.footer-social-link`, `.consent-policy-link`, `.consent-close`,
+  `.pwa-push-signin`, `.sector-explorer-empty button`, `.vend-panel-duration button`,
+  `.vend-panel-back`, `.pwa-update-primary/secondary`.
+- **Kanıt (üretim standalone build, `127.0.0.1:3300`):** `playwright-core` ile
+  mobil (390×844) ölçüm — `.sector-search-clear` 44×44, `.sector-filters-reset`
+  73×44, `.jobs-clear-link` 68×44, `.packages-hero-link` 155×44,
+  `.consent-policy-link` 78×44, `.consent-btn` 350×44. DOM'da ulaşılamayan
+  durumlar (consent close, pwa sign-in, footer social) gerçek stil sayfası enjekte
+  edilerek ölçüldü: hepsi 44px.
+- **Yerleşim etkisi sınırlı:** consent kartı 24px büyüdü (582→606px), kırpma yok;
+  320/360/390px'te yatay taşma 0.
+
+### Bulgu 2 — `editorial-page-scene-video-controls` 31px; yükseltme metni kapatıyor (devredildi)
+
+- **Gözlem:** auth sayfalarındaki video kontrol düğmeleri 31px. 44px'e çıkarınca
+  üstteki `.editorial-page-scene-copy` kartıyla **6px** (390px) / **11px**
+  (1280px) yeni örtüşme oluşuyor; tablet genişliklerinde (768/900px) örtüşme
+  **kartın metnini** kapatıyor (`coversText: true`).
+- **Karar:** Bu bir düzen yeniden tasarımı gerektirir (sahne yüksekliği +
+  kontrol/ kopya konumu birlikte), sınırlı bir "boyut" düzeltmesi değil. Geri
+  alındı, guard'a eklenmedi; ölçümle birlikte not edildi.
+
+### Bulgu 3 — #436: ilçe görselleri "1.9 MB, yalnız Girne görünüyor" iddiası (kanıt)
+
+- **Kaynak vs sunulan:** `Girne.webp` diskte 1916 KB (3840×2500), ama Next.js
+  `_next/image` ile servis edilen hâli **128 KB** (390px genişlik, `quality=90`).
+  Ölçüm: mobil anasayfada hero'nun servis ettiği 6 görsel toplam **1020 KB**,
+  hiçbiri 240 KB üstü. Yani "indirilemez, bu yüzden görünmez" teorisi yanlış.
+- **6 slayt da yükleniyor:** `img.home-hero-slide` üzerinde
+  `naturalWidth > 0 && complete === true` — 6/6. Sayaç/rotasyon da 6 ilçeyi
+  döndürüyor (önceki turda doğrulanmıştı).
+- **Yine de gerçek bir kusur var:** `check-frontend-source.mjs` 500 KB bütçesi
+  yalnız sayfa hero'larını denetliyor; ilçe görselleri kapsam dışı. Kapı
+  genişletilmeli ve mobil "yükleniyor mu" E2E'si eklenmeli — bu iki iş
+  LANE-INFRA (`scripts/**`) ve LANE-QA (`tests/**`) sahipliğinde. Devredildi.
+
+### Bulgu 4 — #361 artığı: `sector-explorer.test.tsx` ertelenmiş `fa` yaması (düzeltildi)
+
+- **Gözlem:** test, `fa` kataloğuna üç anahtarı elle `{count, number}` yapıp
+  yamıyordu (kataloğun henüz tiplenmediği dönemden). `main`'de katalog tiplenmiş,
+  yama gereksiz ve yanıltıcı.
+- **Düzeltme:** yama ve eski yorum kaldırıldı; test artık gerçek katalogları
+  okuyor. `fa` render'ı canlı doğrulandı: sektör toplamı `۱۶` (Farsça rakam),
+  `aria-label` de `مجموع …: ۱۶`, Latin rakam yok, RTL taşma 0.
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅ · `bun run typecheck` ✅ · `bun run check:frontend-source` ✅
+- `bun run test:unit` ✅ **704 pass / 0 fail / 2 todo** (706 test)
+- `design-tokens.test.ts` ✅ 15/15; **negatif test edildi** — bir hedefi 44→20px
+  (footer-social-link), 44→38px (vend-duration) ve 44→36px (pwa-update-primary)
+  çekince guard gerçek sayıyla kırmızı düştü.
+- axe-core (spec'in birebir kopyası, sistem chromium ile): 5 dil × tüm public
+  rotalar + tr/de/fa masaüstü = **112 kontrol, 0 ihlal**. (tr rotaları sandbox'ın
+  standalone sunucusundaki bilinen `localePrefix` 308 döngüsü yüzünden koşamadı;
+  bu sunucu yapılandırma artefaktı, CSS ile ilgisiz.)
+
+### Sahibin / sonraki lane'lerin yapması gerekenler
+
+- **LANE-INFRA:** `scripts/check-frontend-source.mjs` 500 KB bütçesine ilçe
+  görsellerini ekle (kapsam eksikliği; kapı kapsamadığı yüzeyi koruyamaz).
+- **LANE-QA:** mobil E2E — her ilçe slaytının `naturalWidth > 0` yüklendiğini
+  assert et (mevcut guard yalnız metin/layout denetliyor).
+- **LANE-TASARIM (sonraki tur):** `editorial-page-scene-video-controls` 31px
+  düğmelerini 44px'e çıkarmak sahne/copy yerleşimini birlikte ele almayı gerektirir.
+
+**Değişen dosyalar:** `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
+`src/components/home/sector-explorer.test.tsx` — üçü de bu lane'in kapsamında.

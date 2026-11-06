@@ -888,6 +888,7 @@ a {
 }
 .footer-social-link {
   display: inline-flex;
+  min-height: 44px;
   align-items: center;
   gap: 5px;
   padding: 6px 10px;
@@ -2091,9 +2092,10 @@ a {
 }
 .sector-search-clear {
   display: grid;
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin-inline-end: -8px;
   place-items: center;
   border: 0;
   border-radius: 50%;
@@ -2167,7 +2169,10 @@ a {
   letter-spacing: 0.015em;
 }
 .sector-filters-reset {
-  padding: 3px 0;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--green);
@@ -2278,7 +2283,7 @@ a {
   line-height: 1.5;
 }
 .sector-explorer-empty button {
-  min-height: 35px;
+  min-height: 44px;
   padding: 0 13px;
   border: 1px solid var(--border-green);
   border-radius: 999px;
@@ -7635,6 +7640,7 @@ main :where(p) {
 }
 .packages-hero-link {
   display: inline-flex;
+  min-height: 44px;
   align-items: center;
   gap: 10px;
   margin-top: 31px;
@@ -8473,7 +8479,7 @@ main :where(p) {
   margin-top: 9px;
 }
 .vend-panel-duration button {
-  min-height: 38px;
+  min-height: 44px;
   padding: 5px 8px;
   border: 1px solid rgba(231, 244, 235, 0.17);
   border-radius: 8px;
@@ -8568,7 +8574,7 @@ main :where(p) {
 }
 .vend-panel-back {
   display: inline-flex;
-  min-height: 35px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 7px;
@@ -11153,6 +11159,9 @@ main :where(p) {
   gap: 12px;
 }
 .consent-policy-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
   padding: 0;
   border: 0;
   background: none;
@@ -11209,6 +11218,9 @@ main :where(p) {
   outline: none;
 }
 .consent-close {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
   padding: 0;
   border: 0;
   background: none;
@@ -11717,6 +11729,9 @@ html[dir="rtl"] input[name="slug"] {
   letter-spacing: -0.045em;
 }
 .jobs-clear-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
   padding: 7px 0;
   color: var(--ink-4);
   font-size: 12px;
@@ -13006,7 +13021,7 @@ html[dir="rtl"] input[name="slug"] {
 
 .pwa-update-primary,
 .pwa-update-secondary {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 14px;
   border-radius: 999px;
   border: 1px solid transparent;
@@ -13298,6 +13313,9 @@ html[lang="fa"] .pwa-install-steps > li::before {
 }
 
 .pwa-push-signin {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
   width: fit-content;
   color: var(--green);
   font-size: var(--type-supporting);

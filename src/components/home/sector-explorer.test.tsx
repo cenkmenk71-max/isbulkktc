@@ -12,16 +12,14 @@ import { SectorExplorer } from "./sector-explorer";
 /**
  * The sector explorer was the one surface that kept Latin digits on `/fa`: the
  * caller passed `{ count: "{count}" }` — a literal string — and patched the
- * digit in with `.replace`, so ICU never saw a number (issue #361). These tests
- * render the component and assert on the output, so a future refactor cannot
- * quietly reintroduce the string path.
+ * digit in with `.replace`, so ICU never saw a number (issue #361). The catalog
+ * keys are now `{count, number}`, so the component passes a real number and the
+ * tests read the real catalogs. They render the component and assert on the
+ * output, so a future refactor cannot quietly reintroduce the string path.
  *
- * The `fa` catalog still carries these three keys as bare `{count}` because the
- * LANE-İÇERİK side has not typed them yet, so the test supplies the typed form
- * itself: that is the contract the caller must satisfy once the keys are
- * `{count, number}`. The cards render `next/image`, which the node test runner
- * cannot interop, so the explorer is rendered with no sectors — the count
- * surfaces still render, which is exactly what is being pinned.
+ * The cards render `next/image`, which the node test runner cannot interop, so
+ * the explorer is rendered with no sectors — the count surfaces still render,
+ * which is exactly what is being pinned.
  */
 
 const messages = (locale: string) =>
@@ -38,16 +36,6 @@ const LATIN_DIGITS = /[0-9]/;
 
 function render(locale: AppLocale) {
   const catalog = messages(locale);
-  // The caller passes a real number; the catalog must interpolate it as one.
-  // Only `fa` needs the typed form supplied here — the Latin catalogs already
-  // render the number as-is.
-  if (locale === "fa") {
-    catalog.HomePage.sectorTotalCount = "مجموع زمینه‌های شغلی: {count, number}";
-    catalog.HomePage.sectorResultCountSingular =
-      "تعداد زمینه‌های شغلی: {count, number}";
-    catalog.HomePage.sectorResultCountPlural =
-      "تعداد زمینه‌های شغلی: {count, number}";
-  }
 
   return renderToStaticMarkup(
     <NextIntlClientProvider locale={locale} messages={catalog}>

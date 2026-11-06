@@ -593,10 +593,17 @@ test("icons reserve their space on the same logical side under RTL", () => {
  * asserts it for a fixed selector list). Six controls were missing from that
  * list and shipped at 34-40px: the consent dialog's buttons, the company
  * directory pagination, the vend sound toggle, the feedback rating star, the
- * home search "clear filters" link, and the legal-page back link. This resolves
- * each control's *effective* `min-height`/`height` through the media cascade —
- * a responsive override (the pagination shrank to 38px under a breakpoint) must
- * not slip back under the floor.
+ * home search "clear filters" link, and the legal-page back link. A further
+ * eight sat below the floor because they are text-styled controls (a bare
+ * button/link with only padding): the sector explorer's search clear and
+ * "reset filters", the jobs "clear filters" link, the packages hero link, the
+ * consent footer links and close button, the footer social pills, and the PWA
+ * push sign-in link. The same sweep raised four more interactive controls: the
+ * sector explorer's empty-state retry, the vend panel's duration chips and back
+ * button, and the PWA update prompt. This resolves each control's *effective*
+ * `min-height`/`height` through the media cascade — a responsive override (the
+ * pagination shrank to 38px under a breakpoint) must not slip back under the
+ * floor.
  */
 test("the fixed touch targets keep a 44px effective floor", () => {
   const controls = [
@@ -606,6 +613,18 @@ test("the fixed touch targets keep a 44px effective floor", () => {
     ".feedback-rating-star",
     ".home-job-search-clear",
     ".legal-page-back a",
+    ".sector-search-clear",
+    ".sector-filters-reset",
+    ".jobs-clear-link",
+    ".packages-hero-link",
+    ".consent-policy-link",
+    ".consent-close",
+    ".footer-social-link",
+    ".pwa-push-signin",
+    ".sector-explorer-empty button",
+    ".vend-panel-duration button",
+    ".vend-panel-back",
+    ".pwa-update-primary",
   ];
   // Minimal media-cascade resolver: walk top-level rules and @media blocks,
   // collecting the last declaration of a property that applies at 390px.
