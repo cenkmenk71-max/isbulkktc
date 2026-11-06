@@ -9,6 +9,20 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { AppLocale } from "@/i18n/routing";
 
+/**
+ * The step markers are decorative (the ordered list already carries the order),
+ * but they are still digits a reader sees, so they must follow the locale's own
+ * numeral system — Latin `01` beside Persian copy reads as a foreign leak on
+ * `/fa`. `Intl.NumberFormat(locale)` picks the locale's default numbering system
+ * (`fa` → `۰۱`), which a zero-prefixed string literal can never do.
+ */
+export function formatStepNumber(locale: AppLocale, index: number) {
+  return new Intl.NumberFormat(locale, {
+    minimumIntegerDigits: 2,
+    useGrouping: false,
+  }).format(index + 1);
+}
+
 export async function HomeJourneys({ locale }: { locale: AppLocale }) {
   const copy = await getTranslations({ locale, namespace: "HomeJourney" });
 
@@ -49,7 +63,7 @@ export async function HomeJourneys({ locale }: { locale: AppLocale }) {
                 (step, index) => (
                   <li key={step}>
                     <span className="home-journey-step-number" aria-hidden="true">
-                      0{index + 1}
+                      {formatStepNumber(locale, index)}
                     </span>
                     <span>
                       <strong>{copy(`candidate.steps.${step}.title`)}</strong>
@@ -99,7 +113,7 @@ export async function HomeJourneys({ locale }: { locale: AppLocale }) {
                 (step, index) => (
                   <li key={step}>
                     <span className="home-journey-step-number" aria-hidden="true">
-                      0{index + 1}
+                      {formatStepNumber(locale, index)}
                     </span>
                     <span>
                       <strong>{copy(`employer.steps.${step}.title`)}</strong>

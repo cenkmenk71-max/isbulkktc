@@ -658,3 +658,26 @@ test("the fixed touch targets keep a 44px effective floor", () => {
     );
   }
 });
+
+/**
+ * A bare `content: counter(x)` always renders ASCII digits, whatever the
+ * document language is, so the install guide's numbered step badges read 1/2/3
+ * in Latin beside Persian copy on `/fa`. The `lang="fa"` override swaps in the
+ * predefined `persian` counter style. This pins both halves: the base rule stays
+ * ASCII (Latin locales) and the `fa` rule keeps the explicit style, because
+ * deleting either silently restores the leak.
+ */
+test("numbered CSS counters follow the locale's numeral system", () => {
+  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  assert.match(
+    withoutComments,
+    /\.pwa-install-steps\s*>\s*li::before\s*\{[^}]*content:\s*counter\(pwa-step\);/,
+    "the install step badge must keep its default counter() so Latin locales render 1/2/3",
+  );
+  assert.match(
+    withoutComments,
+    /html\[lang="fa"\]\s+\.pwa-install-steps\s*>\s*li::before\s*\{[^}]*content:\s*counter\(pwa-step,\s*persian\);/,
+    "the install step badge must use the `persian` counter style under `lang=fa`",
+  );
+});

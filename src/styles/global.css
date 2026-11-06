@@ -13192,6 +13192,14 @@ html[dir="rtl"] input[name="slug"] {
   font-weight: 700;
 }
 
+/* An unqualified `counter()` emits ASCII digits, so the step badges read 1/2/3 in
+   Latin beside Persian copy. The numbering system follows the *language*, not the
+   direction, so this keys on `lang` like the JS side's `Intl.NumberFormat(locale)`.
+   `persian` is a predefined counter style: no new token or keyframe needed. */
+html[lang="fa"] .pwa-install-steps > li::before {
+  content: counter(pwa-step, persian);
+}
+
 .pwa-install-step-icon {
   display: inline-flex;
   flex: none;
