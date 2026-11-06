@@ -291,3 +291,35 @@ hangisinin güncel olduğu panelden teyit edilmeli (silme yıkıcı → onay bek
 `_mta-sts` / `_smtp._tls` **yok** (e-posta sertleştirme fırsatı, #170).
 
 Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 16".
+
+---
+
+## Tur 17 (2026-11-06) — ölçüm doğruluğu düzeltmesi + yeni WAF boşluğu
+
+**F-09/T-15 düzeltmesi.** "TLS 1.0/1.1 reddediliyor" kanıtı yanlıştı: `no
+protocols available` **istemci-taraflı** (sandbox OpenSSL 1.0/1.1'i derlemiyor).
+Bağımsız doğrulama: **SSL Labs API → 4/4 endpoint `A+`, yalnız TLS 1.2+1.3**.
+Sonuç doğru, dayanak artık SSL Labs. Negatif iddiayı istemcinin desteklemediği
+protokolle kanıtlamayın.
+
+**V-01 (yeni, düşük).** WAF yüzde-kodlamasız tarayıcı yollarını kaçırıyor:
+`/config.php`, `/shell.php`, `/actuator/env`, `/server-status`, `/actuator`,
+`/phpinfo.php`, `/info.php`, `/settings.py`, `/Dockerfile` → **404 origin** (CF
+403 değil). Sızıntı/cache yok (`DYNAMIC`, `private, no-store`). Etki düşük ama
+tarayıcı trafiği Vercel edge'ine ulaşıyor (WAF yok). W-01 paketiyle birlikte
+desen genişletilmeli — yıkıcı CF değişikliği, **sahibin onayı**.
+
+**Tur 17'de temiz doğrulananlar:** WAF pozitif (17 yol: 12 tr rotası + 5 dil öneki; yanlış pozitif
+yok), bot UA'ları 200, yönlendirme zinciri (www 308, http 301, sorgu korunuyor,
+`http://www`→2 hop), açık-yönlendirme denemeleri hep apex'te kalıyor, HTTP/3
+(`alt-svc: h3`), güvenlik başlıkları tam, mixed content yok, `security.txt`
+`Expires 2027-09-02`, DNSSEC `AD=true`, CAA 10 kayıt, CF Email Routing DKIM
+`cf2024-1._domainkey` **2048-bit**. HSTS preload hâlâ `pending`.
+
+**Rate-limit (brief 6):** `/login` 20/20 → 200; CF katmanında görünür limit yok.
+`/api/email/unsubscribe` POST → 405. Tek `http_ratelimit` kuralının auth
+brute-force'a tahsisi önerisi sahibin onayını bekliyor.
+
+**Açık kalan (değişmedi):** H-01, H-02, N-01, R-01, G-01, W-01, V-01, F-08.
+
+Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 17".

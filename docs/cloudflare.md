@@ -48,7 +48,7 @@ Kanıt kısaltmaları: `HTTP` = `curl -D -` başlıkları, `DoH` = `cloudflare-d
 | F-06 | DMARC | `v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; fo=1` | `p=none` izleme modunda — **zorlamaya geçiş planı yok** | DoH TXT |
 | F-07 | CAA | `0 issue` comodoca/digicert/letsencrypt/pki.goog/ssl.com + `issuewild` aynıları | Geniş ama geçerli | DoH CAA |
 | F-08 | **Origin doğrudan erişim** | `https://isbulkktc-amber.vercel.app` CF'yi **tamamen atlıyor**: `server: Vercel`, `cf-ray` yok, `.env`→404, `/api/devtools/`→404, rate-limit yok | Vercel Deployment Protection (Vercel Authentication / Protection Bypass) veya alias'ı public bırakma | `HTTP` alias |
-| F-09 | TLS min sürüm | TLS 1.0/1.1 **reddediliyor** (`no protocols available`), 1.2 + 1.3 OK | Min TLS 1.2 — doğru | `openssl s_client` |
+| F-09 | TLS min sürüm | **SSL Labs (tur 17): 4/4 endpoint grade `A+`, yalnız TLS 1.2 + 1.3 sunuluyor** (1.0/1.1 yok). Sandbox `openssl`'de 1.0/1.1 istemci tarafı da yok, o yüzden "`no protocols available`" **sunucu reddi kanıtı DEĞİL** (bkz. tur 17 düzeltmesi) | Min TLS 1.2 — doğru | SSL Labs API + Python `ssl` |
 | F-10 | Sertifika | Let's Encrypt `YE2`, SAN `*.isbulkktc.com, isbulkktc.com`, geçerlilik 2026-09-19 → 2026-12-18 | OK (CF Universal SSL) | `openssl x509` |
 | F-11 | HSTS | `max-age=31536000; includeSubDomains; preload` | Doğru | `HTTP` |
 | F-12 | HSTS preload | `hstspreload.org` → **`status: pending`** | `preloaded` olana kadar bekle; kaydı geri çekme | hstspreload API |
@@ -958,7 +958,7 @@ kontrol et. Regresyon testine `%252e%252e` ve `%25252e` varyantlarını ekle
 | T-12 | Cache-key | RSC/prefetch (`RSC: 1`, `Next-Router-Prefetch`) | `DYNAMIC` + `private, no-store` | ✔ |
 | T-13 | Zehirleme | `Host: evil.com` / `X-Forwarded-Host: evil.com` | **403** / canonical değişmiyor | ✔ |
 | T-14 | Zehirleme | `/robots.txt` `Host: isbulkktc.com` | 200 `REVALIDATED` | ✔ |
-| T-15 | TLS | min sürüm | TLS 1.0/1.1 `no protocols available`; 1.2+1.3 OK | ✔ |
+| T-15 | TLS | min sürüm | **SSL Labs: 4/4 `A+`, yalnız 1.2+1.3** (sandbox istemcisinde 1.0/1.1 yok → `no protocols available` **sunucu kanıtı değil**) | ✔ (tur 17 düzeltmesi) |
 | T-16 | TLS | ALPN + sertifika | `h2`, `CN=isbulkktc.com`, SAN `*.isbulkktc.com`, LE `YE2` | ✔ |
 | T-17 | HTTP/3 | `alt-svc: h3=":443"; ma=86400` + AAAA | var | ✔ |
 | T-18 | Yönlendirme | `http apex`→301, `http www`→301, `https www`→308 apex (yol+sorgu korunur) | tek sıçrama, sızıntı yok | ✔ |
@@ -991,7 +991,7 @@ düzeltilip düzeltilmediği saldırgan gözüyle sınandı, (b) WAF'ın
 kodlama/normalizasyon davranışı yeniden tarandı ve (c) canlı Cloudflare edge
 yeniden ölçüldü.
 
-### A-01c — #359 kodu düzeltiyor, ama **canlıya deploy edilmedi** (canlı hâlâ savunmasız)
+### A-01c — #359 kod düzeltmesi (**canlıda KAPANDI** — tur 14.1'de doğrulandı)
 
 Tur 13'te bulunan **A-01b** için **LANE-GÜVENLİK** PR #359'u açtı (issue #356):
 yerel desenler artık bir **görsel uzantısı** şart koşuyor
@@ -1349,3 +1349,123 @@ dosya yok.
   SW-01 kapanışı yalnızca edge `cache-control`/`cf-cache-status` ile kanıtlandı.
 - **IPv6 bağlantısı:** sandbox'ta v6 çözümleyici yok (AAAA DoH ile var).
 - **E-posta teslimi (Gmail/Outlook):** gönderim yapılmadı.
+
+---
+
+## Edge mikro-denetim tur 17 — ölçüm doğruluğu düzeltmesi + tarayıcı-yolu WAF boşluğu (2026-11-06)
+
+**Amaç.** Brief'in 1–7. maddeleri (DNS, TLS, cache, WAF, bot, rate-limit, analytics)
+tam yeniden ölçüldü. Bu tur **bir ölçüm hatasını** ve **bir WAF kapsam boşluğunu**
+ortaya çıkardı; ikisi de kanıtla kapatıldı.
+
+### Düzeltme: F-09/T-15 "TLS 1.0/1.1 reddediliyor" kanıtı yanlıştı
+
+Önceki turlarda TLS 1.0/1.1 için `openssl s_client -tls1_1` çıktısındaki
+`no protocols available` **sunucu reddi** sanıldı. Aslında bu hata **istemci
+tarafında**: sandbox'ın OpenSSL 3.x'i TLS 1.0/1.1 protokollerini artık derlemiyor,
+bu yüzden istemci hiç ClientHello gönderemiyor. Python `ssl` ile doğrulandı — aynı
+hata **istemci tarafında** (`ctx.minimum_version=TLSv1_1` → `NO_PROTOCOLS_AVAILABLE`).
+
+**Gerçek kanıt (SSL Labs API, `api.ssllabs.com`):** 4/4 endpoint (2×IPv4 + 2×IPv6)
+grade **`A+`**, sunulan protokoller yalnız **TLS 1.2 + 1.3** → "min TLS 1.2" sonucu
+**doğru**, ama dayanağı `openssl s_client` değil SSL Labs. F-09 ve T-15 bu turda
+düzeltildi. **Ders:** bir istemci bir protokolü *kendisi* desteklemiyorsa, o
+protokolün sunucuda reddedildiği iddia edilemez; negatif iddiayı bağımsız bir
+tarayıcıyla (SSL Labs) doğrula.
+
+### Yeni bulgu: V-01 — WAF tarayıcı yollarında kapsam boşluğu (düşük)
+
+Tur 14'te **W-01** yalnız `%2f` kodlamasına odaklanmıştı. Bu tur WAF'ın
+**yüzde-kodlamasız** tarayıcı yollarını da kaçırdığını gösterdi:
+
+| Yol | Sonuç | CF mi origin mi |
+|---|---|---|
+| `/.git/config`, `/.env`, `/wp-admin/`, `/phpmyadmin/`, `/.aws/credentials`, `/xmlrpc.php`, `/.htaccess`, `/composer.json` | **403** | CF (doğru) |
+| `/config.php`, `/shell.php`, `/actuator/env`, `/server-status`, `/actuator`, `/phpinfo.php`, `/info.php`, `/settings.py`, `/Dockerfile` | **404** | **origin** (CF geçildi) |
+
+`/debug.log`, `/.env.local`, `/web.config` ise 403 (CF). Yani kural deseni
+uzantıya göre seçici. **Sızıntı yok:** origin 404'leri Next'in 404 sayfası
+(7–102 KB HTML), `cf-cache-status: DYNAMIC`, `private, no-store`, `x-robots-tag`
+yok; hiçbiri edge'de cache'lenmiyor. Etki **düşük** (origin statik/Vercel; PHP
+yok, `.git` yok) — ama tarayıcı istekleri CF yerine Vercel'e ulaşıyor ve Vercel
+edge'inde WAF yok. Düzeltme: W-01 ile aynı pakette WAF ifadesini genişlet
+(`.php`, `actuator`, `server-status`, `Dockerfile`, `settings.py` desenleri) —
+**yıkıcı CF değişikliği → sahibin onayı.**
+
+### Drift tablosu (tur 17 — canlı, 2026-11-06)
+
+Canlı build: `/api/build-info` → **`d154e44`**.
+
+| Bulgu | Durum | Canlı kanıt |
+|---|---|---|
+| H-01 — CF HSTS `max-age`'i eziyor | ⚠️ **açık** | edge `31536000` vs origin `63072000` |
+| H-02 — Browser Cache TTL `max-age=0`'ı yükseltiyor | ⚠️ **açık** | `/robots.txt`,`/images/*.webp`→`2628000`; `/sitemap.xml`→`3600` (origin hepsi `max-age=0`) |
+| N-01 — `/_next/static` var olmayan dosya 404'ü 1 yıl cache | ⚠️ **açık** | `/_next/static/nope.js` → 404 + `max-age=31536000` |
+| R-01 — sonlu noktalı apex | ⚠️ **açık** | `isbulkktc.com.` → **404**; `www.isbulkktc.com.` → 308 |
+| G-01 — Email Address Obfuscation | ⚠️ **açık** | `/`, `/en`, `/contact` gövdesinde `cdn-cgi/l/email-protection` |
+| W-01 — WAF kodlanmış nokta-yolu | ⚠️ **açık** | `/.git/config`→403 ama `/.git%2fconfig`→**404** (origin) |
+| V-01 — WAF tarayıcı yolu (yeni) | ⚠️ **açık** | `config.php`,`shell.php`,`actuator/env`,`server-status` → **404 origin** |
+| F-08 — Vercel alias CF zone'unu atlıyor | ⚠️ **açık** | alias `server: Vercel` (cf-ray yok); alias+`Host` → **421** |
+| F-09/T-15 — TLS min kanıtı | ✅ **düzeltildi** | SSL Labs 4/4 `A+`, yalnız TLS 1.2+1.3 |
+| A-01c — `/_next/image` çift-kodlama | ✅ **kapalı** | tur 14.1'de 11 PoC → 400 |
+| SW-01 — `/sw.js` edge cache | ✅ **kapalı** | tur 16: `no-cache` + `BYPASS` |
+
+### Bu turda doğrulananlar (temiz)
+
+| # | Test | Gözlenen | Durum |
+|---|---|---|---|
+| V-01 | WAF negatif (8 saldırı yolu) | 403 | ✔ |
+| V-02 | WAF pozitif (17 meşru yol: 12 tr rotası + 5 dil öneki) | hepsi 200, yanlış pozitif yok | ✔ |
+| V-03 | Bot UA'ları (Googlebot/bingbot/YandexBot/facebookexternalhit/Twitterbot) | 200, `cf-mitigated` yok | ✔ |
+| V-04 | İmzasız istemciler (curl/python-requests/Go-http/boş UA) | 200 (agresif bot challenge yok) | ✔ |
+| V-05 | Yönlendirme zinciri | `http`→`https` (301), `www`→apex (308), sorgu korunuyor; `http://www`→ **2 hop** | ✔ |
+| V-06 | Açık yönlendirme | `//evil.com`,`/\`,`/%5C`,`/%2F%2F`,`/..//` → hep `isbulkktc.com` altında kalıyor | ✔ |
+| V-07 | HTTP/3 | `alt-svc: h3=":443"` | ✔ |
+| V-08 | Güvenlik başlıkları | CSP, COOP, Permissions-Policy, Referrer-Policy, HSTS, nosniff, XFO | ✔ |
+| V-09 | Automatic HTTPS Rewrites | HTML'de `http://` referansı yok (mixed content yok) | ✔ |
+| V-10 | `security.txt` | `Contact: mailto:info@…`, `Expires` 2027-09-02 | ✔ |
+| V-11 | HSTS preload | hstspreload API → **`pending`** (değişmemiş) | ℹ️ |
+| V-12 | DNSSEC | DS `2371 13 2 36e0…775b`, tüm kayıtlarda `AD=true` | ✔ |
+| V-13 | CAA | 5 issuer + `issuewild` (10 kayıt) | ✔ |
+| V-14 | MX / CF Email Routing | `route{1,2,3}.mx.cloudflare.net` | ✔ |
+| V-15 | CF Email Routing DKIM `cf2024-1._domainkey` | **2048-bit** RSA (`MIIBIjAN…`, `h=sha256`) | ✔ |
+| V-16 | Resend DKIM `resend._domainkey` | **1024-bit** (220 B TXT) | ⚠️ #227 |
+| V-17 | Apex TXT | yandex + SPF + **iki** `google-site-verification` | ℹ️ |
+| V-18 | Gap-yolu cache | `config.php`,`actuator/env`,`Dockerfile` → `DYNAMIC` + `private, no-store` | ✔ |
+
+### Rate-limit gözlemi (brief 6)
+
+- `/login`'e 20 hızlı istek → **20/20 200**; CF katmanında görünür bir rate-limit
+  **yok** (tek `http_ratelimit` kuralı "leaked credential check"e harcanmış, brief
+  doğrulandı).
+- `/api/email/unsubscribe` POST → **405** (anon; yöntem yok) → CF rate-limit'i
+  tetikleyecek bir anon yüzey yok.
+- **Öneri (değişmeden):** tek kural auth brute-force'a tahsis edilsin mi? (sahibin
+  onayı; `/login` 20/20 200 bunun açık olduğunu gösteriyor.)
+
+### Micro-denetim (sahip olunan dosyalar)
+
+`git ls-files` ile sahiplik **2 dosya**: `docs/cloudflare.md`,
+`docs/lanes/02-cloudflare.md`. İkisi de bu turda satır satır tarandı.
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `docs/cloudflare.md:51` (F-09) | Doğruluk | "TLS 1.0/1.1 reddediliyor (`no protocols available`)" — istemci-taraflı hata, sunucu kanıtı değil | SSL Labs kanıtı | yanlış kanıt | **düzeltildi** |
+| 2 | `docs/cloudflare.md:961` (T-15) | Tutarlılık | Aynı yanlış iddia özet tabloda | F-09 ile hizalı | çelişki | **düzeltildi** |
+| 3 | `docs/cloudflare.md:994` (A-01c başlık) | Doğruluk | Başlık "canlı hâlâ savunmasız" | tur 14.1'de kapandı | eski durum | **düzeltildi** |
+| 4 | `docs/cloudflare.md` (tur 17) | Doğruluk | V-01 yeni WAF boşluğu + SSL Labs kanıtı | eklendi | güncel | **eklendi** |
+| 5 | `docs/lanes/02-cloudflare.md` | Tutarlılık | tur 16 son satır | tur 17 ile uyumlu | güncel | **eklendi** |
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` yok): WAF ruleset / Cache Rules / **Browser Cache
+  TTL** / Bot Management / Edge Certificates / Analytics panel durumu okunamadı;
+  ölçüm edge↔origin diff + DoH + SSL Labs ile yapıldı.
+- **TLS 1.0/1.1 sunucu reddi** sandbox istemcisiyle doğrulanamaz (istemci o
+  protokolleri desteklemiyor) → SSL Labs sonucuna dayanıldı.
+- **Gerçek tarayıcı ölçümü:** SW güncelleme yayılımı ve CHIPS/`Set-Cookie`
+  davranışı canlı tarayıcıda sürülmedi.
+- **IPv6 bağlantısı:** sandbox'ta v6 yolu yok (`curl --resolve` v6 → 000); SSL Labs
+  IPv6 endpoint'leri `A+` raporladı.
+- **E-posta teslimi (Gmail/Outlook):** gönderim yapılmadı.
+- **Analytics/Logpush (brief 7):** token yok → API ile doğrulanamadı.
