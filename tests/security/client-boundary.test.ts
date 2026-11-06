@@ -79,12 +79,38 @@ function nonPublicEnvNames(source: string): string[] {
 // 1. Client components must not reach into the server modules.
 // ---------------------------------------------------------------------------
 
+/**
+ * True when a module references a `@/server/**` module by any import form:
+ * a static `from "@/server/..."`, a dynamic `import("@/server/...")`, or a
+ * `require("@/server/...")`. The earlier check only matched `from "@/server/`,
+ * so a client component could reach server code through a dynamic import and
+ * this boundary would stay green — the `server-only` marker is the compile-time
+ * backstop, but a boundary test that only sees one spelling is half a test.
+ */
+function importsServerModule(source: string): boolean {
+  return (
+    /from\s+["']@\/server\//.test(source) ||
+    /\bimport\s*\(\s*["']@\/server\//.test(source) ||
+    /\brequire\s*\(\s*["']@\/server\//.test(source)
+  );
+}
+
 test("no client component imports a @/server module", () => {
   const offenders: string[] = [];
   for (const path of clientFiles) {
-    if (/from\s+["']@\/server\//.test(read(path))) offenders.push(relative(path));
+    if (importsServerModule(read(path))) offenders.push(relative(path));
   }
   assert.deepEqual(offenders, [], `client modules importing server code: ${offenders.join(", ")}`);
+});
+
+test("the server-import check sees every import form (self-test)", () => {
+  // Guards the guard: each of these is a real way to reach server code.
+  assert.equal(importsServerModule('import { x } from "@/server/db/supabase-server";'), true);
+  assert.equal(importsServerModule('export { x } from "@/server/db/supabase-server";'), true);
+  assert.equal(importsServerModule('const m = await import("@/server/email/mailer");'), true);
+  assert.equal(importsServerModule('const m = require("@/server/email/mailer");'), true);
+  // And a client-local module must not be flagged.
+  assert.equal(importsServerModule('import { x } from "@/features/sales/schemas";'), false);
 });
 
 // ---------------------------------------------------------------------------

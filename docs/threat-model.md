@@ -160,7 +160,8 @@ issue açar.
   durumuna göre dallanmaz (abonelik oracle'ı yok); çekirdek `timingSafeEqual` +
   uzunluk guard'ı kullanır (`tests/security/unsubscribe-route-auth.test.ts`).
 - **Sırlar:** `NEXT_PUBLIC_*` ile sızmış bir sır adı yok; hiçbir istemci modülü
-  `@/server/**` içe aktarmıyor veya `NEXT_PUBLIC_` olmayan bir env okumuyor
+  `@/server/**` içe aktarmıyor (**statik `from`**, **dinamik `import()`** veya
+  **`require()`** — üç biçim de) veya `NEXT_PUBLIC_` olmayan bir env okumuyor
   (`tests/security/client-boundary.test.ts`).
 - **Yanıt başlıkları:** `next.config.ts` global grubu CSP (wildcard/bare-scheme
   yok, `unsafe-eval` yok), HSTS, `X-Frame-Options`, `X-Content-Type-Options`,

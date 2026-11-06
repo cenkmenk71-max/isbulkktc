@@ -425,3 +425,20 @@ her workflow'un `permissions:` bloğunu okuyordu ama **yalnız top-level** bloğ
   doğrular.
 - **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
   #102.
+
+## Durum (2026-11-05, 18. tur) — istemci→sunucu import biçimleri
+
+Kendi `client-boundary.test.ts`'imi denetledim: "no client component imports a
+`@/server` module" testi yalnız **statik** `from "@/server/…"` biçimini
+yakalıyordu.
+
+- **Bulgu + düzeltme: dinamik `import()` ve `require()` görünmüyordu.** Bir
+  `"use client"` modülü sunucu kodunu `await import("@/server/…")` veya
+  `require("@/server/…")` ile de çekebilir; eski regex ikisini de **kaçırıyordu**
+  (kanıtlandı: üç biçimden yalnız `from` yakalanıyordu). `importsServerModule()`
+  artık üç biçimi de görür; self-test her birini doğrular.
+- **Kanıt (mutation):** `"use client"` bir scratch modül `await
+  import("@/server/email/mailer")` içerince test **kırmızı** oldu; eski regex'te
+  aynı mutasyon **yeşil** kalıyordu.
+- **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
+  #102.
