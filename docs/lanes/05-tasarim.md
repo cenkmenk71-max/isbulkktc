@@ -818,3 +818,77 @@ sınır girdiler tarandı.
 - **#191 e-posta tarafı** hâlâ `lane:urun` + `agent:handoff` (tur 4).
 - Değişen dosyalar: `tests/e2e/accessibility.spec.ts`,
   `docs/lanes/05-tasarim.md`. İkisi de bu lane'in kapsamında.
+
+---
+
+### Tur — `/fa` rakam sızıntısı: vend paneli + sektör keşfi (PR #383, 2026-11-06)
+
+**Kapsam.** Atanmış `lane:tasarim` handoff issue'su **#361** alındı. Kanıt
+doğrulandı (canlı `/fa` render'ında sektör keşif yüzeyi Latin rakam gösteriyordu)
+ve yalnızca sektörle sınırlı olmadığı görüldü: **vend paneli** de aynı sınıfı
+taşıyordu.
+
+**Kök neden (üç ayrı yer, tek sınıf).**
+
+1. `Panel.tsx` fiyatı sabit `"tr-TR"` ile biçimlendiriyordu → `/fa`'da `₺1.290`,
+   hemen yanında `TRY ۱٬۲۹۰` (aynı ekranda iki rakam sistemi).
+2. `Panel.tsx` adım işaretleri `` `0${index+1}` `` ile Latin `01` üretiyordu.
+3. `labels.ts` kanvas raf adedi düz `${p.listingCount}` ile çiziliyordu.
+4. `sector-explorer.tsx` / `home-experience.tsx` çeviriyi **dize** ile çağırıp
+   `.replace("{count}", String(n))` yapıyordu → ICU sayıyı hiç görmüyordu, bu
+   yüzden `fa.json` anahtarları `{count, number}` yapılamıyordu (#361'in özü).
+
+**Çözüm.** Sayfayı `locale` ile besle; fiyat/adım/raf adedini `Intl.NumberFormat`,
+sayaçları `next-intl` `useFormatter().number()` ve `t(k, { count: n })` ile üret.
+Sektör tarafında ICU artık gerçek `number` görüyor, katalog anahtarları
+tiplenebilir hâle geldi.
+
+**Kanıt (canlı `/fa`, üretim standalone build + gerçek tarayıcı DOM).**
+
+| Yüzey | Önce | Sonra |
+|---|---|---|
+| vend fiyat | `₺1.290` | `₺۱٬۲۹۰` |
+| vend adım | `01` | `۰۱` |
+| dizin rozeti | `16` | `۱۶` |
+| toplam `<strong>` | `16` | `۱۶` |
+| filtre çipi | `16` | `۱۶` |
+| `tr` | `2.790` / `16` | değişmedi |
+
+**Mikro-denetim (AUDIT.md).** Sahip olunan alan `git ls-files` ile **63 dosya**;
+bu turda **8**'i satır satır incelendi (6 değişen + 2 yeni test), **55**'i
+rakam/locale, RTL, `target=_blank`, ham hex, `aria-label`↔görünen metin,
+`prefers-reduced-motion` kalıplarıyla tarandı, **bakılmayan 0**. 7 bulgu:
+5 düzeltildi, 1 devredildi (#385), 1 bilinçli bırakıldı (`toLocaleLowerCase("tr")`
+— arama terimleri ASCII, `i/ı` eşlemesi `tr` gerektiriyor).
+
+**Devirler.**
+
+- **#384 → LANE-İÇERİK:** `fa.json` `HomePage.{sectorTotalCount,
+  sectorResultCountSingular, sectorResultCountPlural}` hâlâ çıplak `{count}`.
+  Kod hazır; üç anahtar `{count, number}` yapılıp `FA_DEFERRED_PLACEHOLDERS`
+  muafiyeti kalkınca `/fa` sonuç satırı ve `aria-label` da Farsça olur.
+- **#385 → LANE-INFRA:** `scripts/check-frontend-source.mjs` hâlâ eski
+  `quoteEmailBody.replace("%DAYS%", String(selectedDuration))` satırını birebir
+  pinliyor; yerel-farkında biçim doğru düzeltmeyi engelliyor. Gate hizalanınca
+  `Panel.tsx:60` tekrar düzeltilecek (`/fa` teklif e-postası `۳۰`).
+
+**Çalıştırılan kontroller.**
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅
+- `bun run test:unit` ✅ (689 test)
+- `tests/e2e/accessibility.spec.ts` ✅ 189/189 (tüm 6 dil, üretim standalone)
+- CI (PR #383) ✅ — Static, Database, E2E 1–4, "Quality, database and E2E"
+
+**Sahibin yapması gerekenler.** #384 (LANE-İÇERİK), #385 (LANE-INFRA).
+
+**Sonraki lane için notlar.**
+
+- Kalan iki Latin dize (#384) çözülünce `/fa` sektör yüzeyi tamamen Farsça olur;
+  PR #383 bunun **kod** yarısını kapatıyor.
+- `/fa`'da Latin rakam ararken yalnızca görünen metne bakma: `aria-label`
+  içindeki sayı da bir yüzeydir (bu turda `sector-explorer-total` öyle yakalandı).
+- `scripts/check-frontend-source.mjs` "kaynak birebir şu satırı içermeli" biçiminde
+  pin yapıyor; bu satırı meşru biçimde değiştiren bir düzeltme gate'i kırar —
+  önce gate'i güncelleyecek lane'e devret (#385).
