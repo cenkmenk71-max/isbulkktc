@@ -68,9 +68,17 @@ const nextConfig: NextConfig = {
     // rejects a query string, closing the enumeration surface Next 16 warns
     // about. Statically imported images resolve to `/_next/static/media/**`,
     // which Next allowlists separately, so they are unaffected.
+    //
+    // The pattern also requires an image *extension* (`*.@(webp|png|jpg|jpeg|avif|svg)`).
+    // A plain `/images/**` matched `%252e%252e` too: the matcher compares the
+    // *encoded* path (`URL.pathname` keeps `%25`), while the fetch decodes it
+    // once more, so `/images/%252e%252e/blog` matched the prefix but fetched
+    // `/blog` (issue #356). No real image path ends in a non-image route, and no
+    // route ends in an image extension, so gating on the extension rejects every
+    // encoded traversal while keeping the images this app actually serves.
     localPatterns: [
-      { pathname: "/images/**", search: "" },
-      { pathname: "/logos/**", search: "" },
+      { pathname: "/images/**/*.@(webp|png|jpg|jpeg|avif|svg)", search: "" },
+      { pathname: "/logos/**/*.@(webp|png|jpg|jpeg|avif|svg)", search: "" },
     ],
     remotePatterns: [
       {

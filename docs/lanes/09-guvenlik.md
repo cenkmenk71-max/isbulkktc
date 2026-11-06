@@ -509,3 +509,27 @@ idi.
   yanlış-pozitif).
 - **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
   #102.
+
+## Durum (2026-11-06, 22. tur) — `/_next/image` çift-kodlama atlatması (#356)
+
+`lane:guvenlik`'e devredilen **#356**'yı aldım: #324 düzeltmem bir fazla
+yüzde-kodlama ile hâlâ atlatılıyordu.
+
+- **Bulgu:** matcher yolu **kodlanmış** hâliyle görür (`URL.pathname` `%25`'i
+  korur), optimizer'ın fetch katmanı ise bir kez daha **çözer**. `/images/**`
+  düz öneki `/images/%252e%252e/blog`'a `true` der ama fetch `/blog`'a gider →
+  **200 HTML** (kanıtlandı; matcher'a doğrudan girdiyle ve uçtan uca curl ile).
+- **Düzeltme (`next.config.ts`):** desenler artık **görsel uzantısı** şart koşar —
+  `/images/**/*.@(webp|png|jpg|jpeg|avif|svg)` ve `/logos/**/…`. Kodlanmış
+  traversal hiçbir gerçek görsel yoluna benzemez ve hiçbir rota görsel uzantısıyla
+  bitmez (doğrulandı), bu yüzden atlatma kapanır. Gerçek görseller (`webp/jpg/
+  jpeg/png`) ve `/logos/*.webp` çalışmaya devam eder.
+- **Kanıt (uçtan uca, production standalone):** `%252e%252e`, `%25252e%25252e`,
+  `%2e%2e`, `../` varyantları → **400**; `/images/Girne.webp`, `about-hero.webp`,
+  `homepage-metal-feature-strip.png`, `/logos/*.webp` → **200 image/***; sorgu
+  dizeli görsel → **400**.
+- **Yeni testler:** `security-headers.test.ts` — kodlanmış traversal reddi +
+  "her yerel desen bir görsel uzantısı şart koşar" self-test'i. (Mutation: düz
+  `/images/**`'a dön → ikisi de kırmızı.)
+- **#356 kapatılabilir.** Kalan `todo`'lar: #298, #206, #102.
+- **Bakılmayan:** yok — 13 test dosyası + 2 doküman.

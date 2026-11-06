@@ -218,6 +218,10 @@ test("the optimizer only allows real local image paths", () => {
     "/images/Girne.webp",
     "/images/about-hero.webp",
     "/images/account-gallery/girne-night.webp",
+    "/images/güzelyurt.jpg",
+    "/images/lefkoşa.jpeg",
+    "/images/homepage-metal-feature-strip.png",
+    "/images/og-cover.webp",
     "/logos/ChIJ-3DQ1Att3hQRrIITDNnXwtU.webp",
   ]) {
     assert.equal(
@@ -252,6 +256,40 @@ test("the optimizer only allows real local image paths", () => {
       hasLocalMatch(localPatterns, rejected),
       false,
       `${rejected} must be rejected — the optimizer returned its content`,
+    );
+  }
+});
+
+test("the local allowlist rejects encoded traversal under an image prefix (#356)", () => {
+  // `hasLocalMatch` compares the *encoded* path (`URL.pathname` keeps `%25`),
+  // while the optimizer decodes it once more before fetching. A plain
+  // `/images/**` therefore matched `/images/%252e%252e/blog` but the fetch went
+  // to `/blog`. Gating on an image extension rejects every encoded traversal.
+  for (const traversal of [
+    "/images/../blog",
+    "/images/%2e%2e/blog",
+    "/images/%252e%252e/blog",
+    "/images/%25252e%25252e/blog",
+    "/images/%2e%2e/%2e%2e/jobs",
+    "/images/%252e%252e/%252e%252e/jobs",
+    "/logos/%252e%252e/blog",
+  ]) {
+    assert.equal(
+      hasLocalMatch(localPatterns, traversal),
+      false,
+      `${traversal} must be rejected — the fetch decodes it to a non-image route`,
+    );
+  }
+});
+
+test("every local pattern requires an image extension (self-test)", () => {
+  // Guards the guard: the extension gate is what closes the encoded-traversal
+  // bypass, so no local pattern may be a bare prefix.
+  for (const pattern of localPatterns ?? []) {
+    assert.match(
+      pattern.pathname ?? "",
+      /\.@\((?:[a-z]+\|)*[a-z]+\)$/,
+      `the local pattern ${JSON.stringify(pattern.pathname)} does not require an image extension`,
     );
   }
 });

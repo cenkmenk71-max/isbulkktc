@@ -178,10 +178,13 @@ issue açar.
   **tam bir https host + https protokol** olmalı, private/loopback/metadata host
   yasak. `images.localPatterns` ise aynı-origin **yerel** yolları sınırlar: onsuz
   `?url=%2Fblog` gibi göreli bir yol o rotanın içeriğini (HTML/JSON/text)
-  döndürüyordu (edge audit tur-11, #324). Allowlist yalnız `/images/**` ve
-  `/logos/**`'a izin verir; her başka yol ve sorgu dizeli görsel yolu `400
-  INVALID_IMAGE_OPTIMIZE_REQUEST` alır. Aynı test dosyası ikisini de **gerçek
-  config'ten** ve Next'in kendi matcher'ıyla denetler.
+  döndürüyordu (edge audit tur-11, #324). Desenler yalnız `/images/**` ve
+  `/logos/**`'a izin verir **ve bir görsel uzantısı şart koşar**
+  (`*.@(webp|png|jpg|jpeg|avif|svg)`); böylece matcher'ın kodlanmış hâliyle
+  eşleşip fetch'in bir kez daha çözerek başka rotaya gittiği çift-kodlama
+  atlatması (`/images/%252e%252e/blog`, #356) kapalıdır. Her başka yol ve sorgu
+  dizeli görsel yolu `400 INVALID_IMAGE_OPTIMIZE_REQUEST` alır. Aynı test dosyası
+  bunları **gerçek config'ten** ve Next'in kendi matcher'ıyla denetler.
 - **Açık yönlendirme kapalı:** `sanitizeNextPath` normalizasyon sonrası çıktıyı
   yeniden doğruluyor (`//`, `\`, şema reddi). Denetimde bulunan `"/..//host"`
   bypass'ı sahibi tarafından kapatıldı; `tests/security/open-redirect.test.ts`
