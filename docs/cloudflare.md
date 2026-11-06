@@ -47,7 +47,7 @@ Kanıt kısaltmaları: `HTTP` = `curl -D -` başlıkları, `DoH` = `cloudflare-d
 | F-05 | Mail (CF Email Routing) | MX `route{1,2,3}.mx.cloudflare.net`; SPF `v=spf1 include:_spf.mx.cloudflare.net ~all`; DKIM `cf2024-1._domainkey` (2048-bit) | OK | DoH MX/TXT |
 | F-06 | DMARC | `v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; fo=1` | `p=none` izleme modunda — **zorlamaya geçiş planı yok** | DoH TXT |
 | F-07 | CAA | `0 issue` comodoca/digicert/letsencrypt/pki.goog/ssl.com + `issuewild` aynıları | Geniş ama geçerli | DoH CAA |
-| F-08 | **Origin doğrudan erişim** | `https://isbulkktc-amber.vercel.app` CF'yi **tamamen atlıyor**: `server: Vercel`, `cf-ray` yok, `.env`→404, `/api/devtools/`→404, rate-limit yok (tur 23'te de teyit: `POST /login` 12/12 200, apex'te aynı seri 429) | Vercel Deployment Protection (Vercel Authentication / Protection Bypass) veya alias'ı public bırakma | `HTTP` alias |
+| F-08 | **Origin doğrudan erişim** | `https://isbulkktc-amber.vercel.app` CF'yi **tamamen atlıyor**: `server: Vercel`, `cf-ray` yok, rate-limit yok (`POST /login` 12/12 200, apex'te aynı seri 429). **tur 24 nüansı:** alias'ın **kendi** koruması var — `x-vercel-mitigated: challenge` (Vercel Security Checkpoint) **saldırı-yolu taraması** ile tetiklenir, hacimle değil; challenge **IP'ye özel** (temiz egress → 200) ve tetikleyen IP'de **en az 6 dk** kalıcı (D-14) | Vercel Deployment Protection (Vercel Authentication / Protection Bypass) veya alias'ı public bırakma | `HTTP` alias |
 | F-09 | TLS min sürüm | **SSL Labs (tur 17): 4/4 endpoint grade `A+`, yalnız TLS 1.2 + 1.3 sunuluyor** (1.0/1.1 yok). Sandbox `openssl`'de 1.0/1.1 istemci tarafı da yok, o yüzden "`no protocols available`" **sunucu reddi kanıtı DEĞİL** (bkz. tur 17 düzeltmesi) | Min TLS 1.2 — doğru | SSL Labs API + Python `ssl` |
 | F-10 | Sertifika | Let's Encrypt `YE2`, SAN `*.isbulkktc.com, isbulkktc.com`, geçerlilik 2026-09-19 → 2026-12-18 | OK (CF Universal SSL) | `openssl x509` |
 | F-11 | HSTS | `max-age=31536000; includeSubDomains; preload` | Doğru | `HTTP` |
@@ -67,6 +67,8 @@ Kanıt kısaltmaları: `HTTP` = `curl -D -` başlıkları, `DoH` = `cloudflare-d
 | F-25 | Bot koruması | Bot UA `sqlmap/1.7` → **403**; `curl` UA → 200 | Yönetilen bot koruması aktif | `HTTP` |
 | F-26 | Rate limit | **tur 23 — önceki iddia çürütüldü.** CF auth **POST**'larını limitliyor: `POST /login` hızlı seri → ~10 istekte **429** (`error code: 1015`, `retry-after: 10`), kova `/login`+`/register`+`/forgot-password`+`/reset-password` arasında **paylaşımlı**; `GET /login` ve `POST /` limite **girmez**. `isbulkktc-amber.vercel.app` alias'ı (CF'siz) aynı seride 12/12 **200** → limit **CF'ye ait** | Auth brute-force edge'de **korumalı**. Eski "hiç throttle yok" iddiası **yalnız GET** ölçtüğü için yanlıştı (D-12) | `HTTP` |
 | F-27 | Analytics/Logpush | API scope yok → okunamadı | `Zone → Analytics → Read` ekle | — |
+| F-28 | `103 Early Hints` | HTTP/2'de apex, `200`'den önce aynı `Link` ön-yükleme kümesini `103` ile gönderir; origin'de ve HTTP/1.1'de yok (tur 24, D-13) | Doğru — `curl -D -`'nin "çift `link:`"i budur, bug değil | `HTTP` |
+| F-29 | Sıkıştırma | HTML/CSS `br`/`gzip`/**`zstd`**/`identity` istemciye göre; `content-encoding` birebir, `vary: accept-encoding` (tur 24, D-16) | Doğru — cache-key encoding-duyarlı | `HTTP` |
 
 ## WAF bypass / skip deliği değerlendirmesi
 
@@ -2073,3 +2075,154 @@ kesinleştirir.
 N-01, R-01, G-01, W-01/V-20, F-08, SR-01. Canlı build `main`'in 3 commit
 gerisinde (#319). Detay: F-26 satırı, "Onay bekleyen" 1, T-20, W-18-21,
 "Rate-limit gözlemi".
+
+---
+
+## Edge mikro-denetim tur 24 — yerel teslim / sıkıştırma / cache-key + challenge sahibi (2026-11-06)
+
+Brief'in 3. (Cache Rules) ve 5. (Bot koruması) maddeleri yeniden ölçüldü; tur
+23'ün "alias CF'yi atlıyor" bulgusu derinleştirildi. **İki yeni bilgi bulgusu
+(D-13, D-16) ve iki düzeltme (F-08 nüansı, D-14)** çıktı; hiçbiri yıkıcı değil.
+
+### D-13 — `curl -D -`'deki "çift `link:`" bir bug değil, `103 Early Hints` (bilgi)
+
+Tur 24 başında apex HTML'inde **iki `link:` başlığı** görüldü ve "CF başlık
+enjekte ediyor" sanıldı. Yöntem ayrıştırması bunu çürüttü:
+
+```
+curl -s -o /dev/null -D - 'https://isbulkktc.com/'   # → 2 satır link:
+# çünkü -D - hem 103 hem 200 başlıklarını basar
+curl -s -o /dev/null --http2 -v 'https://isbulkktc.com/' 2>&1 | grep '^< HTTP'
+# < HTTP/2 103   ← Early Hints (aynı Link kümesi)
+# < HTTP/2 200   ← gerçek yanıt (aynı Link kümesi)
+```
+
+| Yüzey | `103` sayısı (3 örnek) | `link:` (200) |
+|---|---|---|
+| apex `HTTP/2` | **1 / 1 / 1** | aynı küme |
+| origin `HTTP/2` | **0 / 0 / 0** | aynı küme |
+| apex `HTTP/1.1` | **0 / 0 / 0** | tek başlık |
+
+Yani `103`'ü **CF ekliyor** (origin'de yok), yalnız HTTP/2'de; `103`'ün `Link`
+kümesi `200`'ünkiyle **birebir aynı** (önyükleme doğru). `103`'ü `-D -` ile
+okumak "çift başlık" sanılır — bu bir **ölçüm tuzağı**, bug değil.
+
+### D-16 — sıkıştırma istemciye göre müzakere ediliyor, `zstd` dahil (bilgi)
+
+`Accept-Encoding` değiştikçe edge `content-encoding`'i birebir seçiyor ve
+`vary: accept-encoding` ile anahtarlıyor:
+
+| `Accept-Encoding` | `content-encoding` (HTML) |
+|---|---|
+| `br` | `br` |
+| `gzip` | `gzip` |
+| `br, gzip` | `br` |
+| `zstd` | **`zstd`** |
+| `identity` | (yok) |
+
+Statik CSS'te de aynı: `br`/`gzip`/`identity` → ilgili `content-encoding`,
+`cf-cache-status: HIT`, `vary: accept-encoding`. **Yeni bilgi:** edge **`zstd`**
+sunuyor (önceden not edilmemişti) — istemci desteklerse `br`'den küçük. Cache-key
+encoding-duyarlı olduğu için yanlış kodlama servis edilmiyor.
+
+### D-14 — Vercel alias'ın kendi challenge'ı: **yol-taramaya duyarlı**, IP'ye özel (orta)
+
+Tur 23 "alias CF'yi atlıyor, korumasız" diyordu. Doğru, **ama** alias'ın kendi
+katmanı var ve tetikleyicisi **hacim değil, saldırı-yolu taraması**:
+
+```
+# Temiz durum: 25× hızlı GET / → 25/25 200 (hacim limiti YOK)
+# Tek bir hassas-yol serisi (16 istek): /.env /.git/config /.aws/credentials …
+#   → 13× 404, 3× 403 (/.DS_Store /actuator/env /web.config), ardından GET / → 403
+#   → x-vercel-mitigated: challenge · retry-after: 30 · server: Vercel
+```
+
+- Challenge **IP'ye özel**: aynı saniyede temiz bir egress'ten (r.jina.ai) alias
+  `/` → **200**, tam sayfa.
+- Challenge **en az 6 dakika** tetikleyen IP'de kalıcı (tur 24'te 60/120/180/240 sn
+  ölçüldü, hâlâ `challenge`); kesin TTL panelden görülmeli — "dakikalar içinde
+  söner" iddiası bu egress'te **doğrulanmadı**.
+- Hassas yollar alias'ta **karışık** döner: `/.env`, `/.git/config`, `/.ssh/id_rsa`,
+  `/wp-config.php` → **404** (origin'de yok); `/.DS_Store`, `/actuator/env`,
+  `/web.config` → **403** (Vercel'in kendi deny-listesi). Yani "her hassas yol
+  404" (tur 23 notu) **yanlıştı** — Vercel'in kendi yapılandırması bazılarını
+  403'ler.
+
+**Sonuç:** alias yine de CF'yi atlıyor (WAF/bot/rate-limit apex'teki gibi değil),
+ama "tamamen korumasız" değil — Vercel'in kendi Security Checkpoint'i saldırı-yolu
+taramasını yakalıyor. Bu, F-08'in **şiddetini düşürür** (yine de Deployment
+Protection önerilir), **kapatmaz**.
+
+### D-15 — `#163` Cloudflare halkası: bot engeli **YOK** (teyit, halka kopuk değil)
+
+Issue #163'ün "CF arama motoru botlarını engelliyor mu?" sorusu yeniden ölçüldü:
+
+| Test | Sonuç |
+|---|---|
+| apex `GET /` Googlebot / bingbot / YandexBot / DuckDuckBot / GPTBot / ClaudeBot | **hepsi 200**, `cf-mitigated` **yok** |
+| apex `GET /` `sqlmap/1.7` | **403** (yalnız kötü UA) |
+| apex sitemap Googlebot UA | **200**, 153 093 B, `application/xml` |
+| apex tüm yollar (`/`, `/jobs`, `/login`, `/sitemap.xml`, `/robots.txt`) | `cf-mitigated` **hiç yok** |
+| apex 30× hızlı `GET /` | 30/30 **200** (bot/rate engeli yok) |
+
+`/JOBS` (büyük harf) bile **200** döner (case-insensitive route). Yani **bot
+engeli halkası kopuk değil**; #163'ün kök nedeni CF değil (doğrulama/indeks,
+LANE-SEO). Bu, `docs/lanes/02-cloudflare.md`'nin önceki tespitiyle uyumlu.
+
+### D-17 — case-insensitive rotalar + `NEXT_LOCALE` çerezi (bilgi, düşük)
+
+- **`/JOBS`, `/Jobs`, `/LOGIN` → 200**, `/jobs` ile **birebir aynı** `<title>` ve
+  canonical (`https://isbulkktc.com/jobs`). Duplike içerik riski **yok** (canonical
+  doğru); edge `DYNAMIC` (cache'lenmiyor).
+- `NEXT_LOCALE=de` çerezi gövdeyi ~değiştirir **ama yalnız `__cf_email__` /
+  `challenge-platform` rastgele parçalarında** (mail obfuscation + CF challenge
+  token'ı); `<html lang>` **değişmez** (`localeDetection: false`). Yani "çerez
+  locale'i değiştiriyor" **değil** — gerçek içerik anahtarı değil. Dinamik HTML
+  zaten `DYNAMIC` + `no-store`.
+
+### Drift (tur 24)
+
+**Yeni:** D-13 (103 bilgi), D-16 (zstd bilgi), D-14 (alias challenge nüansı —
+F-08 şiddeti düştü), D-17 (case/çerez bilgi). **Değişmeyen açık küme:** H-01,
+H-02, N-01, R-01, G-01, W-01/V-20, F-08 (hâlâ açık), SR-01. **Kapandı:** yok
+(tur 24 bilgi + nüans turu). Kanıt yöntemi: tüm ölçümler canlı `curl`/DoH; CF
+paneline/DNS'e **yazılmadı**.
+
+### Sahibin yapması gerekenler (tur 24 eklemeleri)
+
+1. **F-08 (öncelik düştü ama açık):** Vercel Deployment Protection aç. Alias'ın
+   Vercel Security Checkpoint'i saldırı-yolu taramasını yakalıyor ama hacim
+   limiti yok; asıl koruma apex'te.
+2. **D-14 takip:** Vercel'de "Security Checkpoint" ayarının bilinçli mi açık
+   olduğunu panelden teyit et (bu ölçüm yalnız HTTP'den görüldü).
+
+### D-18 — `#227`/`#170` e-posta kimlik doğrulama (DNS) canlı teyidi (orta)
+
+`lane:cloudflare` etiketli **#227** (DKIM sahiplik ayrımı) ve **#170** (spam)
+DNS halkası yeniden ölçüldü (DoH, 2026-11-06):
+
+| Kayıt | Canlı değer | Durum |
+|---|---|---|
+| DKIM `resend._domainkey` | RSA **1024-bit** (`openssl rsa -pubin … -text`) | 🔴 **#227 madde 2 — panelde 2048'e yenile** |
+| DKIM `cf2024-1._domainkey` | RSA **2048-bit** | ✅ |
+| SPF apex | `v=spf1 include:_spf.mx.cloudflare.net ~all` | 🟠 Resend/SES **yok** (ama aşağıya bak) |
+| SPF `send.isbulkktc.com` | `v=spf1 include:amazonses.com ~all` | ✅ Resend dönüş-yolu alt alanı |
+| MX `send.isbulkktc.com` | `10 feedback-smtp.eu-west-1.amazonses.com.` | ✅ |
+| DMARC `_dmarc` | `v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; fo=1` | 🟠 izleme |
+
+**Kritik nüans (doğruluk):** #170 "apex SPF Resend'i yetkilendirmiyor → SPF fail"
+diyor. Bu, **zarf (Return-Path) alanına bağlı**: Resend gönderimi
+`send.isbulkktc.com` zarfından yaparsa SPF `send` kaydına bakar (`amazonses`
+içerir → **pass**), DMARC **relaxed** hizalama (aynı kuruluş alanı) tutar. Yani
+"apex SPF'te `amazonses` yok" **tek başına SPF fail kanıtı değil**; kesin karar
+için gerçek bir gönderimin `Authentication-Results` başlığı gerekir (panel/Gmail
+"show original"). Bu ölçümde üretim postası gönderilemedi → **doğrulanamadı**,
+"bakılmadı" olarak işaretlendi.
+
+**Sahibin (panel/DNS) yapması gerekenler:**
+
+1. **#227/2:** Resend panelinden `resend._domainkey` → **2048-bit** yenile, yeni
+   TXT'i yayınla (kod değişmez; LANE-AUTH + LANE-CLOUDFLARE panel işi).
+2. **#170:** Gerçek kayıt postasının `Authentication-Results`'ını Gmail'de
+   incele; `spf=` ve `dkim=` sonuçlarını **önce ölç**, sonra DMARC'ı
+   `quarantine`'e al. `p=none` + SPF/DKIM `pass` spam'i açıklar, `fail` açıklar.

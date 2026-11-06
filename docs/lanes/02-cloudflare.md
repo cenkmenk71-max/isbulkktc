@@ -561,3 +561,48 @@ tur 19 "Rate-limit gözlemi" düzeltildi.
 **Açık kalan:** H-01, H-02, N-01, R-01, G-01, W-01/V-20, F-08, SR-01.
 **Kapandı:** F-26. Canlı build `main`'in 3 commit gerisinde (#319). Detay:
 `docs/cloudflare.md` → "Edge mikro-denetim tur 23".
+
+## Tur 24 (2026-11-06) — teslim/sıkıştırma/cache-key + challenge sahibi
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF değiştirilmedi)
+```
+
+**Bu tur ne buldu (hepsi canlı `curl`/DoH kanıtlı, `docs/cloudflare.md` → "tur 24"):**
+
+- **D-13 (bilgi):** apex HTML'de görülen "çift `link:`" bir bug değil — HTTP/2'de
+  CF `103 Early Hints` ekliyor (origin'de yok), `Link` kümesi `200`'le birebir
+  aynı. `curl -D -` iki bloğu basınca çift sanılır. **Ölçüm tuzağı.**
+- **D-16 (bilgi):** sıkıştırma istemciye göre (`br`/`gzip`/**`zstd`**/`identity`),
+  `vary: accept-encoding` ile anahtarlı; cache-key encoding-duyarlı.
+- **D-14 (orta — F-08 nüansı):** Vercel alias'ın **kendi** Security Checkpoint'i
+  var; tetikleyici **hacim değil saldırı-yolu taraması** (25× `GET /` → 200,
+  ardından tek bir hassas-yol serisi → `x-vercel-mitigated: challenge`,
+  `retry-after: 30`). Challenge **IP'ye özel** (temiz egress → 200) ve tetikleyen
+  IP'de **≥6 dk** kalıcı. "Alias tamamen korumasız" **fazla iddialıydı**.
+- **D-15 (teyit):** `#163` CF halkası **kopuk değil** — Googlebot/bingbot/
+  YandexBot/DuckDuckBot/GPTBot/ClaudeBot hepsi 200, `cf-mitigated` yok,
+  30× hızlı `GET /` 30/30 200, yalnız `sqlmap` 403. Kök neden CF değil.
+- **D-17 (bilgi):** case-insensitive rotalar (`/JOBS` → 200, canonical doğru);
+  `NEXT_LOCALE=de` çerezi `<html lang>`'i **değiştirmiyor** (localeDetection
+  kapalı), yalnız `__cf_email__`/challenge token'ı değişiyor.
+- **D-18 (orta — #227/#170, `lane:cloudflare`):** DKIM `resend._domainkey` canlı
+  **1024-bit** (2048 olmalı), `cf2024-1` 2048; SPF `send.isbulkktc.com`
+  `amazonses` içeriyor → **#170'in "SPF fail" iddiası zarf alanına bağlı,
+  ölçülmeden kabul edilmemeli** (Authentication-Results gerekir).
+
+**Düzeltilen (doküman doğruluğu):** F-08 şiddeti düştü (alias'ın kendi katmanı
+var); tur 23'ün "her hassas yol alias'ta 404" notu yanlıştı (bazıları Vercel
+403'ü); "challenge dakikalar içinde söner" iddiası ≥6 dk kalıcı olduğu için
+düzeltildi.
+
+**Açık kalan (değişmedi):** H-01, H-02, N-01, R-01, G-01, W-01/V-20, F-08, SR-01.
+**Kapandı:** yok (bilgi + nüans turu).
+
+**Sonraki lane için notlar:** (1) `curl -D -` çıktısındaki çift başlığı `103`'e
+karşı ayıkla (`--http2 -v` + `grep '^< HTTP'`); (2) bir egress'ten alınan
+challenge'ı "site geneli" sanma — temiz egress ile çapraz doğrula; (3) SPF/DKIM
+"fail" iddiasını zarf alanı + `Authentication-Results` olmadan doğrulama.
