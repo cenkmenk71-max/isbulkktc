@@ -408,3 +408,20 @@ yapmıyor**.
   kaybedince ratchet **kırmızı** olur.
 - **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
   #102.
+
+## Durum (2026-11-05, 17. tur) — CI job-level izin bloğu
+
+Kendi `ci-workflow-permissions.test.ts`'imi denetledim: `pull_request` ile koşan
+her workflow'un `permissions:` bloğunu okuyordu ama **yalnız top-level** bloğu.
+
+- **Bulgu + düzeltme: job-level `permissions:` bloğu kaçırılıyordu.** GitHub'da bir
+  job kendi `permissions:` bloğuyla top-level'ı **geçersiz kılar**; `ci.yml`'deki
+  bir job'a `permissions: { contents: write }` eklemek testi **yeşil bırakıyordu**
+  (kanıtlandı) — yani bir lane, izlediği token'ı sessizce genişletebilirdi. Test
+  artık **her** `permissions:` bloğunu (top-level ve girintili job-level) tarar.
+- **Kanıt (mutation):** `static` job'ına `permissions: contents: write` ekle →
+  kırmızı (`unexpected write permission: ci.yml [contents: write]`); geri alınca
+  yeşil. Self-test: iki bloklu bir YAML'da job-level yazma bloğunun görüldüğünü
+  doğrular.
+- **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
+  #102.

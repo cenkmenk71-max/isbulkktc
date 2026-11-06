@@ -12,6 +12,11 @@ import test from "node:test";
  * non-fork PR include write access. The regression is invisible (the workflow
  * still runs) and only shows up as a token that can push.
  *
+ * A *job-level* `permissions:` block overrides the top-level one, so checking
+ * only the top-level block misses the same widening one level down: a job could
+ * add `permissions: { contents: write }` and this suite would stay green. Every
+ * `permissions:` block in a `pull_request` workflow is inspected, at any indent.
+ *
  * These are grep-level checks over the workflow YAML. They cannot prove the token
  * is safe at runtime; they catch the one mistake that silently widens it: a
  * missing or widened `permissions:` block.
@@ -36,9 +41,22 @@ function workflows(): Workflow[] {
 
 const all = workflows();
 
-/** The block under the top-level `permissions:` key, if present. */
+/**
+ * The block under *every* `permissions:` key — top-level (column 0) and any
+ * job-level (indented) one. A job-level block overrides the top-level one, so
+ * both must be inspected.
+ */
+function permissionsBlocks(yaml: string): string[] {
+  const blocks: string[] = [];
+  for (const match of yaml.matchAll(/^([ \t]*)permissions:[ \t]*\n((?:\1[ \t]+.*\n?)*)/gm)) {
+    blocks.push(match[2]);
+  }
+  return blocks;
+}
+
+/** The top-level (`^permissions:`) block only, for the "declares permissions" check. */
 function topLevelPermissions(yaml: string): string | null {
-  const match = yaml.match(/^permissions:\n((?:[ \t]+.*\n?)*)/m);
+  const match = yaml.match(/^permissions:[ \t]*\n((?:[ \t]+.*\n?)*)/m);
   return match ? match[1] : null;
 }
 
@@ -66,10 +84,13 @@ test("only the reviewed auto-merge workflow grants write on pull_request", () =>
   for (const workflow of all) {
     if (!workflow.onPullRequest) continue;
     if (writeAllowlist.has(workflow.name)) continue;
-    const block = topLevelPermissions(workflow.yaml);
-    if (block === null) continue;
-    if (/:\s*write\b/.test(block)) {
-      offenders.push(`${workflow.name} [${block.replace(/\s+/g, " ").trim()}]`);
+    // Check *every* permissions block, not just the top-level one: a job-level
+    // `contents: write` overrides the top-level read and would otherwise be
+    // invisible here.
+    for (const block of permissionsBlocks(workflow.yaml)) {
+      if (/:\s*write\b/.test(block)) {
+        offenders.push(`${workflow.name} [${block.replace(/\s+/g, " ").trim()}]`);
+      }
     }
   }
   assert.deepEqual(
@@ -77,6 +98,27 @@ test("only the reviewed auto-merge workflow grants write on pull_request", () =>
     [],
     `pull_request workflows with an unexpected write permission: ${offenders.join(", ")}`,
   );
+});
+
+test("the permissions scanner sees a job-level block too (self-test)", () => {
+  // Guards the guard: a job-level block overrides the top-level one, so a
+  // scanner that only looked at column 0 would miss the widening.
+  const yaml = [
+    "permissions:",
+    "  contents: read",
+    "jobs:",
+    "  build:",
+    "    runs-on: ubuntu-latest",
+    "    permissions:",
+    "      contents: write",
+  ].join("\n");
+  const blocks = permissionsBlocks(yaml);
+  assert.equal(blocks.length, 2, `expected two permissions blocks, got ${blocks.length}`);
+  assert.ok(
+    blocks.some((block) => /:\s*write\b/.test(block)),
+    "the job-level write block was not seen",
+  );
+  assert.equal(topLevelPermissions(yaml)!.includes("write"), false);
 });
 
 test("no workflow uses the pull_request_target trigger", () => {

@@ -198,10 +198,13 @@ issue açar.
   locale-prefix'li literal; `?error=` tek başına yönlendirme üretmez.
   `tests/security/auth-redirect-boundary.test.ts` bunu sabitler (bulgu yok).
 - **CI tedarik zinciri:** `pull_request` ile koşan her workflow top-level
-  `permissions:` bildirir ve en az yetkidedir; hiçbiri `pull_request_target`
-  kullanmaz. Tek `write` sahibi `agent-pr-automation.yml`'dir (yalnız `gh pr
-  merge/edit`; PR kodunu checkout etmez), ve auto-merge kapısı `.github/workflows/**`
-  değişikliğini yine reddeder. `tests/security/ci-workflow-permissions.test.ts`.
+  `permissions:` bildirir ve en az yetkidedir; **her** `permissions:` bloğu
+  (top-level ve job-level) denetlenir — job-level bir blok top-level'ı geçersiz
+  kıldığı için yalnız üstteki bloğa bakmak `contents: write`'ı kaçırırdı. Hiçbiri
+  `pull_request_target` kullanmaz. Tek `write` sahibi `agent-pr-automation.yml`'dir
+  (yalnız `gh pr merge/edit`; PR kodunu checkout etmez), ve auto-merge kapısı
+  `.github/workflows/**` değişikliğini yine reddeder.
+  `tests/security/ci-workflow-permissions.test.ts`.
 
 ### Açık bulgular (sahibine bildirildi, düzeltme bekliyor)
 
