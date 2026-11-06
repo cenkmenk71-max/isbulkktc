@@ -1150,7 +1150,7 @@ issue'nun üçüncü deneyle de çözülemediği** oldu (#149).
 Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
 Değişen dosyalar: docs/lanes/03-seo.md
 Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
-            test:unit ✅ (590 pass, 4 belgeli todo)  test:security ✅ (47 pass, 2 todo)
+            test:unit ✅ (598 pass, 4 belgeli todo)  test:security ✅ (47 pass, 2 todo)
             build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone doğrulaması ✅
 Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
 ```
@@ -1218,3 +1218,77 @@ ve üçü de doğrulandı:
 - `(auth)/**` sahipliği çift (SEO `src/app/[locale]/**` + AUTH); #288 ile auth
   meta artık doğru, ama tabloya `!src/app/[locale]/(auth)/**` dışlaması eklenmeli.
 - SEO alanı bu turda da **temiz**; yeni iş için yeni ürün yüzeyi gerekiyor.
+
+---
+
+## Micro-denetim raporu — tur 14 (IndexNow anahtar seçimi)
+
+```
+Lane: LANE-SEO        Branch: lane/seo        PR: (bu PR)
+Değişen dosyalar: docs/lanes/03-seo.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅
+            test:unit ✅ (598 pass, 4 belgeli todo)  test:security ✅ (77 pass, 2 todo)
+            build ✅ (NEXT_DIST_DIR=.next-lane-seo)  canlı standalone + üretim doğrulaması ✅
+Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok)
+```
+
+### Denetlenen dosyalar
+
+`git ls-files` ile LANE-SEO sahipliği: **41 dosya** — `src/lib/seo.ts`,
+`src/app/sitemap.ts`, `src/app/robots.ts`, `scripts/submit-indexnow.mjs` ve
+`src/app/[locale]/**` altındaki 37 route/layout. Hepsi tarandı; bakılmayan yok.
+
+### Bu turda doğrulanan yeni commit'ler
+
+| Commit | Ne yaptı | Doğrulama |
+|---|---|---|
+| `#296` (AUTH) | `(auth)` rotalarında RSS autodiscovery linkini geri koydu (kendi `alternates` bloğu layout'unkini **değiştirdiği** için kaybolmuştu) | 23 rotanın **tamamında** `<link rel="alternate" type="application/rss+xml">` var; 404 ve iş ilanı detayı dahil |
+| `#297` (URUN) | e-posta Reply-To + one-click unsubscribe başlıkları | SEO yüzeyine dokunmuyor (e-posta) |
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `scripts/submit-indexnow.mjs:31` + `scripts/verify-indexing.mjs:538` | mantık / hata yolu | Anahtar dosyası `entries.find()` ile seçiliyor; regex yalnız `^[a-z0-9]{8,128}\.txt$`. `readdir` alfabetik döndüğü için ikinci bir eşleşen `.txt` eklenince **yanlış dosya** seçiliyor (`aaasecurityfile12345.txt` → içeriği `"aaasecurityfile12345"`, gerçek anahtar değil) | dosya **adı** içeriğe eşit olan dosya seçilmeli (IndexNow tanımı: `<key>.txt` içeriği `<key>`) | Günlük IndexNow gönderimi yanlış `key`/`keyLocation` ile gider (sessiz); `verify-indexing` **yanlış PASS** üretir | **devredildi → #309** (LANE-INFRA; `scripts/**`) |
+| 2 | Sitemap, canonical, hreflang, robots, OG/Twitter, JSON-LD, link bütünlüğü, RSS, CWV | — | — | — | — | **0 bulgu** (aşağıdaki kanıt) |
+| 3 | `#149` 404 `<html lang/dir>` | üç deney de çözmedi (tur 12) | — | — | — | devredildi, açık |
+| 4 | `#292` `indexing:verify` script'i | `package.json`'da yok (tur 13 bulgusu) | — | — | — | devredildi, açık |
+
+### Kanıt (bu tur)
+
+- **RSS autodiscovery (23 rota):** `/`, 12 statik rota, `/install`, 4 auth rotası,
+  404, ilçe/tür inişi, rehber/blog detayı → **hepsi YES**. Auth-gated 7 rota
+  (admin/profile/company) 307 ile `/login`|`/forgot-password`'a gidiyor; hedef
+  sayfalar RSS taşıyor.
+- **Sitemap:** geçerli XML, 186 `<loc>`, **0 tekrar**, hepsi 200; `<lastmod>` 42
+  kayıtta, ilçe/türde **0** (tur 9 kararı).
+- **hreflang karşılıklılık:** 186 sayfa → **0 ihlal**.
+- **Kopya meta:** **0** (title/description/canonical/og:*/twitter:*/robots/viewport).
+- **JSON-LD:** 186 sayfa geçerli (0 parse hatası); `WebSite`×186, `Organization`×186,
+  `CollectionPage`×96, `BreadcrumbList`×132, `Article`×36, `FAQPage`×12.
+- **Link bütünlüğü:** 415 benzersiz iç hedef → 0 kırık; yetim 0; boş anchor 0.
+- **`verify-indexing.mjs` (üretim):** `PASS robots/sitemap/single-loc/pages/indexnow`
+  → **0 failure / 0 warning / 0 skipped**.
+- **Üretim durumu:** deploy edilen commit tüm düzeltmeleri taşıyor — `/en/login`
+  canonical + RSS, 404 `og:title="Page not found"` (#281), yasal sayfalar
+  yerelleşmiş (#141).
+- **Feed:** 6 `<item>`, tüm `<link>`'ler 200; `security.txt` `Expires` gelecekte;
+  `llms.txt`/`llms-full.txt` 200.
+
+### Düzeltilen / devredilen
+
+- **Düzeltildi:** yok (bulgu başka lane'in dosyasında).
+- **Devredildi:** #309 (IndexNow anahtar seçimi, LANE-INFRA), #292 (INFRA),
+  #149, #173.
+
+### Sonraki lane için notlar
+
+- **`entries.find()` + geniş regex = sessiz yanlış seçim.** `public/`'a dosya
+  ekleyen her araç (IndexNow, doğrulama) ad sırasına güvenmemeli; ad == içerik
+  kontrolü tek sağlam ölçüt.
+- **Aynı desen iki dosyada:** `submit-indexnow.mjs` ve `verify-indexing.mjs`
+  ikisi de aynı seçiciyi kullanıyor; biri düzeltilirse diğeri de düzeltilmeli
+  (#309 ikisini birlikte kapsıyor).
+- **`alternates` bloğu yazan her rota `types`'ı yeniden bildirmeli** (Next en
+  derin segmentte değiştirir) — #296'nın düzelttiği sınıf; yeni rota eklerken
+  RSS linkini kontrol et.
