@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
+import { authorizationIndex, authorizationLookup } from "./authorization-header";
+
 /**
  * The bearer-secret authentication on the two Next.js cron routes.
  *
@@ -33,17 +35,22 @@ function source(file: string): string {
  * `/api/email/engagement-digest` use, and the marker of the class this suite
  * exists to cover:
  *
- *   - it reads the `Authorization` header,
+ *   - it reads the `Authorization` header (any casing / access form),
  *   - it compares against a `Bearer ${…}` string, and
  *   - the token comes from a non-public env var (`*_SECRET` / `*_TOKEN`).
  *
  * All three must hold: a route that merely *reads* the header (to log it, say)
  * is not a bearer-authenticated worker, and a route that reads a secret but
  * never compares the header is not authenticating with it.
+ *
+ * Documented limitation (not silent): the header clause is anchored to a
+ * `headers` receiver, so a route that copies the header map into a differently
+ * named variable first (`const h = new Headers(request.headers); h.get(…)`) is
+ * not discovered. No route does that today; widen the anchor if one appears.
  */
 function isBearerSecretGuard(code: string): boolean {
   return (
-    /headers\.get\(\s*["']authorization["']\s*\)/.test(code) &&
+    authorizationLookup.test(code) &&
     /Bearer\s*\$\{/.test(code) &&
     /process\.env\.(?!NEXT_PUBLIC_)[A-Z0-9_]*(?:SECRET|TOKEN)\b/.test(code)
   );
@@ -93,7 +100,7 @@ for (const route of routes) {
   });
 
   test(`${route.file} authenticates before it inspects its configuration`, () => {
-    const authIndex = route.code.indexOf('request.headers.get("authorization")');
+    const authIndex = authorizationIndex(route.code);
     assert.ok(authIndex > -1, "the bearer comparison was not found");
     if (route.probeIndex === -1) return; // no configuration probe to order against
     assert.ok(
@@ -110,7 +117,7 @@ for (const route of routes) {
     // check vacuous (it would otherwise match any `!x ||` guard).
     assert.match(
       route.code,
-      /!\s*(\w+)\s*\|\|\s*request\.headers\.get\(\s*["']authorization["']\s*\)\s*!==\s*`Bearer \$\{\1\}`/,
+      /!\s*(\w+)\s*\|\|\s*(?:request\.)?headers\s*(?:\.\s*get\(\s*|\[\s*)["']authorization["']\s*[)\]]\s*!==\s*`Bearer \$\{\1\}`/i,
       "the guard must reject when the secret is missing, not skip the comparison",
     );
   });
@@ -138,6 +145,23 @@ test("the bearer-guard predicate sees the route shape and rejects near-misses (s
     ),
     true,
   );
+  // HTTP header names are case-insensitive and `Authorization` is the canonical
+  // spelling — the predicate must discover it, or a route written that way
+  // escapes every check below while staying green.
+  for (const spelling of [
+    'request.headers.get("Authorization")',
+    'request.headers.get("AUTHORIZATION")',
+    'request.headers["authorization"]',
+  ]) {
+    assert.equal(
+      isBearerSecretGuard(
+        `const secret = process.env.PUSH_CRON_SECRET;` +
+          `if (!secret || ${spelling} !== \`Bearer \${secret}\`) {}`,
+      ),
+      true,
+      `the predicate must recognise ${spelling}`,
+    );
+  }
   // A route that reads a secret but never compares the header is not a bearer guard.
   assert.equal(
     isBearerSecretGuard("const secret = process.env.PUSH_CRON_SECRET; return secret;"),

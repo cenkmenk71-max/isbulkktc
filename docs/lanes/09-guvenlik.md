@@ -1003,3 +1003,80 @@ Bu turda tam taranan: `vercel.json` (yeni), `tests/security/vercel-deploy-gate.t
 (yeni), `.github/workflows/prune-vercel-deployments.yml`, `docs/lanes/09-guvenlik.md`.
 `tests/security/**` kalan 19 dosya bu turda **bakılmadı** — önceki turlarda
 denetlendi, CI yeşil. Açık `todo`'lar değişmedi: #298, #206, #102, #418 §6.
+
+## Tur — micro-denetim: bearer-guard dedektörlerinin başlık-yazımı körlüğü
+
+**Lane:** GÜVENLİK · **Branch:** `lane/guvenlik`
+
+AUDIT.md micro-denetimi: `tests/security/**` sahipli 20 dosya tarandı, bu turda
+dört dosya satır satır denetlendi (`cron-route-auth`, `notification-worker-auth`,
+`authorization-header` (yeni), `push-endpoint-ssrf`) + iki doküman.
+
+### Bulgu — HTTP başlık adı büyük/küçük harf körlüğü (gerçek yanlış-negatif)
+
+`cron-route-auth.test.ts`'in keşif predicate'i `Authorization` başlığını **küçük
+harfli** literalle arıyordu:
+
+```ts
+/headers\.get\(\s*["']authorization["']\s*\)/
+```
+
+HTTP başlık adları büyük/küçük harf duyarsızdır ve `"Authorization"` **kanonik**
+yazımdır. `headers.get("Authorization")` yazan bir cron rotası **keşfedilmiyor**,
+yani sıralama / fail-closed / yansıma kontrollerinin **hiçbiri** onun için
+koşmuyordu — sessiz yeşil. Ölçülen biçimler:
+
+| Biçim | Eski dedektör |
+|---|---|
+| `headers.get("authorization")` | keşfedildi |
+| `headers.get("Authorization")` (kanonik) | **MISSED** |
+| `headers.get("AUTHORIZATION")` | **MISSED** |
+| `headers["authorization"]` | **MISSED** |
+| `"Bearer " + s` | **MISSED** |
+| `const { X } = process.env` | **MISSED** |
+| `process.env["X"]` | **MISSED** |
+| `new Headers(...)` | **MISSED** |
+
+8/8 gerçekçi biçimin 7'si kaçırılıyordu.
+
+### Düzeltme
+
+`authorizationLookup` artık `.get(...)` ve bracket biçimini, **her harf
+durumunda** görüyor; `cron-route-auth` ve `notification-worker-auth` aynı
+matcher'ı `tests/security/authorization-header.ts`'ten okuyor (iki tarayıcı
+`sql-hardening` kardeşlerinde bir kez sürüklendiği için tek kaynak).
+
+### Kanıt (mutation)
+
+`createSupabaseServiceClient()`'ı `headers.get("Authorization")` kontrolünden
+**önce** çağıran `src/app/api/probe-cron-case/route.ts` eklendi:
+
+| Dedektör | probe-cron-case | Sonuç |
+|---|---|---|
+| eski (case-sensitive) | keşfedilmedi | 0 kırmızı — **sessiz yeşil** |
+| yeni (case-insensitive) | keşfedildi | 1 kırmızı — "authenticates before it inspects its configuration" |
+
+Probe temizlendi; iki suite **15/15** yeşil.
+
+### Doğrulanan güçlü kontrol (bulgu yok)
+
+`push-endpoint-ssrf` allowlist'i 25 saldırgan girdiyle sınandı (loopback,
+RFC1918, metadata, decimal-IP, `[::ffff:127.0.0.1]`, `0x7f.0.0.1`, `127.1`,
+`fcm.googleapis.com@evil`, `fcm.googleapis.com\@127.0.0.1`, punycode,
+`%66cm...`): **hiçbir atlatma yok**. İki bilinçli genişlik (gerçek Apple
+`*.push.apple.com` / Windows bölgesel alt alanları) allowlist tasarımıdır.
+
+### Kapılar
+
+`lint` temiz, `typecheck` temiz, `check:frontend-source` geçti.
+`test:security` **125 test / 121 pass / 0 fail / 4 todo** (yeni self-test'ler
+mevcut testleri genişletti, sayı korundu). `test:unit` **739 test / 737 pass /
+2 todo** (değişmedi).
+
+### Bakılmayan
+
+Bu turda tam taranan: `cron-route-auth.test.ts`, `notification-worker-auth.test.ts`,
+`authorization-header.ts` (yeni), `push-endpoint-ssrf.test.ts`,
+`docs/threat-model.md`, `tests/security/README.md`, `docs/lanes/09-guvenlik.md`.
+`tests/security/**` kalan 16 dosya bu turda **bakılmadı** — önceki turlarda
+denetlendi, CI yeşil. Açık `todo`'lar değişmedi: #298, #206, #102, #418 §6.

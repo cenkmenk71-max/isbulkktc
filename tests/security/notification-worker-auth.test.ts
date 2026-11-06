@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+import { authorizationIndex } from "./authorization-header";
+
 /**
  * The notification worker's authentication ordering.
  *
@@ -72,7 +74,7 @@ test("the functions with verify_jwt disabled are discovered (self-test)", () => 
 
 for (const name of publicFunctions()) {
   const code = workerSource(name);
-  const authIndex = code.indexOf('request.headers.get("authorization")');
+  const authIndex = authorizationIndex(code);
   // The first configuration read after the guard, whichever form it takes.
   const configMatch = /Deno\.env\.get\("([A-Z0-9_]+)"\)/.exec(
     code.slice(authIndex === -1 ? 0 : authIndex),
@@ -104,7 +106,7 @@ for (const name of publicFunctions()) {
     // comparison — a `!token || … !== \`Bearer ${token}\`` shape.
     assert.match(
       code,
-      /!\s*(\w+)\s*\|\|\s*request\.headers\.get\("authorization"\)\s*!==\s*`Bearer \$\{\1\}`/,
+      /!\s*(\w+)\s*\|\|\s*(?:request\.)?headers\s*(?:\.\s*get\(\s*|\[\s*)["']authorization["']\s*[)\]]\s*!==\s*`Bearer \$\{\1\}`/i,
       "the guard must reject when the token is missing, not skip the comparison",
     );
   });

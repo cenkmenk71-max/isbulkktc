@@ -569,3 +569,35 @@ build-info yalnız sürüm kimliği + `no-store`; depoda/konfigde **hiç** ACAO 
 (M-01 platform-only kaldığı sürece); her `src/app/api/**/route.ts` `dynamic`
 bildirir; her `force-static` rota `no-store` taşır. Üç self-test guard'ın
 görmediği biçimi göstermesi için (mutasyonla kanıtlandı).
+
+### Katmanın kendi dedektörleri (33. tur — HTTP başlık adı büyük/küçük harf körlüğü)
+
+31. turda dedektörler **konu keşfi**ne geçti; bu turda aynı sınıfın bir alt
+biçimi bulundu: keşif predicate'i konunun **yazımına** dar. İki bearer-guard
+dedektörü `Authorization` başlığını **küçük harfli** literalle arıyordu.
+
+- **Bulgu + düzeltme: `cron-route-auth.test.ts` başlık adına duyarlıydı.**
+  `isBearerSecretGuard` içindeki `/headers\.get\(\s*["']authorization["']/`
+  yalnız küçük harfli `.get("authorization")` biçimini görüyordu. HTTP başlık
+  adları **büyük/küçük harf duyarsızdır** ve `"Authorization"` kanonik yazımdır;
+  bu yüzden `headers.get("Authorization")` yazan bir cron rotası **keşfedilmiyor**,
+  dolayısıyla sıralama / fail-closed / yansıma kontrollerinin **hiçbiri** onun
+  için koşmuyordu. Ölçüm: 8 gerçekçi biçimin **7'si** kaçırıldı (kanonik
+  `"Authorization"` dâhil): `"AUTHORIZATION"`, `headers["authorization"]`,
+  `"Bearer " + s` birleştirmesi, `process.env` yıkımı, `process.env["…"]`,
+  `new Headers()` kopyası. `authorizationLookup` artık `.get(...)` ve bracket
+  biçimini, her harf durumunda (`/i`) görüyor.
+- **Düzeltme paylaşılan kaynağa çıkarıldı: `tests/security/authorization-header.ts`.**
+  Aynı körlük `notification-worker-auth.test.ts`'te de vardı (orada semptom
+  gürültülü: `authIndex > -1` iddiası kırmızı olur, ama sıralama yine
+  denetlenmez). İki tarayıcı `sql-hardening` kardeşlerinde bir kez sürüklendiği
+  için matcher tek bir modülden okunuyor; sürüklenme imkânsız.
+- **Kanıt (mutation).** `createSupabaseServiceClient()`'ı `headers.get("Authorization")`
+  kontrolünden **önce** çağıran bir `src/app/api/probe-cron-case/route.ts`
+  eklendi: **eski** dedektör onu keşfetmedi (0 kırmızı, sessiz yeşil), **yeni**
+  dedektör keşfedip "authenticates before it inspects its configuration"
+  testini kırmızıya çevirdi. Probe temizlendi; iki suite 15/15 yeşil.
+- **Bilinçli sınır (sessiz değil).** Başlık maddesi bir `headers` alıcısına
+  bağlı; başlık haritasını farklı adlı bir değişkene kopyalayan bir rota
+  (`const h = new Headers(request.headers); h.get(…)`) keşfedilmez. Bugün böyle
+  bir rota yok; çıkarsa bağ genişletilir.

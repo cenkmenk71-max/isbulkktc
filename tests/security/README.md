@@ -70,6 +70,9 @@ hand-written list of routes, clients or RPCs silently stops covering the next
 one added. `cron-route-auth` scans `src/app/api/**` for the bearer-guard shape,
 `session-cookie-flags` scans `src/**` for `createServerClient(...)`,
 `notification-worker-auth` scans `supabase/config.toml` for `verify_jwt = false`,
+the bearer-guard header matcher is shared by both via `authorization-header.ts`
+(any casing and both `.get(...)`/`[...]` forms — HTTP header names are
+case-insensitive and `"Authorization"` is canonical),
 `anonymous-rpc-throttle` scans the grants for `anon`-callable writers,
 `auth-captcha-wiring` scans `src/features/identity/**` for captcha-protected
 calls (every occurrence, not just the first), and `anonymous-write-surface`
