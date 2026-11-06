@@ -233,19 +233,29 @@ issue açar.
    altındaki diğer tüm sır-okuyan modüller bu işareti taşıyor; eksik olan, yanlış
    bir istemci içe aktarımını derleme hatası yerine sessiz bir sızıntıya çevirir.
    Kanıt: `tests/security/client-boundary.test.ts` (`todo`).
-3. **Push endpoint'i üzerinden SSRF — KAPATILDI** (sahibi: LANE-URUN + LANE-SUPABASE;
-   #273, devir #262). Kayıtlı bir ziyaretçi `endpoint`'e herhangi bir `https://`
-   URL yazabiliyordu; cron worker (`/api/push/dispatch` -> `sendPushMessage` ->
-   `web-push`) o URL'ye **sunucudan** bağlanıyordu — host allowlist'i yoktu
-   (kör SSRF; `https://127.0.0.1/...` yerel bir dinleyiciye 1 bağlantı / 1568
-   bayt TLS ClientHello yaptı). Düzeltme: `isAllowedPushEndpoint`
-   (`src/server/push/push-endpoint.ts`) yalnız bilinen push servis host'larını
-   kabul eder; IP literal, decimal-IP, `localhost`, `.local`/`.internal` reddedilir.
-   **Her iki yazma yolu** (route + `savePushSubscription`) ve gönderim ucu onu
-   çağırır. `tests/security/push-endpoint-ssrf.test.ts` artık bir **kapı**
-   (allowlist'i gerçek fonksiyonla sürer + her yazarı ve sink'i sabitler).
+3. **İki `service_role`-only RPC'de gövde-içi rol guard'ı yok** (sahibi:
+   `supabase/**`, LANE-SUPABASE; devir **#298**). `list_engagement_recipients` ve
+   `opt_out_engagement` `service_role`'e grant'li ama gövdelerinde
+   `auth.role() <> 'service_role'` kontrolü yok; diğer altı `service_role`-only RPC
+   (push + outbox) bunu yapıyor. Birincil kontrol (`revoke … from public, anon,
+   authenticated`) yerinde ve pgTAP'te sabit, ama bir gün `anon`/`authenticated`'e
+   EXECUTE yanlışlıkla geri verilirse (bu depoda oldu) bu ikisinin ikinci savunma
+   hattı yok — `list_engagement_recipients` tam bir mailing-list dump'ıdır. Kanıt:
+   `tests/security/sql-hardening.test.ts` → "every service-role-only RPC re-checks
+   auth.role() in its own body" (`todo`).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
+
+- **Push endpoint'i üzerinden SSRF** (sahibi: LANE-URUN + LANE-SUPABASE; #273,
+  devir #262). Kayıtlı bir ziyaretçi `endpoint`'e herhangi bir `https://` URL
+  yazabiliyordu; cron worker (`/api/push/dispatch` -> `sendPushMessage` ->
+  `web-push`) o URL'ye **sunucudan** bağlanıyordu — host allowlist'i yoktu (kör
+  SSRF; `https://127.0.0.1/...` yerel bir dinleyiciye 1 bağlantı / 1568 bayt TLS
+  ClientHello yaptı). Düzeltme: `isAllowedPushEndpoint`
+  (`src/server/push/push-endpoint.ts`) yalnız bilinen push servis host'larını
+  kabul eder; IP literal, decimal-IP, `localhost`, `.local`/`.internal` reddedilir.
+  **Her iki yazma yolu** (route + `savePushSubscription`) ve gönderim ucu onu
+  çağırır. `tests/security/push-endpoint-ssrf.test.ts` artık bir **kapı**.
 
 - **Açık yönlendirme — `sanitizeNextPath` normalizasyon bypass'ı** (sahibi:
   `src/lib/pwa/destination.ts`, LANE-URUN). `/[locale]/install?next=` girdisi,

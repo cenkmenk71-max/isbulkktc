@@ -335,6 +335,81 @@ test("the admin-guard ratchet reads the last definition, not the first (self-tes
 });
 
 // ---------------------------------------------------------------------------
+// 2d. Every service-role-only RPC re-checks `auth.role()` in its own body.
+//
+// A function granted to `service_role` is a worker primitive: the route that
+// calls it already holds the service key, but the function itself must not rely
+// on that. `list_engagement_recipients` is a full mailing-list dump
+// (`user_id`, `email`, `display_name`, `locale`) and it once shipped callable
+// with the publishable key — the revoke is the primary control, and the in-body
+// `auth.role() <> 'service_role'` check is the second. Six of the eight
+// service-role-only RPCs have it (the four push ones and the two outbox ones);
+// `list_engagement_recipients` and `opt_out_engagement` do not.
+//
+// Documented as a `todo` because the fix belongs to LANE-SUPABASE. When the two
+// are re-created with the guard (one trailing idempotent migration), the `todo`
+// can be dropped and this becomes a gate.
+// ---------------------------------------------------------------------------
+
+/** The signatures granted to `service_role` (with their argument lists). */
+function serviceRoleOnlySignatures(): string[] {
+  const grantedToClients = new Set<string>();
+  const grantedToService = new Set<string>();
+  const re =
+    /grant\s+execute\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*\(([^)]*)\)\s+to\s+([^;]+);/gi;
+  for (const match of allSql.matchAll(re)) {
+    const roles = match[3].toLowerCase();
+    const signature = `${match[1]}(${normalizeArgs(match[2])})`;
+    if (/\bservice_role\b/.test(roles)) grantedToService.add(signature);
+    if (/\banon\b|\bauthenticated\b/.test(roles)) grantedToClients.add(signature);
+  }
+  return [...grantedToService].filter((signature) => !grantedToClients.has(signature)).sort();
+}
+
+// Matches both `(select auth.role()) <> 'service_role'` (the raise form) and
+// `(select auth.role()) = 'service_role'` (a WHERE guard), with or without the
+// closing paren and any spacing.
+const serviceRoleGuard = /auth\.role\(\)\s*\)?\s*(?:<>|=)\s*'service_role'/;
+
+test("the service-role guard matcher reads the latest body and ignores comments (self-test)", () => {
+  assert.equal(
+    serviceRoleGuard.test(stripSqlComments("begin if (select auth.role()) <> 'service_role' then raise; end if; end;")),
+    true,
+  );
+  assert.equal(
+    serviceRoleGuard.test(stripSqlComments("where (select auth.role()) = 'service_role' and p.status = 'active'")),
+    true,
+  );
+  assert.equal(
+    serviceRoleGuard.test(stripSqlComments("begin -- auth.role() <> 'service_role'\n return; end;")),
+    false,
+  );
+});
+
+test(
+  "every service-role-only RPC re-checks auth.role() in its own body",
+  {
+    todo:
+      "list_engagement_recipients and opt_out_engagement are granted to service_role " +
+      "but do not re-check auth.role() in their bodies (see docs/threat-model.md)",
+  },
+  () => {
+    const offenders: string[] = [];
+    for (const signature of serviceRoleOnlySignatures()) {
+      const name = signature.slice(0, signature.indexOf("("));
+      const body = latestFunctionBodies(name).get(name);
+      if (body === undefined) continue; // not a plpgsql/sql body we can read
+      if (!serviceRoleGuard.test(stripSqlComments(body))) offenders.push(name);
+    }
+    assert.deepEqual(
+      offenders,
+      [],
+      `service-role-only RPCs without an auth.role() guard: ${offenders.join(", ")}`,
+    );
+  },
+);
+
+// ---------------------------------------------------------------------------
 // 3. A client grant is always preceded by an explicit revoke.
 //
 // `revoke ... from public` alone does not remove the per-role EXECUTE entries

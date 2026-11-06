@@ -383,3 +383,28 @@ pinliyordu ama **`images.remotePatterns`** (sunucu tarafı görsel-fetch allowli
   "169.254.169.254"` yap → kırmızı; (c) bir desenden `protocol: "https"`'i kaldır →
   kırmızı.
 - **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #206, #102.
+
+## Durum (2026-11-05, 16. tur) — service-role RPC rol guard'ı
+
+`public` şemasındaki **`service_role`'e grant'li, istemci rollerine kapalı** 8
+fonksiyonu taradım: 6'sı gövdesinde `auth.role()` kontrolü yapıyor, **2'si
+yapmıyor**.
+
+- **Bulgu: `list_engagement_recipients` ve `opt_out_engagement` gövde-içi rol
+  guard'ı taşımıyor.** Birincil kontrol (`revoke … from public, anon,
+  authenticated`) yerinde ve pgTAP'te sabit; ama ikinci savunma hattı yok. Bir gün
+  `anon`/`authenticated`'e EXECUTE yanlışlıkla geri verilirse (bu depoda oldu),
+  `list_engagement_recipients` (tam mailing-list dump'ı: `user_id`, `email`,
+  `display_name`, `locale`) açık verir — diğer altısı `auth.role()` ile
+  fail-closed davranır.
+- **Yeni ratchet + devir:** `sql-hardening.test.ts`'e "every service-role-only RPC
+  re-checks auth.role() in its own body" eklendi (`todo`). Ratchet, `service_role`'e
+  grant'li her imzanın **son** gövdesini (migration'lar yeniden oynatılır) okur,
+  yorumları ayıklar ve `auth.role() <> 'service_role'` / `= 'service_role'` arar.
+  İki fonksiyon guard'lanınca `todo` kaldırılıp kapıya terfi eder (doğrulandı).
+  Sahibi LANE-SUPABASE → **#298** (`agent:handoff`).
+- **Kanıt (mutation):** (a) iki fonksiyona guard eklenince ratchet **yeşile**
+  döner; (b) guard'lı üçüncü bir RPC (`finish_notification_email`) guard'ını
+  kaybedince ratchet **kırmızı** olur.
+- **Bakılmayan:** yok — 13 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
+  #102.
