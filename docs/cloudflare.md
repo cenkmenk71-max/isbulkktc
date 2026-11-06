@@ -777,3 +777,77 @@ issue açıldı.
 - **CF zone API** (`CF_API_TOKEN` yok) ve **Vercel platform davranışı** (A-01
   origin'de oluşuyor) — panel/ayar okunamadı; ölçüm canlı HTTP ile.
 - **IPv6:** sandbox'ta v6 çözümleyici yok.
+
+---
+
+## Edge mikro-denetim tur 12 — `/_next/static/*` 404'ü 1 yıl cache'leniyor (2026-11-05)
+
+Brief 3 (cache rules) kapsamında **negatif cache** (404'lerin cache'lenmesi)
+incelendi. Bir yeni bulgu (N-01) çıktı; etkisi **düşük** ama düzeltmesi net.
+
+### N-01 — `/_next/static/*` altındaki 404'ler 1 yıl edge-cache'leniyor
+
+`/_next/static/**` altında **var olmayan** bir dosya istendiğinde origin
+`404` + `cache-control: public, max-age=0, must-revalidate` döner; ama **Cloudflare
+bunu `max-age=31536000` (1 yıl) olarak cache'ler** ve sonraki istekleri `HIT` ile
+servis eder.
+
+**Kanıt (canlı):**
+```
+curl -sS -D - -o /dev/null 'https://isbulkktc.com/_next/static/chunks/nope-xyz.js'
+# 1. istek: HTTP/2 404 · cache-control: public, max-age=31536000, must-revalidate
+#           cf-cache-status: MISS · x-matched-path: /_next/static/not-found.txt
+# 2. istek: HTTP/2 404 · cf-cache-status: HIT   ← edge'den
+# 3. istek: HTTP/2 404 · cf-cache-status: HIT
+```
+
+**Kaynak — origin değil, Cloudflare:**
+```
+origin (Vercel alias, CF bypass):
+  /_next/static/chunks/nope.js → 404 · cache-control: public, max-age=0, must-revalidate
+edge (CF):
+  /_next/static/chunks/nope.js → 404 · cache-control: public, max-age=31536000, must-revalidate · cf-cache-status: HIT
+```
+Yani origin `max-age=0` derken CF **1 yıla yükseltiyor** — bu, H-02'de bulunan
+**Browser Cache TTL** ayarının bir yansıması. Ama burada `max-age`'i **başarılı bir
+statik varlıkla aynı** (gerçek chunk: `public, max-age=31536000, immutable`).
+
+**Kapsam (yalnız bu önek):**
+| Yol | 404 cache-control | cf-cache-status |
+|---|---|---|
+| `/_next/static/**` | `public, max-age=31536000` | **MISS → HIT** (cache'leniyor) |
+| `/_next/**` (static dışı) | `private, no-cache, no-store` | BYPASS |
+| `/_next/image/**` | `private, no-cache, no-store` | DYNAMIC |
+| `/images/**`, `/logos/**`, `/favicon*.ico` | `private, no-cache, no-store` | BYPASS |
+
+**Etki (düşük):**
+- **Doğruluk/tazelik:** bir `/_next/static/**` yolu bir kez 404 dönerse, aynı yol
+  1 yıl boyunca edge'den **404** olarak servis edilir. Aynı ada sahip bir varlık
+  sonradan yayınlanırsa **purge** edilene kadar 404 kalır. Next.js chunk adları
+  içerik-hash'li olduğundan pratikte aynı yol yeniden kullanılmaz → **etki düşük**;
+  ama insan eliyle eklenen `public/_next/static/**` varlıkları (varsa) risk altında.
+- **Sızıntı yok:** gövde 9 baytlık `Not Found`; başlıklarda sır yok.
+- **200 akışı etkilenmiyor:** gerçek chunk yine `immutable` + `HIT`.
+
+**Öneri (CF paneli → sahibin onayı):** Caching → **Browser Cache TTL** = `Respect
+Existing Headers` (H-02 ile aynı düzeltme). Böylece origin'in `max-age=0`'ı
+404'lerde korunur. Alternatif: Cache Rules'ta `/_next/static/**` için
+`Edge TTL = Respect origin` + statiklerde origin `immutable` başlığını koru.
+
+### Bu turda doğrulananlar (temiz)
+
+| # | Test | Gözlenen | Durum |
+|---|---|---|---|
+| N-02 | Negatif cache — diğer önekler | `/images/**`, `/logos/**`, `/_next/**`, `/favicon*.ico` 404 → `private, no-store`/BYPASS | ✔ |
+| N-03 | Gerçek statik varlık | `/_next/static/chunks/*.js` → 200 `immutable` + `HIT` | ✔ |
+| N-04 | Sorgu-dizesi varyantı (cache'li yollar) | `/robots.txt?x=1` ayrı girdi (`MISS`), gövde **aynı** | ✔ |
+| N-05 | Hata yolu cache'i | 404/307 (dinamik) → `private, no-store`, `DYNAMIC` | ✔ |
+| N-06 | Yönlendirme cache'i | `www→apex` 308, `max-age=0`; `http→https` 301 | ✔ |
+| N-07 | WAF/cache regresyon | 3/3 saldırı → 403; gerçek chunk `immutable`+`HIT` | ✔ drift yok |
+| N-08 | Önceki bulgular (H-01, H-02, R-01, G-01, A-01) | hepsi hâlâ açık | ℹ️ |
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` yok): Caching (Browser Cache TTL) / Cache Rules
+  panel durumu okunamadı; ölçüm edge↔origin diff ile.
+- **IPv6:** sandbox'ta v6 çözümleyici yok.

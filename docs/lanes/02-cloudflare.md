@@ -170,3 +170,15 @@ sızıntısı **yok** → **düşük etki**. Vercel alias'ında da aynı → **V
 değil). Düzeltme `next.config.ts`'te → **`lane:guvenlik` handoff**. Optimizer
 allowlist/parametre/sınır testleri temiz (A-02…A-09). Detay: `docs/cloudflare.md` →
 "Edge mikro-denetim tur 11".
+
+### Edge mikro-denetim tur 12 — negatif cache (2026-11-05)
+
+Brief 3 kapsamında **404'lerin cache'lenmesi** tarandı; **N-01** bulundu:
+`/_next/static/**` altındaki **var olmayan** dosyalar origin'de `max-age=0` iken
+CF tarafından **1 yıl** (`max-age=31536000`) cache'leniyor (`MISS → HIT`). Yalnız
+bu önek: `/images/**`, `/logos/**`, `/_next/**` (static dışı), `/_next/image/**`,
+`/favicon*.ico` 404'leri cache'lenmiyor (`BYPASS`/`private, no-store`). Gerçek
+chunk akışı etkilenmiyor (`immutable`+`HIT`). **Etki düşük** (hash'li chunk adları
+yeniden kullanılmaz; gövde 9 B `Not Found`, sır yok). Düzeltme H-02 ile aynı:
+Caching → Browser Cache TTL = **Respect Existing Headers** (sahibin onayı).
+Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 12".
