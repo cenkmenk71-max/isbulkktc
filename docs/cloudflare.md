@@ -54,7 +54,7 @@ Kanıt kısaltmaları: `HTTP` = `curl -D -` başlıkları, `DoH` = `cloudflare-d
 | F-12 | HSTS preload | `hstspreload.org` → **`status: pending`** | `preloaded` olana kadar bekle; kaydı geri çekme | hstspreload API |
 | F-13 | DNSSEC | Açık — DS `2371 13 2 36e0…775b`, apex+çoğu alt alan `AD=true`; **`rsend` CNAME'i `rmta.net`'e gidiyor (DS yok) → `AD=false`** (bkz. tur 18, D-01) | Apex doğru; kısmi kapsam bilinmeli | DoH DS + `AD` |
 | F-14 | Cache — dinamik HTML | `/`, `/jobs`, `/companies`, tüm dil önekleri: `cache-control: private, no-cache, no-store…`, `cf-cache-status: DYNAMIC` | Dinamik asla cache'lenmemeli — **doğru**; ama **prerender** rotalar (`/blog`, `/contact`, `/freelance`, `/about`, `/privacy`, `/terms`) `public, max-age=0` + `Set-Cookie` döner (tur 19, P-01) | `HTTP` |
-| F-15 | Cache — statik | `/_next/static/*`: `public, max-age=31536000, immutable`, `cf-cache-status: HIT`; edge'de `Vary` **yok** (tur 18 düzeltmesi) | Doğru | `HTTP` |
+| F-15 | Cache — statik | `/_next/static/*`: `public, max-age=31536000, immutable`, `cf-cache-status: HIT`; **metin varlıklarında (CSS/JS) edge `vary: accept-encoding` ekler, fontta eklemez** (tur 21, D-07) | Doğru | `HTTP` |
 | F-16 | Cache — `robots.txt` | `public, max-age=2628000` (≈30 gün), `REVALIDATED` | Kabul; ama `noindex` kuralı **`Disallow` etmiyor** (SEO lane) | `HTTP` |
 | F-17 | Cache — `sitemap.xml` | `public, max-age=3600`, `EXPIRED`/`REVALIDATED` | 1 saat TTL makul; `<lastmod>` tazeliği SEO lane'de | `HTTP` |
 | F-18 | Cache — `/images/*` | `public, max-age=2628000`, `MISS`→`REVALIDATED`, ETag var | Görseller edge-cache'leniyor, OK | `HTTP` |
@@ -287,7 +287,7 @@ bulgusu (G-01)** var.
 
 | # | Test | Gözlenen | Beklenen | Durum |
 |---|---|---|---|---|
-| **G-01** | **CF Email Obfuscation** | Footer e-posta linki `/cdn-cgi/l/email-protection#<hex>`'e çevriliyor; `__cf_email__` span + `email-decode.min.js` enjekte | HTML'de düz `mailto:` | 🔴 **yeni bulgu, onay bekliyor** |
+| **G-01** | **CF Email Obfuscation** | Footer e-posta linki `/cdn-cgi/l/email-protection#<hex>`'e çevriliyor; `__cf_email__` span + `email-decode.min.js` enjekte — **ama aynı yanıtta adres JSON-LD + RSC payload'da düz (7×)** (tur 21) | HTML'de düz `mailto:` | 🔴 **yeni bulgu, onay bekliyor** |
 | G-02 | Web cache deception (özel rota) | `/profile/dashboard`, `/company/dashboard` → **307 → /login**, `cf-cache-status: DYNAMIC`, `cache-control: private, no-store` | Cache'lenmemeli | ✔ |
 | G-03 | WCD — statik uzantı | `/profile/dashboard.css\|.js\|.png\|.webp` → **404 `BYPASS`** | Cache'lenmemeli | ✔ |
 | G-04 | WCD — traversal | `/images/../profile/dashboard` → **307 /login**, `DYNAMIC` | Özel veri cache'lenmemeli | ✔ |
@@ -483,8 +483,8 @@ ve hata-yolu boyutu eklendi. **Yeni açık yok; bir doküman düzeltmesi var.**
 
 | # | Boyut | Test | Gözlenen | Durum |
 |---|---|---|---|---|
-| T-01 | Cache-key | `/robots.txt`, `/sitemap.xml` — `Accept-Encoding: gzip` vs `identity` | `Vary: accept-encoding` var; gzip'te `content-encoding: gzip`, identity'de gzip yok → **iki varyant ayrı cache'leniyor** | ✔ doğru |
-| T-02 | Cache-key | `/_next/static/*` | `immutable` + `HIT`; edge'de `Vary` **yok** (tur 18 düzeltmesi) | ✔ |
+| T-01 | Cache-key | `/robots.txt`, `/sitemap.xml` — `Accept-Encoding: gzip`/`br` vs `identity` | **`/sitemap.xml` `Vary: accept-encoding` döner; `/robots.txt` dönmez** (10/10 örnek + cache-bust `?cb=`). Yine de kodlama doğru: identity 228 B düz, gzip 124 B ve `gunzip` ile birebir açılıyor, br ayrı → **gözlenen bozulma yok** (tur 21, D-08) | ✔ kodlama doğru; `Vary` iddiası yanlıştı |
+| T-02 | Cache-key | `/_next/static/*` | `immutable` + `HIT`; edge `Vary` **metin varlıklarında** `accept-encoding`, **fontta yok** (tur 21, D-07) | ✔ |
 | T-03 | Kişiselleştirme sızıntısı | `/robots.txt`, `/sitemap.xml` — `Cookie: NEXT_LOCALE=de/fa`, `Accept-Language: de` | gövde md5 **değişmiyor**, `REVALIDATED` | ✔ sızıntı yok |
 | T-04 | Hata yolu | `GET /definitely-not-a-page-xyz123` | **404**, `private, no-store`, `DYNAMIC`; gövdede stack/`node_modules`/`/home/`/`eyJ` **yok** | ✔ |
 | T-05 | Hata yolu | `POST /api/push/dispatch` (token yok/yanlış) | **401** JSON, `cache-control: public, max-age=0, must-revalidate`, `DYNAMIC`, gövde 26 B | ✔ |
@@ -494,9 +494,14 @@ ve hata-yolu boyutu eklendi. **Yeni açık yok; bir doküman düzeltmesi var.**
 | T-09 | HTTP/3 | `alt-svc` | `h3=":443"; ma=86400` | ✔ |
 | T-10 | IPv6 | AAAA var; bu sandbox'tan v6 | **çözümlenemedi** (ortamda v6 çözümleyici yok) | **bakılmadı** |
 
-**T-01 önemli:** `/robots.txt` ve `/sitemap.xml` gzip/identity varyantları ayrı
-tutuluyor — `Vary: accept-encoding` doğru. Aksi halde gzip gövdesi bir identity
-istemciye servis edilir ve bozuk içerik dönerdi.
+**T-01 önemli (tur 21 düzeltmesi):** önceki tur `/robots.txt` **ve**
+`/sitemap.xml` için "`Vary: accept-encoding` var" diyordu. Canlı ölçüm (tur 21)
+bunu **ayırıyor**: `/sitemap.xml` `vary: accept-encoding` döner, `/robots.txt`
+**dönmez**. Her ikisinde de kodlama doğrudur (identity düz gövde, gzip açılıyor),
+yani bugün gözlenen bozulma yok — ama `Vary`'siz `/robots.txt` teoride paylaşımlı
+bir önbelleğin gzip gövdesini identity istemciye servis etme riskini taşır.
+`/sitemap.xml`'in `Vary`'si origin'den değil **edge**'den gelir (origin ikisinde
+de `Vary` yok); CF metin yanıtlarında `Vary`'yi tutarsız ekliyor. İzlenmeli.
 
 ### Doküman düzeltmesi
 
@@ -1722,3 +1727,114 @@ DNSSEC apex `AD=true`, `rsend` `AD=false`.
 - **`includeSubDomains` alt alan tam envanteri:** crt.sh bu sandbox'ta yanıt
   vermedi; 32 yaygın ad + sahibin bilinen mail isimleri tarandı.
 - **Gerçek tarayıcı:** HTTP/3 tarayıcı davranışı, SW güncellemesi sürülmedi.
+
+---
+
+## Edge mikro-denetim tur 21 — yeniden ölçüm + G-01 derinleştirme + `/robots.txt` `Vary` (2026-11-06)
+
+Salt-okuma. Canlı build `/api/build-info` → **`838444a5`** (production).
+
+### Düzeltmeler (sahip olunan dokümanlarda)
+
+| # | Dosya:satır | Boyut | Gözlenen (önce) | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| D-07 | `docs/cloudflare.md:57,487` (F-15/T-02) | Doğruluk | "edge'de `Vary` **yok**" — tüm `/_next/static/*` için | Yalnız **font**ta yok | Eksik/yanlış genelleme | **düzeltildi** — metin (CSS/JS) `vary: accept-encoding` döner |
+| D-08 | `docs/cloudflare.md:486,497` (T-01) | Doğruluk | "`/robots.txt` ve `/sitemap.xml` `Vary: accept-encoding` var" | `/robots.txt` **dönmez** | Yanlış başlık iddiası | **düzeltildi** |
+
+### D-07 — `Vary` varlık tipine göre değişir (bilgi, düşük)
+
+Origin (`isbulkktc-amber.vercel.app`) `/_next/static/*` için **hiç** `Vary`
+göndermiyor; edge (CF) ekliyor:
+
+| Varlık | Origin `Vary` | Edge `Vary` |
+|---|---|---|
+| `*.css` | yok | `accept-encoding` |
+| `*.js` | yok | `accept-encoding` |
+| `*.woff2` | yok | **yok** |
+
+Yani tur 18'deki "edge'de `Vary` yok" düzeltmesi **font için doğru**, metin
+varlıkları için fazla genellemeydi. Gözlenen bozulma yok (kodlama doğru); yalnız
+doküman kanıtla hizalandı.
+
+### D-08 — `/robots.txt` `Vary`'siz cache'leniyor (bilgi, düşük)
+
+`/sitemap.xml` edge'de `vary: accept-encoding` döner; `/robots.txt` **dönmez**
+(10/10 örnek + `?cb=` cache-bust, `MISS` yolunda da). Her ikisinde de gövde doğru
+kodlanıyor:
+
+```
+/robots.txt  identity → 228 B düz gövde ; gzip → 124 B (gunzip birebir) ; br ayrı
+/sitemap.xml identity/gzip → vary: accept-encoding
+```
+
+Gözlenen bozulma **yok**; risk teorik (paylaşımlı önbellek gzip gövdesini identity
+istemciye servis edebilir). Origin ikisinde de `Vary` göndermiyor → `Vary`
+**edge'den** geliyor ve CF metin yanıtlarında onu tutarsız ekliyor. İzlenmeli.
+
+### G-01 derinleştirme — obfuscation pratikte etkisiz, adres aynı yanıtta 7× düz (bilgi/orta)
+
+Tur 21'de ham HTML ayrıştırıldı; `info@isbulkktc.com` **tek** yanıtta **7 kez**
+düz metin olarak geçiyor:
+
+- 2× JSON-LD (`Organization` + `ContactPoint.email`)
+- 3× RSC payload (`self.__next_f`) — `contactEmail`, footer `mailto:` ve
+  `footer-support-value`
+
+CF Email Obfuscation yalnız **görünür `mailto:`**'u `__cf_email__` span'ına
+çeviriyor; JSON-LD ve RSC payload'daki düz adres olduğu gibi kalıyor → kazınabilir,
+yani obfuscation'ın pratik etkisi **~sıfır**. Ayrıca `/cdn-cgi/l/email-protection`
+doğrudan GET → **404** (yalnız istemci-taraflı çözülür). Öneri değişmedi:
+Scrape Shield → Email Obfuscation **OFF** (kod değişmez; JSON-LD ile tutarlı olur).
+
+### Bu turda yeniden doğrulananlar (temiz)
+
+- **WAF negatif:** SQLi/UNION/XSS/LFI/RCE/SSRF/metadata/Log4Shell (15+ yol) →
+  çoğu 200 (güvenli 404/405); VCS/dotfile/secret/CMS yolları → **403**.
+- **WAF pozitif:** 6 dil × 6 rota → 200 (yalnız `/xx/` → 308 as-needed) → yanlış
+  pozitif yok.
+- **IP başlığı:** `CF-Connecting-IP` spoof → **403 `error code: 1000`**;
+  `X-Forwarded-For`/`True-Client-IP`/`X-Real-IP` spoof → 200, yansıma yok.
+- **Smuggling:** CL+TE → 200; yinelenen `Content-Length` → **400**; CONNECT → 400.
+- **Header injection:** query/path `%0d%0a` → 404 + `set-cookie: NEXT_LOCALE`
+  (yansıma yok).
+- **Host başlığı:** `X-Forwarded-Proto: http` / `X-Forwarded-Host: evil.com` →
+  canonical **sabit** `https://isbulkktc.com`.
+- **Koşullu GET:** `If-None-Match` → **304**; `Range` → 200 (`accept-ranges` +
+  `content-disposition`).
+- **Meşru özel karakter:** Türkçe/`+`/`&`/tırnak içeren aramalar → 200.
+- **Negatif cache:** `/_next/static/<yok>.js` → `MISS→HIT`, `max-age=31536000`
+  (**N-01 teyit**); `/images/*` ve rastgele 404 → `BYPASS`/`DYNAMIC`.
+- **`/cdn-cgi/trace`:** `colo=ORD, tls=TLSv1.3, kex=X25519MLKEM768`.
+- **HSTS preload:** API → `pending`.
+- **DKIM:** `cf2024-1` **2048-bit**, `resend._domainkey` **1024-bit** (K-01 teyit).
+- **Mail DNS:** `autodiscover`/`mta-sts`/`_mta-sts` → **kayıt yok** (mail-only,
+  A/AAAA yok); `send` MX `feedback-smtp.eu-west-1.amazonses.com`; apex+`www` AAAA
+  CF; `rsend` CNAME `send.forge.rmta.net`; rastgele subdomain → NODATA (wildcard
+  **değil**, `example.com` kontrolüyle teyit).
+
+### OG / varlık doğrulaması (temiz)
+
+- `og:image` = `https://isbulkktc.com/images/og-cover.webp`, **1200×630** (VP8
+  lossy, 160 924 B); `og:image:width/height` 1200/630; `twitter:image` + `alt`
+  var; her rota/dilde aynı görsel.
+- Unicode varlık yolları URL-encode ile **200**: `Gazimağusa.webp`,
+  `güzelyurt.jpg`, `lefkoşa.jpeg` (ham `grep` yanlışlıkla 404 gösteriyordu — yol
+  kesilmesi, gerçek 404 değil).
+- `/images/og-default.png` → **404**; ancak repoda (`src/`, `public/`, `docs/`)
+  hiçbir yerde referans yok → var olmamış bir yol, ölü link değil.
+- `/_next/image` yolu yok (`unoptimized`) — bilinen/kabul.
+
+### Drift (tur 21)
+
+H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08 **açık** (değişmedi). Canlı
+`build-info` `838444a5`; issue #319'daki `c406b397`'den ileri (prod deploy
+ilerlemiş) ama main HEAD `732d8ea` ≠ canlı → **drift sürüyor** (issue #319,
+LANE-INFRA kapsamı).
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` yok): WAF ruleset / Cache Rules / Browser Cache
+  TTL / Bot Management / Analytics okunamadı.
+- **IPv6 bağlantısı:** sandbox'ta v6 yolu yok.
+- **Gerçek tarayıcı:** `email-decode.min.js` çalışma-anı davranışı ve Turnstile
+  iframe'i sürülmedi.

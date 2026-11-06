@@ -440,3 +440,51 @@ meşru rotalar + 6 dil 200.
 
 **Açık kalan (değişmedi):** H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08.
 Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 20".
+
+---
+
+## Tur 21 (2026-11-06) — yeniden ölçüm + G-01 derinleştirme + `/robots.txt` `Vary`
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF değiştirilmedi)
+Sahibin yapması gerekenler: H-01 (CF HSTS max-age) · H-02/N-01 (Browser Cache TTL
+            = Respect Existing Headers) · G-01 (Email Obfuscation OFF) · R-01
+            (Vercel host eşleştirme) · W-01 + V-20 (WAF ifadesini genişlet) ·
+            F-08 (Vercel Deployment Protection) · apex TXT yinelenen
+            google-site-verification teyidi · HSTS preload · MTA-STS/TLS-RPT
+            (#170) · DKIM 2048 (#227)
+Sonraki lane için notlar: bir başlığın "var/yok" iddiasını varlık tipine göre
+            ayır (Vary: metin vs font); Vary'yi cache-bust ile de doğrula (edge
+            ekliyor, origin değil); obfuscation'ın etkisini görünür linkle sınırlı
+            sanma — JSON-LD/RSC payload'ı da tara.
+```
+
+**Bu tur ne buldu.** Üç eksen: (1) `Vary` iddiasının varlık tipine göre yeniden
+ölçümü; (2) `/robots.txt` vs `/sitemap.xml` `Vary` ayrımı; (3) G-01
+(Email Obfuscation) etkisinin ham HTML üzerinden derinleştirilmesi. Bulgular:
+
+- **D-07 (doğruluk):** F-15/T-02 "edge'de `Vary` yok" iddiası fazla genellemeydi.
+  Edge `*.css`/`*.js`'te `vary: accept-encoding` **ekler**, `*.woff2`'te eklemez.
+  Düzeltildi (gözlenen bozulma yok; kanıt hizalaması).
+- **D-08 (doğruluk):** T-01 "`/robots.txt` ve `/sitemap.xml` `Vary:
+  accept-encoding` var" yanlıştı. `/sitemap.xml` döner, `/robots.txt` **dönmez**
+  (10/10 örnek + `?cb=` cache-bust). Kodlama yine de doğru (identity düz, gzip
+  açılıyor). Düzeltildi + izleme notu.
+- **G-01 derinleştirme (bilgi/orta):** `info@isbulkktc.com` tek yanıtta **7×**
+  düz (2× JSON-LD + 3× RSC payload + görünür span). Obfuscation yalnız görünür
+  `mailto:`'u sarıyor → kazınabilir, pratik etki ~sıfır. Öneri değişmedi (OFF).
+
+**Temiz doğrulananlar:** WAF neg (SQLi/XSS/LFI/RCE/SSRF/Log4Shell) güvenli
+404/405, VCS/dotfile 403; WAF poz 6 dil × 6 rota 200 (yanlış poz yok);
+`CF-Connecting-IP` spoof → 403 `error code: 1000`; `XFF`/`True-Client-IP`/
+`X-Real-IP` spoof → 200 yansımasız; CL+TE 200, yinelenen CL 400, CONNECT 400;
+`%0d%0a` yansımasız; `X-Forwarded-*` canonical'ı değiştirmiyor; `If-None-Match`
+304, `Range` 200; negatif cache `MISS→HIT` (N-01); `/cdn-cgi/trace` ORD/TLS1.3;
+HSTS preload `pending`; DKIM `cf2024-1` 2048 / `resend` 1024; mail DNS kayıtları;
+OG `og-cover.webp` 1200×630, unicode varlık yolları 200.
+
+**Açık kalan (değişmedi):** H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08.
+Detay: `docs/cloudflare.md` → "Edge mikro-denetim tur 21".
