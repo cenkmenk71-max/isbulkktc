@@ -624,3 +624,46 @@ sınadım.
 - **Kanıt (mutation):** oturum kapısını kaldır → kırmızı.
 - **Bakılmayan:** yok — 14 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
   #102.
+
+## Durum (2026-11-06, 28. tur) — P-01: prerender HTML paylaşımlı önbellekte (#390)
+
+LANE-CLOUDFLARE tur 19'un canlı ölçümüyle açtığı **#390** devralındı; düzeltme
+yeri `next.config.ts` (bu lane'e devredilmiş).
+
+- **Bulgu (doğrulandı, düzeltildi):** prerender rotalar (`/blog`, `/contact`,
+  `/freelance`, `/about`, `/privacy`, `/terms` + yerel-önekli eşleri) Next'in ISR
+  varsayılanıyla `Cache-Control: s-maxage=<n>, stale-while-revalidate=<n>` —
+  *paylaşımlı* önbellek direktifi — dönerken aynı yanıtta yerel middleware
+  `Set-Cookie: NEXT_LOCALE=…` ekliyor. `Vary` `Cookie`'yi listelemiyor. Klasik
+  web-cache-deception deseni; bugün CF HTML'i cache'lemediği için sömürülemez,
+  ama bir Cache Rule değişirse dil içeriği sızar.
+- **Neden `Vary: Cookie` ile çözülemez (kanıt):** `next.config.ts`'e geçici bir
+  `Vary: Cookie` kuralı eklendi, üretim build'i alındı, standalone sunucuda
+  `/de/blog` istendi → `Vary: rsc, next-router-state-tree, next-router-prefetch,
+  next-router-segment-prefetch, Accept-Encoding`. Next kendi `Vary`'ını yazıp
+  config değerini **düşürüyor** (`base-server.js` `setVaryHeader`, yanıt
+  gönderilirken uygulanıyor; config başlıkları `router-server.js`'te daha erken
+  `setHeader` ediliyor ve sonra üzerine yazılıyor). Bu yüzden tek çare paylaşımlı
+  katmanda HTML'i hiç önbelleklememek.
+- **Düzeltme:** `next.config.ts` `headers()`'ın başına, matcher'ı **middleware'in
+  kendi matcher'ıyla birebir aynı** (`src/proxy.ts:125` →
+  `/((?!api|trpc|_next|_vercel|.*\\..*).*)`) bir kural eklendi:
+  `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`.
+  Uzantılı yollar, `_next/**`, `/api/**`, `/trpc`, `/vercel` dışarıda → varlık
+  `immutable` önbelleği ve `/sw.js` no-cache kuralı korunur.
+- **Kanıt (standalone sunucu, `NEXT_DIST_DIR` throwaway build):** `/de/blog` hâlâ
+  `x-nextjs-prerender: 1` (iç ISR önbelleği HIT) ama artık `private, no-cache,
+  no-store` döner. `/robots.txt` (`public, max-age=0`), `/sitemap.xml`,
+  `/llms.txt` (`public, max-age=3600`), `/feed.xml`, `/images/*` **değişmedi**.
+- **Kapıya terfi:** `tests/security/security-headers.test.ts` +4 test. Kural
+  **Next'in kendi `buildCustomRoute` derleyicisiyle** derlenir (gerçek sunucunun
+  eşleştirdiği regex), pozitif liste (12 HTML yolu) + negatif liste (14 varlık
+  yolu) sınanır; matcher `src/proxy.ts`'e ratchet'lenir (kaynak escape bağlamı
+  farklı olduğu için **derlenmiş regex** üzerinden karşılaştırılır). Bir
+  self-test naif `/(.*)`'ın varlıkları da yakaladığını gösterip negatif
+  iddiaları anlamlı kılar.
+- **Kanıt (mutation):** kuralın `source`'unu naif `/(.*)`'a çevir → negatif test
+  kırmızı; `Cache-Control`'e `public` ekle → direktif testi kırmızı.
+- **Bakılmayan:** yok — 15 dosya (`tests/security/**` 14 + `next.config.ts`) +
+  3 doküman. Açık `todo`'lar değişmedi: #298 (SQL), #206 (`unsubscribe-token-core`
+  `server-only`), #139 (anon RPC IP boyutu).

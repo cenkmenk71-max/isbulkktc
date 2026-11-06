@@ -149,6 +149,28 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Every HTML route must be uncacheable at the shared layer. Next's ISR
+        // default for a *prerendered* page is `s-maxage` +
+        // `stale-while-revalidate` — a shared-cache directive — while the locale
+        // middleware adds a per-request `NEXT_LOCALE` `Set-Cookie` to the same
+        // response. `Vary` never lists `Cookie`, and Next overwrites any `Vary`
+        // a config rule sets (verified: a `Vary: Cookie` rule here is dropped),
+        // so the cache key cannot be corrected from this file. The only lever
+        // left is to stop the shared layer caching HTML at all, exactly as the
+        // dynamic routes already are. The matcher is the middleware's own
+        // (`src/proxy.ts`), so the rule covers precisely the routes that receive
+        // the cookie; file extensions, `_next/**`, `/api/**`, `/trpc` and
+        // `/vercel` stay out so immutable asset caching is untouched. See
+        // `docs/threat-model.md` (prerender cache headers) and issue #390.
+        source: "/((?!api|trpc|_next|_vercel|.*\\..*).*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "private, no-cache, no-store, max-age=0, must-revalidate",
+          },
+        ],
+      },
+      {
         // The service worker must never be cached stale. The origin already
         // sends `public, max-age=0, must-revalidate` for `/sw.js` (a Next public
         // asset), but Cloudflare's edge raised it to 30 days

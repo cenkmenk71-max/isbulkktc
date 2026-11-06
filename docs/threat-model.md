@@ -185,6 +185,28 @@ issue açar.
   service worker (`CACHE_VERSION` artışı) PWA kullanıcısına günlerce ulaşmıyor
   (edge audit tur-14, SW-01). `tests/security/security-headers.test.ts`
   **gerçek config'i import edip** `headers()`'ı çağırarak bunları doğrular.
+- **HTML önbelleği paylaşımlı katmanda kapalı (P-01, #390):** prerender rotalar
+  (`/blog`, `/contact`, `/freelance`, `/about`, `/privacy`, `/terms` ve bunların
+  yerel-önekli eşleri) Next'in ISR varsayılanıyla **`Cache-Control: s-maxage=<n>,
+  stale-while-revalidate=<n>`** — yani *paylaşımlı* önbellek direktifi — dönerken
+  aynı yanıtta yerel middleware'in **`Set-Cookie: NEXT_LOCALE=…`** başlığı da
+  bulunuyor. `Vary` `Cookie`'yi hiçbir zaman listelemiyor ve Next config'ten
+  yazılan bir `Vary`'ı **kendi değeriyle eziyor** (standalone sunucuda
+  doğrulandı: `Vary: Cookie` kuralı düşürülüyor), dolayısıyla önbellek anahtarı
+  bu dosyadan düzeltilemez. Tek çare HTML'i paylaşımlı katmanda hiç
+  önbelleklememek: `next.config.ts` `headers()`'a `Cache-Control: private,
+  no-cache, no-store, max-age=0, must-revalidate` kuralı eklendi. Kuralın
+  matcher'ı **middleware'in kendi matcher'ıyla birebir aynı**
+  (`/((?!api|trpc|_next|_vercel|.*\\..*).*)`), yani tam olarak çerezi alan
+  rotaları kapsar; uzantılı yollar, `_next/**`, `/api/**`, `/trpc`, `/vercel`
+  dışarıda kalır → `immutable` varlık önbelleği ve `/sw.js` no-cache kuralı
+  bozulmaz. `tests/security/security-headers.test.ts` kuralı **Next'in kendi
+  `buildCustomRoute` derleyicisiyle** sınayıp matcher'ı middleware'e
+  sabitliyor (ratchet). Kanıt: standalone sunucuda `/de/blog` hâlâ
+  `x-nextjs-prerender: 1` (iç önbellek HIT) ama artık `private, no-cache,
+  no-store` döner; `/robots.txt` (`public, max-age=0`), `/sitemap.xml`,
+  `/llms.txt` (`public, max-age=3600`) ve `/images/*` değişmemiştir. İç ISR
+  önbelleği korunur, yalnız paylaşımlı katman (CDN/proxy) devre dışı kalır.
 - **Görsel optimizasyon allowlist'i:** `images.remotePatterns` sunucu tarafında
   `/ _next/image`'ın hangi host'lardan görsel çekebileceğini belirler; her desen
   **tam bir https host + https protokol** olmalı, private/loopback/metadata host

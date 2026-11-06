@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 /**
@@ -396,4 +397,154 @@ test("the local matcher rejects everything when the allowlist is absent (self-te
   // Guards the premise: without the config, Next allows every local path — the
   // bug. If this ever changed, the finding would need re-reading.
   assert.equal(hasLocalMatch(undefined, "/blog"), true);
+});
+
+// ---------------------------------------------------------------------------
+// The HTML cache rule (issue #390).
+//
+// A prerendered page ships Next's ISR default `Cache-Control: s-maxage=<n>,
+// stale-while-revalidate=<n>` — a *shared-cache* directive — and the locale
+// middleware adds a per-request `NEXT_LOCALE` `Set-Cookie` to the same response.
+// `Vary` never lists `Cookie`, and Next overwrites any `Vary` a config rule sets
+// (verified against the standalone server: a `Vary: Cookie` rule is dropped), so
+// the shared cache key cannot be corrected from `next.config.ts`. The fix is to
+// stop the shared layer caching HTML at all, matching the dynamic routes. This
+// test pins that rule, drives Next's own route compiler so it asserts the paths
+// the server will actually match, and ratchets the matcher to the middleware's
+// own so the rule keeps covering exactly the routes that receive the cookie.
+// ---------------------------------------------------------------------------
+
+type CompiledRoute = { regex: string };
+type RouteCompiler = {
+  buildCustomRoute: (
+    type: "header",
+    route: { source: string; headers: Header[] },
+  ) => CompiledRoute;
+};
+
+async function loadRouteCompiler(): Promise<RouteCompiler> {
+  return import("next/dist/lib/build-custom-route.js") as Promise<RouteCompiler>;
+}
+
+const { buildCustomRoute } = await loadRouteCompiler();
+
+/**
+ * The rule that makes HTML uncacheable at the shared layer. Selected by the
+ * paths it matches, not by array order: `/sw.js` also sets `no-store`, so a
+ * positional `find` would pick the wrong rule if the two ever swapped.
+ */
+const htmlCacheRule = groups.find(
+  (group) =>
+    group.headers.some(
+      (header) =>
+        header.key.toLowerCase() === "cache-control" && /no-store/i.test(header.value),
+    ) &&
+    new RegExp(buildCustomRoute("header", { source: group.source, headers: [] }).regex).test("/blog"),
+);
+assert.ok(htmlCacheRule, "no HTML Cache-Control rule sets `no-store` — prerendered pages stay shared-cacheable");
+
+/** Every pathname the rule matches, compiled the way the server compiles it. */
+const htmlCacheRegex = buildCustomRoute("header", {
+  source: htmlCacheRule!.source,
+  headers: [],
+}).regex;
+const htmlCacheMatcher = new RegExp(htmlCacheRegex);
+
+test("the HTML cache rule covers exactly the routes the locale middleware touches", () => {
+  // Every route that can carry the per-request `NEXT_LOCALE` `Set-Cookie`: the
+  // public pages, their locale-prefixed twins, and the dynamic detail routes.
+  const mustBeUncacheable = [
+    "/",
+    "/blog",
+    "/about",
+    "/contact",
+    "/privacy",
+    "/terms",
+    "/freelance",
+    "/jobs/ilan-ornegi",
+    "/de/blog",
+    "/fa/rehber/ornek-yazi",
+    "/en",
+    "/tr/jobs",
+  ];
+  const leaked = mustBeUncacheable.filter((path) => !htmlCacheMatcher.test(path));
+  assert.deepEqual(
+    leaked,
+    [],
+    `HTML routes left shared-cacheable (prerender s-maxage + Set-Cookie): ${leaked.join(", ")}`,
+  );
+
+  // Anything that is not an HTML document must stay out, or the rule would
+  // clobber immutable asset caching or the `/sw.js` no-cache rule.
+  const mustBeExempt = [
+    "/_next/static/chunks/app.js",
+    "/_next/image",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/llms.txt",
+    "/llms-full.txt",
+    "/feed.xml",
+    "/api/build-info",
+    "/sw.js",
+    "/manifest.webmanifest",
+    "/.well-known/security.txt",
+    "/images/Girne.webp",
+    "/logos/company.webp",
+    "/icon-dark-32x32.png",
+  ];
+  const overreached = mustBeExempt.filter((path) => htmlCacheMatcher.test(path));
+  assert.deepEqual(
+    overreached,
+    [],
+    `non-document paths caught by the HTML cache rule: ${overreached.join(", ")}`,
+  );
+});
+
+test("the HTML cache rule forbids every shared-cache directive", () => {
+  const cacheControl = htmlCacheRule!.headers.find(
+    (header) => header.key.toLowerCase() === "cache-control",
+  )!.value;
+
+  // A shared cache must be told, in every way it understands, not to store this.
+  for (const directive of ["private", "no-store", "no-cache", "must-revalidate"]) {
+    assert.match(
+      cacheControl,
+      new RegExp(`\\b${directive}\\b`, "i"),
+      `the HTML Cache-Control is missing \`${directive}\`: ${cacheControl}`,
+    );
+  }
+  // `public`/`s-maxage` are what made the response shared-cacheable; a positive
+  // `max-age` would let a shared cache serve it without revalidation.
+  assert.doesNotMatch(cacheControl, /\bpublic\b/i, `HTML Cache-Control is shared-cacheable: ${cacheControl}`);
+  assert.doesNotMatch(cacheControl, /\bs-maxage\b/i, `HTML Cache-Control sets a shared max-age: ${cacheControl}`);
+  assert.doesNotMatch(cacheControl, /max-age\s*=\s*[1-9]/i, `HTML Cache-Control has a positive max-age: ${cacheControl}`);
+});
+
+test("the HTML cache matcher is the locale middleware's own (ratchet)", () => {
+  // The rule is only correct while it covers the same routes as the middleware
+  // that writes the cookie. Pinning them equal means a matcher change on either
+  // side fails here instead of silently re-opening a gap. The two sources live in
+  // different escaping contexts (a config value vs a TS string literal), so the
+  // comparison is on the compiled regex, which is what the server matches with.
+  const proxySource = readFileSync(new URL("../../src/proxy.ts", import.meta.url), "utf8");
+  const matcher = /matcher:\s*\[\s*"((?:[^"\\]|\\.)+)"\s*\]/.exec(proxySource)?.[1];
+  assert.ok(matcher, "could not read the middleware matcher from src/proxy.ts");
+  const proxyRegex = buildCustomRoute("header", {
+    source: JSON.parse(`"${matcher}"`),
+    headers: [],
+  }).regex;
+  assert.equal(
+    htmlCacheRegex,
+    proxyRegex,
+    "the HTML cache rule and the locale middleware matcher have drifted apart",
+  );
+});
+
+test("the route compiler reports a naive source matching the exempt paths (self-test)", () => {
+  // Guards the premise: a bare `/(.*)` matches the assets too, so the negative
+  // assertions above are only meaningful because the real source excludes them.
+  const naive = new RegExp(buildCustomRoute("header", { source: "/(.*)", headers: [] }).regex);
+  assert.equal(naive.test("/robots.txt"), true);
+  assert.equal(naive.test("/_next/static/chunks/app.js"), true);
+  assert.equal(naive.test("/blog"), true);
 });
