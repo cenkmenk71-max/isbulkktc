@@ -194,6 +194,18 @@ içeriği çözer → `/images/%2e%2e/blog` tipi **çift-kodlama** allowlist'i a
 
 ### Edge mikro-denetim tur 14 — #359 denetimi + WAF normalizasyon + SW-01 (2026-11-06)
 
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: #363 (merge edildi)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅ (671/671)
+            test:db ✅ (CI)  test:e2e ✅ (4/4 shard)  build ✅ (CI standalone)
+Canlıya dokundu mu: hayır (yalnızca okuma; canlı Supabase'e yazı yok, CF paneli değiştirilmedi)
+Sahibin yapması gerekenler: #364 (LANE-GÜVENLİK, /sw.js başlığı) · #319 (deploy donması,
+            LANE-INFRA) · CF paneli SW-01/H-02/W-01 (hesap sahibi onayı)
+Sonraki lane için notlar: CF API token'sız zone-API denetimi yapılamıyor; A-01c canlıda
+            açık kalır ta ki #319 çözülüp #359 build'i deploy edilene dek.
+```
+
 **A-01b canlıda HÂLÂ AÇIK:** PR #359 desenlere görsel uzantısı şartı getirdi
 (`next.config.ts:79-82`) ve kod doğru, ama **deploy edilmedi** — canlı build
 `ee58dad` (#359 öncesi). Canlı kanıt: `/_next/image?url=%2Fimages%2F%252e%252e%2Fblog`
