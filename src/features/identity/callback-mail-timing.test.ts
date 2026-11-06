@@ -70,3 +70,43 @@ test("the deferred send keeps its error handling (best-effort)", () => {
     "the deferred send must swallow a mail failure",
   );
 });
+
+test("the sign-up action does not await the welcome mail either", () => {
+  // Same defect class as the callback: signUp sends the same welcome mail, and
+  // it used to await the outbound Resend call before redirecting the new account
+  // to its dashboard. Server Functions support `after()` too.
+  const source = readSource("src/features/identity/actions.ts");
+
+  assert.match(
+    source,
+    /import\s*\{[^}]*\bafter\b[^}]*\}\s*from\s*"next\/server"/,
+    "actions.ts must import `after` from next/server",
+  );
+
+  // Scope to signUp: the send lives inside its own `after()` task.
+  const signUp = source.slice(
+    source.indexOf("export async function signUp"),
+    source.indexOf("export async function resendConfirmation"),
+  );
+
+  const sendIndex = signUp.indexOf("sendWelcomeEmail(");
+  assert.ok(sendIndex > -1, "signUp must send the welcome mail");
+  assert.equal(
+    signUp.split("sendWelcomeEmail(").length - 1,
+    1,
+    "signUp must send the welcome mail exactly once",
+  );
+  // The only send is wrapped in `after(async () => { … })`, so it runs after the
+  // response; there is no bare `await sendWelcomeEmail` on the redirect path.
+  const beforeSend = signUp.slice(0, sendIndex);
+  assert.ok(
+    /after\(async\s*\(\)\s*=>\s*\{[\s\S]*try\s*\{[\s\S]*await\s*$/.test(beforeSend),
+    "the welcome mail must run inside after()",
+  );
+  // The redirect must follow the scheduling, so the response is not held.
+  assert.ok(
+    signUp.indexOf("after(async") <
+      signUp.indexOf("redirect(resolveAuthDestination("),
+    "the redirect must come after the mail is scheduled, not awaited",
+  );
+});

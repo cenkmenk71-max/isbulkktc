@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import {
   oauthSignInSchema,
   requestPasswordResetSchema,
@@ -194,21 +195,28 @@ export async function signUp(
 
   if (data.session) {
     if (data.user) {
-      // Best-effort: the account already exists, so a mail problem must never
-      // stop the post-signup redirect or surface as a sign-up failure.
-      try {
-        await sendWelcomeEmail({
-          to: result.data.email,
-          audience: result.data.audience,
-          locale: result.data.locale,
-          name: result.data.displayName,
-          userId: data.user.id,
-        });
-      } catch (mailError) {
-        console.error("Welcome email could not be sent.", {
-          error: mailError instanceof Error ? mailError.message : "unknown_error",
-        });
-      }
+      // Best-effort and off the critical path: the account already exists, so a
+      // mail problem must never stop the post-signup redirect, and the send is an
+      // outbound HTTPS call to the mail provider — awaiting it here delayed the
+      // redirect the visitor is waiting on. `after` runs it once the response has
+      // been sent (it is supported in Server Functions and keeps the request
+      // context), so the visitor reaches their dashboard first.
+      const userId = data.user.id;
+      after(async () => {
+        try {
+          await sendWelcomeEmail({
+            to: result.data.email,
+            audience: result.data.audience,
+            locale: result.data.locale,
+            name: result.data.displayName,
+            userId,
+          });
+        } catch (mailError) {
+          console.error("Welcome email could not be sent.", {
+            error: mailError instanceof Error ? mailError.message : "unknown_error",
+          });
+        }
+      });
     }
     redirect(resolveAuthDestination(result.data.audience, result.data.locale));
   }

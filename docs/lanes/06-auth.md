@@ -998,3 +998,52 @@ best-effort davranışı korunur.
 ### Sahibin yapması gerekenler
 - **#161**'in "gerçek hesapla üretimde doğrulama" kalemi hâlâ insan gerektiriyor.
 - **#271** (transactional e-posta `lang`/`dir`) ve **#227** (auth SMTP + DKIM) devirde.
+
+---
+
+## Çalıştırma raporu — 2026-11-05 (micro-denetim turu 9)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Aldığı issue: yok (yeni sahipsiz lane:auth issue'su yok) → micro-denetim
+              (tur 8'de callback'te düzelttiğim sınıfın signUp'taki eşi)
+Değişen dosyalar:
+  src/features/identity/actions.ts                  (signUp maili `after()`'a alındı)
+  src/features/identity/callback-mail-timing.test.ts (+1 test)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (634, 1'i yeni) / test:security ✅ (79 pass, 3 todo, 0 fail) /
+  test:integration ✅ (61) / production build ✅
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration/şablon değişmedi)
+```
+
+### Denetlenen dosyalar (micro-denetim)
+`git ls-files 'src/features/identity/**'` (40) + 5 `(auth)`/callback route +
+7 şablon → **52 dosya**; hepsine bakıldı. Bakılmayan dosya yok.
+
+### Bulgular
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `actions.ts:196-213` | performans / tutarlılık | `signUp`, redirect'ten önce hoş geldin mailini (Resend HTTPS) **`await`** ediyordu | `after()` ile yanıt sonrası | Tur 8'de callback'te düzeltilen gecikme sınıfının aynısı; `confirmations=false` bir projede kayıt akışı sağlayıcıyı beklerdi | düzeltildi |
+| 2 | `turnstile.ts` | mantık | Başarısız indirme retry'ı taze elemanla; tek-uçuş paylaşımı | — | sorun yok (önceki tur) | bilgi |
+| 3 | 7 şablon | tutarlılık | Etiket dengesi temiz, tek stylesheet, RTL-aware boşluk | — | sorun yok | bilgi |
+
+### Düzeltilen (#1)
+`signUp`'ın `data.session` dalındaki mail gönderimi `after(async () => { … })`
+içine alındı; `after` `next/server`'dan import edilir. Server Function'da da
+desteklenir ve request bağlamını korur. Best-effort hata yakalama korundu.
+
+### Kanıt
+- `callback-mail-timing.test.ts`'e eklenen test: `signUp` gövdesinde tek
+  `sendWelcomeEmail(` var ve `after(async () => { … try { await` ile sarılı;
+  redirect scheduling'den **sonra**. Düzeltme geri alınınca test kırmızı olur
+  (mutasyonla doğrulandı).
+- Production standalone sunucu: `/en/auth/callback?flow=oauth&next=candidate`
+  → `307 /en/login?error=oauth&audience=candidate`; `/en/register` → 200. Build ✅.
+
+### Güvenlik değerlendirmesi (security skill)
+- Yalnız zamanlama; yetki/oturum/DB yolu değişmedi. Mail hatası yine yutulur.
+- `after` yanıt sonrası çalışır; kullanıcıya dönen durum değişmez.
+
+### Sahibin yapması gerekenler
+- **#161**'in "gerçek hesapla üretimde doğrulama" kalemi hâlâ insan gerektiriyor.
+- **#271** (transactional e-posta `lang`/`dir`) ve **#227** (auth SMTP + DKIM) devirde.
