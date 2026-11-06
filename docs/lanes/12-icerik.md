@@ -355,3 +355,72 @@ tutarlılığı**. Sahip olunan yollar `git ls-files 'src/messages/*' 'src/i18n/
   kırıyor; bu lane'in kararı değil — LANE-SEO/LANE-QA ile birlikte değerlendirilmeli.
   Kanıt: `de.json` `Meta.description`, `HomeMeta.title/description`,
   `JobsMeta.title`, `JobTypePage.metaTitle/intro/metaDescription`.
+
+## Tur 6 — mikro-denetim: tr hitap kipi sürüklenmesi + #384 kapanışı (2026-11-06)
+
+**Issue:** #384 (agent:content, lane:icerik) — açık, sahiplenildi ve kapatıldı.
+Ayrıca `tr` kayıt (register) tutarlılığı tarandı. Sahip olunan yollar
+`git ls-files 'src/messages/*' 'src/i18n/*' 'src/content/*'` → **6 + 5 + 26 = 37
+dosya**; hepsine bakıldı (aşağıda `src/content/ai-visibility/geo-audit.test.ts`
+ve `interface-catalog.ts` LANE-GEO üretimi, dokunulmadı).
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/messages/fa.json:676-679` | doğruluk/yerelleştirme (#384) | `sectorTotalCount`/`sectorResultCountSingular`/`sectorResultCountPlural` çıplak `{count}` → `/fa`'da `…: 16` (Latin) | `{count, number}` → `…: ۱۶` | Aynı sayfada iki rakam sistemi; PR #383 kodu gerçek sayı geçiriyor, katalog geride kalmış | düzeltildi |
+| 2 | `src/messages/tr.json:953` `CandidateDashboard.notificationsDescription` | tutarlılık/hitap kipi | "Başvuru durumun değiştiğinde ve **sana** bir mesaj geldiğinde haberdar ol." — 2. tekil | Ürünün her yeri 2. çoğul (`-iniz`, `siz`) | Aynı bildirim metninin kendi resmî eşi `Install.pushBody` (satır 44) "… durumunuz değiştiğinde … haberdar olun." diyor; aynı okuyucuya iki ayrı hitap | düzeltildi → "… durumunuz değiştiğinde ve size bir mesaj geldiğinde haberdar olun." |
+| 3 | `src/messages/tr.json:1097` `CompanyManagement.notificationsDescription` | tutarlılık/hitap kipi | "Yeni bir başvuru geldiğinde ve adaylardan mesaj aldığında haberdar ol." — 2. tekil | 2. çoğul | #2 ile aynı sınıf | düzeltildi → "… aldığınızda haberdar olun." |
+
+### Ratchet (`src/i18n/message-catalogs.test.ts`, 10 test → 11)
+
+- **Yeni:** `INFORMAL_SECOND_PERSON` — tr katalogda belirgin 2. tekil işaretleri
+  (`sen` ailesi, `-yorsun`, `-acaksın/-eceksin`, `-abilirsin/-ebilirsin`,
+  `-malısın/-melisin`, `-dığın/-diğin`) yasaklar. Buton etiketindeki yalın emir
+  kipi ("Kaydet", "Giriş yap") **flag'lenmez** — yalnız kesin tekil işaretleri.
+  `\b` yerine `\p{L}` lookaround kullanıldı: Türkçe harfler (`ı`, `ğ`, `ş`)
+  `\w` değildir, `\b` kelime ortasında eşleşir (yanlış pozitif üretir).
+- `FA_DEFERRED_PLACEHOLDERS` muafiyeti ve `HomePage.sector*` istisna yorumu
+  **silindi** (#384 istediği gibi): kod artık gerçek sayı geçirdiği için
+  `{count, number}` doğru render eder.
+- İki ratchet de regresyon enjekte edilerek kırmızı→yeşil kanıtlandı:
+  `tr.notificationsDescription`'a `sana` geri konunca →
+  `tr.CandidateDashboard.notificationsDescription uses the informal singular "sana"`;
+  `fa.sectorTotalCount` çıplak yapılınca →
+  `fa.HomePage.sectorTotalCount interpolates {count} without a number format`.
+
+### Boyut taraması (AUDIT.md)
+
+| Alan | Sonuç |
+|---|---|
+| Anahtar paritesi (6 dil) | 0 eksik/fazla |
+| Gerçek yer tutucu paritesi (`IntlMessageFormat` AST) | 0 uyumsuz |
+| ICU sözdizimi (6 dil, tüm yapraklar) | 0 hata |
+| `plural` dalları `other` içeriyor mu | 0 eksik |
+| Hitap kipi — tr 2. tekil | 2 bulgu düzeltildi; kalan eşleşmeler resmî/3. şahıs (yanlış pozitif, elendi) |
+| Hitap kipi — de/ru/el/fa resmî | `du`/`ты`/`εσύ`/`تو` = 0 (hepsi Sie/вы/εσείς/شما) |
+| `en` ile birebir aynı nesir anahtarı (tr/ru/el/fa/de) | 0 |
+| Boş değer | 18 (`Admin{Packages,Content}` + `JobApplication.messages.idle` ×6) — kasten boş |
+| Baştaki/sondaki boşluk | yalnız `CandidateDashboard.completionOf` (ru/fa) — RTL/doğal, flag yok |
+| HTML/`javascript:` enjeksiyonu | 0 (yalnız `HomePage.title` zengin metin `<line>`/`<accent>`, 6 dilde aynı etiket kümesi) |
+| Belirsiz/suçlayıcı hata, çıplak "sonuç yok" | 0 |
+| İç sistem sözlüğü (içerik + katalog) | 0 |
+| İçerik yapı paritesi (guides 3×6, editorial 3×6) | slug/section/`readMinutes` tutarlı |
+| Dışa link (içerik) | 0 |
+| `src/content/ai-visibility/{geo-audit.test.ts,interface-catalog.ts}` | **bakılmadı** — LANE-GEO üretimi |
+
+### Doğrulama
+
+- Kapılar: lint ✅, typecheck ✅, check:frontend-source ✅, test:unit 695/695 ✅.
+- `fa` render kanıtı: `createTranslator("fa")` ile üç anahtar `count:16` → `۱۶`.
+- İki ratchet kırmızı→yeşil (yukarıda).
+
+### Devir
+
+- **#327** (de landing H1) ve **#141** (Legal meta/gövde) çekirdek düzeltmeleri
+  `main`'de doğrulandı: `de` `DistrictPage.title`/`JobTypePage.title` Almanca,
+  Legal blokları yalnız `Legal.contactEmail` paylaşıyor. #141'in **seed** kısmı
+  (`supabase/seed-managed-content.sql`, `legal.*` + `faq_entries`) hâlâ bu lane'in
+  dışında → LANE-SUPABASE.
+- **#189** (e-posta şablonları marka kimliği) sahibi LANE-AUTH/LANE-GEO/URUN;
+  bu lane yalnız metin sağlar, kod tarafı devredildi (mevcut issue yeterli).

@@ -159,6 +159,30 @@ test("Turkish catalog keeps internal pipeline vocabulary off the visitor surface
   }
 });
 
+// The interface addresses the visitor with the formal second-person plural
+// (`siz`, `-iniz`) everywhere, so a single informal singular slips into a
+// different register than the rest of the product. Two notification blurbs
+// shipped that way — "Başvuru durumun değiştiğinde ve sana … haberdar ol" and
+// "… adaylardan mesaj aldığında haberdar ol" — beside their own formal twin on
+// the push surface ("… durumunuz değiştiğinde … haberdar olun"), so the same
+// sentence addressed the same reader two ways. The bare imperative of a button
+// label ("Kaydet", "Giriş yap") is not flagged: only the unmistakable singular
+// markers are. The lookarounds use `\p{L}` rather than `\b` because Turkish
+// letters (`ı`, `ğ`, `ş` …) are not `\w`, so `\b` would match mid-word.
+const INFORMAL_SECOND_PERSON =
+  /(?<!\p{L})(sen|sana|seni|senden|sende|senin|seninle|kendin)(?!\p{L})|(?<!\p{L})\p{L}+(yorsun|acaksın|eceksin|abilirsin|ebilirsin|malısın|melisin|dığın|diğin|duğun|düğün)(?!\p{L})/iu;
+
+test("Turkish catalog addresses the visitor in the formal register", () => {
+  for (const [key, value] of Object.entries(turkish)) {
+    const match = value.match(INFORMAL_SECOND_PERSON);
+    assert.equal(
+      match,
+      null,
+      `tr.${key} uses the informal singular "${match?.[0]}"; use the formal second-person plural`,
+    );
+  }
+});
+
 // The ratchet above guards only the source language, so a translator can
 // reintroduce the same leak in a target language unnoticed. These are the
 // per-locale renderings of the internal phrases the brief forbids on the
@@ -254,9 +278,7 @@ test("landing page titles are authored per locale, not copied from English", () 
 // applies it to typed placeholders: a bare `{count}` interpolates the raw Latin
 // string. `fa` shipped "906 ورودی شرکت" beside "۹۰۶ شرکت پیدا شد" from the plural
 // form — two numeral systems on one page. Every numeric placeholder must be
-// typed `{x, number}` (or sit inside a `plural`), except the deferred
-// `HomePage.sector*` templates: those are rendered with a literal "{count}"
-// string, so typing them would format a non-number (see the LANE-TASARIM handoff).
+// typed `{x, number}` (or sit inside a `plural`).
 const NUMERIC_PLACEHOLDERS = new Set([
   "count",
   "total",
@@ -270,16 +292,10 @@ const NUMERIC_PLACEHOLDERS = new Set([
   "number",
   "year",
 ]);
-const FA_DEFERRED_PLACEHOLDERS = new Set([
-  "HomePage.sectorTotalCount",
-  "HomePage.sectorResultCountSingular",
-  "HomePage.sectorResultCountPlural",
-]);
 
 test("Persian numbers use the Persian numeral system, not bare Latin placeholders", () => {
   const messages = flatten(readMessages("fa"));
   for (const [key, message] of Object.entries(messages)) {
-    if (FA_DEFERRED_PLACEHOLDERS.has(key)) continue;
     for (const match of message.matchAll(/\{([a-zA-Z][\w]*)\}/g)) {
       assert.ok(
         !NUMERIC_PLACEHOLDERS.has(match[1]),

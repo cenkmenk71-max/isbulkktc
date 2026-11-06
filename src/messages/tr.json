@@ -950,7 +950,7 @@
   "CandidateDashboard": {
     "eyebrow": "ADAY PROFİLİ",
     "notificationsTitle": "Bildirimler",
-    "notificationsDescription": "Başvuru durumun değiştiğinde ve sana bir mesaj geldiğinde haberdar ol.",
+    "notificationsDescription": "Başvuru durumunuz değiştiğinde ve size bir mesaj geldiğinde haberdar olun.",
     "title": "Merhaba, {name}.",
     "fullNameLabel": "Ad Soyad",
     "fullNamePlaceholder": "Adınız ve soyadınız",
@@ -1094,7 +1094,7 @@
   "CompanyManagement": {
     "eyebrow": "İŞVEREN ALANI",
     "notificationsTitle": "Bildirimler",
-    "notificationsDescription": "Yeni bir başvuru geldiğinde ve adaylardan mesaj aldığında haberdar ol.",
+    "notificationsDescription": "Yeni bir başvuru geldiğinde ve adaylardan mesaj aldığınızda haberdar olun.",
     "title": "{name}, şirket profilinizi yönetin.",
     "description": "Şirket açıklaması",
     "applicationsTitle": "İlan başvuruları",
