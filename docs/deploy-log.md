@@ -18,6 +18,7 @@ Rule 4 of the lane brief: **every merge is recorded — what, when, verified liv
 | Checked (UTC) | main tip | live | verdict | Note |
 |---|---|---|---|---|
 | 2026-11-06T01:28Z | `f7a10fd6` | `f7a10fd6` | ✅ in sync | Three consecutive `build-info` reads over ~50 min all returned `f7a10fd6`, the `main` tip after PR #301 merged. |
+| 2026-11-06T01:54Z | `f7a10fd6` | `f7a10fd6` | ✅ in sync | Fresh read after this lane's PR #307 opened. `main` unchanged; no merge landed between the two checkpoints. |
 
 Earlier in the session the task context reported `main` at `ef6caed3` while the
 live site served `48ff9b78`; `48ff9b78` is an ancestor of `main` (5 commits
@@ -60,8 +61,22 @@ context, not as a measurement.
    a required check, so it never blocks a merge — but preview deploys are dead
    meanwhile. Needs the owner (plan upgrade) or ~24 h.
 
-4. **The `Database` CI job fails on an external rate limit, not on code.**
-   PR #250 shows `Static checks` ✅, all four `E2E` shards ✅, and `Database` ❌
-   with `Error response from daemon: toomanyrequests: Rate exceeded` (Docker Hub
-   pull limit) — the aggregator inherits the red. A re-run once the limit clears
-   should go green; no code change is involved.
+4. **PR #250's `Database` job fails a real pgTAP assertion — it is not a flake.**
+   Job `127550318504` shows `supabase/tests/database/table_privileges.test.sql`
+   test 7, *"anonymous visitors keep the public catalogue reads"*, failing
+   (`Tests: 8 Failed: 1`), so the aggregator inherits the red. A
+   `toomanyrequests: Rate exceeded` burst does appear during `db:start`, but the
+   stack then reports **"Started supabase local development setup."** — the rate
+   limit was retried and is *not* the cause. `supabase/tests/**` is LANE-SUPABASE's;
+   the fix belongs to that lane (PR #250 already touches the file). Recorded here
+   because a red `Database` on an open PR is exactly what the deploy ledger exists
+   to surface.
+
+5. **E2E shards flake on a Docker port collision, not on the change.**
+   PR #307's first run: `E2E (2/4)` failed in *Start the seeded local Supabase
+   stack* with `failed to bind host port for 0.0.0.0:54322 … address already in
+   use`, while `E2E (1/4)`, `(3/4)`, `(4/4)`, `Static checks` and `Database` all
+   passed. Four shards start their own Supabase stack in parallel on the same
+   runner image, so a leftover `54322` listener from a sibling shard can collide.
+   Re-running the failed job cleared it. Infra-owned (`ci.yml`); worth a
+   `supabase stop` / unique-port guard, but not blocking.
