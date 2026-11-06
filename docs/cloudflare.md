@@ -1695,7 +1695,7 @@ tamamı HTTPS sunmalı**. Canlı ölçüm:
 | W-20-1 | HSTS preload durumu | `pending` | ℹ️ |
 | W-20-2 | HSTS başlığı (apex + `www`) | `max-age=31536000; includeSubDomains; preload` | ✔ |
 | W-20-3 | `www` HTTPS | 308 → apex, sertifika `CN=isbulkktc.com` (SAN kapsıyor) | ✔ |
-| W-20-4 | `includeSubDomains` HTTPS kapsamı | `send`, `rsend`, `autodiscover`, `mta-sts` → **HTTPS yok** (`000`, sertifika yok); bunlar mail-only (MX/TXT), A/AAAA yok | ⚠️ |
+| W-20-4 | `includeSubDomains` HTTPS kapsamı | `send`, `rsend`, `autodiscover`, `mta-sts` → **HTTPS yok** (`000`, sertifika yok); bunlar mail-only (MX/TXT), A/AAAA yok | ✔ **kapsam dışı** (tur 25, M-06: kaydı olmayan isim preload denetimine girmez) |
 | W-20-5 | Apex/`www` AAAA | ikisi de CF IPv6 (`2606:4700:…`) | ✔ |
 | W-20-6 | IPv6 bağlantısı | sandbox'ta v6 yolu yok (`curl -6` → 000) | **bakılmadı** |
 | W-20-7 | `http://www` → `https://www` → apex | 301 → 308 → apex, yol+sorgu korunur | ✔ |
@@ -1714,6 +1714,12 @@ bunları gördüğünde `pending`'de takılabilir. İki seçenek: (a) mail-only 
 `includeSubDomains` kapsamı dışına almak mümkün değil (HSTS alt-alan kapsamı
 bölünemez) → HTTPS'i tüm isimlere açmak, ya da (b) preload'u bekletmek. `www`
 dışında tarayıcıya çıkan alt alan olmadığından etki **düşük**.
+
+> **Düzeltme (tur 25, M-06).** Yukarıdaki "preload'da takılabilir" çıkarımı
+> **geçersiz**. hstspreload.org yalnız **DNS kaydı taşıyan** alt alanları denetler;
+> `send`/`rsend` yalnız MX/TXT/CNAME, `mail`/`smtp`/`cdn` ise **hiç kayıt yok**
+> (DoH `Status=0`, `Answer=[]`). Dört preload şartının tamamı canlı karşılanıyor →
+> `pending` bir **kuyruk** durumu, engel değil. Detay: tur 25.
 
 ### Drift (tur 20 — değişmedi)
 
@@ -2226,3 +2232,124 @@ için gerçek bir gönderimin `Authentication-Results` başlığı gerekir (pane
 2. **#170:** Gerçek kayıt postasının `Authentication-Results`'ını Gmail'de
    incele; `spf=` ve `dkim=` sonuçlarını **önce ölç**, sonra DMARC'ı
    `quarantine`'e al. `p=none` + SPF/DKIM `pass` spam'i açıklar, `fail` açıklar.
+
+---
+
+## Edge mikro-denetim tur 25 — origin başlık sahipliği + yöntem semantiği + HSTS preload blocker (2026-11-06)
+
+Canlı build: `/api/build-info` → **`00c665b`** (`origin/main` = `7d5bb64`, yani
+canlı build **1 commit geride** — teslimat, bu lane'in alanı değil). Salt-okuma;
+`CF_API_TOKEN` bu sandbox'ta yine yok → zone API okunamadı. Ölçüm: canlı
+`curl`/`openssl` + DoH + hstspreload API.
+
+Bu turun odağı **origin başlık sahipliği** (hangi başlığı CF, hangisini origin
+koyuyor) ve **HTTP yöntem semantiği** — ikisi de şimdiye dek nokta-noktasına
+sorulmamıştı. Bulguların tamamı `next.config.ts` / `src/app/api/**` (repo) veya
+CF paneli (onay bekleyen) tarafında; **hiçbiri CF edge'inde değil**.
+
+### Özet
+
+**Yeni bulgular (hepsi LANE-GÜVENLİK'e devredildi — #423):**
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki |
+|---|---|---|---|---|---|
+| M-01 | `src/app/api/build-info/route.ts:1` (`force-static`) — **Vercel statik katmanı**, `next.config.ts` değil | Yetki/sızıntı | `force-static` olduğu için Vercel bu yanıtı **statik varlık** gibi sunar ve statik varlıklara platform düzeyinde `access-control-allow-origin: *` ekler → herhangi bir origin `fetch()` ile canlı commit SHA'sını okuyabilir (`{"commit":"00c665b…","environment":"production"}`). Aynı ACAO `/robots.txt`, `/sitemap.xml`, `/_next/static/*.css`'te de var; **HTML sayfalarında ve dinamik API'de yok** | Statik varlık için kabul edilebilir; ama build-info **bilinçli olarak** cross-origin okunabilir olmalı mı? Değilse `force-dynamic` + dar ACAO | Düşük hassasiyetli bilgi (commit SHA) herkese açık; asıl etki "sürüm parmak izi" |
+| M-02 | `src/app/[locale]/**` catch-all (repo, `next.config` değil) | Mantık/tutarlılık | `/` , `/jobs` PUT/DELETE/PATCH → **200** (tam HTML gövdesi); ama `/api/build-info` PUT/DELETE → **405** (doğru) | Sayfa rotaları da yazma yöntemlerine **405** dönmeli | Tutarsız yöntem sözleşmesi; origin (Vercel alias) da aynı davranır → repo-tarafı, CF değil |
+| M-03 | `src/app/api/**` hata yolları | Hata yolu / cache | 405/400/404 yanıtları `cache-control: public, max-age=0, must-revalidate` (`/api/push/subscriptions` 405, `/api/email/unsubscribe` 400, `/_next/static/<yok>` 404) | Hata yolları `no-store` (build-info'nun yaptığı gibi) | CF bugün `DYNAMIC`/`BYPASS` tuttuğu için sömürülemez; CF Cache Rule eklenirse N-01 sınıfı yinelenir |
+| M-04 | `/_next/static/<yok>.js` | Cache | 404 → `public, max-age=31536000, must-revalidate` (N-01'in canlı teyidi) | 404'ler uzun TTL almamalı | `must-revalidate` sayesinde bayat-404 riski düşük; 1 yıl TTL gereksiz |
+| M-05 | `src/app/[locale]/(auth)/**` redirect | Tutarlılık | `/profile/dashboard` 307 yanıtı **iki özdeş** `Set-Cookie: NEXT_LOCALE=tr; Path=/; SameSite=lax` (deterministik, bayt-özdeş, `Accept-Language: de` ile de aynı) | Tek çerez | İşlevsel etki yok (aynı değer); yine de çift yazım |
+| M-06 | `docs/cloudflare.md:1698` (W-20-4) | Doğruluk | Tur 20 "preload `includeSubDomains` şartı `send`/`rsend`/`autodiscover`/`mta-sts`'i HTTPS'e zorlar → `pending`'de takılabilir" dedi | Bu isimler **DNS kaydı taşımıyor** → preload kapsamı **dışı** | Yanlış engel iddiası; aşağıda düzeltildi |
+
+**Doğrulanan / kapanan:**
+
+- **W-20-4 revizyonu (M-06):** hstspreload.org'un **dört şartı** da canlı karşılanıyor
+  (tablo aşağıda). Subdomain engeli **yok**: `send` yalnız MX+TXT, `rsend` CNAME
+  (`rmta.net`), `mail`/`smtp`/`cdn` **hiç kayıt yok** (DoH `Status=0`, `Answer=[]`)
+  → preload yalnız **kaydı olan** alt alanı denetler, bunlar kapsam dışı. `pending`
+  bir **kuyruk** durumudur (inceleme + Chrome sürümüne girme aylar sürer), başarısızlık
+  değil.
+- **F-07 CAA:** canlı 10 kayıt (`issue`+`issuewild`: comodoca, digicert,
+  letsencrypt, pki.goog, ssl.com); CF Universal SSL sertifikası **Let's Encrypt
+  `YE2`** → uyumlu, eksik değil.
+- **Crawler erişimi (#163):** Googlebot/bingbot `/`, `/jobs`, `/sitemap.xml` →
+  **200**, `cf-mitigated` **yok**, `X-Robots-Tag` yok → CF halkası yine **kopuk değil**.
+- **Gerçek statik varlık:** `/_next/static/chunks/*.css` → `public, max-age=31536000,
+  immutable`, `cf-cache-status: HIT`, `age≈678000` → edge cache çalışıyor.
+- **HSTS preload blocker yok** (aşağıdaki tablo).
+
+### M-06 — HSTS preload şartları, tek tek canlı (düzeltme)
+
+hstspreload.org "Submission Requirements" (2026-11-06 alındı):
+
+| Şart | Canlı ölçüm | Sonuç |
+|---|---|---|
+| Geçerli sertifika | `CN=isbulkktc.com`, LE `YE2`, SAN apex+`www`, geçerli | ✅ |
+| HTTP→HTTPS aynı host (port 80) | `http://isbulkktc.com/` → **301** `https://isbulkktc.com/` | ✅ |
+| **Tüm alt alanlar HTTPS** | Yalnız `www` gerçek kayıt taşıyor → HTTPS 308 ✔; `send`/`rsend`/`mail`/`smtp`/`cdn` **DNS kaydı yok** (kapsam dışı) | ✅ |
+| Taban alan HSTS: `max-age ≥ 31536000` + `includeSubDomains` + `preload` | `max-age=31536000; includeSubDomains; preload` | ✅ |
+| Ek HTTPS yönlendirmesi de HSTS taşımalı | `https://www` → 308, **HSTS başlığı var** | ✅ |
+
+**Sonuç:** dört şart da karşılanıyor → `pending` **engel değil**, sıra durumu.
+W-20-4'ün "mail-only isimler preload'u takar" yorumu **geçersiz** (o isimlerin
+A/AAAA'sı yok). Panelde yapılacak yeni bir iş **yok**; yalnız **H-01** (aşağıda)
+kapatılırsa apex `max-age` 2 yıla çıkar (asgari zaten karşılanıyor).
+
+### M-01..M-05 — kanıt
+
+```
+# M-01: cross-origin okunabilirlik (statik katman — Vercel; HTML/dinamik API'de YOK)
+curl -s -H 'Origin: https://evil.example' https://isbulkktc.com/api/build-info -D -
+  -> 200  access-control-allow-origin: *   body={"commit":"00c665b…","environment":"production"}
+curl -s -H 'Origin: https://evil.example' https://isbulkktc.com/robots.txt -D -   -> 200  ACAO: *
+curl -s -H 'Origin: https://evil.example' https://isbulkktc.com/jobs -D -         -> 200  ACAO yok (HTML)
+curl -s -H 'Origin: https://evil.example' https://isbulkktc.com/api/qr -D -       -> 200  ACAO yok (dinamik)
+
+# M-02: yöntem semantiği
+curl -X PUT    https://isbulkktc.com/             -> 200 (text/html, x-vercel-cache: MISS)
+curl -X DELETE https://isbulkktc.com/jobs         -> 200
+curl -X PUT    https://isbulkktc.com/api/build-info -> 405   # API doğru yapıyor
+curl -X PUT    https://isbulkktc-amber.vercel.app/ -> 200    # origin de aynı → CF değil
+
+# M-03/M-04: hata-yolu cache
+curl -D - https://isbulkktc.com/api/push/subscriptions          -> 405 cache-control: public, max-age=0, must-revalidate
+curl -D - https://isbulkktc.com/api/email/unsubscribe?token=abc -> 400 cache-control: public, max-age=0, must-revalidate
+curl -D - https://isbulkktc.com/_next/static/<yok>.js           -> 404 cache-control: public, max-age=31536000, must-revalidate
+
+# M-05: çift çerez
+curl -D - https://isbulkktc.com/profile/dashboard | grep -ci '^set-cookie:'  -> 2
+curl -D - https://isbulkktc.com/login             | grep -ci '^set-cookie:'  -> 1
+
+# M-06: preload
+curl https://hstspreload.org/api/v2/status?domain=isbulkktc.com -> {"status":"pending"}
+DoH random-x9z7q.isbulkktc.com A -> Status=0 Answer=[]  (wildcard YOK)
+```
+
+### Drift (tur 25 — değişmedi)
+
+**Açık:** H-01 (edge HSTS 1 yıl vs origin 2 yıl), H-02 (Browser Cache TTL),
+R-01 (trailing-dot apex 404; `www` 308), G-01 (Email Obfuscation), N-01
+(`/_next/static` 404 1 yıl), W-01 (`%2f` normalizasyon), V-20 (tarayıcı yolu WAF
+boşluğu), F-08 (Vercel alias CF'i atlar), **W-20-4 → geçersiz (M-06)**.
+
+**Yeni açık:** M-01, M-02, M-03, M-04 (repo; #423 ile LANE-GÜVENLİK'e devir).
+M-05, M-06 bilgi/düzeltme.
+
+### Sahibin (CF paneli) yapması gerekenler (değişmedi + yeni)
+
+1. **H-01:** SSL/TLS → Edge Certificates → HSTS'i kapat (origin gönderiyor) **veya**
+   `max-age=63072000` yap. *(Repo alternatifi: `next.config.ts`'te HSTS'i
+   `/api/**` dışı tüm yollara tek-kaynak ver → edge origin'i ezmez — #423'te.)*
+2. **H-02:** Caching → Browser Cache TTL = `Respect Existing Headers`.
+3. **F-08:** Vercel Deployment Protection aç.
+4. **G-01:** Scrape Shield → Email Obfuscation OFF.
+5. **R-01:** `isbulkktc.com.` (trailing-dot) → apex 301/308 kuralı.
+
+### Bakılmayan
+
+- **CF zone API** (`CF_API_TOKEN` yok): WAF ruleset / Cache Rules / Browser Cache
+  TTL / Bot Management / Analytics okunamadı (M-01..M-04'ün "panelde var mı"
+  yarısı ölçülemez).
+- **IPv6 yolu:** sandbox'ta v6 yok (yalnız DoH AAAA).
+- **Gerçek tarayıcı:** çift-çerez davranışı tarayıcıda (hangi değer kazanır) ve
+  PUT sonrası ön-yüz etkisi sürülmedi.
+- **Gerçek posta `Authentication-Results`:** #170 için hâlâ ölçülemedi.

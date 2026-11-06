@@ -606,3 +606,46 @@ düzeltildi.
 karşı ayıkla (`--http2 -v` + `grep '^< HTTP'`); (2) bir egress'ten alınan
 challenge'ı "site geneli" sanma — temiz egress ile çapraz doğrula; (3) SPF/DKIM
 "fail" iddiasını zarf alanı + `Authentication-Results` olmadan doğrulama.
+
+## Tur 25 (2026-11-06) — origin başlık sahipliği + yöntem semantiği + preload blocker düzeltmesi
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF değiştirilmedi)
+```
+
+**Bu tur ne buldu (hepsi canlı `curl`/DoH kanıtlı, `docs/cloudflare.md` → "tur 25"):**
+
+- **M-01 (düşük — #423, LANE-GÜVENLİK):** `/api/build-info` `force-static`
+  olduğu için Vercel statik katmanı `access-control-allow-origin: *` ekliyor →
+  canlı commit SHA herhangi bir origin'den `fetch()` ile okunabilir. Aynı ACAO
+  `/robots.txt`, `/sitemap.xml`, `/_next/static/*`'te var; **HTML ve dinamik
+  API'de yok**. `next.config.ts` ile ilgisi yok — atıf düzeltildi.
+- **M-02 (düşük — #423):** sayfa rotaları `PUT/DELETE/PATCH` → **200** (tam HTML);
+  `/api/*` doğru şekilde **405**. Origin (Vercel alias) da aynı → repo-tarafı.
+- **M-03/M-04 (düşük — #423):** API hata yolları (405/400/404) ve
+  `/_next/static/<yok>` 404'ü `public, max-age=0|31536000, must-revalidate`
+  alıyor → `no-store` olmalı. CF bugün `DYNAMIC`/`BYPASS` tuttuğu için
+  sömürülemez; Cache Rule eklenirse N-01 sınıfı yinelenir.
+- **M-05 (bilgi):** `/profile/dashboard` 307'si **iki özdeş** `NEXT_LOCALE`
+  çerezi yazıyor (deterministik); işlevsel etki yok.
+- **M-06 (doğruluk düzeltmesi):** tur 20'nin W-20-4 "mail-only isimler preload'u
+  takar" çıkarımı **geçersiz** — hstspreload.org yalnız **kaydı olan** alt alanı
+  denetler; `send`/`rsend` yalnız MX/TXT/CNAME, `mail`/`smtp`/`cdn` hiç kayıt
+  yok. Dört preload şartı da canlı karşılanıyor → `pending` = kuyruk, engel değil.
+
+**Teyit edilen (kapanan yok):** F-07 CAA eksik değil (10 kayıt, LE `YE2` uyumlu);
+`#163` CF halkası yine kopuk değil (Googlebot/bingbot 200); gerçek statik varlık
+`immutable` + `HIT`; canlı build `00c665b` (`main` 1 commit geride — teslimat).
+
+**Açık kalan (değişmedi):** H-01, H-02, N-01, R-01, G-01, W-01, V-20, F-08.
+**Kapandı:** W-20-4 (geçersiz çıktı — M-06). **Yeni açık:** M-01..M-04 → **#423**.
+**Devir:** M-01..M-04 `lane:guvenlik` + `agent:handoff` ile **#423** açıldı.
+
+**Sonraki lane için notlar:** (1) origin başlıklarını "CF mi, Vercel mi, config
+mi" diye **sahiplendir** — statik katman (Vercel) ACAO ekler, config eklemez;
+(2) `PUT/DELETE` ile sayfa rotasını dene, 200 beklenmezse origin davranışını
+alias'tan çapraz doğrula; (3) preload "engeli" iddiasını yalnız **DNS kaydı olan**
+alt alan üzerinden kur.
