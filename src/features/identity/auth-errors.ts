@@ -28,13 +28,11 @@ const authErrorMessages: Record<string, AuthMessage> = {
   user_already_exists: "emailAlreadyRegistered",
   identity_already_exists: "emailAlreadyRegistered",
   email_conflict_identity_not_deletable: "emailAlreadyRegistered",
-  // The reset form's new password is the one already on the account. Actionable
-  // ("choose a different password") rather than the generic "could not be
-  // updated, try again", which invites the visitor to retry the same value and
-  // loop. `weak_password` is the sibling case; it is handed off in #273 because
-  // mapping it needs the integration test (LANE-QA) to stop using it as its
-  // generic failure example.
+  // A rejected new password is actionable — the visitor must pick a different,
+  // stronger value — rather than the generic "could not be updated, try again",
+  // which invites them to retry the exact value GoTrue just rejected and loop.
   same_password: "passwordUnchanged",
+  weak_password: "passwordTooWeak",
 };
 
 export function messageForAuthErrorCode(

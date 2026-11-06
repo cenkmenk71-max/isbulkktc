@@ -630,6 +630,7 @@
       "resetRequestFailed": "Der Link zum Zurücksetzen konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
       "passwordUpdateFailed": "Das Passwort konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
       "passwordUnchanged": "Ihr neues Passwort darf nicht mit dem aktuellen identisch sein. Wählen Sie ein anderes Passwort.",
+      "passwordTooWeak": "Dieses Passwort ist nicht stark genug. Wählen Sie ein längeres, schwerer zu erratendes Passwort.",
       "sessionExpired": "Ihre Sitzung ist abgelaufen. Bitte fordern Sie einen neuen Link zum Zurücksetzen des Passworts an.",
       "passwordMismatch": "Die Passwörter stimmen nicht überein. Geben Sie dasselbe Passwort in beide Felder ein."
     }

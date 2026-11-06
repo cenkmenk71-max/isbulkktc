@@ -593,6 +593,7 @@
       "resetRequestFailed": "Could not send the password reset link. Please try again.",
       "passwordUpdateFailed": "Your password could not be updated. Please try again.",
       "passwordUnchanged": "Your new password cannot be the same as your current one. Choose a different password.",
+      "passwordTooWeak": "That password is not strong enough. Choose a longer, harder-to-guess password.",
       "sessionExpired": "Your link has expired. Please request a new password reset link.",
       "passwordMismatch": "Passwords do not match. Enter the same password in both fields."
     }

@@ -30,12 +30,14 @@ test("every GoTrue duplicate-account code maps to the already-registered message
 });
 
 test("unrelated codes still fall through to the caller's fallback", () => {
+  // `weak_password` now has its own copy (a too-weak password is actionable), so
+  // it is no longer an example of a pass-through code.
   assert.equal(
-    messageForAuthErrorCode("weak_password", "signUpFailed"),
+    messageForAuthErrorCode("over_email_send_rate_limit", "signUpFailed"),
     "signUpFailed",
   );
   assert.equal(
-    messageForAuthErrorCode("over_email_send_rate_limit", "signUpFailed"),
+    messageForAuthErrorCode("unexpected_failure", "signUpFailed"),
     "signUpFailed",
   );
   assert.equal(messageForAuthErrorCode(undefined, "signUpFailed"), "signUpFailed");

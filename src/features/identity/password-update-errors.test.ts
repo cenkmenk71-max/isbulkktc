@@ -16,10 +16,14 @@ import { messageForAuthErrorCode } from "./auth-errors";
 // `GoTrueClient`: `_updateUser` catches an `AuthError` and returns it), so the
 // action's `if (error)` branch is the right place to read them.
 
-test("same_password keeps its own message", () => {
+test("same_password and weak_password keep their own message", () => {
   assert.equal(
     messageForAuthErrorCode("same_password", "passwordUpdateFailed"),
     "passwordUnchanged",
+  );
+  assert.equal(
+    messageForAuthErrorCode("weak_password", "passwordUpdateFailed"),
+    "passwordTooWeak",
   );
 });
 
@@ -27,7 +31,6 @@ test("an unrelated update failure still falls back to the generic copy", () => {
   for (const code of [
     "over_request_rate_limit",
     "unexpected_failure",
-    "weak_password",
     "",
     undefined,
   ]) {
@@ -58,7 +61,7 @@ test("the new password messages exist in all six locales", () => {
     const catalog = JSON.parse(
       readFileSync(new URL(`../../messages/${language}.json`, import.meta.url), "utf8"),
     ) as { AuthForms: { messages: Record<string, string> } };
-    for (const key of ["passwordUnchanged"]) {
+    for (const key of ["passwordUnchanged", "passwordTooWeak"]) {
       const copy = catalog.AuthForms.messages[key];
       assert.equal(typeof copy, "string", `${language}: ${key} is missing`);
       assert.ok(copy.length > 20, `${language}: ${key} looks like a placeholder`);
