@@ -608,3 +608,19 @@ sınadım.
   `font-src` direktifini düşür → kırmızı.
 - **Bakılmayan:** yok — 14 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
   #102.
+
+## Durum (2026-11-06, 27. tur) — push kayıt rotasının oturum kapısı
+
+`/api/push/subscriptions` rotasının **oturum kapısını** denetledim.
+
+- **Bulgu: oturum kapısı pinlenmemişti.** Rota gövdeyi ayrıştırmadan önce
+  `getUser()` ile oturum istiyor ve yoksa 401 dönüyor — doğru davranış — ama bunu
+  doğrulayan **hiçbir test yoktu**. Kapı sessizce kaldırılsa (RPC satırı yine
+  `auth.uid()`'e bağladığı için) anonim bir çağıran push kimlik bilgisi
+  kaydedebilirdi ve hiçbir test kırmızı olmazdı.
+- **Düzeltme:** `push-endpoint-ssrf.test.ts` (aynı rota) artık rotanın
+  `getUser()` çağrısının `request.json()`'dan ve 401 dönüşünden **önce** geldiğini
+  doğrular.
+- **Kanıt (mutation):** oturum kapısını kaldır → kırmızı.
+- **Bakılmayan:** yok — 14 test dosyası + 2 doküman. Açık `todo`'lar: #298, #206,
+  #102.

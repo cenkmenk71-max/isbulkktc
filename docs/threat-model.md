@@ -282,7 +282,10 @@ issue açar.
   (`src/server/push/push-endpoint.ts`) yalnız bilinen push servis host'larını
   kabul eder; IP literal, decimal-IP, `localhost`, `.local`/`.internal` reddedilir.
   **Her iki yazma yolu** (route + `savePushSubscription`) ve gönderim ucu onu
-  çağırır. `tests/security/push-endpoint-ssrf.test.ts` artık bir **kapı**.
+  çağırır. `tests/security/push-endpoint-ssrf.test.ts` artık bir **kapı**; aynı
+  test kayıt rotasının (`/api/push/subscriptions`) gövdeyi ayrıştırmadan **önce**
+  oturum istediğini (`getUser()` → 401) de sabitler — bu kapı sessizce kaldırılsa
+  anonim bir çağıran push kimlik bilgisi kaydedebilirdi.
 
 - **Açık yönlendirme — `sanitizeNextPath` normalizasyon bypass'ı** (sahibi:
   `src/lib/pwa/destination.ts`, LANE-URUN). `/[locale]/install?next=` girdisi,

@@ -165,6 +165,24 @@ test("the send sink also checks the allowlist (defence in depth)", () => {
   );
 });
 
+test("the registration route requires a session before it parses the body", () => {
+  // The route binds the row to `auth.uid()` through the RPC, but it must first
+  // refuse an anonymous caller — otherwise anyone could register push
+  // credentials. Dropping the gate is silent: the RPC would still run, and no
+  // other test exercises this route's session check.
+  const route = read("src/app/api/push/subscriptions/route.ts");
+  const getUser = route.indexOf("supabase.auth.getUser()");
+  const unauthorized = route.indexOf("Unauthorized");
+  const parseBody = route.indexOf("request.json()");
+  assert.ok(getUser > -1, "the route no longer resolves the session user");
+  assert.ok(unauthorized > -1, "the route no longer returns 401 for a missing session");
+  assert.ok(parseBody > -1, "the route no longer parses the request body");
+  assert.ok(
+    getUser < unauthorized && getUser < parseBody,
+    "the route parses the body before it checks the session",
+  );
+});
+
 test("the allowlist module names the real push services", () => {
   const source = read("src/server/push/push-endpoint.ts");
   for (const host of [
