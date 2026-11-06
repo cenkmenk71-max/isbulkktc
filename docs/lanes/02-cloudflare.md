@@ -658,7 +658,7 @@ alt alan üzerinden kur.
 ## Tur 26 (2026-11-06) — WAF `%2F` izolasyonu + H-01'in imkânsızlığı + nokta-noktasına denetim
 
 ```
-Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (tur 26, bu tur açılıyor)
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: #438 (tur 26)
 Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
 Çalıştırılan kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
 Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF değiştirilmedi)
