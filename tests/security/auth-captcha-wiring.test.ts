@@ -69,7 +69,7 @@ function authCallBlocks(source: string, call: string): string[] {
     const start = source.indexOf(needle, from);
     if (start === -1) break;
     let depth = 0;
-    let end = start;
+    let end = -1;
     for (let i = start; i < source.length; i += 1) {
       const ch = source[i];
       if (ch === "(") depth += 1;
@@ -80,6 +80,13 @@ function authCallBlocks(source: string, call: string): string[] {
           break;
         }
       }
+    }
+    // An unbalanced call (a truncated file, or the needle inside a string) has no
+    // close: take the rest and stop, so a malformed source fails the assertion
+    // instead of spinning the suite forever.
+    if (end === -1) {
+      blocks.push(source.slice(start));
+      break;
     }
     blocks.push(source.slice(start, end));
     from = end;
@@ -160,4 +167,10 @@ test("the auth-call block extractor is balanced and returns every occurrence (se
   const both = authCallBlocks(twoCalls, "signUp");
   assert.equal(both.length, 2, "the second call was not discovered");
   assert.ok(!/captchaToken/.test(both[1]!), "the second block should be the unguarded one");
+
+  // An unbalanced call must terminate, not loop forever: a truncated file would
+  // otherwise hang CI instead of failing it.
+  const unbalanced = authCallBlocks("supabase.auth.signUp({ email:", "signUp");
+  assert.equal(unbalanced.length, 1);
+  assert.match(unbalanced[0]!, /signUp\(\{ email:$/);
 });
