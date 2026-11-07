@@ -1628,3 +1628,57 @@ Erişilebilirlik/kontrast/RTL bu lane'de kapsam dışı (görsel yüzey yok).
 - **#141** — legal sayfa çevirisi (LANE-İÇERİK).
 - WhatsApp `?text=` ön-dolgusu — `src/features/editorial/brand-pages.tsx:191` +
   `src/lib/social-links.ts:26` LANE-URUN/İÇERİK dizininde; bu lane yazmaz.
+
+## Tur 42 — canlı doğrulama: hesap kayıt/işlem + çerezler (#418)
+
+Sahibin sorusu: "canlıda gözüküyor mu?" → canlı ile repo karşılaştırıldı (salt-okuma).
+
+### Canlı = main (deploy sağlıklı)
+`GET /api/build-info` → `{"commit":"4f4680cc…","environment":"production"}`; yerel `main`
+= `4f4680cc` (PR #468). Tur 41 kodu **canlıda**.
+
+### Kayıt + hesap akışları canlıda çalışıyor
+- `/register`, `/login`, `/forgot-password` → 200; form alanları (`email`, `displayName`,
+  `password`, `audience`, `locale`) sunucu HTML'inde.
+- Turnstile **gerçek tarayıcıda aktif** ("Verify you are human" iframe +
+  `cloudflare.com/products/turnstile` + `/cdn-cgi/challenge-platform/help` linkleri).
+  SSR HTML'inde yalnız boş `editorial-turnstile` konteyneri görünür — beklenen
+  davranış (widget effect'te render edilir), "captcha kapalı" **değil**.
+- Auth formu **Server Action** ile gidiyor; istemci bundle'ında Supabase anahtarı yok.
+- Güvenlik başlıkları tam: HSTS `preload`, CSP, `X-Frame-Options`, `X-Content-Type-Options`,
+  `Referrer-Policy`, `Permissions-Policy`.
+
+### Bulgu (canlı, kanıtlı) — `NEXT_LOCALE` `Secure` değil → devir **#469**
+```
+GET /register        → set-cookie: NEXT_LOCALE=tr; Path=/; SameSite=lax
+GET /de/register     → set-cookie: NEXT_LOCALE=de; Path=/; SameSite=lax
+```
+Beklenen: production'da `…; Secure`. Kök neden `src/i18n/routing.ts`
+(`defineRouting`'de `localeCookie` yok → next-intl varsayılanı `{name, sameSite:'lax'}`,
+`secure` yok). Diğer tüm çerezler (`sb-*`, `ib_oauth_signup_intent`, `ib_consent`)
+production'da `Secure`. Sahibi **LANE-İÇERİK**; devir **#469** (`agent:handoff`,
+`lane:icerik`, `agent:test`). Kapı hazır: `tests/security/locale-cookie-flags.test.ts`
+→ `"in production the locale cookie is Secure"` (todo, bugün kırmızı).
+
+### Bakılmayan / bilinen eksik (canlıda yok — kanıt)
+Hesap **silme/askıya alma/kapatma** UI'i canlıda **yok**: `/account`, `/hesabim`,
+`/ayarlar`, `/settings`, `/profile` → 404; `AccountPanel` salt-okunur (e-posta +
+doğrulama rozeti), `signOut` ve `updatePassword` dışında hesap işlemi sunmuyor.
+Bilinen ve devredilmiş: silme **#400**, askıya alma yazarı **#467**.
+
+### Kapı sonucu
+`lint` ✓ / `typecheck` ✓ / `check:frontend-source` ✓ / `test:unit` 743/741/0/2 /
+`test:security` 165/154/0/11. Canlıya **yazılmadı** (yalnız salt-okuma curl + tarayıcı).
+
+```
+Lane: LANE-GÜVENLİK            Branch: lane/guvenlik-43
+PR: bu PR (tur 42 canlı doğrulama)
+Değişen dosyalar: docs/lanes/09-guvenlik.md
+Çalıştırılan kontroller: lint ✓ / typecheck ✓ / check:frontend-source ✓ /
+  test:unit ✓ (743/741/0/2) / test:security ✓ (165/154/0/11)
+Canlıya dokundu mu: HAYIR (salt-okuma curl + tarayıcı gözlemi)
+Sahibin yapması gerekenler: #469 (LANE-İÇERİK, NEXT_LOCALE Secure) — canlıya
+  yansıması deploy sonrası ölçülmeli; #400/#467 kararı LANE-SUPABASE+AUTH.
+Sonraki lane için notlar: Canlı çerez bayrağını ölçerken ham başlığı sed'siz oku;
+  `/api/build-info` SHA'sı ile main'i karşılaştır (deploy doğrulaması).
+```
