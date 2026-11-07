@@ -448,3 +448,23 @@ test("the content bundle names the districts as the interface does", () => {
     }
   }
 });
+
+// `münhal` (a vacant post) and `iş ilanı` (the ad text for one) are near
+// synonyms; pairing them in a single string reads as a pleonasm — "açık
+// pozisyon ilanı" twice over. #399. `münhal` is deliberately kept as a
+// standalone SEO term (#190), so the rule is only that the two never share a
+// leaf; the two-sentence copy keeps each term on its own line.
+test("the Turkish catalog never pairs 'münhal' with 'iş ilanı'", () => {
+  const offenders = Object.entries(turkish).filter(([, value]) => {
+    const folded = value.toLocaleLowerCase("tr");
+    return folded.includes("münhal") && folded.includes("iş ilan");
+  });
+  assert.deepEqual(
+    offenders,
+    [],
+    `pleonasm — these keys pair "münhal" with "iş ilanı": ${offenders
+      .map(([key]) => key)
+      .join(", ")}`,
+  );
+});
+

@@ -1,7 +1,7 @@
 {
   "Meta": {
-    "title": "İşBul KKTC — KKTC ve Kuzey Kıbrıs İş İlanları",
-    "description": "KKTC ve Kuzey Kıbrıs'taki güncel iş ilanlarını, münhalleri ve kariyer fırsatlarını keşfedin. İş arayanlar ve işverenler için İşBul KKTC platformu."
+    "title": "İşBul KKTC — Kuzey Kıbrıs İş İlanları",
+    "description": "KKTC ve Kuzey Kıbrıs'taki güncel iş ilanlarını ve kariyer fırsatlarını keşfedin. İş arayanlar ve işverenler için İşBul KKTC platformu."
   },
   "InstallMeta": {
     "title": "Uygulamayı yükle",
@@ -54,7 +54,7 @@
   },
   "HomeMeta": {
     "title": "KKTC İş İlanları ve İş Bulma Platformu",
-    "description": "KKTC ve Kuzey Kıbrıs'ta güncel iş ilanları, münhal ve kariyer fırsatları. İş ilanlarını ilçe, çalışma türü ve çalışma düzenine göre arayın; İşBul KKTC ile iş bulun."
+    "description": "KKTC ve Kuzey Kıbrıs'ta güncel iş ilanları ve kariyer fırsatları. İlanları ilçe, çalışma türü ve çalışma düzenine göre arayın; İşBul KKTC ile iş bulun."
   },
   "FreelanceMeta": {
     "title": "Kuzey Kıbrıs’ta serbest çalışma",
@@ -221,8 +221,8 @@
     "description": "Kuzey Kıbrıs'taki şirketleri ad, sektör ve konuma göre arayın; telefon, adres ve web sitesi bilgilerini inceleyin."
   },
   "JobsMeta": {
-    "title": "KKTC Güncel İş İlanları ve Münhaller",
-    "description": "KKTC ve Kuzey Kıbrıs'ta yayımlanan güncel iş ilanlarını ve münhalleri pozisyon, ilçe, çalışma türü ve çalışma düzenine göre arayın."
+    "title": "KKTC Güncel Münhaller",
+    "description": "KKTC ve Kuzey Kıbrıs'ta yayımlanan güncel iş ilanlarını pozisyon, ilçe, çalışma türü ve çalışma düzenine göre arayın."
   },
   "PackagesPage": {
     "eyebrow": "İŞVERENLER İÇİN İLAN HAKLARI",
@@ -660,7 +660,7 @@
   },
   "HomePage": {
     "eyebrow": "KKTC İŞ İLANLARI VE İSTİHDAM AĞI",
-    "title": "<line>KKTC iş ilanları,</line> <line>münhal ve kariyer</line> <accent>fırsatları tek yerde.</accent>",
+    "title": "<line>KKTC iş ilanları,</line> <line>kariyer ve gelişim</line> <accent>fırsatları tek yerde.</accent>",
     "sectorEyebrow": "BÖLGESEL ODAKLAR",
     "sectorTitle": "Kuzey Kıbrıs’ta öne çıkan çalışma alanları",
     "sectorRegion": "Kuzey Kıbrıs",
@@ -1421,9 +1421,9 @@
   "DistrictPage": {
     "eyebrow": "KKTC İŞ İLANLARI",
     "title": "{district} İş İlanları",
-    "metaTitle": "{district} İş İlanları ve Münhaller | KKTC",
-    "metaDescription": "{district} (Kuzey Kıbrıs) güncel iş ilanları, münhal ve kariyer fırsatları. {district} iş ilanlarını İşBul KKTC ile inceleyin ve başvurun.",
-    "intro": "{district} bölgesinde yayımlanan güncel iş ilanlarını ve münhalleri tek yerde inceleyin. Pozisyon, çalışma türü ve çalışma düzenine göre filtreleyin; size uygun fırsata başvurun.",
+    "metaTitle": "{district} İş İlanları | KKTC",
+    "metaDescription": "{district} (Kuzey Kıbrıs) güncel iş ilanları ve kariyer fırsatları. {district} ilanlarını İşBul KKTC ile inceleyin ve başvurun.",
+    "intro": "{district} bölgesinde yayımlanan güncel iş ilanlarını tek yerde inceleyin. Pozisyon, çalışma türü ve çalışma düzenine göre filtreleyin; size uygun fırsata başvurun.",
     "emptyTitle": "{district} için şu anda yayında ilan yok",
     "emptyDescription": "Yeni ilanlar eklendikçe burada görünecek. Tüm KKTC ilanlarına göz atabilir veya daha sonra tekrar bakabilirsiniz.",
     "browseAll": "Tüm KKTC iş ilanlarını gör",
@@ -1433,8 +1433,8 @@
     "eyebrow": "KKTC İŞ İLANLARI",
     "title": "{type} İş İlanları",
     "metaTitle": "{type} İş İlanları | KKTC ve Kuzey Kıbrıs",
-    "metaDescription": "KKTC ve Kuzey Kıbrıs'ta {type} iş ilanları ve münhaller. {type} pozisyonları İşBul KKTC ile inceleyin ve başvurun.",
-    "intro": "KKTC ve Kuzey Kıbrıs genelinde {type} iş ilanlarını ve münhalleri tek yerde inceleyin. İlçe ve pozisyona göre filtreleyin; size uygun fırsata başvurun.",
+    "metaDescription": "KKTC ve Kuzey Kıbrıs'ta {type} iş ilanları. {type} pozisyonlarını İşBul KKTC ile inceleyin ve başvurun.",
+    "intro": "KKTC ve Kuzey Kıbrıs genelinde {type} iş ilanlarını tek yerde inceleyin. İlçe ve pozisyona göre filtreleyin; size uygun fırsata başvurun.",
     "emptyTitle": "{type} kategorisinde şu anda yayında ilan yok",
     "emptyDescription": "Yeni ilanlar eklendikçe burada görünecek. Tüm KKTC ilanlarına göz atabilir veya daha sonra tekrar bakabilirsiniz.",
     "browseAll": "Tüm KKTC iş ilanlarını gör",
