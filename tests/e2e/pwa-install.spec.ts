@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import jsQR from "jsqr";
+import { PNG } from "pngjs";
 
 /**
  * The install entry point and its security boundaries.
@@ -190,7 +192,29 @@ test("an anonymous visitor is asked to sign in, not handed a dead permission but
   );
 });
 
-test("the QR route returns a scannable SVG for the install URL", async ({ request }) => {
+/**
+ * Decodes a QR raster to the string it actually encodes.
+ *
+ * The SVG form the route offers is a module matrix: `QRCode.toString` draws the
+ * symbol as `<path>` rectangles and never emits the payload as text. So a
+ * `expect(svg).not.toContain("evil.example")` is vacuously true for *every*
+ * input — the string is absent from the output even when the route does encode
+ * it — and cannot fail no matter what destination is embedded. Reading the
+ * symbol back with an independent decoder (jsQR) is the assertion that can
+ * fail; it is the same round-trip `tests/unit/pwa-qr.test.ts` does against the
+ * generator, but here it runs through the route, so it also proves the route
+ * forwards the payload to the generator at all.
+ */
+async function decodeQr(png: Buffer): Promise<string | null> {
+  const image = PNG.sync.read(png);
+  const result = jsQR(new Uint8ClampedArray(image.data), image.width, image.height);
+  return result?.data ?? null;
+}
+
+test("the QR route returns a scannable SVG for the install URL", async ({
+  request,
+  baseURL,
+}) => {
   const response = await request.get("/api/qr?format=svg&next=%2Fjobs");
   expect(response.ok()).toBe(true);
   expect(response.headers()["content-type"]).toContain("image/svg+xml");
@@ -200,16 +224,40 @@ test("the QR route returns a scannable SVG for the install URL", async ({ reques
   // A quiet zone is required for a camera to lock on; the generator requests a
   // 4-module margin, which appears as a viewBox larger than the module matrix.
   expect(svg).toMatch(/viewBox="0 0 \d+ \d+"/);
+
+  // "Scannable" is a claim about the payload, and the SVG carries that payload
+  // only as a module matrix. Read the same symbol back from the raster form to
+  // prove the route encodes this origin's install URL — not just that it drew
+  // *a* symbol.
+  const raster = await request.get("/api/qr?format=png&next=%2Fjobs");
+  const decoded = await decodeQr(await raster.body());
+  expect(decoded, "the symbol must decode, or this guard is blind").not.toBeNull();
+
+  const target = new URL(decoded as string);
+  expect(target.origin).toBe(new URL(baseURL as string).origin);
+  expect(target.pathname).toBe("/install");
+  expect(target.searchParams.get("next")).toBe("/jobs");
 });
 
-test("the QR route never encodes an off-site destination", async ({ request }) => {
-  // The route decodes the SVG's module matrix is out of scope here; the contract
-  // that matters is that the request is answered from this origin's install URL.
-  const response = await request.get("/api/qr?format=svg&next=https%3A%2F%2Fevil.example");
+test("the QR route never encodes an off-site destination", async ({
+  request,
+  baseURL,
+}) => {
+  // The payload is only observable by decoding the symbol, so ask for the PNG
+  // form and read it back. (Grepping the SVG cannot see the destination: it is
+  // a module matrix, not text.)
+  const response = await request.get(
+    "/api/qr?format=png&next=https%3A%2F%2Fevil.example",
+  );
   expect(response.ok()).toBe(true);
-  const svg = await response.text();
-  expect(svg).toContain("<svg");
-  expect(svg).not.toContain("evil.example");
+
+  const decoded = await decodeQr(await response.body());
+  expect(decoded, "the symbol must decode, or this guard is blind").not.toBeNull();
+
+  const target = new URL(decoded as string);
+  expect(target.origin).toBe(new URL(baseURL as string).origin);
+  expect(target.pathname).toBe("/install");
+  expect(decoded).not.toContain("evil.example");
 });
 
 test("the QR route can also return a PNG", async ({ request }) => {

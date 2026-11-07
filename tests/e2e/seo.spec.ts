@@ -13,7 +13,7 @@ test("public routes expose localized canonical and social metadata", async ({
       enPath: "/en",
       title: "KKTC İş İlanları ve İş Bulma Platformu",
       description:
-        "KKTC ve Kuzey Kıbrıs'ta güncel iş ilanları, münhal ve kariyer fırsatları. İş ilanlarını ilçe, çalışma türü ve çalışma düzenine göre arayın; İşBul KKTC ile iş bulun.",
+        "KKTC ve Kuzey Kıbrıs'ta güncel iş ilanları ve kariyer fırsatları. İlanları ilçe, çalışma türü ve çalışma düzenine göre arayın; İşBul KKTC ile iş bulun.",
     },
     {
       locale: "en",
@@ -631,7 +631,7 @@ test("district landing pages are indexable, self-canonical and interlinked", asy
     });
     const siteOrigin = new URL(page.url()).origin;
     await expect(page).toHaveTitle(
-      new RegExp(`${district.tr} İş İlanları ve Münhaller`),
+      new RegExp(`${district.tr} İş İlanları`),
     );
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
       "href",

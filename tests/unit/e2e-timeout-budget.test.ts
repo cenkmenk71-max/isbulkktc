@@ -94,9 +94,15 @@ function testBlocks(source: string): TestBlock[] {
 
 /** Whether `block` navigates inside a `for...of` loop over >= 4 items. */
 function isRouteSweep(source: string, block: string): boolean {
-  // Matches `for (const x of ...)` and the destructuring form
-  // `for (const { a, b } of ...)`; both appear in the suite.
-  for (const match of block.matchAll(/for \(const (?:\{[^}]*\}|\w+) of (\[[^\]]*\]|[\w.]+)\)/g)) {
+  // Matches `for (const x of ...)`, the object form `for (const { a, b } of ...)`
+  // and the array form `for (const [a, b] of ...)`; all three appear in the
+  // suite. The array form was missing once, and a `for (const [route, …] of
+  // heroImages)` sweep was invisible to the detector — exactly the silent
+  // no-match this guard exists to prevent. The iterable may also be a member
+  // call (`sourcePhotos.entries()`), which is the same shape.
+  for (const match of block.matchAll(
+    /for \(const (?:\{[^}]*\}|\[[^\]]*\]|\w+) of (\[[^\]]*\]|[\w.]+(?:\([^()]*\))?)\)/g,
+  )) {
     const body = loopBody(block, match.index! + match[0].length - 1);
     if (!/\.goto\(|\.get\(/.test(body)) continue;
 
@@ -140,6 +146,43 @@ test("the sweep detector still recognises a real sweep and ignores a narrow one"
   const narrowBlock = testBlocks(narrow)[0];
   assert.equal(isRouteSweep(sweep, sweepBlock.body), true, "a 4-route sweep must be detected");
   assert.equal(isRouteSweep(narrow, narrowBlock.body), false, "a 2-route loop must not be flagged");
+});
+
+test("an array-destructuring sweep is detected", () => {
+  // `for (const [route, selector, expected] of heroImages)` is a real sweep in
+  // `home.spec.ts`, and the detector's binding pattern used to accept only
+  // `\w+` and `{ ... }`. The array form matched nothing, so the sweep was
+  // invisible — the guard was silent exactly where it was supposed to speak.
+  const routes =
+    `const heroImages = [["/a","s","p"],["/b","s","p"],["/c","s","p"],["/d","s","p"]] as const;\n`;
+  const sweep = `${routes}test("sweeps", async ({ page }) => {\n  for (const [route, selector, expected] of heroImages) {\n    await page.goto(route);\n  }\n});`;
+  const narrow = `${routes}test("narrow", async ({ page }) => {\n  for (const [route] of [["/a"],["/b"]]) {\n    await page.goto(route);\n  }\n});`;
+
+  const sweepBlock = testBlocks(sweep)[0];
+  const narrowBlock = testBlocks(narrow)[0];
+  assert.equal(
+    isRouteSweep(sweep, sweepBlock.body),
+    true,
+    "a 4-route array-destructuring sweep must be detected",
+  );
+  assert.equal(
+    isRouteSweep(narrow, narrowBlock.body),
+    false,
+    "a 2-route array-destructuring loop must not be flagged",
+  );
+});
+
+test("a sweep iterating a member call is skipped, not crashed on", () => {
+  // `for (const [i, photo] of sourcePhotos.entries())` in `home.spec.ts`: the
+  // iterable is a call, not a bare identifier. `namedArrayLength` cannot size a
+  // call, so it returns null and the loop is skipped rather than crashing.
+  const source = `test("sweeps", async ({ page }) => {\n  for (const [i, photo] of photos.entries()) { await page.goto(photo); }\n});`;
+  const block = testBlocks(source)[0];
+  assert.equal(
+    isRouteSweep(source, block.body),
+    false,
+    "an unsizable iterable is skipped, not flagged",
+  );
 });
 
 test("a sweep nested in test.describe is still detected", () => {

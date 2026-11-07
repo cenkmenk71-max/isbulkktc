@@ -71,7 +71,7 @@ test("homepage cycles through local district photos with an animated light-ray l
   await expect(page).toHaveTitle(/KKTC İş İlanları ve İş Bulma Platformu/);
   await expect(
     page.getByRole("heading", {
-      name: "KKTC iş ilanları, münhal ve kariyer fırsatları tek yerde.",
+      name: "KKTC iş ilanları, kariyer ve gelişim fırsatları tek yerde.",
     }),
   ).toBeVisible();
   await expect
