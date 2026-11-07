@@ -1307,3 +1307,109 @@ Supabase'e **yazılmadı** (kural: tek yazar LANE-SUPABASE).
   yorumunu düzelt). Kanıt: `tests/security/auth-throttle-surface.test.ts` (todo).
 - **#418**'e yorum: §7'nin "rate limit: giriş denemesi, şifre sıfırlama" maddesi
   **karşılanmadı**; captcha kapalı olduğu için tek savunma app throttle'ı olmalı.
+
+## Tur 38 — micro-denetim: Storage kova gizliliği kapısı (kapısız madde kapatıldı)
+
+**Lane:** GÜVENLİK · **Branch:** `lane/guvenlik`
+
+Threat model'in "Kişisel dosya/izinsiz yükleme" satırı mitigasyon olarak
+"**Negatif Storage testi**" diyordu; ama bu kontrol yalnız Docker'lı `database`
+işinde (`identity_companies_rls.test.sql`) vardı ve tek kovayı kapsıyordu.
+`tests/security/**`'de **hiç** storage kapısı yoktu — yani hızlı `static` işinde
+`private-resumes`'ı `public = true` yapan ya da `storage.objects`'e gevşek bir
+policy ekleyen bir migration **tüm kapılar yeşilken** geçebilirdi.
+
+### Bulgu (kanıtlı)
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki |
+|---|---|---|---|---|---|
+| S-1 | `tests/security/**` (yok) | yetki | Storage kovalarını denetleyen test yok (`ls tests/security \| grep -i storage` → boş); `grep -rn "on storage.objects" supabase/migrations/` → boş | Kova gizliliği statik kapıyla ratchet'lenmeli | Özel CV/ödeme fişi kovası yanlışlıkla public olursa **sessiz yeşil** → kişisel veri ifşası |
+| S-2 | `supabase/migrations/20261013000000_v4_identity_companies_security.sql:369-373` | yetki | `private-resumes`/`private-payment-receipts` `public=false`, `public-company-assets` `public=true` — bugün **doğru** | Kapı bunu pinlemeli | (S-1'in somut yüzeyi) |
+
+### Düzeltme
+
+`tests/security/storage-bucket-privacy.test.ts` (yeni, 7 test): (1) beyan edilen
+her kova, açık allowlist dışında `public=false`; (2) iki özel kova beyanlı ve
+özel kalıyor; (3) hiç `storage.objects` policy yok (varsayılan deny); (4) hiçbir
+`update storage.buckets` kovayı public'e çevirmiyor. Üç dedektörün her biri için
+self-test (parser `on conflict … set public = excluded.public`'i tuple sanmasın).
+
+### Kanıt (mutation, üçü de kırmızı)
+
+| Enjekte edilen | Kırmızı test |
+|---|---|
+| `values ('private-resumes','private-resumes', true)` | 2 (`allowlist` + `private buckets`) |
+| `create policy probe_read on storage.objects for select to anon using (true)` | 1 (`no storage.objects policy`) |
+| `update storage.buckets set public = true where id='private-resumes'` | 1 (`no migration flips a bucket`) |
+
+Probe migration'lar silindi; 7/7 yeşil.
+
+### Kapılar
+
+`lint` / `typecheck` / `check:frontend-source` temiz.
+`test:security` **147 test / 141 pass / 0 fail / 6 todo** (140→147).
+`test:unit` **743 / 741 pass / 2 todo** (değişmedi).
+
+### Bakılmayan
+
+Bu turda taranan: `tests/security/storage-bucket-privacy.test.ts` (yeni),
+`docs/threat-model.md`, `tests/security/README.md`, `docs/lanes/09-guvenlik.md`.
+`tests/security/**` kalan dosyalar bu turda **bakılmadı** — önceki turlarda
+denetlendi, CI yeşil. Açık `todo`'lar değişmedi: #457, #206, #102, #418 §6.
+
+## Tur 39 — micro-denetim: çerez envanteri + `ib_consent` bayrak kapısı (#418 §6)
+
+**Lane:** GÜVENLİK · **Branch:** `lane/guvenlik`
+
+#418 §6 "her çerez için amaç + süre + bayraklar belgeli olmalı" maddesinin
+denetimi. Oturum çerezi (`session-cookie-flags.test.ts`) ve `NEXT_LOCALE`
+(`locale-cookie-flags.test.ts`) zaten kapılıydı; **onay çerezi `ib_consent`'in
+hiçbir güvenlik testi yoktu** — bayrakları yalnız bir kaynak yorumunda ve
+bayrakları değil *adı* sınayan bir unit testte yaşıyordu.
+
+### Bulgu (kanıtlı)
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki |
+|---|---|---|---|---|---|
+| C-1 | `tests/security/**` (`ib_consent` yok) | yetki | `grep -rn "ib_consent" tests/security/` → yalnız bir yorum satırı; hiç assertion yok | Onay çerezinin bayrakları kapıyla ratchet'lenmeli | `consent-browser.ts`'ten `Secure`/`SameSite`/`Path` düşerse **sessiz yeşil** → çerez HTTP'de sızabilir / cross-site gönderilebilir |
+| C-2 | `src/components/analytics/consent-browser.ts:94,101` | doğruluk | `Path=/; SameSite=Lax${secure}` — yazma **ve** geri çekme-silme aynı bayraklarla; bugün **doğru** | Kapı bunu pinlemeli | (C-1'in somut yüzeyi) |
+| C-3 | `src/components/analytics/consent-browser.ts` | hata yolu | Çift/tek tırnaklı `document.cookie = "…"` yazımı bayrak denetiminden kaçıyordu (dedektör yalnız template literal okuyordu) | Dedektör üç literal biçimi de görmeli | Gelecekteki bir çerez denetimsiz geçebilir |
+
+### Düzeltme
+
+`tests/security/cookie-inventory.test.ts` (yeni, 7 test): (1) uygulama-tanımlı
+her çerez adı ve her `document.cookie` yazarı denetlenen listede (ratchet);
+(2) her istemci çerez yazımı `Path=/` + `SameSite=Lax|Strict` +
+https'te `Secure`; (3) `ib_consent` hem yazmada hem silmede bu bayraklarla ve
+sonlu `Max-Age` ile; (4) `HttpOnly` **olmadığı** açıkça sabitlendi (banner
+geri çekmede silebilmeli). C-3 için dedektör `([`"'])` ile üç biçimi de yakalar
+ve self-test bunu kanıtlar.
+
+### Kanıt (mutation, beşi de kırmızı)
+
+| Enjekte edilen | Kırmızı test |
+|---|---|
+| `SameSite=Lax${secure}` → `SameSite=Lax` (Secure düşür) | 2 |
+| `SameSite=Lax` → `SameSite=None` | 2 |
+| `export const trackingCookieName = "ib_tracking"` (yeni ad) | 1 (ratchet) |
+| `document.cookie = "x=1"` (yeni yazar, çift tırnak) | 2 |
+| `; Path=/; Max-Age` → `; Max-Age` | 2 |
+
+Beş mutasyonun tamamı geri alındı; çalışma ağacı temiz (yalnız amaçlanan
+değişiklikler).
+
+### Kapılar
+
+`lint` / `typecheck` / `check:frontend-source` temiz.
+`test:security` **154 test / 148 pass / 0 fail / 6 todo** (147→154).
+`test:unit` **743 / 741 pass / 2 todo** (değişmedi).
+
+### Bakılmayan
+
+Bu turda taranan: `tests/security/cookie-inventory.test.ts` (yeni),
+`src/components/analytics/consent-browser.ts`, `src/components/analytics/consent.ts`,
+`src/features/identity/actions.ts` (OAuth intent — zaten kapılı), `src/proxy.ts`,
+`src/server/db/supabase-server.ts`, `src/i18n/routing.ts`, `docs/data-retention.md`,
+`docs/threat-model.md`, `tests/security/README.md`, `docs/lanes/09-guvenlik.md`.
+`src/app/**` ve `supabase/**` bu turda **bakılmadı** (sahiplerine ait; CI yeşil).
+Açık `todo`'lar değişmedi: #457, #206, #102, #418 §6.

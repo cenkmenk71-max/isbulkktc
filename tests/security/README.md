@@ -24,6 +24,7 @@ a boundary regression is attributable at a glance.
 | `open-redirect.test.ts` | `/[locale]/install?next=` continuation stays same-origin |
 | `auth-redirect-boundary.test.ts` | `/auth/callback` query values (`next`, `flow`, `sb_flow_id`) never become an off-origin path |
 | `sql-hardening.test.ts` | RLS on every table (any `create [unlogged\|temp] table` form), every table revoked from the client roles, `search_path` pinned to the *empty* path (both `=` and `to` spellings, no kept schema), function grant/revoke pairing, the `admin_*` role guard, the AAL2 gate on `has_platform_role`, the in-body `auth.role()` guard on every `service_role`-only RPC, pgTAP ratchet drift |
+| `storage-bucket-privacy.test.ts` | every declared bucket is private unless it is on the explicit public allowlist; the two private buckets (`private-resumes`, `private-payment-receipts`) stay `public=false`; no `storage.objects` policy exists (default deny); no `update storage.buckets` flips a bucket to public |
 | `client-boundary.test.ts` | no client module imports server code (static, dynamic `import()` or `require()`) or reads secrets; `server-only` markers |
 | `ci-workflow-permissions.test.ts` | every `pull_request` workflow declares least-privilege permissions — **every** `permissions:` block, top-level and job-level; no `pull_request_target`; the auto-merge gate still refuses to merge a change to the workflows themselves |
 | `notification-worker-auth.test.ts` | the edge worker authenticates before it inspects configuration |
@@ -36,6 +37,7 @@ a boundary regression is attributable at a glance.
 | `anonymous-rpc-throttle.test.ts` | the action throttles before the RPC and the mail fan-out (ordering, not presence); the throttle also lives inside the anon RPC bodies (a gate); the action-path IP dimension is still one shared bucket |
 | `session-cookie-flags.test.ts` | the Supabase session cookie's `HttpOnly`/`Secure`/`SameSite` flags, the OAuth-intent cookie's flags, and the controls around them |
 | `locale-cookie-flags.test.ts` | the `NEXT_LOCALE` locale cookie's flags, driven through the real middleware with the app's own `routing.ts` (a `todo` pins the missing `Secure`; the `HttpOnly` question is answered in the file) |
+| `cookie-inventory.test.ts` | the whole app cookie inventory (#418 §6): every app-defined cookie name and every `document.cookie` writer is on the audited list (a ratchet), every client-cookie write is `Path=/` + `SameSite=Lax\|Strict` + `Secure`-on-https, and the `ib_consent` consent cookie specifically carries those flags and a finite `Max-Age` (write and withdrawal-clear both) |
 | `log-safety.test.ts` | no `console.*` call logs a credential (#418 §7). The label rule (first argument is a string/template literal or a shared event name, never a raw object/`Error`) runs on `src` + `supabase/functions`; the credential rule (`process.env.*_SECRET`, a bare `password`/`token`/`secret` value) also runs on `scripts/**`, which execute in CI with `GH_TOKEN`/`VERCEL_TOKEN`/`SUPABASE_ACCESS_TOKEN`. A ratchet — clean today, 6 self-tests pin the rules |
 | `api-response-surface.test.ts` | the App Router API response surface (#424): `/api/build-info` returns exactly `{commit, environment}` and its own `no-store`; no source or config file adds `Access-Control-Allow-Origin` (the live header is Vercel platform behaviour, proven absent on the local standalone); every `src/app/api/**/route.ts` declares `dynamic`; every `force-static` route pairs it with `no-store` |
 | `inline-script-safety.test.ts` | every `dangerouslySetInnerHTML` in `src/**` keeps the shape that makes it safe: a JSON-LD block escapes `<` (`.replace(/</g, "\u003c")`), any other block is a static string literal — a value expression (the shape DB-backed content arrives in) is rejected. Guards the stored-XSS class the live-support work (#398) introduces |
@@ -66,7 +68,8 @@ the test passes on its own — remove the `todo` option to promote it to a gate.
 
 Each detector that reads source or SQL carries a self-test proving it sees the
 access forms it claims to (`client-boundary`, `sql-hardening`,
-`session-cookie-flags`). A guard is only as wide as its matcher; the self-test
+`session-cookie-flags`, `storage-bucket-privacy`, `cookie-inventory`). A guard is
+only as wide as its matcher; the self-test
 fails when a matcher is narrowed, so a silent hole cannot be reintroduced.
 
 Detectors also **discover their subject** rather than listing it by hand — a
