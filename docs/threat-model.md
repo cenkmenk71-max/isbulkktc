@@ -307,6 +307,25 @@ issue açar.
    `Secure` taşıyor, yani bu çerez tutarsız. Kanıt:
    `tests/security/locale-cookie-flags.test.ts` (`todo`; gerçek middleware, gerçek
    `routing.ts` ile sürülür).
+5. **Kimlik uç noktalarında uygulama-içi hız sınırı yok** (sahibi:
+   `src/features/identity/**` -> LANE-AUTH). `signIn` (`actions.ts:111`) ve
+   `requestPasswordReset` (`actions.ts:302`) doğrudan
+   `signInWithPassword` / `resetPasswordForEmail` çağırıyor; `src/features/abuse/**`
+   limiter'ı yalnız feedback/sales action'larında bağlı, bu ikisinde **hiç yok**.
+   Platform captcha'sı da bir yedek değil: **hosted projede Supabase captcha
+   KAPALI** — `POST /auth/v1/token?grant_type=password` bogus bir
+   `gotrue_meta_security.captcha_token` ile bile `invalid_credentials` döndü
+   (`captcha_failed` değil), `/auth/v1/settings` gövdesinde captcha anahtarı yok.
+   (Yerel `supabase/config.toml:63-66` "hosted projede captcha açık" diyor; bu
+   yorum bayat.) Yayınlanabilir anahtar yeterli: saldırgan `/auth/v1/token` ile
+   sınırsız şifre denemesi, `/auth/v1/recover` ile sınırsız sıfırlama maili
+   gönderebilir; action üstüne hiçbir sınır koymuyor. #418 §7'nin "giriş
+   denemesi / şifre sıfırlama talebi rate limit" maddesi karşılanmamış.
+   Önerilen düzeltme: `src/features/abuse/**` limiter'ını (veya DB-tarafı bir
+   kotayı) `signIn` ve `requestPasswordReset`'e bağla; kullanıcıya nötr bir
+   "çok deneme" mesajı döndür. Kanıt:
+   `tests/security/auth-throttle-surface.test.ts` (`todo`, mutasyonla
+   doğrulandı). Devir: **#457** (`agent:handoff`, LANE-AUTH).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
 

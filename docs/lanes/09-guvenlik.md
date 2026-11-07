@@ -1252,3 +1252,58 @@ olarak yazıldı.
 - **#398**'e güvenlik incelemesi: CSP zaten `wss://*.supabase.co` içeriyor → kendi
   widget + Realtime **CSP değişikliği gerektirmez**; yalnız `postgres_changes`
   (Broadcast/Presence RLS'i atlar), RLS, anon throttle, log-safety.
+
+## Durum (2026-11-06, tur 37) — #418 §7 "saldırgan test" boyutu
+
+Sahip geçerli bir Supabase anahtarı verdi; canlı auth ayarlarını **salt-okuma**
+ölçtüm ve #418 §7'nin üç maddesini tek tek sınadım.
+
+### Denetlenen dosyalar
+
+`git ls-files 'tests/security/**'` → **21 dosya**; 20 test dosyası + `README.md`
+okundu. `docs/threat-model.md` ve `docs/data-retention.md` (sahip olduklarım)
+denetlendi. `src/features/identity/actions.ts`, `src/features/abuse/**`,
+`next.config.ts` **yalnız okundu** (sahiplik başka lane'de) — bulgular devredildi.
+
+### Bulgular
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/features/identity/actions.ts:111` (`signIn`) | yetki/hız | `signInWithPassword`'e giden yolda **hiç throttle yok**; `features/abuse/**` yalnız feedback/sales'te bağlı | Sınırsız şifre denemesi engellenmeli | Yüksek | **devredildi** (#457, LANE-AUTH) |
+| 2 | `src/features/identity/actions.ts:302` (`requestPasswordReset`) | yetki/hız | `resetPasswordForEmail` öncesi **hiç throttle yok** | Sınırsız sıfırlama maili engellenmeli | Orta | **devredildi** (#457) |
+| 3 | hosted auth (`/auth/v1/settings`, `/auth/v1/token`) | yetki | Supabase captcha **kapalı**: bogus `captcha_token` ile bile `invalid_credentials`; `settings`'te captcha anahtarı yok | Turnstile zorunlu olmalı (config.toml:63-66 öyle diyor) | Yüksek (1-2'yi açar) | **devredildi** (#457 + #418 yorumu) |
+| 4 | `src/features/identity/actions.ts` | kimlik | `setSession`/`refreshSession`/token-from-input yok | — | Yok | **temiz** (güçlü kontrol) |
+| 5 | `next.config.ts:56` `experimental.serverActions` | CSRF | `allowedOrigins` tanımsız → Next.js same-origin kontrolü | Açık kalmamalı | Yok | **kapıya alındı** |
+| 6 | `src/features/identity/actions.ts:392` (`signOut`) | hata yolu | Yerel çerez temizliği auth-js `_removeSession()` ile; proxy bayat çerezi temizliyor | Çıkışta çerezler silinmeli | Yok | **temiz** |
+
+**Kök neden (3).** `supabase/config.toml:63-66` "hosted projede captcha açık"
+diyor ama canlı ayarlar aksini gösteriyor. Canlı probe: `POST /auth/v1/token`
+`{..., "gotrue_meta_security":{"captcha_token":"bogus"}}` → `invalid_credentials`
+(`captcha_failed` değil). Yani prod'da Supabase captcha **uygulanmıyor**; tek
+savunma app'teki Turnstile widget'ı ve **doğrudan PostgREST çağrısını durdurmaz**
+(yayınlanabilir anahtar yeterli).
+
+### Kapılar
+
+| Kapı | Sonuç |
+|---|---|
+| `bun run lint` | temiz |
+| `bun run typecheck` | temiz |
+| `bun run check:frontend-source` | temiz |
+| `bun run test:unit` | yeşil (exit 0) |
+| `bun run test:security` | **134 pass / 0 fail / 2 todo** (yeni dosya +5 test) |
+| Yeni test mutasyonu | `signIn`'e throttle eklenince `⚠`→`✔`, geri alınca `⚠` → **vacuous değil** |
+
+### Bakılmayan
+
+`tests/security/**`'nin 20 test dosyasının 20'si okundu; **hiçbiri "bakılmadı"
+değil**. `src/features/identity/**` yalnız okundu (sahiplik LANE-AUTH). Canlı
+Supabase'e **yazılmadı** (kural: tek yazar LANE-SUPABASE).
+
+### Devir (kendi alanım dışı)
+
+- **#457** (`lane:auth` + `agent:handoff`): `signIn` + `requestPasswordReset`'e
+  uygulama-içi hız sınırı bağla; hosted Supabase captcha'sını aç (veya config
+  yorumunu düzelt). Kanıt: `tests/security/auth-throttle-surface.test.ts` (todo).
+- **#418**'e yorum: §7'nin "rate limit: giriş denemesi, şifre sıfırlama" maddesi
+  **karşılanmadı**; captcha kapalı olduğu için tek savunma app throttle'ı olmalı.
