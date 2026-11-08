@@ -1,0 +1,70 @@
+name: Reap stalled sandboxes
+
+# The lane autopilot keeps lanes working inside a fixed sandbox budget. A lane
+# whose conversation ends in `error` (or is abandoned in `finished`/`stuck`)
+# leaves its sandbox RUNNING with nobody using it, and that sandbox holds one of
+# the budget slots forever. Once every slot is stranded the autopilot defers the
+# lanes that have real work, so the team silently stops making progress while
+# burning quota — the capacity deadlock in issue #218.
+#
+# This job pauses those stranded sandboxes on a schedule. Pausing frees the slot
+# but keeps the lane's worktree, so the autopilot can `resume` it later without
+# spending quota. It only touches a sandbox when every conversation attached to
+# it is in a terminal state, so it can never stop an agent that is still working.
+#
+# Needs the OPENHANDS_API_KEY repository secret, the same one the autopilot uses.
+# Without it the job fails fast rather than pretending to run.
+
+on:
+  schedule:
+    # Runs just after each autopilot pass (the autopilot fires at :00/:20/:40 and
+    # :07/:27/:47) so a slot freed here is available to the very next pass.
+    - cron: '12,32,52 * * * *'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Pause stalled sandboxes (uncheck for a dry-run)'
+        type: boolean
+        default: true
+      min_idle_minutes:
+        description: 'Ignore sandboxes idle for less than this many minutes'
+        type: string
+        default: '15'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reap-stalled-sandboxes
+  cancel-in-progress: false
+
+jobs:
+  reap:
+    name: Pause stalled sandboxes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Reap stalled sandboxes
+        env:
+          OPENHANDS_API_KEY: ${{ secrets.OPENHANDS_API_KEY }}
+          REAP_MIN_IDLE_MINUTES: ${{ inputs.min_idle_minutes || vars.REAP_MIN_IDLE_MINUTES || '15' }}
+          REAP_MAX_PAUSES: ${{ vars.REAP_MAX_PAUSES || '20' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${OPENHANDS_API_KEY:-}" ]; then
+            echo "::error::OPENHANDS_API_KEY is not set as a repository secret"
+            exit 1
+          fi
+          # Scheduled runs apply; a manual run defaults to apply but can dry-run.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.apply }}" != "true" ]; then
+            node scripts/reap-stalled-sandboxes.mjs
+          else
+            node scripts/reap-stalled-sandboxes.mjs --apply
+          fi
