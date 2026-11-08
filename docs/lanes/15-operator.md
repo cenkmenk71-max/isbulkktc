@@ -179,3 +179,36 @@ artık `OK main CI` diyor, çıkış kodu 1 → 0.
 **Ders.** İki arıza da "gösterge kendi hatasını okuyor" sınıfındandır: (a) bekçi
 kendi kırmızısını sistem kırmızısı sanıyor, (b) sayaç başarıyı görmüyor. Yeni bir
 tıkanıklık görürsen önce şunu sor: **bu sinyal kimi ölçüyor, kendini mi?**
+
+## Tur notları — araç yükleme denetimi (2026-11-08, kanıtlı)
+
+Bu turda kod değişmedi; **kanıt toplandı**. Amaç: lane'lerin skill / AGENTS.md /
+MCP yapılandırmasının gerçekten yüklenip yüklenmediğini doğrulamak. Üç bulgu, üçü
+de birincil kaynakla (OpenHands resmî dokümanı + canlı olay günlüğü) doğrulandı.
+
+**Yöntem.** Kanıt bu konuşmanın olay günlüğünden (`$OH_CONVERSATIONS_PATH/*/events/`)
+alındı: `event-00000` içindeki `agent_context` ve `event-00001`'deki sistem promptu.
+Çapraz kontrol: repo dosyaları + OpenHands dokümanı (skills, repository, mcp-settings).
+
+| # | İddia | Gerçek (kanıt) | Etki | Sahip |
+|---|---|---|---|---|
+| T1 | `.github/skills/` proje skill'leridir | OpenHands **yalnız `.agents/skills/`** okur (doküman: "Project skills: `<project>/.agents/skills/`"). Canlı: `.github/skills/*` adları (deep-audit, next16-app-router, v4-database-workflow, project-e2e) **hiçbir** yükleme yolunda yok — `lanes.json`'da da geçmez | 4 iş akışı **ölü kaynak**; Copilot içindir, lane'ler görmez | LANE-INFRA |
+| T2 | `.mcp.json` proje MCP'si sağlar | Doküman: "There is no per-project MCP configuration file." MCP app-seviyesi (`settings.json`); canlı `mcp_config` boş. `.mcp.json`'u yalnız VS Code Copilot okur | Context7 MCP lane'lerde **etkisiz**; `developer-tooling.md` abartılı anlatıyor | LANE-INFRA |
+| T3 | Bu oturumda skill/AGENTS yüklenmedi | `load_project_skills=false`, `load_user_skills=false`, `load_public_skills=false`; `AGENTS.md` sistem promptunda **yok** | **Bu** sohbet repoyu sohbet ortasında klonladığı için (repo işaretleri ilk kez event-00001'de) proje context'i bağlanmadı | — (beklenen) |
+
+**Önemli ayrım (T3).** Lane'ler bu durumda **değil**: `spawn-lanes.mjs` (satır
+45/47) ve `lane-autopilot.mjs` (satır 346/348) konuşmayı `selected_repository` +
+`git_provider` ile başlatıyor. Yani lane'lerde repo baştan bağlı →
+`load_project_skills` açık, `.agents/skills/` + `AGENTS.md` yüklenir. Buradaki
+bayrakların kapalı olması **beklenen** davranış, arıza değil.
+
+**T2 operasyonel uyarı.** `.mcp.json` kaldırılsa **hiçbir OpenHands lane'i
+etkilenmez**; sadece VS Code Copilot'un Context7 erişimi kaybolur.
+`docs/developer-tooling.md` bu dosyayı "proje MCP'si" gibi anlatıyor — düzeltilmeli.
+
+**Devir.** T1 + T2'nin doküman/kod düzeltmesi LANE-INFRA'ya issue olarak açıldı
+(`agent:handoff`, `lane:infra`). Bu lane alan işi yapmaz.
+
+**Kanıt komutu.** `python3` ile `event-00000` `agent_context` bayrakları ve
+`event-00001` sistem promptu okunur; `grep -rln '.agents/skills' docs/` **boş**
+döner — hiçbir doküman lane'lere doğru skill dizinini işaret etmiyor.
