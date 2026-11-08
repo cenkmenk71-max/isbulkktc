@@ -54,6 +54,8 @@ node scripts/lane-autopilot.mjs
 | 2 | dal iş sürüyor | squash-merge edilmiş dal "1 önde" görünür | `working` veya açık PR şartı |
 | 3 | sandbox hazır | `resume` sonrası `STARTING` | `waitForSandboxReady` |
 | 4 | lane boşta | `send-message` ile meşgul ama start-task `READY` | `execution_status=running` sayılır |
+| 5 | sistem kırmızı | **gösterge kendi hatasını okuyor** (kendine referans) | kendi workflow'unu hariç tut |
+| 6 | lane ölü | sayaç başarıda sıfırlanmıyor, iş başına değil lane ömrüne bağlı | iş imzası (`work`) + başarıda sıfırla |
 
 **Yeni bir tıkanıklık görürsen:** aynı sınıfta mı diye sor — "bir sinyal yanlış
 okunuyor mu?" Genelde cevap evet.
@@ -145,3 +147,35 @@ başlatma, mevcut PR'lar merge olana kadar bekle. `lanes.json`'a koy (tek kaynak
 
 **Neden operatörün işi:** bu bir alan işi değil, **sistem verimi** işi. Lane'ler
 kendi PR'larını üretir; kaç tanesinin aynı anda açık kalacağı sistem kararıdır.
+
+## Tur notları — kendine referans ve ölü sayaç (2026-11-08)
+
+İki tıkanıklık, **aynı kök sınıf**: bir sinyal yanlış okunuyor. İkisi de
+operatörün kendi aracında, o yüzden devredilmedi, burada düzeltildi.
+
+| # | Dosya | Gözlenen | Gerçek | Etki | Durum |
+|---|---|---|---|---|---|
+| F1 | `scripts/system-health.mjs` | "main CI" kapısı **kendi** workflow'unu (`System health`) da tarıyordu | Sağlık koşusu kırmızıysa rapor "main CI kırmızı" diyor; bu da yeni bir kırmızı sağlık koşusu üretiyor | Kendine referanslı kilit: gerçek kırmızı kapıyı sonsuza dek maskeler | düzeltildi |
+| F2 | `scripts/lane-autopilot.mjs` (#471) | `attempts` sayacı yalnız artıyor, **başarıda sıfırlanmıyordu** | Sayaç iş başına değil **lane ömrüne** bağlıydı | Başarılı bir teslimattan sonra da lane kalıcı `exhausted` kalıyor; yeni iş alsa bile başlamıyor | düzeltildi |
+
+**F1 düzeltmesi.** `system-health-core.mjs`'e `redWorkflowsOnMain(runs)` eklendi:
+`failingWorkflows(runs)`'tan `HEALTH_WORKFLOW` (`System health`) çıkarılır.
+`system-health.mjs` artık bunu kullanır. Sağlık koşusunun kendi sonucu artık
+"main CI" kararına girmez.
+
+**F2 düzeltmesi.** `lane-autopilot-core.mjs`'e `carriedAttempts(entry, work)`
+eklendi: `laneDelivered(entry.lastStatus)` ise **0**, `entry.work !== work` ise
+**0**, aksi halde `entry.attempts ?? 0`. `decide()` bunu kullanır; iş imzası
+(`workSignature`) `entry.work` olarak dört yazma yolunda da kalıcılaştırılır
+(REUSED, REFRESHED, RESUMED, kapasite-hatası). Böylece teslim edilen iş sayacı
+sıfırlar ve **yeni iş bütçeyi yeniden başlatır** — lane artık ölü kalmaz.
+
+**Kanıt.** `scripts/system-health.test.mjs` + `scripts/lane-autopilot-core.test.mjs`
+yeni testlerle **30/30 geçti**. Mutasyon kanıtı: eski davranışa döndürüldüğünde
+**4 test kırmızı**, geri alındığında yeşil. Tam `test:unit` **758 geçti / 0 kaldı**;
+`lint`, `typecheck`, `check:frontend-source` temiz. Canlı doğrulama: `system-health`
+artık `OK main CI` diyor, çıkış kodu 1 → 0.
+
+**Ders.** İki arıza da "gösterge kendi hatasını okuyor" sınıfındandır: (a) bekçi
+kendi kırmızısını sistem kırmızısı sanıyor, (b) sayaç başarıyı görmüyor. Yeni bir
+tıkanıklık görürsen önce şunu sor: **bu sinyal kimi ölçüyor, kendini mi?**
