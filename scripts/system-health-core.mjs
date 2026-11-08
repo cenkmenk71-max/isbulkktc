@@ -7,6 +7,15 @@
  */
 
 /**
+ * This check's own workflow name, as declared in `.github/workflows/system-health.yml`.
+ *
+ * Kept here, and asserted against the workflow file by a unit test, so the two
+ * cannot drift: renaming the workflow without updating this would silently
+ * un-exclude it and re-break the gate.
+ */
+export const HEALTH_WORKFLOW = 'System health';
+
+/**
  * The newest completed run of each workflow that ran on the default branch.
  *
  * The gate on `main` is not one fixed workflow. `isbulkktc CI` ran on push until
@@ -43,4 +52,22 @@ export function failingWorkflows(runs) {
   return [...newestRunPerWorkflow(runs).entries()]
     .filter(([, run]) => run.conclusion === 'failure')
     .map(([name]) => name);
+}
+
+/**
+ * Workflows whose newest completed run on the branch failed, excluding the
+ * health check's own workflow.
+ *
+ * Without the exclusion the check is self-referential: this workflow runs on a
+ * schedule, not on push, so a failing run stays the newest run of its own name
+ * on `main` forever. The next run then reads its own last failure, reports
+ * "1 workflow(s) red on main: System health", fails, and the cycle repeats —
+ * the gate can never go green, and the real red (a stale `push`-triggered run
+ * whose trigger no longer fires) hides behind the noise.
+ *
+ * @param {Array<{name?: string, conclusion?: string|null, status?: string, createdAt?: string}>} runs
+ * @returns {string[]}
+ */
+export function redWorkflowsOnMain(runs) {
+  return failingWorkflows(runs).filter((name) => name !== HEALTH_WORKFLOW);
 }

@@ -69,3 +69,58 @@ export function isCapacityError(detail) {
     text.includes('capacity')
   );
 }
+
+/**
+ * Whether a lane's last recorded status is a successful delivery.
+ *
+ * The autopilot records `lastStatus` on every start. `RUNNING` means the
+ * platform accepted the task and the agent began working — the only status that
+ * means the lane got its work. `REUSED`, `RESUMED` and `REFRESHED` also mean the
+ * task was handed over. `ERROR` (a rejection) and `null` (never started) do not.
+ *
+ * @param {string|null|undefined} status
+ * @returns {boolean}
+ */
+export function laneDelivered(status) {
+  return ['RUNNING', 'REUSED', 'RESUMED', 'REFRESHED'].includes(String(status ?? ''));
+}
+
+/**
+ * A stable signature of the work a lane is about to be started for.
+ *
+ * Two starts with the same signature are the same work, so a failure count
+ * carries over. A *new* signature means the lane's assignment changed — a fresh
+ * handoff, or the previous one closed — and the retry budget must restart,
+ * because "three attempts" is a budget *per piece of work*, not per lane
+ * lifetime. Without this a lane that exhausted its budget on one issue stays
+ * `exhausted` forever even after new work arrives (issue #471).
+ *
+ * @param {object} ctx
+ * @param {{number?: number}|undefined} ctx.handoff the handoff issue naming this lane, if any
+ * @param {boolean} ctx.branchExists a stale remote branch for this lane exists
+ * @returns {string}
+ */
+export function workSignature({ handoff, branchExists }) {
+  if (handoff) return `handoff:${handoff.number}`;
+  if (branchExists) return 'stale-branch';
+  return 'labelled-work';
+}
+
+/**
+ * The attempt count to carry into a lane's next decision.
+ *
+ * Reset to zero when the previous attempt delivered (see `laneDelivered`) or
+ * when the work itself changed (see `workSignature`); otherwise carry the count
+ * forward so a repeatedly failing lane still stops at the budget.
+ *
+ * @param {{attempts?: number, lastStatus?: string|null, work?: string}|undefined} entry
+ * @param {string} work the signature of the work about to be attempted
+ * @returns {number}
+ */
+export function carriedAttempts(entry, work) {
+  const attempts = Number.isFinite(entry?.attempts) && entry.attempts > 0 ? entry.attempts : 0;
+  if (attempts === 0) return 0;
+  if (laneDelivered(entry?.lastStatus)) return 0;
+  if (entry?.work && entry.work !== work) return 0;
+  return attempts;
+}

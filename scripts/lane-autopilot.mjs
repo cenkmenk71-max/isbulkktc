@@ -33,9 +33,11 @@ import { dirname, join } from 'node:path';
 
 import { kickoff } from './lane-kickoff.mjs';
 import {
+  carriedAttempts,
   hasLabelledWork,
   isCapacityError,
   nextConversationAction,
+  workSignature,
 } from './lane-autopilot-core.mjs';
 
 const API = 'https://app.all-hands.dev/api/v1';
@@ -460,11 +462,19 @@ function handoffForLane(name, issues) {
 
 async function decide(name, ctx) {
   const lane = LANES[name];
-  const state = ctx.state[name] ?? { attempts: 0 };
+  const stored = ctx.state[name] ?? { attempts: 0 };
   const pr = ctx.prs.find((p) => p.headRefName === lane.branch);
   const branchExists = ctx.branches.includes(`origin/${lane.branch}`);
   const blocked = blockedForLane(name, ctx.blocked);
   const handoff = handoffForLane(name, ctx.handoffs);
+
+  // The retry budget is per *piece of work*, not per lane lifetime. A lane that
+  // delivered, or whose assignment changed, starts its next attempt with a clean
+  // count; only a lane that keeps failing the same work carries its attempts.
+  // Without this a lane that exhausted three attempts once stayed `exhausted`
+  // forever — even after a new handoff arrived (issue #471).
+  const work = workSignature({ handoff, branchExists });
+  const state = { ...stored, attempts: carriedAttempts(stored, work), work };
 
   // A human blocker stops the lane. A handoff is work: it does not stop it.
   if (blocked) {
@@ -504,7 +514,7 @@ async function decide(name, ctx) {
         : state.attempts === 0
           ? 'labelled work'
           : `retry ${state.attempts + 1}/${MAX_ATTEMPTS}`,
-    context: { previousError: state.lastError },
+    context: { previousError: state.lastError, work },
   };
 }
 
@@ -679,6 +689,7 @@ async function main() {
         entry.lastConversationId = reusable.id;
         entry.lastStatus = 'REUSED';
         entry.lastError = null;
+        entry.work = d.context?.work;
         entry.updatedAt = new Date().toISOString();
         state[d.name] = entry;
         console.log(
@@ -703,6 +714,7 @@ async function main() {
           entry.lastConversationId = reusable.id;
           entry.lastStatus = 'REFRESHED';
           entry.lastError = null;
+          entry.work = d.context?.work;
           entry.updatedAt = new Date().toISOString();
           state[d.name] = entry;
           console.log(
@@ -728,6 +740,7 @@ async function main() {
             entry.lastConversationId = resumable.id;
             entry.lastStatus = 'RESUMED';
             entry.lastError = null;
+            entry.work = d.context?.work;
             entry.updatedAt = new Date().toISOString();
             state[d.name] = entry;
             console.log(
@@ -753,6 +766,7 @@ async function main() {
       if (result.status === 'ERROR' && isCapacityError(result.detail)) {
         console.error(`  ${d.name}: no capacity — ${result.detail}`);
         entry.lastError = result.detail;
+        entry.work = d.context?.work;
         entry.updatedAt = new Date().toISOString();
         state[d.name] = entry;
         console.error('  stopping this pass: no sandbox capacity');
@@ -762,6 +776,7 @@ async function main() {
       entry.attempts = (entry.attempts ?? 0) + 1;
       entry.lastTaskId = taskId;
       entry.lastStatus = result.status;
+      entry.work = d.context?.work;
       entry.lastError =
         result.status === 'ERROR' ? (result.detail ?? 'unknown error') : null;
       entry.updatedAt = new Date().toISOString();

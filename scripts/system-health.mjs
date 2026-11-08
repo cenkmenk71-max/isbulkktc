@@ -15,7 +15,7 @@
 
 import { execFileSync } from 'node:child_process';
 
-import { failingWorkflows } from './system-health-core.mjs';
+import { redWorkflowsOnMain } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
 const asJson = process.argv.includes('--json');
@@ -114,6 +114,11 @@ else if (stalled.length === 0 && stuck.length === 0) {
 // returning its last run and answering "green" while the workflow that *does*
 // run on push, `Verify production deployment`, was failing. Reading whatever
 // runs on the branch cannot drift out of step with the gate.
+//
+// The check's own workflow is excluded: it runs on a schedule, not on push, so
+// a single failing run stays the newest run of its own name on `main` forever
+// and the check would read its own failure as "main CI red" every time — a
+// gate that can never go green, hiding the real red behind it.
 const branchRuns = JSON.parse(
   gh([
     'run',
@@ -126,7 +131,7 @@ const branchRuns = JSON.parse(
     'name,conclusion,status,createdAt',
   ]),
 );
-const red = failingWorkflows(branchRuns);
+const red = redWorkflowsOnMain(branchRuns);
 if (branchRuns.length === 0) {
   note('warn', 'main CI', 'no runs found on main');
 } else if (red.length > 0) {

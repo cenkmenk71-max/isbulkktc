@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  carriedAttempts,
   hasLabelledWork,
   isCapacityError,
+  laneDelivered,
   nextConversationAction,
+  workSignature,
 } from "./lane-autopilot-core.mjs";
 
 // ---------------------------------------------------------------------------
@@ -89,4 +92,71 @@ test("a quota/capacity rejection is recognised", () => {
 test("an ordinary failure is not treated as a capacity error", () => {
   assert.equal(isCapacityError("repository not found"), false);
   assert.equal(isCapacityError(undefined), false);
+});
+
+// ---------------------------------------------------------------------------
+// carriedAttempts — the retry budget is per work item, not per lane lifetime
+// (issue #471)
+// ---------------------------------------------------------------------------
+
+test("a delivered attempt resets the count, so the lane is never stuck exhausted", () => {
+  for (const status of ["RUNNING", "REUSED", "RESUMED", "REFRESHED"]) {
+    assert.equal(
+      carriedAttempts({ attempts: 3, lastStatus: status, work: "handoff:7" }, "handoff:7"),
+      0,
+      `${status} should clear the count`,
+    );
+  }
+});
+
+test("a rejection keeps the count so a failing lane still stops at the budget", () => {
+  assert.equal(
+    carriedAttempts({ attempts: 3, lastStatus: "ERROR", work: "handoff:7" }, "handoff:7"),
+    3,
+  );
+});
+
+test("a never-started lane carries nothing", () => {
+  assert.equal(carriedAttempts(undefined, "labelled-work"), 0);
+  assert.equal(carriedAttempts({ attempts: 0 }, "labelled-work"), 0);
+});
+
+test("new work restarts the budget, even after exhaustion", () => {
+  // The lane exhausted its three attempts on handoff #7 and never delivered.
+  const exhausted = { attempts: 3, lastStatus: "ERROR", work: "handoff:7" };
+  // The same work carries the count — it must still stop.
+  assert.equal(carriedAttempts(exhausted, "handoff:7"), 3);
+  // A new handoff is new work: the lane gets its three attempts back.
+  assert.equal(carriedAttempts(exhausted, "handoff:9"), 0);
+});
+
+test("a failed attempt on new work carries its count", () => {
+  // A lane that failed once on handoff #9 keeps that one failure on the same work.
+  assert.equal(
+    carriedAttempts({ attempts: 1, lastStatus: "ERROR", work: "handoff:9" }, "handoff:9"),
+    1,
+  );
+});
+
+test("an entry written before the work field existed keeps its count", () => {
+  // Legacy state: no `work` recorded, so the signature cannot prove the work
+  // changed. Treating it as unchanged is the safe reading — it preserves the
+  // budget rather than silently handing an exhausted lane more attempts.
+  assert.equal(carriedAttempts({ attempts: 2, lastStatus: "ERROR" }, "handoff:7"), 2);
+});
+
+test("workSignature is stable for the same work and distinct for new work", () => {
+  assert.equal(workSignature({ handoff: { number: 7 }, branchExists: false }), "handoff:7");
+  assert.equal(workSignature({ handoff: { number: 9 }, branchExists: false }), "handoff:9");
+  assert.equal(workSignature({ handoff: undefined, branchExists: true }), "stale-branch");
+  assert.equal(workSignature({ handoff: undefined, branchExists: false }), "labelled-work");
+});
+
+test("laneDelivered recognises only the statuses that mean work was handed over", () => {
+  for (const status of ["RUNNING", "REUSED", "RESUMED", "REFRESHED"]) {
+    assert.equal(laneDelivered(status), true);
+  }
+  for (const status of ["ERROR", null, undefined, "PENDING", ""]) {
+    assert.equal(laneDelivered(status), false);
+  }
 });
