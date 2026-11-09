@@ -1,6 +1,6 @@
 begin;
 
-select plan(11);
+select plan(13);
 
 -- The engagement digest is the only promotional family, so its consent gate has
 -- to hold independently of any seed data: these rows are inserted inside the
@@ -110,6 +110,37 @@ select is(
   0,
   'the batch cursor resumes after the last returned user id'
 );
+
+-- ---------------------------------------------------------------------------
+-- The in-body `auth.role()` guard is the second line of defence. The grant
+-- alone would stop a client caller, so the assertions above cannot tell a
+-- guarded body from an unguarded one: to prove the body re-checks the role,
+-- hand `anon` EXECUTE inside this transaction and confirm the call still fails
+-- closed. That is the exact leak that shipped once through `pg_default_acl`
+-- (AGENTS.md). The grant is rolled back with the transaction.
+-- ---------------------------------------------------------------------------
+
+grant execute on function public.list_engagement_recipients(uuid, integer) to anon;
+grant execute on function public.opt_out_engagement(text, text) to anon;
+
+set local "request.jwt.claims" = '{"role":"anon"}';
+set local role anon;
+
+select throws_ok(
+  $$select * from public.list_engagement_recipients(null, 100)$$,
+  '42501',
+  null,
+  'the recipient list re-checks the role in its own body even when anon holds EXECUTE'
+);
+
+select throws_ok(
+  $$select public.opt_out_engagement('attacker@example.test', null)$$,
+  '42501',
+  null,
+  'recording an opt-out re-checks the role in its own body even when anon holds EXECUTE'
+);
+
+reset role;
 
 select * from finish();
 
