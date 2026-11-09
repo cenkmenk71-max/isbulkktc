@@ -4,20 +4,20 @@
 // `scripts/lane-autopilot.mjs` counts a sandbox as running while it is RUNNING
 // and treats the lane as busy while its conversation is `running`. The platform
 // releases a sandbox on its own when a conversation ends *cleanly*, but a
-// conversation that ends in `error` (or is abandoned in `finished`/`stuck`)
-// leaves its sandbox RUNNING with nobody using it. That sandbox holds one of
-// the `sandboxBudget` slots forever, so capacity is permanently short and the
-// lanes with real work are `deferred` every pass — the capacity deadlock in
-// issue #218.
+// conversation that ends in `error`, is abandoned in `finished`/`stuck`, or is
+// **interrupted** (`paused`) leaves its sandbox RUNNING with nobody using it.
+// That sandbox holds one of the `sandboxBudget` slots forever, so capacity is
+// permanently short and the lanes with real work are `deferred` every pass —
+// the capacity deadlock in issue #218.
 //
 // This script finds those sandboxes and *pauses* them. Pausing frees the slot
 // (the budget counts RUNNING sandboxes) while keeping the lane's worktree, so
 // the autopilot can `resume` it later without spending quota. It never deletes.
 //
 // It is deliberately conservative. A sandbox is only paused when every
-// conversation attached to it is in a terminal state, so it can never pull the
+// conversation attached to it is in a reclaimable state, so it can never pull the
 // sandbox out from under an agent that is still working. An idle conversation
-// (finished its turn, waiting for the next task) is not terminal and is left
+// (finished its turn, waiting for the next task) is not reclaimable and is left
 // alone — that is exactly the state the autopilot reuses.
 //
 // Usage:
@@ -38,20 +38,23 @@ import { pathToFileURL } from "node:url";
 const API = "https://app.all-hands.dev/api/v1";
 
 // A conversation in one of these states is done with the sandbox: nothing will
-// run on it again, so the sandbox is safe to reclaim. `idle` is deliberately
-// absent — an idle conversation is between tasks and is the autopilot's reuse
-// target. `waiting_for_confirmation` is absent because it is blocked on a human,
-// not finished.
-const TERMINAL_STATUSES = new Set(["error", "finished", "stuck"]);
+// run on it again on its own, so the sandbox is safe to reclaim. `paused` is
+// here, not in ACTIVE_STATUSES: an interrupted task — or a lane the operator
+// had to stop — leaves its sandbox RUNNING with no agent attached, and counting
+// that as active is what let those sandboxes hold a budget slot forever (#218).
+// Pausing the sandbox keeps the worktree, so the autopilot can still resume it.
+// `idle` is deliberately absent — an idle conversation is between tasks and is
+// the autopilot's reuse target. `waiting_for_confirmation` is absent because it
+// is blocked on a human, not finished.
+const RECLAIMABLE_STATUSES = new Set(["error", "finished", "stuck", "paused"]);
 
 // A sandbox is in use while any conversation attached to it is in one of these
 // states, regardless of that conversation's own status. Guards the shared-sandbox
 // case: a lane refreshes its conversation on the same sandbox, so one sandbox can
-// hold an old terminal conversation and a live one at once.
+// hold an old reclaimable conversation and a live one at once.
 const ACTIVE_STATUSES = new Set([
   "running",
   "idle",
-  "paused",
   "waiting_for_confirmation",
 ]);
 
@@ -66,7 +69,7 @@ export function laneName(title) {
  * given the raw `/app-conversations/search` items.
  *
  * A sandbox is selected only when all of the following hold:
- *   - it has at least one lane conversation in a terminal state;
+ *   - it has at least one lane conversation in a reclaimable state;
  *   - no conversation attached to it (lane or not) is in an active state;
  *   - its last activity is at least `minIdleMs` old.
  *
@@ -96,10 +99,10 @@ export function selectStalledSandboxes(conversations, options = {}) {
     const statuses = bucket.map((c) => String(c?.execution_status ?? ""));
     if (statuses.some((status) => ACTIVE_STATUSES.has(status))) continue;
 
-    const terminal = bucket.filter((c) =>
-      TERMINAL_STATUSES.has(String(c?.execution_status ?? "")),
+    const reclaimable = bucket.filter((c) =>
+      RECLAIMABLE_STATUSES.has(String(c?.execution_status ?? "")),
     );
-    if (terminal.length === 0) continue;
+    if (reclaimable.length === 0) continue;
 
     const lastActivity = bucket.reduce((newest, c) => {
       const at = Date.parse(String(c?.updated_at ?? ""));
@@ -110,7 +113,7 @@ export function selectStalledSandboxes(conversations, options = {}) {
 
     // Name the sandbox after the lane whose conversation stopped last: that is
     // the conversation whose failure stranded it.
-    const culprit = terminal.reduce((latest, c) =>
+    const culprit = reclaimable.reduce((latest, c) =>
       Date.parse(String(c?.updated_at ?? "")) >
       Date.parse(String(latest?.updated_at ?? ""))
         ? c
