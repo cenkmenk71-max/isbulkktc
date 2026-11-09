@@ -312,3 +312,43 @@ open → 0 sayılır). Tam `test:unit` **779 test / 777 geçti / 0 kaldı**; `li
 artıyor" diyordu, ölçüm bunu **doğrulamadı**. Doğru refleks, istenen sınırı yine
 de koymak — ama gerekçesini ölçüme göre düzeltmek (tavan/eşzamanlılık denetimi),
 uydurma bir "öncesi/sonrası kazanç" yazmamak.
+
+---
+
+## Tur 2 — #453: kırmızı PR'ında donan lane yeniden başlatılır
+
+**Sorun.** Autopilot açık bir PR'ı her zaman "in flight" sayıp lane'i bekletiyordu.
+Bir lane'in sandbox'ı ölmüşse ama PR'ı kırmızıysa onu düzeltecek kimse kalmıyordu:
+lane kendi kırmızı PR'ında sonsuza dek donuyordu (#453).
+
+**Neden `mergeStateStatus` yetmiyor.** Branch protection'da tek zorunlu kontrol
+`Quality, database and E2E` (aggregator job, `.github/workflows/ci.yml:315`).
+Ama `mergeStateStatus` hem *zorunlu* hem *zorunlu olmayan* kırmızıyı `BLOCKED`
+gösteriyor. Zorunlu-olmayan bir hata (ör. Vercel build-rate limiti — dış kota,
+lane'in kodu değil) lane'i uyandırmamalı; yoksa her kota tıkanıklığında tüm takım
+uyanır.
+
+**Çözüm.** Check rollup doğrudan okunur:
+
+- `scripts/lanes.json` → `requiredChecks: ["Quality, database and E2E"]`.
+- `scripts/lane-autopilot-core.mjs` → `failedRequiredChecks(checks, required)`:
+  yalnız `FAILURE`/`TIMED_OUT` sonuçlu **zorunlu** check'leri döndürür. Eksik ya da
+  hâlâ çalışan check *hata değildir* (bekleyen koşu lane'i uyandırmaz).
+- `scripts/lane-autopilot.mjs` → `openPullRequests()` artık `statusCheckRollup`
+  de alıyor; `decide()` kırmızı zorunlu check varsa `spawn` (düzelt) döndürür,
+  yoksa eskisi gibi `wait`. Deneme bütçesi dolmuşsa `exhausted` (insan gerekir).
+- `workSignature({prNumber})` → `pr-fix:<n>`: PR düzeltme turu kendi iş
+  imzasına sahip; PR'ı açan işin denemelerini devralmaz (#471 mantığıyla tutarlı).
+- `scripts/lane-kickoff.mjs` → `context.redPr` verilince prompt "yeni iş başlatma,
+  **kendi PR'ını düzelt**" der (`gh pr checks <n>`, aynı branch'e push).
+
+**Test.** `lane-autopilot-core.test.mjs`'e 6 test, `lane-kickoff.test.mjs`'e 2 test
+eklendi (zorunlu hata → isimle döner; TIMED_OUT hata; zorunlu-olmayan kırmızı
+uyandırmaz; pending/eksik hata değil; eski `context` alanı; `requiredChecks` boş →
+hiç hata yok; `pr-fix` iş imzası; kırmızı-PR promptu). Tam `test:unit`
+**788 test / 786 geçti / 0 kaldı**; `lint`, `typecheck`, `check:frontend-source`
+temiz.
+
+**Doğrulama.** `gh api .../branches/main/protection` → tek context
+`Quality, database and E2E`; PR #478 rollup'ında bu isim (workflow `isbulkktc CI`)
+mevcut. Yani helper canlı veriyle eşleşiyor.

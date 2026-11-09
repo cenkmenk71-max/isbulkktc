@@ -5,6 +5,7 @@
   "maxAttemptsPerLane": 3,
   "sandboxBudget": 10,
   "maxOpenPRs": 4,
+  "requiredChecks": ["Quality, database and E2E"],
   "lanes": {
     "supabase": {
       "brief": "01-supabase",

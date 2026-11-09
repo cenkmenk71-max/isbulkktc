@@ -22,6 +22,8 @@
  * @param {object} [context]
  * @param {number} [context.maxAttempts] retry budget to quote (default 3)
  * @param {string|null} [context.previousError] why the last attempt failed
+ * @param {{number: number, checks: string[]}} [context.redPr] an open PR whose
+ *   required check failed; the lane is re-spawned to fix it, not to start over
  * @returns {string}
  */
 export function kickoff(name, lane, context = {}) {
@@ -95,6 +97,15 @@ export function kickoff(name, lane, context = {}) {
       'standartlar. Rapor formatı docs/lanes/00-orchestration.md sonunda.',
     skillLine,
   ];
+  if (context.redPr) {
+    parts.push(
+      `KENDİ PR'INI DÜZELT: açık PR #${context.redPr.number} kırmızı ` +
+        `(${context.redPr.checks.join(', ')}). Yeni iş başlatma — önce bu PR'ın ` +
+        'kırmızı kontrolünü yeşile getir. `gh pr checks ' +
+        `${context.redPr.number}\` ile hatayı oku, düzelt, kendi branch'ine ` +
+        'commit + push et. PR açık kalır; yeni PR açma.',
+    );
+  }
   if (context.previousError) {
     parts.push(
       'ÖNCEKİ DENEME BAŞARISIZ OLDU. Hata: ' +
