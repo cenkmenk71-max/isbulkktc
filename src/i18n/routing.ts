@@ -5,6 +5,13 @@ export const routing = defineRouting({
   defaultLocale: 'tr',
   localePrefix: 'as-needed',
   localeDetection: false,
+  // The middleware writes NEXT_LOCALE on every document navigation. next-intl's
+  // default is `{name: 'NEXT_LOCALE', sameSite: 'lax'}` with no `Secure`, and
+  // `receiveRoutingConfig` merges this option over that default, so passing
+  // `secure` alone keeps `name`/`sameSite`. `HttpOnly` is deliberately absent:
+  // the language switcher writes this cookie from `document.cookie`, which
+  // cannot set it. Every other cookie the app writes is Secure in production.
+  localeCookie: { secure: process.env.NODE_ENV === 'production' },
   // next-intl's middleware otherwise sets a `Link` response header advertising
   // every locale variant of the request path. That is wrong here on two counts:
   // job-detail pages serve one Turkish text under all six prefixes and
