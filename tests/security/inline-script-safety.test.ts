@@ -16,9 +16,10 @@ import test from "node:test";
  *    `JSON.stringify(...)` of structured data, and `<` must be escaped
  *    (`\u003c`) so a `</script>` inside a string cannot close the tag early and
  *    spill the rest of the document into the parser.
- *  - **A static script**: `__html` is a string/template literal written in the
- *    source (the GA bootstrap). A bare identifier or member expression — the
- *    shape a data value arrives in — is rejected.
+ *  - **A static script**: `__html` is built only from string/template literals
+ *    written in the source, joined by `+` (the GA bootstrap). A bare identifier,
+ *    member expression, call, or a template-literal *hole* (`` `<p>${body}</p>` ``)
+ *    — the shapes a data value arrives in — is rejected.
  *
  * The rules are checked against a pure function so the self-test can prove each
  * one is non-vacuous on a synthetic source, independent of what `src/**`
@@ -58,6 +59,162 @@ function attributeBlock(source: string, at: number): string {
   return source.slice(open);
 }
 
+/** Index just past the closing quote, or -1 when the literal is unterminated. */
+function scanQuoted(source: string, start: number, quote: string): number {
+  let i = start + 1;
+  while (i < source.length) {
+    if (source[i] === "\\") {
+      i += 2;
+      continue;
+    }
+    if (source[i] === quote) return i + 1;
+    i += 1;
+  }
+  return -1;
+}
+
+/** Index of the `}` that closes the `{` at `open`, or -1 when unbalanced. */
+function matchBrace(source: string, open: number): number {
+  let depth = 0;
+  let i = open;
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === '"' || ch === "'") {
+      const end = scanQuoted(source, i, ch);
+      if (end < 0) return -1;
+      i = end;
+      continue;
+    }
+    if (ch === "`") {
+      const template = scanTemplate(source, i);
+      if (!template) return -1;
+      i = template.end;
+      continue;
+    }
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+    i += 1;
+  }
+  return -1;
+}
+
+/**
+ * The template literal at `start`: where it ends and the raw `${ … }` holes it
+ * carries. `null` when it is unterminated.
+ */
+function scanTemplate(
+  source: string,
+  start: number,
+): { end: number; holes: string[] } | null {
+  const holes: string[] = [];
+  let i = start + 1;
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === "\\") {
+      i += 2;
+      continue;
+    }
+    if (ch === "`") return { end: i + 1, holes };
+    if (ch === "$" && source[i + 1] === "{") {
+      const close = matchBrace(source, i + 1);
+      if (close < 0) return null;
+      holes.push(source.slice(i + 2, close));
+      i = close + 1;
+      continue;
+    }
+    i += 1;
+  }
+  return null;
+}
+
+/**
+ * True when the `__html` expression is built only from string/template literals
+ * joined by `+` — the shape a value written in the source takes.
+ *
+ * A template literal's `${ … }` holes are *code*, so each is checked in turn:
+ * `` `<p>${thread.body}</p>` `` is rejected because the hole carries a member
+ * expression, the exact stored-XSS shape this rule exists to catch. A bare
+ * literal check on the leading character missed this: the value starts with a
+ * backtick, so it looked static while interpolating untrusted data. The scan
+ * stops at the `}` that closes the enclosing attribute object.
+ *
+ * A hole that names a **build-time constant** is allowed — `staticNames` holds
+ * the module-scope `const`s initialised from a literal or `process.env.*` (the
+ * GA bootstrap interpolates `measurementId`, a validated `NEXT_PUBLIC_*` value,
+ * which is not request data). Anything derived at runtime — a member
+ * expression, a call, an unknown identifier — is rejected.
+ */
+function isStaticMarkup(value: string, staticNames: Set<string>): boolean {
+  let i = 0;
+  while (i < value.length) {
+    const ch = value[i];
+    if (ch === "}") return true; // the attribute object closed — expression ended
+    if (
+      ch === " " ||
+      ch === "\t" ||
+      ch === "\n" ||
+      ch === "\r" ||
+      ch === "+" ||
+      ch === "," // a trailing comma before the closing brace is formatting, not code
+    ) {
+      i += 1;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      const end = scanQuoted(value, i, ch);
+      if (end < 0) return false;
+      i = end;
+      continue;
+    }
+    if (ch === "/" && value[i + 1] === "/") {
+      // A line comment is formatting; it may contain backticks (the GA
+      // bootstrap documents `?ga_debug=1` between its concatenated literals).
+      const newline = value.indexOf("\n", i);
+      if (newline < 0) return true;
+      i = newline + 1;
+      continue;
+    }
+    if (ch === "/" && value[i + 1] === "*") {
+      const close = value.indexOf("*/", i + 2);
+      if (close < 0) return true;
+      i = close + 2;
+      continue;
+    }
+    if (ch === "`") {
+      const template = scanTemplate(value, i);
+      if (!template) return false;
+      if (template.holes.some((hole) => !isStaticMarkup(hole, staticNames))) return false;
+      i = template.end;
+      continue;
+    }
+    // A bare identifier that names a build-time constant is static; a member
+    // expression (`thread.body`) or a call (`render(x)`) fails on the next
+    // character, and an unknown identifier fails here.
+    const ident = /^[A-Za-z_$][\w$]*/.exec(value.slice(i))?.[0];
+    if (ident && staticNames.has(ident)) {
+      i += ident.length;
+      continue;
+    }
+    return false; // live code: an identifier, member expression, call, …
+  }
+  return true;
+}
+
+/** Module-scope `const`s whose initialiser is a build-time value, not runtime data. */
+function buildTimeConstants(source: string): Set<string> {
+  const names = new Set<string>();
+  for (const match of source.matchAll(/\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*([^;\n]+)/g)) {
+    const initializer = match[2].trim();
+    if (/^(?:"[^"]*"|'[^']*'|`[^`$]*`|process\.env\.[A-Za-z0-9_]+)$/.test(initializer)) {
+      names.add(match[1]);
+    }
+  }
+  return names;
+}
+
 /**
  * The rule violations in `source`. Empty means compliant.
  *
@@ -69,6 +226,7 @@ export function inlineScriptViolations(
   file = "<source>",
 ): string[] {
   const problems: string[] = [];
+  const staticNames = buildTimeConstants(source);
   const needle = "dangerouslySetInnerHTML";
   let from = 0;
   for (;;) {
@@ -98,10 +256,9 @@ export function inlineScriptViolations(
         );
       }
     } else {
-      const first = value.trimStart()[0];
-      if (first !== "`" && first !== '"' && first !== "'") {
+      if (!isStaticMarkup(value, staticNames)) {
         problems.push(
-          `${file}: dangerouslySetInnerHTML.__html is not a static string literal; a value expression can carry untrusted content`,
+          `${file}: dangerouslySetInnerHTML.__html is not a static string literal; a value expression (or a template-literal hole) can carry untrusted content`,
         );
       }
     }
@@ -144,4 +301,46 @@ test("self-test: a non-JSON-LD block fed a value expression is rejected", () => 
   const good =
     "<Script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];` }} />";
   assert.deepStrictEqual(inlineScriptViolations(good), []);
+});
+
+test("self-test: a template literal that interpolates a value is rejected", () => {
+  // The regression this pins: the value starts with a backtick, so a check on
+  // the *first character* alone called it static while the `${ … }` hole
+  // carried member access — the stored-XSS shape (a message body, a job
+  // description) the rule exists to catch. The hole is code; it must be scanned.
+  for (const bad of [
+    "<div dangerouslySetInnerHTML={{ __html: `<p>${thread.body}</p>` }} />",
+    "<div dangerouslySetInnerHTML={{ __html: `<b>${job.description}</b>` }} />",
+    "<div dangerouslySetInnerHTML={{ __html: `prefix ${render(message)}` }} />",
+    "<div dangerouslySetInnerHTML={{ __html: `${user.name}` }} />",
+    // Interpolated inside a concatenation of otherwise-static literals.
+    "<div dangerouslySetInnerHTML={{ __html: `<p>` + `${thread.body}` + `</p>` }} />",
+  ]) {
+    assert.equal(
+      inlineScriptViolations(bad).length,
+      1,
+      `expected a finding for: ${bad}`,
+    );
+  }
+
+  // Static concatenations of literals — the GA bootstrap's shape — stay allowed,
+  // including a hole whose own content is a written literal (recursively static).
+  for (const good of [
+    "<Script dangerouslySetInnerHTML={{ __html: `a` + \"b\" + 'c' }} />",
+    "<div dangerouslySetInnerHTML={{ __html: `${'<p>hi</p>'}` }} />",
+    // A build-time constant (module-scope `const` from a literal / env) is not
+    // request data, so interpolating it is the GA bootstrap's real shape.
+    "const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;\n" +
+      "<Script dangerouslySetInnerHTML={{ __html: `gtag('config','${measurementId}')` }} />",
+  ]) {
+    assert.deepStrictEqual(inlineScriptViolations(good), [], `expected no finding for: ${good}`);
+  }
+
+  // A name that is *not* a build-time constant — a component prop or state — is
+  // runtime data and must still be rejected even inside a template hole.
+  const runtimeValue =
+    "function Panel({ body }: { body: string }) {\n" +
+    "  return <div dangerouslySetInnerHTML={{ __html: `${body}` }} />;\n" +
+    "}";
+  assert.equal(inlineScriptViolations(runtimeValue).length, 1);
 });
