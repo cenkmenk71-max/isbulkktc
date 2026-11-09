@@ -27,15 +27,20 @@
 //   VERCEL_PROJECT      default "isbulkktc"
 //   DEPLOY_TIMEOUT_SEC  how long to wait for the commit (default 900)
 //   DEPLOY_POLL_SEC     seconds between polls (default 20)
+//   DEPLOY_TIP_REFRESH_SEC  seconds between branch-tip re-reads (default 60)
 //
 // Exits non-zero only on a real problem: the commit never promotes, or a
 // reachable route is unhealthy. Writes a Markdown summary when
 // GITHUB_STEP_SUMMARY is set.
 
+import { execFile } from "node:child_process";
 import { appendFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
+import { promisify } from "node:util";
 
 const API = "https://api.vercel.com";
+
+const execFileAsync = promisify(execFile);
 
 /** Routes every deploy must serve with a 2xx when the origin is reachable.
  * The default locale (`tr`) is unprefixed under `localePrefix: "as-needed"`, so
@@ -308,6 +313,43 @@ function argValue(flag) {
   return index !== -1 ? process.argv[index + 1] : undefined;
 }
 
+/** Read the current head of `main` from the remote, or "" when it cannot be read.
+ * `git ls-remote` reads the ref without needing local history, so it sees a merge
+ * that landed after this run was queued. The call is bounded like every other
+ * request here, so a stalled connection cannot hang the poll loop past its
+ * deadline. Any failure yields "" — the caller then treats the tip as unknown
+ * and keeps verifying rather than skipping blindly. */
+async function readRemoteTip(remote = "origin", branch = "main") {
+  try {
+    const { stdout } = await execFileAsync(
+      "git",
+      ["ls-remote", remote, `refs/heads/${branch}`],
+      { timeout: REQUEST_TIMEOUT_MS, killSignal: "SIGKILL" },
+    );
+    return stdout.trim().split(/\s+/)[0] ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** The run skipped because a newer commit owns the branch tip. */
+function skippedSummary(expectedCommit, tipCommit) {
+  return [
+    "## Production deploy verification",
+    "",
+    `- skipped: \`${expectedCommit.slice(0, 8)}\` was superseded by \`${normalizeCommit(tipCommit).slice(0, 8)}\``,
+    "- the newer push verifies production instead",
+  ].join("\n");
+}
+
+async function reportSkipped(expectedCommit, tipCommit) {
+  const message = skippedSummary(expectedCommit, tipCommit);
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    await appendFile(process.env.GITHUB_STEP_SUMMARY, `${message}\n`);
+  }
+  console.log(message);
+}
+
 async function main() {
   const expectedCommit = argValue("--expect") ?? process.env.GITHUB_SHA;
   const tipCommit = argValue("--tip") ?? process.env.BRANCH_TIP_SHA;
@@ -318,6 +360,7 @@ async function main() {
   ).replace(/\/$/, "");
   const timeoutSec = parsePositiveInt(process.env.DEPLOY_TIMEOUT_SEC, 900);
   const pollSec = parsePositiveInt(process.env.DEPLOY_POLL_SEC, 20);
+  const tipRefreshSec = parsePositiveInt(process.env.DEPLOY_TIP_REFRESH_SEC, 60);
   const token = process.env.VERCEL_TOKEN;
 
   if (!normalizeCommit(expectedCommit)) {
@@ -328,18 +371,19 @@ async function main() {
   // and this run would wait for a commit that is never promoted. Skipping keeps
   // back-to-back pushes from painting a healthy site red.
   if (isSuperseded(expectedCommit, tipCommit)) {
-    const message = [
-      "## Production deploy verification",
-      "",
-      `- skipped: \`${expectedCommit.slice(0, 8)}\` was superseded by \`${normalizeCommit(tipCommit).slice(0, 8)}\``,
-      "- the newer push verifies production instead",
-    ].join("\n");
-    if (process.env.GITHUB_STEP_SUMMARY) {
-      await appendFile(process.env.GITHUB_STEP_SUMMARY, `${message}\n`);
-    }
-    console.log(message);
+    await reportSkipped(expectedCommit, tipCommit);
     return;
   }
+
+  // Only re-read the tip when a tip is actually in play. A manual run passes no
+  // `--tip` because it names the commit explicitly and means to verify it even
+  // if it is no longer the tip; introducing a tip there would silently change
+  // that contract. On a push run, track the tip even when the workflow's initial
+  // `git ls-remote` came back empty — skipping a superseded commit is the right
+  // call either way, and the in-loop refresh recovers what the initial read
+  // missed.
+  const trackTip =
+    process.env.GITHUB_EVENT_NAME === "push" || Boolean(normalizeCommit(tipCommit));
 
   let context = null;
   let contextError = null;
@@ -361,8 +405,27 @@ async function main() {
   const deadline = Date.now() + timeoutSec * 1000;
   let vercel = initialVercelState(token, context, contextError);
   let http = { ok: false, blocked: false, reason: "not checked yet" };
+  let lastTipCheck = Date.now();
 
   for (;;) {
+    // `--tip` is read once by the workflow, but this loop can poll for 15
+    // minutes. A merge landing on `main` mid-run moves the production alias to
+    // the newer commit, so the original tip goes stale and the run fails on a
+    // healthy site. Re-read the live tip periodically and skip when a newer
+    // commit has taken over — the same decision `isSuperseded` makes up front.
+    // `cancel-in-progress` cannot cover this: auto-merges use the default
+    // Actions token, whose push triggers no workflow run to cancel this one.
+    if (trackTip && Date.now() - lastTipCheck >= tipRefreshSec * 1000) {
+      lastTipCheck = Date.now();
+      const liveTip = await readRemoteTip();
+      // An empty read means the remote was unreachable — keep verifying rather
+      // than conclude the run is superseded on no evidence.
+      if (liveTip && isSuperseded(expectedCommit, liveTip)) {
+        await reportSkipped(expectedCommit, liveTip);
+        return;
+      }
+    }
+
     if (context && !vercel.ok) {
       try {
         vercel = await checkVercelAlias(context, token, expectedCommit);

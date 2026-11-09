@@ -164,3 +164,31 @@ context, not as a measurement.
     pending runs) but it doubles the `gh` traffic that #218 is trying to cut.
     `lane-autopilot.mjs` is LANE-INFRA's file, so it is handed off, not edited
     here.
+
+## 2026-11-09
+
+| Checked (UTC) | main tip | live | verdict | Note |
+|---|---|---|---|---|
+| 2026-11-09T23:25Z | `bc767871` | `bc767871` | ✅ in sync | Direct `git ls-remote` + `build-info` read. No lag: the 2026-11-06 rate-limit oscillation (issue #319) is not reproducing this round. |
+| 2026-11-09T23:38Z | `a1419963` | `a1419963` | ✅ in sync | `main` advanced past `bc767871` (a merge landed while this lane worked). Full `verify-production-deployment.mjs --expect a1419963` run: exit 0, confirmed via HTTP, 5/5 smoke routes 200. The HTTP channel was **reachable** this time — Cloudflare did not 403 the runner, so the verdict came from `/api/build-info` rather than the Vercel API. |
+
+### Delivery health findings (2026-11-09)
+
+13. **`verify-production-deployment.mjs` read `--tip` once, so a merge landing
+    mid-run painted a healthy site red (issue #427).** The workflow resolves the
+    branch tip at the start and passes it as `--tip`; the script then polls for up
+    to `DEPLOY_TIMEOUT_SEC` (900 s). If a merge lands on `main` while the run is
+    polling, production heads to the newer commit, so the run can never see its
+    commit promoted — but the frozen `tip` value means `isSuperseded()` never
+    fires and the run fails. Observed live: `Verify production deployment` was red
+    on 3/5 recent `main` runs (`vercel=alias built from 3257efa3, expected
+    c3d3d023`) while `expected c3d3d023` stayed fixed across a running poll. The
+    `concurrency: cancel-in-progress` block cannot cover this: auto-merges use the
+    default Actions token, whose push starts no workflow run to cancel the older
+    one. Fixed by re-reading the live tip every `DEPLOY_TIP_REFRESH_SEC` (default
+    60) inside the poll loop and skipping when a newer commit owns `main`. An
+    unreadable remote keeps verifying rather than skipping on no evidence, and a
+    manual (`workflow_dispatch`) run with no `--tip` is unchanged. Three
+    regression tests added: a moving tip skips (exit 0); a static tip still fails
+    loudly; a push run recovers when the workflow's initial `ls-remote` returned
+    empty. The mid-run test fails against the pre-fix script, so it pins the bug.
