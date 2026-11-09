@@ -618,9 +618,14 @@ assert.doesNotMatch(
 );
 assert.match(packagesShowcase, /role="group"/);
 assert.match(packagesPanel, /aria-pressed=/);
+// The quote body must consume the `%DAYS%` placeholder before it reaches the
+// mail client. Accept either the plain `String(selectedDuration)` form or the
+// locale-aware `Intl.NumberFormat(locale).format(selectedDuration)` form so
+// LANE-TASARIM can land the `fa` numeral fix (#385) without the gate pinning
+// the Latin-only rendering.
 assert.match(
   packagesPanel,
-  /quoteEmailBody\.replace\("%DAYS%", String\(selectedDuration\)\)/,
+  /quoteEmailBody\.replace\(\s*"%DAYS%",\s*(?:String\(selectedDuration\)|new Intl\.NumberFormat\(locale\)\.format\(selectedDuration\))/,
 );
 assert.doesNotMatch(packagesShowcase, /packages-vend-selector/);
 assert.match(packagesShowcase, /packages-vend-accessible-controls/);
