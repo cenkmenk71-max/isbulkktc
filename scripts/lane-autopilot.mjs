@@ -35,6 +35,7 @@ import { kickoff } from './lane-kickoff.mjs';
 import { reapStalledSandboxes } from './reap-stalled-sandboxes.mjs';
 import {
   carriedAttempts,
+  failedRequiredChecks,
   hasLabelledWork,
   isCapacityError,
   nextConversationAction,
@@ -73,6 +74,13 @@ const MAX_REUSES = REGISTRY.maxReusesPerConversation ?? 2;
 // starts no new lane: the next pass runs once a merge frees a slot. 0/absent
 // means no limit, as before.
 const MAX_OPEN_PRS = REGISTRY.maxOpenPRs ?? 0;
+// The status checks that branch protection actually requires. An open PR is
+// normally "in flight" and its lane is left alone, but a PR whose *required*
+// check has failed is a dead end — its sandbox is gone, so nothing else will
+// ever fix it (issue #453). Only these names may wake a lane; a non-required
+// failure (Vercel's build-rate limit is an external quota, not the lane's code)
+// must not, or every quota hiccup would wake the whole team.
+const REQUIRED_CHECKS = REGISTRY.requiredChecks ?? [];
 // Whether a lane must have a labelled issue to be started. The kickoff prompt
 // also lets a lane pick its own bounded task from its brief, so this is a
 // deliberate policy switch: on, the autopilot only starts lanes with a labelled
@@ -146,7 +154,7 @@ function openPullRequests() {
     // so the conflict guard below read `undefined === 'CONFLICTING'` and never
     // fired. `mergeStateStatus` alone is not a substitute — it reports BLOCKED
     // for a conflict and for a missing required check alike.
-    'number,headRefName,mergeStateStatus,mergeable,labels,isDraft,autoMergeRequest',
+    'number,headRefName,mergeStateStatus,mergeable,labels,isDraft,autoMergeRequest,statusCheckRollup',
     '--limit',
     '50',
   ]);
@@ -346,6 +354,7 @@ function laneKickoff(name, context) {
   return kickoff(name, LANES[name], {
     maxAttempts: MAX_ATTEMPTS,
     previousError: context?.previousError,
+    redPr: context?.redPr,
   });
 }
 
@@ -483,7 +492,7 @@ async function decide(name, ctx) {
   // count; only a lane that keeps failing the same work carries its attempts.
   // Without this a lane that exhausted three attempts once stayed `exhausted`
   // forever — even after a new handoff arrived (issue #471).
-  const work = workSignature({ handoff, branchExists });
+  const work = workSignature({ handoff, branchExists, prNumber: pr?.number });
   const state = { ...stored, attempts: carriedAttempts(stored, work), work };
 
   // A human blocker stops the lane. A handoff is work: it does not stop it.
@@ -491,6 +500,29 @@ async function decide(name, ctx) {
     return { action: 'blocked', reason: `issue #${blocked.number} needs a human` };
   }
   if (pr) {
+    // A PR whose *required* check has failed is a dead end: the sandbox that
+    // opened it is gone, so a lane left to "wait" here never moves again — its
+    // own red PR freezes it (issue #453). Re-spawn to fix the failing check.
+    // Only required checks qualify; a non-required failure (Vercel's build-rate
+    // limit is an external quota) must not wake a lane.
+    const failed = failedRequiredChecks(pr.statusCheckRollup, REQUIRED_CHECKS);
+    if (failed.length > 0) {
+      if (state.attempts >= MAX_ATTEMPTS) {
+        return {
+          action: 'exhausted',
+          reason: `PR #${pr.number} red (${failed.join(', ')}); ${state.attempts} attempts used; needs a human`,
+        };
+      }
+      return {
+        action: 'spawn',
+        reason: `PR #${pr.number} red (${failed.join(', ')}) — respawn to fix`,
+        context: {
+          previousError: `PR #${pr.number} failed: ${failed.join(', ')}`,
+          work,
+          redPr: { number: pr.number, checks: failed },
+        },
+      };
+    }
     const state_ = pr.mergeStateStatus;
     if (state_ === 'CLEAN') return { action: 'wait', reason: `PR #${pr.number} ready to merge` };
     return { action: 'wait', reason: `PR #${pr.number} in flight (${state_})` };

@@ -3,11 +3,13 @@ import test from "node:test";
 
 import {
   carriedAttempts,
+  failedRequiredChecks,
   hasLabelledWork,
   isCapacityError,
   laneDelivered,
   nextConversationAction,
   prCapacity,
+  requiredCheckFailed,
   workSignature,
 } from "./lane-autopilot-core.mjs";
 
@@ -153,6 +155,13 @@ test("workSignature is stable for the same work and distinct for new work", () =
   assert.equal(workSignature({ handoff: undefined, branchExists: false }), "labelled-work");
 });
 
+test("fixing an open PR is its own piece of work, keyed by the PR number", () => {
+  // A red-PR fix round must not inherit the attempts of the work that opened the
+  // PR (or a later handoff): it is a distinct task with its own budget (#453).
+  assert.equal(workSignature({ prNumber: 478, handoff: { number: 7 }, branchExists: true }), "pr-fix:478");
+  assert.equal(workSignature({ prNumber: 479, handoff: { number: 7 }, branchExists: true }), "pr-fix:479");
+});
+
 test("laneDelivered recognises only the statuses that mean work was handed over", () => {
   for (const status of ["RUNNING", "REUSED", "RESUMED", "REFRESHED"]) {
     assert.equal(laneDelivered(status), true);
@@ -186,4 +195,60 @@ test("a missing or non-positive cap means no limit", () => {
 test("a missing or negative open count is treated as zero", () => {
   assert.equal(prCapacity(undefined, 3), 3);
   assert.equal(prCapacity(-1, 3), 3);
+});
+
+// ---------------------------------------------------------------------------
+// failedRequiredChecks — a red required check must respawn the lane (issue #453)
+// ---------------------------------------------------------------------------
+
+const REQUIRED = ["Quality, database and E2E"];
+
+test("a failed required check is reported by name", () => {
+  const checks = [
+    { name: "Quality, database and E2E", conclusion: "FAILURE" },
+    { name: "automate", conclusion: "CANCELLED" },
+  ];
+  assert.deepEqual(failedRequiredChecks(checks, REQUIRED), ["Quality, database and E2E"]);
+  assert.equal(requiredCheckFailed(checks, REQUIRED), true);
+});
+
+test("a timed-out required check counts as a failure", () => {
+  const checks = [{ name: "Quality, database and E2E", conclusion: "TIMED_OUT" }];
+  assert.deepEqual(failedRequiredChecks(checks, REQUIRED), REQUIRED);
+});
+
+// The bug this guards: PR #478 showed Vercel's `automate` check CANCELLED. That
+// is a non-required, external-quota failure; treating it as red would spawn the
+// whole team on every build-rate hiccup.
+test("a non-required failure never wakes a lane", () => {
+  const checks = [
+    { name: "Quality, database and E2E", conclusion: "SUCCESS" },
+    { name: "automate", conclusion: "CANCELLED" },
+    { name: "Vercel", conclusion: "FAILURE" },
+  ];
+  assert.deepEqual(failedRequiredChecks(checks, REQUIRED), []);
+  assert.equal(requiredCheckFailed(checks, REQUIRED), false);
+});
+
+test("a pending or absent required check is not a failure", () => {
+  assert.equal(
+    requiredCheckFailed([{ name: "Quality, database and E2E", status: "IN_PROGRESS", conclusion: null }], REQUIRED),
+    false,
+  );
+  assert.equal(requiredCheckFailed([], REQUIRED), false);
+  assert.equal(requiredCheckFailed(undefined, REQUIRED), false);
+});
+
+test("the legacy `context` field is matched too", () => {
+  // Older rollup entries use `context` where newer ones use `name`.
+  assert.deepEqual(
+    failedRequiredChecks([{ context: "Quality, database and E2E", conclusion: "FAILURE" }], REQUIRED),
+    REQUIRED,
+  );
+});
+
+test("no configured required checks means nothing can fail", () => {
+  const checks = [{ name: "Quality, database and E2E", conclusion: "FAILURE" }];
+  assert.equal(requiredCheckFailed(checks, []), false);
+  assert.equal(requiredCheckFailed(checks, undefined), false);
 });

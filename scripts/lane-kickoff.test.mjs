@@ -73,3 +73,22 @@ test("the kickoff tells the lane to rebase onto origin/main before opening the P
   assert.match(prompt, /git fetch origin main && git rebase origin\/main/);
   assert.match(prompt, /CONFLICTING/);
 });
+
+// The bug this guards (#453): a lane whose sandbox is gone but whose PR is red
+// used to wait forever — its own red PR froze it, because an open PR always read
+// as "in flight". The autopilot now re-spawns it with `redPr`, and the prompt
+// must tell it to fix that PR instead of starting new work.
+test("a red-PR respawn tells the lane to fix that PR, not start new work", () => {
+  const prompt = kickoff("infra", lane, {
+    redPr: { number: 478, checks: ["Quality, database and E2E"] },
+  });
+  assert.match(prompt, /PR #478/);
+  assert.match(prompt, /Quality, database and E2E/);
+  assert.match(prompt, /Yeni iş başlatma/);
+  assert.match(prompt, /gh pr checks 478/);
+  assert.match(prompt, /yeni PR açma/i);
+});
+
+test("a plain kickoff carries no red-PR instruction", () => {
+  assert.doesNotMatch(kickoff("infra", lane), /PR #\d+/);
+});

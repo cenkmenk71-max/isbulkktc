@@ -100,7 +100,8 @@ export function laneDelivered(status) {
  * @param {boolean} ctx.branchExists a stale remote branch for this lane exists
  * @returns {string}
  */
-export function workSignature({ handoff, branchExists }) {
+export function workSignature({ handoff, branchExists, prNumber }) {
+  if (prNumber) return `pr-fix:${prNumber}`;
   if (handoff) return `handoff:${handoff.number}`;
   if (branchExists) return 'stale-branch';
   return 'labelled-work';
@@ -146,4 +147,41 @@ export function prCapacity(openPrs, maxOpenPRs) {
   const limit = Number.isFinite(maxOpenPRs) && maxOpenPRs > 0 ? maxOpenPRs : Infinity;
   const open = Number.isFinite(openPrs) && openPrs > 0 ? openPrs : 0;
   return Math.max(0, limit - open);
+}
+
+/**
+ * The required checks that have actually *failed* on a PR.
+ *
+ * Only a required check failing should break the "PR in flight" wait: a
+ * non-required failure (Vercel's build-rate limit is an external quota, not the
+ * lane's code) must not wake a lane, or every quota hiccup would spawn the whole
+ * team. `mergeStateStatus` cannot tell the two apart — it reports `BLOCKED` for
+ * both — so the check rollup is consulted directly. A check that is absent or
+ * still running is not a failure: a lane is not woken for a pending run.
+ *
+ * @param {Array<{name?: string, context?: string, status?: string, conclusion?: string|null}>} checks statusCheckRollup entries
+ * @param {string[]} requiredChecks the required check names (from lanes.json)
+ * @returns {string[]} names of the required checks that failed
+ */
+export function failedRequiredChecks(checks, requiredChecks) {
+  const required = Array.isArray(requiredChecks) ? requiredChecks : [];
+  return required.filter((name) => {
+    const match = (checks ?? []).find((c) => (c?.name ?? c?.context) === name);
+    return match ? ['FAILURE', 'TIMED_OUT'].includes(match.conclusion) : false;
+  });
+}
+
+/**
+ * Whether any *required* check on a PR has failed.
+ *
+ * The autopilot treats an open PR as "in flight" and waits, so a lane whose
+ * sandbox is gone but whose PR is red waits forever — its own red PR freezes it
+ * (issue #453). This is the predicate that breaks that wait.
+ *
+ * @param {Array<object>} checks statusCheckRollup entries
+ * @param {string[]} requiredChecks the required check names (from lanes.json)
+ * @returns {boolean}
+ */
+export function requiredCheckFailed(checks, requiredChecks) {
+  return failedRequiredChecks(checks, requiredChecks).length > 0;
 }
