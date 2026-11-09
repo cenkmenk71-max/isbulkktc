@@ -387,3 +387,33 @@ her kontrol, token'ın görebildiği PR kümesine bağlıdır. Kapıyı gerçek 
 denemek için admin token'la çalıştırın. Doğrulandı:
 `No collisions across 1 open PR(s).` (önce 2), `lane-collisions` 9/9, tam CI
 (Static + Database + 4×E2E) yeşil.
+
+### Tur — devir kuyruğu, ek 2: LANE-OPERATÖR harness ailesi sahipsizdi (#428)
+
+Kapı düzeltildikten sonra PR #494 (`lane/operator`, #443) açıldı ve çakışma
+yeniden kırmızıya döndü:
+
+```
+#494 scripts/lane-autopilot-core.mjs — lane-operator does not own it (LANE-INFRA)
+#494 scripts/lane-autopilot-core.test.mjs — lane-operator does not own it (LANE-INFRA)
+```
+
+**Kök neden.** Sahiplik tablosu LANE-OPERATÖR için yalnız
+`lane-autopilot.mjs`, `lane-kickoff.mjs`, `system-health.mjs` listeliyordu.
+Operatör lane'i harness'ini sonradan modülleştirdi ve `reap-stalled-sandboxes`
+ekledi (`lane-autopilot-core.mjs`, `lane-kickoff.test.mjs`,
+`system-health-core.mjs`, `system-health.test.mjs`,
+`reap-stalled-sandboxes.mjs` + test — hepsi `operator(tur)` commit'lerinden),
+ama tabloya yazılmadı. Hepsi LANE-INFRA'nın `scripts/**` catch-all'ına düştü →
+operatör kendi dosyasını düzenleyince "sahibi değil" denildi.
+
+**Düzeltme.** LANE-OPERATÖR satırı aile globlarına genişletildi:
+`scripts/lane-autopilot*.mjs`, `scripts/lane-kickoff*.mjs`,
+`scripts/system-health*.mjs`, `scripts/reap-stalled-sandboxes*.mjs`.
+`lane-collisions.test.mjs` on dosyalık aileyi LANE-OPERATÖR'e sabitledi.
+
+**Ders.** `scripts/**` gibi bir catch-all satır, başka bir lane yeni bir script
+yarattığı an yanlış sahiplik üretir. Bir lane kendi alanında dosya çoğaltınca
+sahiplik satırını da güncellemeli; catch-all'ı dar tutmak yerine lane satırını
+glob'la büyütmek doğru yön. Doğrulandı: `No collisions across 2 open PR(s).`,
+`lane-collisions` 10/10, `test:unit` 876/874 pass.
