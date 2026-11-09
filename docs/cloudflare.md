@@ -38,6 +38,39 @@ uyuşuyor: **eksik olan tam scope `Zone → Analytics → Read`** (Logpush için
 
 Kanıt kısaltmaları: `HTTP` = `curl -D -` başlıkları, `DoH` = `cloudflare-dns.com/dns-query`.
 
+### Bulgu kimliği şeması
+
+Her bulgu `ÖNEK-NN` biçiminde kalıcı bir kimlik taşır; rapor blokları, drift
+tabloları ve issue'lar bu kimlikle atıf yapar. **Yeni bulgu eklemeden önce ailenin
+kullanılmış aralığını `grep` ile doğrula.** Aynı kimliği iki farklı bulguya vermek
+atıfları belirsizleştirir; bu dokümanda iki kez yaşandı: tur 18'de `V-01`
+çakışması (`D-03`), tur 26/27'de `N-01..N-06` kümesinin negatif-cache aralığıyla
+çakışması — ikincisi bu turda `N-11..N-16` olarak ayrıldı.
+
+| Önek | Kapsam | Tanımlandığı yer |
+|---|---|---|
+| `F-` | Ana bulgu tablosu (DNS, TLS/HSTS, cache, WAF, bot, rate-limit, analytics) | `## Bulgu tablosu` |
+| `A-` | `/_next/image` optimizer denetimi (allowlist/normalizasyon) | tur 11–14 |
+| `E-` | E-posta kimlik doğrulama (SPF/DKIM/DMARC/MTA-STS) | issue #170 |
+| `K-` | DKIM anahtar/selector denetimi | issue #227 |
+| `G-` | Edge genel bulgular (ör. CF Email Obfuscation) | tur 4 |
+| `C-` | Bulunabilirlik / crawler erişimi | issue #163 |
+| `H-` | Edge ↔ origin başlık karşılaştırması (HSTS, Browser Cache TTL) | tur 9 |
+| `R-` | Yönlendirme / host kanonikleştirme | tur 8 |
+| `T-` | Tur bazlı ölçüm/denetim tabloları (kontrol listesi) | tur 7+ |
+| `U-` | HTTP semantiği (304 / Range / HEAD / koşullu istek) | tur 10 |
+| `V-` | İstek kaçakçılığı / method semantiği + bot doğrulama | tur 10+ |
+| `W-` | **İki kapsam:** `W-01` WAF bulgusu; `W-18`/`W-19`/`W-20` tur-bazlı canlı ölçüm tabloları (tur 18/19/20, sonuncusu HSTS preload) | tur 10+ |
+| `N-` | **İki ayrı aralık:** `N-01..N-08` negatif-cache (tur 12–25); `N-11..N-16` WAF `%2F` kümesi (tur 26+) | tur 12+ |
+| `D-` | Doküman düzeltmeleri / drift kayıtları | tur 14+ |
+| `M-` | Panel/manuel gözlemler + meta kayıtlar | tur 25 |
+| `P-` | Kapanan kayıtlar (ör. `P-01` prerender cache) | tur 22 |
+| `SW-` | Service worker cache | tur 14 |
+| `SR-` | Speed Brain / `speculation-rules` | tur 22+ |
+
+- `-NN` iki hanelidir. Küçük `r` soneki **aynı bulgunun yeniden ölçümü/düzeltmesidir**
+  (`H-01r`, `N-11r`, `SR-01r`); `W-18-1` gibi üçüncü parça bir alt satırdır.
+
 | # | Nokta | Mevcut | Olması gereken | Kanıt |
 |---|---|---|---|---|
 | F-01 | Apex A kaydı | `104.21.29.3`, `172.67.171.53` — CF **proxied** | Proxied kalmalı | DoH A |

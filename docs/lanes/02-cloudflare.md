@@ -731,7 +731,9 @@ Sonraki lane için notlar: (1) `%2F` kaçışı kurala bağlı — kuralın lite
             tek düzeltme ifadede `url_decode`. (3) Tur 26'nın "üç kategori de" özeti
             fazla genişti → düzeltildi. (4) #163 CF halkası TEMİZ; kopuk halka
             LANE-SEO'da (#173). (5) Preload `pending` iken HSTS `max-age` 12 ayın
-            altına inmemeli.
+            altına inmemeli. (6) Bulgu kimliği şeması `docs/cloudflare.md` →
+            "Bulgu kimliği şeması"; yeni bulgudan önce aralığı `grep` ile doğrula
+            (`N-11..N-16` tur 26/27 WAF kümesi için ayrıldı, `N-01..N-08` negatif-cache).
 ```
 
 **Ne ölçüldü (tur 27).**
