@@ -32,6 +32,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { kickoff } from './lane-kickoff.mjs';
+import { reapStalledSandboxes } from './reap-stalled-sandboxes.mjs';
 import {
   carriedAttempts,
   hasLabelledWork,
@@ -539,6 +540,32 @@ async function main() {
   if (!dryRun && !key) {
     console.error('OPENHANDS_API_KEY is not set');
     process.exit(1);
+  }
+
+  // Free the slots stranded by lanes that ended in `error` (or were abandoned in
+  // `finished`/`stuck`): those leave their sandbox RUNNING forever, and once the
+  // budget fills, the lanes with real work are deferred every pass. Reap before
+  // the fetch below so the count it reads reflects the freed slots, and this
+  // pass can spend them. Pausing keeps the worktree, so a lane can still be
+  // resumed later without quota. Never runs in a dry-run: it is not a decision.
+  if (!dryRun) {
+    try {
+      const reaped = await reapStalledSandboxes({ key });
+      if (reaped.paused.length > 0 || reaped.failures.length > 0) {
+        console.log(
+          `reaped stalled sandboxes: paused=${reaped.paused.length} failed=${reaped.failures.length}`,
+        );
+        for (const entry of reaped.paused) {
+          console.log(`  paused ${entry.lane} (${entry.sandboxId})`);
+        }
+        for (const failure of reaped.failures) {
+          console.error(`  reap FAIL ${failure}`);
+        }
+      }
+    } catch (error) {
+      // Reaping is opportunistic housekeeping: a failure must not stop the pass.
+      console.error(`  reap skipped: ${String(error.message).split('\n')[0]}`);
+    }
   }
 
   const [prs, blocked, handoffs, issues, tasks, sandboxes, idle, paused] =

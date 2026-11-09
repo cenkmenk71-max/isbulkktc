@@ -212,3 +212,52 @@ etkilenmez**; sadece VS Code Copilot'un Context7 erişimi kaybolur.
 **Kanıt komutu.** `python3` ile `event-00000` `agent_context` bayrakları ve
 `event-00001` sistem promptu okunur; `grep -rln '.agents/skills' docs/` **boş**
 döner — hiçbir doküman lane'lere doğru skill dizinini işaret etmiyor.
+
+## Tur notları — sandbox kilitlenmesi (2026-11-08, kanıtlı)
+
+**Arıza (issue #218).** Sandbox bütçesi 10. Autopilot bir sandbox'ı `RUNNING`
+gördükçe dolu sayıyor ve lane'i `busy` kabul ediyor. Konuşma **temiz** biterse
+platform sandbox'ı kendisi bırakır; ama `error` ile biten (ya da `finished`/
+`stuck` içinde terk edilen) konuşma sandbox'ı `RUNNING` bırakır. O sandbox bir
+slotu **sonsuza kadar** tutar; slotlar dolunca autopilot gerçek işi olan lane'leri
+`deferred` yapar. Sonuç: sistem sessizce durur, kota yanar.
+
+**Canlı kanıt.** Tur başında `sandboxes/search`: **10 RUNNING** (bütçe tam dolu),
+biri ajanın kendi oturumu — yani lane bütçesine yanlış yazılıyor. LANE-geo'da bir
+konuşma `exec_status=error`, sandbox hâlâ `RUNNING`, ölü ~17 dk.
+
+**Çözüm — `scripts/reap-stalled-sandboxes.mjs`.** Yalnız **terminal** durumdaki
+(`error`/`finished`/`stuck`) lane konuşmalarının sandbox'ını **pause** eder.
+Pause slotu serbest bırakır ama worktree'yi korur → autopilot sonra `resume`
+edebilir, kota harcamaz. **Silmez.** Güvenlik sınırı: sandbox'a bağlı **herhangi
+bir** konuşma aktifse (`running`/`idle`/`paused`/`waiting_for_confirmation`)
+dokunulmaz — çalışan bir ajanın altından sandbox çekilmez. `idle` kasıtlı olarak
+terminal **değildir**: autopilot'un yeniden kullanım hedefidir.
+
+**Uygulama.** `--apply` ile çalıştırıldı: LANE-geo sızıntısı pause edildi,
+RUNNING **10 → 9**, bir slot açıldı.
+
+**Neden ayrı workflow değil (kapı dersi).** İlk denemede ayrı bir
+`.github/workflows/reap-stalled-sandboxes.yml` eklendi. `agent-pr-automation.yml`
+kapısı **`.github/workflows/**` dokunan hiçbir PR'ı otomatik merge etmez** (bir
+lane kendi denetimini zayıflatamasın diye) → PR `agent:blocked` aldı ve insan
+onayı beklerken **kapasite sızıntısı düzelmeden kaldı**. Çözüm: reaper'ı ayrı
+workflow yerine **mevcut autopilot geçişinin içine** bağlamak. Autopilot zaten
+zamanlanmış çalışıyor; PR artık yalnız `scripts/**` dokunur → kapıyı geçer,
+otomatik merge edilir. Ders: **bekçi işini kapının arkasına koyma** — ayrı bir
+workflow dosyası, düzeltmeyi kendi kapısının arkasında kilitler.
+
+`scripts/lane-autopilot.mjs` içinde `main()` sandbox sayımından **önce**
+`reapStalledSandboxes({ key })` çağırır; böylece bu geçişte açılan slotlar hemen
+kullanılır. Reap `--dry-run`'da atlanır (karar değil, bakım işi) ve hata
+durumunda geçişi durdurmaz (fırsatçı bakım).
+
+**Test.** `scripts/reap-stalled-sandboxes.test.mjs` — 17 test. Saf seçim kararı
+(`selectStalledSandboxes`) + orkestrasyon (`reapStalledSandboxes`, enjekte edilen
+sahte `request` ile: max-pauses tavanı, 404 = zaten geri alınmış, hata toplama).
+En kritikleri: "paylaşılan sandbox'ta canlı konuşma varsa dokunma" ve "idle
+terminal değildir".
+
+**Ders.** Yine "gösterge kimi ölçüyor?" sınıfı: autopilot sandbox'ın `RUNNING`
+olmasını "iş var" sanıyor; oysa `RUNNING`, "kimse bırakmadı" demek olabilir.
+Bekçi ile gerçek iş sinyalini ayır.
