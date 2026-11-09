@@ -839,13 +839,22 @@ async function main() {
   // live sandbox and fed it another task, so one conversation reached 34.5M
   // prompt tokens. The lane instead gets a fresh conversation (or sandbox), and
   // the interrupt below stops the burn now.
+  //
+  // A lane with an open PR is exempt: the conversation's own `pr_number` stays
+  // empty when the PR was opened via `gh`/the API (the norm here), so the
+  // ceiling fired on a lane that was fixing its PR — the dry run reported
+  // `would interrupt stalled LANE-infra` while LANE-infra held PR #493. The
+  // branch's open PR is the ground truth that the lane is working, not looping.
+  const openPrBranches = new Set(prs.map((p) => p.headRefName));
+  const poisonOptions = {
+    maxIdleMs: MAX_CONVERSATION_IDLE_MS,
+    maxRuntimeMs: MAX_CONVERSATION_RUNTIME_MS,
+    noCommitMs: LANE_COMMIT_WINDOW_MS,
+    commitsByLane,
+    openPrBranches,
+  };
   const poisoned = new Set(
-    poisonedConversations(conversations, {
-      maxIdleMs: MAX_CONVERSATION_IDLE_MS,
-      maxRuntimeMs: MAX_CONVERSATION_RUNTIME_MS,
-      noCommitMs: LANE_COMMIT_WINDOW_MS,
-      commitsByLane,
-    }).map((c) => c.id),
+    poisonedConversations(conversations, poisonOptions).map((c) => c.id),
   );
   const idle = idleConversations(conversations).filter(
     (c) => !poisoned.has(c.id),
@@ -861,12 +870,7 @@ async function main() {
   // reaper reclaims it on the next pass, when the lane restarts from a clean
   // state. Excluded from `busyConversations` below so the lane is not skipped as
   // still-busy on the stale status. A dry-run only previews it.
-  const stalledLanes = stalledConversations(conversations, {
-    maxIdleMs: MAX_CONVERSATION_IDLE_MS,
-    maxRuntimeMs: MAX_CONVERSATION_RUNTIME_MS,
-    noCommitMs: LANE_COMMIT_WINDOW_MS,
-    commitsByLane,
-  });
+  const stalledLanes = stalledConversations(conversations, poisonOptions);
   const interrupted = new Set();
   if (dryRun && stalledLanes.length > 0) {
     for (const conversation of stalledLanes) {

@@ -876,6 +876,55 @@ test("a poisoned lane that already opened a PR is spared", () => {
   );
 });
 
+test("a lane whose branch has an open PR is spared even with empty pr fields", () => {
+  // The conversation's own `pr_number`/`pull_requests` stay empty when the PR was
+  // opened via `gh`/the API, so a lane fixing its PR read as "no PR" and the
+  // ceiling fired on it (dry run: `would interrupt stalled LANE-infra` while
+  // LANE-infra held PR #493). The branch's open PR is the ground truth.
+  assert.deepEqual(
+    poisonedConversations(
+      [runningLane({ title: "LANE-infra", execution_status: "running", created_at: hoursAgo(2), pr_number: [], pull_requests: [] })],
+      { now: NOW, maxRuntimeMs: 45 * 60_000, openPrBranches: ["lane/infra"] },
+    ),
+    [],
+  );
+});
+
+test("the open-PR exemption is per branch, not a blanket amnesty", () => {
+  // A *different* lane's open PR must not spare this PR-less loop.
+  const poisoned = poisonedConversations(
+    [runningLane({ title: "LANE-qa", execution_status: "running", created_at: hoursAgo(20) })],
+    { now: NOW, maxRuntimeMs: 45 * 60_000, openPrBranches: ["lane/infra"] },
+  );
+  assert.equal(poisoned.length, 1);
+  assert.equal(poisoned[0].title, "LANE-qa");
+});
+
+test("no open PRs (or none supplied) leaves the poison guard as before", () => {
+  const conv = runningLane({ title: "LANE-qa", execution_status: "running", created_at: hoursAgo(20) });
+  assert.equal(
+    poisonedConversations([conv], { now: NOW, maxRuntimeMs: 45 * 60_000, openPrBranches: [] }).length,
+    1,
+  );
+  assert.equal(
+    poisonedConversations([conv], { now: NOW, maxRuntimeMs: 45 * 60_000 }).length,
+    1,
+  );
+});
+
+test("stalledConversations honours the open-PR exemption too", () => {
+  const conversations = [
+    runningLane({ title: "LANE-infra", execution_status: "running", created_at: hoursAgo(2) }),
+    runningLane({ title: "LANE-qa", execution_status: "running", created_at: hoursAgo(20) }),
+  ];
+  const stalled = stalledConversations(conversations, {
+    now: NOW,
+    maxRuntimeMs: 45 * 60_000,
+    openPrBranches: ["lane/infra"],
+  });
+  assert.deepEqual(stalled.map((c) => c.title), ["LANE-qa"]);
+});
+
 test("a lane waiting for a human is blocked, not poisoned", () => {
   assert.deepEqual(
     poisonedConversations(
