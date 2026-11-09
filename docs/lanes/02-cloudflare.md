@@ -762,3 +762,52 @@ Sonraki lane için notlar: (1) `%2F` kaçışı kurala bağlı — kuralın lite
 
 **Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01.
 **Devir:** N-15 → **#437** (açık); N-13 → **#441** (`lane:infra`+`agent:handoff`, açık).
+
+## Tur 28 (2026-11-09) — bulgu kimliği çakışmasının kapatılması + SR-01r
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Çalıştırılan kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅ (886 pass, 2 todo)
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF değiştirilmedi)
+Sahibin yapması gerekenler: N-11r (WAF `/`-literallerini `url_decode` üzerinden kur, onay) ·
+            H-01r (HSTS politika kararı) · H-02 (Browser Cache TTL = Respect Existing Headers) ·
+            R-01 (trailing-dot apex) · G-01 (Email Obfuscation OFF) · F-08 (Vercel alias kapat) ·
+            #227 (Resend DKIM 2048-bit)
+Sonraki lane için notlar: (1) Bulgu kimliği şeması `docs/cloudflare.md` → "Bulgu kimliği şeması";
+            yeni bulgudan önce aralığı `grep` ile doğrula. (2) `N-01..N-08` negatif-cache'e,
+            `N-11..N-16` WAF `%2F` kümesine aittir — ikisi karıştırılmasın.
+```
+
+**Bu tur ne düzeltti (hepsi `docs/cloudflare.md`'de kanıtlı):**
+
+- **D-19 (doküman doğruluğu — kimlik çakışması):** tur 26/27 WAF bulguları
+  `N-01..N-06` kimlikleriyle yazılmıştı, ama `N-01..N-08` aralığı **zaten**
+  tur 12–25 **negatif-cache** bulgularına aitti (`N-01` = `/_next/static` 404'ünün
+  1 yıl cache'lenmesi). Aynı kimlik iki bulguya işaret ediyordu → WAF `%2F` kümesi
+  **`N-11..N-16`** (+`N-11r`, `N-13r`) olarak yeniden numaralandı. `grep -nE 'N-0[1-6]'
+  origin/main -- docs/cloudflare.md` ile çakışma doğrulandı.
+- **D-20 (kapsam daraltma):** tur 26'nın "üç kategoride de (VCS, dotfile,
+  CMS/api-devtools) atlanıyor" özeti **fazla genişti**; kaçış yalnız **literalinde
+  `/` olan** kurallarda (`/.git/`, `/api/devtools/`). `wp-admin`/`phpmyadmin`/`.env`
+  bloklu kalır (tur 27 matrisi). Özet buna göre düzeltildi.
+- **SR-01r (canlı teyit — bu turda yeniden ölçüldü):** `speculation-rules` başlığı
+  **her içerik tipinde** ve **hata yanıtlarında** geliyor — önceki "yalnız HTML
+  yanıtlarında" iddiası **yanlıştı** ve düzeltildi. Kanıt (canlı `curl -I`):
+  `/robots.txt` `text/plain`, `/sitemap.xml` `application/xml`,
+  `/api/build-info` `application/json`, `/favicon.ico` **404**, `/nonexistent-xyz-123`
+  **404**, `/.env` **403** → hepsinde `speculation-rules: "/cdn-cgi/speculation"`.
+- **Bulgu kimliği şeması tablosu eklendi** (`docs/cloudflare.md`): tüm `ÖNEK-NN`
+  aileleri + kapsamları; `W-` ve `N-` öneklerinin **iki kapsamlı** olduğu açıkça
+  belirtildi, yeni bulgudan önce aralığı `grep` ile doğrulama kuralı yazıldı.
+- **T-07 düzeltmesi:** tur 7 ölçüm tablosundaki `/robots.txt` satırı yanlışlıkla
+  `Vary: accept-encoding` diyordu; tur 21'in T-01 düzeltmesine göre `/robots.txt`'te
+  **`Vary` yok** (yalnız `/sitemap.xml`'de var).
+
+**Teyit edilen (temiz):** WAF saldırı yolları **403**, meşru rotalar **200**,
+`wp-admin`/`phpmyadmin`/`.env` bloklu; dinamik HTML cache'lenmiyor; #163 CF halkası
+kopuk değil (arama botları 200, `cf-mitigated` yok).
+
+**Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01 (SR-01 davranışı
+açık; yalnız **iddiası** SR-01r ile düzeltildi).
+**Devir:** N-15 → **#437**, N-13 → **#441** (ikisi de açık, `lane:infra`).
