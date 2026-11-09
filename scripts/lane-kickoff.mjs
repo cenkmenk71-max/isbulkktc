@@ -64,6 +64,17 @@ export function kickoff(name, lane, context = {}) {
       'gözlenen, beklenen, etki) ve PR gövdesine tablo hâlinde yaz. Atladığın ' +
       'dosya varsa "bakılmadı" diye işaretle — sessizce geçme. Tek bir bug ' +
       'düzeltip durmak yeterli değil; alanı tara.',
+    // Context discipline. A lane that re-reads its brief and starts over is
+    // losing its plan to condensation: the transcript is summarised faster than
+    // it can work, so each summary drops the plan and the agent restarts from
+    // the top (one lane read its 67 KB brief 21 times in 80 minutes and made no
+    // commit). Telling the lane to read once, keep a task list, and commit the
+    // first small fix breaks that cycle.
+    'BAĞLAM DİSİPLİNİ: brief\'i (00-orchestration.md + kendi brief\'in) BİR KEZ oku, ' +
+      'sonra göreve başla — aynı dosyayı tekrar tekrar okuma. İlerlemeni bir görev ' +
+      'listesinde tut; aynı adımı ikinci kez yapıyorsan planını kaybetmişsin demektir, ' +
+      'yeniden okumak yerine hemen uygula ve commit et. Tüm alanı taramayı bitirmeden ' +
+      'ilk küçük düzeltmeyi commit et — ilerleme diske yazılırsa bağlam kısalsa bile kaybolmaz.',
     // Parallel lanes push while `main` moves. A PR whose head conflicts with
     // main gets **no CI run at all** — GitHub fires no check-run for a
     // CONFLICTING head, and `gh pr checks` shows only an unrelated failing

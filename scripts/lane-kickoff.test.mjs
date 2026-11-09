@@ -74,6 +74,18 @@ test("the kickoff tells the lane to rebase onto origin/main before opening the P
   assert.match(prompt, /CONFLICTING/);
 });
 
+// The bug this guards (#484): a lane that re-reads its whole brief every turn
+// is thrashing — condensation drops the plan faster than the lane can act, so
+// the agent restarts from the top (one lane read its 67 KB brief 21 times in
+// 80 minutes and made no commit). The prompt must name the cycle and the fix:
+// read once, keep a task list, commit the first small fix.
+test("the kickoff warns the lane against re-reading its brief and losing the plan", () => {
+  const text = kickoff("infra", lane, {});
+  assert.match(text, /BAĞLAM DİSİPLİNİ/);
+  assert.match(text, /BİR KEZ oku/);
+  assert.match(text, /commit et/);
+});
+
 // The bug this guards (#453): a lane whose sandbox is gone but whose PR is red
 // used to wait forever — its own red PR froze it, because an open PR always read
 // as "in flight". The autopilot now re-spawns it with `redPr`, and the prompt
