@@ -10,26 +10,26 @@ import createMiddleware from "next-intl/middleware";
  * document navigation. Verified against the *real* middleware driven with the
  * app's own `src/i18n/routing.ts`, the emitted header is:
  *
- *   NEXT_LOCALE=de; Path=/; SameSite=lax
+ *   NEXT_LOCALE=de; Path=/; Secure; SameSite=lax
  *
- * — no `Secure`, no `HttpOnly`. `Secure` is the gap: production is HTTPS-only
- * (HSTS `includeSubDomains; preload`), so the value is not exposed on the wire
- * today, but a redirect that drops to HTTP — or a future mixed-content embed —
- * would send the visitor's locale choice in the clear. Every other cookie the
- * app writes carries `Secure` in production (the Supabase session cookie and the
- * OAuth-intent cookie in `session-cookie-flags.test.ts`, the consent cookie in
- * `consent-browser.ts`), so this one is inconsistent.
+ * `Secure` was the gap: production is HTTPS-only (HSTS `includeSubDomains;
+ * preload`), so the value was not exposed on the wire, but a redirect that drops
+ * to HTTP — or a mixed-content embed — would have sent the visitor's locale
+ * choice in the clear, while every other cookie the app writes carried `Secure`
+ * in production. LANE-İÇERİK closed it by adding
+ * `localeCookie: { secure: process.env.NODE_ENV === "production" }` to
+ * `defineRouting` (#469/#498); the gate below now enforces it.
  *
- * Why not `HttpOnly` (the issue asks to confirm): the language switcher writes
- * this cookie from JavaScript. `src/components/layout/site-header.tsx` renders
- * `<Link … locale={code}>`, and `next-intl`'s `BaseLink` calls `syncLocaleCookie`
- * on click, which does `document.cookie = "NEXT_LOCALE=…"`. The client does not
- * *read* the cookie, but it *writes* it, and `document.cookie` cannot set
- * `HttpOnly` — so the flag is not a server-side one-liner; the client write path
- * has to change first. `Secure` has no such conflict.
+ * Why not `HttpOnly`: the language switcher writes this cookie from JavaScript.
+ * `src/components/layout/site-header.tsx` renders `<Link … locale={code}>`, and
+ * `next-intl`'s `BaseLink` calls `syncLocaleCookie` on click, which does
+ * `document.cookie = "NEXT_LOCALE=…"`. The client does not *read* the cookie,
+ * but it *writes* it, and `document.cookie` cannot set `HttpOnly` — so the flag
+ * is not a server-side one-liner; the client write path would have to change
+ * first. `Secure` has no such conflict.
  *
- * `src/i18n/routing.ts` is owned by LANE-İÇERİK; this lane only reads it and
- * proves the finding. The owner fixes it, then the `todo` below is removed.
+ * `src/i18n/routing.ts` is owned by LANE-İÇERİK; this lane reads it and proves
+ * the behaviour.
  */
 
 type Routing = Parameters<typeof createMiddleware>[0];
@@ -127,18 +127,14 @@ test("the production drive detects a Secure locale cookie (self-test)", async ()
 });
 
 // ---------------------------------------------------------------------------
-// 3. The finding. In production the cookie must be `Secure`. `todo` while the
-//    gap is open (LANE-İÇERİK); the owner adds `localeCookie: { secure: … }` to
-//    `defineRouting` and this passes on its own, ready to be promoted to a gate.
+// 3. In production the cookie must be `Secure`. LANE-İÇERİK added
+//    `localeCookie: { secure: process.env.NODE_ENV === "production" }` to
+//    `defineRouting` (#469/#498), so this is a gate.
 // ---------------------------------------------------------------------------
 
-test(
-  "in production the locale cookie is Secure",
-  { todo: "LANE-İÇERİK: add `localeCookie: { secure: true }` (production) to defineRouting" },
-  async () => {
-    const cookies = localeCookies(await loadRouting("production", "prod"), "/de/blog");
-    const cookie = nextLocaleCookie(cookies);
-    assert.ok(cookie, "the middleware no longer sets NEXT_LOCALE on a document navigation");
-    assert.match(cookie, /;\s*Secure\b/i, `NEXT_LOCALE is not Secure in production: ${cookie}`);
-  },
-);
+test("in production the locale cookie is Secure", async () => {
+  const cookies = localeCookies(await loadRouting("production", "prod"), "/de/blog");
+  const cookie = nextLocaleCookie(cookies);
+  assert.ok(cookie, "the middleware no longer sets NEXT_LOCALE on a document navigation");
+  assert.match(cookie, /;\s*Secure\b/i, `NEXT_LOCALE is not Secure in production: ${cookie}`);
+});
