@@ -19,6 +19,11 @@ import {
   resolveAuthDestination,
 } from "./auth-routing";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
+import { clientIp } from "@/features/abuse/request-context";
+import {
+  passwordResetThrottle,
+  signInThrottle,
+} from "./auth-rate-limits";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import { redirectLocalized } from "@/i18n/redirect";
 import { getLocalePrefix } from "@/i18n/routing";
@@ -32,6 +37,18 @@ import {
 const invalidForm: SignInFormState = {
   status: "error",
   message: "invalid",
+};
+
+// A throttled credential call answers with the same generic failure as a rejected
+// one, so a scripted caller cannot confirm from the response that it tripped a
+// limit (mirrors the feedback/sales actions).
+const throttledSignIn: SignInFormState = {
+  status: "error",
+  message: "signInFailed",
+};
+const throttledReset: SignInFormState = {
+  status: "error",
+  message: "resetRequestFailed",
 };
 
 // Turnstile renders its widget inside the form and writes the token into this
@@ -121,6 +138,16 @@ export async function signIn(
   });
 
   if (!result.success) return invalidForm;
+
+  // Throttle before the credential check. Per client address and per submitted
+  // address, so neither a shared origin nor one account can be guessed without
+  // limit — the captcha is not a substitute on the hosted project (#418 §7).
+  if (!signInThrottle.address.check(`ip:${await clientIp()}`).ok) {
+    return throttledSignIn;
+  }
+  if (!signInThrottle.email.check(`email:${result.data.email}`).ok) {
+    return throttledSignIn;
+  }
 
   const supabase = await createSupabaseServerClient({
     allowCookieWrites: true,
@@ -310,6 +337,15 @@ export async function requestPasswordReset(
   });
 
   if (!result.success) return invalidForm;
+
+  // Throttle before the mail fan-out. Per client address and per submitted
+  // address, so neither one origin nor one victim mailbox can be flooded (#418 §7).
+  if (!passwordResetThrottle.address.check(`ip:${await clientIp()}`).ok) {
+    return throttledReset;
+  }
+  if (!passwordResetThrottle.email.check(`email:${result.data.email}`).ok) {
+    return throttledReset;
+  }
 
   const supabase = await createSupabaseServerClient({
     allowCookieWrites: true,
