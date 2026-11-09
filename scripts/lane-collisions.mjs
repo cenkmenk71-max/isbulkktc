@@ -17,6 +17,7 @@
  * Usage: node scripts/lane-collisions.mjs
  */
 
+import { pathToFileURL } from "node:url";
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
@@ -215,6 +216,6 @@ function main() {
 }
 
 // Only run when invoked directly, so `laneFromBranch` stays importable in tests.
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
 }

@@ -25,6 +25,7 @@
 //   SUPABASE_PROJECT_REF   default the project this repository targets.
 //   DRY_RUN=1              validate without writing.
 
+import { pathToFileURL } from "node:url";
 import { evaluateTurnstileSecret, verifyCaptchaLive } from "./verify-auth-config.mjs";
 
 const SUPABASE_API = "https://api.supabase.com/v1";
@@ -174,6 +175,6 @@ async function main() {
   process.exitCode = 1;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await main();
 }

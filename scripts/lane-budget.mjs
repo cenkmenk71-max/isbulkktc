@@ -45,6 +45,8 @@
  * every conversation, not only the lanes.
  */
 
+import { pathToFileURL } from "node:url";
+
 /** User settings document: reads and writes the condenser. */
 export const CONDENSER_API = 'https://app.all-hands.dev/api/v1/settings';
 /** Org app settings document: the only place `max_budget_per_task` persists. */
@@ -177,7 +179,7 @@ async function main() {
 }
 
 // Only run when executed directly; a test may import the pure helpers above.
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
     console.error(error.message);
     process.exit(1);

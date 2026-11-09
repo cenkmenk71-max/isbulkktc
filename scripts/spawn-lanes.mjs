@@ -18,7 +18,7 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { kickoff } from './lane-kickoff.mjs';
@@ -111,6 +111,6 @@ async function main() {
 }
 
 // Only run when invoked directly, so the module stays importable in tests.
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await main();
 }
