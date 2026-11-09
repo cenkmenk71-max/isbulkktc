@@ -311,3 +311,51 @@ dosyalarıydı (devir #210).
 kapı**. "Report a visual regression" advisory uyarı adımı silindi; diff
 artefaktlarını yükleyen adım `failure()` koşuluna alındı (kapı kırmızı olunca
 kanıt kalır).
+
+### Tur — devir kuyruğu (#306, #428, #188, #292, #385, #447, #309, #386)
+
+**Kapsam.** LANE-INFRA'ya devredilen sekiz issue (hepsi sahip olunan yollarda:
+`scripts/**`, `.github/**`, `package.json`, bu dosya) sırayla alındı, kanıtı
+doğrulandı, düzeltildi, test edildi.
+
+**Yapılanlar.**
+
+1. **#306 — doğrudan-çalıştırma koruması.** Sekiz script'te kırılgan
+   `import.meta.url === \`file://${process.argv[1]}\`` yerine
+   `pathToFileURL(process.argv[1]).href` karşılaştırması. Yol içinde boşluk/özel
+   karakter/Windows sürücü harfi olduğunda eski biçim `main()`'i hiç çalıştırmaz
+   (sessiz no-op); yeni biçim yolu doğru yüzde-kodlar. Dört script zaten
+   sağlamdı, dokunulmadı.
+2. **#428 — lane-collisions CI'a bağlandı.** `static` job'ına `pull-requests:
+   read` izni + `node scripts/lane-collisions.mjs` adımı. `gh` okuması
+   başarısızsa script artık **yüksek sesle** sıfırdan farklı çıkar (eskiden
+   sessizce "çakışma yok" derdi — kapının önlemek istediği tam da bu yanlış
+   yeşildi).
+3. **#188 — stale `package-lock.json` kaldırıldı.** Paket yöneticisi bun
+   (`bun.lock`); `npm ci` `bun.lock`'a karşı zaten başarısız. İkinci, bayat
+   manifest Dependabot'un denetlediği tek lockfile'dı. Dosya silindi +
+   `.gitignore`'a eklendi; `.github/dependabot.yml` ekosistemi `bun`'a çevrildi.
+4. **#292 + #385 — `indexing:verify` + `%DAYS%` kapısı.** `package.json`'a
+   `indexing:verify` script'i; `check-frontend-source.mjs`'teki `%DAYS%`
+   iddiası hem eski `String(selectedDuration)` hem yerel-duyarlı
+   `Intl.NumberFormat(locale).format(...)` biçimini kabul edecek şekilde
+   genişletildi (LANE-TASARIM'ın `fa` rakam düzeltmesi kapıya takılmasın).
+5. **#447 — ilçe görsel bütçesi.** `check-frontend-source.mjs` ilçe hero
+   görsellerini gevşek 9 MB yerine **500 KB** ile denetler. Negatif test: 500 KB
+   üstü görselde kapı kırmızı.
+6. **#309 — IndexNow anahtarı.** Yeni `scripts/indexnow-key.mjs`
+   (`readIndexNowKey`) anahtarı **ad==gövde** eşleşmesiyle seçer; `submit-
+   indexnow.mjs` ve `verify-indexing.mjs` bunu kullanır. Eski `entries.find(...)`
+   dosya sistemi sırasına güvenip `security.txt`/`ads.txt` gibi eşleşen bir
+   `.txt`'i sessizce anahtar sanabiliyordu.
+7. **#386 — sahipsiz `src/server/email/**`.** Bu dosyadaki LANE-URUN sahiplik
+   satırına eklendi; `lane-collisions.test.mjs`'e bu boşluğun geri açılmasını
+   engelleyen ratchet testi.
+
+**Çalıştırılan kontroller.** `bun run lint`, `typecheck`,
+`check:frontend-source`, `test:unit` (875 test), `test:security` (163),
+`test:integration` — hepsi yeşil. `node scripts/lane-collisions.mjs` canlı
+API'ye karşı 0 çakışma. Yeni `indexnow-key.test.mjs` 5/5.
+
+**Canlıya dokundu mu:** hayır. Hiçbir Supabase/Vercel yazımı yok; yalnız kaynak
+ve CI yapılandırması.
