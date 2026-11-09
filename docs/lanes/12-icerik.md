@@ -649,7 +649,7 @@ lint ✅ · typecheck ✅ · check:frontend-source ✅ · test:unit 887 pass / 0
 
 ## Tur 10 — mikro-denetim: #418 §6 gizlilik politikası pazarlama çerezlerini belgelemiyor (2026-11-09)
 
-**PR:** (bu PR) · **Issue:** #418 §6 (çerez denetimi; sahibin en öncelikli maddesi) · **Branch:** `lane/icerik`
+**PR:** #507 · **Issue:** #418 §6 (çerez denetimi; sahibin en öncelikli maddesi) · **Branch:** `lane/icerik`
 
 ### Bulgu
 
@@ -719,7 +719,7 @@ lint ✅ · typecheck ✅ · check:frontend-source ✅ · test:unit 893 pass / 0
 ### Rapor (00-orchestration formatı)
 
 ```
-Lane: icerik            Branch: lane/icerik            PR: (bu PR)
+Lane: icerik            Branch: lane/icerik            PR: #507
 Değişen dosyalar: src/messages/{tr,en,ru,el,fa,de}.json,
   src/i18n/message-catalogs.test.ts, docs/lanes/12-icerik.md
 Çalıştırılan kontroller:
