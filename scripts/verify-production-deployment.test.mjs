@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, mkdtempSync, rmSync, writeFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { initialVercelState, parsePositiveInt } from "./verify-production-deployment.mjs";
+import {
+  initialVercelState,
+  isSuperseded,
+  parsePositiveInt,
+} from "./verify-production-deployment.mjs";
 
 test("a token that fails to resolve is not reported as 'not set'", () => {
   // Set but unreachable (bad token, unknown team slug, API blip): the old code
@@ -84,4 +88,115 @@ test("the direct-run guard fires even when the script path holds a space", () =>
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+/**
+ * Run the script in a throwaway dir with a fake `git` on PATH whose
+ * `ls-remote origin refs/heads/main` reports `tipSha`. `--expect`/`--tip` are
+ * pinned to `expectedSha`, the poll is capped, and no Vercel token is set so the
+ * HTTP channel (pointed at a closed port) is the only one — meaning the run can
+ * only ever end by deadline or by the superseded skip.
+ */
+function runWithFakeGit({ expectedSha, tipSha }) {
+  const source = fileURLToPath(
+    new URL("./verify-production-deployment.mjs", import.meta.url),
+  );
+  const dir = mkdtempSync(join(tmpdir(), "verify-tip-"));
+  try {
+    const copy = join(dir, "verify-production-deployment.mjs");
+    cpSync(source, copy);
+
+    const fakeGit = join(dir, "git");
+    writeFileSync(
+      fakeGit,
+      [
+        "#!/bin/sh",
+        'if [ "$1" = "ls-remote" ]; then',
+        `  echo "${tipSha}\trefs/heads/main"`,
+        "  exit 0",
+        "fi",
+        "exit 1",
+      ].join("\n"),
+    );
+    chmodSync(fakeGit, 0o755);
+
+    let code = 0;
+    let output = "";
+    try {
+      output = execFileSync(
+        process.execPath,
+        [
+          copy,
+          "--expect",
+          expectedSha,
+          "--tip",
+          expectedSha,
+          // A closed port fails the HTTP channel immediately (connection
+          // refused), so the poll does not wait on a request timeout.
+          "--url",
+          "http://127.0.0.1:1",
+        ],
+        {
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            // Put the fake `git` first so `readRemoteTip` finds it.
+            PATH: `${dir}:${process.env.PATH}`,
+            GITHUB_SHA: "",
+            BRANCH_TIP_SHA: "",
+            VERCEL_TOKEN: "",
+            DEPLOY_TIMEOUT_SEC: "6",
+            DEPLOY_POLL_SEC: "1",
+            DEPLOY_TIP_REFRESH_SEC: "1",
+          },
+        },
+      );
+    } catch (error) {
+      code = error.status;
+      output = `${error.stdout ?? ""}${error.stderr ?? ""}`;
+    }
+    return { code, output };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test("a tip that advances mid-run makes the poll skip instead of failing", () => {
+  // The bug from issue #427: `--tip` is read once up front, but the loop polls
+  // for up to 15 minutes. When a merge lands on `main` mid-run, the production
+  // alias moves to the newer commit; the stale tip means the run never sees
+  // "superseded" and paints a healthy site red. Here the fake remote tip is a
+  // different commit from `--expect`, which is exactly the mid-run state.
+  const { code, output } = runWithFakeGit({
+    expectedSha: "1111111111111111111111111111111111111111",
+    tipSha: "2222222222222222222222222222222222222222",
+  });
+
+  assert.equal(code, 0, output);
+  assert.match(output, /superseded by `22222222`/);
+  // The skip must come from the in-loop refresh, not the up-front check: the
+  // up-front `--tip` equals `--expect`, so only a live re-read can skip here.
+  assert.doesNotMatch(output, /FAIL/);
+});
+
+test("a tip that never moves still fails loudly when the commit does not promote", () => {
+  // Guards against over-correcting: if the remote tip stays put, the run must
+  // still report the real failure rather than skip everything.
+  const sha = "3333333333333333333333333333333333333333";
+  const { code, output } = runWithFakeGit({ expectedSha: sha, tipSha: sha });
+
+  assert.equal(code, 1, output);
+  assert.match(output, /FAIL/);
+  assert.doesNotMatch(output, /superseded/);
+});
+
+test("isSuperseded treats a moved tip as superseded and an unmoved one as not", () => {
+  const expected = "aaaa111111111111111111111111111111111111";
+  assert.equal(isSuperseded(expected, expected), false);
+  // Abbreviated tip that is a prefix of the expected commit is the same commit.
+  assert.equal(isSuperseded(expected, "aaaa111"), false);
+  // A genuinely newer tip on the branch.
+  assert.equal(isSuperseded(expected, "bbbb222222222222222222222222222222222222"), true);
+  // Unknown tip must not trigger a skip.
+  assert.equal(isSuperseded(expected, ""), false);
 });
