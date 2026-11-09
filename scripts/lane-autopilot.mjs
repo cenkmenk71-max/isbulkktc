@@ -35,9 +35,10 @@ import { kickoff } from './lane-kickoff.mjs';
 import { reapStalledSandboxes } from './reap-stalled-sandboxes.mjs';
 import {
   carriedAttempts,
+  deadConversationLanes,
   failedRequiredChecks,
   hasLabelledWork,
-  isCapacityError,
+  isInfraRejection,
   nextConversationAction,
   prCapacity,
   workSignature,
@@ -299,14 +300,19 @@ async function runningSandboxes() {
   return (body.items ?? []).filter((s) => s.status === 'RUNNING');
 }
 
+/** Every conversation, newest first — one fetch the pass derives several views from. */
+async function allConversations() {
+  const { ok, body } = await api('/app-conversations/search?limit=50');
+  if (!ok || !body) return [];
+  return body.items ?? [];
+}
+
 /**
  * Conversations whose sandbox is running but whose agent is not busy — the
  * ones a new task can be sent to without creating a sandbox.
  */
-async function idleConversations() {
-  const { ok, body } = await api('/app-conversations/search?limit=50');
-  if (!ok || !body) return [];
-  return (body.items ?? []).filter(
+function idleConversations(conversations) {
+  return (conversations ?? []).filter(
     (c) =>
       c.sandbox_status === 'RUNNING' &&
       !['running'].includes(String(c.execution_status ?? '')),
@@ -318,10 +324,8 @@ async function idleConversations() {
  * not create one, so it costs no quota — the third way to keep working on a
  * quota-exhausted day, after reuse and before a fresh sandbox.
  */
-async function pausedConversations() {
-  const { ok, body } = await api('/app-conversations/search?limit=50');
-  if (!ok || !body) return [];
-  return (body.items ?? []).filter((c) => c.sandbox_status === 'PAUSED');
+function pausedConversations(conversations) {
+  return (conversations ?? []).filter((c) => c.sandbox_status === 'PAUSED');
 }
 
 async function resumeSandbox(sandboxId) {
@@ -609,7 +613,7 @@ async function main() {
     }
   }
 
-  const [prs, blocked, handoffs, issues, tasks, sandboxes, idle, paused] =
+  const [prs, blocked, handoffs, issues, tasks, sandboxes, conversations] =
     await Promise.all([
       Promise.resolve(openPullRequests()),
       Promise.resolve(blockedIssues()),
@@ -617,9 +621,24 @@ async function main() {
       Promise.resolve(openIssues()),
       startTasks(),
       runningSandboxes(),
-      idleConversations(),
-      pausedConversations(),
+      allConversations(),
     ]);
+  const idle = idleConversations(conversations);
+  const paused = pausedConversations(conversations);
+
+  // Self-heal a budget poisoned by an outage before deciding anything: a lane
+  // whose last conversation died without working never actually spent its
+  // attempts (issue #442). Deleting the entry (not just zeroing the count) also
+  // drops the stale lastError/work, so the lane restarts clean. This must run
+  // before the decisions so every healed lane — including ones this pass defers —
+  // starts from a clean count. A dry run still heals in memory (so its preview is
+  // truthful) but does not write, keeping it side-effect-free.
+  const healed = deadConversationLanes(state, conversations);
+  if (healed.length > 0) {
+    for (const name of healed) delete state[name];
+    console.log(`healed poisoned budgets (conversation died, 0 tokens): ${healed.join(', ')}`);
+    if (!dryRun) saveState(state);
+  }
 
   const branches = execFileSync('git', ['branch', '-r'], { encoding: 'utf8' })
     .split('\n')
@@ -633,9 +652,9 @@ async function main() {
   // counting only start tasks made a busy lane look idle and the pass asked for
   // a fresh sandbox it did not need.
   const busyConversations = new Set(
-    (await api('/app-conversations/search?limit=50')).body?.items
-      ?.filter((c) => String(c.execution_status ?? '') === 'running')
-      .map((c) => String(c.title ?? '').replace(/^LANE-/, '')) ?? [],
+    (conversations ?? [])
+      .filter((c) => String(c.execution_status ?? '') === 'running')
+      .map((c) => String(c.title ?? '').replace(/^LANE-/, '')),
   );
   const working = new Set([
     ...tasks
@@ -849,16 +868,17 @@ async function main() {
       await new Promise((r) => setTimeout(r, 4000));
       const result = await confirm(taskId);
 
-      // A capacity rejection is the platform's limit, not the lane's failure.
-      // Do not spend an attempt on it, and stop the pass: if the quota is
-      // exhausted, the remaining lanes will be refused too.
-      if (result.status === 'ERROR' && isCapacityError(result.detail)) {
-        console.error(`  ${d.name}: no capacity — ${result.detail}`);
+      // An infrastructure rejection (quota, or the model closed to the account)
+      // is the platform's limit, not the lane's failure. Do not spend an attempt
+      // on it, and stop the pass: a model-access or quota refusal will refuse the
+      // remaining lanes too.
+      if (result.status === 'ERROR' && isInfraRejection(result.detail)) {
+        console.error(`  ${d.name}: infra rejection — ${result.detail}`);
         entry.lastError = result.detail;
         entry.work = d.context?.work;
         entry.updatedAt = new Date().toISOString();
         state[d.name] = entry;
-        console.error('  stopping this pass: no sandbox capacity');
+        console.error('  stopping this pass: infrastructure rejection');
         break;
       }
 
