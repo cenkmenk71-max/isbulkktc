@@ -15,7 +15,7 @@
 
 import { execFileSync } from 'node:child_process';
 
-import { redWorkflowsOnMain } from './system-health-core.mjs';
+import { classifyRedRuns, redRunsOnMain } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
 const asJson = process.argv.includes('--json');
@@ -29,6 +29,23 @@ function gh(args) {
         process.env.GITHUB_PERSONAL_ACCESS_TOKEN ?? process.env.GH_TOKEN,
     },
   }).trim();
+}
+
+/**
+ * How many jobs a run actually started.
+ *
+ * A scheduled run GitHub reports as failed but never picked up has zero jobs.
+ * Returns `null` when the lookup fails so the caller treats the run as real
+ * rather than silently dropping a genuine red.
+ */
+function jobCountOf(runId) {
+  try {
+    return Number(
+      gh(['api', `repos/${REPO}/actions/runs/${runId}/jobs`, '--jq', '.total_count']),
+    );
+  } catch {
+    return null;
+  }
 }
 
 const findings = [];
@@ -119,6 +136,11 @@ else if (stalled.length === 0 && stuck.length === 0) {
 // a single failing run stays the newest run of its own name on `main` forever
 // and the check would read its own failure as "main CI red" every time — a
 // gate that can never go green, hiding the real red behind it.
+//
+// A red run is split by whether it actually ran a job. GitHub's scheduler
+// occasionally marks a run `failure` without ever starting one (zero jobs, no
+// logs) — a transient hiccup that must warn, not fail. Reading a job count needs
+// the run id, so the query keeps `databaseId`.
 const branchRuns = JSON.parse(
   gh([
     'run',
@@ -128,14 +150,26 @@ const branchRuns = JSON.parse(
     '--limit',
     '100',
     '--json',
-    'name,conclusion,status,createdAt',
+    'name,conclusion,status,createdAt,databaseId',
   ]),
 );
-const red = redWorkflowsOnMain(branchRuns);
+const redRuns = redRunsOnMain(branchRuns).map((run) => ({
+  ...run,
+  // 0 jobs = the run never started (glitch). `null` = the lookup failed, which
+  // `classifyRedRuns` treats as real so a red is never silently dropped.
+  jobCount: jobCountOf(run.databaseId),
+}));
+const { real: red, glitches } = classifyRedRuns(redRuns);
 if (branchRuns.length === 0) {
   note('warn', 'main CI', 'no runs found on main');
 } else if (red.length > 0) {
   note('fail', 'main CI', `${red.length} workflow(s) red on main: ${red.join(', ')}`);
+} else if (glitches.length > 0) {
+  note(
+    'warn',
+    'main CI',
+    `${glitches.length} transient 0-job run(s) on main (GitHub glitch, not a real failure): ${glitches.join(', ')}`,
+  );
 } else {
   note('ok', 'main CI', `every workflow on main is green`);
 }

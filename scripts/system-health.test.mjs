@@ -4,8 +4,10 @@ import test from "node:test";
 
 import {
   HEALTH_WORKFLOW,
+  classifyRedRuns,
   failingWorkflows,
   newestRunPerWorkflow,
+  redRunsOnMain,
   redWorkflowsOnMain,
 } from "./system-health-core.mjs";
 
@@ -145,4 +147,95 @@ test("the excluded name matches the workflow file, so a rename cannot slip past"
   );
   const declared = workflow.match(/^name:\s*(.+?)\s*$/m)?.[1];
   assert.equal(declared, HEALTH_WORKFLOW);
+});
+
+// ---------------------------------------------------------------------------
+// redRunsOnMain / classifyRedRuns — a 0-job GitHub glitch is not "main CI red"
+// ---------------------------------------------------------------------------
+
+// The bug this guards: GitHub's scheduler sometimes reports a scheduled run as
+// `failure` without ever starting a job (zero jobs, no logs). Counting that as a
+// red on `main` made the gate fail on a GitHub hiccup, and the false red buried a
+// real one in the same report. Only a red run that actually ran a job is real.
+
+test("redRunsOnMain keeps the run objects so a job count can be read", () => {
+  const redRuns = redRunsOnMain([
+    {
+      name: "Dispatch web push",
+      status: "completed",
+      conclusion: "failure",
+      createdAt: "2026-01-02T00:00:00Z",
+      databaseId: 12345,
+    },
+  ]);
+  assert.equal(redRuns.length, 1);
+  assert.equal(redRuns[0].name, "Dispatch web push");
+  assert.equal(redRuns[0].databaseId, 12345);
+});
+
+test("redRunsOnMain still excludes the health check's own workflow", () => {
+  const redRuns = redRunsOnMain([
+    {
+      name: "System health",
+      status: "completed",
+      conclusion: "failure",
+      createdAt: "2026-01-02T00:00:00Z",
+      databaseId: 1,
+    },
+    {
+      name: "Gate",
+      status: "completed",
+      conclusion: "failure",
+      createdAt: "2026-01-01T00:00:00Z",
+      databaseId: 2,
+    },
+  ]);
+  assert.deepEqual(
+    redRuns.map((run) => run.name),
+    ["Gate"],
+  );
+});
+
+test("a red run with zero jobs is a glitch, not a real failure", () => {
+  assert.deepEqual(
+    classifyRedRuns([{ name: "Dispatch web push", jobCount: 0 }]),
+    { real: [], glitches: ["Dispatch web push"] },
+  );
+});
+
+test("a red run that started a job is a real failure", () => {
+  assert.deepEqual(classifyRedRuns([{ name: "Verify production deployment", jobCount: 1 }]), {
+    real: ["Verify production deployment"],
+    glitches: [],
+  });
+});
+
+test("a red run whose job count is unknown stays real, so a red is never dropped", () => {
+  // The lookup failed (`null`). Fail-safe: a check must never turn a red into a
+  // green just because it could not look.
+  assert.deepEqual(classifyRedRuns([{ name: "Gate", jobCount: null }]), {
+    real: ["Gate"],
+    glitches: [],
+  });
+  assert.deepEqual(classifyRedRuns([{ name: "Gate" }]), {
+    real: ["Gate"],
+    glitches: [],
+  });
+});
+
+test("a real red and a glitch are separated, not merged", () => {
+  // This is the point of the whole change: the glitch must not hide the real
+  // red, and the real red must still be loud.
+  assert.deepEqual(
+    classifyRedRuns([
+      { name: "Dispatch web push", jobCount: 0 },
+      { name: "Verify production deployment", jobCount: 2 },
+    ]),
+    { real: ["Verify production deployment"], glitches: ["Dispatch web push"] },
+  );
+});
+
+test("no red runs classifies to nothing on either side", () => {
+  assert.deepEqual(classifyRedRuns([]), { real: [], glitches: [] });
+  assert.deepEqual(classifyRedRuns(undefined), { real: [], glitches: [] });
 });
