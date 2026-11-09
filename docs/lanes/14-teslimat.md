@@ -195,3 +195,44 @@ kapatıldı, canlı ölçüm yapıldı, bir bulgu LANE-INFRA'ya devredildi.
 **Merge kuyruğu (görev 1).** Açık PR'lar taze (hepsi <30 dk) ve hepsinde zorunlu `Quality, database and E2E` hâlâ koşuyor; #250 zorunlu `Database`'te gerçek pgTAP hatasıyla duruyor (auto-merge açık, doğru davranış). Bu turda merge edilebilir durumda bekleyen PR yoktu.
 
 **Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅, `test:unit` **650 test / 645 pass / 0 fail / 5 todo** (yeni: `prune-vercel-deployments.test.mjs` 8 test, `verify-production-deployment.test.mjs` +1).
+
+---
+
+## Tur 5 — 2026-11-09 (lane/teslimat)
+
+**Kapsam.** Atanmış açık issue **#427** (`lane:teslimat` + `agent:handoff`, LANE-OPERATÖR'ün
+PR #425 mikro-denetiminden) alındı: `verify-production-deployment` `main` ilerlediğinde
+kırmızı düşüyordu. Kanıt doğrulandı, kök neden düzeltildi, regresyon testleri eklendi,
+canlı ölçüm yapıldı.
+
+**Bulgular.**
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `scripts/verify-production-deployment.mjs` (eski `isSuperseded` çağrısı tek seferlik) | mantık / doğruluk | `--tip` workflow tarafından **başta bir kez** okunuyor; script 900 sn poll ediyor. Poll sürerken `main`'e merge düşerse `expected` artık tip değildir ama `isSuperseded` bunu göremez | poll döngüsünde tip tazelenmeli, yeni commit `main`i aldıysa koşu **atlamalı** | `main`'de kalıcı kırmızı gürültü (son 5 koşunun 3'ü kırmızı); operatörün sağlık kapısı her merge sonrası sahte alarm veriyor | **düzeltildi** (#427) + 3 regresyon testi |
+| 2 | `scripts/verify-production-deployment.mjs` (yeni `readRemoteTip`) | hata yolu / sınır girdi | `git ls-remote` çağrısı sınırsızdı; diğer bütün istekler `REQUEST_TIMEOUT_MS` ile sınırlı | çağrı da sınırlanmalı | Takılan bağlantı poll döngüsünü deadline'ın ötesine asabilir | **düzeltildi** (`timeout` + `SIGKILL`) |
+| 3 | `scripts/verify-production-deployment.mjs` (yeni `trackTip`) | sınır girdi / yapı | Workflow'un ilk `ls-remote`'u düşerse `--tip` boş kalır ve superseded-atlama sessizce kapanır | push koşusunda tip yine izlenmeli | Boş `--tip` ile #427'nin ta kendisi geri gelir | **düzeltildi** (`GITHUB_EVENT_NAME === "push"`) + 2 test |
+
+**Kanıt (bulgu 1).** Sahte `git` ile: `--expect 1111… --tip 1111…` (ikisi de aynı, yani
+baştaki kontrol ateşlemez) ve uzak tip `2222…` → **eski** script: deadline'a kadar poll
+edip `FAIL` (exit 1); **yeni** script: `skipped: 11111111 was superseded by 22222222`
+(exit 0). Regresyon testi eski script'e karşı **kırmızı**, yeni script'e karşı yeşil —
+yani test gerçekten hatayı pinliyor (stash ile doğrulandı).
+
+**Değişmez sözleşme korundu.** `workflow_dispatch` (`--tip` yok) manuel koşuda commit'i
+adıyla doğrular; canlı tip okuması yapmaz, superseded diye atlamaz. Bu, test 6 ile
+pinlendi (exit 1, `FAIL`, `superseded` yok).
+
+**Canlı ölçüm (görev 3).** 23:25Z: `main` = canlı = `bc767871` ✅. 23:38Z: `main` =
+canlı = `a1419963` ✅ (bu lane çalışırken bir merge düştü — #427'nin senaryosunun
+gerçek olduğunun kanıtı). Tam koşu `--expect a1419963` → exit 0, HTTP kanalı **ulaşılabilir**
+(Cloudflare bu kez 403 vermedi), 5/5 smoke route 200.
+
+**Merge kuyruğu (görev 1).** Açık PR'lar: #493 (lane/infra, `CLEAN`, tüm zorunlu
+kontroller yeşil) — **ama `.github/workflows/ci.yml` değiştiriyor → "iki fren" gereği
+merge edilmedi (insan)**. #501 (lane/icerik, `BLOCKED`, E2E 1/4 hâlâ koşuyor).
+Bu turda merge edilebilir durumda bekleyen PR yoktu.
+
+**Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅, `test:unit`
+**893 test / 891 pass / 0 fail / 2 todo** (yeni: `verify-production-deployment.test.mjs`
++5 test → toplam 9).
