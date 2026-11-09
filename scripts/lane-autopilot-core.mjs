@@ -235,6 +235,18 @@ export function diedWithoutWorking(conversation) {
  * human, not looping, so it must be left alone (the reaper treats it as active
  * for the same reason).
  *
+ * A lane whose branch has an **open PR** is never poisoned, whatever the three
+ * signals say. The conversation's own `pr_number`/`pull_requests` fields are the
+ * ones the platform fills in from the agent's summary, and they stay empty for a
+ * lane that opened its PR through `gh`/the API (the norm here) — so an
+ * established lane that is genuinely working its PR reads as "no PR" and the
+ * 45-minute ceiling fired on it. The dry run reported `would interrupt stalled
+ * LANE-infra` while LANE-infra held open PR #493, and interrupting it would have
+ * killed the agent mid-fix on live work. A branch with an open PR is the ground
+ * truth that work is in flight, so it overrides the guess; only a PR-less lane
+ * can be looping. The caller passes `openPrBranches` (the open PRs'
+ * `headRefName`), keyed against the lane's `lane/<name>` branch.
+ *
  * Only conversations titled `LANE-*` are considered: the guard governs the lane
  * team, so the operator's own conversation (or any other human-run one) is never
  * touched by it.
@@ -245,7 +257,7 @@ export function diedWithoutWorking(conversation) {
  * disabled the predicate returns nothing, as before.
  *
  * @param {Array<{execution_status?: string|null, created_at?: string, updated_at?: string, pr_number?: unknown, pull_requests?: unknown, title?: string|null}>} conversations
- * @param {{now?: number, maxIdleMs?: number, maxRuntimeMs?: number, noCommitMs?: number, commitsByLane?: Map<string, number>|Record<string, number>}} [options]
+ * @param {{now?: number, maxIdleMs?: number, maxRuntimeMs?: number, noCommitMs?: number, commitsByLane?: Map<string, number>|Record<string, number>, openPrBranches?: Iterable<string>}} [options]
  * @returns {Array<object>} the poisoned conversations, in input order
  */
 export function poisonedConversations(conversations, options = {}) {
@@ -255,7 +267,11 @@ export function poisonedConversations(conversations, options = {}) {
     maxRuntimeMs = 0,
     noCommitMs = 0,
     commitsByLane,
+    openPrBranches,
   } = options;
+  // Branches with an open PR, normalized once. A lane with one is working, so it
+  // is exempt from every poison signal below.
+  const openPrSet = new Set(openPrBranches ?? []);
   const idleLimit = Number.isFinite(maxIdleMs) && maxIdleMs > 0 ? maxIdleMs : 0;
   const runtimeLimit = Number.isFinite(maxRuntimeMs) && maxRuntimeMs > 0 ? maxRuntimeMs : 0;
   // The commit signal needs a commit map to read: without one (a caller that
@@ -279,6 +295,10 @@ export function poisonedConversations(conversations, options = {}) {
   for (const conversation of conversations ?? []) {
     const title = String(conversation?.title ?? '');
     if (!title.startsWith('LANE-')) continue;
+    // A lane with an open PR is working, not looping: the conversation's own
+    // PR fields stay empty when the PR was opened via `gh`/the API, so without
+    // this the ceiling fires on a lane that is fixing its PR. Exempt it.
+    if (openPrSet.size > 0 && openPrSet.has(`lane/${title.slice(5)}`)) continue;
     // `waiting_for_confirmation` is blocked on a human, not looping, and must be
     // left alone (the reaper treats it as active for the same reason).
     if (String(conversation?.execution_status ?? '') === 'waiting_for_confirmation') {
