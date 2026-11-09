@@ -6,23 +6,21 @@ import test from "node:test";
  * #418 §7 — the credential endpoints must carry their own abuse control.
  *
  * `signIn` and `requestPasswordReset` are the two endpoints #418 names under
- * "Rate limit: giriş denemesi, şifre sıfırlama talebi". Neither runs any
- * application-level throttle today, and the platform captcha is not a substitute:
- * the hosted project does not enforce one (see `docs/threat-model.md`, "Açık
- * bulgular"). A publishable key is enough to POST `/auth/v1/token?grant_type=password`
- * and `/auth/v1/recover` directly, so an unlimited password guess and an unlimited
- * reset-mail fan-out both live one HTTP call away. The server action adds no bound
- * on top of that, which is the same shape `anonymous-rpc-throttle.test.ts` closed
- * for the anonymous write RPCs.
+ * "Rate limit: giriş denemesi, şifre sıfırlama talebi". Neither ran any
+ * application-level throttle, and the platform captcha is not a substitute: the
+ * hosted project does not enforce one (see `docs/threat-model.md`, "Açık
+ * bulgular"). A publishable key was enough to POST
+ * `/auth/v1/token?grant_type=password` and `/auth/v1/recover` directly, so an
+ * unlimited password guess and an unlimited reset-mail fan-out both lived one
+ * HTTP call away. The server action adds no bound on top of that, which is the
+ * same shape `anonymous-rpc-throttle.test.ts` closed for the anonymous write RPCs.
  *
  * This suite pins the *presence* of a control in the action, the same contract the
  * feedback/sales actions already meet through `src/features/abuse/**`. It does not
  * pin the mechanism: any limiter reference satisfies it. Ordering (throttle before
- * the Supabase call) is not asserted here because no call is throttled yet; when
- * LANE-AUTH lands the control this becomes a gate and the `todo` is dropped.
- *
- * A `todo` documents the open finding without failing the run, so the layer stays
- * green while the gap is tracked (see `tests/security/README.md`).
+ * the Supabase call) is not asserted here; LANE-AUTH landed the control in
+ * `src/features/identity/auth-rate-limits.ts`, which both actions consult before
+ * the Supabase call.
  */
 
 const actionsPath = "src/features/identity/actions.ts";
