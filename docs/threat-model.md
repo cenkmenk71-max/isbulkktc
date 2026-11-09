@@ -282,32 +282,7 @@ issue açar.
    altındaki diğer tüm sır-okuyan modüller bu işareti taşıyor; eksik olan, yanlış
    bir istemci içe aktarımını derleme hatası yerine sessiz bir sızıntıya çevirir.
    Kanıt: `tests/security/client-boundary.test.ts` (`todo`).
-3. **İki `service_role`-only RPC'de gövde-içi rol guard'ı yok** (sahibi:
-   `supabase/**`, LANE-SUPABASE; devir **#298**). `list_engagement_recipients` ve
-   `opt_out_engagement` `service_role`'e grant'li ama gövdelerinde
-   `auth.role() <> 'service_role'` kontrolü yok; diğer altı `service_role`-only RPC
-   (push + outbox) bunu yapıyor. Birincil kontrol (`revoke … from public, anon,
-   authenticated`) yerinde ve pgTAP'te sabit, ama bir gün `anon`/`authenticated`'e
-   EXECUTE yanlışlıkla geri verilirse (bu depoda oldu) bu ikisinin ikinci savunma
-   hattı yok — `list_engagement_recipients` tam bir mailing-list dump'ıdır. Kanıt:
-   `tests/security/sql-hardening.test.ts` → "every service-role-only RPC re-checks
-   auth.role() in its own body" (`todo`).
-4. **`NEXT_LOCALE` çerezi `Secure` bayrağını taşımıyor** (sahibi:
-   `src/i18n/routing.ts`, LANE-İÇERİK). Yerel middleware her belge gezinmesinde
-   `Set-Cookie: NEXT_LOCALE=de; Path=/; SameSite=lax` yazıyor — `Secure` yok.
-   `HttpOnly` **eklenemez**: dil değiştirici bu çerezi istemciden yazıyor
-   (`src/components/layout/site-header.tsx` `<Link … locale={code}>` → next-intl
-   `syncLocaleCookie` → `document.cookie`), ve `document.cookie` `HttpOnly`
-   bayrağını **atayamaz** — yani sunucu tarafında tek satırlık bir ekleme değil,
-   önce istemci yazım yolunun değişmesi gerekir.
-   `Secure` için böyle bir çelişki yok. Üretim HTTPS-only (HSTS
-   `includeSubDomains; preload`) olduğu için değer bugün telde açıkta değil; ama
-   bir HTTP downgrade'i ya da mixed-content gömme aynı değeri düz metin gönderir.
-   Uygulamanın yazdığı diğer tüm çerezler (oturum, OAuth-intent, consent) üretimde
-   `Secure` taşıyor, yani bu çerez tutarsız. Kanıt:
-   `tests/security/locale-cookie-flags.test.ts` (`todo`; gerçek middleware, gerçek
-   `routing.ts` ile sürülür).
-5. **Kimlik uç noktalarında uygulama-içi hız sınırı yok** (sahibi:
+3. **Kimlik uç noktalarında uygulama-içi hız sınırı yok** (sahibi:
    `src/features/identity/**` -> LANE-AUTH). `signIn` (`actions.ts:111`) ve
    `requestPasswordReset` (`actions.ts:302`) doğrudan
    `signInWithPassword` / `resetPasswordForEmail` çağırıyor; `src/features/abuse/**`
@@ -329,6 +304,30 @@ issue açar.
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
 
+- **İki `service_role`-only RPC'de gövde-içi rol guard'ı yoktu** (sahibi:
+  `supabase/**`, LANE-SUPABASE; devir **#298**). `list_engagement_recipients` ve
+  `opt_out_engagement` `service_role`'e grant'liydi ama gövdelerinde
+  `auth.role() <> 'service_role'` kontrolü yoktu; bir gün `anon`/`authenticated`'e
+  EXECUTE yanlışlıkla geri verilirse (bu depoda oldu) ikinci savunma hattı
+  olmayacaktı — `list_engagement_recipients` tam bir mailing-list dump'ıdır.
+  LANE-SUPABASE `20261109000000_v4_engagement_rpc_role_guard.sql` ile iki
+  fonksiyonu da `raise … errcode '42501'` guard'ıyla yeniden yarattı (imzalar ve
+  service-role-only ACL değişmedi). `tests/security/sql-hardening.test.ts` →
+  "every service-role-only RPC re-checks auth.role() in its own body" artık
+  `todo` değil, kapı (#488 ile terfi etti); mutasyonla doğrulandı (guard
+  kaldırılınca kırmızı).
+- **`NEXT_LOCALE` çerezi `Secure` bayrağını taşımıyordu** (sahibi:
+  `src/i18n/routing.ts`, LANE-İÇERİK). Middleware her belge gezinmesinde
+  `Set-Cookie: NEXT_LOCALE=de; Path=/; SameSite=lax` yazıyordu — `Secure` yok.
+  `HttpOnly` **eklenemez**: dil değiştirici bu çerezi istemciden yazıyor
+  (`src/components/layout/site-header.tsx` `<Link … locale={code}>` → next-intl
+  `syncLocaleCookie` → `document.cookie`), ve `document.cookie` `HttpOnly`
+  bayrağını **atayamaz**. `Secure` için böyle bir çelişki yoktu. LANE-İÇERİK
+  (#469/#498) `defineRouting`'e
+  `localeCookie: { secure: process.env.NODE_ENV === "production" }` ekledi;
+  `tests/security/locale-cookie-flags.test.ts` → "in production the locale cookie
+  is Secure" artık `todo` değil, kapı; mutasyonla doğrulandı (seçenek kaldırılınca
+  kırmızı).
 - **Push endpoint'i üzerinden SSRF** (sahibi: LANE-URUN + LANE-SUPABASE; #273,
   devir #262). Kayıtlı bir ziyaretçi `endpoint`'e herhangi bir `https://` URL
   yazabiliyordu; cron worker (`/api/push/dispatch` -> `sendPushMessage` ->
