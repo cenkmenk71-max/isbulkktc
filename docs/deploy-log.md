@@ -171,6 +171,7 @@ context, not as a measurement.
 |---|---|---|---|---|
 | 2026-11-09T23:25Z | `bc767871` | `bc767871` | ✅ in sync | Direct `git ls-remote` + `build-info` read. No lag: the 2026-11-06 rate-limit oscillation (issue #319) is not reproducing this round. |
 | 2026-11-09T23:38Z | `a1419963` | `a1419963` | ✅ in sync | `main` advanced past `bc767871` (a merge landed while this lane worked). Full `verify-production-deployment.mjs --expect a1419963` run: exit 0, confirmed via HTTP, 5/5 smoke routes 200. The HTTP channel was **reachable** this time — Cloudflare did not 403 the runner, so the verdict came from `/api/build-info` rather than the Vercel API. |
+| 2026-11-09T23:45Z | `713d8fe` | `713d8fe` | ✅ in sync | **Merge record — PR #503** (this lane's #427 fix) merged by `app/github-actions` at 23:44:29Z, all required checks green including the `Quality, database and E2E` aggregator. Full `verify-production-deployment.mjs --expect 713d8fe` run: exit 0, confirmed via HTTP, 5/5 smoke routes 200. |
 
 ### Delivery health findings (2026-11-09)
 
