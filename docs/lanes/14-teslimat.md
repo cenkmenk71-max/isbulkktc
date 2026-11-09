@@ -231,8 +231,18 @@ gerçek olduğunun kanıtı). Tam koşu `--expect a1419963` → exit 0, HTTP kan
 **Merge kuyruğu (görev 1).** Açık PR'lar: #493 (lane/infra, `CLEAN`, tüm zorunlu
 kontroller yeşil) — **ama `.github/workflows/ci.yml` değiştiriyor → "iki fren" gereği
 merge edilmedi (insan)**. #501 (lane/icerik, `BLOCKED`, E2E 1/4 hâlâ koşuyor).
-Bu turda merge edilebilir durumda bekleyen PR yoktu.
 
-**Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅, `test:unit`
-**893 test / 891 pass / 0 fail / 2 todo** (yeni: `verify-production-deployment.test.mjs`
-+5 test → toplam 9).
+**Teslim edildi.** PR **#503** (bu düzeltme) tüm zorunlu kontroller yeşilken
+`app/github-actions` auto-merge ile **23:44:29Z'de merge edildi** (`main` =
+`713d8fe`). Canlı doğrulama: `--expect 713d8fe` → exit 0, HTTP kanalı, 5/5 smoke
+route 200. Merge kaydı `docs/deploy-log.md`'de (kural 4).
+
+**Not (kapsam dışı, LANE-INFRA sahibi).** Bu merge'i de yapan bot push'u
+`verify-production-deployment` workflow'unu **tetiklemedi** (varsayılan Actions
+token'ı ile push → `push` event yok; son `push` koşusu 15:54Z). Bu boşluk Tur 1'de
+zaten INFRA'ya devredildi; #427 düzeltmesi bu boşluğu kapatmaz, yalnız *koşan*
+işin yanlış kırmızıya düşmesini engeller.
+
+**Kapılar (rebase sonrası, `a141996` üzerine).** `lint` ✅, `typecheck` ✅,
+`check:frontend-source` ✅, `test:unit` **894 test / 892 pass / 0 fail / 2 todo**
+(yeni: `verify-production-deployment.test.mjs` +5 test → toplam 9).
