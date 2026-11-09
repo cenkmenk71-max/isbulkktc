@@ -57,6 +57,32 @@ test("waiting_for_confirmation is a human block, not a terminal state", () => {
   assert.deepEqual(stalled, []);
 });
 
+test("an interrupted (paused) conversation's sandbox is reclaimed", () => {
+  // An interrupt — the operator stopping a zombie, or a lane paused mid-run —
+  // leaves the conversation `paused` but its sandbox RUNNING. Counting `paused`
+  // as active stranded those sandboxes and kept the capacity deadlock (#218)
+  // alive; it is now a reclaimable state.
+  const stalled = selectStalledSandboxes(
+    [conversation("sbx-1", "paused", 30, "LANE-auth")],
+    { minIdleMs: 15 * MINUTE, now: NOW },
+  );
+  assert.deepEqual(sandboxIds(stalled), ["sbx-1"]);
+  assert.equal(stalled[0].status, "paused");
+});
+
+test("a sandbox with a live conversation is spared despite a paused one", () => {
+  // Same shared-sandbox guard as the idle case, now for `paused`: a paused old
+  // conversation must not drag a sandbox that a live conversation still owns.
+  const stalled = selectStalledSandboxes(
+    [
+      conversation("sbx-1", "paused", 40),
+      conversation("sbx-1", "running", 2),
+    ],
+    { minIdleMs: 15 * MINUTE, now: NOW },
+  );
+  assert.deepEqual(stalled, []);
+});
+
 test("a shared sandbox with a live conversation is spared despite an old terminal one", () => {
   // The lane refreshes its conversation on the same sandbox: an old errored
   // conversation and a live idle one coexist. The live one wins.

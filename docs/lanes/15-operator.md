@@ -352,3 +352,60 @@ temiz.
 **Doğrulama.** `gh api .../branches/main/protection` → tek context
 `Quality, database and E2E`; PR #478 rollup'ında bu isim (workflow `isbulkktc CI`)
 mevcut. Yani helper canlı veriyle eşleşiyor.
+
+---
+
+## Tur 3 — süresiz `running` zombisi kesilir + duraklatılmış sandbox geri alınır (2026-11-08)
+
+**İki arıza, tek kök sınıf: bir sinyal yanlış okunuyor.**
+
+**A) Autopilot hiçbir zaman `running` bir konuşmayı kesmiyordu.** `working` kümesi
+her `running` konuşmayı meşgul sayar ve `decide()` dalı var olan bir lane için
+`wait` döndürür. Dolayısıyla **döngüye giren** bir konuşma — aynı brief'i tekrar
+okuyup `git status` çalıştıran, hiç commit atmayan — `running`'den hiç çıkmaz,
+her geçişte atlanır ve sonsuza dek token yakar. Canlı kanıt: bir lane **13,5 saat**,
+**~180M prompt token**, **sıfır commit/PR**. Platform durdurmuyor; reaper ise
+yalnız zaten terminal konuşmaların sandbox'ını geri alıyor — yani hiçbir şey
+durdurmuyordu.
+
+**B) `paused` sandbox geri alınmıyordu.** Reaper'ın `ACTIVE_STATUSES`'i `paused`
+içeriyordu, o yüzden kesilmiş bir konuşmanın sandbox'ı **sonsuza dek** RUNNING
+kalıp bir bütçe slotunu tutuyordu (#218 sınıfı).
+
+**Çözüm.**
+
+- `scripts/lane-autopilot-core.mjs` → **saf** `stalledConversations(conversations,
+  {now, maxRuntimeMs})`: `LANE-*` başlıklı, `running`, `maxRuntimeMs`'ten eski ve
+  **hiç PR açmamış** konuşmaları döndürür. `maxRuntimeMs <= 0` bekçiyi kapatır
+  (boş/eksik eşik hiçbir şeyi kesmez — `approve-pending-runs`'u ısıran `""` tuzağı).
+  `pr_number` API'de **dizi** (`[]`) döner; boş dizi truthy olduğu için sayılır,
+  test edilmez.
+- `scripts/lane-autopilot.mjs` → geçişte bu konuşmaları `/interrupt` ile keser
+  (sandbox'ın kendi konuşma API'si: `conversation_url` + `session_api_key`), kesilen
+  id'leri `busyConversations`'tan çıkarır, dry-run'da yalnız önizler. Eşik:
+  `scripts/lanes.json` → `"maxConversationRuntimeMinutes": 120`.
+- `scripts/reap-stalled-sandboxes.mjs` → `TERMINAL_STATUSES` → **`RECLAIMABLE_STATUSES`**
+  = `{error, finished, stuck, paused}`; `paused` `ACTIVE_STATUSES`'ten çıkarıldı.
+
+**Neden 120 dk.** Ölçüldü: sağlıklı bir lane görevi ≤ ~60 dk sürüyor (E2E shard
+≤ 9,7 dk, en uzun lane turu ~45 dk). 120 dk, gerçek bir turu kesmeyecek kadar geniş
+ama 13,5 saatlik bir döngüyü ilk geçişte yakalayacak kadar dar.
+
+**Güvenlik sınırı.** Bekçi yalnız `LANE-*` başlıklı konuşmalara dokunur — operatörün
+kendi (veya insan eliyle çalışan herhangi bir) konuşmasını **kesmez**. `idle`
+konuşma zaten `running` değil; `waiting_for_confirmation` insan beklediği için
+dokunulmaz.
+
+**Test.** `lane-autopilot-core.test.mjs`'e 9 test (bütçe aşımı → kesilir; bütçe
+içi → değil; PR açmış → asla; yalnız `running`; yalnız `LANE-*`; eşik ≤0 kapatır;
+ayrıştırılamayan `created_at` atlanır; boş girdi; sıra korunur). `reap-stalled-sandboxes.test.mjs`'e 2 test
+(duraklatılmış konuşmanın sandbox'ı geri alınır; paylaşılan sandbox'ta canlı
+konuşma varsa dokunulmaz). Tüm script testleri **158/158**; `lint`/`syntax` temiz.
+
+**Doğrulama.** `node scripts/lane-autopilot.mjs --dry-run` → canlı durumla uyumlu:
+iki `running` lane 0,8 sa (bekçi dokunmaz), operatör konuşması (14,6 sa) başlık
+öneki olmadığı için hariç. Saat kayması yok (ortam saati 12:38 UTC).
+
+**Ders.** Yine "gösterge kimi ölçüyor?" sınıfı: `running` "iş sürüyor" demek
+**sanılıyordu**; oysa `running`, "bitmedi" demek — bazen "sonsuza dek bitmeyecek"
+demek. Bekçi, meşguliyeti *süreyle* çapraz kontrol eder.

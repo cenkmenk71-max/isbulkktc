@@ -42,6 +42,7 @@ import {
   isInfraRejection,
   nextConversationAction,
   prCapacity,
+  stalledConversations,
   workSignature,
 } from './lane-autopilot-core.mjs';
 
@@ -82,6 +83,13 @@ const MAX_OPEN_PRS = REGISTRY.maxOpenPRs ?? 0;
 // poisoned every lane's attempts the team recovers on its own instead of
 // staying frozen (issue #442). A lane that exhausts again simply re-parks.
 const EXHAUSTED_COOLDOWN_MS = (REGISTRY.exhaustedCooldownMinutes ?? 0) * 60_000;
+// How long a lane conversation may stay `running` before the pass treats it as
+// a stalled loop and interrupts it. A looping conversation never leaves
+// `running`, so it is skipped as "busy" every pass and spends tokens forever
+// (one ran 13.5 h / ~180M prompt tokens with no commit and no PR). 0 (absent)
+// disables the guard, so an unset threshold never interrupts anything.
+const MAX_CONVERSATION_RUNTIME_MS =
+  (REGISTRY.maxConversationRuntimeMinutes ?? 0) * 60_000;
 // The status checks that branch protection actually requires. An open PR is
 // normally "in flight" and its lane is left alone, but a PR whose *required*
 // check has failed is a dead end — its sandbox is gone, so nothing else will
@@ -338,6 +346,38 @@ function pausedConversations(conversations) {
 async function resumeSandbox(sandboxId) {
   const { ok } = await api(`/sandboxes/${sandboxId}/resume`, { method: 'POST' });
   return ok;
+}
+
+/**
+ * Interrupt a running lane conversation, ending its task.
+ *
+ * The interrupt lives on the sandbox's own conversation API, not the control
+ * plane, so it needs the conversation's `conversation_url` (which carries the
+ * sandbox host) and its per-conversation `session_api_key`. Both come from the
+ * search item; a conversation missing either cannot be interrupted and is
+ * reported so the caller can see it was skipped rather than silently ignored.
+ *
+ * Returns true when the sandbox accepted the interrupt.
+ */
+async function interruptConversation(conversation) {
+  const url = String(conversation?.conversation_url ?? '');
+  const sessionKey = String(conversation?.session_api_key ?? '');
+  if (!url || !sessionKey) return false;
+  const base = url.split('/api/conversations')[0];
+  try {
+    const response = await fetch(
+      `${base}/api/conversations/${conversation.id}/interrupt`,
+      {
+        method: 'POST',
+        headers: { 'X-Session-API-Key': sessionKey, 'Content-Type': 'application/json' },
+        body: '{}',
+        signal: AbortSignal.timeout(20000),
+      },
+    );
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -662,6 +702,31 @@ async function main() {
   const idle = idleConversations(conversations);
   const paused = pausedConversations(conversations);
 
+  // Break stalled loops before deciding: a `running` conversation older than the
+  // runtime budget that has opened no PR is a lane stuck in a loop, and it is
+  // counted as "working" every pass, so nothing ever re-evaluates it. Interrupt
+  // it here to stop the burn now; the sandbox it was holding is released and the
+  // reaper reclaims it on the next pass, when the lane restarts from a clean
+  // state. Excluded from `busyConversations` below so the lane is not skipped as
+  // still-busy on the stale status. A dry-run only previews it.
+  const stalledLanes = stalledConversations(conversations, {
+    maxRuntimeMs: MAX_CONVERSATION_RUNTIME_MS,
+  });
+  const interrupted = new Set();
+  if (dryRun && stalledLanes.length > 0) {
+    for (const conversation of stalledLanes) {
+      console.log(`  would interrupt stalled ${conversation.title} (${conversation.id})`);
+    }
+  } else if (stalledLanes.length > 0) {
+    for (const conversation of stalledLanes) {
+      const stopped = await interruptConversation(conversation);
+      if (stopped) interrupted.add(conversation.id);
+      console.log(
+        `  ${stopped ? 'interrupted' : 'could not interrupt'} stalled ${conversation.title} (${conversation.id})`,
+      );
+    }
+  }
+
   // Self-heal a budget poisoned by an outage before deciding anything: a lane
   // whose last conversation died without working never actually spent its
   // attempts (issue #442). Deleting the entry (not just zeroing the count) also
@@ -690,6 +755,7 @@ async function main() {
   const busyConversations = new Set(
     (conversations ?? [])
       .filter((c) => String(c.execution_status ?? '') === 'running')
+      .filter((c) => !interrupted.has(c.id))
       .map((c) => String(c.title ?? '').replace(/^LANE-/, '')),
   );
   const working = new Set([

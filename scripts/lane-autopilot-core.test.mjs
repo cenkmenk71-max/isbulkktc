@@ -14,6 +14,7 @@ import {
   nextConversationAction,
   prCapacity,
   requiredCheckFailed,
+  stalledConversations,
   workSignature,
 } from "./lane-autopilot-core.mjs";
 
@@ -421,4 +422,116 @@ test("no configured required checks means nothing can fail", () => {
   const checks = [{ name: "Quality, database and E2E", conclusion: "FAILURE" }];
   assert.equal(requiredCheckFailed(checks, []), false);
   assert.equal(requiredCheckFailed(checks, undefined), false);
+});
+
+// ---------------------------------------------------------------------------
+// stalledConversations — break a lane loop the platform never stops
+// ---------------------------------------------------------------------------
+
+const NOW = Date.parse("2026-11-09T12:00:00Z");
+const hoursAgo = (h) => new Date(NOW - h * 3600_000).toISOString();
+const runningLane = (over = {}) => ({
+  title: "LANE-qa",
+  execution_status: "running",
+  created_at: hoursAgo(1),
+  pr_number: [],
+  pull_requests: [],
+  ...over,
+});
+
+test("a running lane past the budget with no PR is stalled", () => {
+  const stalled = stalledConversations([runningLane({ created_at: hoursAgo(5) })], {
+    now: NOW,
+    maxRuntimeMs: 2 * 3600_000,
+  });
+  assert.equal(stalled.length, 1);
+  assert.equal(stalled[0].title, "LANE-qa");
+});
+
+test("a lane inside the budget is not stalled", () => {
+  assert.deepEqual(
+    stalledConversations([runningLane({ created_at: hoursAgo(1) })], {
+      now: NOW,
+      maxRuntimeMs: 2 * 3600_000,
+    }),
+    [],
+  );
+});
+
+test("a lane that opened a PR is never interrupted, however old", () => {
+  // pr_number is the array the API actually returns; a bare `[]` is truthy.
+  assert.deepEqual(
+    stalledConversations([runningLane({ created_at: hoursAgo(20), pr_number: [123] })], {
+      now: NOW,
+      maxRuntimeMs: 2 * 3600_000,
+    }),
+    [],
+  );
+  assert.deepEqual(
+    stalledConversations([runningLane({ created_at: hoursAgo(20), pull_requests: [{ number: 7 }] })], {
+      now: NOW,
+      maxRuntimeMs: 2 * 3600_000,
+    }),
+    [],
+  );
+});
+
+test("only running lanes are considered", () => {
+  for (const status of ["idle", "error", "finished", "stuck", "paused", null, ""]) {
+    assert.deepEqual(
+      stalledConversations([runningLane({ execution_status: status, created_at: hoursAgo(20) })], {
+        now: NOW,
+        maxRuntimeMs: 2 * 3600_000,
+      }),
+      [],
+    );
+  }
+});
+
+test("the guard only governs lane conversations", () => {
+  // The operator's own conversation (and any other human-run one) is left alone.
+  assert.deepEqual(
+    stalledConversations([runningLane({ title: "Merhaba uzman", created_at: hoursAgo(20) })], {
+      now: NOW,
+      maxRuntimeMs: 2 * 3600_000,
+    }),
+    [],
+  );
+});
+
+test("a non-positive or missing budget disables the guard", () => {
+  const old = runningLane({ created_at: hoursAgo(50) });
+  assert.deepEqual(stalledConversations([old], { now: NOW, maxRuntimeMs: 0 }), []);
+  assert.deepEqual(stalledConversations([old], { now: NOW }), []);
+  assert.deepEqual(stalledConversations([old], { now: NOW, maxRuntimeMs: Number.NaN }), []);
+});
+
+test("an unparseable created_at is skipped, not interrupted", () => {
+  assert.deepEqual(
+    stalledConversations([runningLane({ created_at: "not-a-date" })], {
+      now: NOW,
+      maxRuntimeMs: 2 * 3600_000,
+    }),
+    [],
+  );
+});
+
+test("missing or empty input yields nothing", () => {
+  assert.deepEqual(stalledConversations(undefined, { now: NOW, maxRuntimeMs: 3600_000 }), []);
+  assert.deepEqual(stalledConversations([], { now: NOW, maxRuntimeMs: 3600_000 }), []);
+});
+
+test("several stalled lanes are all returned in input order", () => {
+  const stalled = stalledConversations(
+    [
+      runningLane({ title: "LANE-qa", created_at: hoursAgo(4) }),
+      runningLane({ title: "LANE-seo", created_at: hoursAgo(1) }),
+      runningLane({ title: "LANE-auth", created_at: hoursAgo(9) }),
+    ],
+    { now: NOW, maxRuntimeMs: 2 * 3600_000 },
+  );
+  assert.deepEqual(
+    stalled.map((c) => c.title),
+    ["LANE-qa", "LANE-auth"],
+  );
 });

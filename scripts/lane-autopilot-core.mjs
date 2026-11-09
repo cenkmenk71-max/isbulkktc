@@ -190,6 +190,59 @@ export function diedWithoutWorking(conversation) {
 }
 
 /**
+ * Lane conversations that are still `running` long past any reasonable task
+ * budget and have opened no PR.
+ *
+ * The autopilot's `working` set treats every `running` conversation as busy and
+ * skips it for the rest of the pass, and `decide()` returns `wait` for a lane
+ * whose branch exists while it is `working`. A conversation that loops — reading
+ * the same brief, re-running `git status`, never committing — therefore never
+ * leaves `running`, is never re-evaluated, and burns tokens indefinitely. One
+ * such lane ran 13.5 hours and spent ~180M prompt tokens with no commit and no
+ * PR; the platform does not stop it, and the reaper only reclaims sandboxes
+ * whose conversations are already terminal, so nothing did.
+ *
+ * This is the missing staleness guard. A conversation is stalled when it is
+ * `running`, started longer than `maxRuntimeMs` ago, and has produced no PR
+ * (neither the summary `pr_number` nor the `pull_requests` list). The caller
+ * interrupts those conversations, which releases the sandbox and lets the next
+ * pass re-decide the lane from a clean state.
+ *
+ * Only conversations titled `LANE-*` are considered: the guard governs the lane
+ * team, so the operator's own conversation (or any other human-run one) is never
+ * interrupted by it.
+ *
+ * `maxRuntimeMs <= 0` disables the guard, so an unset/blank threshold never
+ * interrupts anything (the `""`-is-truthy trap that bit `approve-pending-runs`).
+ *
+ * @param {Array<{execution_status?: string|null, created_at?: string, pr_number?: unknown, pull_requests?: unknown, title?: string|null}>} conversations
+ * @param {{now?: number, maxRuntimeMs?: number}} [options]
+ * @returns {Array<object>} the stalled conversations, in input order
+ */
+export function stalledConversations(conversations, options = {}) {
+  const { now = Date.now(), maxRuntimeMs = 0 } = options;
+  if (!(Number.isFinite(maxRuntimeMs) && maxRuntimeMs > 0)) return [];
+  const stalled = [];
+  for (const conversation of conversations ?? []) {
+    if (!String(conversation?.title ?? '').startsWith('LANE-')) continue;
+    if (String(conversation?.execution_status ?? '') !== 'running') continue;
+    const startedAt = Date.parse(String(conversation?.created_at ?? ''));
+    if (!Number.isFinite(startedAt)) continue;
+    if (now - startedAt < maxRuntimeMs) continue;
+    // `pr_number` comes back as an array (`[]` when none) and `pull_requests` as
+    // a count; a bare `[]` is truthy, so count both instead of testing them.
+    const prs =
+      (Array.isArray(conversation?.pr_number) ? conversation.pr_number.length : 0) ||
+      (Array.isArray(conversation?.pull_requests)
+        ? conversation.pull_requests.length
+        : Number(conversation?.pull_requests ?? 0) || 0);
+    if (prs > 0) continue;
+    stalled.push(conversation);
+  }
+  return stalled;
+}
+
+/**
  * The lanes whose attempt counter must be cleared because their last
  * conversation died without working.
  *
