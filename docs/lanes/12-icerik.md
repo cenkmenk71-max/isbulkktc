@@ -646,3 +646,87 @@ lint ✅ · typecheck ✅ · check:frontend-source ✅ · test:unit 887 pass / 0
 - **LANE-GÜVENLİK:** `cookie-inventory.test.ts` §6 tablosundaki `NEXT_LOCALE`
   satırındaki "no Secure — open finding" artık #498 ile kapandı → "Secure (prod)"
   olarak güncellenmeli (Tur 8 devri hâlâ geçerli).
+
+## Tur 10 — mikro-denetim: #418 §6 gizlilik politikası pazarlama çerezlerini belgelemiyor (2026-11-09)
+
+**PR:** #507 · **Issue:** #418 §6 (çerez denetimi; sahibin en öncelikli maddesi) · **Branch:** `lane/icerik`
+
+### Bulgu
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/messages/{tr,en,ru,el,fa,de}.json` → `Legal.privacy.sections.s2.p2` | doğruluk/gizlilik | Gizlilik politikası yalnız **analitik** çerezden söz ediyordu ("...analitik çerezler kullanırız...") | Banner'ın sunduğu **her** onay kategorisini adıyla belgelemeli | Tur 9 `/cookies` sayfasını düzeltti ama **gizlilik politikası** — birincil hukuki belge — aynı onay yüzeyini tarif ediyor ve hâlâ yalnız analytics'i anıyordu. Ziyaretçi, gizlilik politikasında adı geçmeyen `marketing` kategorisine onay veriyordu → KVKK/GDPR şeffaflık açığı | düzeltildi |
+
+### Kök neden
+
+`src/components/analytics/consent.ts` → `consentCategories = ["analytics", "marketing"]`.
+Banner her ikisini de toggle olarak sunar ve `marketing` kararı **gerçek bir sinyali**
+sürer: `src/components/analytics/google-analytics.tsx:45-47` içinde `ad_storage`,
+`ad_user_data`, `ad_personalization` üçü de `consent.marketing`'e bağlı. İki hukuki
+belge (`/cookies` ve `/privacy`) aynı onay yüzeyini tarif eder. Tur 9 (`#501`) yalnız
+`Legal.cookies.sections.s2`'yi düzeltti; `Legal.privacy.sections.s2.p2` düzeltilmeden
+kaldı. İki yüzey arasında **kod düzeyinde bir bağ yoktu**, bu yüzden biri düzeltilirken
+diğeri sessizce geride kaldı.
+
+### Düzeltme
+
+`Legal.privacy.sections.s2.p2` artık hem analitik hem pazarlama çerezini adıyla anıyor
+("...analitik çerezler, ilgi alanınıza uygun içerik ve reklam için pazarlama
+çerezleri kullanırız..."). 6 dilin hepsinde, dilin doğal sözcükleriyle (kelime kelime
+çeviri değil). Cümle, ziyaretçinin kendi seçimini anlatıyor ve mevcut "reddedebilir /
+tercihinizi değiştirebilirsiniz" güvencesini koruyor.
+
+### Kanıt (ratchet — kırmızı→yeşil)
+
+**Yeni gerçek kapı (bu lane'in dosyası):** `src/i18n/message-catalogs.test.ts` —
+"the privacy policy documents every consent category the banner offers". Ortak
+yardımcı `assertPolicyNamesConsentCategories(locale, policyLabel, policyKeys)` hem
+çerez (Tur 9) hem gizlilik politikasını **aynı** `consentCategories` listesine bağlar;
+kategori listesi modülden okunur, sabit değil. `consentCategories`'e bir kategori
+eklenirse o kategori iki belgenin de 6 dilinde belgelenmeden CI yeşile dönmez.
+`en` gizlilik `s2.p2`'sinden "marketing" çıkarılınca test **kırmızı**
+(`en privacy policy never names the "marketing" category…`), geri konunca **yeşil**
+(kanıtlandı).
+
+### Boyut taraması (AUDIT.md, seçilen düzeltmeye uygulandı)
+
+| Alan | Sonuç |
+|---|---|
+| Doğruluk (politika ↔ gerçek çerez) | 1 bulgu, düzeltildi (yukarıda) |
+| Yetki/şeffaflık (onay ↔ belge) | İki hukuki belge artık banner kategori kümesine ratchet'li |
+| İç sistem sözlüğü (6 dil katalog) | 0 eşleşme (kaynak veri/ilan, senkron, veritabanı, koordinat, şube sayısı) |
+| Anahtar paritesi (6 dil) | 0 eksik/fazla |
+| Placeholder paritesi | korundu (s2.p2'de placeholder yok) |
+| ICU sözdizimi / JSON round-trip | 6/6 birebir (dosya başına 1 satır değişti) |
+| Erişilebilirlik/kontrast/RTL | metin değişikliği; yeni renk/ikon yok, `fa` RTL akışı etkilenmez |
+| #327 (de landing H1) | `main`'de düzeltilmiş (`de.DistrictPage.title` = "Stellenangebote in {district}") |
+| #399 (tr pleonazm) | `main`'de düzeltilmiş; `tr.json`'da `münhal` 0 eşleşme (ratchet yeşil) |
+| #469 (`NEXT_LOCALE` Secure) | `main`'de düzeltilmiş + `locale-cookie-flags.test.ts` gerçek kapıya terfi etmiş (#502) |
+
+### Kapılar
+
+lint ✅ · typecheck ✅ · check:frontend-source ✅ · test:unit 893 pass / 0 fail (2 todo) ✅
+
+### Devir
+
+- **LANE-TASARIM** (`src/components/analytics/**`): `consentCategories` değişirse iki
+  ratchet de kırmızıya döner — yeni kategoriyi iki belgenin de 6 dilinde belgelemek bu
+  lane'in işi; haber verin. Kanıt: bu PR.
+- **LANE-SUPABASE:** `supabase/seed-managed-content.sql` (#141) hâlâ `legal.*` satırlarını
+  yalnız Türkçe tutuyor ve gizlilik/çerez metnini de içeriyor → bu düzeltmenin canlı
+  etkisi seed yeniden üretilene kadar sınırlı. `supabase/**` bu lane'in dışında.
+
+### Rapor (00-orchestration formatı)
+
+```
+Lane: icerik            Branch: lane/icerik            PR: #507
+Değişen dosyalar: src/messages/{tr,en,ru,el,fa,de}.json,
+  src/i18n/message-catalogs.test.ts, docs/lanes/12-icerik.md
+Çalıştırılan kontroller:
+  lint -> pass | typecheck -> pass | check:frontend-source -> pass
+  test:unit -> 893 pass / 0 fail (2 todo) | e2e -> CI'da | database -> CI'da
+Canlıya dokundu mu: hayır
+Sahibin yapması gerekenler: PR'ı merge et; seed (#141) yeniden üretilmeli (LANE-SUPABASE)
+Sonraki lane için notlar: iki hukuki belge (privacy + cookies) artık ortak kategori
+  ratchet'ine bağlı; kategori eklenirse ikisi de güncellenir.
+```
