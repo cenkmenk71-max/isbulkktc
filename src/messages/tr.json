@@ -1330,9 +1330,9 @@
           "p1": "Oturumunuzu açık tutmak, güvenliği sağlamak ve dil tercihinizi hatırlamak için kullanılan çerezler zorunludur; bunlar olmadan site çalışmaz."
         },
         "s2": {
-          "title": "Analitik çerezler",
-          "p1": "Google Analytics çerezleri yalnızca onayınızı verdiğinizde yüklenir. Bu çerezler ziyaret edilen sayfaları anonim olarak ölçmemize yardımcı olur.",
-          "p2": "Onay vermezseniz hiçbir analitik betiği yüklenmez. Tercihinizi site üzerindeki çerez ayarlarından dilediğiniz zaman değiştirebilirsiniz."
+          "title": "Analitik ve pazarlama çerezleri",
+          "p1": "Google Analytics çerezleri yalnızca onayınızı verdiğinizde yüklenir. Bu çerezler ziyaret edilen sayfaları anonim olarak ölçmemize yardımcı olur. Reklam ve pazarlama çerezleri ise yalnızca bu kategoriye onay verdiğinizde etkinleşir ve ilgi alanınıza uygun içerik ile reklam için kullanılır.",
+          "p2": "Bu kategorilerden birine onay vermezseniz ilgili betik veya çerez hiç yüklenmez. Tercihinizi site üzerindeki çerez ayarlarından dilediğiniz zaman değiştirebilirsiniz."
         },
         "s3": {
           "title": "Tercihleri yönetme",

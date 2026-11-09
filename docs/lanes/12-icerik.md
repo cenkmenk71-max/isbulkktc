@@ -577,3 +577,72 @@ lint ✅ · typecheck ✅ · check:frontend-source ✅ · test:unit 865 pass / 0
   terfi ettirilmeli; `cookie-inventory.test.ts` §6 tablosundaki "no Secure — open
   finding" satırı "Secure (prod)" olarak güncellenmeli. Kanıt: bu PR.
 - **LANE-SUPABASE:** `supabase/seed-managed-content.sql` (#141) hâlâ bu lane'in dışı.
+
+## Tur 9 — mikro-denetim: #418 §6 çerez politikası pazarlama kategorisini belgelemiyor (2026-11-09)
+
+**PR:** (bu PR) · **Issue:** #418 §6 (çerez denetimi; sahibin en öncelikli maddesi) · **Branch:** `lane/icerik`
+
+### Bulgu
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/messages/{tr,en,ru,el,fa,de}.json` → `Legal.cookies.sections.s2` | doğruluk/gizlilik | Politika yalnızca **analitik** çerezi anlatıyordu ("Analitik çerezler" başlığı, tek paragraf GA) | Banner'ın sunduğu **her** onay kategorisini adıyla belgelemeli | Banner iki kategori sunuyor (`analytics`, `marketing`); `/cookies` sayfası `marketing`'i hiç anmıyordu. Ziyaretçi, politikada adı geçmeyen bir şeye onay veriyordu → KVKK/GDPR şeffaflık açığı | düzeltildi |
+
+### Kök neden
+
+`src/components/analytics/consent.ts` → `consentCategories = ["analytics", "marketing"]`.
+Banner her ikisini de toggle olarak sunar ve `marketing` kararı **gerçek bir sinyali**
+sürer: `src/components/analytics/google-analytics.tsx:45-47` içinde `ad_storage`,
+`ad_user_data`, `ad_personalization` üçü de `consent.marketing`'e bağlı. Yani
+"pazarlama" soyut bir etiket değil, yüklenen bir çerez sınıfı. Politika metni ise
+yalnız `analytics`'i tarif ediyordu — s2 başlığı "Analitik çerezler", gövdesi tek
+paragraf GA. İki yüzey (banner kategorileri ↔ politika metni) **kod düzeyinde
+bağlı değildi**, bu yüzden sessizce ayrıştı.
+
+### Düzeltme
+
+`s2` başlığı "Analitik **ve pazarlama** çerezleri" oldu; `p1`'e pazarlama/`reklam`
+çerezlerinin **yalnızca o kategoriye onay verildiğinde** etkinleştiği eklendi; `p2`
+"bir kategoriden birine onay vermezseniz ilgili betik veya çerez hiç yüklenmez"
+biçiminde kategori-genel hâle getirildi (tek kategori varsayımı kaldırıldı). 6 dilin
+hepsinde, dilin doğal sözcükleriyle (kelime kelime çeviri değil).
+
+### Kanıt (ratchet — kırmızı→yeşil)
+
+**Yeni gerçek kapı (bu lane'in dosyası):** `src/i18n/message-catalogs.test.ts` —
+"the cookie policy documents every consent category the banner offers". Test,
+kategori listesini **`consentCategories` modülünden okur** (sabit liste değil), her
+kategoriyi 6 dilde politika metninde arar. `consentCategories`'e bir kategori eklenirse
+o kategori 6 politikanın hepsinde belgelenmeden CI yeşile dönemez.
+
+Kategori etiketi kısa bir isimdir ("Аналитика") ama politika farklı dilbilgisel biçim
+ister ("Аналитические cookie"), bu yüzden eşleşme etiketin birebir kendisiyle değil,
+dile özgü **gövde (stem)** ile yapılır (ru `аналит`/`маркет`; diğer 5 dil etiketle
+birebir). Düzeltme geçici bozulunca (`en` s2'den "marketing" çıkarıldı) test **kırmızı**,
+geri konunca **yeşil** (kanıtlandı).
+
+### Boyut taraması (AUDIT.md, seçilen düzeltmeye uygulandı)
+
+| Alan | Sonuç |
+|---|---|
+| Doğruluk (politika ↔ gerçek çerez) | 1 bulgu, düzeltildi (yukarıda) |
+| Yetki/şeffaflık (onay ↔ belge) | Banner kategori kümesi artık politikaya ratchet'li |
+| İç sistem sözlüğü (6 dil katalog) | 0 eşleşme |
+| Anahtar paritesi (6 dil) | 0 eksik/fazla |
+| Placeholder paritesi | korundu (s2'de placeholder yok) |
+| Erişilebilirlik/kontrast/RTL | metin değişikliği; yeni renk/ikon yok, `fa` RTL akışı etkilenmez |
+| #327 (de landing H1) | `main`'de düzeltilmiş (`de.DistrictPage.title` = "Stellenangebote in {district}"), bulgu kapalı |
+| #399 (tr pleonazm) | `main`'de düzeltilmiş; `tr.json`'da `münhal`+`iş ilanı` çifti kalmadı (ratchet testi yeşil) |
+
+### Kapılar
+
+lint ✅ · typecheck ✅ · check:frontend-source ✅ · test:unit 887 pass / 0 fail (2 todo) ✅
+
+### Devir
+
+- **LANE-TASARIM** (`src/components/analytics/**` guard'ları): kategori kümesi
+  değişirse (yeni bir onay kategorisi) bu lane'in ratchet'i kırmızıya döner — yeni
+  kategoriyi 6 politikada da belgelemek bu lane'in işi; haber verin. Kanıt: bu PR.
+- **LANE-GÜVENLİK:** `cookie-inventory.test.ts` §6 tablosundaki `NEXT_LOCALE`
+  satırındaki "no Secure — open finding" artık #498 ile kapandı → "Secure (prod)"
+  olarak güncellenmeli (Tur 8 devri hâlâ geçerli).
