@@ -354,8 +354,36 @@ doğrulandı, düzeltildi, test edildi.
 
 **Çalıştırılan kontroller.** `bun run lint`, `typecheck`,
 `check:frontend-source`, `test:unit` (875 test), `test:security` (163),
-`test:integration` — hepsi yeşil. `node scripts/lane-collisions.mjs` canlı
-API'ye karşı 0 çakışma. Yeni `indexnow-key.test.mjs` 5/5.
+`test:integration` — hepsi yeşil. Yeni `indexnow-key.test.mjs` 5/5.
 
 **Canlıya dokundu mu:** hayır. Hiçbir Supabase/Vercel yazımı yok; yalnız kaynak
 ve CI yapılandırması.
+
+### Tur — devir kuyruğu, ek: çakışma kapısı kendi PR'ını kırdı (#428)
+
+CI'a bağlanan `lane-collisions.mjs` **Static checks → Lane collisions** adımında
+`Found 2 collision problem(s)` verdi. Yerel koşuda görünmemesinin nedeni
+oturumdaki token'dı: varsayılan `gh` kimliği (`orijinus1997-sudo`) yalnız
+kendi PR'larını listeler, çakışmayı raporlamaz. Depo admin token'ı
+(`GITHUB_PERSONAL_ACCESS_TOKEN`) ile çalıştırınca aynı iki satır çıktı:
+
+```
+#493 .gitignore — owned by no lane
+#493 package-lock.json — owned by no lane
+```
+
+**Kök neden.** Dedektör sahipliği `docs/lanes/00-orchestration.md`'den okur;
+LANE-INFRA satırı bu iki yolu listelemiyordu. `5d20745` (bayat npm lockfile'ını
+kaldır, `.gitignore`'a ekle) ikisine de dokununca dedektör kendi PR'ını çakışma
+saydı — `bun.lock` için daha önce düzeltilen (mikro-denetim #2) hatanın aynısı,
+iki yol daha eksik kalmış.
+
+**Düzeltme.** `package-lock.json` ve `.gitignore` LANE-INFRA sahiplik satırına
+eklendi; `lane-collisions.test.mjs` bu üç yolu (bun.lock, package-lock.json,
+.gitignore) LANE-INFRA'ya sabitledi.
+
+**Ders.** Çakışma kapısını yerelde "yeşil" görüp geçmeyin: `gh pr list` çağıran
+her kontrol, token'ın görebildiği PR kümesine bağlıdır. Kapıyı gerçek kümeyle
+denemek için admin token'la çalıştırın. Doğrulandı:
+`No collisions across 1 open PR(s).` (önce 2), `lane-collisions` 9/9, tam CI
+(Static + Database + 4×E2E) yeşil.
