@@ -3,9 +3,11 @@ import test from "node:test";
 
 import {
   carriedAttempts,
+  confirmOutcome,
   deadConversationLanes,
   diedWithoutWorking,
   exhaustedCooldownElapsed,
+  failedApiFetches,
   failedRequiredChecks,
   fairOrder,
   hasLabelledWork,
@@ -16,6 +18,7 @@ import {
   noCommitInWindow,
   poisonedConversations,
   prCapacity,
+  readApiList,
   requiredCheckFailed,
   selectSlots,
   stalledConversations,
@@ -920,4 +923,91 @@ test("poison guard leaves non-lane conversations and bad input alone", () => {
   assert.deepEqual(poisonedConversations([], opts), []);
   assert.deepEqual(poisonedConversations([runningLane({ created_at: "not-a-date" })], opts), []);
   assert.deepEqual(poisonedConversations([runningLane({ created_at: hoursAgo(50) })], { now: NOW }), []);
+});
+
+// ---------------------------------------------------------------------------
+// readApiList / failedApiFetches — a failed fetch must not read as empty
+// (operator bottleneck #5: the indicator reads its own error)
+// ---------------------------------------------------------------------------
+
+test("a successful read exposes its items and is not failed", () => {
+  assert.deepEqual(readApiList({ ok: true, body: { items: [{ id: "a" }] } }), {
+    items: [{ id: "a" }],
+    failed: false,
+  });
+});
+
+test("a genuinely empty list is not a failure", () => {
+  assert.deepEqual(readApiList({ ok: true, body: { items: [] } }), {
+    items: [],
+    failed: false,
+  });
+  assert.deepEqual(readApiList({ ok: true, body: {} }), { items: [], failed: false });
+});
+
+test("an HTTP error or timeout reads as failed, never as an empty list", () => {
+  for (const result of [
+    { ok: false, status: 401, body: null },
+    { ok: false, status: 0, body: null, timedOut: true },
+    undefined,
+    null,
+  ]) {
+    assert.deepEqual(readApiList(result), { items: [], failed: true });
+  }
+});
+
+test("failedApiFetches names every read that did not succeed", () => {
+  assert.deepEqual(
+    failedApiFetches([
+      { label: "start-tasks", ok: true },
+      { label: "sandboxes", ok: false },
+      { label: "conversations", ok: false },
+    ]),
+    ["sandboxes", "conversations"],
+  );
+});
+
+test("failedApiFetches is empty only when every read succeeded", () => {
+  assert.deepEqual(
+    failedApiFetches([
+      { label: "start-tasks", ok: true },
+      { label: "sandboxes", ok: true },
+      { label: "conversations", ok: true },
+    ]),
+    [],
+  );
+  assert.deepEqual(failedApiFetches(undefined), []);
+});
+
+// ---------------------------------------------------------------------------
+// confirmOutcome — the read that confirms a spawn can itself fail (issue #443)
+// ---------------------------------------------------------------------------
+
+test("a successful read of a present task reports its status", () => {
+  assert.deepEqual(
+    confirmOutcome("t1", {
+      items: [
+        { id: "t0", status: "READY" },
+        { id: "t1", status: "ERROR", detail: "Daily sandbox limit of 20 reached" },
+      ],
+      failed: false,
+    }),
+    { status: "ERROR", detail: "Daily sandbox limit of 20 reached" },
+  );
+});
+
+test("a missing task on a successful read is UNKNOWN, not a failure", () => {
+  // Real evidence the task is gone — distinct from a read that failed.
+  assert.deepEqual(confirmOutcome("gone", { items: [], failed: false }), {
+    status: "UNKNOWN",
+  });
+});
+
+test("a failed read reports UNKNOWN with the failed flag, never a bare status", () => {
+  // The gap this closes: a failed read collapsed to items=[] and read as
+  // "task missing", so the pass persisted an unmeasured status and treated the
+  // lane as started. The failed flag must survive.
+  for (const read of [{ items: [], failed: true }, {}, undefined]) {
+    assert.deepEqual(confirmOutcome("t1", read), { status: "UNKNOWN", failed: true });
+  }
 });

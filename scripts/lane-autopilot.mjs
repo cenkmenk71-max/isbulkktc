@@ -35,8 +35,10 @@ import { kickoff } from './lane-kickoff.mjs';
 import { reapStalledSandboxes } from './reap-stalled-sandboxes.mjs';
 import {
   carriedAttempts,
+  confirmOutcome,
   deadConversationLanes,
   exhaustedCooldownElapsed,
+  failedApiFetches,
   failedRequiredChecks,
   fairOrder,
   hasLabelledWork,
@@ -44,6 +46,7 @@ import {
   nextConversationAction,
   poisonedConversations,
   prCapacity,
+  readApiList,
   selectSlots,
   stalledConversations,
   workSignature,
@@ -392,24 +395,29 @@ function mergeReadyPullRequests(prs, dryRun) {
   return { merged, stalled };
 }
 
+/**
+ * The three API reads a pass cannot decide without, each returning
+ * `{ items, failed }` so a failed fetch is not mistaken for an empty result.
+ *
+ * `api()` reports a failure as `{ ok: false }`; collapsing that to `[]` made an
+ * expired key or a timeout read as "0 sandboxes, no conversations" — a full
+ * budget and every lane idle — and the pass would then over-spawn into a quota
+ * it could not see. The caller aborts on any `failed` read (bottleneck #5).
+ */
+
 /** Lane tasks this process has started, newest first, from the cloud API. */
 async function startTasks() {
-  const { ok, body } = await api('/app-conversations/start-tasks/search?limit=50');
-  if (!ok || !body) return [];
-  return body.items ?? [];
+  return readApiList(await api('/app-conversations/start-tasks/search?limit=50'));
 }
 
 async function runningSandboxes() {
-  const { ok, body } = await api('/sandboxes/search?limit=50');
-  if (!ok || !body) return [];
-  return (body.items ?? []).filter((s) => s.status === 'RUNNING');
+  const { items, failed } = readApiList(await api('/sandboxes/search?limit=50'));
+  return { items: items.filter((s) => s.status === 'RUNNING'), failed };
 }
 
 /** Every conversation, newest first — one fetch the pass derives several views from. */
 async function allConversations() {
-  const { ok, body } = await api('/app-conversations/search?limit=50');
-  if (!ok || !body) return [];
-  return body.items ?? [];
+  return readApiList(await api('/app-conversations/search?limit=50'));
 }
 
 /**
@@ -588,10 +596,7 @@ async function sendToExisting(conversationId, name, context) {
 
 /** Read a start task back; the POST returns 200 even when the sandbox is refused. */
 async function confirm(taskId) {
-  const tasks = await startTasks();
-  const task = tasks.find((t) => t.id === taskId);
-  if (!task) return { status: 'UNKNOWN' };
-  return { status: task.status, detail: task.detail };
+  return confirmOutcome(taskId, await startTasks());
 }
 
 /**
@@ -781,16 +786,44 @@ async function main() {
     }
   }
 
-  const [prs, blocked, handoffs, issues, tasks, sandboxes, conversations] =
-    await Promise.all([
-      Promise.resolve(openPullRequests()),
-      Promise.resolve(blockedIssues()),
-      Promise.resolve(handoffIssues()),
-      Promise.resolve(openIssues()),
-      startTasks(),
-      runningSandboxes(),
-      allConversations(),
-    ]);
+  const [
+    prs,
+    blocked,
+    handoffs,
+    issues,
+    tasksRead,
+    sandboxesRead,
+    conversationsRead,
+  ] = await Promise.all([
+    Promise.resolve(openPullRequests()),
+    Promise.resolve(blockedIssues()),
+    Promise.resolve(handoffIssues()),
+    Promise.resolve(openIssues()),
+    startTasks(),
+    runningSandboxes(),
+    allConversations(),
+  ]);
+
+  // Abort before deciding anything if an API read failed. Every decision below
+  // is derived from these reads; a failed one reads as empty, so the pass would
+  // see a full budget and every lane idle and over-spawn into a quota it cannot
+  // see (the "indicator reads its own error" family, operator bottleneck #5).
+  // Aborting keeps the previous `.lane-state.json` untouched and retries next
+  // pass instead of acting on a number it never measured.
+  const failedReads = failedApiFetches([
+    { label: 'start-tasks', ok: tasksRead.failed === false },
+    { label: 'sandboxes', ok: sandboxesRead.failed === false },
+    { label: 'conversations', ok: conversationsRead.failed === false },
+  ]);
+  if (failedReads.length > 0) {
+    throw new Error(
+      `autopilot API read failed (${failedReads.join(', ')}); ` +
+        'refusing to decide on incomplete state',
+    );
+  }
+  const tasks = tasksRead.items;
+  const sandboxes = sandboxesRead.items;
+  const conversations = conversationsRead.items;
   // The lane branches' newest commit times, for the commit-window stall signal.
   // Fetched once here so the signal has real data on a `fetch-depth: 1` runner
   // (where no lane ref exists locally). Skipped when the window is disabled, so
@@ -1202,6 +1235,18 @@ async function main() {
       const taskId = await spawnLane(d.name, d.context);
       await new Promise((r) => setTimeout(r, 4000));
       const result = await confirm(taskId);
+
+      // The read-back that confirms the spawn can itself fail. Acting on it would
+      // record a status the pass never measured — `UNKNOWN` is not `ERROR`, so the
+      // lane would look started on a number it did not read (bottleneck #5). Stop
+      // the pass instead, leaving the previous state untouched: the task, if the
+      // spawn landed, shows up in the next pass's task list and reads as running.
+      if (result.failed) {
+        console.error(
+          `  ${d.name}: could not confirm the start task (API read failed) — stopping this pass`,
+        );
+        break;
+      }
 
       // An infrastructure rejection (quota, or the model closed to the account)
       // is the platform's limit, not the lane's failure. Do not spend an attempt

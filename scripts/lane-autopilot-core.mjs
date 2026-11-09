@@ -556,3 +556,69 @@ export function failedRequiredChecks(checks, requiredChecks) {
 export function requiredCheckFailed(checks, requiredChecks) {
   return failedRequiredChecks(checks, requiredChecks).length > 0;
 }
+
+/**
+ * Normalise an `api()` result into a list, *and* whether the read failed.
+ *
+ * `api()` reports a failure (HTTP error or timeout) as `{ ok: false, body: null }`
+ * rather than throwing. The readers in `lane-autopilot.mjs` collapsed that to an
+ * empty list, so a failed fetch was indistinguishable from a genuinely empty
+ * one: an expired key or an API timeout made the pass read "0 sandboxes" and
+ * "no conversations", i.e. a full budget and every lane idle, and it would then
+ * over-spawn into a quota it could not see. The `failed` flag is what lets the
+ * caller abort the pass instead of acting on a number it did not measure — the
+ * same "the indicator reads its own error" family as bottleneck #5 in the
+ * operator brief.
+ *
+ * @param {{ok?: boolean, body?: any}} result the value returned by `api()`
+ * @returns {{items: any[], failed: boolean}}
+ */
+export function readApiList(result) {
+  if (!result || result.ok !== true || !result.body) {
+    return { items: [], failed: true };
+  }
+  return { items: Array.isArray(result.body.items) ? result.body.items : [], failed: false };
+}
+
+/**
+ * The labels of the API reads that failed in a pass.
+ *
+ * Each entry is `{ label, ok }`. A non-empty result means the pass must not act:
+ * every decision it would make is derived from state it failed to read.
+ *
+ * @param {Array<{label: string, ok: boolean}>} fetches
+ * @returns {string[]}
+ */
+export function failedApiFetches(fetches) {
+  return (fetches ?? [])
+    .filter((f) => !f || f.ok !== true)
+    .map((f) => f?.label ?? 'unknown');
+}
+
+/**
+ * Interpret `confirm()`'s read-back of a start task, keeping the failure flag.
+ *
+ * The read that confirms a spawn can itself fail: `startTasks()` reports a failed
+ * fetch as `{ items: [], failed: true }`, and a caller that only looked at `items`
+ * read that as "the task is not in the list" — the same answer as a genuinely
+ * missing task. Recording `UNKNOWN` there persists a status the pass never
+ * measured, and because `UNKNOWN` is not `ERROR` it also leaves the lane looking
+ * started. The `failed` flag is carried through so the caller can stop instead of
+ * acting on a number it did not read (bottleneck #5, "the indicator reads its own
+ * error").
+ *
+ * A missing task on a *successful* read still reports `UNKNOWN` with no `failed`
+ * flag: that is real evidence the task is gone, not a read that failed.
+ *
+ * @param {string} taskId
+ * @param {{items?: any[], failed?: boolean}} read the `startTasks()` result
+ * @returns {{status: string, detail?: any, failed?: boolean}}
+ */
+export function confirmOutcome(taskId, read) {
+  if (read?.failed !== false) {
+    return { status: 'UNKNOWN', failed: true };
+  }
+  const task = (read.items ?? []).find((t) => t?.id === taskId);
+  if (!task) return { status: 'UNKNOWN' };
+  return { status: task.status, detail: task.detail };
+}
