@@ -496,27 +496,61 @@ const CATEGORY_STEMS: Record<AppLocale, Record<ConsentCategory, string>> = {
   de: { analytics: "analyse", marketing: "marketing" },
 };
 
+/**
+ * Assert that one legal policy names every consent category the banner offers.
+ *
+ * `policyKeys` are the flattened message keys that make up the policy's
+ * consent paragraph; the check joins them and looks for each category's
+ * per-locale stem. Shared by the cookie and privacy policy gates below — the
+ * two documents describe the same consent surface and must not drift apart.
+ */
+function assertPolicyNamesConsentCategories(
+  locale: AppLocale,
+  policyLabel: string,
+  policyKeys: readonly string[],
+): void {
+  const messages = flatten(readMessages(locale));
+  const policy = policyKeys
+    .map((key) => messages[key] ?? "")
+    .join(" ")
+    .toLocaleLowerCase(locale);
+
+  for (const category of consentCategories) {
+    const labelKey = `Analytics.${category}Label`;
+    const label = messages[labelKey];
+    assert.ok(
+      typeof label === "string" && label.length > 0,
+      `${locale}.${labelKey} must exist to label the banner category`,
+    );
+    assert.ok(
+      policy.includes(CATEGORY_STEMS[locale][category]),
+      `${locale} ${policyLabel} never names the "${category}" category the banner offers ("${label}")`,
+    );
+  }
+}
+
 // The ratchet ties the two surfaces together. It reads the banner's category
 // list from the module rather than hardcoding it, so a category added to
 // `consentCategories` must be documented in all six policies before CI passes.
 test("the cookie policy documents every consent category the banner offers", () => {
   for (const locale of locales) {
-    const messages = flatten(readMessages(locale));
-    const policy = `${messages["Legal.cookies.sections.s2.title"] ?? ""} ${
-      messages["Legal.cookies.sections.s2.p1"] ?? ""
-    }`.toLocaleLowerCase(locale);
+    assertPolicyNamesConsentCategories(locale, "cookie policy", [
+      "Legal.cookies.sections.s2.title",
+      "Legal.cookies.sections.s2.p1",
+    ]);
+  }
+});
 
-    for (const category of consentCategories) {
-      const labelKey = `Analytics.${category}Label`;
-      const label = messages[labelKey];
-      assert.ok(
-        typeof label === "string" && label.length > 0,
-        `${locale}.${labelKey} must exist to label the banner category`,
-      );
-      assert.ok(
-        policy.includes(CATEGORY_STEMS[locale][category]),
-        `${locale} cookie policy never names the "${category}" category the banner offers ("${label}"); document it in Legal.cookies.sections.s2`,
-      );
-    }
+// The privacy policy is the primary legal document and describes the same
+// consent surface: `Legal.privacy.sections.s2.p2` is the paragraph that tells
+// the visitor which optional cookies they can accept. Tur 9 fixed only the
+// /cookies page, so the privacy policy still named analytics alone while the
+// banner also offered marketing (#418 §6). This gate closes that drift for good
+// — the two legal documents now move together.
+test("the privacy policy documents every consent category the banner offers", () => {
+  for (const locale of locales) {
+    assertPolicyNamesConsentCategories(locale, "privacy policy", [
+      "Legal.privacy.sections.s2.p2",
+    ]);
   }
 });
