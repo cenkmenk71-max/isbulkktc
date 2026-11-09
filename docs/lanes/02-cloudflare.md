@@ -662,7 +662,7 @@ Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: #438 (tur 26)
 Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
 Çalıştırılan kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
 Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF değiştirilmedi)
-Sahibin yapması gerekenler: (1) N-01 WAF ifadesini url_decode ile kur (yıkıcı → onay);
+Sahibin yapması gerekenler: (1) N-11 WAF ifadesini url_decode ile kur (yıkıcı → onay);
   (2) H-01r HSTS politika kararı (1–12 ay tavanı); (3) H-02 Browser Cache TTL;
   (4) R-01 trailing-dot apex; (5) G-01 Email Obfuscation OFF; (6) F-08 Vercel alias kapat;
   (7) #227 Resend DKIM 2048-bit.
@@ -674,26 +674,28 @@ Sonraki lane için notlar: (1) WAF boşluğunu "kodlanmış yol" diye bırakma �
 
 **Bu tur ne buldu (hepsi canlı `curl`/DoH/SSL Labs kanıtlı, `docs/cloudflare.md` → "tur 26"):**
 
-- **N-01 (orta — yeni, izolasyon):** tur 14'ten beri "kodlanmış yol" denen WAF
+- **N-11 (orta — yeni, izolasyon):** tur 14'ten beri "kodlanmış yol" denen WAF
   boşluğu **yalnız `%2F`** ile açılıyor. `%2E`/`%2D`/harf-kodlaması, çift-kodlama,
   ters bölü, `//`, nokta-segmentleri ve case **hepsi doğru yakalanıyor**; kaçan tek
-  varyant eğik çizginin `%2F`'si. Üç kategoride de (VCS, dotfile, CMS/api-devtools)
-  aynı. Origin'e ulaşma `x-vercel-id`+`DYNAMIC` ile ispatlı (CF 403 sayfası değil).
+  varyant eğik çizginin `%2F`'si. **Tur 27 düzeltmesi:** kaçış "üç kategoride de"
+  değil, yalnız **literalinde `/` olan** kurallarda (VCS `/.git/`, `/api/devtools/`)
+  geçerli; `/wp-admin`, `/phpmyadmin`, `.env` (literalinde `/` yok) **bloklu kalır**.
+  Origin'e ulaşma `x-vercel-id`+`DYNAMIC` ile ispatlı (CF 403 sayfası değil).
   **Düzeltme:** ifadeyi `url_decode(http.request.uri.path)` (veya `raw.`) üzerinden
   kur. **Yıkıcı → sahibin onayı.**
-- **N-02 (bilgi — öneri düzeltmesi):** "Normalize incoming URLs'ı aç" bu boşluğu
+- **N-12 (bilgi — öneri düzeltmesi):** "Normalize incoming URLs'ı aç" bu boşluğu
   **kapatmaz** — CF'nin RFC 3986 normalizasyonu rezerve `/`'yi **çözmez**, `%2F`
   normalizasyondan sonra da `%2F`'dir. Doğru çözüm ifade, ayar değil.
-- **N-03 (düşük — repo):** `/api%2F*` yolları origin'de **500** (Next.js
+- **N-13 (düşük — repo):** `/api%2F*` yolları origin'de **500** (Next.js
   rotalayamıyor; `qr`/`push`/`unsubscribe`), `build-info` 200. Origin alias da aynı
   → CF değil. Sızıntı yok (jenerik `/500` gövdesi). Sahip: `src/app/api/**`.
-- **N-04 (bilgi):** `robots.txt` `Disallow: /api/` `%2F`'yi tutmuyor; robots
+- **N-14 (bilgi):** `robots.txt` `Disallow: /api/` `%2F`'yi tutmuyor; robots
   güvenlik kontrolü değil → aksiyon yok.
 - **H-01r (düzeltme — orta):** tur 9'un "H-01: CF edge HSTS'i origin'in 2 yılına
   hizala" önerisi **imkânsız** — CF HSTS `Max Age Header` **1–12 ay** ile sınırlı
   (resmî doküman); `63072000` panelde girilemez. H-01 "açık bulgu" değil,
   **politika kararı** (origin'i 12 aya indir / CF HSTS'i kapat / bırak).
-- **N-05 (devir):** `AGENTS.md:82-83` "`tr` sunulan URL'de ön-ekli" ↔ canlı
+- **N-15 (devir):** `AGENTS.md:82-83` "`tr` sunulan URL'de ön-ekli" ↔ canlı
   `/tr/jobs` → **308** ön-eksiz. `robots.txt` doğru (yalnız varsayılan-olmayan
   diller listeli). AGENTS.md bu lane'in değil → devir **#437** (`lane:infra` + `agent:handoff`).
 
@@ -702,9 +704,9 @@ apex+`www` CF anycast + `www` → 308 apex; WAF saldırı **12/12 → 403**, me�
 **18/18 → 200**, `sqlmap` 403; güvenlik başlıkları edge=origin **birebir** (tek
 fark HSTS); `alt-svc: h3`; dinamik HTML hiç cache'lenmiyor.
 
-**Açık (değişmedi):** H-02, N-01 (eski W-01/V-20), R-01, G-01, F-08, SR-01.
+**Açık (değişmedi):** H-02, N-11 (eski W-01/V-20), R-01, G-01, F-08, SR-01.
 **Düzeltildi:** H-01 → H-01r (imkânsız öneri, politika kararına çevrildi).
-**Yeni açık:** N-01, N-03. **Devir:** N-05 → `lane:infra` (issue **#437**); N-03 → `src/app/api/**`.
+**Yeni açık:** N-11, N-13. **Devir:** N-15 → `lane:infra` (issue **#437**); N-13 → `src/app/api/**`.
 
 **Sonraki lane için notlar:** (1) WAF boşluğunu "kodlanmış yol" diye bırakma,
 kodlamayı **tek tek** izole et (burada tek kaçan `%2F`); (2) "Normalize incoming
@@ -720,7 +722,7 @@ Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
 Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
             (CI: Static/Database/E2E — PR açılışında)
 Canlıya dokundu mu: hayır (read-only; CF paneli/DNS/cache/WAF değiştirilmedi)
-Sahibin yapması gerekenler: N-01r (WAF kurallarını `url_decode` üzerinden kur, onay) ·
+Sahibin yapması gerekenler: N-11r (WAF kurallarını `url_decode` üzerinden kur, onay) ·
             H-01r (HSTS 1–12 ay tavanı; preload `pending` → "kapat" riskli) ·
             H-02 (Browser Cache TTL) · R-01 · G-01 · F-08 · #227 (DKIM 2048)
 Sonraki lane için notlar: (1) `%2F` kaçışı kurala bağlı — kuralın literalinde `/`
@@ -729,12 +731,14 @@ Sonraki lane için notlar: (1) `%2F` kaçışı kurala bağlı — kuralın lite
             tek düzeltme ifadede `url_decode`. (3) Tur 26'nın "üç kategori de" özeti
             fazla genişti → düzeltildi. (4) #163 CF halkası TEMİZ; kopuk halka
             LANE-SEO'da (#173). (5) Preload `pending` iken HSTS `max-age` 12 ayın
-            altına inmemeli.
+            altına inmemeli. (6) Bulgu kimliği şeması `docs/cloudflare.md` →
+            "Bulgu kimliği şeması"; yeni bulgudan önce aralığı `grep` ile doğrula
+            (`N-11..N-16` tur 26/27 WAF kümesi için ayrıldı, `N-01..N-08` negatif-cache).
 ```
 
 **Ne ölçüldü (tur 27).**
 
-- **N-01r (mekanizma, orta):** CF WAF'tan önce **yalnız unreserved** karakterleri
+- **N-11r (mekanizma, orta):** CF WAF'tan önce **yalnız unreserved** karakterleri
   çözer (`%2E`→`.`) — **rezerve `/` (`%2F`) çözülmez**; origin ise çözer. Kesin
   kanıt: `/api/build-info` ve `/api%2Fbuild-info` ikisi de **200, aynı 80 B JSON**;
   `/api%252Fbuild-info` → 404.
@@ -742,9 +746,9 @@ Sonraki lane için notlar: (1) `%2F` kaçışı kurala bağlı — kuralın lite
   **atlanıyor** (`x-vercel-id` dolu, 404 origin); `/wp-admin`, `/phpmyadmin`, `.env`
   (literalinde `/` yok) **403 CF'te kalıyor**. Tur 26'nın "üç kategori de" iddiası
   **düzeltildi**.
-- **N-06:** Sınıf adı **"`/`-içeren literaller"**; `%09`/`;` gibi kodlu ayraçlar
+- **N-16:** Sınıf adı **"`/`-içeren literaller"**; `%09`/`;` gibi kodlu ayraçlar
   kuralı bozmuyor (`/api/devtools/x%09x` → 403).
-- **N-03r:** `%2F` API yolları origin'de 500 (`/api/qr`, `/api/push/subscriptions`,
+- **N-13r:** `%2F` API yolları origin'de 500 (`/api/qr`, `/api/push/subscriptions`,
   `/api/email/unsubscribe`); `/api%2Fbuild-info` 200. CF değil, `src/app/api/**` (devir **#441**).
 - **Kapalı kayıt — #163 CF halkası TEMİZ:** Googlebot/bingbot/YandexBot 200,
   `cf-mitigated` yok; 207 `<loc>` hepsi apex host'ta; `google-site-verification`
@@ -756,5 +760,54 @@ Sonraki lane için notlar: (1) `%2F` kaçışı kurala bağlı — kuralın lite
 - **Cache:** `%2F` yolları ve cache-deception varyantları `DYNAMIC`/`BYPASS`,
   `private` → poisoning yüzeyi yok. **H-02** başlıkları sabit.
 
-**Açık (değişmedi):** H-01r, H-02, N-01r, R-01, G-01, F-08, SR-01.
-**Devir:** N-05 → **#437** (açık); N-03 → **#441** (`lane:infra`+`agent:handoff`, açık).
+**Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01.
+**Devir:** N-15 → **#437** (açık); N-13 → **#441** (`lane:infra`+`agent:handoff`, açık).
+
+## Tur 28 (2026-11-09) — bulgu kimliği çakışmasının kapatılması + SR-01r
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Çalıştırılan kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅ (886 pass, 2 todo)
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF değiştirilmedi)
+Sahibin yapması gerekenler: N-11r (WAF `/`-literallerini `url_decode` üzerinden kur, onay) ·
+            H-01r (HSTS politika kararı) · H-02 (Browser Cache TTL = Respect Existing Headers) ·
+            R-01 (trailing-dot apex) · G-01 (Email Obfuscation OFF) · F-08 (Vercel alias kapat) ·
+            #227 (Resend DKIM 2048-bit)
+Sonraki lane için notlar: (1) Bulgu kimliği şeması `docs/cloudflare.md` → "Bulgu kimliği şeması";
+            yeni bulgudan önce aralığı `grep` ile doğrula. (2) `N-01..N-08` negatif-cache'e,
+            `N-11..N-16` WAF `%2F` kümesine aittir — ikisi karıştırılmasın.
+```
+
+**Bu tur ne düzeltti (hepsi `docs/cloudflare.md`'de kanıtlı):**
+
+- **D-19 (doküman doğruluğu — kimlik çakışması):** tur 26/27 WAF bulguları
+  `N-01..N-06` kimlikleriyle yazılmıştı, ama `N-01..N-08` aralığı **zaten**
+  tur 12–25 **negatif-cache** bulgularına aitti (`N-01` = `/_next/static` 404'ünün
+  1 yıl cache'lenmesi). Aynı kimlik iki bulguya işaret ediyordu → WAF `%2F` kümesi
+  **`N-11..N-16`** (+`N-11r`, `N-13r`) olarak yeniden numaralandı. `grep -nE 'N-0[1-6]'
+  origin/main -- docs/cloudflare.md` ile çakışma doğrulandı.
+- **D-20 (kapsam daraltma):** tur 26'nın "üç kategoride de (VCS, dotfile,
+  CMS/api-devtools) atlanıyor" özeti **fazla genişti**; kaçış yalnız **literalinde
+  `/` olan** kurallarda (`/.git/`, `/api/devtools/`). `wp-admin`/`phpmyadmin`/`.env`
+  bloklu kalır (tur 27 matrisi). Özet buna göre düzeltildi.
+- **SR-01r (canlı teyit — bu turda yeniden ölçüldü):** `speculation-rules` başlığı
+  **her içerik tipinde** ve **hata yanıtlarında** geliyor — önceki "yalnız HTML
+  yanıtlarında" iddiası **yanlıştı** ve düzeltildi. Kanıt (canlı `curl -I`):
+  `/robots.txt` `text/plain`, `/sitemap.xml` `application/xml`,
+  `/api/build-info` `application/json`, `/favicon.ico` **404**, `/nonexistent-xyz-123`
+  **404**, `/.env` **403** → hepsinde `speculation-rules: "/cdn-cgi/speculation"`.
+- **Bulgu kimliği şeması tablosu eklendi** (`docs/cloudflare.md`): tüm `ÖNEK-NN`
+  aileleri + kapsamları; `W-` ve `N-` öneklerinin **iki kapsamlı** olduğu açıkça
+  belirtildi, yeni bulgudan önce aralığı `grep` ile doğrulama kuralı yazıldı.
+- **T-07 düzeltmesi:** tur 7 ölçüm tablosundaki `/robots.txt` satırı yanlışlıkla
+  `Vary: accept-encoding` diyordu; tur 21'in T-01 düzeltmesine göre `/robots.txt`'te
+  **`Vary` yok** (yalnız `/sitemap.xml`'de var).
+
+**Teyit edilen (temiz):** WAF saldırı yolları **403**, meşru rotalar **200**,
+`wp-admin`/`phpmyadmin`/`.env` bloklu; dinamik HTML cache'lenmiyor; #163 CF halkası
+kopuk değil (arama botları 200, `cf-mitigated` yok).
+
+**Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01 (SR-01 davranışı
+açık; yalnız **iddiası** SR-01r ile düzeltildi).
+**Devir:** N-15 → **#437**, N-13 → **#441** (ikisi de açık, `lane:infra`).
