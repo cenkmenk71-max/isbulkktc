@@ -1932,7 +1932,10 @@ conservative` (yalnız işaretçi hover'ında), aynı-origin, `prefetch` (render
 değil). Risk: gereksiz prefetch → origin'e ek trafik; `/login` gibi rotalar için
 kullanıcı hover'ında ön-getirme. Öneri (panel, düşük öncelik): kullanılmıyorsa
 Speed Brain'i kapat; kullanılıyorsa `/login`,`/auth/*` `where`'den hariç tut.
-`speculation-rules` yalnız HTML yanıtlarında; JSON/`robots.txt`'te yok.
+~~`speculation-rules` yalnız HTML yanıtlarında; JSON/`robots.txt`'te yok.~~
+**DÜZELTİLDİ (tur 28):** bu iddia **yanlıştı** — başlık **her** içerik tipinde
+geliyor (`text/plain`, `application/xml`, `application/json`, `image/webp`,
+`text/css`, RSS) ve **403/404 hata yanıtlarında** da var. Kanıt: tur 28, SR-01r.
 
 ### Bu turda yeniden doğrulananlar (temiz)
 
