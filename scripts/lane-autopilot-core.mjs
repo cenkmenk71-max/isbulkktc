@@ -327,6 +327,37 @@ export function prCapacity(openPrs, maxOpenPRs) {
 }
 
 /**
+ * Order candidate lanes longest-waiting first, so a scarce slot is shared.
+ *
+ * When more lanes are ready to start than there are PR slots, only the first
+ * `slots` of the candidate list run this pass; the rest are deferred. Taking
+ * the first `slots` in `lanes.json` order starves the lanes listed after the
+ * cap: they lose the same race every pass and never start, however long their
+ * handoff has been waiting. That is exactly what happened — with a cap of 4 and
+ * the resume-heavy head of the registry (supabase, cloudflare, seo, geo) always
+ * winning, the tail (urun, guvenlik, icerik, teslimat, operator) was deferred
+ * every pass all day with `open PRs: 0`.
+ *
+ * Sorting by the lane's last start (`updatedAt`, refreshed on every attempt)
+ * lets a lane that just ran fall behind one that has waited, so the slots
+ * rotate instead of freezing on the registry head. A lane never started sorts
+ * first (no `updatedAt`), and ties keep the input order so the result is
+ * deterministic. Ordering only decides who runs *first*; a deferred lane is
+ * still deferred, never dropped (issue #430).
+ *
+ * @param {Array<{name: string}>} decisions candidate lanes
+ * @param {Record<string, {updatedAt?: string}|undefined>} state lane state keyed by name
+ * @returns {Array<{name: string}>} a new array, longest-waiting first
+ */
+export function fairOrder(decisions, state) {
+  const age = (name) => {
+    const at = Date.parse(String(state?.[name]?.updatedAt ?? ''));
+    return Number.isFinite(at) ? at : -Infinity;
+  };
+  return [...(decisions ?? [])].sort((a, b) => age(a.name) - age(b.name));
+}
+
+/**
  * The required checks that have actually *failed* on a PR.
  *
  * Only a required check failing should break the "PR in flight" wait: a

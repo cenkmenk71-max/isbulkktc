@@ -38,6 +38,7 @@ import {
   deadConversationLanes,
   exhaustedCooldownElapsed,
   failedRequiredChecks,
+  fairOrder,
   hasLabelledWork,
   isInfraRejection,
   nextConversationAction,
@@ -57,7 +58,9 @@ const REGISTRY = JSON.parse(readFileSync(join(HERE, 'lanes.json'), 'utf8'));
 // agent_settings_diff and read back as deepseek-v4-pro, yet every conversation
 // still started on flash. Passing it per spawn is the one path that is verified
 // to work, and it makes the choice visible here instead of hidden in a setting.
-const LANE_MODEL = REGISTRY.model ?? 'openhands/deepseek-v4-pro';
+// Fallback must stay reachable: `deepseek-v4-pro` was not, and silently
+// stranded every lane (#442).
+const LANE_MODEL = REGISTRY.model ?? 'openhands/deepseek-v4.1-flash';
 // The state file is gitignored. The autopilot workflow caches this exact path
 // between scheduled runs so the attempt counters survive on a fresh runner.
 const STATE_FILE = join(REPO_ROOT, '.lane-state.json');
@@ -797,7 +800,16 @@ async function main() {
   const fresh = toSpawn.filter((d) => !reusableFor(d) && !resumableFor(d));
 
   const capacity = Math.max(0, SANDBOX_BUDGET - running);
-  const freshAllowed = fresh.slice(0, capacity);
+  // Rotate, don't freeze on the registry order. Both the sandbox budget and the
+  // PR cap are scarce, and the candidate lists were sliced in `lanes.json`
+  // order, so with a cap of 4 and 9 resumable lanes the registry head (supabase,
+  // cloudflare, seo, geo) won every pass and the tail (urun, guvenlik, icerik,
+  // teslimat, operator) was deferred all day with `open PRs: 0` — starvation,
+  // not a full queue. Ordering longest-waiting first (`updatedAt`, refreshed on
+  // every attempt) lets the tail take its turn; a lane that just ran falls
+  // behind one that has waited.
+  const freshOrdered = fairOrder(fresh, state);
+  const freshAllowed = freshOrdered.slice(0, capacity);
   // Two independent brakes. The sandbox budget bounds fresh sandboxes; the PR cap
   // bounds how many lanes may open a PR this pass. Reusable/resumable lanes cost
   // no quota so they are considered first — but they still spend a PR slot,
@@ -805,10 +817,11 @@ async function main() {
   // dropped: it starts on a later pass once a merge frees a slot (issue #430).
   // Merges below are deliberately not subject to the cap, so the queue drains.
   const prSlots = prCapacity(prs.length, MAX_OPEN_PRS);
-  const startable = [...reusable, ...resumable, ...freshAllowed];
+  const quotaFree = fairOrder([...reusable, ...resumable], state);
+  const startable = [...quotaFree, ...freshAllowed];
   const allowed = startable.slice(0, prSlots);
   const overPrCap = startable.slice(prSlots);
-  const overBudget = fresh.slice(capacity);
+  const overBudget = freshOrdered.slice(capacity);
   const deferred = [...overBudget, ...overPrCap];
   const deferredReason = new Map();
   for (const d of overBudget) deferredReason.set(d, 'no sandbox budget');

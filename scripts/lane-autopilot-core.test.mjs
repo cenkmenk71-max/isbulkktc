@@ -7,6 +7,7 @@ import {
   diedWithoutWorking,
   exhaustedCooldownElapsed,
   failedRequiredChecks,
+  fairOrder,
   hasLabelledWork,
   isCapacityError,
   isInfraRejection,
@@ -366,6 +367,70 @@ test("a missing or non-positive cap means no limit", () => {
 test("a missing or negative open count is treated as zero", () => {
   assert.equal(prCapacity(undefined, 3), 3);
   assert.equal(prCapacity(-1, 3), 3);
+});
+
+// ---------------------------------------------------------------------------
+// fairOrder — rotate scarce PR slots so the registry tail is not starved (#484)
+// ---------------------------------------------------------------------------
+
+test("a lane that has waited longer is ordered ahead of one that just ran", () => {
+  const candidates = [{ name: "head" }, { name: "tail" }];
+  const state = {
+    head: { updatedAt: "2026-11-09T12:58:00Z" },
+    tail: { updatedAt: "2026-11-09T06:00:00Z" },
+  };
+  assert.deepEqual(
+    fairOrder(candidates, state).map((d) => d.name),
+    ["tail", "head"],
+  );
+});
+
+test("a lane never started sorts before every lane that has", () => {
+  const candidates = [{ name: "started" }, { name: "fresh" }];
+  const state = { started: { updatedAt: "2026-11-09T12:58:00Z" } };
+  assert.deepEqual(
+    fairOrder(candidates, state).map((d) => d.name),
+    ["fresh", "started"],
+  );
+});
+
+test("slots rotate across passes as updatedAt advances", () => {
+  const candidates = [{ name: "a" }, { name: "b" }, { name: "c" }];
+  // First pass: all fresh, registry order preserved (stable ties).
+  const pass1 = fairOrder(candidates, {});
+  assert.deepEqual(pass1.map((d) => d.name), ["a", "b", "c"]);
+  // After a ran, it falls behind b and c, so the next pass starts elsewhere.
+  const state = { a: { updatedAt: "2026-11-09T13:00:00Z" } };
+  const pass2 = fairOrder(candidates, state);
+  assert.deepEqual(pass2.map((d) => d.name), ["b", "c", "a"]);
+  assert.deepEqual(
+    pass2.slice(0, 2).map((d) => d.name),
+    ["b", "c"],
+    "the two slots should go to the lanes that waited, not a",
+  );
+});
+
+test("equal or unparsable timestamps keep the input order (deterministic)", () => {
+  const candidates = [{ name: "x" }, { name: "y" }, { name: "z" }];
+  const state = {
+    x: { updatedAt: "2026-11-09T13:00:00Z" },
+    y: { updatedAt: "2026-11-09T13:00:00Z" },
+    z: { updatedAt: "not a date" },
+  };
+  assert.deepEqual(
+    fairOrder(candidates, state).map((d) => d.name),
+    ["z", "x", "y"],
+  );
+});
+
+test("fairOrder does not mutate the input array", () => {
+  const candidates = [{ name: "head" }, { name: "tail" }];
+  const state = {
+    head: { updatedAt: "2026-11-09T12:58:00Z" },
+    tail: { updatedAt: "2026-11-09T06:00:00Z" },
+  };
+  fairOrder(candidates, state);
+  assert.deepEqual(candidates.map((d) => d.name), ["head", "tail"]);
 });
 
 // ---------------------------------------------------------------------------
