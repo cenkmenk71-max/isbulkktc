@@ -545,10 +545,15 @@ yazıyor, `HttpOnly` istemciden kurulamaz — ayrı bir refactor gerektirir, #46
 
 ### Kanıt (kırmızı→yeşil)
 
+**Yeni gerçek kapı (bu lane'in dosyası):** `src/i18n/routing.test.ts` — `NODE_ENV=production`
+ile `src/i18n/routing.ts` taze import edilir ve **gerçek middleware** sürülür; çerezde
+`Secure` aranır. Düzeltme geçici kaldırılınca test **kırmızı**, geri konunca **yeşil**
+(kanıtlandı). Bu bir `todo` değil, düz assertion: regresyon CI'ı düşürür.
+
 `tests/security/locale-cookie-flags.test.ts` "in production the locale cookie is Secure"
-(başlangıçta `{ todo }`): düzeltmeden sonra assertion geçer; aynı dosyadaki self-test
-`secure:true` verilince assertion'ın döndüğünü zaten kanıtlıyor. Gerçek middleware
-`loadRouting("production", …)` ile sürülür, sentetik bir kopya değil.
+ise `{ todo }` idi — bir `todo` testi **başarısız olsa da todo sayılır**, yani regresyonu
+yakalayamaz. Bu yüzden LANE-GÜVENLİK'in todo'yu kaldırıp gerçek kapıya terfi ettirmesi
+gerekir (aşağıda devir).
 
 ### Boyut taraması (AUDIT.md, seçilen düzeltmeye uygulandı)
 
