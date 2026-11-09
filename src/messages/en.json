@@ -1330,9 +1330,9 @@
           "p1": "Cookies used to keep your session open, maintain security and remember your language preference are required; the site does not work without them."
         },
         "s2": {
-          "title": "Analytics cookies",
-          "p1": "Google Analytics cookies load only when you give consent. They help us measure the pages visited anonymously.",
-          "p2": "If you do not consent, no analytics script loads. You can change your choice at any time from the cookie settings on the site."
+          "title": "Analytics and marketing cookies",
+          "p1": "Google Analytics cookies load only when you give consent. They help us measure the pages visited anonymously. Advertising and marketing cookies activate only when you consent to that category, and are used for content and ads relevant to your interests.",
+          "p2": "If you do not consent to one of these categories, the related script or cookie never loads. You can change your choice at any time from the cookie settings on the site."
         },
         "s3": {
           "title": "Managing preferences",

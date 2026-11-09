@@ -1330,9 +1330,9 @@
           "p1": "Cookies, die Ihre Sitzung offen halten, die Sicherheit gewährleisten und Ihre Spracheinstellung speichern, sind erforderlich; ohne sie funktioniert die Website nicht."
         },
         "s2": {
-          "title": "Analyse-Cookies",
-          "p1": "Google-Analytics-Cookies werden nur geladen, wenn Sie einwilligen. Sie helfen uns, die besuchten Seiten anonym zu messen.",
-          "p2": "Wenn Sie nicht einwilligen, wird kein Analyse-Skript geladen. Sie können Ihre Wahl jederzeit über die Cookie-Einstellungen auf der Website ändern."
+          "title": "Analyse- und Marketing-Cookies",
+          "p1": "Google-Analytics-Cookies werden nur geladen, wenn Sie einwilligen. Sie helfen uns, die besuchten Seiten anonym zu messen. Werbe- und Marketing-Cookies werden nur aktiviert, wenn Sie in diese Kategorie einwilligen, und dienen relevanten Inhalten und Werbung.",
+          "p2": "Wenn Sie nicht in eine dieser Kategorien einwilligen, wird das jeweilige Skript oder Cookie nie geladen. Sie können Ihre Wahl jederzeit über die Cookie-Einstellungen auf der Website ändern."
         },
         "s3": {
           "title": "Einstellungen verwalten",
