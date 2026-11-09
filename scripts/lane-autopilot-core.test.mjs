@@ -13,6 +13,7 @@ import {
   isInfraRejection,
   laneDelivered,
   nextConversationAction,
+  noCommitInWindow,
   poisonedConversations,
   prCapacity,
   requiredCheckFailed,
@@ -576,6 +577,7 @@ const runningLane = (over = {}) => ({
   title: "LANE-qa",
   execution_status: "running",
   created_at: hoursAgo(1),
+  updated_at: hoursAgo(1),
   pr_number: [],
   pull_requests: [],
   ...over,
@@ -675,6 +677,171 @@ test("several stalled lanes are all returned in input order", () => {
   assert.deepEqual(
     stalled.map((c) => c.title),
     ["LANE-qa", "LANE-auth"],
+  );
+});
+
+// ---------------------------------------------------------------------------
+// the idle signal — a *running* conversation that stopped moving is a dead
+// sandbox, so the fast signal reclaims it before the ceiling fires
+// ---------------------------------------------------------------------------
+
+test("a running lane untouched past the idle limit is stalled", () => {
+  const stalled = stalledConversations(
+    [runningLane({ created_at: hoursAgo(1), updated_at: hoursAgo(1) })],
+    { now: NOW, maxIdleMs: 20 * 60_000 },
+  );
+  assert.equal(stalled.length, 1);
+});
+
+test("a running lane touched within the idle limit is not stalled", () => {
+  // Young (10 min) and busy: this is a lane doing real work, not a dead sandbox.
+  assert.deepEqual(
+    stalledConversations(
+      [runningLane({ created_at: hoursAgo(1), updated_at: new Date(NOW - 10 * 60_000).toISOString() })],
+      { now: NOW, maxIdleMs: 20 * 60_000 },
+    ),
+    [],
+  );
+});
+
+test("idleness alone does not poison a paused lane, only the ceiling does", () => {
+  // A paused lane is legitimately waiting; its age is the ceiling's business.
+  const paused = runningLane({
+    execution_status: "paused",
+    created_at: hoursAgo(1),
+    updated_at: hoursAgo(1),
+  });
+  assert.deepEqual(
+    poisonedConversations([paused], { now: NOW, maxIdleMs: 20 * 60_000 }),
+    [],
+  );
+  assert.equal(
+    poisonedConversations([paused], { now: NOW, maxRuntimeMs: 30 * 60_000 }).length,
+    1,
+  );
+});
+
+test("the ceiling fires even while updated_at keeps moving — the read-only loop", () => {
+  // The bug this guards ("canlıda değişiklik yok"): a lane that greps and
+  // re-reads forever keeps `updated_at` current, so an idleness test alone would
+  // keep it alive all day. The ceiling must fire regardless of `updated_at`.
+  const looping = runningLane({
+    created_at: hoursAgo(3),
+    updated_at: new Date(NOW - 60_000).toISOString(),
+  });
+  assert.equal(
+    poisonedConversations([looping], {
+      now: NOW,
+      maxIdleMs: 20 * 60_000,
+      maxRuntimeMs: 2 * 3600_000,
+    }).length,
+    1,
+  );
+});
+
+test("with both signals disabled nothing is poisoned", () => {
+  const old = runningLane({ created_at: hoursAgo(50), updated_at: hoursAgo(50) });
+  assert.deepEqual(poisonedConversations([old], { now: NOW }), []);
+  assert.deepEqual(
+    poisonedConversations([old], { now: NOW, maxIdleMs: 0, maxRuntimeMs: 0 }),
+    [],
+  );
+});
+
+// ---------------------------------------------------------------------------
+// noCommitInWindow — the brief's real stall criterion: a lane that lands no
+// commit in the window is looping, whatever `updated_at` says
+// ---------------------------------------------------------------------------
+
+test("noCommitInWindow fires once the window has elapsed with no commit since start", () => {
+  const since = NOW - 30 * 60_000;
+  assert.equal(noCommitInWindow({ commitAt: undefined, since, now: NOW, windowMs: 20 * 60_000 }), true);
+});
+
+test("noCommitInWindow clears when a commit landed at or after the conversation started", () => {
+  const since = NOW - 30 * 60_000;
+  assert.equal(
+    noCommitInWindow({ commitAt: NOW - 60_000, since, now: NOW, windowMs: 20 * 60_000 }),
+    false,
+  );
+  // Exactly at the start counts as progress (>=), so a lane is not judged on the
+  // boundary.
+  assert.equal(noCommitInWindow({ commitAt: since, since, now: NOW, windowMs: 20 * 60_000 }), false);
+});
+
+test("noCommitInWindow stays silent before the window has elapsed", () => {
+  // A lane still inside its first minutes is never called stalled — the kickoff
+  // asks for a commit in the first ~10 minutes and the window gives it room.
+  assert.equal(
+    noCommitInWindow({ commitAt: undefined, since: NOW - 5 * 60_000, now: NOW, windowMs: 20 * 60_000 }),
+    false,
+  );
+});
+
+test("noCommitInWindow cannot judge without a start time or with the window disabled", () => {
+  assert.equal(noCommitInWindow({ commitAt: undefined, since: Number.NaN, now: NOW, windowMs: 60_000 }), false);
+  assert.equal(noCommitInWindow({ commitAt: undefined, since: NOW - 3600_000, now: NOW, windowMs: 0 }), false);
+  assert.equal(noCommitInWindow({ commitAt: undefined, since: NOW - 3600_000, now: NOW }), false);
+  assert.equal(noCommitInWindow(), false);
+});
+
+// ---------------------------------------------------------------------------
+// poisonedConversations — the commit signal is the third way in
+// ---------------------------------------------------------------------------
+
+test("a running lane with no commit in the window is poisoned even while updated_at moves", () => {
+  // The read-only loop: greps and re-reads forever, so `updated_at` is current
+  // and the idle signal never fires. The commit signal sees the branch has not
+  // moved since the conversation started and catches it.
+  const looping = runningLane({
+    title: "LANE-infra",
+    created_at: hoursAgo(1),
+    updated_at: new Date(NOW - 60_000).toISOString(),
+  });
+  const poisoned = poisonedConversations([looping], {
+    now: NOW,
+    noCommitMs: 20 * 60_000,
+    commitsByLane: new Map([["infra", NOW - 2 * 3600_000]]),
+  });
+  assert.equal(poisoned.length, 1);
+});
+
+test("a lane that committed since it started is spared by the commit signal", () => {
+  const working = runningLane({
+    title: "LANE-infra",
+    created_at: hoursAgo(1),
+    updated_at: new Date(NOW - 60_000).toISOString(),
+  });
+  assert.deepEqual(
+    poisonedConversations([working], {
+      now: NOW,
+      noCommitMs: 20 * 60_000,
+      commitsByLane: new Map([["infra", NOW - 5 * 60_000]]),
+    }),
+    [],
+  );
+});
+
+test("an unreadable commit map leaves the lane unjudged on the commit signal", () => {
+  // A missing branch (or a failed query) must not poison the lane on this
+  // signal; the idleness and ceiling signals still decide.
+  const laneConv = runningLane({
+    title: "LANE-infra",
+    created_at: hoursAgo(1),
+    updated_at: new Date(NOW - 60_000).toISOString(),
+  });
+  assert.deepEqual(
+    poisonedConversations([laneConv], { now: NOW, noCommitMs: 20 * 60_000, commitsByLane: new Map() }),
+    [],
+  );
+  // A plain object is accepted too, so a caller need not build a Map.
+  assert.equal(
+    poisonedConversations([laneConv], {
+      now: NOW,
+      noCommitMs: 20 * 60_000,
+      commitsByLane: { infra: NOW - 2 * 3600_000 },
+    }).length,
+    1,
   );
 });
 

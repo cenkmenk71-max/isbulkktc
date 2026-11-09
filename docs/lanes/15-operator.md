@@ -564,3 +564,46 @@ autopilot geçişinde denenmedi** (18:52 geçişi eski kodla koştu, urun/guvenl
 doğrulanmalı. 14 lane #474–#490 arası sıfır alan PR'ı üretti (yalnız operatör);
 sandbox açlığı/tükenmesi sürüyorsa kök neden lane-içi değil.
 
+
+## Round: commit sinyali — zombiyi yaşla değil commit'le kes (#218, 2026-11-09)
+
+**Belirti.** Süresiz `running` zombisi sürüyor: bir lane her geçişte "meşgul"
+görünüyor, `updated_at` sürekli hareket ediyor (grep + yeniden okuma döngüsü), ne
+PR ne commit üretiyor. Yaş tavanı (`maxConversationRuntimeMinutes`) ve boşta kalma
+(`maxConversationIdleMinutes`) sinyalleri bunu geç yakalar: biri sabit yaş, diğeri
+`updated_at`'e bakar — döngü `updated_at`'i diri tutar. Brief'in adlandırdığı kriter
+ise yaş değil, **"pencerede commit/push yok"**.
+
+**Kök neden.** Autopilot'un elinde commit verisi yoktu. `fetch-depth: 1` yüzünden
+runner'da yalnız `origin/main` var, yerel lane ref'leri **yok**; dolayısıyla
+`git branch -r` ile okumak her lane'i commit'siz sanıp tüm takımı zehirlerdi. Sinyal
+için API şart.
+
+**Çözüm.**
+
+- `scripts/lane-autopilot.mjs` → yeni `laneCommitTimes()`: **tek** GraphQL çağrısıyla
+  `refs/heads/lane/*` başlarının `committedDate`'ini çeker, `Map<laneAdı, epoch ms>`
+  döndürür. Sorgu düşerse `null` döner → çağıran sinyali **kapatır** (veri yokluğu
+  hiçbir lane'i zehirlemez); dal adı uyuşmazlığında tüm takımı birden zehirlemeyi
+  önler. `main()` içinde pencere kapalıyken hiç çağrılmaz (kotasız ekstra API yok).
+- `scripts/lane-autopilot-core.mjs` → saf **`noCommitInWindow({commitAt, since,
+  now, windowMs})`**: pencere geçmeden hüküm vermez (taze lane yargılanmaz), başlangıçtan
+  sonra commit varsa sinyal temizlenir. `poisonedConversations`'a `commitsByLane` +
+  `noCommitMs` eklendi. **Karar döngüde:** haritada girdisi olmayan lane bu sinyalde
+  *yargılanmaz* (yaş/boşta sinyalleri karar verir) — `undefined` ≠ "commit yok".
+- `scripts/lanes.json` → `"laneCommitWindowMinutes": 25` (kickoff ilk ~10 dk'da commit
+  ister; 25 dk sağlıklı lane'e pay bırakır, 45 dk tavandan önce döngüyü yakalar).
+
+**Test.** `lane-autopilot-core.test.mjs` 5 commit-sinyali testi: pencerede commit yok
+→ zehir; başlangıçtan sonra commit → temiz; haritada girdi yok (boş Map) → yargılanmaz;
+düz nesne de kabul; pencere geçmeden hüküm yok. `node --test scripts/*.test.mjs`
+**209/209**; `SYNTAX OK`, `JSON OK`.
+
+**Ders.** Üç sinyal üç farklı soruyu yanıtlar: boşta = "sandbox ölmüş mü", yaş tavanı
+= "ne kadar uzun sürdü", commit penceresi = "gerçekten ilerliyor mu". Bir döngü
+`updated_at`'i diri tuttuğu için yalnız ilk ikisi onu kaçırır; üçüncüsü diske bakınca
+yakalar.
+
+**Sonraki.** Bir sonraki `*/20` geçişinde commit sinyalinin gerçek veriyle çalıştığı
+doğrulanmalı (log'da "lane commit times unavailable" görünmemeli). #490'ın attempt
+tavanı da aynı geçişte teyit edilmeli.

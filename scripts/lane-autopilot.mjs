@@ -96,8 +96,32 @@ const EXHAUSTED_COOLDOWN_MS = (REGISTRY.exhaustedCooldownMinutes ?? 0) * 60_000;
 // `running`, so it is skipped as "busy" every pass and spends tokens forever
 // (one ran 13.5 h / ~180M prompt tokens with no commit and no PR). 0 (absent)
 // disables the guard, so an unset threshold never interrupts anything.
+//
+// This is the hard ceiling: it fires whatever `updated_at` says, which is what
+// stops a read-only exploration loop. Such a lane greps and re-reads forever, so
+// `updated_at` never stops moving and an idleness test alone would keep it alive
+// all day — the "canlıda değişiklik yok" treadmill (a lane busy every pass that
+// lands nothing).
 const MAX_CONVERSATION_RUNTIME_MS =
   (REGISTRY.maxConversationRuntimeMinutes ?? 0) * 60_000;
+// How long a *running* conversation may go untouched before the pass treats it
+// as a dead sandbox (its agent is gone, nothing will resume it) and reclaims it.
+// `updated_at` moves on every turn, so a running conversation that stopped
+// moving is not working — it is holding a sandbox the team could be using. This
+// is the fast signal; the ceiling above is the backstop for a loop that keeps
+// moving. 0 (absent) disables it, so an unset threshold reclaims nothing.
+const MAX_CONVERSATION_IDLE_MS =
+  (REGISTRY.maxConversationIdleMinutes ?? 0) * 60_000;
+// The stall criterion the brief actually names: a lane that lands no commit in
+// the window. The two signals above are both proxies — idleness reads
+// `updated_at`, which a lane that greps and re-reads forever keeps moving; the
+// ceiling is a fixed age that cannot tell "working" from "looping". This one
+// reads the lane *branch*: no commit since the conversation started is the
+// ground truth for a lane that is busy every pass and landing nothing. The
+// kickoff asks for a commit in the first ~10 minutes, so the window gives a
+// healthy lane room while catching a loop well before the 45-minute ceiling. 0
+// (absent) disables it, so an unset threshold never poisons anything.
+const LANE_COMMIT_WINDOW_MS = (REGISTRY.laneCommitWindowMinutes ?? 0) * 60_000;
 // The status checks that branch protection actually requires. An open PR is
 // normally "in flight" and its lane is left alone, but a PR whose *required*
 // check has failed is a dead end — its sandbox is gone, so nothing else will
@@ -238,6 +262,64 @@ function openIssues() {
     '100',
   ]);
   return JSON.parse(raw);
+}
+
+/**
+ * The newest commit time on each lane branch, keyed by lane name.
+ *
+ * This is the ground truth for the commit-window stall signal: a lane that is
+ * `running` every pass but has landed no commit is looping, whatever
+ * `updated_at` claims. It must come from the API, not `git branch -r`: the
+ * autopilot's checkout uses `fetch-depth: 1`, so a fresh runner has only
+ * `origin/main` and no lane refs at all — a local read would see every lane as
+ * commit-less and poison the whole team.
+ *
+ * One GraphQL call returns every `refs/heads/lane/*` head with its commit date,
+ * so the pass stays at a single request. A lane whose branch is absent is left
+ * out of the map, which the commit signal reads as "cannot judge" (the idleness
+ * and ceiling signals still decide) rather than "commit-less" — a title/branch
+ * mismatch would otherwise poison the whole team at once. A failed query returns
+ * `null` instead, so the caller disables the signal outright.
+ *
+ * @returns {Map<string, number>|null} lane name → newest commit epoch ms, or
+ *   `null` when the query could not be read
+ */
+function laneCommitTimes() {
+  const query = `query($owner:String!,$name:String!){
+    repository(owner:$owner,name:$name){
+      refs(refPrefix:"refs/heads/lane/",first:100){
+        nodes{ name target{ ... on Commit { committedDate } } }
+      }
+    }
+  }`;
+  const [owner, name] = REPO.split('/');
+  let raw;
+  try {
+    raw = gh([
+      'api',
+      'graphql',
+      '-f',
+      `query=${query}`,
+      '-f',
+      `owner=${owner}`,
+      '-f',
+      `name=${name}`,
+    ]);
+  } catch (error) {
+    // A read failure must not poison every lane: return `null` so the caller
+    // disables the commit signal and the other signals decide. Reported so the
+    // degradation is visible.
+    console.error(`  lane commit times unavailable: ${String(error.message).split('\n')[0]}`);
+    return null;
+  }
+  const nodes = JSON.parse(raw)?.data?.repository?.refs?.nodes ?? [];
+  const times = new Map();
+  for (const node of nodes) {
+    const committed = Date.parse(String(node?.target?.committedDate ?? ''));
+    if (!Number.isFinite(committed)) continue;
+    times.set(String(node.name), committed);
+  }
+  return times;
 }
 
 /**
@@ -414,6 +496,7 @@ function laneKickoff(name, context) {
     maxAttempts: MAX_ATTEMPTS,
     previousError: context?.previousError,
     redPr: context?.redPr,
+    recovery: context?.recovery,
   });
 }
 
@@ -581,6 +664,7 @@ async function decide(name, ctx) {
               previousError: `PR #${pr.number} failed: ${failed.join(', ')}`,
               work,
               redPr: { number: pr.number, checks: failed },
+              recovery: true,
             },
           };
         }
@@ -620,7 +704,7 @@ async function decide(name, ctx) {
         action: 'spawn',
         reason: `cooldown elapsed after ${state.attempts} attempts — retrying`,
         resetAttempts: true,
-        context: { previousError: stored.lastError, work },
+        context: { previousError: stored.lastError, work, recovery: true },
       };
     }
     return {
@@ -707,6 +791,12 @@ async function main() {
       runningSandboxes(),
       allConversations(),
     ]);
+  // The lane branches' newest commit times, for the commit-window stall signal.
+  // Fetched once here so the signal has real data on a `fetch-depth: 1` runner
+  // (where no lane ref exists locally). Skipped when the window is disabled, so
+  // an unconfigured repo pays no extra API call.
+  const commitsByLane =
+    LANE_COMMIT_WINDOW_MS > 0 ? laneCommitTimes() : new Map();
   // A conversation that is old and has produced no PR is poisoned: its
   // transcript only grows, so every extra task re-sends all of it and the leak
   // compounds (issue #218). Compute it once here, before anything is
@@ -718,7 +808,10 @@ async function main() {
   // the interrupt below stops the burn now.
   const poisoned = new Set(
     poisonedConversations(conversations, {
+      maxIdleMs: MAX_CONVERSATION_IDLE_MS,
       maxRuntimeMs: MAX_CONVERSATION_RUNTIME_MS,
+      noCommitMs: LANE_COMMIT_WINDOW_MS,
+      commitsByLane,
     }).map((c) => c.id),
   );
   const idle = idleConversations(conversations).filter(
@@ -736,7 +829,10 @@ async function main() {
   // state. Excluded from `busyConversations` below so the lane is not skipped as
   // still-busy on the stale status. A dry-run only previews it.
   const stalledLanes = stalledConversations(conversations, {
+    maxIdleMs: MAX_CONVERSATION_IDLE_MS,
     maxRuntimeMs: MAX_CONVERSATION_RUNTIME_MS,
+    noCommitMs: LANE_COMMIT_WINDOW_MS,
+    commitsByLane,
   });
   const interrupted = new Set();
   if (dryRun && stalledLanes.length > 0) {

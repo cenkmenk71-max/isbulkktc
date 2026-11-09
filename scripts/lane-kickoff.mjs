@@ -24,6 +24,8 @@
  * @param {string|null} [context.previousError] why the last attempt failed
  * @param {{number: number, checks: string[]}} [context.redPr] an open PR whose
  *   required check failed; the lane is re-spawned to fix it, not to start over
+ * @param {boolean} [context.recovery] a respawn after the attempt budget was
+ *   spent; the lane must do ONE small commit, not survey its whole area
  * @returns {string}
  */
 export function kickoff(name, lane, context = {}) {
@@ -34,8 +36,20 @@ export function kickoff(name, lane, context = {}) {
     : '';
   const parts = [
     `isbulkktc reposunda paralel "lane" programında çalışacaksın. Lane: ${name}.`,
-    'Önce şu dosyaları OKU: docs/lanes/00-orchestration.md ve docs/lanes/' +
-      `${lane.brief}.md. Ayrıca AGENTS.md'yi oku. Sonra kendi lane'inin görevini uygula.`,
+    // The lane's own brief is the whole task. It used to be told to read
+    // 00-orchestration.md + AUDIT.md + its brief + every owned file *before*
+    // acting — and that is exactly the loop: one lane read its 67 KB brief 21
+    // times in 80 minutes and never committed. Read the one brief that names the
+    // work, then act.
+    'Önce SADECE kendi brief\'ini oku: docs/lanes/' +
+      `${lane.brief}.md. Ayrıca AGENTS.md'yi oku (kısa, kurallar için). ` +
+      '00-orchestration.md ve AUDIT.md\'yi baştan OKUMA — gerekirse ilgili bölümüne bak.',
+    // Action before exhaustive reading. Progress only counts when it is on disk:
+    // a summary can drop the plan, but a commit cannot be summarised away.
+    'EYLEM ÖNCE (EN ÖNEMLİ): okumakla saatler geçirme. İlk ~10 dakikada brief\'inden ' +
+      'küçük ama GERÇEK bir düzeltme seç, uygula ve hemen COMMIT ET (`git add -p` + ' +
+      '`git commit`). Diske yazılan ilerleme bağlam kısalsa bile kaybolmaz; sadece ' +
+      'okuduğun hiçbir şey kaydedilmez. İlk commit\'ten sonra kalanına devam et.',
     // The sandbox ships neither bun nor unzip and has no usable sudo, so the
     // gates cannot run until bun is installed. bootstrap-bun.sh handles that
     // without sudo (extracts the release zip with Python).
@@ -55,22 +69,21 @@ export function kickoff(name, lane, context = {}) {
       `\`gh issue list --state open --label ${lane.laneLabel ?? lane.label}\`. Varsa onu al ` +
       '(içindeki kanıtı doğrula, düzelt, test et). Yoksa kendi brief\'indeki ' +
       'hedeflerden en yüksek etkili olanı seç ve sınırlı tut.',
-    // The audit protocol turns "find one bug" into "examine every file". The
-    // brief names the domain; AUDIT.md names the dimensions to check per file.
-    'MICRO-DENETİM: docs/lanes/AUDIT.md\'yi oku ve uygula. Sahip olduğun her ' +
-      'dosyayı `git ls-files` ile listele, dosya dosya ilerle, her boyutu ' +
-      '(doğruluk, hata yolu, yetki, erişilebilirlik, kontrast, RTL, linkler, ' +
-      'mantık, sınır girdiler) tek tek sor. Bulguları kanıtla (dosya:satır, ' +
-      'gözlenen, beklenen, etki) ve PR gövdesine tablo hâlinde yaz. Atladığın ' +
-      'dosya varsa "bakılmadı" diye işaretle — sessizce geçme. Tek bir bug ' +
-      'düzeltip durmak yeterli değil; alanı tara.',
+    // The audit dimensions are a checklist for the ONE fix you picked, not a
+    // mandate to sweep every owned file before committing. "Scan the whole area"
+    // is what turned a bounded task into an endless read (the leak this prompt
+    // now fights).
+    'DENETİM: docs/lanes/AUDIT.md\'deki boyutları (doğruluk, hata yolu, yetki, ' +
+      'erişilebilirlik, kontrast, RTL, linkler, mantık, sınır girdiler) SEÇTİĞİN ' +
+      'düzeltmeye uygula — sahip olduğun her dosyayı taramak zorunda değilsin. ' +
+      'Bulguyu kanıtla (dosya:satır, gözlenen, beklenen, etki) ve PR gövdesine yaz.',
     // Context discipline. A lane that re-reads its brief and starts over is
     // losing its plan to condensation: the transcript is summarised faster than
     // it can work, so each summary drops the plan and the agent restarts from
     // the top (one lane read its 67 KB brief 21 times in 80 minutes and made no
     // commit). Telling the lane to read once, keep a task list, and commit the
     // first small fix breaks that cycle.
-    'BAĞLAM DİSİPLİNİ: brief\'i (00-orchestration.md + kendi brief\'in) BİR KEZ oku, ' +
+    'BAĞLAM DİSİPLİNİ: kendi brief\'ini BİR KEZ oku, ' +
       'sonra göreve başla — aynı dosyayı tekrar tekrar okuma. İlerlemeni bir görev ' +
       'listesinde tut; aynı adımı ikinci kez yapıyorsan planını kaybetmişsin demektir, ' +
       'yeniden okumak yerine hemen uygula ve commit et. Tüm alanı taramayı bitirmeden ' +
@@ -81,7 +94,16 @@ export function kickoff(name, lane, context = {}) {
     // check, so the PR looks "never triggered" while it is really unverified
     // (#304, PR #301). Rebasing onto the current `main` immediately before
     // opening the PR is what keeps the gate attached.
-    'GÜNCEL TUT: PR açmadan hemen önce `git fetch origin main && git rebase ' +
+    // A stale lane branch is 100-250 commits behind main, so the lane's first
+    // `rebase` is a wall of conflicts and it gives up (or never starts). Start
+    // from main instead: `checkout -B` resets the branch to origin/main in one
+    // step, so the diff the lane commits is against today's tree, not a week-old
+    // one. The branch name is unchanged, so the PR still lands on `lane/<name>`.
+    'DALI TAZE BAŞLAT: çalışmaya başlarken dalını main\'den sıfırla — ' +
+      `\`git fetch origin main && git checkout -B ${lane.branch} origin/main\`. ` +
+      'Eski dalı rebase etmeye uğraşma; dalın main\'in yüzlerce commit gerisinde ' +
+      've rebase çakışma duvarına döner. Sonra çalışmanı commit et.',
+    'GÜNCEL TUT: PR açmadan hemen önce tekrar `git fetch origin main && git rebase ' +
       'origin/main` çalıştır. Çakışma varsa çöz ya da dur — çakışan (CONFLICTING) ' +
       'bir PR açma; o PR\'a CI hiç çalışmaz ve doğrulanmamış kalır.',
     // Autonomy: the agent must verify its own work before opening the PR, and
@@ -121,6 +143,18 @@ export function kickoff(name, lane, context = {}) {
     parts.push(
       'ÖNCEKİ DENEME BAŞARISIZ OLDU. Hata: ' +
         `${context.previousError}. Bu hatayı tekrarlama; önce onu çöz.`,
+    );
+  }
+  if (context.recovery) {
+    // A lane that burned its whole budget without landing anything did it by
+    // surveying instead of shipping. The recovery respawn narrows the task to a
+    // single small, bounded commit so the pass produces a PR even when the lane
+    // never finishes its area.
+    parts.push(
+      'KURTARMA TURU: önceki denemeler bütçeyi tüketti ve hiçbir şey birleşmedi. ' +
+        'Bu turda alanı taramaya ÇALIŞMA. Sadece brief\'inden TEK küçük, sınırlı bir ' +
+        'düzeltme seç, uygula, test et ve PR aç. Tek commit yeterli — kapsamı ' +
+        'genişletme.',
     );
   }
   return parts.filter(Boolean).join('\n');
