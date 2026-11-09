@@ -705,7 +705,7 @@ eklenirse o kategori iki belgenin de 6 dilinde belgelenmeden CI yeşile dönmez.
 
 ### Kapılar
 
-lint ✅ · typecheck ✅ · check:frontend-source ✅ · test:unit 888 pass / 0 fail (2 todo) ✅
+lint ✅ · typecheck ✅ · check:frontend-source ✅ · test:unit 893 pass / 0 fail (2 todo) ✅
 
 ### Devir
 
@@ -724,7 +724,7 @@ Değişen dosyalar: src/messages/{tr,en,ru,el,fa,de}.json,
   src/i18n/message-catalogs.test.ts, docs/lanes/12-icerik.md
 Çalıştırılan kontroller:
   lint -> pass | typecheck -> pass | check:frontend-source -> pass
-  test:unit -> 888 pass / 0 fail (2 todo) | e2e -> CI'da | database -> CI'da
+  test:unit -> 893 pass / 0 fail (2 todo) | e2e -> CI'da | database -> CI'da
 Canlıya dokundu mu: hayır
 Sahibin yapması gerekenler: PR'ı merge et; seed (#141) yeniden üretilmeli (LANE-SUPABASE)
 Sonraki lane için notlar: iki hukuki belge (privacy + cookies) artık ortak kategori
