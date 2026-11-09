@@ -3,6 +3,7 @@
   "repo": "cenkmenk71-max/isbulkktc",
   "provider": "github",
   "maxAttemptsPerLane": 3,
+  "exhaustedCooldownMinutes": 60,
   "sandboxBudget": 10,
   "maxOpenPRs": 4,
   "requiredChecks": ["Quality, database and E2E"],

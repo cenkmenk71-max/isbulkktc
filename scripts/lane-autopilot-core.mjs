@@ -98,6 +98,29 @@ export function isInfraRejection(detail) {
 }
 
 /**
+ * Whether an exhausted lane's cooldown has elapsed, so it may be retried.
+ *
+ * Parking a lane at `exhausted` forever means one outage that burns every lane's
+ * attempts freezes the whole team with no path back — the sandbox-quota outage
+ * that killed nine lanes left them permanently "needs a human" (issue #442). The
+ * cooldown opens a fresh, bounded window after a wait: the lane retries, and if
+ * it exhausts again with no new work it re-parks for another cooldown. Recovery
+ * is automatic but a genuinely stuck lane still escalates instead of looping
+ * every pass. Measured from the lane's last start (`updatedAt`); an unknown age
+ * counts as elapsed, so a missing timestamp never blocks recovery.
+ *
+ * @param {{updatedAt?: string}|undefined} entry lane state
+ * @param {{now?: number, cooldownMs?: number}} [options]
+ * @returns {boolean}
+ */
+export function exhaustedCooldownElapsed(entry, { now = Date.now(), cooldownMs = 0 } = {}) {
+  if (!(Number(cooldownMs) > 0)) return false;
+  const at = Date.parse(String(entry?.updatedAt ?? ''));
+  if (!Number.isFinite(at)) return true;
+  return now - at >= cooldownMs;
+}
+
+/**
  * Whether a lane's last recorded status is a successful delivery.
  *
  * The autopilot records `lastStatus` on every start. `RUNNING` means the

@@ -5,6 +5,7 @@ import {
   carriedAttempts,
   deadConversationLanes,
   diedWithoutWorking,
+  exhaustedCooldownElapsed,
   failedRequiredChecks,
   hasLabelledWork,
   isCapacityError,
@@ -225,6 +226,45 @@ test("a lane with no conversation at all is left alone", () => {
 test("an empty or missing state heals nothing", () => {
   assert.deepEqual(deadConversationLanes({}, [{ title: "LANE-qa", ...dead }]), []);
   assert.deepEqual(deadConversationLanes(undefined, []), []);
+});
+
+// ---------------------------------------------------------------------------
+// exhaustedCooldownElapsed — exhaustion is a cooldown, not a dead end (#442)
+// ---------------------------------------------------------------------------
+
+test("a lane is retried once its cooldown has elapsed", () => {
+  const now = Date.parse("2026-11-09T12:00:00Z");
+  const hourAgo = new Date(now - 60 * 60_000).toISOString();
+  assert.equal(
+    exhaustedCooldownElapsed({ updatedAt: hourAgo }, { now, cooldownMs: 60 * 60_000 }),
+    true,
+  );
+});
+
+test("a lane still inside its cooldown waits", () => {
+  const now = Date.parse("2026-11-09T12:00:00Z");
+  const tenMinutesAgo = new Date(now - 10 * 60_000).toISOString();
+  assert.equal(
+    exhaustedCooldownElapsed({ updatedAt: tenMinutesAgo }, { now, cooldownMs: 60 * 60_000 }),
+    false,
+  );
+});
+
+test("a zero cooldown keeps the old dead-end behaviour", () => {
+  // 0 (absent) must not start retrying exhausted lanes: the feature is opt-in.
+  const ancient = new Date(0).toISOString();
+  assert.equal(exhaustedCooldownElapsed({ updatedAt: ancient }, { cooldownMs: 0 }), false);
+  assert.equal(exhaustedCooldownElapsed({ updatedAt: ancient }), false);
+});
+
+test("an unknown age counts as elapsed so recovery is never blocked", () => {
+  // A lane healed by an outage may carry no updatedAt; that must not strand it.
+  assert.equal(exhaustedCooldownElapsed({}, { cooldownMs: 60 * 60_000 }), true);
+  assert.equal(exhaustedCooldownElapsed(undefined, { cooldownMs: 60 * 60_000 }), true);
+  assert.equal(
+    exhaustedCooldownElapsed({ updatedAt: "not a date" }, { cooldownMs: 60 * 60_000 }),
+    true,
+  );
 });
 
 // ---------------------------------------------------------------------------

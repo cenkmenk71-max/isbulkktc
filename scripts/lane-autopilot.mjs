@@ -36,6 +36,7 @@ import { reapStalledSandboxes } from './reap-stalled-sandboxes.mjs';
 import {
   carriedAttempts,
   deadConversationLanes,
+  exhaustedCooldownElapsed,
   failedRequiredChecks,
   hasLabelledWork,
   isInfraRejection,
@@ -75,6 +76,12 @@ const MAX_REUSES = REGISTRY.maxReusesPerConversation ?? 2;
 // starts no new lane: the next pass runs once a merge frees a slot. 0/absent
 // means no limit, as before.
 const MAX_OPEN_PRS = REGISTRY.maxOpenPRs ?? 0;
+// How long an `exhausted` lane waits before it may be retried. 0 (absent) keeps
+// the old behaviour — an exhausted lane waits for a human forever. A positive
+// value makes exhaustion a cooldown instead of a dead end: after one outage
+// poisoned every lane's attempts the team recovers on its own instead of
+// staying frozen (issue #442). A lane that exhausts again simply re-parks.
+const EXHAUSTED_COOLDOWN_MS = (REGISTRY.exhaustedCooldownMinutes ?? 0) * 60_000;
 // The status checks that branch protection actually requires. An open PR is
 // normally "in flight" and its lane is left alone, but a PR whose *required*
 // check has failed is a dead end — its sandbox is gone, so nothing else will
@@ -512,6 +519,23 @@ async function decide(name, ctx) {
     const failed = failedRequiredChecks(pr.statusCheckRollup, REQUIRED_CHECKS);
     if (failed.length > 0) {
       if (state.attempts >= MAX_ATTEMPTS) {
+        // After the cooldown a red PR is worth one more respawn: its failing
+        // check may have been transient (a quota hiccup), and the merge queue
+        // cannot drain a PR nobody retries. Clear the count so the retry is a
+        // fresh bounded window; otherwise the same gate returns `exhausted`
+        // forever (issue #453).
+        if (exhaustedCooldownElapsed(stored, { cooldownMs: EXHAUSTED_COOLDOWN_MS })) {
+          return {
+            action: 'spawn',
+            reason: `PR #${pr.number} red (${failed.join(', ')}) — cooldown elapsed, respawn`,
+            resetAttempts: true,
+            context: {
+              previousError: `PR #${pr.number} failed: ${failed.join(', ')}`,
+              work,
+              redPr: { number: pr.number, checks: failed },
+            },
+          };
+        }
         return {
           action: 'exhausted',
           reason: `PR #${pr.number} red (${failed.join(', ')}); ${state.attempts} attempts used; needs a human`,
@@ -539,6 +563,18 @@ async function decide(name, ctx) {
     return { action: 'wait', reason: `branch ${lane.branch} in use, task running` };
   }
   if (state.attempts >= MAX_ATTEMPTS) {
+    // A lane that exhausted its budget is retried once the cooldown elapses, so
+    // one outage that burned every lane's attempts does not freeze the team
+    // forever (issue #442). The reset makes the retry a fresh bounded window;
+    // a lane that exhausts again with no new work simply re-parks.
+    if (exhaustedCooldownElapsed(stored, { cooldownMs: EXHAUSTED_COOLDOWN_MS })) {
+      return {
+        action: 'spawn',
+        reason: `cooldown elapsed after ${state.attempts} attempts — retrying`,
+        resetAttempts: true,
+        context: { previousError: stored.lastError, work },
+      };
+    }
     return {
       action: 'exhausted',
       reason: `${state.attempts} attempts used; needs a human`,
@@ -781,6 +817,12 @@ async function main() {
         (c) => String(c.title ?? '') === `LANE-${d.name}` && c.sandbox_id,
       );
       let entry = state[d.name] ?? { attempts: 0 };
+
+      // A cooldown retry starts a fresh bounded window: clear the count so the
+      // lane gets its full budget again instead of re-parking on the first
+      // failure. `updatedAt` is refreshed below, so the next cooldown is timed
+      // from this retry.
+      if (d.resetAttempts) entry = { ...entry, attempts: 0 };
 
       // Reuse is bounded. A conversation keeps every task's transcript, and each
       // new turn re-sends all of it; past MAX_REUSES the lane gets a fresh
