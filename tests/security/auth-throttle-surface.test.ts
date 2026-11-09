@@ -73,38 +73,30 @@ test("the function extractor returns the named body, not the whole file (self-te
   assert.ok(exportedFunctionText(synthetic, "beta").includes("throttleCheck"));
 });
 
-test(
-  "sign-in carries an abuse control, not only the captcha",
-  { todo: "signIn has no application-level throttle; the hosted captcha is off (#418 §7)" },
-  () => {
-    const body = exportedFunctionText(actions, "signIn");
-    // Non-vacuity: the endpoint we are talking about must still be the one here.
-    assert.ok(
-      body.includes("signInWithPassword"),
-      `${actionsPath} signIn no longer calls signInWithPassword`,
-    );
-    assert.ok(
-      throttleReference.test(body),
-      "signIn does not consult any rate limiter before calling Supabase",
-    );
-  },
-);
+test("sign-in carries an abuse control, not only the captcha", () => {
+  const body = exportedFunctionText(actions, "signIn");
+  // Non-vacuity: the endpoint we are talking about must still be the one here.
+  assert.ok(
+    body.includes("signInWithPassword"),
+    `${actionsPath} signIn no longer calls signInWithPassword`,
+  );
+  assert.ok(
+    throttleReference.test(body),
+    "signIn does not consult any rate limiter before calling Supabase",
+  );
+});
 
-test(
-  "password-reset requests carry an abuse control, not only the captcha",
-  { todo: "requestPasswordReset has no application-level throttle; the hosted captcha is off (#418 §7)" },
-  () => {
-    const body = exportedFunctionText(actions, "requestPasswordReset");
-    assert.ok(
-      body.includes("resetPasswordForEmail"),
-      `${actionsPath} requestPasswordReset no longer calls resetPasswordForEmail`,
-    );
-    assert.ok(
-      throttleReference.test(body),
-      "requestPasswordReset does not consult any rate limiter before mailing",
-    );
-  },
-);
+test("password-reset requests carry an abuse control, not only the captcha", () => {
+  const body = exportedFunctionText(actions, "requestPasswordReset");
+  assert.ok(
+    body.includes("resetPasswordForEmail"),
+    `${actionsPath} requestPasswordReset no longer calls resetPasswordForEmail`,
+  );
+  assert.ok(
+    throttleReference.test(body),
+    "requestPasswordReset does not consult any rate limiter before mailing",
+  );
+});
 
 /**
  * CSRF posture of Server Actions.
