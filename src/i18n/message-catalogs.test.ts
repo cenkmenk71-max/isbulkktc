@@ -4,6 +4,10 @@ import test from "node:test";
 import { faqByLocale } from "@/content/ai-visibility/faq";
 import { getArticles } from "@/content/editorial";
 import { getGuides } from "@/content/guides";
+import {
+  consentCategories,
+  type ConsentCategory,
+} from "@/components/analytics/consent";
 import type { AppLocale } from "@/i18n/routing";
 
 const locales = ["tr", "en", "ru", "el", "fa", "de"] as const;
@@ -468,3 +472,51 @@ test("the Turkish catalog never pairs 'münhal' with 'iş ilanı'", () => {
   );
 });
 
+// The consent banner offers exactly the categories in `consentCategories`
+// (`src/components/analytics/consent.ts`), and each one is a real choice: the
+// `marketing` decision drives Google Consent Mode's `ad_storage`,
+// `ad_user_data` and `ad_personalization` signals
+// (`src/components/analytics/google-analytics.tsx`). The /cookies policy
+// therefore has to document every category the visitor can accept. It did not:
+// the banner shipped a Marketing toggle while the policy described analytics
+// alone, so a visitor could consent to something the policy never named (#418).
+//
+// The banner label is a short noun ("Аналитика") while the policy needs a
+// different grammatical form ("Аналитические cookie"), so matching the label
+// verbatim reports a false miss. The check therefore runs on a per-locale stem:
+// a fixed prefix of the banner label long enough to be unmistakable. Russian
+// truncates to `Аналит`/`Маркет` (both cases differ in the final letters), the
+// other five languages match their label exactly.
+const CATEGORY_STEMS: Record<AppLocale, Record<ConsentCategory, string>> = {
+  tr: { analytics: "analitik", marketing: "pazarlama" },
+  en: { analytics: "analytics", marketing: "marketing" },
+  ru: { analytics: "аналит", marketing: "маркет" },
+  el: { analytics: "ανάλυσ", marketing: "μάρκετινγκ" },
+  fa: { analytics: "تحلیل", marketing: "بازاریابی" },
+  de: { analytics: "analyse", marketing: "marketing" },
+};
+
+// The ratchet ties the two surfaces together. It reads the banner's category
+// list from the module rather than hardcoding it, so a category added to
+// `consentCategories` must be documented in all six policies before CI passes.
+test("the cookie policy documents every consent category the banner offers", () => {
+  for (const locale of locales) {
+    const messages = flatten(readMessages(locale));
+    const policy = `${messages["Legal.cookies.sections.s2.title"] ?? ""} ${
+      messages["Legal.cookies.sections.s2.p1"] ?? ""
+    }`.toLocaleLowerCase(locale);
+
+    for (const category of consentCategories) {
+      const labelKey = `Analytics.${category}Label`;
+      const label = messages[labelKey];
+      assert.ok(
+        typeof label === "string" && label.length > 0,
+        `${locale}.${labelKey} must exist to label the banner category`,
+      );
+      assert.ok(
+        policy.includes(CATEGORY_STEMS[locale][category]),
+        `${locale} cookie policy never names the "${category}" category the banner offers ("${label}"); document it in Legal.cookies.sections.s2`,
+      );
+    }
+  }
+});
