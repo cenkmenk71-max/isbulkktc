@@ -208,20 +208,20 @@ kök nedenden ikisi platform ayarı (operatör), ikisi repo kodunda (bu lane).
 | 1 | `.lane-state.json` gitignored **ve** `lane-autopilot.yml`'de hiçbir kalıcılık adımı yok → her 30 dk'lık koşuda taze runner'da state sıfırlanıyor, `maxAttemptsPerLane` (sonsuz-retry freni) **hiç ateşlenemiyor** | düzeltildi (cache) |
 | 2 | Konuşma yeniden kullanımı tükenince **yeni sandbox** açılıyordu → kota (sandbox yaratma) harcanıyordu; üstelik sayaç sıfırlanmadığı için sonraki her geçişte yeniden | düzeltildi (aynı sandbox'ta taze konuşma + sayaç sıfırlama) |
 | 3 | İşi olmayan lane'e yine kickoff gidiyordu ("no work yet") → boşuna tam konuşma yakıyor | düzeltildi (`hasLabelledWork` kapısı, `requireLabelledWork`) |
-| 4 | Condenser pratikte kapalı (`max_size` 1e18) + `max_budget_per_task` null | operatör script'i + doküman (org-geneli, canlıya yazılmadı) |
+| 4 | Condenser zaten açık (`llm_summarizing`, `max_size` 240) ama araç onu **yanlış dokümandan** okuduğu için "kapalı/null" sanıyordu; `max_budget_per_task` null | araç düzeltildi (`/api/v1/settings`) + `max_budget_per_task` için `--apply` reçetesi |
 
 **Not:** #2 main'de kısmen vardı (`MAX_REUSES` / `maxReusesPerConversation`, #192
 ile geldi) ama tükenince **yeni sandbox**'a düşüyor ve `reuses` sayacını
 sıfırlamıyordu — ikisi de kota sızıntısı. Bu tur onu aynı sandbox'ta taze
 konuşmaya çevirdi.
 
-**Platform kanıtı.** `GET /api/organizations/app` → `max_budget_per_task: null`,
-condenser ayarı yok. `POST /app-conversations` şeması `max_iterations`/`condenser`
-**kabul etmiyor** (yalnız `sandbox_id`, `conversation_id`, `initial_message`, …).
-Tek kol: `POST /api/organizations/app` (`OrgAppSettingsUpdate` →
-`max_budget_per_task`, `agent_settings_diff`). Bu yüzden #4 repo kodundan
-çözülemez; `scripts/lane-budget.mjs` (varsayılan salt-okuma, `--apply` ile yazar)
-ve `bun run lane:budget` eklendi.
+**Platform kanıtı (düzeltildi — bkz. Tur 3.1).** `POST /app-conversations` şeması
+`max_iterations`/`condenser` **kabul etmiyor** (yalnız `sandbox_id`,
+`conversation_id`, `initial_message`, …). Ayarlar **kullanıcı** dokümanında
+(`/api/v1/settings`) yaşar: `max_budget_per_task` üst düzeyde, condenser
+`agent_settings.condenser` altında. Bu yüzden #4 repo kodundan çözülemez;
+`scripts/lane-budget.mjs` (varsayılan salt-okuma, `--apply` ile yazar) ve
+`bun run lane:budget` eklendi.
 
 **Mekanizma.** `POST /app-conversations` `sandbox_id` kabul ettiği için aynı
 sandbox üzerinde **taze konuşma** açılabiliyor: kota maliyeti yok (sandbox
@@ -229,14 +229,53 @@ yaratılmıyor), geçmiş sıfır. Konuşma açma asenkron (POST bir start-task 
 bu yüzden state **sandbox id + görev sayısı** tutar, dönen id'yi değil.
 
 **Doğrulama.** `scripts/lane-autopilot-core.test.mjs` **12/12** (yeni),
-`scripts/lane-collisions.test.mjs` **6/6** (yeni), `test:unit` **462/462**,
+`scripts/lane-collisions.test.mjs` **6/6** (yeni), `test:unit` **828/828**,
 `lint`/`typecheck`/`check:frontend-source` temiz, `lane-autopilot.mjs --dry-run`
-karar tablosunu hatasız basıyor. Canlıya dokunulmadı (org ayarı yalnız `--apply`
+karar tablosunu hatasız basıyor. Canlıya dokunulmadı (ayar yalnız `--apply`
 + insan onayıyla yazılır).
 
 **Sahibin yapması gereken (operatör).** `OPENHANDS_API_KEY=… bun run lane:budget
 -- --apply` ile condenser `max_size` ve `max_budget_per_task` canlıya uygulanır;
-bu org-geneli olduğu için bilinçli bir karar.
+bu hesap-geneli olduğu için bilinçli bir karar.
+
+### Tur 3.1 — düzeltme: arıza okuma yolundaydı, yazma değil
+
+**Bulgu.** Tur 3, `scripts/lane-budget.mjs`'in condenser okumasını yanlış
+değerlendirdi: "platform `agent_settings_diff`'i sessizce düşürüyor" sanıldı.
+Gerçekte **yazma kalıcıydı**, sorun **okumaydı**: eski script condenser'ı
+`GET /api/organizations/app`'ten okuyordu, ama o ucun yanıt modeli
+(`OrgAppSettingsResponse`) yalnız `{enable_proactive_conversation_starters,
+max_budget_per_task, registered_marketplaces, updated_at}` döndürür —
+`agent_settings` **yoktur**. Dolayısıyla okuma her zaman `condenser: null`
+basıyordu ve bu "platform düşürüyor" diye yorumlandı.
+
+**Kanıt (2026-11-09, canlı).**
+- `POST /api/organizations/app` gövdesi `{"agent_settings_diff":{"condenser":
+  {"condenser_kind":"llm_summarizing","enabled":true,"max_size":241,…}}}` →
+  `GET /api/organizations/<org>/settings` taze okumada `max_size: 241` gösterdi
+  (testte 240'a geri alındı). Yani org-geneli varsayılanlara **yazılıyor**;
+  "düşürülüyor" değil. `GET /api/organizations/<org>/settings`
+  (`OrgDefaultsSettingsResponse`) `agent_settings.condenser`'ı **açıkça** içerir.
+- `GET /api/v1/settings` (`GETSettingsModel`) da `agent_settings.condenser`'ı ve
+  üst düzey `max_budget_per_task`'ı içerir; `POST /api/v1/settings` ile
+  `{"agent_settings_diff":{"condenser":{…,"max_size":241}}}` → `{"message":
+  "Settings stored"}` ve taze okuma 241 (240'a geri alındı).
+- Alan adı `kind` değil **`condenser_kind`**; yanlış anahtar sessizce yok sayılır.
+- **Condenser zaten açıktı:** hem org varsayılanlarında hem kullanıcı dokümanında
+  `{condenser_kind: "llm_summarizing", enabled: true, max_size: 240, keep_first: 2,
+  minimum_progress: 0.1}`. Yani Tur 3'ün "condenser pratikte kapalı" öncülü de
+  yanlıştı — asıl arıza yalnız **okuma yolundaydı**.
+
+**Düzeltme.** `scripts/lane-budget.mjs` artık `/api/v1/settings` kullanır
+(kullanıcı dokümanı; condenser'ı doğrudan sunar), doğru
+`condenser_kind`/`enabled` alanlarını yazar ve `agent_settings.condenser`'ı okur
+(`condenserOf`). Regresyon testi `scripts/lane-budget.test.mjs` endpoint'i ve alan
+adlarını kilitler (8/8).
+
+**Not (uç nokta ayrımı).** "Org ucunda `agent_settings` yok" ifadesi yalnızca
+`/api/organizations/app` **yanıtı** için doğrudur; org **varsayılanları** ucu
+(`/api/organizations/<org>/settings`) `agent_settings.condenser`'ı içerir. İkisini
+karıştırmak bu yanlış teşhisin kaynağıydı.
 
 ### Tur 3 — ek bulgu: çakışma dedektörü yanlış pozitif üretiyordu
 

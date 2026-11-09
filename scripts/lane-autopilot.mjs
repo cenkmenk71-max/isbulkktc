@@ -54,10 +54,13 @@ const REGISTRY = JSON.parse(readFileSync(join(HERE, 'lanes.json'), 'utf8'));
 
 // The model every lane runs on. Passed explicitly at spawn because the
 // account-level default is the cheap tier (deepseek-v4.1-flash), and setting it
-// through the settings API did not take effect: the org endpoint accepted
-// agent_settings_diff and read back as deepseek-v4-pro, yet every conversation
-// still started on flash. Passing it per spawn is the one path that is verified
-// to work, and it makes the choice visible here instead of hidden in a setting.
+// through the settings API did not take effect: a write was acknowledged and
+// read back, yet every conversation still started on flash. The org endpoint
+// cannot be the one that stores this — it has no `agent_settings` field at all
+// (that lives in the user settings document, `/api/v1/settings`), so any
+// read-back from it is a wrong-endpoint artifact. Passing the model per spawn is
+// the one path that is verified to work, and it makes the choice visible here
+// instead of hidden in a setting.
 // Fallback must stay reachable: `deepseek-v4-pro` was not, and silently
 // stranded every lane (#442).
 const LANE_MODEL = REGISTRY.model ?? 'openhands/deepseek-v4.1-flash';
