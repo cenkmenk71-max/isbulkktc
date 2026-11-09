@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { laneFromBranch } from "./lane-collisions.mjs";
+import {
+  foldName,
+  laneFromBranch,
+  ownersOf,
+  parseOwnership,
+} from "./lane-collisions.mjs";
 
 // The ownership table names lanes as `LANE-QA`, `LANE-INFRA`, …; pass the same
 // strings the detector reads from the doc.
@@ -53,4 +59,38 @@ test("a non-lane branch returns null", () => {
 
 test("an unknown lane branch still names itself so the report is actionable", () => {
   assert.equal(laneFromBranch("lane/newlane", lanes), "lane-newlane");
+});
+
+// The detector reads the ownership table out of docs/lanes/00-orchestration.md.
+// Asserting on the real file (not a fixture) is the point: the doc is the single
+// source of truth, and a lane whose row loses a path silently stops being
+// checked. These run without `gh`, so they are deterministic in CI.
+const orchestration = readFileSync("docs/lanes/00-orchestration.md", "utf8");
+const table = parseOwnership(orchestration);
+
+test("every lane in the registry has an ownership row", () => {
+  const registry = JSON.parse(readFileSync("scripts/lanes.json", "utf8"));
+  const rows = new Set(table.map((l) => foldName(l.lane)));
+  for (const name of Object.keys(registry.lanes)) {
+    assert.ok(
+      rows.has(foldName(`LANE-${name}`)),
+      `lanes.json has "${name}" but the ownership table has no row for it`,
+    );
+  }
+});
+
+test("a path is owned by exactly the lane whose globs match it", () => {
+  // Root-level file: the bug that dropped `package.json` from the table.
+  assert.deepEqual(ownersOf("package.json", table), ["LANE-INFRA"]);
+  // A glob with a slash.
+  assert.deepEqual(ownersOf("scripts/lane-collisions.mjs", table), ["LANE-INFRA"]);
+  // Exclusion syntax: URUN owns src/features/** but not identity.
+  assert.deepEqual(ownersOf("src/features/identity/x.ts", table), ["LANE-AUTH"]);
+  // A path no lane claims.
+  assert.deepEqual(ownersOf("src/unowned/thing.ts", table), []);
+});
+
+test("foldName folds the Turkish lane name to ASCII", () => {
+  assert.equal(foldName("LANE-GÜVENLİK"), "lane-guvenlik");
+  assert.equal(foldName("LANE-İÇERİK"), "lane-icerik");
 });

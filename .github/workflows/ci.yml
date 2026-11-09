@@ -32,6 +32,13 @@ jobs:
   static:
     name: Static checks
     runs-on: ubuntu-latest
+    # `lane-collisions.mjs` reads the open pull requests from the API, so this
+    # job needs `pull-requests: read` on top of the workflow's `contents: read`.
+    # A job-level `permissions` block replaces the workflow-level one, so
+    # `contents: read` is repeated here (checkout needs it).
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Check out source
         uses: actions/checkout@v7
@@ -64,6 +71,19 @@ jobs:
 
       - name: Unit tests
         run: bun run test:unit
+
+      # The lane programme's ownership table (docs/lanes/00-orchestration.md)
+      # says one file has one owner and no two lanes edit the same file, but
+      # nothing enforced it until this step: two lanes could claim the same file
+      # or issue and no CI job would notice. The detector reads the ownership
+      # table and the open pull requests and fails on an unowned file or a file
+      # two PRs both touch. `GH_TOKEN` comes from the job's `pull-requests: read`
+      # permission, so it never needs a stored secret. A read failure exits
+      # non-zero on purpose (see the script) rather than reporting a false green.
+      - name: Lane collisions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/lane-collisions.mjs
 
       # The security layer is source-level (it reads migrations and modules and
       # attacks sanitise/redirect boundaries), so it needs neither Supabase nor a

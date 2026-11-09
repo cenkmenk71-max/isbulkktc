@@ -47,7 +47,7 @@ function checkRegistryMatchesDoc(lanes) {
   return problems;
 }
 
-function parseOwnership(markdown) {
+export function parseOwnership(markdown) {
   const lanes = [];
   const row = /^\|\s*(LANE-[^\s|]+)\s*\|(.+)\|\s*$/gm;
   // A path token is either a glob (contains `/`) or a root-level filename
@@ -72,7 +72,7 @@ function parseOwnership(markdown) {
  * comparison would report every file in that lane as unowned. Folds to ASCII
  * and lowercases.
  */
-function foldName(name) {
+export function foldName(name) {
   return name
     .replace(/İ/g, 'I')
     .replace(/ı/g, 'i')
@@ -112,23 +112,35 @@ function owns(path, globs) {
   return included && !excluded;
 }
 
-function ownersOf(path, lanes) {
+export function ownersOf(path, lanes) {
   return lanes.filter(({ globs }) => owns(path, globs)).map(({ lane }) => lane);
 }
 
 function openPullRequests() {
-  const raw = execFileSync(
-    'gh',
-    [
-      'pr',
-      'list',
-      '--state',
-      'open',
-      '--json',
-      'number,headRefName,title,files',
-    ],
-    { encoding: 'utf8' },
-  );
+  let raw;
+  try {
+    raw = execFileSync(
+      'gh',
+      [
+        'pr',
+        'list',
+        '--state',
+        'open',
+        '--json',
+        'number,headRefName,title,files',
+      ],
+      { encoding: 'utf8' },
+    );
+  } catch (error) {
+    // A read failure must be loud, not silent: exiting 0 here would report "no
+    // collisions" when the pull requests were never read, which is exactly the
+    // silent-green the check exists to prevent. The message names the token
+    // scope so a CI failure is actionable.
+    throw new Error(
+      `could not list open pull requests via \`gh\` (${error.message}). ` +
+        'The collision check needs a token with pull-requests:read.',
+    );
+  }
   return JSON.parse(raw);
 }
 
@@ -215,7 +227,12 @@ function main() {
   process.exit(1);
 }
 
-// Only run when invoked directly, so `laneFromBranch` stays importable in tests.
+// Only run when invoked directly, so the helpers stay importable in tests.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main();
+  try {
+    main();
+  } catch (error) {
+    console.error(`lane-collisions: ${error.message}`);
+    process.exit(1);
+  }
 }
