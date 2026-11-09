@@ -374,8 +374,8 @@ for (const asset of [
     assert.deepEqual([...photo.subarray(0, 3)], [0xff, 0xd8, 0xff]);
   }
   assert.ok(
-    photo.length < 9_000_000,
-    `Original district image ${asset} is unexpectedly large.`,
+    photo.length < 500_000,
+    `Original district image ${asset} should remain below 500 KB.`,
   );
   assert.match(
     home,
