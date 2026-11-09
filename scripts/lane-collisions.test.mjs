@@ -86,6 +86,8 @@ test("a path is owned by exactly the lane whose globs match it", () => {
   assert.deepEqual(ownersOf("scripts/lane-collisions.mjs", table), ["LANE-INFRA"]);
   // Exclusion syntax: URUN owns src/features/** but not identity.
   assert.deepEqual(ownersOf("src/features/identity/x.ts", table), ["LANE-AUTH"]);
+  // `src/server/email/**` was unowned for three turns (#386); pin it to URUN.
+  assert.deepEqual(ownersOf("src/server/email/mailer.ts", table), ["LANE-URUN"]);
   // A path no lane claims.
   assert.deepEqual(ownersOf("src/unowned/thing.ts", table), []);
 });
