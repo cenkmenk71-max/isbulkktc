@@ -409,3 +409,52 @@ iki `running` lane 0,8 sa (bekçi dokunmaz), operatör konuşması (14,6 sa) ba�
 **Ders.** Yine "gösterge kimi ölçüyor?" sınıfı: `running` "iş sürüyor" demek
 **sanılıyordu**; oysa `running`, "bitmedi" demek — bazen "sonsuza dek bitmeyecek"
 demek. Bekçi, meşguliyeti *süreyle* çapraz kontrol eder.
+
+---
+
+## Round: zehirli transcript — kesmek yetmiyor, beslememek gerek (#218, 2026-11-09)
+
+**Arıza.** Önceki round `stalledConversations` bekçisini ekledi: `running` +
+bütçe aşımı + PR yok → `/interrupt`. Ama bu yalnızca **o anki** döngüyü durdurdu.
+Kesilen konuşma `paused`'a döndü; bir sonraki geçiş onu **yeniden kullanılabilir /
+devam ettirilebilir** sayıp aynı sandbox'a yeni görev verdi. Transcript her turda
+tüm geçmişi yeniden gönderdiği için sızıntı **bileşik** büyüdü: canlı kanıt, bir
+Supabase konuşması **34.5M prompt token**, **0 PR**; sekiz lane toplamda **~863M
+prompt token**, **0 PR** (en kötü LANE-icerik 215M / 667 dk). Tek bir 16:25 geçişi
+**6 lane'i birden** kesti.
+
+**İki bağlı hata.**
+- `idle` durumu interrupt'tan **önce** hesaplanıyordu → az önce kesilen konuşma
+  aynı geçişte "yeniden kullanılabilir" görünüyordu.
+- `resumable` (devam ettirme) yolu **MAX_REUSES** sınırını atlıyordu → `paused`
+  konuşma sınırsız ekleniyordu.
+
+**Çözüm.**
+- `scripts/lane-autopilot-core.mjs` → saf **`poisonedConversations(conversations,
+  {now, maxRuntimeMs})`**: `LANE-*`, bütçe aşımı, PR yok — **durumdan bağımsız**.
+  `waiting_for_confirmation` (insan bekliyor, döngü değil) hariç. `stalledConversations`
+  artık bunun üzerine kurulu: **zehirli = stall + zaten kesilmiş olanlar.**
+- `scripts/lane-autopilot.mjs` → `poisoned` kümesi interrupt'tan **önce** bir kez
+  hesaplanır ve hem `idle` (reuse) hem `paused` (resume) hedeflerinden dışlanır.
+  Resume yoluna reuse bütçesi eklendi: `MAX_REUSES` dolunca aynı (kota-dışı)
+  sandbox'ta **taze transcript** başlatılır. Lane'in tek sandbox'ı yalnız zehirli
+  konuşma taşıyorsa: resume edilip üzerinde taze transcript açılır; bu kurtarma
+  **kota-dışı** sayılıp sandbox bütçesi / PR kapısına takılmaz.
+
+**Neden durumdan bağımsız.** Bekçinin asıl dersi: "kesmek" yeterli değil; kesilen
+konuşma hâlâ bir **reuse hedefi** olarak duruyorsa aynı sızıntı geri gelir. Zehir
+`running`'e değil, konuşmanın **kimliğine** (yaş + PR'sızlık) bağlanmalı.
+
+**Test.** `lane-autopilot-core.test.mjs`'e 6 test: durumdan bağımsızlık (running/
+paused/idle/error/finished hepsi zehirli), PR affı, `waiting_for_confirmation`
+bloklu, bütçe içi temiz, "poison ⊇ stall" ilişkisi, hatalı/eksik girdi. Tüm script
+testleri **178/178**; `eslint`/`node --check` temiz.
+
+**Doğrulama.** Canlı durum: `LANE-supabase` (sb `3qgonSUwLkuTnnQwGr5BVo`) ve
+`LANE-urun` (sb `6BN0TvWUdNywzIhCXZnmnJ`) `execution_status: None`, PR yok —
+poison sınıfına girer; yeni yol bunları beslemek yerine taze transcript'le kurtarır.
+Ortam saati ile API `created_at` uyumlu (17:25 UTC), saat kayması yok.
+
+**Ders.** Ölçüm, düzeltmenin gerçekten durduğunu doğrulamalı: bekçi eklendikten
+sonra token eğrisi düşmediyse, kesilen sinyal yanlış yerde demektir. Burada kesme
+doğruydu, ama **besleme** yolunda bir açık kalmıştı.

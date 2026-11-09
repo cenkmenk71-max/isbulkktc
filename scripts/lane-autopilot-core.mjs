@@ -190,42 +190,47 @@ export function diedWithoutWorking(conversation) {
 }
 
 /**
- * Lane conversations that are still `running` long past any reasonable task
- * budget and have opened no PR.
+ * Lane conversations that have run past any reasonable task budget and opened
+ * no PR — regardless of whether they are still `running`.
  *
- * The autopilot's `working` set treats every `running` conversation as busy and
- * skips it for the rest of the pass, and `decide()` returns `wait` for a lane
- * whose branch exists while it is `working`. A conversation that loops — reading
- * the same brief, re-running `git status`, never committing — therefore never
- * leaves `running`, is never re-evaluated, and burns tokens indefinitely. One
- * such lane ran 13.5 hours and spent ~180M prompt tokens with no commit and no
- * PR; the platform does not stop it, and the reaper only reclaims sandboxes
- * whose conversations are already terminal, so nothing did.
+ * A conversation that loops — reading the same brief, re-running `git status`,
+ * never committing — is the token leak of issue #218: one lane ran 13.5 hours
+ * and spent ~180M prompt tokens with no commit and no PR. The staleness guard
+ * interrupts such a conversation, but interrupting only *pauses* it; the next
+ * pass saw a non-`running` conversation with a live sandbox, treated it as
+ * "idle/reusable", and fed it another task. The transcript (and its per-turn
+ * cost) only grew, so one conversation accumulated 34.5M prompt tokens across
+ * its whole life. Being old and PR-less is the poison, so this predicate is what
+ * both the interrupt *and* the reuse/resume decisions consult.
  *
- * This is the missing staleness guard. A conversation is stalled when it is
- * `running`, started longer than `maxRuntimeMs` ago, and has produced no PR
- * (neither the summary `pr_number` nor the `pull_requests` list). The caller
- * interrupts those conversations, which releases the sandbox and lets the next
- * pass re-decide the lane from a clean state.
+ * A conversation is poisoned when its title starts with `LANE-`, it started
+ * longer than `maxRuntimeMs` ago, and it has produced no PR (neither the summary
+ * `pr_number` nor the `pull_requests` list). `waiting_for_confirmation` is
+ * excluded: it is blocked on a human, not looping, so it must be left alone (the
+ * reaper treats it as active for the same reason).
  *
  * Only conversations titled `LANE-*` are considered: the guard governs the lane
  * team, so the operator's own conversation (or any other human-run one) is never
- * interrupted by it.
+ * touched by it.
  *
  * `maxRuntimeMs <= 0` disables the guard, so an unset/blank threshold never
- * interrupts anything (the `""`-is-truthy trap that bit `approve-pending-runs`).
+ * poisons anything (the `""`-is-truthy trap that bit `approve-pending-runs`).
  *
  * @param {Array<{execution_status?: string|null, created_at?: string, pr_number?: unknown, pull_requests?: unknown, title?: string|null}>} conversations
  * @param {{now?: number, maxRuntimeMs?: number}} [options]
- * @returns {Array<object>} the stalled conversations, in input order
+ * @returns {Array<object>} the poisoned conversations, in input order
  */
-export function stalledConversations(conversations, options = {}) {
+export function poisonedConversations(conversations, options = {}) {
   const { now = Date.now(), maxRuntimeMs = 0 } = options;
   if (!(Number.isFinite(maxRuntimeMs) && maxRuntimeMs > 0)) return [];
-  const stalled = [];
+  const poisoned = [];
   for (const conversation of conversations ?? []) {
     if (!String(conversation?.title ?? '').startsWith('LANE-')) continue;
-    if (String(conversation?.execution_status ?? '') !== 'running') continue;
+    // `waiting_for_confirmation` is blocked on a human, not looping, and must be
+    // left alone (the reaper treats it as active for the same reason).
+    if (String(conversation?.execution_status ?? '') === 'waiting_for_confirmation') {
+      continue;
+    }
     const startedAt = Date.parse(String(conversation?.created_at ?? ''));
     if (!Number.isFinite(startedAt)) continue;
     if (now - startedAt < maxRuntimeMs) continue;
@@ -237,9 +242,27 @@ export function stalledConversations(conversations, options = {}) {
         ? conversation.pull_requests.length
         : Number(conversation?.pull_requests ?? 0) || 0);
     if (prs > 0) continue;
-    stalled.push(conversation);
+    poisoned.push(conversation);
   }
-  return stalled;
+  return poisoned;
+}
+
+/**
+ * The subset of `poisonedConversations` that is still `running`, so the caller
+ * can interrupt the burn now. A conversation that has *already* been interrupted
+ * (it reports `paused`/`error`/`finished`) is not returned here — interrupting it
+ * again is a no-op — but it is still poisoned, so it must not be resumed and fed
+ * another task either.
+ *
+ * @param {Array<object>} conversations
+ * @param {{now?: number, maxRuntimeMs?: number}} [options]
+ * @returns {Array<object>}
+ */
+export function stalledConversations(conversations, options = {}) {
+  return poisonedConversations(conversations, options).filter(
+    (conversation) =>
+      String(conversation?.execution_status ?? '') === 'running',
+  );
 }
 
 /**
