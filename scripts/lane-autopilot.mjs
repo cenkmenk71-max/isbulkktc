@@ -38,6 +38,7 @@ import {
   hasLabelledWork,
   isCapacityError,
   nextConversationAction,
+  prCapacity,
   workSignature,
 } from './lane-autopilot-core.mjs';
 
@@ -64,6 +65,14 @@ const SANDBOX_BUDGET = REGISTRY.sandboxBudget ?? 6;
 // A conversation re-sends its whole transcript every turn, so reuse is a
 // context cost, not a saving — see issue #218.
 const MAX_REUSES = REGISTRY.maxReusesPerConversation ?? 2;
+// How many lane PRs may be open at once. POLICY.md fixes the concurrent band at
+// 4–6 lanes and every open PR is one CI run in the runner queue (5 PRs × 6 jobs
+// = 30 concurrent jobs; one E2E shard took 17 minutes — issue #430). The cap is
+// the band's lower bound, so the queue never saturates. When it is reached the
+// autopilot still merges and still lets a lane *with an open PR* finish, but
+// starts no new lane: the next pass runs once a merge frees a slot. 0/absent
+// means no limit, as before.
+const MAX_OPEN_PRS = REGISTRY.maxOpenPRs ?? 0;
 // Whether a lane must have a labelled issue to be started. The kickoff prompt
 // also lets a lane pick its own bounded task from its brief, so this is a
 // deliberate policy switch: on, the autopilot only starts lanes with a labelled
@@ -636,18 +645,39 @@ async function main() {
 
   const capacity = Math.max(0, SANDBOX_BUDGET - running);
   const freshAllowed = fresh.slice(0, capacity);
-  const allowed = [...reusable, ...resumable, ...freshAllowed];
-  const deferred = fresh.slice(capacity);
+  // Two independent brakes. The sandbox budget bounds fresh sandboxes; the PR cap
+  // bounds how many lanes may open a PR this pass. Reusable/resumable lanes cost
+  // no quota so they are considered first — but they still spend a PR slot,
+  // because a PR is what queues CI. Beyond the cap a spawn is *deferred*, not
+  // dropped: it starts on a later pass once a merge frees a slot (issue #430).
+  // Merges below are deliberately not subject to the cap, so the queue drains.
+  const prSlots = prCapacity(prs.length, MAX_OPEN_PRS);
+  const startable = [...reusable, ...resumable, ...freshAllowed];
+  const allowed = startable.slice(0, prSlots);
+  const overPrCap = startable.slice(prSlots);
+  const overBudget = fresh.slice(capacity);
+  const deferred = [...overBudget, ...overPrCap];
+  const deferredReason = new Map();
+  for (const d of overBudget) deferredReason.set(d, 'no sandbox budget');
+  for (const d of overPrCap) {
+    deferredReason.set(
+      d,
+      `PR limit: pass may open ${prSlots} (open ${prs.length}, cap ${MAX_OPEN_PRS})`,
+    );
+  }
 
   console.log(`sandboxes running: ${running} (budget ${SANDBOX_BUDGET})`);
+  if (MAX_OPEN_PRS > 0) console.log(`open PRs: ${prs.length} (limit ${MAX_OPEN_PRS})`);
   for (const d of decisions) {
-    const isAllowed = allowed.includes(d);
-    const marker = d.action === 'spawn' && !isAllowed ? 'deferred' : d.action;
-    const note = reusableFor(d)
-      ? ' (reuse)'
-      : resumableFor(d)
-        ? ' (resume)'
-        : '';
+    const isDeferred = deferredReason.has(d);
+    const marker = isDeferred ? 'deferred' : d.action;
+    const note = isDeferred
+      ? ` (${deferredReason.get(d)})`
+      : reusableFor(d)
+        ? ' (reuse)'
+        : resumableFor(d)
+          ? ' (resume)'
+          : '';
     console.log(`  ${d.name.padEnd(11)} ${marker.padEnd(9)} ${d.reason}${note}`);
   }
 
@@ -840,7 +870,15 @@ async function main() {
     }
   }
   if (deferred.length > 0) {
-    console.log(`\ndeferred (no sandbox budget): ${deferred.map((d) => d.name).join(', ')}`);
+    const byReason = {};
+    for (const d of deferred) {
+      const reason = deferredReason.get(d) ?? 'deferred';
+      (byReason[reason] ??= []).push(d.name);
+    }
+    console.log('\ndeferred:');
+    for (const [reason, names] of Object.entries(byReason)) {
+      console.log(`  ${names.join(', ')} — ${reason}`);
+    }
   }
 
   saveState(state);

@@ -7,6 +7,7 @@ import {
   isCapacityError,
   laneDelivered,
   nextConversationAction,
+  prCapacity,
   workSignature,
 } from "./lane-autopilot-core.mjs";
 
@@ -159,4 +160,30 @@ test("laneDelivered recognises only the statuses that mean work was handed over"
   for (const status of ["ERROR", null, undefined, "PENDING", ""]) {
     assert.equal(laneDelivered(status), false);
   }
+});
+
+// ---------------------------------------------------------------------------
+// prCapacity — bound concurrent PRs to shorten the CI runner queue (issue #430)
+// ---------------------------------------------------------------------------
+
+test("below the cap every lane may open a PR", () => {
+  assert.equal(prCapacity(0, 3), 3);
+  assert.equal(prCapacity(1, 3), 2);
+  assert.equal(prCapacity(2, 3), 1);
+});
+
+test("at or above the cap no new PR is opened", () => {
+  assert.equal(prCapacity(3, 3), 0);
+  assert.equal(prCapacity(5, 3), 0);
+});
+
+test("a missing or non-positive cap means no limit", () => {
+  for (const unlimited of [0, -1, undefined, Number.NaN]) {
+    assert.equal(prCapacity(50, unlimited), Infinity, `cap ${String(unlimited)} should be unlimited`);
+  }
+});
+
+test("a missing or negative open count is treated as zero", () => {
+  assert.equal(prCapacity(undefined, 3), 3);
+  assert.equal(prCapacity(-1, 3), 3);
 });
