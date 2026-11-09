@@ -86,6 +86,43 @@ test("the kickoff warns the lane against re-reading its brief and losing the pla
   assert.match(text, /commit et/);
 });
 
+// The bug this guards: the kickoff told the lane to read 00-orchestration.md +
+// AUDIT.md + its brief *before* acting, which is the reading loop itself. The
+// prompt must scope the reading to the one brief that names the work and put a
+// commit in the first minutes on disk.
+test("the kickoff scopes the reading to its own brief and commits early", () => {
+  const text = kickoff("infra", lane, {});
+  assert.match(text, /Önce SADECE kendi brief/);
+  assert.match(text, /00-orchestration\.md ve AUDIT\.md'yi baştan OKUMA/);
+  assert.match(text, /EYLEM ÖNCE/);
+  assert.match(text, /COMMIT ET/);
+  assert.match(text, /İlk ~10 dakikada/);
+});
+
+// The bug this guards: a stale lane branch is 100-250 commits behind main, so
+// the lane's first rebase is a wall of conflicts and it never starts. The
+// prompt must reset the branch from main in one step (`checkout -B`) before
+// working, keeping the branch name so the PR still lands on `lane/<name>`.
+test("the kickoff resets the lane branch from main instead of rebasing a stale one", () => {
+  const text = kickoff("infra", lane, {});
+  assert.match(text, /git fetch origin main && git checkout -B lane\/infra origin\/main/);
+  assert.match(text, /DALI TAZE BAŞLAT/);
+});
+
+// The bug this guards: a lane that burned its whole budget without landing
+// anything did it by surveying instead of shipping. The recovery respawn must
+// narrow the task to a single small commit, not a survey of its area.
+test("a recovery respawn narrows the lane to one small commit", () => {
+  const text = kickoff("infra", lane, { recovery: true });
+  assert.match(text, /KURTARMA TURU/);
+  assert.match(text, /TEK küçük, sınırlı bir/);
+  assert.match(text, /Tek commit yeterli/);
+});
+
+test("a plain kickoff carries no recovery instruction", () => {
+  assert.doesNotMatch(kickoff("infra", lane, {}), /KURTARMA TURU/);
+});
+
 // The bug this guards (#453): a lane whose sandbox is gone but whose PR is red
 // used to wait forever — its own red PR froze it, because an open PR always read
 // as "in flight". The autopilot now re-spawns it with `redPr`, and the prompt

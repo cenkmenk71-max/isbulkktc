@@ -209,37 +209,81 @@ export function diedWithoutWorking(conversation) {
  * its whole life. Being old and PR-less is the poison, so this predicate is what
  * both the interrupt *and* the reuse/resume decisions consult.
  *
- * A conversation is poisoned when its title starts with `LANE-`, it started
- * longer than `maxRuntimeMs` ago, and it has produced no PR (neither the summary
- * `pr_number` nor the `pull_requests` list). `waiting_for_confirmation` is
- * excluded: it is blocked on a human, not looping, so it must be left alone (the
- * reaper treats it as active for the same reason).
+ * A conversation is poisoned when its title starts with `LANE-`, it has
+ * produced no PR (neither the summary `pr_number` nor the `pull_requests`
+ * list), and *any* signal fires:
+ *
+ *   - **no commit in the window** — the lane's branch has had no new commit
+ *     since the conversation started, and `noCommitMs` has elapsed. This is the
+ *     signal that matches the brief: the stall criterion is "no commit/push in
+ *     the window", not age. `updated_at` alone cannot see it — a lane that greps
+ *     and re-reads forever keeps `updated_at` moving while landing nothing — so
+ *     the caller passes the lane branch's newest commit time (`commitsByLane`).
+ *     A lane that just started (window not elapsed) is not judged.
+ *   - **idle** — it is still `running` but has not been touched for `maxIdleMs`.
+ *     `updated_at` moves on every turn (tool call, model reply), so a *running*
+ *     conversation that stopped moving is a dead sandbox whose agent is gone;
+ *     nothing will resume it, and it is holding a sandbox the team could use.
+ *     Only `running` conversations are judged idle: a `paused`/`idle` one is
+ *     legitimately waiting, so its age is the ceiling's business, not idleness.
+ *   - **over the hard ceiling** — it started longer than `maxRuntimeMs` ago,
+ *     *whatever* `updated_at` says. This is the backstop for a loop that keeps
+ *     moving but the commit signal cannot see (e.g. a branch whose commit time
+ *     the caller could not read).
+ *
+ * `waiting_for_confirmation` is excluded from all three: it is blocked on a
+ * human, not looping, so it must be left alone (the reaper treats it as active
+ * for the same reason).
  *
  * Only conversations titled `LANE-*` are considered: the guard governs the lane
  * team, so the operator's own conversation (or any other human-run one) is never
  * touched by it.
  *
- * `maxRuntimeMs <= 0` disables the guard, so an unset/blank threshold never
- * poisons anything (the `""`-is-truthy trap that bit `approve-pending-runs`).
+ * A non-positive `maxIdleMs`, `maxRuntimeMs` or `noCommitMs` disables *that*
+ * signal (it never fires), so an unset/blank threshold cannot poison anything on
+ * its own — the `""`-is-truthy trap that bit `approve-pending-runs`. With all
+ * disabled the predicate returns nothing, as before.
  *
- * @param {Array<{execution_status?: string|null, created_at?: string, pr_number?: unknown, pull_requests?: unknown, title?: string|null}>} conversations
- * @param {{now?: number, maxRuntimeMs?: number}} [options]
+ * @param {Array<{execution_status?: string|null, created_at?: string, updated_at?: string, pr_number?: unknown, pull_requests?: unknown, title?: string|null}>} conversations
+ * @param {{now?: number, maxIdleMs?: number, maxRuntimeMs?: number, noCommitMs?: number, commitsByLane?: Map<string, number>|Record<string, number>}} [options]
  * @returns {Array<object>} the poisoned conversations, in input order
  */
 export function poisonedConversations(conversations, options = {}) {
-  const { now = Date.now(), maxRuntimeMs = 0 } = options;
-  if (!(Number.isFinite(maxRuntimeMs) && maxRuntimeMs > 0)) return [];
+  const {
+    now = Date.now(),
+    maxIdleMs = 0,
+    maxRuntimeMs = 0,
+    noCommitMs = 0,
+    commitsByLane,
+  } = options;
+  const idleLimit = Number.isFinite(maxIdleMs) && maxIdleMs > 0 ? maxIdleMs : 0;
+  const runtimeLimit = Number.isFinite(maxRuntimeMs) && maxRuntimeMs > 0 ? maxRuntimeMs : 0;
+  // The commit signal needs a commit map to read: without one (a caller that
+  // passed no `commitsByLane`, or one whose query failed and passed `null`) the
+  // signal is disabled, so missing data never poisons a lane.
+  const commitLimit =
+    Number.isFinite(noCommitMs) && noCommitMs > 0 && commitsByLane != null ? noCommitMs : 0;
+  if (idleLimit === 0 && runtimeLimit === 0 && commitLimit === 0) return [];
+  const commitAtFor = (laneName) => {
+    if (commitsByLane instanceof Map) {
+      return commitsByLane.has(laneName) ? commitsByLane.get(laneName) : undefined;
+    }
+    if (commitsByLane && typeof commitsByLane === 'object') {
+      return Object.prototype.hasOwnProperty.call(commitsByLane, laneName)
+        ? commitsByLane[laneName]
+        : undefined;
+    }
+    return undefined;
+  };
   const poisoned = [];
   for (const conversation of conversations ?? []) {
-    if (!String(conversation?.title ?? '').startsWith('LANE-')) continue;
+    const title = String(conversation?.title ?? '');
+    if (!title.startsWith('LANE-')) continue;
     // `waiting_for_confirmation` is blocked on a human, not looping, and must be
     // left alone (the reaper treats it as active for the same reason).
     if (String(conversation?.execution_status ?? '') === 'waiting_for_confirmation') {
       continue;
     }
-    const startedAt = Date.parse(String(conversation?.created_at ?? ''));
-    if (!Number.isFinite(startedAt)) continue;
-    if (now - startedAt < maxRuntimeMs) continue;
     // `pr_number` comes back as an array (`[]` when none) and `pull_requests` as
     // a count; a bare `[]` is truthy, so count both instead of testing them.
     const prs =
@@ -248,9 +292,52 @@ export function poisonedConversations(conversations, options = {}) {
         ? conversation.pull_requests.length
         : Number(conversation?.pull_requests ?? 0) || 0);
     if (prs > 0) continue;
-    poisoned.push(conversation);
+
+    const startedAt = Date.parse(String(conversation?.created_at ?? ''));
+    const touchedAt = Date.parse(
+      String(conversation?.updated_at ?? conversation?.created_at ?? ''),
+    );
+    // A conversation with no parsable timestamp at all cannot be judged, so it
+    // is skipped rather than interrupted on a guess.
+    if (!Number.isFinite(startedAt) && !Number.isFinite(touchedAt)) continue;
+
+    const running = String(conversation?.execution_status ?? '') === 'running';
+    const idle =
+      running && idleLimit > 0 && Number.isFinite(touchedAt) && now - touchedAt >= idleLimit;
+    const overCeiling =
+      runtimeLimit > 0 && Number.isFinite(startedAt) && now - startedAt >= runtimeLimit;
+    // A lane the commit map does not know about (no branch recorded, or a lane
+    // name that does not line up) is left unjudged on this signal rather than
+    // assumed commit-less: a naming mismatch would otherwise poison the whole
+    // team at once. The idleness and ceiling signals still decide for it.
+    const commitAt = commitAtFor(title.replace(/^LANE-/, ''));
+    const noCommit =
+      commitAt !== undefined &&
+      noCommitInWindow({ commitAt, since: startedAt, now, windowMs: commitLimit });
+    if (idle || overCeiling || noCommit) poisoned.push(conversation);
   }
   return poisoned;
+}
+
+/**
+ * Whether a lane has gone a whole window without landing a commit.
+ *
+ * The stall criterion the brief names: "no commit/push in the window", not age.
+ * A lane is judged only once the window has elapsed since it started, so a lane
+ * that is still inside its first minutes is never called stalled — the kickoff
+ * asks for a commit in the first ~10 minutes, and the window gives it room. A
+ * commit on the lane branch at or after the start is progress, so it clears the
+ * signal; no parsable start time or a disabled window means "cannot judge".
+ *
+ * @param {{commitAt?: number, since?: number, now?: number, windowMs?: number}} params
+ * @returns {boolean}
+ */
+export function noCommitInWindow({ commitAt, since, now = Date.now(), windowMs = 0 } = {}) {
+  const limit = Number.isFinite(windowMs) && windowMs > 0 ? windowMs : 0;
+  if (limit === 0) return false;
+  if (!Number.isFinite(since)) return false;
+  if (now - since < limit) return false;
+  return !(Number.isFinite(commitAt) && commitAt >= since);
 }
 
 /**
@@ -261,7 +348,7 @@ export function poisonedConversations(conversations, options = {}) {
  * another task either.
  *
  * @param {Array<object>} conversations
- * @param {{now?: number, maxRuntimeMs?: number}} [options]
+ * @param {{now?: number, maxIdleMs?: number, maxRuntimeMs?: number}} [options]
  * @returns {Array<object>}
  */
 export function stalledConversations(conversations, options = {}) {
