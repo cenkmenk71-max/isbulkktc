@@ -124,3 +124,26 @@ export function carriedAttempts(entry, work) {
   if (entry?.work && entry.work !== work) return 0;
   return attempts;
 }
+
+/**
+ * How many *new* PRs the autopilot may open this pass.
+ *
+ * Every open PR is one CI run in the runner queue: five PRs × six jobs is thirty
+ * concurrent jobs, and one E2E shard took 17 minutes under that load (issue
+ * #430). Bounding how many PRs are open at once shortens the queue for every
+ * lane. This only counts lanes that would open a *new* PR — a lane that already
+ * has one is `wait`, not deferred — and it never blocks a merge, so the cap
+ * drains itself: a merge frees a slot for the next pass.
+ *
+ * A missing or non-positive cap means "no limit" (`Infinity`), so a repo that
+ * does not configure `maxOpenPRs` behaves exactly as before.
+ *
+ * @param {number} openPrs PRs currently open (any author, lane or not)
+ * @param {number} maxOpenPRs the configured cap
+ * @returns {number} how many new PRs may be opened (0 when at or over the cap)
+ */
+export function prCapacity(openPrs, maxOpenPRs) {
+  const limit = Number.isFinite(maxOpenPRs) && maxOpenPRs > 0 ? maxOpenPRs : Infinity;
+  const open = Number.isFinite(openPrs) && openPrs > 0 ? openPrs : 0;
+  return Math.max(0, limit - open);
+}

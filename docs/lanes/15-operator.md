@@ -261,3 +261,54 @@ terminal değildir".
 **Ders.** Yine "gösterge kimi ölçüyor?" sınıfı: autopilot sandbox'ın `RUNNING`
 olmasını "iş var" sanıyor; oysa `RUNNING`, "kimse bırakmadı" demek olabilir.
 Bekçi ile gerçek iş sinyalini ayır.
+
+## Tur notları — eşzamanlı PR sınırı, uygulandı (2026-11-08)
+
+**Devredilen görev (issue #430) tamamlandı.** Sahibin bıraktığı "eşzamanlı PR
+sınırı" işi kodlandı, test edildi, kanıtlandı.
+
+**Uygulama.** `scripts/lanes.json`'a `"maxOpenPRs": 4` eklendi (tek kaynak).
+Sınır, POLICY.md'nin "dalga başına 4–6 lane" bandının **alt** ucudur. Autopilot
+kararı `scripts/lane-autopilot-core.mjs`'teki **saf** `prCapacity(openPrs,
+maxOpenPRs)` ile verilir: `max(0, limit − open)`, geçersiz/0 limit → `Infinity`
+(yapılandırılmamış repo eski davranışta kalır). `lane-autopilot.mjs` bu slot
+sayısını iki bağımsız frende biri olarak kullanır:
+
+- **sandbox bütçesi** taze sandbox sayısını sınırlar (eskiden tek fren);
+- **PR sınırı** bu geçişte kaç lane'in PR açabileceğini sınırlar.
+
+Reuse/resume lane'leri kota harcamaz, o yüzden önce değerlendirilir — ama yine de
+**PR slotu** harcar, çünkü kuyruğa giren şey PR'dır. Sınır aşılırsa spawn
+**deferred** olur (düşürülmez); sonraki geçişte bir merge slot açınca başlar.
+**Merge'ler sınıra tabi değildir**, böylece kuyruk kendini boşaltır.
+
+**Ölçüm (istenen kanıt).** GitHub Actions API'den job düzeyinde
+`started_at − created_at` (= runner kuyruk beklemesi):
+
+| Rejim | Job | Kuyruk bekleme (ort/en büyük) |
+|---|---|---|
+| Yüksek (6 Kas ~20:00, 5–6 eşzamanlı run) | 35 | 2.0 s / 3 s |
+| Düşük (8–9 Kas, 0–1 eşzamanlı run) | 35 | 1.9 s / 3 s |
+
+**Dürüst bulgu:** kuyruk beklemesi **her iki rejimde de ~2 s** — yani bugünkü
+gerçek darboğaz kuyruk *değil*. #430'un tablosundaki "5–6 bekleyen check" ise
+bekleyen *job* sayısı, *bekleme süresi* değil; E2E shard'ları bugün ≤ 9.7 dk
+(#421'deki 17 dk tek seferlik görünüyor). Sınırın değeri bu yüzden "bugünkü
+beklemeyi kısaltmak" değil, **eşzamanlılığı POLICY bandında tutan bir tavan
+koymak**: 10 lane aynı anda PR üretirse kuyruk doğrusal büyür ve 2026-11-04'te
+bir run 24 dk'ya çıkmıştı (POLICY.md). Sınır bunun tekrarını önler.
+
+**Dry-run kanıtı (sınır dolduğunda doğru karar).** Sınırlı geçişte autopilot
+şunu yazıyor: `open PRs: 0 (limit 4)`, ilk 4 başlatılabilir lane `spawn`, geri
+kalan her lane `deferred  … (PR limit: pass may open 4 (open 0, cap 4))`. Yani
+sınır aşıldığında yeni lane başlatılmıyor, sebep raporlanıyor.
+
+**Test.** `scripts/lane-autopilot-core.test.mjs`'e 4 test eklendi (altında sınır
+altı → slot var, sınırda/üstünde → 0, eksik/≤0 limit → sınırsız, eksik/negatif
+open → 0 sayılır). Tam `test:unit` **779 test / 777 geçti / 0 kaldı**; `lint`,
+`typecheck` temiz.
+
+**Ders.** Bir "verim" şikâyeti ölçülmeden doğru kabul edilmemeli: #430 "bekleme
+artıyor" diyordu, ölçüm bunu **doğrulamadı**. Doğru refleks, istenen sınırı yine
+de koymak — ama gerekçesini ölçüme göre düzeltmek (tavan/eşzamanlılık denetimi),
+uydurma bir "öncesi/sonrası kazanç" yazmamak.

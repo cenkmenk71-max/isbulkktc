@@ -4,6 +4,7 @@
   "provider": "github",
   "maxAttemptsPerLane": 3,
   "sandboxBudget": 10,
+  "maxOpenPRs": 4,
   "lanes": {
     "supabase": {
       "brief": "01-supabase",
