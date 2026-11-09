@@ -98,6 +98,32 @@ test("a path is owned by exactly the lane whose globs match it", () => {
   assert.deepEqual(ownersOf("src/unowned/thing.ts", table), []);
 });
 
+test("the operator harness family is owned by LANE-OPERATÖR", () => {
+  // The operator lane split its harness into `-core`/test modules and added
+  // `reap-stalled-sandboxes`, but the ownership row still listed only
+  // `lane-autopilot.mjs` / `lane-kickoff.mjs` / `system-health.mjs`. Every new
+  // file therefore fell through to LANE-INFRA's `scripts/**`, so PR #494
+  // (lane/operator) editing `lane-autopilot-core.mjs` reported a collision.
+  // Pin the whole family to the operator lane.
+  for (const path of [
+    "scripts/lane-autopilot.mjs",
+    "scripts/lane-autopilot-core.mjs",
+    "scripts/lane-autopilot-core.test.mjs",
+    "scripts/lane-kickoff.mjs",
+    "scripts/lane-kickoff.test.mjs",
+    "scripts/system-health.mjs",
+    "scripts/system-health-core.mjs",
+    "scripts/system-health.test.mjs",
+    "scripts/reap-stalled-sandboxes.mjs",
+    "scripts/reap-stalled-sandboxes.test.mjs",
+  ]) {
+    assert.ok(
+      ownersOf(path, table).includes("LANE-OPERATÖR"),
+      `${path} must be owned by LANE-OPERATÖR`,
+    );
+  }
+});
+
 test("foldName folds the Turkish lane name to ASCII", () => {
   assert.equal(foldName("LANE-GÜVENLİK"), "lane-guvenlik");
   assert.equal(foldName("LANE-İÇERİK"), "lane-icerik");

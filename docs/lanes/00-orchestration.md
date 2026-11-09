@@ -35,7 +35,7 @@ Bu dosya kuralları ve sırayı tanımlar. Bir lane'in brief'i `docs/lanes/<ad>.
 | LANE-VERIFY | `tests/verify/**`, `scripts/verify-*.mjs`, `docs/verification-log.md`, `docs/lanes/11-verify.md` |
 | LANE-İÇERİK | `src/messages/**`, `src/i18n/**`, `src/content/**`, `docs/lanes/12-icerik.md` |
 | LANE-TESLİMAT | `scripts/prune-vercel-deployments.mjs`, `scripts/approve-pending-runs.mjs`, `scripts/verify-production-deployment.mjs`, `docs/deploy-log.md`, `docs/lanes/14-teslimat.md` |
-| LANE-OPERATÖR | `docs/OPERATOR.md`, `scripts/system-health.mjs`, `scripts/lane-autopilot.mjs`, `scripts/lane-kickoff.mjs`, `docs/lanes/15-operator.md` |
+| LANE-OPERATÖR | `docs/OPERATOR.md`, `scripts/lane-autopilot*.mjs`, `scripts/lane-kickoff*.mjs`, `scripts/system-health*.mjs`, `scripts/reap-stalled-sandboxes*.mjs`, `docs/lanes/15-operator.md` |
 | LANE-INFRA | `.github/**`, `scripts/**`, `package.json`, `bun.lock`, `package-lock.json`, `.gitignore`, `docs/lanes/00-orchestration.md`, `docs/lanes/README.md`, `docs/lanes/POLICY.md`, `docs/lanes/AUDIT.md` |
 
 **Her lane kendi brief'ine sahiptir.** Protokol "notlarını `docs/lanes/<ad>.md`'ye
