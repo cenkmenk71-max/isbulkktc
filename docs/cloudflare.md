@@ -959,7 +959,7 @@ kontrol et. Regresyon testine `%252e%252e` ve `%25252e` varyantlarını ekle
 | T-04 | WAF | Kodlanmış traversal **query**'de (`%2e%2e%2f`, `%252e%252e%252f`) | 200 (origin işler, yansıtmaz) | ✔ bilgi |
 | T-05 | Cache | Dinamik HTML `/`, `/jobs`, `/companies`, `/en`… | `private, no-store`, `DYNAMIC` | ✔ |
 | T-06 | Cache | `/_next/static/**` gerçek varlık | `immutable` + `HIT` | ✔ |
-| T-07 | Cache | `/robots.txt` gzip/identity/br + `Vary: accept-encoding` | ayrı girdi, doğru kodlama | ✔ |
+| T-07 | Cache | `/robots.txt` gzip/identity/br | ayrı girdi, doğru kodlama; **`Vary` yok** (tur 21/T-01 düzeltmesi — bu satır önce yanlışlıkla `Vary: accept-encoding` diyordu) | ✔ |
 | T-08 | Cache | `/sitemap.xml` gzip/identity | `Vary: accept-encoding`, 4027 vs 153112 B | ✔ |
 | T-09 | Cache | `/_next/image` gerçek görsel | 200 `image/jpeg`, `immutable`, `vary: Accept` | ✔ |
 | T-10 | Cache | Negatif cache — diğer önekler (`/images/**`, `/_next/**` 404) | `no-store`/`BYPASS` | ✔ |
