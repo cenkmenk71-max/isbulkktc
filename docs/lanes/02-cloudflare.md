@@ -662,7 +662,7 @@ Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: #438 (tur 26)
 Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
 Çalıştırılan kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
 Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF değiştirilmedi)
-Sahibin yapması gerekenler: (1) N-01 WAF ifadesini url_decode ile kur (yıkıcı → onay);
+Sahibin yapması gerekenler: (1) N-11 WAF ifadesini url_decode ile kur (yıkıcı → onay);
   (2) H-01r HSTS politika kararı (1–12 ay tavanı); (3) H-02 Browser Cache TTL;
   (4) R-01 trailing-dot apex; (5) G-01 Email Obfuscation OFF; (6) F-08 Vercel alias kapat;
   (7) #227 Resend DKIM 2048-bit.
@@ -674,26 +674,28 @@ Sonraki lane için notlar: (1) WAF boşluğunu "kodlanmış yol" diye bırakma �
 
 **Bu tur ne buldu (hepsi canlı `curl`/DoH/SSL Labs kanıtlı, `docs/cloudflare.md` → "tur 26"):**
 
-- **N-01 (orta — yeni, izolasyon):** tur 14'ten beri "kodlanmış yol" denen WAF
+- **N-11 (orta — yeni, izolasyon):** tur 14'ten beri "kodlanmış yol" denen WAF
   boşluğu **yalnız `%2F`** ile açılıyor. `%2E`/`%2D`/harf-kodlaması, çift-kodlama,
   ters bölü, `//`, nokta-segmentleri ve case **hepsi doğru yakalanıyor**; kaçan tek
-  varyant eğik çizginin `%2F`'si. Üç kategoride de (VCS, dotfile, CMS/api-devtools)
-  aynı. Origin'e ulaşma `x-vercel-id`+`DYNAMIC` ile ispatlı (CF 403 sayfası değil).
+  varyant eğik çizginin `%2F`'si. **Tur 27 düzeltmesi:** kaçış "üç kategoride de"
+  değil, yalnız **literalinde `/` olan** kurallarda (VCS `/.git/`, `/api/devtools/`)
+  geçerli; `/wp-admin`, `/phpmyadmin`, `.env` (literalinde `/` yok) **bloklu kalır**.
+  Origin'e ulaşma `x-vercel-id`+`DYNAMIC` ile ispatlı (CF 403 sayfası değil).
   **Düzeltme:** ifadeyi `url_decode(http.request.uri.path)` (veya `raw.`) üzerinden
   kur. **Yıkıcı → sahibin onayı.**
-- **N-02 (bilgi — öneri düzeltmesi):** "Normalize incoming URLs'ı aç" bu boşluğu
+- **N-12 (bilgi — öneri düzeltmesi):** "Normalize incoming URLs'ı aç" bu boşluğu
   **kapatmaz** — CF'nin RFC 3986 normalizasyonu rezerve `/`'yi **çözmez**, `%2F`
   normalizasyondan sonra da `%2F`'dir. Doğru çözüm ifade, ayar değil.
-- **N-03 (düşük — repo):** `/api%2F*` yolları origin'de **500** (Next.js
+- **N-13 (düşük — repo):** `/api%2F*` yolları origin'de **500** (Next.js
   rotalayamıyor; `qr`/`push`/`unsubscribe`), `build-info` 200. Origin alias da aynı
   → CF değil. Sızıntı yok (jenerik `/500` gövdesi). Sahip: `src/app/api/**`.
-- **N-04 (bilgi):** `robots.txt` `Disallow: /api/` `%2F`'yi tutmuyor; robots
+- **N-14 (bilgi):** `robots.txt` `Disallow: /api/` `%2F`'yi tutmuyor; robots
   güvenlik kontrolü değil → aksiyon yok.
 - **H-01r (düzeltme — orta):** tur 9'un "H-01: CF edge HSTS'i origin'in 2 yılına
   hizala" önerisi **imkânsız** — CF HSTS `Max Age Header` **1–12 ay** ile sınırlı
   (resmî doküman); `63072000` panelde girilemez. H-01 "açık bulgu" değil,
   **politika kararı** (origin'i 12 aya indir / CF HSTS'i kapat / bırak).
-- **N-05 (devir):** `AGENTS.md:82-83` "`tr` sunulan URL'de ön-ekli" ↔ canlı
+- **N-15 (devir):** `AGENTS.md:82-83` "`tr` sunulan URL'de ön-ekli" ↔ canlı
   `/tr/jobs` → **308** ön-eksiz. `robots.txt` doğru (yalnız varsayılan-olmayan
   diller listeli). AGENTS.md bu lane'in değil → devir **#437** (`lane:infra` + `agent:handoff`).
 
@@ -702,9 +704,9 @@ apex+`www` CF anycast + `www` → 308 apex; WAF saldırı **12/12 → 403**, me�
 **18/18 → 200**, `sqlmap` 403; güvenlik başlıkları edge=origin **birebir** (tek
 fark HSTS); `alt-svc: h3`; dinamik HTML hiç cache'lenmiyor.
 
-**Açık (değişmedi):** H-02, N-01 (eski W-01/V-20), R-01, G-01, F-08, SR-01.
+**Açık (değişmedi):** H-02, N-11 (eski W-01/V-20), R-01, G-01, F-08, SR-01.
 **Düzeltildi:** H-01 → H-01r (imkânsız öneri, politika kararına çevrildi).
-**Yeni açık:** N-01, N-03. **Devir:** N-05 → `lane:infra` (issue **#437**); N-03 → `src/app/api/**`.
+**Yeni açık:** N-11, N-13. **Devir:** N-15 → `lane:infra` (issue **#437**); N-13 → `src/app/api/**`.
 
 **Sonraki lane için notlar:** (1) WAF boşluğunu "kodlanmış yol" diye bırakma,
 kodlamayı **tek tek** izole et (burada tek kaçan `%2F`); (2) "Normalize incoming
@@ -720,7 +722,7 @@ Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
 Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
             (CI: Static/Database/E2E — PR açılışında)
 Canlıya dokundu mu: hayır (read-only; CF paneli/DNS/cache/WAF değiştirilmedi)
-Sahibin yapması gerekenler: N-01r (WAF kurallarını `url_decode` üzerinden kur, onay) ·
+Sahibin yapması gerekenler: N-11r (WAF kurallarını `url_decode` üzerinden kur, onay) ·
             H-01r (HSTS 1–12 ay tavanı; preload `pending` → "kapat" riskli) ·
             H-02 (Browser Cache TTL) · R-01 · G-01 · F-08 · #227 (DKIM 2048)
 Sonraki lane için notlar: (1) `%2F` kaçışı kurala bağlı — kuralın literalinde `/`
@@ -734,7 +736,7 @@ Sonraki lane için notlar: (1) `%2F` kaçışı kurala bağlı — kuralın lite
 
 **Ne ölçüldü (tur 27).**
 
-- **N-01r (mekanizma, orta):** CF WAF'tan önce **yalnız unreserved** karakterleri
+- **N-11r (mekanizma, orta):** CF WAF'tan önce **yalnız unreserved** karakterleri
   çözer (`%2E`→`.`) — **rezerve `/` (`%2F`) çözülmez**; origin ise çözer. Kesin
   kanıt: `/api/build-info` ve `/api%2Fbuild-info` ikisi de **200, aynı 80 B JSON**;
   `/api%252Fbuild-info` → 404.
@@ -742,9 +744,9 @@ Sonraki lane için notlar: (1) `%2F` kaçışı kurala bağlı — kuralın lite
   **atlanıyor** (`x-vercel-id` dolu, 404 origin); `/wp-admin`, `/phpmyadmin`, `.env`
   (literalinde `/` yok) **403 CF'te kalıyor**. Tur 26'nın "üç kategori de" iddiası
   **düzeltildi**.
-- **N-06:** Sınıf adı **"`/`-içeren literaller"**; `%09`/`;` gibi kodlu ayraçlar
+- **N-16:** Sınıf adı **"`/`-içeren literaller"**; `%09`/`;` gibi kodlu ayraçlar
   kuralı bozmuyor (`/api/devtools/x%09x` → 403).
-- **N-03r:** `%2F` API yolları origin'de 500 (`/api/qr`, `/api/push/subscriptions`,
+- **N-13r:** `%2F` API yolları origin'de 500 (`/api/qr`, `/api/push/subscriptions`,
   `/api/email/unsubscribe`); `/api%2Fbuild-info` 200. CF değil, `src/app/api/**` (devir **#441**).
 - **Kapalı kayıt — #163 CF halkası TEMİZ:** Googlebot/bingbot/YandexBot 200,
   `cf-mitigated` yok; 207 `<loc>` hepsi apex host'ta; `google-site-verification`
@@ -756,5 +758,5 @@ Sonraki lane için notlar: (1) `%2F` kaçışı kurala bağlı — kuralın lite
 - **Cache:** `%2F` yolları ve cache-deception varyantları `DYNAMIC`/`BYPASS`,
   `private` → poisoning yüzeyi yok. **H-02** başlıkları sabit.
 
-**Açık (değişmedi):** H-01r, H-02, N-01r, R-01, G-01, F-08, SR-01.
-**Devir:** N-05 → **#437** (açık); N-03 → **#441** (`lane:infra`+`agent:handoff`, açık).
+**Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01.
+**Devir:** N-15 → **#437** (açık); N-13 → **#441** (`lane:infra`+`agent:handoff`, açık).
