@@ -520,3 +520,55 @@ Sonraki lane için notlar: `tests/**` = LANE-QA; metin değişince e2e pinlerini
   tek başına kalır.
 ```
 
+
+## Tur 8 — mikro-denetim: #469 `NEXT_LOCALE` çerezi production'da `Secure` değil (2026-11-09)
+
+**PR:** (bu PR) · **Issue:** #469 (devir, LANE-GÜVENLİK → LANE-İÇERİK) · **Branch:** `lane/icerik`
+
+### Bulgu
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/i18n/routing.ts` (`defineRouting`) | yetki/gizlilik | `localeCookie` verilmemiş → next-intl varsayılanı `{name:'NEXT_LOCALE', sameSite:'lax'}`, **`Secure` yok** | production'da `Secure` | HTTPS-only sitede (HSTS `includeSubDomains; preload`) her belge navigasyonunda yazılan çerez tek istisnaydı; uygulamanın diğer tüm çerezleri (`sb-*`, `ib_oauth_signup_intent`, `ib_consent`) production'da `Secure` | düzeltildi → `localeCookie: { secure: process.env.NODE_ENV === 'production' }` |
+
+### Kök neden / doğrulama
+
+`receiveRoutingConfig` (`node_modules/next-intl/dist/esm/production/routing/config.js`)
+seçeneği varsayılanla **birleştirir**: `{name:'NEXT_LOCALE', sameSite:'lax', ...localeCookie}`.
+Yani `secure` **tek başına** yeterlidir; `name`/`sameSite` varsayılanda kalır. Aynı
+`localeCookie` nesnesi **istemci yazımında da** kullanılır (`createNavigation(routing)`
+→ `BaseLink` → `syncLocaleCookie`, `document.cookie`), yani bayrak her iki yolda da
+uygulanır.
+
+`HttpOnly` **eklenmedi** (bilinçli): dil değiştirici çerezi `document.cookie` ile
+yazıyor, `HttpOnly` istemciden kurulamaz — ayrı bir refactor gerektirir, #469 kapsamı dışı.
+
+### Kanıt (kırmızı→yeşil)
+
+`tests/security/locale-cookie-flags.test.ts` "in production the locale cookie is Secure"
+(başlangıçta `{ todo }`): düzeltmeden sonra assertion geçer; aynı dosyadaki self-test
+`secure:true` verilince assertion'ın döndüğünü zaten kanıtlıyor. Gerçek middleware
+`loadRouting("production", …)` ile sürülür, sentetik bir kopya değil.
+
+### Boyut taraması (AUDIT.md, seçilen düzeltmeye uygulandı)
+
+| Alan | Sonuç |
+|---|---|
+| İç sistem sözlüğü (6 dil katalog) | 0 eşleşme (kaynak veri/ilan, senkron, veritabanı, koordinat, şube sayısı) |
+| Sayı + iç terim | 0 (`locationCount` "{count} şube", `activeJobCount` "{count} açık ilan" — ziyaretçinin gördüğü şube/ilan sayısı, iç metrik değil) |
+| Boş durum dili | 0 kusur dili (hepsi "bulunamadı / deneyin / göz atın") |
+| Anahtar paritesi (6 dil) | 0 eksik/fazla |
+| İçerik (`src/content/**`) | 0 yeni sızıntı (`llms-brief`'in GEO'ya devri yürürlükte) |
+| #327 (de landing H1) | `main`'de zaten düzeltilmiş — `de.DistrictPage.title` Almanca doğrulandı, bulgu kapalı |
+
+### Kapılar
+
+lint ✅ · typecheck ✅ · check:frontend-source ✅ · test:unit 865 pass / 0 fail ✅
+
+### Devir
+
+- **LANE-GÜVENLİK** (`tests/security/**` sahibi): `locale-cookie-flags.test.ts`
+  içindeki `{ todo: "LANE-İÇERİK: …" }` artık gereksiz → todo kaldırılıp gerçek kapıya
+  terfi ettirilmeli; `cookie-inventory.test.ts` §6 tablosundaki "no Secure — open
+  finding" satırı "Secure (prod)" olarak güncellenmeli. Kanıt: bu PR.
+- **LANE-SUPABASE:** `supabase/seed-managed-content.sql` (#141) hâlâ bu lane'in dışı.
