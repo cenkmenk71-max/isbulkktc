@@ -315,11 +315,17 @@ function argValue(flag) {
 
 /** Read the current head of `main` from the remote, or "" when it cannot be read.
  * `git ls-remote` reads the ref without needing local history, so it sees a merge
- * that landed after this run was queued. Any failure yields "" — the caller then
- * treats the tip as unknown and keeps verifying rather than skipping blindly. */
+ * that landed after this run was queued. The call is bounded like every other
+ * request here, so a stalled connection cannot hang the poll loop past its
+ * deadline. Any failure yields "" — the caller then treats the tip as unknown
+ * and keeps verifying rather than skipping blindly. */
 async function readRemoteTip(remote = "origin", branch = "main") {
   try {
-    const { stdout } = await execFileAsync("git", ["ls-remote", remote, `refs/heads/${branch}`]);
+    const { stdout } = await execFileAsync(
+      "git",
+      ["ls-remote", remote, `refs/heads/${branch}`],
+      { timeout: REQUEST_TIMEOUT_MS, killSignal: "SIGKILL" },
+    );
     return stdout.trim().split(/\s+/)[0] ?? "";
   } catch {
     return "";
