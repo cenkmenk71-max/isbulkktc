@@ -262,3 +262,72 @@ doğrulaması gerekir. `supabase/templates/**` LANE-AUTH'un; dokunulmadı.
 
 **Canlıya dokunulmadı.** `config.toml` yalnız repo dosyası; hosted'a `config push`
 veya panel gerekir.
+
+## Çalışma günlüğü — 7. tur (2026-11-06)
+
+**Atanmış issue yok:** tüm `lane:supabase` issue'larının (#227, #206, #181, #162,
+#139) supabase yarıları merge edildi (#239, #216, #197, #169); kalanlar
+LANE-URUN/LANE-AUTH/sahip işi. Bu yüzden brief'in #1 hedefini (RLS / en az yetki)
+derinleştirdim.
+
+**Bulgu (yapısal, kendi alanımda):** fonksiyonlar için bir yetki ratchet'i var
+(`function_privileges.test.sql`) ama **tablolar için yok**. Negatif assertion'lar
+tablo-tablo ve kısmi; Supabase'in `pg_default_acl`'i yeni bir `public` tabloya
+`anon`/`authenticated`'a tüm yetkileri verdiği için, bir gün eklenen
+`grant select on public.audit_logs to anon` (fonksiyon katmanında bir kez sızdıran
+desenin tablo hali) sessizce yayına girerdi.
+
+**Düzeltme:** `supabase/tests/database/table_privileges.test.sql` (8 assertion).
+- **Ratchet:** `has_table_privilege` **veya** `has_any_column_privilege` ile
+  `public` tablolarından hangileri `anon`/`authenticated`'a ulaşılabilir; küme
+  gözden geçirilmiş listeye eşit olmalı (yeni tablo kapalı doğar, yeni grant CI'ı
+  kırar). `has_any_column_privilege` şart çünkü `job_packages` okuması
+  **kolon-seviyesi** (`grant select (…) on public.job_packages to anon,
+  authenticated`) → tablo-seviyesi `has_table_privilege` onu kaçırırdı.
+- 5 adlandırılmış hassas-sınıf guard'ı (audit/event/contact-share, push,
+  worker/provenance/ledger, visitor-submission/opt-out, admin-only) — biri
+  sızarsa hata hangi sınıf olduğunu söyler.
+- 2 pozitif guard (anon katalog okumaları; authenticated kendi satır okumaları).
+
+**Kanıt:** beklenen küme 46 migration pglast ile tarandı + `grep 'grant … to
+(anon|authenticated)'` ile çapraz doğrulandı → tam 11 tablo (anon 4, authenticated
+11; birleşim 11). Ham grant'lerde DELETE yok, bu yüzden DELETE kontrol edilmiyor.
+
+**Kendi kendini doğrulama:** code-review turunda `array_agg(relname)::text[]`
+tip hatasını yakaladım — `name[]`→`text[]` geçerli cast değil; `relname::text`
+yapıldı. pglast ile ayrıştırıldı; tüm kapılar yeşil.
+
+**Denetim (temiz):** 30/30 `public` tablo RLS + `revoke` (hepsinde `anon` **ve**
+`authenticated` adı geçiyor); 57 definer fonksiyonun tamamı `search_path` sabit;
+46 migration pglast ile 0 hata; tüm admin_* RPC'leri `has_platform_role` ile
+kapılı; her tablonun pgTAP kapsamı var; seed idempotent.
+
+**Devir/not:** FAQ prose'unda "Gazimağusa" yazıyor, kanonik ilçe adı "Mağusa"
+(DB + app). İçerik `src/content/ai-visibility/faq.ts` (LANE-GEO/İÇERİK) —
+dokunulmadı; kozmetik ve kasıtlı olabilir, not olarak bırakıldı.
+
+**Canlıya dokunulmadı.** Yalnız yeni bir pgTAP dosyası eklendi; migration yok.
+
+## Tur 2 — CI kırmızısı düzeltmesi (operatör devri, 2026-11-09)
+
+**Bulgu:** #250 `Database` işinde 7. assertion düştü ("anonymous visitors keep the
+public catalogue reads"). Kök neden: assertion `has_table_privilege('anon',
+'public.jobs', 'SELECT')` bekliyordu, ama anon'un `public.jobs` üzerinde **tablo
+seviyesinde SELECT'i yok**. `20261020195000_v4_public_job_preview_rpc.sql` (satır
+1-7) hem `revoke all on table public.jobs from anon` hem de ilgili **kolon**
+listesini revoke ediyor; public iş okuması SECURITY DEFINER RPC'lere taşınmış
+(`search_public_jobs`, `search_public_job_previews`). `has_table_privilege`
+tablo-seviyesi bakar; RLS policy grant yerine geçmez.
+
+**Düzeltme:** 7. assertion'dan `public.jobs` satırı çıkarıldı (anon kataloğu
+`companies` + `company_directory_overrides` ile doğrulanıyor); nedenini anlatan
+yorum eklendi. Assertion sayısı 8'de kalır. `jobs` hâlâ 1. assertion'ın
+reachable-listesinde (authenticated tablo okuması sayesinde) ve 8. assertion'da
+`authenticated` için doğrulanıyor. RPC `execute` grant'ı zaten
+`function_privileges.test.sql` (satır 192-194) tarafından pinli olduğu için
+koruma kaybı yok.
+
+**Doğrulama:** kanıt zinciri — `src/server/dal/jobs.ts:176,272` ve
+`src/app/api/email/engagement-digest/route.ts:120` public kataloğu
+`supabase.rpc("search_public_jobs")` ile okuyor; ham `anon` tablo SELECT'i
+kullanılmıyor.
