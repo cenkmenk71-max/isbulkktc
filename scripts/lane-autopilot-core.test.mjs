@@ -16,6 +16,7 @@ import {
   poisonedConversations,
   prCapacity,
   requiredCheckFailed,
+  selectSlots,
   stalledConversations,
   workSignature,
 } from "./lane-autopilot-core.mjs";
@@ -276,13 +277,24 @@ test("an unknown age counts as elapsed so recovery is never blocked", () => {
 // ---------------------------------------------------------------------------
 
 test("a delivered attempt resets the count, so the lane is never stuck exhausted", () => {
-  for (const status of ["RUNNING", "REUSED", "RESUMED", "REFRESHED"]) {
+  for (const status of ["RUNNING", "REUSED", "RESUMED"]) {
     assert.equal(
       carriedAttempts({ attempts: 3, lastStatus: status, work: "handoff:7" }, "handoff:7"),
       0,
       `${status} should clear the count`,
     );
   }
+});
+
+test("a refreshed transcript keeps the count — a restart is not a delivery", () => {
+  // REFRESHED means the poisoned transcript was dropped and a fresh conversation
+  // started on the same sandbox. It delivered nothing, so the budget must carry,
+  // or a lane that refreshes without ever opening a PR never stops (attempt 9
+  // with a cap of 3).
+  assert.equal(
+    carriedAttempts({ attempts: 3, lastStatus: "REFRESHED", work: "handoff:7" }, "handoff:7"),
+    3,
+  );
 });
 
 test("a rejection keeps the count so a failing lane still stops at the budget", () => {
@@ -336,10 +348,10 @@ test("fixing an open PR is its own piece of work, keyed by the PR number", () =>
 });
 
 test("laneDelivered recognises only the statuses that mean work was handed over", () => {
-  for (const status of ["RUNNING", "REUSED", "RESUMED", "REFRESHED"]) {
+  for (const status of ["RUNNING", "REUSED", "RESUMED"]) {
     assert.equal(laneDelivered(status), true);
   }
-  for (const status of ["ERROR", null, undefined, "PENDING", ""]) {
+  for (const status of ["REFRESHED", "ERROR", null, undefined, "PENDING", ""]) {
     assert.equal(laneDelivered(status), false);
   }
 });
@@ -433,6 +445,70 @@ test("fairOrder does not mutate the input array", () => {
   fairOrder(candidates, state);
   assert.deepEqual(candidates.map((d) => d.name), ["head", "tail"]);
 });
+
+// ---------------------------------------------------------------------------
+// selectSlots — reserve a share of PR slots for fresh work (starvation fix)
+// ---------------------------------------------------------------------------
+
+test("fresh work is guaranteed a slot when both groups have candidates", () => {
+  // The starvation bug: quota-free listed first took every slot, so `fresh`
+  // (urun, tasarim, guvenlik, infra) never ran while `open PRs: 0`.
+  const quotaFree = [{ name: "supabase" }, { name: "cloudflare" }, { name: "seo" }, { name: "geo" }];
+  const fresh = [{ name: "urun" }, { name: "tasarim" }, { name: "guvenlik" }];
+  const { allowed } = selectSlots(quotaFree, fresh, 4);
+  assert.deepEqual(allowed.map((d) => d.name), ["supabase", "cloudflare", "urun", "tasarim"]);
+});
+
+test("the split is half to fresh and half to quota-free at the cap", () => {
+  const quotaFree = [{ name: "a" }, { name: "b" }];
+  const fresh = [{ name: "c" }, { name: "d" }];
+  assert.deepEqual(
+    selectSlots(quotaFree, fresh, 4).allowed.map((d) => d.name),
+    ["a", "b", "c", "d"],
+  );
+});
+
+test("an empty fresh group leaves every slot to the quota-free group", () => {
+  const quotaFree = [{ name: "a" }, { name: "b" }, { name: "c" }];
+  assert.deepEqual(
+    selectSlots(quotaFree, [], 4).allowed.map((d) => d.name),
+    ["a", "b", "c"],
+  );
+});
+
+test("a single slot stays with the quota-free group (it must not wait on quota)", () => {
+  const quotaFree = [{ name: "a" }, { name: "b" }];
+  const fresh = [{ name: "c" }];
+  const { allowed, deferred } = selectSlots(quotaFree, fresh, 1);
+  assert.deepEqual(allowed.map((d) => d.name), ["a"]);
+  assert.deepEqual(deferred.map((d) => d.name), ["b", "c"]);
+});
+
+test("with no slots nothing starts and everything is deferred", () => {
+  const quotaFree = [{ name: "a" }];
+  const fresh = [{ name: "b" }];
+  const { allowed, deferred } = selectSlots(quotaFree, fresh, 0);
+  assert.deepEqual(allowed, []);
+  assert.deepEqual(deferred.map((d) => d.name), ["a", "b"]);
+});
+
+test("both groups' order is preserved within their slots (rotation)", () => {
+  const quotaFree = [{ name: "q1" }, { name: "q2" }];
+  const fresh = [{ name: "f1" }, { name: "f2" }];
+  const { allowed } = selectSlots(quotaFree, fresh, 2);
+  assert.deepEqual(allowed.map((d) => d.name), ["q1", "f1"]);
+});
+
+test("a slot one group cannot fill is handed to the other, not wasted", () => {
+  // Only one quota-free candidate but three fresh ones, cap 4: the fresh group
+  // takes the quota-free group's spare slot instead of leaving it empty.
+  const quotaFree = [{ name: "q1" }];
+  const fresh = [{ name: "f1" }, { name: "f2" }, { name: "f3" }];
+  const { allowed, deferred } = selectSlots(quotaFree, fresh, 4);
+  assert.deepEqual(allowed.map((d) => d.name), ["q1", "f1", "f2", "f3"]);
+  assert.deepEqual(deferred, []);
+});
+
 
 // ---------------------------------------------------------------------------
 // failedRequiredChecks — a red required check must respawn the lane (issue #453)

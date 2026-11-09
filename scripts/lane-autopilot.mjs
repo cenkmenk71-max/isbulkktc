@@ -44,6 +44,7 @@ import {
   nextConversationAction,
   poisonedConversations,
   prCapacity,
+  selectSlots,
   stalledConversations,
   workSignature,
 } from './lane-autopilot-core.mjs';
@@ -860,9 +861,10 @@ async function main() {
     [...reusable, ...resumable, ...poisonedSandboxed],
     state,
   );
-  const startable = [...quotaFree, ...freshAllowed];
-  const allowed = startable.slice(0, prSlots);
-  const overPrCap = startable.slice(prSlots);
+  // Reserve a share of the PR slots for the fresh group; otherwise the
+  // quota-free group (larger than the cap whenever every lane holds a poisoned
+  // sandbox) takes all of them and fresh work never runs. See `selectSlots`.
+  const { allowed, deferred: overPrCap } = selectSlots(quotaFree, freshAllowed, prSlots);
   const overBudget = freshOrdered.slice(capacity);
   const deferred = [...overBudget, ...overPrCap];
   const deferredReason = new Map();
@@ -938,6 +940,14 @@ async function main() {
         (c) => String(c.title ?? '') === `LANE-${d.name}` && c.sandbox_id,
       );
       let entry = state[d.name] ?? { attempts: 0 };
+
+      // The decision gates on `carriedAttempts`, but the stored count was never
+      // synced to it: a reset (delivered / new work / infra rejection) zeroed
+      // only the decision's view, so the raw counter kept climbing — a lane
+      // reached attempt 9 with a cap of 3. Persist the carried count so the
+      // stored value and the gate always agree; the increment below then starts
+      // from the same number the decision saw.
+      entry = { ...entry, attempts: carriedAttempts(entry, d.context?.work) };
 
       // A cooldown retry starts a fresh bounded window: clear the count so the
       // lane gets its full budget again instead of re-parking on the first

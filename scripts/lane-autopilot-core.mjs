@@ -121,18 +121,24 @@ export function exhaustedCooldownElapsed(entry, { now = Date.now(), cooldownMs =
 }
 
 /**
- * Whether a lane's last recorded status is a successful delivery.
+ * Whether a lane's last recorded status is a successful *delivery*.
  *
- * The autopilot records `lastStatus` on every start. `RUNNING` means the
- * platform accepted the task and the agent began working — the only status that
- * means the lane got its work. `REUSED`, `RESUMED` and `REFRESHED` also mean the
- * task was handed over. `ERROR` (a rejection) and `null` (never started) do not.
+ * The autopilot records `lastStatus` on every start. `RUNNING`, `REUSED` and
+ * `RESUMED` mean the platform accepted the task on the lane's existing
+ * transcript — the lane got its work. `REFRESHED` does *not*: it means the
+ * lane's poisoned transcript was abandoned and a fresh, empty conversation was
+ * started on the same sandbox. That is a restart, not a delivery. Counting it as
+ * one reset the retry budget to zero on every pass, so a lane that refreshed
+ * without ever opening a PR never reached `MAX_ATTEMPTS`: the poisoned-recovery
+ * path looped forever (a lane reached attempt 9 with `maxAttemptsPerLane: 3`),
+ * burning tokens and never escalating. `ERROR` (a rejection) and `null` (never
+ * started) are not deliveries either.
  *
  * @param {string|null|undefined} status
  * @returns {boolean}
  */
 export function laneDelivered(status) {
-  return ['RUNNING', 'REUSED', 'RESUMED', 'REFRESHED'].includes(String(status ?? ''));
+  return ['RUNNING', 'REUSED', 'RESUMED'].includes(String(status ?? ''));
 }
 
 /**
@@ -347,6 +353,53 @@ export function prCapacity(openPrs, maxOpenPRs) {
   const limit = Number.isFinite(maxOpenPRs) && maxOpenPRs > 0 ? maxOpenPRs : Infinity;
   const open = Number.isFinite(openPrs) && openPrs > 0 ? openPrs : 0;
   return Math.max(0, limit - open);
+}
+
+/**
+ * Split the pass's PR slots between the quota-free group and the fresh group so
+ * neither starves the other.
+ *
+ * The quota-free group (reuse / resume / poisoned-sandbox recovery) costs no
+ * sandbox quota, but every lane in it still spends a PR slot. Listing it first
+ * and taking `slice(0, slots)` let it monopolize all four slots whenever it was
+ * larger than the cap — which, with every lane holding a poisoned sandbox, was
+ * always. The fresh group (new sandboxes, the lanes that can actually deliver
+ * new work) then never ran, all day, with `open PRs: 0`. That is starvation,
+ * not a full queue.
+ *
+ * Reserving at least one slot for fresh work fixes it: when both groups have
+ * candidates and at least two slots exist, the fresh group is guaranteed one
+ * slot. A single slot stays with the quota-free group (it is quota-free and must
+ * not be blocked by a quota that may already be gone), and an empty fresh group
+ * leaves every slot to the quota-free group. The quota-free group takes the
+ * remainder. Both groups are expected pre-sorted longest-waiting-first, so the
+ * rotation within each is preserved.
+ *
+ * @param {Array<{name: string}>} quotaFree quota-free candidates, ordered
+ * @param {Array<{name: string}>} fresh fresh-sandbox candidates, ordered
+ * @param {number} slots how many PR slots this pass may spend
+ * @returns {{allowed: Array<{name: string}>, deferred: Array<{name: string}>}}
+ */
+export function selectSlots(quotaFree, fresh, slots) {
+  const q = Array.isArray(quotaFree) ? quotaFree : [];
+  const f = Array.isArray(fresh) ? fresh : [];
+  const cap = Number.isFinite(slots) && slots > 0 ? Math.floor(slots) : 0;
+  // Reserve at least one slot for fresh work whenever both groups are waiting.
+  // A single slot stays with the quota-free group: it costs no quota and must
+  // not be blocked by a quota that may already be gone.
+  const freshReserved = f.length > 0 && cap >= 2 ? Math.max(1, Math.ceil(cap / 2)) : 0;
+  const quotaFreeReserved = cap - freshReserved;
+  const takeQ = Math.min(q.length, quotaFreeReserved);
+  const takeF = Math.min(f.length, freshReserved);
+  // Any slot a group could not fill goes to the other, so no slot is wasted when
+  // one group is smaller than its quota.
+  const spare = cap - takeQ - takeF;
+  const extraQ = Math.min(q.length - takeQ, spare);
+  const extraF = Math.min(f.length - takeF, spare - extraQ);
+  return {
+    allowed: [...q.slice(0, takeQ + extraQ), ...f.slice(0, takeF + extraF)],
+    deferred: [...q.slice(takeQ + extraQ), ...f.slice(takeF + extraF)],
+  };
 }
 
 /**

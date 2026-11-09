@@ -169,6 +169,9 @@ eklendi: `laneDelivered(entry.lastStatus)` ise **0**, `entry.work !== work` ise
 (`workSignature`) `entry.work` olarak dört yazma yolunda da kalıcılaştırılır
 (REUSED, REFRESHED, RESUMED, kapasite-hatası). Böylece teslim edilen iş sayacı
 sıfırlar ve **yeni iş bütçeyi yeniden başlatır** — lane artık ölü kalmaz.
+> **Düzeltme (2026-11-09):** `laneDelivered` artık `REFRESHED`'i **saymaz**
+> (taze transcript bir *teslimat* değil, bir *yeniden başlatma*'dır). Ayrıca
+> saklanan `attempts` artık `carriedAttempts` ile senkronlanır. Aşağıdaki tura bak.
 
 **Kanıt.** `scripts/system-health.test.mjs` + `scripts/lane-autopilot-core.test.mjs`
 yeni testlerle **30/30 geçti**. Mutasyon kanıtı: eski davranışa döndürüldüğünde
@@ -458,3 +461,59 @@ Ortam saati ile API `created_at` uyumlu (17:25 UTC), saat kayması yok.
 **Ders.** Ölçüm, düzeltmenin gerçekten durduğunu doğrulamalı: bekçi eklendikten
 sonra token eğrisi düşmediyse, kesilen sinyal yanlış yerde demektir. Burada kesme
 doğruydu, ama **besleme** yolunda bir açık kalmıştı.
+
+## Round: açlık + treadmill — kotasız grup tüm slotları yiyor, taze transcript sayacı sıfırlıyor (2026-11-09)
+
+**Belirti.** LANE-urun (#462) hiç ilerlemiyor; tüm lane dalları 11-06/11-07'de
+donmuş, bugün sıfır yeni commit; son operatör-olmayan merge #489'dan önce yalnız
+operatör PR'ları. Yani **alan lane'leri hiç PR üretmiyor** — operatör yalnız kendi
+autopilot'unu düzeltiyor (kendine referanslı döngü).
+
+**İki bağımsız kök neden.**
+
+1. **Açlık (starvation).** `lane-autopilot.mjs`'te `startable = [...quotaFree,
+   ...freshAllowed]; allowed = startable.slice(0, prSlots)`. Kota-dışı grup
+   (reuse + resume + zehirli-sandbox kurtarma) **önce** listeleniyordu. Her lane'de
+   zehirli bir sandbox olduğu için bu grup neredeyse her geçişte `prSlots`'tan
+   (4) büyüktü → **tüm slotları yiyordu**. `fresh` grubu (yeni sandbox açabilen,
+   yeni iş üretebilen lane'ler: urun, tasarim, guvenlik, infra) hiç çalışmadı —
+   `open PRs: 0` iken bile. Bu bir **açlık**, kuyruk dolu değil.
+
+2. **Treadmill (koşu bandı).** `laneDelivered('REFRESHED')` **true** dönüyordu.
+   `REFRESHED`, zehirli transcript'in bırakılıp **aynı sandbox'ta taze transcript**
+   başlatılmasıdır — bir **yeniden başlatma**, bir teslimat değil. Ama
+   `carriedAttempts` bunu "teslim etti" sayıp denemeleri **0'a** sıfırlıyordu. Sonuç:
+   hiç PR üretmeyen bir lane **asla** `MAX_ATTEMPTS`'e ulaşmıyor, sonsuza dek taze
+   transcript'le yeniden doğuyordu — canlı kanıt: `cloudflare attempt 9` (üst sınır 3).
+   İkinci tutarsızlık: saklanan `entry.attempts` ham sayıyordu; sıfırlama yalnız
+   `decide()`'in görünümünde kalıyordu, kalıcılaşmıyordu.
+
+**Çözüm.**
+
+- `scripts/lane-autopilot-core.mjs`:
+  - `laneDelivered` artık `['RUNNING','REUSED','RESUMED']` — `REFRESHED` çıkarıldı.
+  - Yeni saf `selectSlots(quotaFree, fresh, slots)`: taze gruba **en az bir slot**
+    ayırır (`cap>=2` ve `fresh` dolu iken `freshQuota = max(1, ceil(cap/2))`).
+    Tek slot kota-dışı grupta kalır (kota-dışı olan kota beklememeli); `fresh` boşsa
+    tüm slotlar kota-dışına gider. Sıralama (fairOrder rotasyonu) korunur.
+- `scripts/lane-autopilot.mjs`:
+  - Slot bloğu `selectSlots(quotaFree, freshAllowed, prSlots)` kullanır; `overPrCap`
+    artık onun `deferred`'ı (erteleme gerekçeleri değişmedi).
+  - Spawn döngüsü `entry.attempts`'i `carriedAttempts(entry, work)` ile **senkronlar**,
+    böylece saklanan sayaç ile karar kapısı hep aynı sayıyı görür (tırmanan ham sayaç
+    biter).
+
+**Test.** `lane-autopilot-core.test.mjs`: `REFRESHED` artık sıfırlamıyor (yeni test),
+`laneDelivered` listesi güncellendi, `selectSlots` için 6 test (taze garantili slot,
+yarı-yarı bölüşüm, boş `fresh`, tek slot, sıfır slot, sıra korunumu). Core **74/74**,
+tüm script testleri **185/185**; `eslint` temiz.
+
+**Neden bu ikisi birlikte gerekli.** Açlık düzeltilmezse taze lane hiç slot almaz;
+treadmill düzeltilmezse kota-dışı lane sonsuza dek döner ve slotları yine tüketir.
+Biri "kim çalışacak", diğeri "ne zaman duracak" sorusunu yanıtlar.
+
+**Sonraki.** #462 karar-kapılı (KVKK/gizlilik, kod değil) — insana yönlendir, lane
+yakma. #398 gerçek iş (kendi widget'ı, CSP değişmez). 15 PAUSED ölü sandbox reaper'la
+temizlenmeli; 45 dk `maxConversationRuntimeMinutes` bir lane'in kurulum+denetim
+süresinden kısa olabilir → transcript PR'dan önce sıfırlanıyor.
+
