@@ -301,6 +301,28 @@ issue açar.
    "çok deneme" mesajı döndür. Kanıt:
    `tests/security/auth-throttle-surface.test.ts` (`todo`, mutasyonla
    doğrulandı). Devir: **#457** (`agent:handoff`, LANE-AUTH).
+4. **Mail dağıtan iki kimlik uç noktası daha hız sınırı taşımıyor** (sahibi:
+   `src/features/identity/**` -> LANE-AUTH). Bulgu 3 iki uç noktayı (`signIn`,
+   `requestPasswordReset`) sabitliyor; ama aynı dosyada çağıranın seçtiği
+   adrese mail gönderen iki kardeş var ve ikisinde de ne oturum kapısı
+   (`getUser()`) ne throttle var:
+   - `signUp` (`actions.ts:179`) `supabase.auth.signUp` çağırıyor — Supabase
+     gönderilen adrese doğrulama bağlantısı mail'ler — ve oturum dönerse
+     `sendWelcomeEmail` ile karşılama mail'i dağıtıyor.
+   - `resendConfirmation` (`actions.ts:281`) `supabase.auth.resend` çağırıyor —
+     doğrulama bağlantısını **tasarımı gereği keyfî bir adrese** yeniden
+     mail'ler.
+   Bulgu 3'ün bütün gerekçesi burada da geçerli: yalnız yayınlanabilir anahtar
+   yeter, hosted projede captcha KAPALI olduğundan formların taşıdığı Turnstile
+   jetonu da bağlayıcı değil. Sonuç sınırsız doğrulama-maili dağıtımı: kurban
+   adresi başına bir HTTP çağrısı, gelen kutusu seli ve Resend gönderim
+   kotasının tüketimi. #418 §7'nin "giriş denemesi / şifre sıfırlama talebi rate
+   limit" maddesi bu iki uç noktayı kapsayacak biçimde genişletilmeli. Önerilen
+   düzeltme: bulgu 3 ile aynı limiter'ı `signUp` ve `resendConfirmation`'a bağla
+   (`auth-throttle-surface.test.ts`'in beklediği `signInThrottle` desenini
+   izle). Kanıt: `tests/security/auth-mail-throttle-surface.test.ts` (`todo`,
+   matcher + extractor öz-testleriyle vacuous geçişe karşı korumalı). Devir:
+   **#457** (`agent:handoff`, LANE-AUTH).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
 
