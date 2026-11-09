@@ -56,6 +56,7 @@ node scripts/lane-autopilot.mjs
 | 4 | lane boşta | `send-message` ile meşgul ama start-task `READY` | `execution_status=running` sayılır |
 | 5 | sistem kırmızı | **gösterge kendi hatasını okuyor** (kendine referans) | kendi workflow'unu hariç tut |
 | 6 | lane ölü | sayaç başarıda sıfırlanmıyor, iş başına değil lane ömrüne bağlı | iş imzası (`work`) + başarıda sıfırla |
+| 7 | main CI kırmızı | 0 job'lu **geçici GitHub glitch koşusu** gerçek arıza sanılıyor | job sayısına bak: 0 = glitch (warn), >0 = gerçek (fail) |
 
 **Yeni bir tıkanıklık görürsen:** aynı sınıfta mı diye sor — "bir sinyal yanlış
 okunuyor mu?" Genelde cevap evet.
@@ -516,4 +517,50 @@ Biri "kim çalışacak", diğeri "ne zaman duracak" sorusunu yanıtlar.
 yakma. #398 gerçek iş (kendi widget'ı, CSP değişmez). 15 PAUSED ölü sandbox reaper'la
 temizlenmeli; 45 dk `maxConversationRuntimeMinutes` bir lane'in kurulum+denetim
 süresinden kısa olabilir → transcript PR'dan önce sıfırlanıyor.
+
+## Round: sağlık kapısı 0-job glitch'i gerçek kırmızı sanıyordu (#218, 2026-11-09)
+
+**Belirti.** `system-health.mjs` 19:01'de "main CI kırmızı" deyip **FAIL** (exit 1)
+verdi. `--json` dökümünde main'de iki workflow kırmızıydı: `Dispatch web push` ve
+`System health`. İkincisi zaten hariç; ama `Dispatch web push` kırmızısı gerçek
+miydi?
+
+**Kök neden.** Run nesneleri yapısal olarak aynıydı (ikisi de `conclusion=failure`,
+`status=completed`, `run_attempt=1`, `event=schedule`); tek fark **job sayısı**:
+`gh api .../runs/<id>/jobs --jq .total_count` → glitch koşu **0**, gerçek kırmızı
+**1**. GitHub'ın zamanlayıcısı ara sıra bir koşuyu hiç başlatmadan `failure` işaretler
+(sıfır job, sıfır log). Bu, `redWorkflowsOnMain`'in `conclusion === 'failure'`
+süzgecinden **gerçek kırmızı gibi** geçiyordu → hem yanlış FAIL hem de aynı raporda
+gerçek kırmızıyı gürültüye gömme riski (aile #7, "gösterge yalan söylüyor").
+
+**Çözüm.**
+
+- `scripts/system-health-core.mjs`:
+  - Yeni `redRunsOnMain(runs)` — kırmızı koşuları **nesne olarak** döndürür (çağıran
+    `databaseId`'yi okuyabilsin); `redWorkflowsOnMain` artık onun `.map(name)`'i
+    (davranış aynı, tek kaynak).
+  - Yeni saf `classifyRedRuns(redRuns)`: `jobCount === 0` → `glitches`, aksi
+    (`>0` **ve** `null`) → `real`. **Fail-safe:** job sayısı bilinmiyorsa (`null`,
+    sorgu düştü) koşu **gerçek** sayılır — bir kapı, bakamadığı için kırmızıyı yeşile
+    çevirmemeli.
+- `scripts/system-health.mjs`: 3. adım artık `--json`'a `databaseId` ekler, kırmızı
+  koşular için `jobCountOf(runId)` (hata → `null`) çeker, `classifyRedRuns` ile
+  ayırır. Gerçek kırmızı → `fail`; yalnız glitch → `warn` ("transient 0-job run");
+  hiçbiri → `ok`.
+
+**Test.** `scripts/system-health.test.mjs`: `redRunsOnMain` nesne/kendi-workflow
+hariç (2), `classifyRedRuns` 0-job→glitch, >0→gerçek, `null`/alan yok→gerçek
+(fail-safe), gerçek+glitch ayrışması, boş (5). `node --test scripts/*.test.mjs`
+**193/193**; `eslint` temiz. Canlı `node scripts/system-health.mjs` → exit **0**
+(glitch koşu artık FAIL değil).
+
+**Ders.** Aynı sınıf: bir sinyal yanlış okunuyor. `conclusion=failure` tek başına
+"kırıldı" demek değil; **iş gerçekten koştu mu** (job sayısı) ayırt edici. Fail-safe
+yön önemli: kanıt yoksa gürültüyü bastırma, kırmızıyı koru.
+
+**Sonraki.** #490 (açlık+treadmill) 18:53'te merge oldu ama **henüz bir sonraki
+autopilot geçişinde denenmedi** (18:52 geçişi eski kodla koştu, urun/guvenlik
+`attempt 5`). Bir sonraki `*/20` geçişinde attempt sayacının 3'te durması
+doğrulanmalı. 14 lane #474–#490 arası sıfır alan PR'ı üretti (yalnız operatör);
+sandbox açlığı/tükenmesi sürüyorsa kök neden lane-içi değil.
 

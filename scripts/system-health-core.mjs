@@ -55,8 +55,9 @@ export function failingWorkflows(runs) {
 }
 
 /**
- * Workflows whose newest completed run on the branch failed, excluding the
- * health check's own workflow.
+ * The newest failed run of each workflow on the branch, excluding the health
+ * check's own workflow, as the run objects themselves (so the caller can read
+ * fields `newestRunPerWorkflow` kept, such as `databaseId`).
  *
  * Without the exclusion the check is self-referential: this workflow runs on a
  * schedule, not on push, so a failing run stays the newest run of its own name
@@ -66,8 +67,50 @@ export function failingWorkflows(runs) {
  * whose trigger no longer fires) hides behind the noise.
  *
  * @param {Array<{name?: string, conclusion?: string|null, status?: string, createdAt?: string}>} runs
+ * @returns {Array<{name: string, conclusion: string|null, createdAt: string}>}
+ */
+export function redRunsOnMain(runs) {
+  return [...newestRunPerWorkflow(runs).values()].filter(
+    (run) => run.conclusion === 'failure' && run.name !== HEALTH_WORKFLOW,
+  );
+}
+
+/**
+ * Workflows whose newest completed run on the branch failed, excluding the
+ * health check's own workflow.
+ *
+ * @param {Array<{name?: string, conclusion?: string|null, status?: string, createdAt?: string}>} runs
  * @returns {string[]}
  */
 export function redWorkflowsOnMain(runs) {
-  return failingWorkflows(runs).filter((name) => name !== HEALTH_WORKFLOW);
+  return redRunsOnMain(runs).map((run) => run.name);
+}
+
+/**
+ * Split the red workflows on `main` into real failures and transient startup
+ * glitches.
+ *
+ * GitHub's scheduler occasionally reports a run as `failure` without ever
+ * starting a job — the runner never picked the run up, so it has zero jobs and
+ * no logs. Counting that as "main CI red" makes the gate fail on a GitHub
+ * hiccup, and worse, the false red buries a real one in the same report. A red
+ * run that actually ran a job (job count > 0) is a real failure; a red run with
+ * zero jobs is a glitch, worth a warning, not a failure.
+ *
+ * When the job count is unknown (`null` — the lookup failed) the run is treated
+ * as real. A check must never turn a red into a green just because it could not
+ * look; fail-safe here means the gate stays loud until it has proof of a glitch.
+ *
+ * @param {Array<{name: string, jobCount?: number|null}>} redRuns
+ * @returns {{real: string[], glitches: string[]}}
+ */
+export function classifyRedRuns(redRuns) {
+  const real = [];
+  const glitches = [];
+  for (const run of redRuns ?? []) {
+    const jobs = run?.jobCount;
+    if (Number.isFinite(jobs) && jobs === 0) glitches.push(run.name);
+    else real.push(run.name);
+  }
+  return { real, glitches };
 }
