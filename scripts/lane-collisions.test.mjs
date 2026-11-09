@@ -82,6 +82,12 @@ test("every lane in the registry has an ownership row", () => {
 test("a path is owned by exactly the lane whose globs match it", () => {
   // Root-level file: the bug that dropped `package.json` from the table.
   assert.deepEqual(ownersOf("package.json", table), ["LANE-INFRA"]);
+  // The lockfile Dependabot now watches (see .github/dependabot.yml), and the
+  // ignore rule that retired the stale npm lockfile. Both were unowned, so the
+  // infra PR that touched them reported itself as a collision in CI.
+  assert.deepEqual(ownersOf("bun.lock", table), ["LANE-INFRA"]);
+  assert.deepEqual(ownersOf("package-lock.json", table), ["LANE-INFRA"]);
+  assert.deepEqual(ownersOf(".gitignore", table), ["LANE-INFRA"]);
   // A glob with a slash.
   assert.deepEqual(ownersOf("scripts/lane-collisions.mjs", table), ["LANE-INFRA"]);
   // Exclusion syntax: URUN owns src/features/** but not identity.
