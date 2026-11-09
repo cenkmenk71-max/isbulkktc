@@ -307,3 +307,27 @@ kapılı; her tablonun pgTAP kapsamı var; seed idempotent.
 dokunulmadı; kozmetik ve kasıtlı olabilir, not olarak bırakıldı.
 
 **Canlıya dokunulmadı.** Yalnız yeni bir pgTAP dosyası eklendi; migration yok.
+
+## Tur 2 — CI kırmızısı düzeltmesi (operatör devri, 2026-11-09)
+
+**Bulgu:** #250 `Database` işinde 7. assertion düştü ("anonymous visitors keep the
+public catalogue reads"). Kök neden: assertion `has_table_privilege('anon',
+'public.jobs', 'SELECT')` bekliyordu, ama anon'un `public.jobs` üzerinde **tablo
+seviyesinde SELECT'i yok**. `20261020195000_v4_public_job_preview_rpc.sql` (satır
+1-7) hem `revoke all on table public.jobs from anon` hem de ilgili **kolon**
+listesini revoke ediyor; public iş okuması SECURITY DEFINER RPC'lere taşınmış
+(`search_public_jobs`, `search_public_job_previews`). `has_table_privilege`
+tablo-seviyesi bakar; RLS policy grant yerine geçmez.
+
+**Düzeltme:** 7. assertion'dan `public.jobs` satırı çıkarıldı (anon kataloğu
+`companies` + `company_directory_overrides` ile doğrulanıyor); nedenini anlatan
+yorum eklendi. Assertion sayısı 8'de kalır. `jobs` hâlâ 1. assertion'ın
+reachable-listesinde (authenticated tablo okuması sayesinde) ve 8. assertion'da
+`authenticated` için doğrulanıyor. RPC `execute` grant'ı zaten
+`function_privileges.test.sql` (satır 192-194) tarafından pinli olduğu için
+koruma kaybı yok.
+
+**Doğrulama:** kanıt zinciri — `src/server/dal/jobs.ts:176,272` ve
+`src/app/api/email/engagement-digest/route.ts:120` public kataloğu
+`supabase.rpc("search_public_jobs")` ile okuyor; ham `anon` tablo SELECT'i
+kullanılmıyor.

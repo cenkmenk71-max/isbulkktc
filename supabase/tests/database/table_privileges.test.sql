@@ -129,9 +129,15 @@ select ok(
 -- The reviewed positive surface: a visitor can read the public catalogue, and a
 -- signed-in session can read its own rows. These are table-level grants, so the
 -- check is exact; it fails if a needed grant is ever revoked by accident.
+--
+-- `public.jobs` is absent from the visitor check on purpose: anon reads jobs
+-- through the SECURITY DEFINER RPCs `search_public_jobs` /
+-- `search_public_job_previews` (their `execute` grant is pinned in
+-- `function_privileges.test.sql`), and
+-- `20261020195000_v4_public_job_preview_rpc.sql` revokes both the table- and the
+-- column-level SELECT from anon. `authenticated` keeps the table read.
 select ok(
-  has_table_privilege('anon', 'public.jobs', 'SELECT')
-  and has_table_privilege('anon', 'public.companies', 'SELECT')
+  has_table_privilege('anon', 'public.companies', 'SELECT')
   and has_table_privilege('anon', 'public.company_directory_overrides', 'SELECT'),
   'anonymous visitors keep the public catalogue reads'
 );
