@@ -13,6 +13,7 @@ import {
   isInfraRejection,
   laneDelivered,
   nextConversationAction,
+  poisonedConversations,
   prCapacity,
   requiredCheckFailed,
   stalledConversations,
@@ -599,4 +600,81 @@ test("several stalled lanes are all returned in input order", () => {
     stalled.map((c) => c.title),
     ["LANE-qa", "LANE-auth"],
   );
+});
+
+// ---------------------------------------------------------------------------
+// poisonedConversations — a leaked transcript must not be reused OR resumed
+// ---------------------------------------------------------------------------
+
+test("a lane past the budget with no PR is poisoned whatever its status", () => {
+  // The leak (#218): the staleness guard only interrupted the running loop, so
+  // the next pass found the *paused* conversation, reused its sandbox and fed it
+  // another task — the transcript grew forever. Poison must not depend on status.
+  for (const status of ["running", "paused", "idle", "error", "finished"]) {
+    const poisoned = poisonedConversations(
+      [runningLane({ execution_status: status, created_at: hoursAgo(20) })],
+      { now: NOW, maxRuntimeMs: 2 * 3600_000 },
+    );
+    assert.equal(poisoned.length, 1, `status ${status}`);
+    assert.equal(poisoned[0].title, "LANE-qa");
+  }
+});
+
+test("a poisoned lane that already opened a PR is spared", () => {
+  assert.deepEqual(
+    poisonedConversations(
+      [runningLane({ execution_status: "paused", created_at: hoursAgo(20), pr_number: [42] })],
+      { now: NOW, maxRuntimeMs: 2 * 3600_000 },
+    ),
+    [],
+  );
+});
+
+test("a lane waiting for a human is blocked, not poisoned", () => {
+  assert.deepEqual(
+    poisonedConversations(
+      [runningLane({ execution_status: "waiting_for_confirmation", created_at: hoursAgo(20) })],
+      { now: NOW, maxRuntimeMs: 2 * 3600_000 },
+    ),
+    [],
+  );
+});
+
+test("a lane inside the budget is not poisoned", () => {
+  assert.deepEqual(
+    poisonedConversations([runningLane({ created_at: hoursAgo(1) })], {
+      now: NOW,
+      maxRuntimeMs: 2 * 3600_000,
+    }),
+    [],
+  );
+});
+
+test("poison is a superset of stall: every stalled lane is poisoned", () => {
+  const conversations = [
+    runningLane({ title: "LANE-qa", execution_status: "running", created_at: hoursAgo(9) }),
+    runningLane({ title: "LANE-seo", execution_status: "paused", created_at: hoursAgo(9) }),
+  ];
+  const poisoned = poisonedConversations(conversations, {
+    now: NOW,
+    maxRuntimeMs: 2 * 3600_000,
+  }).map((c) => c.title);
+  const stalled = stalledConversations(conversations, {
+    now: NOW,
+    maxRuntimeMs: 2 * 3600_000,
+  }).map((c) => c.title);
+  assert.deepEqual(poisoned, ["LANE-qa", "LANE-seo"]);
+  assert.deepEqual(stalled, ["LANE-qa"]);
+});
+
+test("poison guard leaves non-lane conversations and bad input alone", () => {
+  const opts = { now: NOW, maxRuntimeMs: 3600_000 };
+  assert.deepEqual(
+    poisonedConversations([runningLane({ title: "Merhaba uzman", created_at: hoursAgo(20) })], opts),
+    [],
+  );
+  assert.deepEqual(poisonedConversations(undefined, opts), []);
+  assert.deepEqual(poisonedConversations([], opts), []);
+  assert.deepEqual(poisonedConversations([runningLane({ created_at: "not-a-date" })], opts), []);
+  assert.deepEqual(poisonedConversations([runningLane({ created_at: hoursAgo(50) })], { now: NOW }), []);
 });

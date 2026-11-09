@@ -42,6 +42,7 @@ import {
   hasLabelledWork,
   isInfraRejection,
   nextConversationAction,
+  poisonedConversations,
   prCapacity,
   stalledConversations,
   workSignature,
@@ -705,8 +706,26 @@ async function main() {
       runningSandboxes(),
       allConversations(),
     ]);
-  const idle = idleConversations(conversations);
-  const paused = pausedConversations(conversations);
+  // A conversation that is old and has produced no PR is poisoned: its
+  // transcript only grows, so every extra task re-sends all of it and the leak
+  // compounds (issue #218). Compute it once here, before anything is
+  // interrupted, and exclude these conversations from *both* the reuse target
+  // (`idle`) and the resume target (`paused`). Without this the staleness guard
+  // only paused the loop — the next pass saw a non-`running` conversation with a
+  // live sandbox and fed it another task, so one conversation reached 34.5M
+  // prompt tokens. The lane instead gets a fresh conversation (or sandbox), and
+  // the interrupt below stops the burn now.
+  const poisoned = new Set(
+    poisonedConversations(conversations, {
+      maxRuntimeMs: MAX_CONVERSATION_RUNTIME_MS,
+    }).map((c) => c.id),
+  );
+  const idle = idleConversations(conversations).filter(
+    (c) => !poisoned.has(c.id),
+  );
+  const paused = pausedConversations(conversations).filter(
+    (c) => !poisoned.has(c.id),
+  );
 
   // Break stalled loops before deciding: a `running` conversation older than the
   // runtime budget that has opened no PR is a lane stuck in a loop, and it is
@@ -796,11 +815,24 @@ async function main() {
       (c) =>
         String(c.title ?? '') === `LANE-${d.name}` && c.sandbox_id,
     );
+  // A lane whose only sandbox holds a poisoned conversation: it has a sandbox
+  // already, so recovering it (fresh transcript on that sandbox) spends no
+  // quota — it must not be budget-gated like a lane that needs a *new* sandbox.
+  const poisonedSandboxFor = (d) =>
+    conversations.find(
+      (c) =>
+        poisoned.has(c.id) &&
+        String(c.title ?? '') === `LANE-${d.name}` &&
+        c.sandbox_id,
+    );
   const reusable = toSpawn.filter((d) => reusableFor(d));
   const resumable = toSpawn.filter(
     (d) => !reusableFor(d) && resumableFor(d),
   );
-  const fresh = toSpawn.filter((d) => !reusableFor(d) && !resumableFor(d));
+  const fresh = toSpawn.filter(
+    (d) =>
+      !reusableFor(d) && !resumableFor(d) && !poisonedSandboxFor(d),
+  );
 
   const capacity = Math.max(0, SANDBOX_BUDGET - running);
   // Rotate, don't freeze on the registry order. Both the sandbox budget and the
@@ -820,7 +852,14 @@ async function main() {
   // dropped: it starts on a later pass once a merge frees a slot (issue #430).
   // Merges below are deliberately not subject to the cap, so the queue drains.
   const prSlots = prCapacity(prs.length, MAX_OPEN_PRS);
-  const quotaFree = fairOrder([...reusable, ...resumable], state);
+  // A poisoned-sandbox recovery is quota-free too: it starts a fresh transcript
+  // on a sandbox the lane already owns, so it joins the quota-free group and is
+  // never deferred for "no sandbox budget".
+  const poisonedSandboxed = toSpawn.filter((d) => poisonedSandboxFor(d));
+  const quotaFree = fairOrder(
+    [...reusable, ...resumable, ...poisonedSandboxed],
+    state,
+  );
   const startable = [...quotaFree, ...freshAllowed];
   const allowed = startable.slice(0, prSlots);
   const overPrCap = startable.slice(prSlots);
@@ -967,18 +1006,43 @@ async function main() {
           // send fails and the lane spends an attempt on a race.
           const ready = await waitForSandboxReady(resumable.sandbox_id);
           if (ready) {
-            await sendToExisting(resumable.id, d.name, d.context);
-            entry.attempts = (entry.attempts ?? 0) + 1;
-            entry.lastConversationId = resumable.id;
-            entry.lastStatus = 'RESUMED';
-            entry.lastError = null;
-            entry.work = d.context?.work;
-            entry.updatedAt = new Date().toISOString();
-            state[d.name] = entry;
-            console.log(
-              `  ${d.name}: resumed sandbox (attempt ${entry.attempts})`,
+            // The resume path must honour the same transcript budget as reuse:
+            // appending forever is what leaks tokens (#218). Past MAX_REUSES the
+            // lane gets a fresh transcript on the same (quota-free) sandbox.
+            if (reuseAllowed) {
+              await sendToExisting(resumable.id, d.name, d.context);
+              entry.attempts = (entry.attempts ?? 0) + 1;
+              entry.reuses = reuses + 1;
+              entry.lastConversationId = resumable.id;
+              entry.lastStatus = 'RESUMED';
+              entry.lastError = null;
+              entry.work = d.context?.work;
+              entry.updatedAt = new Date().toISOString();
+              state[d.name] = entry;
+              console.log(
+                `  ${d.name}: resumed sandbox (attempt ${entry.attempts}, reuse ${entry.reuses}/${MAX_REUSES})`,
+              );
+              continue;
+            }
+            const started = await startConversationOnSandbox(
+              resumable.sandbox_id,
+              d.name,
+              d.context,
             );
-            continue;
+            if (started) {
+              entry.attempts = (entry.attempts ?? 0) + 1;
+              entry.reuses = 1;
+              entry.lastConversationId = null;
+              entry.lastStatus = 'REFRESHED';
+              entry.lastError = null;
+              entry.work = d.context?.work;
+              entry.updatedAt = new Date().toISOString();
+              state[d.name] = entry;
+              console.log(
+                `  ${d.name}: context budget spent (${reuses} reuses), fresh conversation on the resumed sandbox (attempt ${entry.attempts})`,
+              );
+              continue;
+            }
           }
           console.error(
             `  ${d.name}: sandbox did not become ready after resume, using a new one`,
@@ -986,6 +1050,47 @@ async function main() {
         } else {
           console.error(`  ${d.name}: resume failed, falling through to a new sandbox`);
         }
+      }
+
+      // The lane's only sandbox may hold just a poisoned conversation — the leak
+      // case itself. Reusing the sandbox costs no quota, so resume it if needed
+      // and start a *fresh transcript* on it instead of creating a sandbox or,
+      // worse, appending to the leaked conversation. The old transcript is
+      // abandoned; its history is never re-sent.
+      const poisonedConv = conversations.find(
+        (c) =>
+          poisoned.has(c.id) &&
+          String(c.title ?? '') === `LANE-${d.name}` &&
+          c.sandbox_id,
+      );
+      if (poisonedConv) {
+        const resumed = await resumeSandbox(poisonedConv.sandbox_id);
+        const ready =
+          resumed && (await waitForSandboxReady(poisonedConv.sandbox_id));
+        if (ready) {
+          const started = await startConversationOnSandbox(
+            poisonedConv.sandbox_id,
+            d.name,
+            d.context,
+          );
+          if (started) {
+            entry.attempts = (entry.attempts ?? 0) + 1;
+            entry.reuses = 1;
+            entry.lastConversationId = null;
+            entry.lastStatus = 'REFRESHED';
+            entry.lastError = null;
+            entry.work = d.context?.work;
+            entry.updatedAt = new Date().toISOString();
+            state[d.name] = entry;
+            console.log(
+              `  ${d.name}: poisoned conversation dropped, fresh transcript on its sandbox (attempt ${entry.attempts})`,
+            );
+            continue;
+          }
+        }
+        console.error(
+          `  ${d.name}: could not start a fresh transcript on the poisoned sandbox, using a new one`,
+        );
       }
 
       const taskId = await spawnLane(d.name, d.context);
