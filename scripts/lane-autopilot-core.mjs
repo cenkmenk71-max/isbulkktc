@@ -71,6 +71,33 @@ export function isCapacityError(detail) {
 }
 
 /**
+ * A rejection caused by the platform or account config, not by the lane's work.
+ *
+ * A capacity/quota rejection already exists (`isCapacityError`). This adds the
+ * second infrastructure class the team hit: the model named in `lanes.json` being
+ * closed to the account, so every spawn dies on the first turn with 0 tokens and
+ * nothing to do with the lane's code (issue #442 — `deepseek-v4-pro` was not in
+ * the team's allowed list, so the whole team failed instantly).
+ *
+ * A rejection in either class must not spend a retry attempt: retrying the same
+ * work cannot fix it, and counting it walks every lane to `maxAttemptsPerLane`
+ * and freezes the whole team — the exact stall this guards against.
+ *
+ * @param {string|null|undefined} detail the platform's rejection message
+ * @returns {boolean}
+ */
+export function isInfraRejection(detail) {
+  if (isCapacityError(detail)) return true;
+  const text = String(detail ?? '').toLowerCase();
+  return (
+    text.includes('not allowed to access model') ||
+    text.includes('model_access_denied') ||
+    text.includes('team_model_access_denied') ||
+    text.includes('team not allowed to access model')
+  );
+}
+
+/**
  * Whether a lane's last recorded status is a successful delivery.
  *
  * The autopilot records `lastStatus` on every start. `RUNNING` means the
@@ -108,13 +135,86 @@ export function workSignature({ handoff, branchExists, prNumber }) {
 }
 
 /**
+ * Whether a lane's conversation died without doing any work.
+ *
+ * This is the signature of an *infrastructure* failure, not a lane failure. When
+ * the model named in `lanes.json` is closed to the account (issue #442) — or any
+ * other config/platform problem hits before the first turn — the conversation
+ * ends having spent nothing: `accumulated_cost` is zero. The platform may mark
+ * such a conversation `error` (a refused spawn), `stuck`, or leave the status
+ * null; all spend zero. The platform still accepts the *start task* (it reports
+ * `READY`), so the autopilot cannot tell from the start task that the lane is
+ * dead — only the conversation shows it.
+ *
+ * The predicate is deliberately narrow, to avoid healing a lane that is merely
+ * between tasks. Only a conversation in a *failed* state counts (`error`,
+ * `stuck`, or an empty/null status); `running`/`idle`/`paused`/
+ * `waiting_for_confirmation`/`finished` do not. And it must have spent nothing:
+ * a conversation that spent anything (cost > 0) ran real work, so its failure is
+ * the lane's own and must still count. Together these separate "the platform
+ * refused to run this" from "the lane tried and failed" and from "not started
+ * yet".
+ *
+ * @param {{execution_status?: string|null, metrics?: {accumulated_cost?: number}}} conversation
+ * @returns {boolean}
+ */
+export function diedWithoutWorking(conversation) {
+  if (!conversation || typeof conversation !== 'object') return false;
+  const status = String(conversation.execution_status ?? '');
+  if (!['error', 'stuck', ''].includes(status)) return false;
+  const cost = Number(conversation.metrics?.accumulated_cost ?? 0);
+  return !(cost > 0);
+}
+
+/**
+ * The lanes whose attempt counter must be cleared because their last
+ * conversation died without working.
+ *
+ * The counterpart to `diedWithoutWorking` for the whole team: the autopilot
+ * applies this before deciding, so every poisoned lane — including ones the pass
+ * later defers — restarts from a clean count. The newest conversation titled
+ * `LANE-<name>` is the lane's last attempt (the search list is newest-first), so
+ * only that one is consulted; an older death under newer live work is ignored.
+ *
+ * Only a lane that has actually spent attempts is considered: a lane at zero has
+ * nothing to heal, and reporting it would be noise.
+ *
+ * @param {Record<string, {attempts?: number}>} state lane state, keyed by lane name
+ * @param {Array<{title?: string, execution_status?: string, metrics?: {accumulated_cost?: number}}>} conversations newest-first
+ * @returns {string[]} names of the lanes to heal
+ */
+export function deadConversationLanes(state, conversations) {
+  const healed = [];
+  for (const [name, entry] of Object.entries(state ?? {})) {
+    if (!(Number.isFinite(entry?.attempts) && entry.attempts > 0)) continue;
+    const last = (conversations ?? []).find(
+      (c) => String(c?.title ?? '') === `LANE-${name}`,
+    );
+    if (diedWithoutWorking(last)) healed.push(name);
+  }
+  return healed;
+}
+
+/**
  * The attempt count to carry into a lane's next decision.
  *
- * Reset to zero when the previous attempt delivered (see `laneDelivered`) or
- * when the work itself changed (see `workSignature`); otherwise carry the count
+ * Reset to zero when the previous attempt delivered (see `laneDelivered`), when
+ * the work itself changed (see `workSignature`), or when the previous attempt was
+ * an infrastructure rejection (see `isInfraRejection`); otherwise carry the count
  * forward so a repeatedly failing lane still stops at the budget.
  *
- * @param {{attempts?: number, lastStatus?: string|null, work?: string}|undefined} entry
+ * The infrastructure reset is the self-heal for a poisoned budget: a model-access
+ * or quota outage fails every spawn with nothing the lane can fix, so counting
+ * those rejections walked the whole team to `exhausted` and froze it long after
+ * the outage ended (issue #442). A failure the lane cannot cause must never count
+ * against it, so the next pass retries instead of waiting for a human.
+ *
+ * This covers a rejection the autopilot *recorded* (`lastError`). A spawn that
+ * dies after the start task is accepted leaves no `lastError` — the start task
+ * still reports `READY` — so that case is healed from the conversation itself
+ * (`diedWithoutWorking`), which the caller applies before deciding.
+ *
+ * @param {{attempts?: number, lastStatus?: string|null, lastError?: string|null, work?: string}|undefined} entry
  * @param {string} work the signature of the work about to be attempted
  * @returns {number}
  */
@@ -123,6 +223,7 @@ export function carriedAttempts(entry, work) {
   if (attempts === 0) return 0;
   if (laneDelivered(entry?.lastStatus)) return 0;
   if (entry?.work && entry.work !== work) return 0;
+  if (isInfraRejection(entry?.lastError)) return 0;
   return attempts;
 }
 

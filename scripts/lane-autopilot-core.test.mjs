@@ -3,9 +3,12 @@ import test from "node:test";
 
 import {
   carriedAttempts,
+  deadConversationLanes,
+  diedWithoutWorking,
   failedRequiredChecks,
   hasLabelledWork,
   isCapacityError,
+  isInfraRejection,
   laneDelivered,
   nextConversationAction,
   prCapacity,
@@ -95,6 +98,133 @@ test("a quota/capacity rejection is recognised", () => {
 test("an ordinary failure is not treated as a capacity error", () => {
   assert.equal(isCapacityError("repository not found"), false);
   assert.equal(isCapacityError(undefined), false);
+});
+
+// ---------------------------------------------------------------------------
+// isInfraRejection — the model closed to the account must not spend an attempt
+// (issue #442)
+// ---------------------------------------------------------------------------
+
+test("a model-access rejection is an infrastructure failure", () => {
+  assert.equal(isInfraRejection("team not allowed to access model openhands/x"), true);
+  assert.equal(isInfraRejection("model_access_denied"), true);
+  assert.equal(isInfraRejection("team_model_access_denied"), true);
+  assert.equal(isInfraRejection("not allowed to access model"), true);
+});
+
+test("a capacity rejection is also an infrastructure failure", () => {
+  // isInfraRejection subsumes isCapacityError: both are the platform's limit.
+  assert.equal(isInfraRejection("Daily sandbox limit of 20 reached"), true);
+  assert.equal(isInfraRejection("quota exceeded"), true);
+});
+
+test("a lane's own failure is not an infrastructure rejection", () => {
+  assert.equal(isInfraRejection("tests failed"), false);
+  assert.equal(isInfraRejection(undefined), false);
+  assert.equal(isInfraRejection(null), false);
+});
+
+// ---------------------------------------------------------------------------
+// diedWithoutWorking — the death signature a start task cannot show (issue #442)
+// ---------------------------------------------------------------------------
+
+test("an errored conversation that spent nothing died without working", () => {
+  // Exactly what a disallowed model produces: execution_status=error, cost 0,
+  // while the start task still reports READY — invisible to confirm().
+  assert.equal(
+    diedWithoutWorking({ execution_status: "error", metrics: { accumulated_cost: 0 } }),
+    true,
+  );
+});
+
+test("a null-status conversation that spent nothing died without working", () => {
+  // The observed #442 signature: a sandbox that never produced a turn leaves the
+  // status null and the cost zero. This is the case a status-only check misses.
+  assert.equal(
+    diedWithoutWorking({ execution_status: null, metrics: { accumulated_cost: 0 } }),
+    true,
+  );
+  assert.equal(diedWithoutWorking({ metrics: { accumulated_cost: 0 } }), true);
+  assert.equal(
+    diedWithoutWorking({ execution_status: "stuck", metrics: { accumulated_cost: 0 } }),
+    true,
+  );
+});
+
+test("an errored conversation that did work is a real failure, not infra", () => {
+  // The lane tried and failed: cost > 0 means the platform ran it, so the
+  // attempt must count and the lane must stop at its budget.
+  assert.equal(
+    diedWithoutWorking({ execution_status: "error", metrics: { accumulated_cost: 0.02 } }),
+    false,
+  );
+  assert.equal(
+    diedWithoutWorking({ execution_status: null, metrics: { accumulated_cost: 0.05 } }),
+    false,
+  );
+});
+
+test("a conversation that is not in a failed state did not die", () => {
+  // A live or between-tasks conversation must never be healed, or a lane mid-turn
+  // would lose the attempt it just spent.
+  for (const status of ["running", "idle", "paused", "waiting_for_confirmation", "finished"]) {
+    assert.equal(
+      diedWithoutWorking({ execution_status: status, metrics: { accumulated_cost: 0 } }),
+      false,
+      `${status} must not count as a death`,
+    );
+  }
+  assert.equal(diedWithoutWorking(undefined), false);
+});
+
+test("a missing metrics field on an error reads as zero cost", () => {
+  // A rejected spawn may omit metrics entirely; the death is still a death.
+  assert.equal(diedWithoutWorking({ execution_status: "error" }), true);
+});
+
+// ---------------------------------------------------------------------------
+// deadConversationLanes — heal the whole team's poisoned budget at once (#442)
+// ---------------------------------------------------------------------------
+
+const dead = { execution_status: "error", metrics: { accumulated_cost: 0 } };
+const alive = { execution_status: "running", metrics: { accumulated_cost: 1 } };
+
+test("only lanes whose last conversation died are healed", () => {
+  const state = { qa: { attempts: 3 }, seo: { attempts: 3 } };
+  const conversations = [
+    { title: "LANE-seo", ...alive },
+    { title: "LANE-qa", ...dead },
+  ];
+  assert.deepEqual(deadConversationLanes(state, conversations), ["qa"]);
+});
+
+test("the newest conversation wins, so an old death under live work is ignored", () => {
+  // The list is newest-first: seo died, then was restarted and is now running.
+  const state = { seo: { attempts: 2 } };
+  const conversations = [
+    { title: "LANE-seo", ...alive },
+    { title: "LANE-seo", ...dead },
+  ];
+  assert.deepEqual(deadConversationLanes(state, conversations), []);
+});
+
+test("a lane that spent no attempts has nothing to heal", () => {
+  const state = { qa: { attempts: 0 }, seo: {} };
+  const conversations = [
+    { title: "LANE-qa", ...dead },
+    { title: "LANE-seo", ...dead },
+  ];
+  assert.deepEqual(deadConversationLanes(state, conversations), []);
+});
+
+test("a lane with no conversation at all is left alone", () => {
+  const state = { qa: { attempts: 3 } };
+  assert.deepEqual(deadConversationLanes(state, [{ title: "LANE-seo", ...dead }]), []);
+});
+
+test("an empty or missing state heals nothing", () => {
+  assert.deepEqual(deadConversationLanes({}, [{ title: "LANE-qa", ...dead }]), []);
+  assert.deepEqual(deadConversationLanes(undefined, []), []);
 });
 
 // ---------------------------------------------------------------------------
