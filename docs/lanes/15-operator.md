@@ -235,11 +235,28 @@ dokunulmaz — çalışan bir ajanın altından sandbox çekilmez. `idle` kasıt
 terminal **değildir**: autopilot'un yeniden kullanım hedefidir.
 
 **Uygulama.** `--apply` ile çalıştırıldı: LANE-geo sızıntısı pause edildi,
-RUNNING **10 → 9**, bir slot açıldı. `.github/workflows/reap-stalled-sandboxes.yml`
-her autopilot geçişinden hemen sonra (dakika 12/32/52) çalışır.
+RUNNING **10 → 9**, bir slot açıldı.
 
-**Test.** `scripts/reap-stalled-sandboxes.test.mjs` — 11 test; en kritik olanı
-"paylaşılan sandbox'ta canlı konuşma varsa dokunma" ve "idle terminal değildir".
+**Neden ayrı workflow değil (kapı dersi).** İlk denemede ayrı bir
+`.github/workflows/reap-stalled-sandboxes.yml` eklendi. `agent-pr-automation.yml`
+kapısı **`.github/workflows/**` dokunan hiçbir PR'ı otomatik merge etmez** (bir
+lane kendi denetimini zayıflatamasın diye) → PR `agent:blocked` aldı ve insan
+onayı beklerken **kapasite sızıntısı düzelmeden kaldı**. Çözüm: reaper'ı ayrı
+workflow yerine **mevcut autopilot geçişinin içine** bağlamak. Autopilot zaten
+zamanlanmış çalışıyor; PR artık yalnız `scripts/**` dokunur → kapıyı geçer,
+otomatik merge edilir. Ders: **bekçi işini kapının arkasına koyma** — ayrı bir
+workflow dosyası, düzeltmeyi kendi kapısının arkasında kilitler.
+
+`scripts/lane-autopilot.mjs` içinde `main()` sandbox sayımından **önce**
+`reapStalledSandboxes({ key })` çağırır; böylece bu geçişte açılan slotlar hemen
+kullanılır. Reap `--dry-run`'da atlanır (karar değil, bakım işi) ve hata
+durumunda geçişi durdurmaz (fırsatçı bakım).
+
+**Test.** `scripts/reap-stalled-sandboxes.test.mjs` — 17 test. Saf seçim kararı
+(`selectStalledSandboxes`) + orkestrasyon (`reapStalledSandboxes`, enjekte edilen
+sahte `request` ile: max-pauses tavanı, 404 = zaten geri alınmış, hata toplama).
+En kritikleri: "paylaşılan sandbox'ta canlı konuşma varsa dokunma" ve "idle
+terminal değildir".
 
 **Ders.** Yine "gösterge kimi ölçüyor?" sınıfı: autopilot sandbox'ın `RUNNING`
 olmasını "iş var" sanıyor; oysa `RUNNING`, "kimse bırakmadı" demek olabilir.

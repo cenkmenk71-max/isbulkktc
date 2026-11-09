@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { laneName, selectStalledSandboxes } from "./reap-stalled-sandboxes.mjs";
+import { laneName, reapStalledSandboxes, selectStalledSandboxes } from "./reap-stalled-sandboxes.mjs";
 
 // The selection decides which sandbox is paused. Pausing the wrong one stops a
 // working agent; failing to pause a stranded one keeps the capacity deadlock in
@@ -124,4 +124,119 @@ test("laneName reads the lane out of a title and rejects non-lanes", () => {
   assert.equal(laneName("LANE-geo"), "geo");
   assert.equal(laneName("Some other conversation"), null);
   assert.equal(laneName(undefined), null);
+});
+
+// --- reapStalledSandboxes orchestration -------------------------------------
+// The orchestration is what talks to the API: the max-pauses cap, the
+// already-gone handling and failure collection. A fake `request` exercises it
+// without a network, so the wiring is tested, not just the pure decision.
+
+/** A fake request that answers the conversation list and each pause by path. */
+function fakeRequest({ items, pauseStatus = 200 }) {
+  const pausedPaths = [];
+  const request = async (_key, path, method = "GET") => {
+    if (path.startsWith("/app-conversations/search")) {
+      return { status: 200, body: { items } };
+    }
+    const match = /^\/sandboxes\/([^/]+)\/pause$/.exec(path);
+    if (match && method === "POST") {
+      pausedPaths.push(match[1]);
+      return { status: pauseStatus, body: {} };
+    }
+    throw new Error(`unexpected request: ${method} ${path}`);
+  };
+  return { request, pausedPaths };
+}
+
+test("reap pauses each stalled sandbox and reports it", async () => {
+  const { request, pausedPaths } = fakeRequest({
+    items: [
+      conversation("sbx-1", "error", 30),
+      conversation("sbx-2", "finished", 40),
+    ],
+  });
+  const result = await reapStalledSandboxes({
+    key: "k",
+    request,
+    minIdleMinutes: 15,
+    now: NOW,
+  });
+  assert.deepEqual(pausedPaths.sort(), ["sbx-1", "sbx-2"]);
+  assert.equal(result.paused.length, 2);
+  assert.equal(result.failures.length, 0);
+});
+
+test("reap in dry-run mode finds candidates but pauses nothing", async () => {
+  const { request, pausedPaths } = fakeRequest({
+    items: [conversation("sbx-1", "error", 30)],
+  });
+  const result = await reapStalledSandboxes({
+    key: "k",
+    request,
+    apply: false,
+    minIdleMinutes: 15,
+    now: NOW,
+  });
+  assert.equal(result.candidates.length, 1);
+  assert.equal(result.toPause.length, 1);
+  assert.equal(result.paused.length, 0);
+  assert.deepEqual(pausedPaths, []);
+});
+
+test("reap honours the max-pauses cap so one run cannot free the whole budget", async () => {
+  const { request, pausedPaths } = fakeRequest({
+    items: [
+      conversation("sbx-1", "error", 30),
+      conversation("sbx-2", "error", 40),
+      conversation("sbx-3", "error", 50),
+    ],
+  });
+  const result = await reapStalledSandboxes({
+    key: "k",
+    request,
+    maxPauses: 2,
+    minIdleMinutes: 15,
+    now: NOW,
+  });
+  assert.equal(result.toPause.length, 2);
+  assert.equal(pausedPaths.length, 2);
+});
+
+test("a 404 means the platform already reclaimed it, not a failure", async () => {
+  const { request } = fakeRequest({
+    items: [conversation("sbx-1", "error", 30)],
+    pauseStatus: 404,
+  });
+  const result = await reapStalledSandboxes({
+    key: "k",
+    request,
+    minIdleMinutes: 15,
+    now: NOW,
+  });
+  assert.equal(result.gone.length, 1);
+  assert.equal(result.paused.length, 0);
+  assert.equal(result.failures.length, 0);
+});
+
+test("a pause error is collected, not thrown", async () => {
+  const { request } = fakeRequest({
+    items: [conversation("sbx-1", "error", 30)],
+    pauseStatus: 500,
+  });
+  const result = await reapStalledSandboxes({
+    key: "k",
+    request,
+    minIdleMinutes: 15,
+    now: NOW,
+  });
+  assert.equal(result.paused.length, 0);
+  assert.equal(result.failures.length, 1);
+  assert.match(result.failures[0], /HTTP 500/);
+});
+
+test("reap refuses to run without an API key", async () => {
+  await assert.rejects(
+    () => reapStalledSandboxes({ key: "", minIdleMinutes: 15, now: NOW }),
+    /OPENHANDS_API_KEY/,
+  );
 });

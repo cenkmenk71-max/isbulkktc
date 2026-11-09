@@ -168,6 +168,68 @@ function formatRow(entry) {
   return `${entry.lane.padEnd(12)} ${entry.status.padEnd(8)} idle ${String(minutes).padStart(4)}m  ${entry.sandboxId}  (${entry.conversations} conv)`;
 }
 
+/**
+ * Reap in one call: list conversations, select stalled sandboxes, pause them.
+ * Returns what it found and what it did, so the caller can log or summarise.
+ *
+ * `request` is injectable so the orchestration (the max-pauses cap, the
+ * already-gone handling, failure collection) can be tested without a network.
+ *
+ * @param {{key?: string, apply?: boolean, minIdleMinutes?: number,
+ *          maxPauses?: number, now?: number,
+ *          request?: (key: string, path: string, method?: string) => Promise<{status: number, body: any}>}} [options]
+ * @returns {Promise<{candidates: Array<object>, toPause: Array<object>, paused: Array<object>, gone: Array<object>, failures: string[]}>}
+ */
+export async function reapStalledSandboxes({
+  key,
+  apply = true,
+  minIdleMinutes = 15,
+  maxPauses = 20,
+  now = Date.now(),
+  request = apiRequest,
+} = {}) {
+  if (!key) {
+    throw new Error("OPENHANDS_API_KEY is not set.");
+  }
+
+  const { status, body } = await request(
+    key,
+    "/app-conversations/search?limit=50",
+  );
+  if (status !== 200) {
+    throw new Error(`Could not list conversations (HTTP ${status}).`);
+  }
+
+  const candidates = selectStalledSandboxes(body?.items ?? [], {
+    minIdleMs: minIdleMinutes * 60_000,
+    now,
+  });
+  const toPause = candidates.slice(0, maxPauses);
+  const paused = [];
+  const gone = [];
+  const failures = [];
+
+  if (apply) {
+    for (const entry of toPause) {
+      const result = await request(
+        key,
+        `/sandboxes/${entry.sandboxId}/pause`,
+        "POST",
+      );
+      if (result.status === 200 || result.status === 204) {
+        paused.push(entry);
+      } else if (result.status === 404) {
+        // Already gone: the platform reclaimed it between the list and the pause.
+        gone.push(entry);
+      } else {
+        failures.push(`${entry.lane} ${entry.sandboxId} HTTP ${result.status}`);
+      }
+    }
+  }
+
+  return { candidates, toPause, paused, gone, failures };
+}
+
 export async function main() {
   const key = process.env.OPENHANDS_API_KEY;
   if (!key) {
@@ -180,68 +242,59 @@ export async function main() {
     15,
   );
   const maxPauses = parsePositiveInt(process.env.REAP_MAX_PAUSES, 20);
-  const minIdleMs = minIdleMinutes * 60_000;
 
-  const { status, body } = await apiRequest(
+  const result = await reapStalledSandboxes({
     key,
-    "/app-conversations/search?limit=50",
-  );
-  if (status !== 200) {
-    throw new Error(`Could not list conversations (HTTP ${status}).`);
-  }
-
-  const candidates = selectStalledSandboxes(body?.items ?? [], { minIdleMs });
-  const toPause = candidates.slice(0, maxPauses);
+    apply,
+    minIdleMinutes,
+    maxPauses,
+  });
 
   const summaryLines = ["## Stalled sandboxes", ""];
   console.log(
-    `stalled sandboxes: ${candidates.length} (pausing ${toPause.length}, min idle ${minIdleMinutes}m)`,
+    `stalled sandboxes: ${result.candidates.length} (pausing ${result.toPause.length}, min idle ${minIdleMinutes}m)`,
   );
-  for (const entry of candidates) {
+  for (const entry of result.candidates) {
     console.log(`  ${formatRow(entry)}`);
   }
 
   if (!apply) {
     console.log("\n--dry-run: nothing paused. Re-run with --apply to pause.");
     summaryLines.push(
-      `- stalled: **${candidates.length}**`,
+      `- stalled: **${result.candidates.length}**`,
       `- paused: 0 (dry-run)`,
     );
     await writeSummary(summaryLines);
     return;
   }
 
-  let paused = 0;
-  const failures = [];
-  for (const entry of toPause) {
-    const result = await apiRequest(
-      key,
-      `/sandboxes/${entry.sandboxId}/pause`,
-      "POST",
-    );
-    if (result.status === 200 || result.status === 204) {
-      paused += 1;
-      console.log(`  paused ${entry.lane} (${entry.sandboxId})`);
-    } else if (result.status === 404) {
-      // Already gone: the platform reclaimed it between the list and the pause.
-      console.log(`  gone   ${entry.lane} (${entry.sandboxId})`);
-    } else {
-      failures.push(`${entry.lane} ${entry.sandboxId} HTTP ${result.status}`);
-      console.error(`  FAIL   ${entry.lane} (${entry.sandboxId}) HTTP ${result.status}`);
-    }
+  for (const entry of result.paused) {
+    console.log(`  paused ${entry.lane} (${entry.sandboxId})`);
+  }
+  for (const entry of result.gone) {
+    console.log(`  gone   ${entry.lane} (${entry.sandboxId})`);
+  }
+  for (const failure of result.failures) {
+    console.error(`  FAIL   ${failure}`);
   }
 
-  console.log(`\nDone. paused=${paused} failed=${failures.length}`);
-  summaryLines.push(
-    `- stalled: **${candidates.length}**`,
-    `- paused: ${paused}`,
+  console.log(
+    `\nDone. paused=${result.paused.length} failed=${result.failures.length}`,
   );
-  if (failures.length > 0) {
-    summaryLines.push("", "Failed pauses:", ...failures.map((f) => `- \`${f}\``));
+  summaryLines.push(
+    `- stalled: **${result.candidates.length}**`,
+    `- paused: ${result.paused.length}`,
+  );
+  if (result.failures.length > 0) {
+    summaryLines.push(
+      "",
+      "Failed pauses:",
+      ...result.failures.map((f) => `- \`${f}\``),
+    );
   }
   await writeSummary(summaryLines);
 
-  if (failures.length > 0) {
+  if (result.failures.length > 0) {
     process.exitCode = 1;
   }
 }
