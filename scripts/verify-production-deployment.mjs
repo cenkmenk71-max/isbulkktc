@@ -375,11 +375,15 @@ async function main() {
     return;
   }
 
-  // Only re-read the tip when the caller supplied one. A manual run passes no
+  // Only re-read the tip when a tip is actually in play. A manual run passes no
   // `--tip` because it names the commit explicitly and means to verify it even
   // if it is no longer the tip; introducing a tip there would silently change
-  // that contract.
-  let trackTip = Boolean(normalizeCommit(tipCommit));
+  // that contract. On a push run, track the tip even when the workflow's initial
+  // `git ls-remote` came back empty — skipping a superseded commit is the right
+  // call either way, and the in-loop refresh recovers what the initial read
+  // missed.
+  const trackTip =
+    process.env.GITHUB_EVENT_NAME === "push" || Boolean(normalizeCommit(tipCommit));
 
   let context = null;
   let contextError = null;

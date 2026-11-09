@@ -97,7 +97,7 @@ test("the direct-run guard fires even when the script path holds a space", () =>
  * HTTP channel (pointed at a closed port) is the only one — meaning the run can
  * only ever end by deadline or by the superseded skip.
  */
-function runWithFakeGit({ expectedSha, tipSha }) {
+function runWithFakeGit({ expectedSha, tipSha, passTip = true, eventName = "" }) {
   const source = fileURLToPath(
     new URL("./verify-production-deployment.mjs", import.meta.url),
   );
@@ -120,37 +120,35 @@ function runWithFakeGit({ expectedSha, tipSha }) {
     );
     chmodSync(fakeGit, 0o755);
 
+    const args = [
+      copy,
+      "--expect",
+      expectedSha,
+      // A closed port fails the HTTP channel immediately (connection
+      // refused), so the poll does not wait on a request timeout.
+      "--url",
+      "http://127.0.0.1:1",
+    ];
+    if (passTip) args.push("--tip", expectedSha);
+
     let code = 0;
     let output = "";
     try {
-      output = execFileSync(
-        process.execPath,
-        [
-          copy,
-          "--expect",
-          expectedSha,
-          "--tip",
-          expectedSha,
-          // A closed port fails the HTTP channel immediately (connection
-          // refused), so the poll does not wait on a request timeout.
-          "--url",
-          "http://127.0.0.1:1",
-        ],
-        {
-          encoding: "utf8",
-          env: {
-            ...process.env,
-            // Put the fake `git` first so `readRemoteTip` finds it.
-            PATH: `${dir}:${process.env.PATH}`,
-            GITHUB_SHA: "",
-            BRANCH_TIP_SHA: "",
-            VERCEL_TOKEN: "",
-            DEPLOY_TIMEOUT_SEC: "6",
-            DEPLOY_POLL_SEC: "1",
-            DEPLOY_TIP_REFRESH_SEC: "1",
-          },
+      output = execFileSync(process.execPath, args, {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          // Put the fake `git` first so `readRemoteTip` finds it.
+          PATH: `${dir}:${process.env.PATH}`,
+          GITHUB_SHA: "",
+          GITHUB_EVENT_NAME: eventName,
+          BRANCH_TIP_SHA: "",
+          VERCEL_TOKEN: "",
+          DEPLOY_TIMEOUT_SEC: "6",
+          DEPLOY_POLL_SEC: "1",
+          DEPLOY_TIP_REFRESH_SEC: "1",
         },
-      );
+      });
     } catch (error) {
       code = error.status;
       output = `${error.stdout ?? ""}${error.stderr ?? ""}`;
@@ -184,6 +182,36 @@ test("a tip that never moves still fails loudly when the commit does not promote
   // still report the real failure rather than skip everything.
   const sha = "3333333333333333333333333333333333333333";
   const { code, output } = runWithFakeGit({ expectedSha: sha, tipSha: sha });
+
+  assert.equal(code, 1, output);
+  assert.match(output, /FAIL/);
+  assert.doesNotMatch(output, /superseded/);
+});
+
+test("a push run recovers when the workflow's initial tip read came back empty", () => {
+  // The workflow's own `git ls-remote` can fail (network blip), leaving `--tip`
+  // empty. On a push run the script still tracks the tip, so a commit that was
+  // superseded while this run polled is skipped instead of failing red.
+  const { code, output } = runWithFakeGit({
+    expectedSha: "1111111111111111111111111111111111111111",
+    tipSha: "2222222222222222222222222222222222222222",
+    passTip: false,
+    eventName: "push",
+  });
+
+  assert.equal(code, 0, output);
+  assert.match(output, /superseded by `22222222`/);
+});
+
+test("a manual run without a tip never re-reads the remote and still fails loudly", () => {
+  // `workflow_dispatch` names the commit explicitly and means to verify it even
+  // if it is no longer the tip, so a manual run must not skip on a live re-read.
+  const { code, output } = runWithFakeGit({
+    expectedSha: "1111111111111111111111111111111111111111",
+    tipSha: "2222222222222222222222222222222222222222",
+    passTip: false,
+    eventName: "workflow_dispatch",
+  });
 
   assert.equal(code, 1, output);
   assert.match(output, /FAIL/);
