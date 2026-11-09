@@ -374,13 +374,11 @@ test("the admin-guard ratchet reads the last definition, not the first (self-tes
 // on that. `list_engagement_recipients` is a full mailing-list dump
 // (`user_id`, `email`, `display_name`, `locale`) and it once shipped callable
 // with the publishable key — the revoke is the primary control, and the in-body
-// `auth.role() <> 'service_role'` check is the second. Six of the eight
-// service-role-only RPCs have it (the four push ones and the two outbox ones);
-// `list_engagement_recipients` and `opt_out_engagement` do not.
-//
-// Documented as a `todo` because the fix belongs to LANE-SUPABASE. When the two
-// are re-created with the guard (one trailing idempotent migration), the `todo`
-// can be dropped and this becomes a gate.
+// `auth.role() <> 'service_role'` check is the second. All eight service-role-only
+// RPCs now carry it: the four push ones and the two outbox ones originally, and
+// `list_engagement_recipients` / `opt_out_engagement` since
+// `20261109000000_v4_engagement_rpc_role_guard.sql` re-created them with the guard.
+// This is a gate: a new service-role RPC that omits the guard fails the build.
 // ---------------------------------------------------------------------------
 
 /** The signatures granted to `service_role` (with their argument lists). */
@@ -452,11 +450,7 @@ test("the service-role grant scanner sees `grant all` and excludes client grants
 
 test(
   "every service-role-only RPC re-checks auth.role() in its own body",
-  {
-    todo:
-      "list_engagement_recipients and opt_out_engagement are granted to service_role " +
-      "but do not re-check auth.role() in their bodies (see docs/threat-model.md)",
-  },
+  {},
   () => {
     const offenders: string[] = [];
     for (const signature of serviceRoleOnlySignatures()) {
