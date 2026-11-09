@@ -51,10 +51,25 @@ function read(path: string): string {
   return readFileSync(path, "utf8");
 }
 
+/**
+ * The `document.cookie` access, in both spellings the language allows: dot
+ * (`document.cookie`) and bracket (`document["cookie"]`). The property name is
+ * a plain string, so `obj["cookie"]` is the same property as `obj.cookie` —
+ * a detector that reads only the dot form lets a bracket-notation write ship
+ * with the file still green. This is the same false-negative class the sibling
+ * detectors were hardened against (`log-safety`'s `console["error"]`,
+ * `client-boundary`'s `process.env["NAME"]`). `\b` keeps `document.cookiefoo`
+ * out. A bare alias (`const d = document; d.cookie = …`) is a conscious limit:
+ * `document` is a global with no local rebinding in this tree, and tracking
+ * every alias would flag unrelated `.cookie` properties on other objects.
+ */
+const DOCUMENT_COOKIE = String.raw`document\s*(?:\.\s*cookie\b|\[\s*["'\x60]cookie["'\x60]\s*\])`;
+
 /** Files that assign `document.cookie` — i.e. every client-side cookie writer. */
 function documentCookieWriters(): string[] {
+  const writer = new RegExp(`${DOCUMENT_COOKIE}\\s*=`);
   return sourceFiles
-    .filter((path) => /document\s*\.\s*cookie\s*=/.test(read(path)))
+    .filter((path) => writer.test(read(path)))
     .map(relative)
     .sort();
 }
@@ -64,11 +79,12 @@ function documentCookieWriters(): string[] {
  * character and the literal body. All three literal forms are captured — a
  * double-quoted `"a=1"` is a real write site, and the flag audit must see it (a
  * detector that only reads template literals would let a future cookie written
- * with quotes ship unaudited).
+ * with quotes ship unaudited). Both the dot and bracket access forms are read
+ * (see `DOCUMENT_COOKIE`).
  */
 function documentCookieAssignments(source: string): { quote: string; body: string }[] {
   const assignments: { quote: string; body: string }[] = [];
-  const re = /document\s*\.\s*cookie\s*=\s*([`"'])((?:\\.|(?!\1)[\s\S])*)\1/g;
+  const re = new RegExp(`${DOCUMENT_COOKIE}\\s*=\\s*(["'\x60])((?:\\\\.|(?!\\1)[\\s\\S])*)\\1`, "g");
   let match: RegExpExecArray | null;
   while ((match = re.exec(source)) !== null) {
     assignments.push({ quote: match[1], body: match[2] });
@@ -211,6 +227,18 @@ test("the document.cookie detector sees a write but not a read (self-test)", () 
   // template form the current code happens to use.
   assert.deepEqual(documentCookieTemplates('document.cookie = "a=1";'), ["a=1"]);
   assert.deepEqual(documentCookieTemplates("document.cookie = 'a=1';"), ["a=1"]);
+});
+
+test("the document.cookie detector reads the bracket access form (self-test)", () => {
+  // `document["cookie"]` is the same property as `document.cookie`; a detector
+  // that reads only the dot form lets a bracket-notation write ship green.
+  assert.deepEqual(documentCookieTemplates('document["cookie"] = `a=1; Path=/`;'), ["a=1; Path=/"]);
+  assert.deepEqual(documentCookieTemplates("document['cookie'] = `b=2; Path=/`;"), ["b=2; Path=/"]);
+  assert.deepEqual(documentCookieTemplates('document["cookie"] = "c=3; Path=/";'), ["c=3; Path=/"]);
+  // Reading through the bracket form is still not a write.
+  assert.deepEqual(documentCookieTemplates('const x = document["cookie"];'), []);
+  // A different property name must not match (the `\b` keeps `cookiefoo` out).
+  assert.deepEqual(documentCookieTemplates('document["cookiefoo"] = `x=1`;'), []);
 });
 
 test("the cookie-name detector sees a declared name and rejects a near-miss (self-test)", () => {
