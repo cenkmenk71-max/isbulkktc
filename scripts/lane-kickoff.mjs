@@ -26,6 +26,8 @@
  *   required check failed; the lane is re-spawned to fix it, not to start over
  * @param {boolean} [context.recovery] a respawn after the attempt budget was
  *   spent; the lane must do ONE small commit, not survey its whole area
+ * @param {number} [context.issueNumber] the exact issue the autopilot picked for
+ *   this lane; the lane must work it, not re-pick from its label list
  * @returns {string}
  */
 export function kickoff(name, lane, context = {}) {
@@ -65,10 +67,22 @@ export function kickoff(name, lane, context = {}) {
     // `guvenlik` and `verify` all carry `agent:test`, so a broad query hands the
     // same issue to several lanes and they duplicate the work. `hasLabelledWork`
     // already matches precisely first; the prompt must agree with that gate.
-    'SOMUT İŞ: önce sana atanmış açık issue var mı bak: ' +
-      `\`gh issue list --state open --label ${lane.laneLabel ?? lane.label}\`. Varsa onu al ` +
-      '(içindeki kanıtı doğrula, düzelt, test et). Yoksa kendi brief\'indeki ' +
-      'hedeflerden en yüksek etkili olanı seç ve sınırlı tut.',
+    // The autopilot picks a lane's work by oldest-first FIFO across handoffs and
+    // labelled issues, and *claims* that exact issue so no other lane takes it.
+    // The prompt used to leave the choice open ("look for an issue, else pick
+    // from your brief"), so the lane re-picked from its own `gh` list (newest
+    // first) and worked a *different* issue than the one the autopilot claimed
+    // and recorded — the oldest labelled issue was claimed every pass and never
+    // produced (#398). Pinning the issue the autopilot picked closes that gap.
+    context.issueNumber
+      ? 'SOMUT İŞ: bu turda TAM OLARAK şu issue üzerinde çalış: ' +
+        `#${context.issueNumber}. Onu al (\`gh issue view ${context.issueNumber}\`), ` +
+        'içindeki kanıtı doğrula, düzelt, test et. Kendi etiket listenden BAŞKA ' +
+        'bir issue SEÇME — bu numara senin için seçildi ve sahiplenildi.'
+      : 'SOMUT İŞ: önce sana atanmış açık issue var mı bak: ' +
+        `\`gh issue list --state open --label ${lane.laneLabel ?? lane.label}\`. Varsa onu al ` +
+        '(içindeki kanıtı doğrula, düzelt, test et). Yoksa kendi brief\'indeki ' +
+        'hedeflerden en yüksek etkili olanı seç ve sınırlı tut.',
     // The audit dimensions are a checklist for the ONE fix you picked, not a
     // mandate to sweep every owned file before committing. "Scan the whole area"
     // is what turned a bounded task into an endless read (the leak this prompt

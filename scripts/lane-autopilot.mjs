@@ -531,6 +531,10 @@ function laneKickoff(name, context) {
     previousError: context?.previousError,
     redPr: context?.redPr,
     recovery: context?.recovery,
+    // The issue the autopilot picked and claimed for this lane. Without it the
+    // prompt left the choice open and the lane re-picked a different issue, so
+    // the claimed one was never produced (#398).
+    issueNumber: context?.issueNumber,
   });
 }
 
@@ -671,6 +675,10 @@ async function decide(name, ctx) {
   const named = workForLane(name, ctx);
   const isHandoff = (named?.labels ?? []).some((l) => (l.name ?? l) === 'agent:handoff');
   const handoff = named;
+  // The issue this pass picked for the lane. It is both *claimed* (so no other
+  // lane takes it) and handed to the lane's kickoff prompt, so the lane works
+  // the same issue the autopilot recorded instead of re-picking its own (#398).
+  const issueNumber = named ? Number(named.number) : undefined;
 
   // The retry budget is per *piece of work*, not per lane lifetime. A lane that
   // delivered, or whose assignment changed, starts its next attempt with a clean
@@ -809,8 +817,8 @@ async function decide(name, ctx) {
         : state.attempts === 0
           ? 'labelled work'
           : `retry ${state.attempts + 1}/${MAX_ATTEMPTS}`,
-    issueNumber: named ? Number(named.number) : undefined,
-    context: { previousError: state.lastError, work },
+    issueNumber,
+    context: { previousError: state.lastError, work, issueNumber },
   };
 }
 
