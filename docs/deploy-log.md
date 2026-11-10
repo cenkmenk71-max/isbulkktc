@@ -11,7 +11,9 @@ Rule 4 of the lane brief: **every merge is recorded — what, when, verified liv
 - `main tip` — `git ls-remote origin refs/heads/main` at the time of the check.
 - `live` — `GET https://isbulkktc.com/api/build-info` → `commit`.
 - `verdict` — ✅ live == main tip; ⚠️ live is an ancestor of the tip (behind);
-  ❌ diverged (neither is an ancestor of the other).
+  ❌ diverged (neither is an ancestor of the other); 🚫 **the origin serves no
+  site at all** (Vercel `402 DEPLOYMENT_DISABLED` — account blocked/suspended),
+  so `build-info` reports no commit and no comparison is possible.
 
 ## 2026-11-06
 
@@ -217,3 +219,27 @@ context, not as a measurement.
 | Checked (UTC) | main tip | live | verdict | Note |
 |---|---|---|---|---|
 | 2026-11-10T00:30Z | `3fcafbf3` | `3fcafbf3` | ✅ in sync | **Merge record — PR #509** (finding 14's `--paginate` fix) auto-merged by `app/github-actions` at 00:26:53Z; all required checks green including the `Quality, database and E2E` aggregator. Full `verify-production-deployment.mjs --expect 3fcafbf` run: exit 0, confirmed via HTTP, 5/5 smoke routes 200. `main` advanced `8f4a50e3` → `3fcafbf3` and production followed it immediately — no freeze. |
+| 2026-11-10T02:12Z | `8d3db245` | — | 🚫 **origin disabled** | 🔴 **Production is down for every visitor — the worst state this log can record.** `GET https://isbulkktc.com/api/build-info` → **HTTP 402** with header `x-vercel-error: DEPLOYMENT_DISABLED`; every smoke route (`/`, `/jobs`, `/companies`, `/contact`, `/en`, `/tr`, `/login`) returns 402. The `main` tip's commit status is `Vercel: failure — Account is blocked.` (`3fcafbf3`/`8f4a50e3` were the last two successes). Nothing is served, so `build-info` reports no commit and no `main`↔live comparison is possible — hence 🚫 rather than ✅/⚠️/❌. This is account/quota state, **not a code defect**; cannot be fixed from this repository. Handoff: issue #319 (LANE-INFRA). `verify-production-deployment.mjs --expect 8d3db245` → exit 1 with the new "production deployment is disabled" verdict (finding 15). |
+
+### Delivery health findings (2026-11-10, round 2)
+
+15. **`verify-production-deployment.mjs` could report a green deploy for a site
+    that is down for every visitor.** Vercel answers a blocked/suspended
+    account's deployment with **HTTP 402** and `x-vercel-error:
+    DEPLOYMENT_DISABLED` (`https://isbulkktc.com/*` → 402 today). The verifier
+    classified 402 as a plain 4xx and, worse, `decideVerification` checked the
+    **Vercel API channel first**: that channel can still report the alias
+    pointing at a `READY` deployment built from the expected commit while every
+    visitor gets 402. So a healthy alias could outrank a dead origin and the run
+    would print ✅ for a production that serves nothing — the single most
+    dangerous false green this lane can emit. Fixed in this PR:
+    `classifyHttpStatus` now detects the disabled case (status 402 or the
+    `x-vercel-error` header), `isDeploymentDisabled` names it, and
+    `decideVerification` treats `http.disabled` as the **highest-priority**
+    failure — checked *before* `vercel.ok` — so the verdict reads
+    `❌ production deployment is disabled (not a code problem): HTTP 402
+    (DEPLOYMENT_DISABLED)`. The poll loop also breaks immediately on a disabled
+    origin (an account state cannot be fixed by waiting for a build). Verified
+    live against the real outage: exit 1, the message above, and `Vercel API:
+    ⏭️ VERCEL_TOKEN not set` no longer able to mask it. Regression tests added;
+    the masking test fails against the pre-fix ordering, so it pins the bug.
