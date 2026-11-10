@@ -79,6 +79,28 @@ test("the function extractor returns the named body, not the whole file (self-te
   assert.ok(exportedFunctionText(synthetic, "beta").includes("throttleCheck"));
 });
 
+/**
+ * The abuse control must run *before* the mail fan-out, not merely appear in the
+ * body. A refactor that moved the limiter below `supabase.auth.signUp`/`resend`
+ * would let every rejected call still spend one mail send — a presence-only gate
+ * would stay green. Returns the byte offset of the first control reference, or
+ * -1 when there is none.
+ */
+function firstThrottleOffset(body: string): number {
+  return body.search(throttleReference);
+}
+
+test("the ordering helper reports the control position, not just presence (self-test)", () => {
+  const guarded =
+    "export async function alpha() {\n  if (!signUpThrottle.address.check(x).ok) return;\n  await supabase.auth.signUp({});\n}";
+  const body = exportedFunctionText(guarded, "alpha");
+  assert.ok(firstThrottleOffset(body) > -1);
+  assert.ok(firstThrottleOffset(body) < body.indexOf("supabase.auth.signUp"));
+  // A body with no control at all must report -1, not 0, so the ordering gate
+  // below cannot pass vacuously on an empty match.
+  assert.equal(firstThrottleOffset("export async function beta() {}"), -1);
+});
+
 test(
   "sign-up carries an abuse control before it mails a confirmation link",
   () => {
@@ -91,6 +113,10 @@ test(
     assert.ok(
       throttleReference.test(body),
       "signUp does not consult any rate limiter before Supabase mails the confirmation link",
+    );
+    assert.ok(
+      firstThrottleOffset(body) < body.indexOf("supabase.auth.signUp"),
+      "signUp consults the rate limiter only after calling supabase.auth.signUp, so a throttled call still sends one confirmation mail",
     );
   },
 );
@@ -106,6 +132,10 @@ test(
     assert.ok(
       throttleReference.test(body),
       "resendConfirmation does not consult any rate limiter before Supabase mails the confirmation link",
+    );
+    assert.ok(
+      firstThrottleOffset(body) < body.indexOf("supabase.auth.resend"),
+      "resendConfirmation consults the rate limiter only after calling supabase.auth.resend, so a throttled call still sends one confirmation mail",
     );
   },
 );
