@@ -3559,7 +3559,7 @@ kanonikleştirmesidir**.
 | `http://www.isbulkktc.com/` | **301** | `https://www.isbulkktc.com/` — **host www kalıyor** |
 | `http://www.isbulkktc.com/freelance?q=test` | **301** | `https://www.isbulkktc.com/freelance?q=test` (yol+sorgu korunur) |
 | `https://www.isbulkktc.com/` | **200** | yönlendirme **yok**; `server: cloudflare`, `cf-ray` dolu, `x-vercel-cache` dolu |
-| `https://www.isbulkktc.com/sitemap.xml` | **200** | içerik **1509 URL, hepsi `https://isbulkktc.com`** (apex) — hiç `www` URL yok |
+| `https://www.isbulkktc.com/sitemap.xml` | **200** | içerik **207 `<loc>`, hepsi `https://isbulkktc.com`** (apex) — hiç `www` URL yok. (Önceki "1509 URL" **yanlıştı**: 1509, gövdenin ~153 061 B boyutunun yanlış okunmasıdır; `grep -c '<loc>'` = 207, apex ile **birebir aynı** — tur 39 düzeltmesi) |
 | `https://www.isbulkktc.com/robots.txt` | **200** | apex ile **aynı** gövde |
 | `https://www.isbulkktc.com/.git/config` | **403** | WAF kuralı **host-bağımsız** çalışıyor |
 | `https://www.isbulkktc.com/<olmayan-yol>` | **404** | `cf-cache-status: DYNAMIC` (negatif cache yok) |
