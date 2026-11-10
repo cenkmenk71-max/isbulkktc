@@ -142,13 +142,31 @@ test(
 // removed without turning the suite red.
 // ---------------------------------------------------------------------------
 
+test("the signIn extractor ignores a regex-literal decoy (self-test)", () => {
+  // `source` is every `src/**` file concatenated, and a sibling test file writes
+  // the shape `/export async function signIn\b…/` as a regex literal. A `signIn\b`
+  // pattern matched that literal, so the gate below asserted against a copy of
+  // itself and could never fail on the real code. Requiring the open paren of a
+  // declaration keeps the match on `actions.ts`.
+  const decoy =
+    'const signIn = source.match(/export async function signIn\\b[\\s\\S]*?\\n\\}/);';
+  assert.equal(/export async function signIn\([\s\S]*?\n\}/.test(decoy), false);
+  const real = "export async function signIn(\n  a: string,\n) {\n  return a;\n}";
+  assert.ok(/export async function signIn\([\s\S]*?\n\}/.test(real));
+});
+
 test("sign-in refuses an account whose profile is not active", () => {
-  const signIn = source.match(/export async function signIn\b[\s\S]*?\n\}/);
+  const signIn = source.match(/export async function signIn\([\s\S]*?\n\}/);
   assert.ok(signIn, "signIn is not defined");
+  assert.ok(
+    signIn[0].includes("signInWithPassword"),
+    "signIn extraction matched a decoy, not the function in actions.ts",
+  );
   // A fix must read the caller's own profile row *and* act on its status. The
   // read alone is not enough: a suspended account must not keep the session, so
-  // the block path has to sign the caller out (directly or through the shared
-  // kill-switch helper).
+  // the block path has to sign the caller out. The two calls are pinned in
+  // order — `isAccountBlocked` followed within a short window by `signOut()` —
+  // so removing the sign-out (and leaving only the read) turns the gate red.
   assert.match(
     signIn[0],
     /from\(\s*["'`]profiles["'`]\)[\s\S]{0,300}?status/i,
@@ -156,8 +174,8 @@ test("sign-in refuses an account whose profile is not active", () => {
   );
   assert.match(
     signIn[0],
-    /isAccountBlocked|signOut\s*\(/,
-    "signIn reads profiles.status but never acts on it, so a blocked account keeps its session",
+    /isAccountBlocked\([\s\S]{0,160}?signOut\s*\(/,
+    "signIn reads profiles.status but never signs the blocked caller out, so a suspended account keeps its session",
   );
 });
 
