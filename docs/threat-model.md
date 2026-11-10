@@ -251,6 +251,11 @@ issue açar.
   (yalnız `gh pr merge/edit`; PR kodunu checkout etmez), ve auto-merge kapısı
   `.github/workflows/**` değişikliğini yine reddeder.
   `tests/security/ci-workflow-permissions.test.ts`.
+- **Kilit dosyası, manifest'i çözmeli:** CI `bun install --frozen-lockfile` ile
+  `bun.lock`'tan kurar; `bun.lock`'un workspace manifesti `package.json` ile
+  birebir aynı olmalı ve `package.json`'ın bildirdiği **her** doğrudan bağımlılığı
+  çözmeli. `bun.lock` tarafı kapıdır — kanonik kilit manifestten koparsa kırmızı
+  olur. `tests/security/lockfile-coverage.test.ts`.
 
 ### Açık bulgular (sahibine bildirildi, düzeltme bekliyor)
 
@@ -323,6 +328,20 @@ issue açar.
    izle). Kanıt: `tests/security/auth-mail-throttle-surface.test.ts` (`todo`,
    matcher + extractor öz-testleriyle vacuous geçişe karşı korumalı). Devir:
    **#457** (`agent:handoff`, LANE-AUTH).
+5. **İkinci kilit dosyası bayat ve Dependabot yalnız onu tarıyor** (sahibi:
+   `package.json`, kilit dosyaları -> LANE-INFRA). Depo tek paket yöneticisi
+   kullanır (`bun.lock`; CI `bun install --frozen-lockfile`) ama
+   `package-lock.json` de commit'li. Dependabot'un npm ekosistemi yalnız
+   `package-lock.json`'ı okur, yani **gerçek kilit dosyası (`bun.lock`) hiç
+   taranmaz**. `package-lock.json` (lockfileVersion 3) `package.json`'ın
+   bildirdiği dört doğrudan bağımlılığı çözmez — `qrcode` ve `web-push` (prod),
+   `jsqr` ve `pngjs` (dev) — ve `lucide-react`'i bayat (`1.63.0` ↔ `bun.lock`
+   `1.62.0`) sabitler. Yani danışma (advisory) taraması **sevk edilenden farklı
+   bir ağacı** okur; bildirilen açık alert'ler yalnız dev zincirindedir
+   (`bun audit --prod` temiz), üretim çalışma zamanına girmez. Önerilen düzeltme:
+   `package-lock.json`'ı sil (tercih edilen) ya da `package.json` ile aynı
+   değişiklikte yeniden üret. Kanıt: `tests/security/lockfile-coverage.test.ts`
+   (`todo`; `bun.lock` tarafı kapı). Devir: **#188** (`agent:handoff`, LANE-INFRA).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
 

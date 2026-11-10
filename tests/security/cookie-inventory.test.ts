@@ -20,7 +20,7 @@ import test from "node:test";
  * |---|---|---|---|
  * | `sb-<ref>-auth-token` (+ `-code-verifier`) | `@supabase/ssr` via `src/proxy.ts`, `src/server/db/supabase-server.ts` | session / PKCE | HttpOnly, Secure (prod), SameSite=Lax — pinned in `session-cookie-flags.test.ts` |
  * | `ib_oauth_signup_intent` | `src/features/identity/actions.ts` | OAuth sign-up audience | HttpOnly, Secure (prod), SameSite=Lax — pinned in `session-cookie-flags.test.ts` |
- * | `NEXT_LOCALE` | `next-intl` middleware (`src/i18n/routing.ts`) | language choice | SameSite=Lax, **no Secure** — open finding, `locale-cookie-flags.test.ts` (LANE-İÇERİK) |
+ * | `NEXT_LOCALE` | `next-intl` middleware (`src/i18n/routing.ts`) | language choice | Secure (prod), SameSite=Lax — pinned in `locale-cookie-flags.test.ts` |
  * | `ib_consent` | `src/components/analytics/consent-browser.ts` (client) | analytics/marketing consent | Secure (https), SameSite=Lax, Path=/, **not** HttpOnly — pinned here |
  *
  * `ib_consent` is deliberately not `HttpOnly`: the banner must be able to clear
@@ -226,4 +226,34 @@ test("the cookie-name detector sees a declared name and rejects a near-miss (sel
   ].join("\n");
   while ((match = re.exec(source)) !== null) names.push(match[1]);
   assert.deepEqual(names, ["ib_consent", "ib_oauth_signup_intent"]);
+});
+
+// ---------------------------------------------------------------------------
+// 5. The §6 table is the audit's single source of truth, so a row must not
+//    drift from the code it summarises. `NEXT_LOCALE`'s row kept reading
+//    "no Secure — open finding" long after LANE-İÇERİK closed it (#469/#498),
+//    which would have misled the next cookie audit into re-opening a fixed
+//    finding. Pin the row to the routing config it describes.
+// ---------------------------------------------------------------------------
+
+test("the NEXT_LOCALE inventory row matches the routing config it describes", () => {
+  const inventory = read(new URL(import.meta.url).pathname);
+  const routing = read(new URL("../../src/i18n/routing.ts", import.meta.url).pathname);
+
+  const row = inventory.split("\n").find((line) => /\|\s*`NEXT_LOCALE`\s*\|/.test(line));
+  assert.ok(row, "the §6 table no longer documents the NEXT_LOCALE cookie");
+
+  // `src/i18n/routing.ts` (LANE-İÇERİK) hardens the locale cookie in production.
+  assert.match(
+    routing,
+    /localeCookie:\s*\{[^}]*secure:\s*process\.env\.NODE_ENV\s*===\s*["']production["']/,
+    "routing.ts no longer sets Secure on the locale cookie in production",
+  );
+  // So the row must claim Secure and must not still advertise the closed finding.
+  assert.match(row, /Secure \(prod\)/, `the NEXT_LOCALE row is stale: ${row}`);
+  assert.doesNotMatch(
+    row,
+    /no Secure|open finding/,
+    `the NEXT_LOCALE row still advertises the closed #469/#498 finding: ${row}`,
+  );
 });
