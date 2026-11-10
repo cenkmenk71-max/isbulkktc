@@ -126,18 +126,20 @@ test("the accepted version range starts below what even the default payload need
   }
 });
 
-test("the route renders without an error path (finding)", () => {
-  // The static half: prove the route has no try/catch (or capacity check) around
-  // the generator, so the throw escapes to a 500. When the owner adds one, this
-  // flips red and the assertion should be replaced by the functional route test.
+test("the route guards its generator with an error path (was a finding, now fixed)", () => {
+  // Was pinned as "the route has no try/catch". #544 added one: an unrenderable
+  // `version` falls back to auto-sizing and a payload no version can hold answers
+  // a controlled 4xx. Assert the guard exists so a refactor cannot silently
+  // reintroduce the unhandled throw (the functional half lives in
+  // `tests/integration/qr-route.test.ts`).
   const route = readFileSync(new URL("../../src/app/api/qr/route.ts", import.meta.url), "utf8");
   assert.ok(
     route.includes("QRCode.toString"),
     "the route must still be the file under test",
   );
   assert.ok(
-    !/\btry\b/.test(route),
-    "the QR route must guard its generator with a try/catch (finding: it does not)",
+    /\btry\b/.test(route),
+    "the QR route must guard its generator (finding: it once did not)",
   );
 });
 
