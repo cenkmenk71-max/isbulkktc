@@ -1224,7 +1224,7 @@ Yeni kimlik: D-32 (sayısal iddia düzeltmesi).
 geçersiz; `www` yönlendirmesi doğrudan ölçüldü.
 
 **Bulgu (R-01r3, gerçek açık):**
-- `https://www.isbulkktc.com/` → **200** (3/3 GET), apex'e yönlenmiyor → duplicate content / kanonik risk.
+- `https://www.isbulkktc.com/` → **200** (3/3 GET), apex'e yönlenmiyor → host düzeyinde duplicate content riski. Sayfa `<link rel="canonical">` ile apex'i gösteriyor (sayfa düzeyi sinyal var), ama host düzeyi yönlendirme yok.
 - `http://www.isbulkktc.com/` → **301** → `https://www.isbulkktc.com/` (host `www` kalır; CF Always Use HTTPS).
 - `https://www.isbulkktc.com./` → **404** (5/5 GET+HEAD, `x-vercel-id` dolu) — kesinti artefaktı değil.
 - `https://isbulkktc.com./` → **404**; `https://isbulkktc.com./en` → **200** (R-01, origin host eşleştirmesi).

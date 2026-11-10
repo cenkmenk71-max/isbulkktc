@@ -3811,10 +3811,14 @@ origin'de yeniden ölçülmeli" demişti. Tur 36 (H-03) sağlıklı origin'de **
 | `https://isbulkktc.com./en` | **200** | origin |
 
 **Sonuç:** `www` yönlendirmesi **yalnız şemayı** düzeltir (`http→https`, CF),
-**host'u kanonikleştirmez**. `https://www` apex ile aynı gövdeyi **200** servis
-eder → **duplicate content / kanonik risk** (SEO). Bu artık bir ölçüm kısıtı
-değil, **doğrulanmış konfig eksiği**: `next.config.ts` `redirects()` içinde
-`www→apex` kuralı yok, Vercel domain-level yönlendirme de yok. Apex host'un
+**host'u kanonikleştirmez**. `https://www` içeriği **200** servis eder. Sayfa
+`<link rel="canonical" href="https://isbulkktc.com">` (ve `og:url`) ile apex'i
+gösterir → **sayfa düzeyinde** duplike sinyali zayıflatılır; ancak **host
+düzeyinde** kanonikleştirme (yönlendirme) yoktur, `www` ayrı bir 200 veren host
+olarak kalır (ham HTML bayt-özdeş değil — dinamik nonce/CF challenge parametreleri;
+bkz. D-31). Bu artık bir ölçüm kısıtı değil, **doğrulanmış konfig eksiği**:
+`next.config.ts` `redirects()` içinde `www→apex` kuralı yok, Vercel domain-level
+yönlendirme de yok. Apex host'un
 sondaki-nokta (`isbulkktc.com.`) 404'ü ise origin host eşleştirmesinde (R-01),
 CF'de değil.
 
