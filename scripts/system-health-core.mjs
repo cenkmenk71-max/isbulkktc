@@ -221,8 +221,13 @@ export function redPullRequests(prs) {
  * `402 Payment Required` with `x-vercel-error: DEPLOYMENT_DISABLED` means the
  * account is blocked, suspended or over quota. It is an account state, not an
  * application bug: the origin is down for every visitor and redeploying does not
- * fix it. Kept as a pure predicate (mirroring `verify-production-deployment.mjs`)
- * so the probe's verdict is testable without the network.
+ * fix it. On 2026-11-10 the live origin switched to **404** with
+ * `x-vercel-error: DEPLOYMENT_NOT_FOUND` — same account-level state, different
+ * marker. A bare 404 must NOT match: a healthy origin answers 404 for every path
+ * it does not own, so only the `x-vercel-error` header disambiguates it (the 402
+ * is unambiguous on its own). Kept as a pure predicate (mirroring
+ * `verify-production-deployment.mjs`) so the probe's verdict is testable without
+ * the network.
  *
  * @param {number|null|undefined} status
  * @param {string|null|undefined} vercelError
@@ -230,10 +235,14 @@ export function redPullRequests(prs) {
  */
 export function isDeploymentDisabled(status, vercelError) {
   if (status === 402) return true;
-  return (
-    typeof vercelError === 'string' &&
-    vercelError.trim().toUpperCase() === 'DEPLOYMENT_DISABLED'
-  );
+  return vercelAccountState(vercelError) !== '';
+}
+
+/** The account-state marker Vercel sent, normalised, or "" when there is none. */
+function vercelAccountState(vercelError) {
+  if (typeof vercelError !== 'string') return '';
+  const marker = vercelError.trim().toUpperCase();
+  return marker === 'DEPLOYMENT_DISABLED' || marker === 'DEPLOYMENT_NOT_FOUND' ? marker : '';
 }
 
 /**
@@ -246,12 +255,12 @@ export function isDeploymentDisabled(status, vercelError) {
  * `402 DEPLOYMENT_DISABLED` to everyone. A red workflow is a symptom; "the site
  * is down" is the finding, and it must be read directly from the origin.
  *
- * A 402 / `DEPLOYMENT_DISABLED` is a hard failure: the site is down for real
- * visitors, which outranks a workflow that merely reports it. A 403/429 is the
- * edge blocking the probe (Cloudflare answers datacenter IPs that way) — that is
- * "could not verify", a warning, never a failure. A network error is likewise
- * "could not verify" rather than "down": the probe has no evidence either way,
- * so it warns instead of inventing an outage.
+ * A 402 / `DEPLOYMENT_DISABLED` / `DEPLOYMENT_NOT_FOUND` is a hard failure: the
+ * site is down for real visitors, which outranks a workflow that merely reports
+ * it. A 403/429 is the edge blocking the probe (Cloudflare answers datacenter IPs
+ * that way) — that is "could not verify", a warning, never a failure. A network
+ * error is likewise "could not verify" rather than "down": the probe has no
+ * evidence either way, so it warns instead of inventing an outage.
  *
  * @param {{status?: number|null, vercelError?: string|null, networkError?: string|null}} probe
  * @returns {{level: 'ok'|'warn'|'fail', detail: string}}
@@ -265,9 +274,12 @@ export function classifyProductionProbe(probe) {
     return { level: 'warn', detail: 'probe returned no status' };
   }
   if (isDeploymentDisabled(status, vercelError)) {
+    const state = vercelAccountState(vercelError);
     return {
       level: 'fail',
-      detail: `DOWN: HTTP ${status} DEPLOYMENT_DISABLED (Vercel account blocked or over quota)`,
+      detail: state
+        ? `DOWN: HTTP ${status} ${state} (Vercel account/deployment is not being served)`
+        : `DOWN: HTTP ${status} (Vercel account blocked or over quota)`,
     };
   }
   if (status >= 200 && status < 400) {

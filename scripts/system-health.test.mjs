@@ -501,3 +501,29 @@ test("isDeploymentDisabled matches only the 402 or the Vercel marker", () => {
   assert.equal(isDeploymentDisabled(403, null), false);
   assert.equal(isDeploymentDisabled(null, null), false);
 });
+
+test("isDeploymentDisabled recognises DEPLOYMENT_NOT_FOUND (404) but not a bare 404", () => {
+  // 2026-11-10: the live origin answered 404 + x-vercel-error on every route.
+  assert.equal(isDeploymentDisabled(404, "DEPLOYMENT_NOT_FOUND"), true);
+  assert.equal(isDeploymentDisabled(404, "  deployment_not_found  "), true);
+  // A healthy origin returns 404 for any path it does not own — without the
+  // header this must stay a plain failure, not an account-state verdict.
+  assert.equal(isDeploymentDisabled(404, null), false);
+  assert.equal(isDeploymentDisabled(404, "NOT_FOUND"), false);
+});
+
+test("classifyProductionProbe names the Vercel account state it saw", () => {
+  assert.deepEqual(classifyProductionProbe({ status: 404, vercelError: "DEPLOYMENT_NOT_FOUND" }), {
+    level: "fail",
+    detail: "DOWN: HTTP 404 DEPLOYMENT_NOT_FOUND (Vercel account/deployment is not being served)",
+  });
+  assert.deepEqual(classifyProductionProbe({ status: 402, vercelError: "DEPLOYMENT_DISABLED" }), {
+    level: "fail",
+    detail: "DOWN: HTTP 402 DEPLOYMENT_DISABLED (Vercel account/deployment is not being served)",
+  });
+  // A bare 404 keeps the generic, non-actionable copy.
+  assert.deepEqual(classifyProductionProbe({ status: 404 }), {
+    level: "fail",
+    detail: "origin answered HTTP 404",
+  });
+});
