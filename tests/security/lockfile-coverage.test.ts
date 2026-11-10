@@ -1,34 +1,33 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 /**
- * Supply-chain boundary: a committed lockfile must resolve the manifest it
- * accompanies.
+ * Supply-chain boundary: the repository carries exactly one lockfile, that
+ * lockfile resolves the manifest it accompanies, and Dependabot watches the
+ * ecosystem the build actually installs from.
  *
- * The repository carries **two** lockfiles. `bun.lock` is the one CI installs
- * from (`bun install --frozen-lockfile` in every job), but Dependabot's npm
- * ecosystem audits `package-lock.json` instead — it is the only manifest the
- * advisory scan reads (#188). That makes the stale lock a blind spot rather
- * than a harmless duplicate: an advisory in a package the stale lock never
- * resolved is invisible to the scan while the code still ships.
+ * #188 was a blind spot rather than a harmless duplicate. `package-lock.json`
+ * was a second, stale manifest and the only one Dependabot's npm ecosystem
+ * read, so the advisory scan saw a tree that did not match what CI installed
+ * while the real lockfile (`bun.lock`, the one `bun install --frozen-lockfile`
+ * uses in every job) went unscanned. LANE-INFRA closed it in b1f8d62: the stale
+ * lock is deleted and gitignored, and `.github/dependabot.yml` now watches the
+ * `bun` ecosystem.
  *
- * `package-lock.json` (lockfileVersion 3) does not resolve four direct
- * dependencies `package.json` declares — `qrcode` and `web-push` (production)
- * and `jsqr` and `pngjs` (dev). npm treats a lock that omits a declared
- * dependency as out of sync and refuses `npm ci`. `lucide-react` is stale in the
- * same lock: it pins `1.63.0` where `bun.lock` resolves `1.62.0`.
+ * The previous revision of this file read `package-lock.json` inside a `todo`
+ * test. Once the file was gone that test threw `ENOENT` — and a `todo` never
+ * fails the run, so the read error was invisible and the test measured nothing
+ * at all. A boundary that only holds while the file it forbids is present is
+ * not a boundary. The gate below asserts the closure instead: no npm lock is in
+ * the tree and Dependabot is pointed at bun. A reintroduced `package-lock.json`
+ * — the original blind spot — turns it red.
  *
- * The invariant below is deliberately narrow — direct dependencies only. That is
- * exactly what a lockfile is required to resolve, and it is stable across
- * lockfile versions (npm's `packages` keys are `node_modules/<name>`, bun's are
- * bare names). Transitive completeness is left alone; it drifts for reasons
- * unrelated to this boundary.
- *
- * The `bun.lock` side is a gate: it passes today and turns red the moment the
- * canonical lock stops tracking the manifest. The `package-lock.json` side is a
- * `todo` — it documents the open finding (#188) without failing the run, and
- * passes on its own once LANE-INFRA regenerates or drops the stale lock.
+ * The resolution invariant is deliberately narrow — direct dependencies only.
+ * That is exactly what a lockfile is required to resolve, and it is stable
+ * across lockfile versions (npm's `packages` keys are `node_modules/<name>`,
+ * bun's are bare names). Transitive completeness is left alone; it drifts for
+ * reasons unrelated to this boundary.
  */
 
 const root = new URL("../../", import.meta.url);
@@ -77,13 +76,6 @@ function resolvedNames(packages: Record<string, unknown>): Set<string> {
   return names;
 }
 
-function packageLockResolved(): Set<string> {
-  const lock = JSON.parse(read("package-lock.json")) as {
-    packages?: Record<string, unknown>;
-  };
-  return resolvedNames(lock.packages ?? {});
-}
-
 function bunLockResolved(): Set<string> {
   const lock = parseJsonc(read("bun.lock")) as {
     packages?: Record<string, unknown>;
@@ -94,6 +86,25 @@ function bunLockResolved(): Set<string> {
 /** Direct deps of a lockfile that declare none of them — the drift to catch. */
 function unresolvedIn(resolved: Set<string>): string[] {
   return declaredDeps().filter((name) => !resolved.has(name));
+}
+
+/** npm-family lockfiles this repository must never commit (bun is the manager). */
+const FOREIGN_LOCKFILES = [
+  "package-lock.json",
+  "npm-shrinkwrap.json",
+  "yarn.lock",
+  "pnpm-lock.yaml",
+] as const;
+
+/**
+ * The `package-ecosystem:` values in `.github/dependabot.yml`. There is no YAML
+ * parser available to a plain `node:test` file, and the value is a quoted scalar
+ * on its own line in every form Dependabot accepts, so it is read line by line.
+ */
+function dependabotEcosystems(text: string): string[] {
+  return [
+    ...text.matchAll(/^\s*-\s*package-ecosystem:\s*"?([a-z-]+)"?\s*$/gm),
+  ].map((match) => match[1]);
 }
 
 test("the coverage check sees a missing resolution and ignores a present one (self-test)", () => {
@@ -112,6 +123,19 @@ test("the coverage check sees a missing resolution and ignores a present one (se
 
   const bunKeys = { next: [], qrcode: [] };
   assert.deepEqual([...resolvedNames(bunKeys)].sort(), ["next", "qrcode"]);
+});
+
+test("the Dependabot-ecosystem extractor reads the ecosystem list (self-test)", () => {
+  const sample = [
+    "version: 2",
+    "updates:",
+    '  - package-ecosystem: "bun"',
+    '    directory: "/"',
+    "  - package-ecosystem: npm",
+    '    directory: "/"',
+  ].join("\n");
+  assert.deepEqual(dependabotEcosystems(sample), ["bun", "npm"]);
+  assert.deepEqual(dependabotEcosystems("version: 2\nupdates: []\n"), []);
 });
 
 test("bun.lock's workspace manifest matches package.json exactly (gate)", () => {
@@ -138,10 +162,30 @@ test("bun.lock resolves every direct dependency (gate)", () => {
   assert.deepEqual(unresolvedIn(bunLockResolved()), []);
 });
 
-test(
-  "package-lock.json resolves every direct dependency",
-  { todo: "package-lock.json (the only manifest Dependabot audits) omits qrcode, web-push, jsqr and pngjs and pins a stale lucide-react; the advisory scan reads a tree that is not what CI installs (owner: LANE-INFRA, #188)" },
-  () => {
-    assert.deepEqual(unresolvedIn(packageLockResolved()), []);
-  },
-);
+test("the tree carries no npm lockfile, so the #188 blind spot cannot return (gate)", () => {
+  for (const name of FOREIGN_LOCKFILES) {
+    assert.equal(
+      existsSync(new URL(name, root)),
+      false,
+      `${name} is back; a second, stale lockfile would again be the manifest Dependabot reads (#188)`,
+    );
+  }
+  // A stray `npm install` must not be able to commit one.
+  assert.match(
+    read(".gitignore"),
+    /^package-lock\.json$/m,
+    "package-lock.json must stay gitignored while bun is the package manager",
+  );
+});
+
+test("Dependabot watches the ecosystem the build installs from (gate)", () => {
+  const ecosystems = dependabotEcosystems(read(".github/dependabot.yml"));
+  assert.ok(
+    ecosystems.includes("bun"),
+    "dependabot.yml must watch the bun ecosystem — that is the lockfile CI installs (#188)",
+  );
+  assert.ok(
+    !ecosystems.includes("npm"),
+    "dependabot.yml must not watch npm: there is no npm lockfile to audit (#188)",
+  );
+});

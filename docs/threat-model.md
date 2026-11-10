@@ -251,11 +251,15 @@ issue açar.
   (yalnız `gh pr merge/edit`; PR kodunu checkout etmez), ve auto-merge kapısı
   `.github/workflows/**` değişikliğini yine reddeder.
   `tests/security/ci-workflow-permissions.test.ts`.
-- **Kilit dosyası, manifest'i çözmeli:** CI `bun install --frozen-lockfile` ile
-  `bun.lock`'tan kurar; `bun.lock`'un workspace manifesti `package.json` ile
-  birebir aynı olmalı ve `package.json`'ın bildirdiği **her** doğrudan bağımlılığı
-  çözmeli. `bun.lock` tarafı kapıdır — kanonik kilit manifestten koparsa kırmızı
-  olur. `tests/security/lockfile-coverage.test.ts`.
+- **Tek kilit dosyası ve manifest eşleşmesi:** CI `bun install
+  --frozen-lockfile` ile `bun.lock`'tan kurar; `bun.lock`'un workspace manifesti
+  `package.json` ile birebir aynı olmalı ve `package.json`'ın bildirdiği **her**
+  doğrudan bağımlılığı çözmeli. Ağaçta npm-ailesi ikinci bir kilit dosyası
+  (`package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock`, `pnpm-lock.yaml`)
+  bulunmamalı ve `.github/dependabot.yml` **`bun`** ekosistemini izlemeli — yani
+  Dependabot'un taradığı ağaç, CI'ın kurduğu ağaç olmalı. Üçü de kapı: kanonik
+  kilit manifestten kopar, ikinci kilit geri gelir ya da Dependabot `npm`'e
+  dönerse kırmızı. `tests/security/lockfile-coverage.test.ts`.
 
 ### Açık bulgular (sahibine bildirildi, düzeltme bekliyor)
 
@@ -287,21 +291,7 @@ issue açar.
    altındaki diğer tüm sır-okuyan modüller bu işareti taşıyor; eksik olan, yanlış
    bir istemci içe aktarımını derleme hatası yerine sessiz bir sızıntıya çevirir.
    Kanıt: `tests/security/client-boundary.test.ts` (`todo`).
-3. **İkinci kilit dosyası bayat ve Dependabot yalnız onu tarıyor** (sahibi:
-   `package.json`, kilit dosyaları -> LANE-INFRA). Depo tek paket yöneticisi
-   kullanır (`bun.lock`; CI `bun install --frozen-lockfile`) ama
-   `package-lock.json` de commit'li. Dependabot'un npm ekosistemi yalnız
-   `package-lock.json`'ı okur, yani **gerçek kilit dosyası (`bun.lock`) hiç
-   taranmaz**. `package-lock.json` (lockfileVersion 3) `package.json`'ın
-   bildirdiği dört doğrudan bağımlılığı çözmez — `qrcode` ve `web-push` (prod),
-   `jsqr` ve `pngjs` (dev) — ve `lucide-react`'i bayat (`1.63.0` ↔ `bun.lock`
-   `1.62.0`) sabitler. Yani danışma (advisory) taraması **sevk edilenden farklı
-   bir ağacı** okur; bildirilen açık alert'ler yalnız dev zincirindedir
-   (`bun audit --prod` temiz), üretim çalışma zamanına girmez. Önerilen düzeltme:
-   `package-lock.json`'ı sil (tercih edilen) ya da `package.json` ile aynı
-   değişiklikte yeniden üret. Kanıt: `tests/security/lockfile-coverage.test.ts`
-   (`todo`; `bun.lock` tarafı kapı). Devir: **#188** (`agent:handoff`, LANE-INFRA).
-4. **Push endpoint allowlist'inin DB yarısı app kuralıyla ayrışıyor** (sahibi:
+3. **Push endpoint allowlist'inin DB yarısı app kuralıyla ayrışıyor** (sahibi:
    `supabase/migrations/**` -> LANE-SUPABASE). `register_push_subscription`
    host'u **ham string** üzerinden çıkarıyor —
    `lower(split_part(split_part(endpoint, '/', 3), ':', 1))`
@@ -336,6 +326,18 @@ issue açar.
    Devir: LANE-SUPABASE (`agent:handoff`, #536).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
+
+- **İkinci, bayat kilit dosyası ve Dependabot kör noktası** (sahibi:
+  `package.json` + kilit dosyaları, LANE-INFRA; devir **#188** — kapandı).
+  `package-lock.json` commit'liydi ve Dependabot'un **npm** ekosistemi yalnız onu
+  okurdu; danışma taraması `package.json`'ın dört doğrudan bağımlılığını
+  çözmeyen (`qrcode`, `web-push`, `jsqr`, `pngjs`) ve `lucide-react`'i bayat
+  sabitleyen bir ağacı görürken gerçek kilit (`bun.lock`) hiç taranmıyordu.
+  LANE-INFRA b1f8d62'de bayat kilidi silip `.gitignore`'a ekledi ve
+  `.github/dependabot.yml`'i `bun` ekosistemine çevirdi.
+  `tests/security/lockfile-coverage.test.ts` artık kapanışı kapıya bağlar: ağaçta
+  npm kilit dosyası yok ve Dependabot `bun`'u izler (ikisi de mutation ile
+  doğrulandı).
 
 - **Kimlik uç noktalarında uygulama-içi hız sınırı yoktu** (sahibi:
   `src/features/identity/**`, LANE-AUTH; devir **#457** — kapandı). `signIn` ve
