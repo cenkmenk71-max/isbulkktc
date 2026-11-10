@@ -1886,3 +1886,61 @@ değişmedi. Erişilebilirlik/kontrast/RTL bu lane'de kapsam dışı.
 Yeni devir yok — #188 zaten açık (`agent:handoff`, LANE-INFRA); bu tur kanıtı
 kapıya çevirdi. Sahibi `package-lock.json`'ı siler/yeniden üretirse `todo`
 kendiliğinden kapanır.
+
+## Durum (2026-11-10, 46. tur) — mail-throttle kapıları gate'e terfi (#514)
+
+Açık devir **#514** (LANE-AUTH → LANE-GÜVENLİK) alındı. LANE-AUTH, #505/PR #513
+kapsamında `signUp` + `resendConfirmation`'a adres/e-posta boyutlu throttle'ı
+bağladı; `tests/security/auth-mail-throttle-surface.test.ts` içindeki iki kapı
+hâlâ `{ todo }` işaretliydi, yani ölçtükleri koşul karşılanmasına rağmen test
+kırmızıya dönemiyordu (vakumlu yeşil).
+
+### Yapılanlar
+
+1. **İki `{ todo }` kaldırıldı** → iki test gerçek kapıya terfi etti. Öz-testler
+   (matcher + extractor) korundu.
+2. **Sıra assert'i eklendi.** Kapı artık yalnız kontrolün *varlığını* değil
+   **konumunu** da sabitler: throttle `supabase.auth.signUp`/`resend` çağrısından
+   **önce** olmalı. Aksi halde reddedilen her çağrı yine bir mail gönderirdi;
+   varlık-only bir kapı bunu kaçırırdı.
+3. **Vakumlu-geçiş açığı bulundu ve kapatıldı (kendi hatam).** İlk sıra assert'i
+   `body.search(throttleReference)` (yorumlar dahil) ile `body.indexOf(
+   "supabase.auth.signUp")` karşılaştırıyordu. `signUp` gövdesindeki
+   `// Throttle before the mail fan-out.` yorumu `supabase.auth.signUp`'ın
+   **üstünde** duruyor; matcher büyük/küçük harf duyarsız olduğundan yorumdaki
+   "Throttle" kelimesini eşleştiriyor ve kapı, kontrol mail çağrısının **altına**
+   taşınsa bile yeşil kalıyordu. Düzeltme: `stripComments()` ile eşleşmeden önce
+   `//` ve `/* */` yorumları silinir; hem varlık hem sıra kontrolü **aynı**
+   (yorum-süzülmüş) metin üzerinde çalışır. Yeni öz-test: yalnız yorumda geçen bir
+   kontrol sözcüğü sayılmaz.
+
+### Kanıt (mutasyon)
+
+- Kontrol `supabase.auth.signUp`'ın **altına** taşınınca → `sign-up carries an
+  abuse control…` **✖ fail**; kaynak geri alınınca yeşil.
+- Kontrol `supabase.auth.resend`'in **altına** taşınınca → `resending the
+  confirmation mail…` **✖ fail**; geri alınınca yeşil.
+- Düzeltme öncesi her iki mutasyonda da kapı **yeşil kalıyordu** (vakumlu geçiş).
+
+### Dokümanlar
+
+- `docs/threat-model.md`: "Açık bulgular"tan kapanan #457 ve #514 maddeleri
+  çıkarıldı (5→3 yeniden numaralandı), "Kapatılan bulgular"a iki madde eklendi.
+- `tests/security/README.md`: kapsam satırı (sıra + yorum-süzme notu) ve bulgular
+  tablosundaki iki satır güncellendi.
+
+### Kapılar (yeşil)
+
+- `bun run test:security` → 193 test / 185 pass / **0 fail** / 8 todo.
+- `bun run lint` ✓ · `bun run typecheck` ✓ · `bun run check:frontend-source` ✓.
+- `bun run test:unit` → 906 test / 904 pass / 0 fail / 2 todo.
+
+### Bakılmayan / değişmeyen
+
+`src/features/identity/actions.ts` yalnız mutasyon testi için geçici olarak
+değiştirildi ve geri alındı (çalışma ağacında değişiklik yok) — düzeltme sahibi
+LANE-AUTH'tur. Erişilebilirlik/kontrast/RTL bu lane'de kapsam dışı.
+
+### Devir
+
+Yeni devir yok. #514 bu PR ile kapanır; sıra+kapsam invariantı artık kalıcı kapı.
