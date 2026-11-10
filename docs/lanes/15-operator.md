@@ -826,3 +826,40 @@ geri alınınca **48/48**. Canlı koşu artık iki satırı da yazıyor:
 "paylaşılan neden" ile "N bağımsız arıza"yı ayıramaz. Aynı adı taşıyan kırmızıları
 grupla; 2+ ise tek sistemik neden olarak sun. Bekçi yine **çözemez** — kapının
 kendisi global, düzeltme LANE-INFRA'da (#552'ye yapısal bulgu olarak eklendi).
+
+## Tur notları — toplayıcı işi kendi kapısı sanma (2026-11-10)
+
+Önceki tur "aynı check N PR'da kırmızıysa tek neden"i ekledi. Bu tur aynı
+grubun **fazla saydığını** buldu: tek donma **iki** kapı gibi görünüyordu.
+
+**Bulgu.** Canlı koşu iki `queue-global gate` satırı yazıyordu:
+
+```
+  WARN queue-global gate Static checks is red on 2 PRs (#557, #555) ...
+  WARN queue-global gate Quality, database and E2E is red on 2 PRs (#557, #555) ...
+```
+
+`Quality, database and E2E` (`.github/workflows/ci.yml`) **toplayıcı** bir iştir:
+`needs: [static, database, e2e]` ve tek yaptığı, bir bağımlılık düştüyse düşmek;
+**kendi kapısı yok**. `Static checks` kuyrukta kırmızıyken toplayıcı da **her**
+PR'da kırmızıdır. Bu yüzden `queueGlobalGates` **tek** kök nedeni **iki** bağımsız
+kapı gibi gösteriyor ve operatörü düzeltilecek kendi hatası olmayan bir işe
+yönlendiriyordu — 8. ailenin (gösterge yanlış okuyor) sayaç eksenindeki hâli.
+
+**Düzeltme (LANE-OPERATÖR dosyaları).** `system-health-core.mjs`'e
+`CI_AGGREGATOR_CHECKS` eklendi; `queueGlobalGates` toplayıcı adlarını atlar.
+`redPullRequests` **bilinçli olarak filtrelenmedi**: PR başına "bu head kırmızı"
+bilgisi doğru ve eyleme dönüktür. Bir birim testi toplayıcı adının `ci.yml`'de
+`needs:` taşıdığını doğrular (toplayıcı tanımının kanıtı), böylece yeniden
+adlandırma çift sayımı geri getiremez.
+
+**Kanıt.** `scripts/system-health.test.mjs` **50/50** (yeni 2 test). Canlı koşu
+artık tek satır yazıyor:
+```
+  WARN queue-global gate Static checks is red on 2 PRs (#557, #555) ...
+```
+`lint`/`typecheck`/`check:frontend-source` temiz, `test:unit` **987/987**.
+
+**Ders.** Bir kırmızıyı **adlandırdığında** sor: bu iş kendi başına mı karar
+veriyor, yoksa yalnız başka bir işi mi aynalıyor? İkincisiyse ayrı bir neden
+değil, aynı nedenin ikinci görüntüsüdür; raporla, ama çözüm olarak sunma.
