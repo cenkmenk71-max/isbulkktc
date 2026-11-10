@@ -24,6 +24,11 @@
  *      ownership slip turns *every* open PR red (#552, #557, #555): the branch
  *      that owns the offending lane is told to fix it, and no one else waits.
  *
+ * Each PR's files are judged against its *own head* ownership table when that
+ * table is readable, so a lane that claims a new path (and edits the table) is
+ * not reported as "owned by no lane" in every other PR before the claim lands
+ * on main (#563, the scope-inverted twin of #552). See `headOwnership`.
+ *
  * Exit code is non-zero when either scope finds a problem, so it can gate CI.
  * It never writes anything.
  *
@@ -149,6 +154,42 @@ export function isDeletion(file) {
   return kind === 'DELETED' || kind === 'removed';
 }
 
+/**
+ * The ownership table as of one pull request's own head branch.
+ *
+ * Ownership must be judged against the tree that *introduces* a file, not the
+ * tree that happens to be asking. A lane that claims a new path edits both the
+ * file and its ownership row, so in *its* tree the path is owned and its own CI
+ * is green. The querying PR's tree is the merge of its own head into main, which
+ * does not carry that not-yet-merged row yet — so the same path looks unowned
+ * there. Reading only the querying tree turned a legitimate new claim into a
+ * queue-wide "owned by no lane" and reddened *every* open PR until the claiming
+ * PR merged (#563, the scope-inverted twin of #552).
+ *
+ * @param {string} ref the pull request's head branch
+ * @returns {Array<{lane:string,globs:string[]}>|null} that branch's table, or
+ *   null when it cannot be read (branch deleted, rate limited, offline) so the
+ *   caller falls back to the shared table instead of inventing ownership
+ */
+export function headOwnership(ref) {
+  try {
+    const raw = execFileSync(
+      'gh',
+      [
+        'api',
+        `repos/{owner}/{repo}/contents/${ORCHESTRATION}?ref=${encodeURIComponent(ref)}`,
+        '-H',
+        'Accept: application/vnd.github.raw',
+      ],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+    );
+    const lanes = parseOwnership(raw);
+    return lanes.length > 0 ? lanes : null;
+  } catch {
+    return null;
+  }
+}
+
 function openPullRequests() {
   let raw;
   try {
@@ -174,7 +215,12 @@ function openPullRequests() {
         'The collision check needs a token with pull-requests:read.',
     );
   }
-  return JSON.parse(raw);
+  // Attach each PR's own ownership table so a claim it makes in its branch is
+  // honoured here before the row lands on main (#563).
+  return JSON.parse(raw).map((pr) => ({
+    ...pr,
+    lanes: headOwnership(pr.headRefName),
+  }));
 }
 
 /**
@@ -219,9 +265,14 @@ export function evaluateCollisions(prs, lanes, currentPr = null) {
 
   for (const pr of prs) {
     const lane = laneFromBranch(pr.headRefName, knownLanes);
+    // Judge this PR's files against its *own* head table when it was readable,
+    // so a path it claims in its branch counts as owned here before the row
+    // merges (#563). Falling back to the shared table keeps a deleted branch or
+    // a failed read from turning its files into false "owned by no lane".
+    const table = pr.lanes ?? lanes;
     for (const file of pr.files ?? []) {
       const path = file.path ?? file;
-      const owners = ownersOf(path, lanes);
+      const owners = ownersOf(path, table);
       // A deletion leaves no file behind, so "owned by no lane" does not apply:
       // ownership governs what a lane writes, and a removed path occupies no
       // lane's territory once merged. Without this, deleting a stray unowned
