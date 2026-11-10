@@ -213,3 +213,7 @@ context, not as a measurement.
     by adding `--paginate` and extracting `parsePendingRuns()` so the row shape is
     testable without `gh`. Three regression tests added; the `--paginate`-presence
     test fails against the pre-fix script, so it pins the bug.
+
+| Checked (UTC) | main tip | live | verdict | Note |
+|---|---|---|---|---|
+| 2026-11-10T00:30Z | `3fcafbf3` | `3fcafbf3` | ✅ in sync | **Merge record — PR #509** (finding 14's `--paginate` fix) auto-merged by `app/github-actions` at 00:26:53Z; all required checks green including the `Quality, database and E2E` aggregator. Full `verify-production-deployment.mjs --expect 3fcafbf` run: exit 0, confirmed via HTTP, 5/5 smoke routes 200. `main` advanced `8f4a50e3` → `3fcafbf3` and production followed it immediately — no freeze. |

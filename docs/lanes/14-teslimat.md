@@ -285,3 +285,11 @@ boşluğunu kapattı, #306'nın geri kalanına dokunmadı.
 **Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅, `test:unit`
 **898 test / 896 pass / 0 fail / 2 todo** (yeni: `approve-pending-runs.test.mjs`
 +3 test → toplam 8).
+
+**Merge (kural 4).** PR **#509** `app/github-actions` tarafından 00:26:53Z'de
+otomatik merge edildi (`ci.yml` değiştirmediği için "iki fren" engellemedi); tüm
+zorunlu kontroller yeşil (aggregator dahil). `main` `8f4a50e3` → `3fcafbf3`.
+
+**Canlı teyit (görev 3, merge sonrası).** 00:30Z: `main` = canlı = `3fcafbf3` ✅.
+Tam koşu `--expect 3fcafbf` → exit 0, HTTP kanalı ulaşılabilir, 5/5 smoke route
+200. Üretim merge'i anında takip etti — **donma yok**.
