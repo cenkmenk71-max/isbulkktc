@@ -322,7 +322,21 @@ context, not as a measurement.
     expected commit). 402 is unambiguous, so the status alone suffices there; the 404
     state requires the `x-vercel-error` header to disambiguate, and
     `evaluateRouteResponse` now takes that header so the smoke path names the state the
-    same way. Both directions are pinned by tests that fail against the pre-fix script.
+    same way.
+
+    **Ownership note.** The first cut also edited
+    `scripts/verify-production-deployment.test.mjs` to pin both directions. That file
+    is **not** this lane's: LANE-VERIFY owns `scripts/verify-*.mjs` (row 35 of
+    `docs/lanes/00-orchestration.md`), and the glob swallows the `-production-deployment`
+    test file while the LANE-TESLİMAT row lists only the three scripts, no test. The
+    collision gate (`CI` "Static checks" → `scripts/lane-collisions.mjs`) therefore
+    failed with `lane-teslimat does not own it (LANE-VERIFY, LANE-INFRA)` and PR #549
+    sat `BLOCKED`. The fix was re-cut to stay inside the file this lane owns: the whole
+    change is now `scripts/verify-production-deployment.mjs` alone, the existing suite
+    passes unchanged (14/14), and the regression tests for the 404 states are handed to
+    LANE-VERIFY. The general lesson: a lane that owns a script but not its `*.test.mjs`
+    must make the source change pass the *existing* suite, or the ownership gate blocks
+    the delivery.
 
     Sibling blind spots, handed off rather than edited (out of lane):
     `scripts/system-health-core.mjs` (LANE-OPERATOR) and `scripts/verify-indexing.mjs`
