@@ -1327,16 +1327,16 @@
       "sections": {
         "s1": {
           "title": "Unbedingt erforderliche Cookies",
-          "p1": "Cookies, die Ihre Sitzung offen halten, die Sicherheit gewährleisten und Ihre Spracheinstellung speichern, sind erforderlich; ohne sie funktioniert die Website nicht."
+          "p1": "Erforderlich sind das Sitzungs-Cookie, das Sie angemeldet hält, das NEXT_LOCALE-Cookie, das Ihre Sprache speichert, und das Sicherheits-Cookie für die Anmeldung über ein soziales Netzwerk. Das Sitzungs-Cookie gilt 400 Tage, das Sicherheits-Cookie 15 Minuten und NEXT_LOCALE nur für die Sitzung; ohne sie funktioniert die Website nicht."
         },
         "s2": {
           "title": "Analyse- und Marketing-Cookies",
-          "p1": "Google-Analytics-Cookies werden nur geladen, wenn Sie einwilligen. Sie helfen uns, die besuchten Seiten anonym zu messen. Werbe- und Marketing-Cookies werden nur aktiviert, wenn Sie in diese Kategorie einwilligen, und dienen relevanten Inhalten und Werbung.",
+          "p1": "Google-Analytics-Cookies werden nur geladen, wenn Sie einwilligen, und höchstens 2 Jahre gespeichert; sie helfen uns, die besuchten Seiten anonym zu messen. Werbe- und Marketing-Cookies werden nur aktiviert, wenn Sie in diese Kategorie einwilligen, und dienen relevanten Inhalten und Werbung.",
           "p2": "Wenn Sie nicht in eine dieser Kategorien einwilligen, wird das jeweilige Skript oder Cookie nie geladen. Sie können Ihre Wahl jederzeit über die Cookie-Einstellungen auf der Website ändern."
         },
         "s3": {
           "title": "Einstellungen verwalten",
-          "p1": "Ihre Cookie-Einstellungen werden in Ihrem Browser gespeichert und betreffen nur diese Website. In den Browsereinstellungen können Sie Cookies vollständig löschen oder blockieren.",
+          "p1": "Ihre Cookie-Einstellungen werden in Ihrem Browser gespeichert und betreffen nur diese Website. Ihre Entscheidung verliert nach 180 Tagen ihre Gültigkeit und Sie werden erneut gefragt. In den Browsereinstellungen können Sie Cookies vollständig löschen oder blockieren.",
           "p2": "Wenn Sie Cookies blockieren, funktionieren einige Funktionen wie Anmeldung und Profilvorgänge möglicherweise nicht."
         }
       }

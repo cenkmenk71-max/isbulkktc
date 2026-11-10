@@ -1327,16 +1327,16 @@
       "sections": {
         "s1": {
           "title": "Strictly necessary cookies",
-          "p1": "Cookies used to keep your session open, maintain security and remember your language preference are required; the site does not work without them."
+          "p1": "The session cookie that keeps you signed in, the NEXT_LOCALE cookie that remembers your language, and the security cookie used during social sign-up are required. The session cookie lasts 400 days, the security cookie 15 minutes, and NEXT_LOCALE only for the session; the site does not work without them."
         },
         "s2": {
           "title": "Analytics and marketing cookies",
-          "p1": "Google Analytics cookies load only when you give consent. They help us measure the pages visited anonymously. Advertising and marketing cookies activate only when you consent to that category, and are used for content and ads relevant to your interests.",
+          "p1": "Google Analytics cookies load only when you give consent and are kept for up to 2 years; they help us measure the pages visited anonymously. Advertising and marketing cookies activate only when you consent to that category and are used for content and ads relevant to your interests.",
           "p2": "If you do not consent to one of these categories, the related script or cookie never loads. You can change your choice at any time from the cookie settings on the site."
         },
         "s3": {
           "title": "Managing preferences",
-          "p1": "Your cookie preferences are stored in your browser and affect this site only. You can delete or block cookies entirely in your browser settings.",
+          "p1": "Your cookie choices are stored in your browser and affect only this site. The decision you make is no longer valid after 180 days and you will be asked again. You can delete or block cookies entirely from your browser settings.",
           "p2": "If you block cookies, some functions such as signing in and profile actions may not work."
         }
       }
