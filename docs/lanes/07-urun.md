@@ -1258,8 +1258,8 @@ verildiğinde telefonu gösterir, boş alanlar satır üretmez.
 | Sınır girdi | ✅ HTML kaçışı; `undefined`/`null` alan düşer |
 
 ### Kapılar
-lint ✅ / typecheck ✅ / check:frontend-source ✅ / test:unit **1032/1032** ✅ /
-`test:security` 195 pass / 0 fail / 8 todo (todo'lar LANE-SUPABASE sahipli,
+lint ✅ / typecheck ✅ / check:frontend-source ✅ / test:unit **1033/1033** ✅ / test:integration **175/175** ✅ /
+`test:security` 197 pass / 0 fail / 7 todo (todo'lar LANE-SUPABASE sahipli,
 bu değişiklikten bağımsız) / `bun run build` (throwaway `NEXT_DIST_DIR`) ✅.
 Canlıya dokunulmadı (secret/DB/migration yok).
 
@@ -1275,7 +1275,7 @@ Değişen dosyalar: src/features/companies/actions.ts,
   src/server/email/company-profile-email.test.ts (yeni),
   docs/lanes/07-urun.md
 Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
-  test:unit 1032/1032 ✅ / test:security 195 pass-8 todo (bağımsız) /
+  test:unit 1033/1033 ✅ / test:integration 175/175 ✅ / test:security 197 pass-7 todo (bağımsız) /
   build ✅
 Canlıya dokundu mu: hayır (secret yazımı yok, DB yok, migration yok)
 Sahibin yapması gerekenler: PR'ı gözden geçirip merge et. Üretimde
