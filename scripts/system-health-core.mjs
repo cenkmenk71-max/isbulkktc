@@ -346,6 +346,9 @@ export function classifyProductionProbe(probe) {
   return { level: 'fail', detail: `origin answered HTTP ${status}` };
 }
 
+/** A hex commit SHA (7–40 chars); anything else is not a commit and cannot be compared. */
+const COMMIT_SHA = /^[0-9a-f]{7,40}$/;
+
 /**
  * Compare the commit the live origin serves to the default branch head.
  *
@@ -372,8 +375,6 @@ export function classifyProductionProbe(probe) {
  * @param {{liveCommit?: string|null, mainCommit?: string|null}} [input]
  * @returns {{level: 'ok'|'warn'|'unknown', detail: string}}
  */
-const COMMIT_SHA = /^[0-9a-f]{7,40}$/;
-
 export function classifyDeployFreshness({ liveCommit, mainCommit } = {}) {
   const live = typeof liveCommit === 'string' ? liveCommit.trim().toLowerCase() : '';
   const main = typeof mainCommit === 'string' ? mainCommit.trim().toLowerCase() : '';
