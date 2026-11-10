@@ -105,14 +105,44 @@ test("an empty list yields no deletions", () => {
   assert.deepEqual(selectDeploymentsToDelete([], { now: NOW }), []);
 });
 
-test("a negative keep count is clamped to zero rather than deleting nothing", () => {
-  const deployments = [deployment("p", 5, "production")];
+test("a negative keep count is clamped to zero, but the newest production deployment is still kept", () => {
+  // `keepProduction` may legitimately be 0 (or negative). The newest production
+  // deployment is the only rollback target and, when the live id is unknown, may
+  // be the one serving traffic — so it is never pruned.
+  const deployments = [
+    deployment("prod-new", 5, "production"),
+    deployment("prod-old", 9, "production"),
+    deployment("prev", 1),
+  ];
   const stale = selectDeploymentsToDelete(deployments, {
     keepProduction: -3,
     keepPreview: -1,
     now: NOW,
   });
-  assert.deepEqual(uids(stale), ["p"]);
+  assert.deepEqual(uids(stale), ["prev", "prod-old"]);
+});
+
+test("never deletes every production deployment when the live id is unknown", () => {
+  // Regression: `keepUid` absent (targets.production.id missing) plus
+  // VERCEL_KEEP_PRODUCTION=0 previously selected *every* production deployment.
+  const deployments = [
+    deployment("prod-live", 500, "production"),
+    deployment("prod-old", 800, "production"),
+    deployment("pre1", 1),
+  ];
+  const stale = selectDeploymentsToDelete(deployments, {
+    keepProduction: 0,
+    keepPreview: 0,
+    now: NOW,
+  });
+  const remaining = deployments
+    .map((d) => d.uid)
+    .filter((uid) => !stale.some((d) => d.uid === uid));
+  assert.ok(
+    remaining.includes("prod-live"),
+    "the newest production deployment must survive",
+  );
+  assert.deepEqual(uids(stale), ["pre1", "prod-old"]);
 });
 
 test("only auto-generated vercel.app hostnames are disposable", () => {
