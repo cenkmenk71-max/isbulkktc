@@ -764,3 +764,35 @@ etkilenmez) → **32/32**. Canlı: `headOwnership('main')` → 14 satır;
 **pass**.
 
 **Canlıya dokundu mu:** hayır. Yalnız `scripts/lane-collisions*.mjs` ve bu dosya.
+
+### Tur — zamanlanmış üretim-doğrulaması: donmuş bir origin yeşil kalıyordu (#319, 2026-11-10)
+
+**Kapsam.** `lane:infra` kuyruğundan `#319` alındı; canlı kanıt doğrulandı
+(`curl https://isbulkktc.com/api/build-info` → `3644cbe`; `origin/main` → `f2a1a1c`;
+`git merge-base --is-ancestor 3644cbe origin/main` → canlı **atası**, yani geride).
+
+**Bulgu (mantık / sessiz yanlış-pozitif).** `verify-production-deployment.yml`
+yalnız `push: branches: [main]` ile tetikleniyordu. Varsayılan Actions token'ıyla
+yapılan bir merge **hiç workflow koşusu ateşlemez**; ateşlenen bir koşu ise daha
+yeni bir commit tipi sahiplenince `isSuperseded` ile **atlanır**. Sonuç: site eski
+bir build sunarken **Actions sekmesi yeşil kalır** — donma görünmez (#319). Aynı
+sınıf, `system-health`'in yalnız "origin 200 dönüyor mu" sorusuna bakmasıyla da
+paylaşılıyor; hiçbir kontrol origin'in *hangi* commit'i sunduğunu sormuyordu.
+
+**Düzeltme.** İki saatte bir koşan bir `schedule` tetikleyicisi eklendi
+(`cron: '43 */2 * * *'`). Zamanlanmış koşu `main`'in **o an ne olduğunu** doğrular,
+commit'in nasıl indiğinden bağımsız. Dal-tipi adımı `if: github.event_name !=
+'workflow_dispatch'` yapıldı: `push` **ve** `schedule` tipi geçer, döngü-içi
+superseded kontrolü korunur; elle `workflow_dispatch` açık bir commit adlandırır,
+tip geçmez. Job adı "the pushed commit" → "the expected commit" (zamanlanmış koşuda
+push yok).
+
+**Test.** `scripts/verify-production-deployment.test.mjs` yeni vaka: workflow
+`schedule:` + `cron:` bildirmeli ve dal-tipi adımı `!= workflow_dispatch` ile
+koşmalı. Dosya 16/16; `test:unit` 1051/1051.
+
+**Çalıştırılan kontroller.** `bun run lint`, `typecheck`, `check:frontend-source`
+— yeşil; `test:unit` **1051/1051**.
+
+**Canlıya dokundu mu:** hayır. Yalnız `.github/workflows/verify-production-deployment.yml`,
+`scripts/verify-production-deployment.test.mjs` ve bu dosya.
