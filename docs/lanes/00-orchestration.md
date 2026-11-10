@@ -417,3 +417,25 @@ yarattığı an yanlış sahiplik üretir. Bir lane kendi alanında dosya çoğa
 sahiplik satırını da güncellemeli; catch-all'ı dar tutmak yerine lane satırını
 glob'la büyütmek doğru yön. Doğrulandı: `No collisions across 2 open PR(s).`,
 `lane-collisions` 10/10, `test:unit` 876/874 pass.
+
+### Tur — sahipsiz güvenlik yüzeyleri (#435)
+
+#435'un bildirdiği iki sahipsiz yüzey doğrulandı ve sahiplendirildi. Tabloda
+`src/proxy.ts`, `src/server/auth/**` ve `src/app/api/build-info/**` için **hiç**
+satır yoktu; üçü de `lane-collisions.mjs`'in "owned by no lane" sınıfına
+düşüyordu.
+
+**Kanıt.** `grep -n "proxy.ts\|build-info" docs/lanes/00-orchestration.md` →
+eşleşme yok. Dosyalar var (`src/proxy.ts` 3876 B, `src/app/api/build-info/route.ts`).
+`src/proxy.ts` oturum çerezi + locale yönlendirmesinin güvenlik sınırı;
+`src/server/auth/supabase-guards.ts` onun auth koruması; `build-info/route.ts`
+`force-static` yapı kimliği yüzeyi (M-01).
+
+**Düzeltme.** LANE-AUTH satırına `src/proxy.ts` + `src/server/auth/**`
+(oturum sınırı auth lane'inindir), LANE-INFRA satırına
+`src/app/api/build-info/**` eklendi. `lane-collisions.test.mjs` üç yolu
+sabitledi (11/11).
+
+**Ders.** `src/**` ağacının tabloda kapsanmayan kök dosyaları (`src/proxy.ts`
+gibi, `src/` altında ama hiçbir lane glob'una girmeyen) sessizce sahipsiz kalır.
+Yeni bir üst-düzey kaynak dosyası eklerken sahiplik satırını da güncelle.
