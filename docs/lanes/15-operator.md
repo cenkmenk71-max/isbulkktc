@@ -979,3 +979,50 @@ açlık üretir. Kuyruk işlerinde ya en-eski seç ya sıralamayı açıkça bel
 Ayrıca FIFO'ya geçince "aynı iş birden çok sahibe" sınıfı ortaya çıktı — çoklu
 etiketli issue'da talep kümesi şart; yoksa israfı bir kapıdan kapatırken diğerinden
 açarsın.
+
+## Tur notu — `build-info` yer tutucusu bayat deploy değildir (2026-11-10)
+
+**Bulgu (doğruluk / hata yolu).** `system-health`'in `deploy` satırı, canlının
+`/api/build-info` commit'ini `main` HEAD ile karşılaştırıp **eşleşmeyen her string**
+için `warn` yazıyordu. `src/app/api/build-info/route.ts` ise
+`VERCEL_GIT_COMMIT_SHA` yokken literal **`"unknown"`** (ve `"development"`) döner.
+Sonuç, var olmayan bir commit'i adlandıran uydurma bir uyarıydı:
+
+```
+WARN deploy  live build unknown is behind main 1c103de — merged work is not deployed
+```
+
+`unknown` bir commit değil; "karşılaştıramadım" demek. Operatörü olmayan bir bayat
+deploy'un peşine salıyordu — 8. ailenin ("gösterge kendi hatasını okuyor") deploy
+ekseni.
+
+**Düzeltme.** `classifyDeployFreshness` her iki tarafta da hex SHA şartı arar
+(`/^[0-9a-f]{7,40}$/`); commit olmayan değer `unknown` döner (asla `warn`) ve
+çağıran `unknown` satırını zaten yazmaz. `verify-production-deployment.mjs`'in
+`normalizeCommit` guard'ıyla aynı şekil. Guard "her şey eşleşir"e düşmez: iki
+farklı commit-dışı değer `ok` sayılmaz.
+
+**Kanıt.** Mutasyon: guard silinince 2 yeni test kırmızı (`actual:'warn'`,
+`expected:'unknown'`), geri konunca `system-health.test.mjs` **58/58**. Canlı
+`"3644cbe"` (gerçek, bayat) hâlâ `warn`; `"unknown"` artık satır üretmiyor.
+
+**#551 kapandı — zaten düzeltilmişti.** Devir issue'su (`system-health-core`
+404 `DEPLOYMENT_NOT_FOUND`'u tanımıyor) **main'de çözülü** (PR #555,
+`vercelAccountState`). Kanıtlandı: `isDeploymentDisabled(404,'DEPLOYMENT_NOT_FOUND')`
+→ `true`; `classify` → `fail — DOWN: HTTP 404 DEPLOYMENT_NOT_FOUND`; çıplak 404
+hâlâ genel. Issue kanıtla kapatıldı; bu turda yeniden uygulanmadı.
+
+**Açık kalan (bu lane'in dosyası değil).** Canlı `system-health` turu
+`FAIL main CI` (Verify production deployment) ile `WARN deploy` (canlı build
+`3644cbe` geride) **aynı kök nedeni** paylaşıyor: yeni Vercel hesabında otomatik
+Git deploy yok (#547, `agent:blocked`). Ayrıca `verify-production-deployment`
+koşucusu origin'den **HTTP 403** alıyor (yerelde 200) — edge/WAF runner'ı
+engelliyor, yani doğrulamanın HTTP yarısı CI'da yeşile dönemez. İkisi de
+LANE-INFRA/LANE-TESLİMAT dosyalarında; burada yalnızca kanıt bırakıldı.
+
+**Not — autopilot abort'u geçiciydi.** `lane-autopilot.mjs --dry-run` bir kez
+`autopilot API read failed (start-tasks, sandboxes, conversations)` ile düştü.
+Üç okuma yolu (HTTP) elle denendi: üçü de `200` + geçerli JSON. Yeniden çalıştırma
+temiz geçti (5 sandbox RUNNING, 3 açık PR, `operator` "task in progress").
+Yani bu bir **API timeout**'u (hata yolu doğru davrandı: ölçemediği hâlde karar
+vermedi), kod hatası değil.
