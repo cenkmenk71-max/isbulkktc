@@ -2699,8 +2699,13 @@ rotalayamıyor). Sızıntı yok (jenerik `/500` gövdesi). Sahip: `src/app/api/*
   (`/`, `/en`, `/de`, `/en/jobs`; `grep -c site-verification` = **0**, 2026-11-10).
   `src/app/[locale]/layout.tsx` etiketi `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`'dan
   okuyor; env **üretimde tanımsız** → etiket basılmıyor. **Önceki "gerçek sayfalarda
-  mevcut" kaydı YANLIŞTI** (bkz. tur 38 / **V-01**). DNS TXT'te iki token var ama
-  meta yok → GSC mülkü **doğrulanmamış** olabilir.
+  mevcut" kaydı YANLIŞTI** (bkz. tur 38 / **V-01**).
+  **Nüans (tur 39, U-16r):** DNS TXT'te **iki geçerli** `google-site-verification`
+  token'i var (`1zuidCsJ2…`, `7YbjG-3…`) — bu, Google'ın **DNS doğrulama** yöntemidir
+  ve meta etiket olmadan da mülkü doğrulayabilir. Yani meta etiketin yokluğu
+  **kod/env boşluğudur**, mülkün doğrulanmadığının **kanıtı değildir**. GSC paneli
+  okunmadan "doğrulanmamış" denemez; bu yüzden burada issue açılmıyor, yalnız
+  `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` env'inin girilmesi önerilir (LANE-SEO).
 - **robots.txt** yalnız `/api/`, `/auth/` ve **varsayılan-olmayan** dilleri listeler.
 
 **Gerçek kopuk halka LANE-SEO'da ve zaten açık:** Bing mülk doğrulaması yok —
