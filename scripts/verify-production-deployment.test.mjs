@@ -267,6 +267,20 @@ test("a disabled origin is not reported as healthy when the Vercel channel is ab
   assert.match(decision.reason, /disabled/);
 });
 
+test("a disabled origin is a failure even when the runner is edge-blocked", () => {
+  // The full false-green path: Cloudflare edge-blocks the runner (403), so every
+  // smoke route is *skipped* and nothing downstream can catch it, while the
+  // Vercel alias still looks healthy. The old `if (vercel.ok)`-first ordering
+  // returned verified:true here, so the run exited 0 for a site serving 402 to
+  // every real visitor.
+  const decision = decideVerification({
+    vercel: { configured: true, ok: true, reason: "alias built from 8d3db245" },
+    http: { ok: false, blocked: true, disabled: true, reason: "HTTP 402 (DEPLOYMENT_DISABLED)" },
+  });
+  assert.equal(decision.verified, false);
+  assert.match(decision.reason, /disabled/);
+});
+
 test("a disabled route response is a failure, not a skipped 4xx", () => {
   const disabled = evaluateRouteResponse("/", 402, 78);
   assert.equal(disabled.ok, false);

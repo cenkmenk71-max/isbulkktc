@@ -227,19 +227,29 @@ context, not as a measurement.
     that is down for every visitor.** Vercel answers a blocked/suspended
     account's deployment with **HTTP 402** and `x-vercel-error:
     DEPLOYMENT_DISABLED` (`https://isbulkktc.com/*` → 402 today). The verifier
-    classified 402 as a plain 4xx and, worse, `decideVerification` checked the
-    **Vercel API channel first**: that channel can still report the alias
-    pointing at a `READY` deployment built from the expected commit while every
-    visitor gets 402. So a healthy alias could outrank a dead origin and the run
-    would print ✅ for a production that serves nothing — the single most
-    dangerous false green this lane can emit. Fixed in this PR:
-    `classifyHttpStatus` now detects the disabled case (status 402 or the
-    `x-vercel-error` header), `isDeploymentDisabled` names it, and
+    classified 402 as a plain 4xx and `decideVerification` checked the **Vercel
+    API channel first**: that channel proves the *alias target* (which deployment
+    the domain points at), not that the origin serves it, and can still report
+    the alias pointing at a `READY` deployment built from the expected commit
+    while every visitor gets 402. Measured against the pre-fix script with the
+    alias healthy and the origin answering 402: the summary printed
+    `verdict: ✅ alias built from 8d3db245` even though every smoke route had
+    failed — the ✅ was wrong, and the run only stayed red because the smoke
+    loop happened to be reachable. When Cloudflare edge-blocks the runner (its
+    usual answer to GitHub datacenter IPs, 403) every smoke route is *skipped*,
+    so there is no failing route to catch it: with the same healthy alias the old
+    script **exited 0** — a full false green for a production that serves
+    nothing. Fixed in this PR: a new `isDeploymentDisabled` detects the disabled
+    case (status 402 or the `x-vercel-error` header), `evaluateRouteResponse`
+    marks such a route as a failure rather than a skipped 4xx, and
     `decideVerification` treats `http.disabled` as the **highest-priority**
     failure — checked *before* `vercel.ok` — so the verdict reads
     `❌ production deployment is disabled (not a code problem): HTTP 402
     (DEPLOYMENT_DISABLED)`. The poll loop also breaks immediately on a disabled
-    origin (an account state cannot be fixed by waiting for a build). Verified
-    live against the real outage: exit 1, the message above, and `Vercel API:
-    ⏭️ VERCEL_TOKEN not set` no longer able to mask it. Regression tests added;
-    the masking test fails against the pre-fix ordering, so it pins the bug.
+    origin (an account state cannot be fixed by waiting for a build: measured
+    live against the real outage with `DEPLOY_TIMEOUT_SEC=45`, the old script
+    polled for **61 s** and printed three `waiting` lines before failing, the new
+    one returns in **<1 s** with zero `waiting` lines). Verified live: exit 1, the message
+    above, and `Vercel API: ⏭️ VERCEL_TOKEN not set` no longer able to mask it.
+    Regression tests added; the masking test fails against the pre-fix ordering,
+    so it pins the bug.

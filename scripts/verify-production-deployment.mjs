@@ -166,8 +166,11 @@ export function decideVerification({ vercel, http }) {
   // proves the *alias target* (which deployment the domain points at), not that
   // the origin serves it: with the account blocked the alias can still resolve
   // to a READY deployment built from the expected commit while every visitor
-  // gets 402. Trusting `vercel.ok` there would report a green deploy for a site
-  // that is down for everyone.
+  // gets 402. The old `if (vercel.ok)`-first ordering therefore printed a ✅
+  // verdict for an origin that had just answered 402 — and when Cloudflare
+  // edge-blocked the runner (its usual answer to GitHub datacenter IPs) every
+  // smoke route is skipped, so the run exited 0: a false green for a site that
+  // is down for everyone.
   if (http.disabled) {
     return {
       verified: false,
