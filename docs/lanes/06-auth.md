@@ -1181,7 +1181,7 @@ aynısı).
 ## Çalıştırma raporu — 2026-11-10 (kill-switch turu: #467 / #418)
 
 ```
-Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Lane: LANE-AUTH            Branch: lane/auth            PR: #542
 Aldığı issue: #467 (lane:auth + lane:supabase, agent:handoff) — LANE-AUTH yarısı
 Değişen dosyalar:
   src/features/identity/account-status.ts               (yeni: isAccountBlocked)
