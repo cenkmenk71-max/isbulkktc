@@ -862,3 +862,33 @@ Sonraki lane için notlar: (1) Origin 402 verirken cache/başlık bulguları (H-
 - **D-23:** O-01 → **#518** (açık, `lane:infra`); #319'dan ayrı kök neden.
 - **D-24:** tur 30 blok başlığında "Değişen dosyalar" yalnız `docs/cloudflare.md`
   diyordu → iki dosya + `PR: #520` olarak düzeltildi (blok ↔ gerçek diff uyumu).
+
+## Tur 31 (2026-11-10) — WAF kaçış matrisi: eğiksiz/ayraçlı `.git` + eksik dotfile kümesi
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: N-18 (WAF `/.git` kuralını eğiksiz + `url_decode` üzerinden
+            kur — onay) · N-19 (eksik dotfile kümesini ekle — onay) · N-11r · H-01r ·
+            H-02 · R-01 · G-01 · F-08 · #227 · O-01 (#518, LANE-INFRA, acil)
+Sonraki lane için notlar: (1) `curl --path-as-is` kullan (yoksa curl yolu normalleştirir,
+            kaçışı maskeler). (2) 402 kesintisinde 403=WAF / 402=origin ayrımı kanıt sağlar.
+            (3) Kural literali `/.git/` ise `/.git` (eğiksiz), `/.git;/x`, `/.git,/x`,
+            `/.git%09/config` atlanır — kaçış yalnız `%2F` değil. (4) Yeni kimlik: `N-18`,
+            `N-19` (tur 26/27 `N-11..N-16` WAF kümesinin devamı).
+```
+
+- **N-18 (orta):** WAF `/.git/` kuralı **literale** bağlı. Eğiksiz `/.git`,
+  ayraçlı `/.git;/x`·`/.git,/x`, kodlu TAB `/.git%09/config` ve kodlu `/`
+  `/.git%2Fconfig` → **402** (origin'e ulaşıyor); yalnız tam `/.git/config` →
+  403. `/api/devtools` aynı sınıfta. Kök neden: kural sondaki eğik çizgiyi dahil
+  ediyor. Düzeltme: eğik çizgisiz + `url_decode(http.request.uri.path)`.
+- **N-19 (orta):** dotfile kuralı **eksik**: `/.npmrc`, `/.git-credentials`,
+  `/.netrc`, `/.pypirc`, `/.bash_history`, `/.kube/config`, `/.gem/credentials`,
+  `/.docker/config.json` → **402** (bloklu değil). `/.env`, `/.htpasswd`,
+  `/.aws/config`, `/.ssh/known_hosts` bloklu.
+- **D-25:** tur 29 N-17'nin "kesinti sırasında bile WAF bypass'ı yok" iddiası
+  fazla genişti — yalnız **eğikli** yollar denenmişti; kapsamı daraltıldı.
+- **O-01r2:** tüm ölçümler 402 kesintisi altında; CF/TLS/WAF katmanı sağlam.
