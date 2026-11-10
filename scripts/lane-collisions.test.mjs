@@ -128,3 +128,15 @@ test("foldName folds the Turkish lane name to ASCII", () => {
   assert.equal(foldName("LANE-GÜVENLİK"), "lane-guvenlik");
   assert.equal(foldName("LANE-İÇERİK"), "lane-icerik");
 });
+
+test("the security-critical surfaces of #424/#435 have an owner", () => {
+  // `src/proxy.ts` is the session/locale security boundary, `src/server/auth/**`
+  // holds its auth guards, and `src/app/api/build-info/**` is the `force-static`
+  // build-identity surface. None were in the ownership table, so a fix to any of
+  // them would report "owned by no lane" and no lane was accountable (#435).
+  // `src/proxy.ts` is a root-level *source* file, which the `isPathToken` rule
+  // (slash or dot-extension) must still accept.
+  assert.deepEqual(ownersOf("src/proxy.ts", table), ["LANE-AUTH"]);
+  assert.deepEqual(ownersOf("src/server/auth/supabase-guards.ts", table), ["LANE-AUTH"]);
+  assert.deepEqual(ownersOf("src/app/api/build-info/route.ts", table), ["LANE-INFRA"]);
+});
