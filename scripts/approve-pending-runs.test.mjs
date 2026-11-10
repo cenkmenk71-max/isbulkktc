@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ghEnv, parsePendingRuns } from "./approve-pending-runs.mjs";
+import { ghEnv, ghErrorLine, parsePendingRuns } from "./approve-pending-runs.mjs";
 
 test("a missing token leaves GH_TOKEN unset so gh keeps its stored auth", () => {
   // With neither variable set the old `GH_TOKEN: A ?? B` still produced an
@@ -110,6 +110,19 @@ test("the list call paginates, so a backlog over one page is not half-approved",
     "utf8",
   );
   assert.match(source, /'--paginate'/);
+});
+
+test("the real reason from gh is surfaced, not just 'Command failed'", () => {
+  // `execFileSync`'s message is only `Command failed: gh api …`; the actionable
+  // text ("Resource not accessible by integration") is on stderr. Reporting the
+  // message alone leaves an operator staring at a run that says nothing.
+  const error = Object.assign(
+    new Error("Command failed: gh api repos/x/actions/runs/1/approve"),
+    { stderr: "gh: Resource not accessible by integration\n" },
+  );
+  assert.equal(ghErrorLine(error), "gh: Resource not accessible by integration");
+  // No stderr (e.g. a spawn error) falls back to the message.
+  assert.equal(ghErrorLine(new Error("spawn gh ENOENT")), "spawn gh ENOENT");
 });
 
 test("a failed approval does not exit 0", () => {

@@ -43,6 +43,23 @@ function gh(args, env = ghEnv()) {
   return execFileSync('gh', args, { encoding: 'utf8', env }).trim();
 }
 
+/**
+ * The most useful single line from a failed `gh` call. `execFileSync`'s
+ * `error.message` is only `Command failed: gh api …` — the real reason
+ * ("Resource not accessible by integration", "Not Found") is on `stderr`, so a
+ * failure reported from `message` alone is undiagnosable from the log.
+ */
+export function ghErrorLine(error) {
+  const stderr = error?.stderr ? String(error.stderr).trim() : "";
+  const message = String(error?.message ?? error ?? "");
+  return (
+    (stderr || message)
+      .split("\n")
+      .map((line) => line.trim())
+      .find(Boolean) ?? "unknown error"
+  );
+}
+
 /** Parse the `id\tname\tbranch` rows emitted by the list call. Exported so the
  * row shape is testable without touching `gh`. */
 export function parsePendingRuns(raw) {
@@ -92,9 +109,7 @@ export async function main(argv = process.argv.slice(2)) {
       console.log(`  approved ${run.id} ${run.name} (${run.branch})`);
     } catch (error) {
       failed += 1;
-      console.error(
-        `  could not approve ${run.id}: ${String(error.message).split('\n')[0]}`,
-      );
+      console.error(`  could not approve ${run.id}: ${ghErrorLine(error)}`);
     }
   }
 
@@ -119,7 +134,7 @@ export async function main(argv = process.argv.slice(2)) {
 // would silently skip `main()`.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
-    console.error(String(error.message).split('\n')[0]);
+    console.error(ghErrorLine(error));
     process.exitCode = 1;
   });
 }
