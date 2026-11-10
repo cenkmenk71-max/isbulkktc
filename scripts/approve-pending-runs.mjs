@@ -39,8 +39,28 @@ export function ghEnv(source = process.env) {
   return env;
 }
 
+/**
+ * Bound every `gh` call. The caller (`lane-autopilot.mjs`) runs this script with
+ * `execFileSync` and no timeout of its own, and the workflow sets no
+ * `timeout-minutes`, so a stalled `gh` (a hung connection, an auth prompt)
+ * blocks the whole scheduled lane pass until the six-hour job cap — the same
+ * unbounded-call gap already closed in the sibling lane scripts. On timeout
+ * `execFileSync` throws, which the caller reports and counts as a failure
+ * instead of hanging. `GH_TIMEOUT_MS` is overridable so a test can pin the
+ * behaviour without waiting a minute.
+ */
+export function ghTimeoutMs(source = process.env) {
+  const parsed = Number.parseInt(source.GH_TIMEOUT_MS ?? '', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 60_000;
+}
+
 function gh(args, env = ghEnv()) {
-  return execFileSync('gh', args, { encoding: 'utf8', env }).trim();
+  return execFileSync('gh', args, {
+    encoding: 'utf8',
+    env,
+    timeout: ghTimeoutMs(),
+    killSignal: 'SIGKILL',
+  }).trim();
 }
 
 /**

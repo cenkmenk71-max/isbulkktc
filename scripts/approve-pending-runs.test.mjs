@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ghEnv, ghErrorLine, parsePendingRuns } from "./approve-pending-runs.mjs";
+import { ghEnv, ghErrorLine, ghTimeoutMs, parsePendingRuns } from "./approve-pending-runs.mjs";
 
 test("a missing token leaves GH_TOKEN unset so gh keeps its stored auth", () => {
   // With neither variable set the old `GH_TOKEN: A ?? B` still produced an
@@ -221,6 +221,58 @@ test("every pending run on every page is approved, not just the first page", () 
     assert.match(output, /would approve 11 CI \(main\)/);
     assert.match(output, /would approve 22 E2E \(main\)/);
     assert.match(readFileSync(log, "utf8"), /--paginate/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("the gh timeout defaults to a bounded value and honours an override", () => {
+  // A stalled `gh` must not hang the whole scheduled lane pass: the caller
+  // (`lane-autopilot.mjs`) sets no timeout of its own and the workflow sets no
+  // `timeout-minutes`, so an unbounded call would spin to the six-hour job cap.
+  // The default is 60s; a blank or non-positive override falls back to it.
+  assert.equal(ghTimeoutMs({}), 60_000);
+  assert.equal(ghTimeoutMs({ GH_TIMEOUT_MS: "" }), 60_000);
+  assert.equal(ghTimeoutMs({ GH_TIMEOUT_MS: "0" }), 60_000);
+  assert.equal(ghTimeoutMs({ GH_TIMEOUT_MS: "-5" }), 60_000);
+  assert.equal(ghTimeoutMs({ GH_TIMEOUT_MS: "1500" }), 1500);
+});
+
+test("a hung gh is killed instead of hanging the run", () => {
+  // Real proof of the bound, not just the constant: a fake `gh` that sleeps far
+  // longer than the timeout must make the script exit non-zero quickly rather
+  // than block. GH_TIMEOUT_MS is turned down to 500ms so the test stays fast.
+  const source = fileURLToPath(
+    new URL("./approve-pending-runs.mjs", import.meta.url),
+  );
+  const dir = mkdtempSync(join(tmpdir(), "approve-hang "));
+  const bin = join(dir, "bin");
+  try {
+    mkdirSync(bin);
+    const fakeGh = join(bin, "gh");
+    writeFileSync(fakeGh, "#!/bin/sh\nsleep 30\n");
+    chmodSync(fakeGh, 0o755);
+
+    const started = Date.now();
+    let status = 0;
+    try {
+      execFileSync(process.execPath, [source], {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH}`,
+          GH_TOKEN: "ghs_fake",
+          GITHUB_PERSONAL_ACCESS_TOKEN: "",
+          GH_TIMEOUT_MS: "500",
+        },
+      });
+    } catch (error) {
+      status = error.status;
+    }
+
+    assert.equal(status, 1);
+    // Killed at the 500ms bound, not after the fake's 30s sleep.
+    assert.ok(Date.now() - started < 10_000, "the hung gh should be killed quickly");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

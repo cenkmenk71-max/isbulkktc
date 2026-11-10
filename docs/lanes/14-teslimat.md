@@ -384,3 +384,60 @@ kontroller yeşil (aggregator dahil), tek kırmızı `Vercel — Account is bloc
 (zorunlu değil → `UNSTABLE`). Canlı doğrulama **yapılamadı**: her route hâlâ
 **402** (`DEPLOYMENT_DISABLED`) — hesap bloğu (#319 / #518) sürüyor. Merge kaydı
 `docs/deploy-log.md`'de.
+
+---
+
+## Tur 9 — 2026-11-10 (lane/teslimat)
+
+**Kapsam.** Açık `lane:teslimat` issue yok. Bu tur: sahip olunan
+`verify-production-deployment.mjs`'te bir gerçek hata düzeltildi (finding 20),
+PR merge edildi, canlı ölçüm yapıldı — **ama üretim dondurulmuş** olduğu için
+merge canlıda doğrulanamadı ve neden tahmin edilmedi, adı kondu (finding 21).
+
+**Bulgular.**
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `scripts/verify-production-deployment.mjs` (`if (!decision.verified)` `else` bloğu) | mantık / hata yolu | Smoke bloğu yalnız **yeşil** verdict'te koşuyordu; commit kontrolü kırmızıyken origin hiç problanmıyordu | Tazelik ile sağlık **ayrı sorular**; origin cevap veriyorsa smoke koşmalı | `main` geride ama site ayakta (bu repoda **normal** durum, #319/#547) ile "geride **ve** bozuk" ayırt edilemiyordu; kırmızı koşu sağlık kanalını tamamen düşürüyordu | **düzeltildi** (#570) + regresyon testi |
+
+**Kanıt (bulgu 1).** Aynı komut, düzeltme öncesi/sonrası, canlı `3644cbe3`'e karşı
+`--expect e6d1345`: **eski** → `verdict: ❌ … serving 3644cbe3, expected e6d1345`,
+**hiç `smoke routes` satırı yok**. **yeni** → aynı kırmızı verdict **+**
+`smoke routes: ✅ 5 passed, 0 skipped, 0 failed` (beş route da 200). Çıkış kodu
+ikisinde de `1` → değişiklik **tamamen eklemeli**: yeşil koşuda kapı aynı, kırmızı
+koşuda düşen bir route zaten-kırmızı verdict'e yalnız detay ekler. Devre dışı
+deployment (`402`/`404`) her zaman `verified:false` **ve** `http.disabled:true`
+zorladığından, atlanması gereken tek durum (site herkese kapalı) yine atlanır.
+
+**Merge kuyruğu (görev 1).** Açık PR'lar: #566 (lane/supabase, `CLEAN`, zorunlu
+kontroller yeşil) — bu turda `app/github-actions` auto-merge ile **11:38:52Z'de
+merge edildi** (`main` `e6d1345` → `d5f19bc`); #569 (lane/qa) ve #567 (lane/urun)
+`BLOCKED`. Hiçbiri `.github/workflows/**` değiştirmiyor, `agent:hold` yok → "iki
+fren" tetiklenmedi. Bu lane'in merge edebileceği, taze ve yeşil tek PR #566'ydı ve
+zaten auto-merge kuyruğundaydı.
+
+**Teslim edildi (kural 4).** PR **#570** `app/github-actions` auto-merge (squash)
+ile **11:44:04Z'de merge edildi** (`main` `e6d1345` → `f7b3196` → `1adde86`); tüm
+zorunlu kontroller yeşil (Static 1m06s, Database 2m00s, E2E 1–4 pass, aggregator
+dahil). Merge kaydı `docs/deploy-log.md`'de.
+
+**Canlı ölçüm (görev 3) — 🔴 teslim doğrulanamadı, nedeni adıyla kondu.**
+`main` = `1adde86`, canlı = `3644cbe3` (**14 geride**). Bu, #319'un build-rate-limit
+salınımı **değil** — o imza `Vercel: Deployment rate limited` kırmızısı bırakır ve
+saatler içinde kendiliğinden açılır. Burada son commit'lerde **hiç `Vercel` status
+girdisi yok** (`total_count: 0`) → **#547** durumu: yeni Vercel hesabında GitHub Git
+bağlantısı yok, `main` push'u build tetiklemiyor. Ayırt edici: rate-limit bir durum
+*state*'i bırakır, eksik entegrasyon hiçbir şey bırakmaz. Bu, depodan düzeltilemez;
+sahip tarafı (Vercel Dashboard → Git) veya LANE-INFRA `VERCEL_TOKEN` deploy
+workflow'u — ikisi de #547'de kapsanmış. Bu turun tek doğrulanamayan merge'i budur ve
+sebebi dışsaldır; gizlenmedi, adı kondu.
+
+**Devredilenler (sahibi başka lane).** #547 (`agent:infra` + `agent:blocked`; teslim
+donmasının kök nedeni) bu lane'in sahibi olmadığı bir Vercel/Actions ayarı — yeni
+kanıtla (14 geride, `total_count: 0`) tazelendi. #305 (auto-merge'de push
+workflow'ları koşmuyor), #306 (bozuk guard + çift onay bloğu) hâlâ açık ve
+LANE-INFRA'nın; bu lane dokunmadı.
+
+**Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅ (41 token, 16
+sektör görseli), `test:unit` ✅ (bu turun değişikliği CI'da tüm shard'larda yeşil).
+

@@ -299,6 +299,8 @@ context, not as a measurement.
     against the pre-fix script.
 
 | 2026-11-10T08:28Z | `3644cbe3` | `3644cbe3` | ✅ **recovered** | **Outage cleared.** The Vercel account block (#319 / issue #518) was lifted and production caught up: `GET https://isbulkktc.com/api/build-info` → `{"commit":"3644cbe3501ba5879aaa3eeb79ba825ee1af34f2","environment":"production"}`, and `main` tip is `3644cbe3` — the two agree for the first time since 2026-11-06. `GET /` answers **200** (site CSP, `NEXT_LOCALE=tr`); the 402 `DEPLOYMENT_DISABLED` on every route is gone, as is the 404 `DEPLOYMENT_NOT_FOUND` state seen mid-day. The sandbox's own probe of `/api/build-info` is edge-blocked with **403** (the documented Cloudflare answer to datacenter IPs), so this comparison was made with `curl`/`gh`, not the verifier's own fetch — the same channel CI uses. |
+| 2026-11-10T11:13Z | `e6d1345` | `3644cbe3` | ⚠️ **behind by 5** | Fresh read before this lane's merge: `main` advanced `3644cbe3` → `e6d1345` (#561/#564/#560/#557/#555 etc.) while production stayed on `3644cbe3` — per **#547** the new Vercel account has **no GitHub Git connection**, so no `main` push since the last manual `vercel deploy --prod` has reached production (this is *not* the old #319 build-rate-limit signature: recent commits carry **no `Vercel` status at all**). `GET /` and all five smoke routes answer **200**, so this is the "stale but healthy" state that finding 20's fix now reports explicitly: `verify-production-deployment.mjs --expect e6d1345` → verdict ❌ (correctly red on freshness) **with** `smoke routes: ✅ 5 passed`, whereas the pre-fix script printed no smoke line at all. |
+| 2026-11-10T11:44Z | `1adde86` | `3644cbe3` | ⚠️ **behind by 14** | **Merge record — PR #570** (finding 20's smoke-on-red fix) auto-merged by `app/github-actions` at **11:44:04Z** (squash; `main` `e6d1345` → `f7b3196` → `1adde86`). All required checks green including the `Quality, database and E2E` aggregator (Static 1m06s, Database 2m00s, E2E 1–4 all pass); no red on the PR. **Verified live: no — cause now named, not guessed.** `GET https://isbulkktc.com/api/build-info` → **`3644cbe3`** (14 commits behind `main`), and the commit status for `1adde86` carries **no `Vercel` entry at all** (`total_count: 0`) — the missing-Git-integration state of **#547**, not the rate-limit state of #319. The new Vercel account has no GitHub connection, so `main` pushes do not auto-deploy and production is frozen at the last manual `vercel deploy --prod`. This merge is **not** live-verifiable from inside the repository; the fix is owner-side (Vercel Dashboard → Git connection, per #547) or a LANE-INFRA `VERCEL_TOKEN` deploy workflow. `main` advanced again `f7b3196` → `1adde86` (#569, lane/qa) before this record. |
 
 ### Delivery health findings (2026-11-10, round 5)
 
@@ -342,3 +344,50 @@ context, not as a measurement.
     `scripts/system-health-core.mjs` (LANE-OPERATOR) and `scripts/verify-indexing.mjs`
     (LANE-SEO) carry the same `isDeploymentDisabled` shape and will miss a 404
     `DEPLOYMENT_NOT_FOUND` outage the same way.
+
+### Delivery health findings (2026-11-10, round 6)
+
+20. **`verify-production-deployment.mjs` skipped its smoke test whenever the commit
+    check failed, so a red run could not tell "stale but healthy" from "stale and
+    broken".** The smoke block lived in the `else` branch of `if (!decision.verified)`
+    in `scripts/verify-production-deployment.mjs`, so the only path that probed the
+    origin was the green one. The lane brief keeps *three* separate questions — is
+    `main` green, is the deploy green, is the live content new — and a freshness red is
+    the normal, self-healing state in this repo (#319: the Vercel build rate limit makes
+    production oscillate behind `main`). Under the old shape a stale-but-serving origin
+    produced a verdict that named only the freshness gap and dropped the health channel
+    entirely, hiding a *concurrent* outage behind the more common staleness.
+
+    Evidence (same command, pre-fix vs post-fix, against live `3644cbe3` with
+    `--expect e6d1345`): **old** → `verdict: ❌ … serving 3644cbe3, expected e6d1345`
+    with **no** `smoke routes` line at all; **new** → the same red verdict **plus**
+    `smoke routes: ✅ 5 passed, 0 skipped, 0 failed` (all five routes 200). Exit code is
+    `1` in both cases, so the change is strictly additive: on a green run the gate is
+    unchanged, and on a red run a failing route only appends detail to an already-red
+    verdict. A disabled deployment (`402`/`404`) always forces `verified: false` **and**
+    `http.disabled: true`, so the one state worth skipping — the site down for every
+    visitor — still skips the smoke.
+
+    Regression test added: `scripts/verify-production-deployment.test.mjs`
+    ("a reachable origin is smoke-tested even when the commit check fails"). The file is
+    this lane's: the LANE-TESLİMAT row of `docs/lanes/00-orchestration.md` was widened to
+    `scripts/verify-production-deployment*.mjs` after the #549 ownership block (finding
+    19), so the test sibling now falls inside the glob —
+    `node scripts/lane-collisions.mjs --pr 570` → "No collisions across 4 open PR(s)".
+
+21. **Delivery is frozen and the cause changed shape — the lane's headline finding.**
+    Every merge since the last manual deploy is stranded: `main` is at `1adde86` while
+    production serves `3644cbe3`, **14 commits behind** (`d5f19bc` #566, `f7b3196` #570,
+    `1adde86` #569 among them). This is **not** the #319 build-rate-limit oscillation —
+    that signature was `Vercel: Deployment rate limited — retry in 24 hours` and it
+    self-healed within hours. Here the recent commits carry **no `Vercel` status entry at
+    all** (`GET /repos/…/commits/1adde86/status` → `total_count: 0`), which is the
+    **#547** state: the new Vercel account has no GitHub Git connection, so a `main` push
+    never triggers a build. The two states are told apart by *presence*, not by *state*:
+    rate-limit leaves a red `Vercel` status, missing integration leaves none. Delivery
+    cannot be restored from inside this repository — it is an owner-side Vercel setting
+    (Dashboard → Git connection) or a LANE-INFRA `VERCEL_TOKEN` deploy workflow, both
+    already scoped in #547. Recorded here so the freeze is named and dated, not assumed
+    away; `verify-production-deployment` will keep reporting the freshness gap until it
+    is fixed, which is the correct signal.
+
