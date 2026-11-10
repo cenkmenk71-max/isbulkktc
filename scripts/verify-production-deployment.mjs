@@ -126,9 +126,7 @@ export function classifyHttpStatus(status) {
  */
 export function isDeploymentDisabled(status, vercelError) {
   if (status === 402) return true;
-  if (typeof vercelError !== "string") return false;
-  const marker = vercelError.trim().toUpperCase();
-  return marker === "DEPLOYMENT_DISABLED" || marker === "DEPLOYMENT_NOT_FOUND";
+  return vercelAccountState(vercelError) !== "";
 }
 
 /** The account-state marker Vercel sent, normalised, or "" when there is none. */
@@ -146,7 +144,7 @@ export function evaluateRouteResponse(route, status, bodyLength, vercelError) {
       route,
       ok: false,
       disabled: true,
-      reason: `HTTP ${status} (deployment not being served — account blocked/suspended or no deployment)`,
+      reason: `HTTP ${status} (deployment disabled — account blocked/suspended or no deployment)`,
     };
   }
   if (kind === "blocked") {
@@ -542,7 +540,7 @@ async function main() {
     `- verdict: ${decision.verified ? "✅" : "❌"} ${decision.reason}`,
     `- confirmed via: ${decision.verified ? decision.method : "—"}`,
     `- Vercel API: ${vercel.configured ? (vercel.ok ? "✅" : "❌") : "⏭️"} ${vercel.reason}`,
-    `- HTTP build identity: ${http.disabled ? "🚫 not served" : http.blocked ? "⏭️ blocked" : http.ok ? "✅" : "❌"} ${http.reason}`,
+    `- HTTP build identity: ${http.disabled ? "🚫 disabled" : http.blocked ? "⏭️ blocked" : http.ok ? "✅" : "❌"} ${http.reason}`,
   ];
 
   const failures = [];

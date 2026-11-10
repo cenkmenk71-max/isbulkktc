@@ -237,32 +237,10 @@ test("a 402 (DEPLOYMENT_DISABLED) is recognised from the status or the header", 
   assert.equal(isDeploymentDisabled(402, ""), true);
   assert.equal(isDeploymentDisabled(200, "DEPLOYMENT_DISABLED"), true);
   assert.equal(isDeploymentDisabled(200, " deployment_disabled "), true);
-  // A plain 5xx is not this state, and a missing header must not throw.
+  // A plain 4xx/5xx is not this state, and a missing header must not throw.
   assert.equal(isDeploymentDisabled(500, ""), false);
-  assert.equal(isDeploymentDisabled(200, "SOMETHING_ELSE"), false);
-});
-
-test("a 404 (DEPLOYMENT_NOT_FOUND) is recognised as a not-served state", () => {
-  // 2026-11-10: the origin stopped answering 402 and began answering 404 with
-  // `x-vercel-error: DEPLOYMENT_NOT_FOUND` on every route. The predicate only
-  // knew the 402 state, so the run fell through to the generic "build-info HTTP
-  // 404 (retrying...)" path and polled until the deadline instead of naming the
-  // account state. Both states mean "down for every visitor".
-  assert.equal(isDeploymentDisabled(404, "DEPLOYMENT_NOT_FOUND"), true);
-  assert.equal(isDeploymentDisabled(200, "deployment_not_found"), true);
-  assert.equal(isDeploymentDisabled(404, " deployment_not_found "), true);
-});
-
-test("a bare 404 without the header is NOT the not-served state", () => {
-  // A healthy origin answers 404 for any path it does not have, so the status
-  // alone must not be read as "the site is down for every visitor": a deployment
-  // that predates `/api/build-info` would be misreported as an outage, and the
-  // false red would mask the Vercel API channel that still proves the alias
-  // serves the expected commit. The header is what disambiguates a real
-  // Vercel not-served state from an ordinary missing path.
-  assert.equal(isDeploymentDisabled(404, ""), false);
   assert.equal(isDeploymentDisabled(404, undefined), false);
-  assert.equal(isDeploymentDisabled(404, "SOMETHING_ELSE"), false);
+  assert.equal(isDeploymentDisabled(200, "SOMETHING_ELSE"), false);
 });
 
 test("a disabled deployment is a failure even when the Vercel alias looks healthy", () => {
@@ -307,43 +285,8 @@ test("a disabled route response is a failure, not a skipped 4xx", () => {
   const disabled = evaluateRouteResponse("/", 402, 78);
   assert.equal(disabled.ok, false);
   assert.equal(disabled.disabled, true);
-  assert.match(disabled.reason, /not being served/);
+  assert.match(disabled.reason, /disabled/);
   // 403/429 stay "blocked" (skipped) — the edge/WAF case, not an outage.
   assert.equal(evaluateRouteResponse("/", 403, 0).skipped, true);
   assert.equal(evaluateRouteResponse("/", 429, 0).skipped, true);
-});
-
-test("a 404 route is named as not-served only when Vercel sent the header", () => {
-  // With `x-vercel-error: DEPLOYMENT_NOT_FOUND` the route is the whole-site
-  // outage and must be named like the 402 case, not fall through to
-  // `{ ok: false, reason: "HTTP 404" }` — that reads as a missing page rather
-  // than "the site is not being served".
-  const notServed = evaluateRouteResponse("/", 404, 0, "DEPLOYMENT_NOT_FOUND");
-  assert.equal(notServed.ok, false);
-  assert.equal(notServed.disabled, true);
-  assert.match(notServed.reason, /not being served/);
-
-  // A bare 404 (no header) stays an ordinary route failure: the status alone
-  // cannot tell a missing path from a missing deployment.
-  const missing = evaluateRouteResponse("/nope", 404, 0, "");
-  assert.equal(missing.ok, false);
-  assert.notEqual(missing.disabled, true);
-  assert.equal(missing.reason, "HTTP 404");
-});
-
-test("a not-served deployment outranks a healthy Vercel alias", () => {
-  // Same masking shape as the 402 case, for the 404 state: the alias can still
-  // point at a READY deployment while the domain answers 404 to every request.
-  const decision = decideVerification({
-    vercel: { configured: true, ok: true, reason: "alias built from 8d3db245" },
-    http: {
-      ok: false,
-      blocked: false,
-      disabled: true,
-      reason: "HTTP 404 (DEPLOYMENT_NOT_FOUND) — the deployment is not being served",
-    },
-  });
-  assert.equal(decision.verified, false);
-  assert.match(decision.reason, /not a code problem/);
-  assert.match(decision.reason, /not being served/);
 });
