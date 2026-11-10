@@ -42,6 +42,7 @@ import {
   failedApiFetches,
   failedRequiredChecks,
   fairOrder,
+  heldForHuman,
   isInfraRejection,
   modelIsAllowed,
   nextConversationAction,
@@ -738,6 +739,18 @@ async function decide(name, ctx) {
       };
     }
     const state_ = pr.mergeStateStatus;
+    // A PR carrying agent:hold / agent:blocked is parked for a human, and
+    // `mergeReadyPullRequests` refuses to merge it. Reporting "ready to merge"
+    // here contradicted that refusal in the very same pass (#579: `wait — ready
+    // to merge` printed directly above `STALLED PRs (need a human): #579`). Say
+    // what the merge step will actually do.
+    const prLabels = (pr.labels ?? []).map((l) => l.name ?? l);
+    if (heldForHuman(prLabels)) {
+      return {
+        action: 'wait',
+        reason: `PR #${pr.number} held for a human (${prLabels.filter((l) => String(l).startsWith('agent:')).join(', ')})`,
+      };
+    }
     if (state_ === 'CLEAN') return { action: 'wait', reason: `PR #${pr.number} ready to merge` };
     return { action: 'wait', reason: `PR #${pr.number} in flight (${state_})` };
   }

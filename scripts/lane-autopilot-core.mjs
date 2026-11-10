@@ -701,6 +701,36 @@ export function pullRequestConflicts(pr) {
 }
 
 /**
+ * Whether an open PR carries a brake that leaves it for a human.
+ *
+ * `agent:hold` and `agent:blocked` both mean "do not touch this without a
+ * person": the first parks it deliberately, the second records that an agent
+ * tried and could not finish. Two parts of the pass already honour them —
+ * `mergeReadyPullRequests` refuses to merge such a PR and reports it under
+ * "STALLED PRs (need a human)". But the per-lane `decide()` step only reads the
+ * *issue* labels, so a lane whose PR carries `agent:blocked` and whose merge
+ * state is `CLEAN` was told "PR #N ready to merge" — the same pass that had just
+ * refused to merge it. On 2026-11-10 the report said both at once:
+ *
+ *     infra   wait      PR #579 ready to merge (reuse)
+ *     STALLED PRs (need a human): 1
+ *       #579 — held for a human (agent:blocked)
+ *
+ * The lane can never act on "ready to merge": the merge step will not merge it
+ * and nothing else clears the label, so "ready to merge" is false. Report the
+ * real state — held for a human — so the two lines agree.
+ *
+ * @param {Array<{name?: string}|string>|null|undefined} labels
+ * @returns {boolean}
+ */
+export function heldForHuman(labels) {
+  return (labels ?? []).some((label) => {
+    const name = label?.name ?? label;
+    return name === 'agent:hold' || name === 'agent:blocked';
+  });
+}
+
+/**
  * Checks that only aggregate other jobs, so they carry no gate of their own.
  *
  * `Quality, database and E2E` in `.github/workflows/ci.yml` declares
