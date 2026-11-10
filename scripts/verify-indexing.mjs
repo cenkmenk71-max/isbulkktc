@@ -10,7 +10,9 @@
 //   3. Per-page signals — a sample of sitemap URLs answers 200, is not
 //      `noindex`, and declares the correct absolute canonical.
 //   4. IndexNow — the key file the scheduler publishes is reachable and its
-//      body matches the key it claims.
+//      body matches the key it claims. The key file is selected by name == body
+//      (via the shared `readIndexNowKey`), not by filename order, so a second
+//      shape-matching `.txt` cannot hijack the check into a false pass.
 //
 // These checks are deterministic and need no credentials. Two origin states are
 // not evidence about indexing and are reported as `skip`, never a false `fail`:
@@ -26,9 +28,10 @@
 //
 // Exit code is non-zero only on a real `fail`. `warn` and `skip` are notes.
 
-import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { readIndexNowKey } from "./indexnow-key.mjs";
 
 /**
  * True when the module was launched directly (`node script.mjs`) rather than
@@ -528,32 +531,53 @@ async function fetchText(url, { userAgent, timeoutMs = 20_000 } = {}) {
 }
 
 /**
- * Vercel answers a disabled deployment (blocked/suspended/over-quota account)
- * with **402** and `x-vercel-error: DEPLOYMENT_DISABLED`. That is an account
- * state, not a property of the site's indexing configuration: every request to
- * the origin shares it, so reading it as `fail robots`/`fail sitemap` blames the
- * crawler surface for an outage that has nothing to do with it. Mirrors
- * `verify-production-deployment.mjs`, which treats the same state distinctly.
+ * Vercel's marker for a deployment the account can no longer serve. Two distinct
+ * account-level states exist and both mean "the origin is down for every
+ * visitor", so both must be named rather than collapsed into a bare status code:
+ *
+ * - `402` + `x-vercel-error: DEPLOYMENT_DISABLED` — blocked, suspended or over
+ *   quota. Redeploying does not fix it until the account is unblocked.
+ * - `404` + `x-vercel-error: DEPLOYMENT_NOT_FOUND` — Vercel no longer resolves
+ *   the project to a deployment. The domain answers 404 on every route until a
+ *   fresh production deployment succeeds.
+ *
+ * Either is an account state, not a property of the site's indexing
+ * configuration: every request to the origin shares it, so reading it as
+ * `fail robots`/`fail sitemap` blames the crawler surface for an outage that has
+ * nothing to do with it. Mirrors `verify-production-deployment.mjs`, which
+ * treats the same states distinctly.
+ *
+ * A **bare** 404 is deliberately not this state: a healthy origin answers 404
+ * for every path it does not own, so a genuinely missing route would be
+ * misreported as an outage. Only the `x-vercel-error` header disambiguates it
+ * (the 402 is unambiguous on its own, so the status alone suffices there).
  */
 export function isDeploymentDisabled(status, vercelError) {
   if (status === 402) return true;
-  return (
-    typeof vercelError === "string" &&
-    vercelError.trim().toUpperCase() === "DEPLOYMENT_DISABLED"
-  );
+  return vercelAccountState(vercelError) !== "";
+}
+
+/** The account-state marker Vercel sent, normalised, or "" when there is none. */
+function vercelAccountState(vercelError) {
+  if (typeof vercelError !== "string") return "";
+  const marker = vercelError.trim().toUpperCase();
+  return marker === "DEPLOYMENT_DISABLED" || marker === "DEPLOYMENT_NOT_FOUND" ? marker : "";
 }
 
 /**
  * A clause explaining why the origin could not be measured, or `null` when it
- * answered normally. A disabled deployment and a Cloudflare/interstitial
- * challenge both leave the indexing surface unmeasurable from here; neither is
- * evidence about the site, so both are a `skip`. A disabled deployment is
- * checked first: it is an account-level outage, and the challenge heuristic
- * would otherwise only partly cover it.
+ * answered normally. A down deployment and a Cloudflare/interstitial challenge
+ * both leave the indexing surface unmeasurable from here; neither is evidence
+ * about the site, so both are a `skip`. A down deployment is checked first: it
+ * is an account-level outage, and the challenge heuristic would otherwise only
+ * partly cover it. The clause names the marker Vercel actually sent, so a
+ * `DEPLOYMENT_NOT_FOUND` outage is not reported as a bare 404.
  */
 export function unmeasurableReason(status, body, vercelError) {
   if (isDeploymentDisabled(status, vercelError)) {
-    return "the deployment is disabled (HTTP 402, DEPLOYMENT_DISABLED) — the site is down for every visitor";
+    const marker = vercelAccountState(vercelError);
+    const named = marker ? `, ${marker}` : "";
+    return `the deployment is not being served (HTTP ${status}${named}) — the site is down for every visitor`;
   }
   if (status === 403 || status === 429 || status === 503) {
     return `it is behind a challenge (HTTP ${status})`;
@@ -735,19 +759,18 @@ async function checkPages(parsed) {
 
 async function checkIndexNow() {
   const publicDir = path.join(REPO_ROOT, "public");
-  let keyFile;
+  let found;
   try {
-    const entries = await readdir(publicDir);
-    keyFile = entries.find((name) => /^[a-z0-9]{8,128}\.txt$/i.test(name));
+    found = await readIndexNowKey(publicDir);
   } catch (error) {
     record("indexnow", "skip", `could not read public/: ${error.message}`);
     return;
   }
-  if (!keyFile) {
+  if (!found) {
     record("indexnow", "skip", "no IndexNow key file in public/");
     return;
   }
-  const key = (await readFile(path.join(publicDir, keyFile), "utf8")).trim();
+  const { key, file: keyFile } = found;
   const { status, body, vercelError, error } = await fetchText(`${ORIGIN}/${keyFile}`);
   const unmeasurable = unmeasurableReason(status, body, vercelError);
   const verdict = evaluateIndexNowKey({ status, body, key, error });

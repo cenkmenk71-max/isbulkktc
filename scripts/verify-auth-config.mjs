@@ -70,6 +70,49 @@ export function looksLikeTurnstileSiteKey(value) {
 }
 
 /**
+ * The Turnstile site key a deployed client bundle ships, or null.
+ *
+ * The widget field renders in an effect (`turnstile-field.tsx`), so the SSR HTML
+ * always contains the empty `<div class="editorial-turnstile">` container — even
+ * on a site where captcha is live (AGENTS.md). The loader only pulls the SDK in
+ * when a site key is set, so the presence of the SDK URL is itself proof the
+ * widget is configured; the `0x4A…` key next to it names it.
+ */
+export function turnstileSiteKeyInBundle(js) {
+  if (typeof js !== "string") return null;
+  if (!js.includes("challenges.cloudflare.com/turnstile")) return null;
+  const match = js.match(/0x4A[0-9A-Za-z_-]{10,}/);
+  return match ? match[0] : "(present)";
+}
+
+/**
+ * Reads the Turnstile state out of the *deployed* bundle for `origin`.
+ *
+ * The local `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is the value baked at build time
+ * here, which is not the value the deployment shipped — production is built by
+ * Vercel with its own environment. Reading the local var alone let the guard
+ * report "captcha is disabled" for a site whose bundle carries a live key.
+ * `fetchImpl` is injectable so the scan is testable without a network.
+ */
+export async function detectDeployedCaptcha(origin, fetchImpl = fetch) {
+  const page = await fetchText(`${origin}/login`, fetchImpl);
+  if (page.status !== 200) {
+    return { checked: false, reason: `the login page answered HTTP ${page.status}` };
+  }
+  const chunkPaths = [
+    ...new Set(
+      [...page.text.matchAll(/\/_next\/static\/chunks\/[^"'\s]+?\.js/g)].map((m) => m[0]),
+    ),
+  ];
+  for (const path of chunkPaths) {
+    const chunk = await fetchText(`${origin}${path}`, fetchImpl);
+    const siteKey = turnstileSiteKeyInBundle(chunk.text);
+    if (siteKey) return { checked: true, siteKey, chunk: path };
+  }
+  return { checked: true, siteKey: null };
+}
+
+/**
  * Interprets a Cloudflare `siteverify` reply for a deliberately invalid token.
  * A *valid* secret answers `invalid-input-response`; an unknown secret answers
  * `invalid-input-secret`. Cloudflare's always-pass testing keys answer
@@ -315,6 +358,21 @@ async function fetchJson(url, init, timeoutMs = 15_000) {
   }
 }
 
+/** Fetches text with the same bound as `fetchJson`, returning "" on any failure
+ * (a bundle that will not load means "could not tell", never "captcha is off"). */
+async function fetchText(url, fetchImpl, timeoutMs = 15_000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(url, { signal: controller.signal });
+    return { status: response.status, text: await response.text().catch(() => "") };
+  } catch {
+    return { status: 0, text: "" };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** The publishable key the app itself uses, needed for the live auth probe. */
 async function fetchAnonKey(token, projectRef) {
   const { status, body } = await fetchJson(
@@ -468,10 +526,29 @@ async function main() {
     );
   }
 
-  if (!siteKey) {
-    notes.push("NEXT_PUBLIC_TURNSTILE_SITE_KEY is empty — captcha is disabled.");
-  } else if (!looksLikeTurnstileSiteKey(siteKey)) {
+  if (siteKey && !looksLikeTurnstileSiteKey(siteKey)) {
     failures.push(`NEXT_PUBLIC_TURNSTILE_SITE_KEY is not a Turnstile site key.`);
+  }
+
+  // The local env var is not the value the deployment shipped: production is
+  // built by Vercel with its own environment. Read the deployed bundle, or a
+  // live widget gets reported as "captcha is disabled" (AGENTS.md).
+  const deployed = await detectDeployedCaptcha(origin);
+  if (!deployed.checked) {
+    notes.push(
+      `deployed captcha state could not be read (${deployed.reason}); ` +
+        (siteKey ? "a site key is set locally" : "no local site key either"),
+    );
+  } else if (deployed.siteKey) {
+    notes.push(
+      `production ships a Turnstile site key (${deployed.siteKey}) — captcha is enforced on auth forms.`,
+    );
+  } else if (siteKey) {
+    failures.push(
+      `NEXT_PUBLIC_TURNSTILE_SITE_KEY is set locally but the deployed bundle carries no Turnstile key — production is built without captcha.`,
+    );
+  } else {
+    notes.push("the deployed bundle carries no Turnstile key — captcha is disabled in production.");
   }
 
   if (!token) {

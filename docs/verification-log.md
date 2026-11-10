@@ -492,3 +492,158 @@ node scripts/verify-deliverability.mjs
 Testler: `verify-deliverability.test.mjs` 14/14 (üç kusurun regresyonu dahil).
 Kapılar: `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`,
 `bun run test:unit` (946/946) — yeşil.
+
+## Tur 10 — ikinci Vercel kesinti işaretçisi de tanınmıyordu (2026-11-10, LANE-VERIFY #556/#550)
+
+Devir issue'su (#556, kopyası #550): 2026-11-10'da canlı origin **her rotada 404
++ `x-vercel-error: DEPLOYMENT_NOT_FOUND`** döndü — hesap/dağıtım durumu, yol
+hatası değil. `verify-indexing.mjs:538` içindeki `isDeploymentDisabled` yalnız
+**402**'yi ve **`DEPLOYMENT_DISABLED`** işaretçisini tanıyordu; bu ikinci hesap
+durumu `unmeasurableReason()`'dan `null` olarak geçiyordu.
+
+| Boyut | Gözlenen (önce) | Beklenen (sonra) | Etki |
+|---|---|---|---|
+| hata yolu | 404 + `DEPLOYMENT_NOT_FOUND` → `fail robots`/`fail sitemap` | `skip` + gözlenen işaretçi adıyla | Hesap kesintisi "indexing bozuk" diye raporlanıyordu — tam da bu fonksiyonun ayırmaya çalıştığı sınıf |
+
+Düzeltme (issue'nun önerdiği gibi `verify-production-deployment.mjs` ve
+`scripts/system-health-core.mjs` ile aynı şekil): `vercelAccountState(vercelError)`
+yardımcısı çıkarıldı, hem `DEPLOYMENT_DISABLED` hem `DEPLOYMENT_NOT_FOUND`
+eşleştiriliyor ve `unmeasurableReason()` gözlenen işaretçiyi metne taşıyor.
+**Çıplak 404 eşleşmiyor**: sağlıklı origin sahip olmadığı her yol için 404 döner,
+404'ü yalnız `x-vercel-error` başlığı ayrıştırır (402 tek başına kesin).
+
+Regresyon: `verify-indexing.test.mjs` "a disabled deployment is not evidence
+about indexing" — `404 DEPLOYMENT_NOT_FOUND` → `true`, `404 ""`/`404 NOT_FOUND`
+→ `false`, `skip` metni `DEPLOYMENT_NOT_FOUND` içeriyor.
+
+### Canlı ölçüm (2026-11-10 ~10:20 UTC — düzeltmeden sonra)
+
+Kesinti bu turda **çözülmüş**; origin yeniden servis ediyor:
+
+```
+$ curl -s -o /dev/null -w '%{http_code}' https://isbulkktc.com/          -> 200
+$ curl -s -o /dev/null -w '%{http_code}' https://isbulkktc.com/robots.txt -> 200
+
+node scripts/verify-indexing.mjs
+  PASS robots    allows crawling; sitemap https://isbulkktc.com/sitemap.xml
+  PASS sitemap   207 URLs, all on-origin canonical; 186 with the full hreflang set, 21 single-locale (no hreflang)
+  PASS single-loc 3 single-locale entries: the localized duplicate canonicalises back
+  PASS pages     8 sampled pages are 200, indexable, with a matching canonical
+  PASS indexnow  key file matches isbulkkt…
+  0 failure(s), 0 warning(s), 0 skipped
+```
+
+Kesinti sırasında ölçüm (issue kanıtı, düzeltmeden önce): `404 DEPLOYMENT_NOT_FOUND`
+→ `fail robots`. Düzeltmeden sonra aynı girdi `skip` verir; canlı kesinti
+bittiği için `fail`'in `skip`'e döndüğü canlı gösterilemez, ama predicate girdisi
+birim testle sabitlendi.
+
+Kapılar: `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`,
+`bun run test:unit` (1018/1018) — yeşil.
+
+## Tur 11 — IndexNow anahtarı dosya adına göre seçiliyordu: doğrulayıcının kendi sessiz yanlış-PASS'i (2026-11-10, LANE-VERIFY #309)
+
+**Boyut: mantık / sınır girdi (araç doğruluğu).**
+
+`scripts/verify-indexing.mjs` IndexNow anahtar dosyasını `entries.find(/^[a-z0-9]{8,128}\.txt$/i)`
+ile seçiyordu — yani **alfabetik ilk** şekle-uyan `.txt`. IndexNow protokolü anahtar
+dosyasını "adı == gövdesi" olarak tanımlar; adı uyan ama gövdesi anahtar olmayan
+ikinci bir dosya (ör. `security.txt`, `ads.txt`, bir site-doğrulama `.txt`'si) araya
+girdiğinde doğrulayıcı **yanlış dosyayı** çeker. Araç çektiği dosyayı kendi seçtiği
+için, yanlış-ama-tutarlı ad/gövde çifti **PASS** verir: sessiz bir yanlış-pozitif,
+tam da bu lane'in yakalamak için var olduğu sınıf.
+
+`scripts/submit-indexnow.mjs` zaten paylaşılan `readIndexNowKey` (ad == gövde)
+yardımcısına delege edilmişti; doğrulayıcı bu düzeltmeden ayrı düşmüştü.
+
+| Boyut | Gözlenen (önce) | Beklenen (sonra) | Etki |
+|---|---|---|---|
+| mantık / sınır girdi | `entries.find(...)` → alfabetik ilk `.txt` | `readIndexNowKey` → ad == gövde | Şekle-uyan ikinci `.txt` doğrulamayı sahte PASS'a çevirebiliyordu |
+
+**Kanıt (önce/sonra, aynı dizin — `aaasecurity.txt` + gerçek anahtar):**
+
+```
+files: aaasecurity.txt, isbulkktcada1d9ce6917a3363df4ff8fccc7629a.txt
+OLD picks: aaasecurity.txt | body: "Contact: mailto:security@example.com"
+NEW picks: isbulkktcada1d9ce6917a3363df4ff8fccc7629a.txt | body: "isbulkktcada1d9ce6917a3363df4ff8fccc7629a"
+```
+
+Eski mantıkta seçilen dosyanın adı gövdesine eşit değil; doğrulayıcı yine de onu
+çekip "eşleşiyor" derdi. Yeni mantık gerçek anahtarı seçer.
+
+**Düzeltme.** `verify-indexing.mjs` `readIndexNowKey`'e delege eder; `readdir`/`readFile`
+ithalatı kalktı, `entries.find` deseni gitti. Regresyon testi
+(`verify-indexing.test.mjs`) ithalatı `assert.match` ile sabitler ve `entries.find(`
+kullanımını `assert.doesNotMatch` ile yasaklar — iki IndexNow çağrı yeri bir daha
+ayrışamaz.
+
+**Canlı ölçüm (2026-11-10 ~10:30 UTC, düzeltmeden sonra):**
+
+```
+node scripts/verify-indexing.mjs
+  PASS robots    allows crawling; sitemap https://isbulkktc.com/sitemap.xml
+  PASS sitemap   207 URLs, all on-origin canonical; 186 with the full hreflang set, 21 single-locale
+  PASS single-loc 3 single-locale entries: the localized duplicate canonicalises back
+  PASS pages     8 sampled pages are 200, indexable, with a matching canonical
+  PASS indexnow  key file matches isbulkkt…
+  0 failure(s), 0 warning(s), 0 skipped
+```
+
+Kapılar: `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`,
+`bun run test:unit` (1020/1020) — yeşil.
+
+## Tur 12 — auth-config doğrulayıcısı canlı captcha'yı "kapalı" sanıyordu (2026-11-10, LANE-VERIFY)
+
+**Boyut: doğruluk / yanlış-NEGATİF (araç doğruluğu).**
+
+`scripts/verify-auth-config.mjs` Turnstile durumunu **yerel**
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY` ortam değişkeninden okuyordu. O değer *bu ağaçta*
+derleme anında gömülen değerdir; üretim ise Vercel tarafından **kendi ortamıyla**
+derlenir. Yerel değişken boş olduğunda araç "captcha is disabled" diye not düşüyordu
+— oysa üretim paketi canlı bir anahtar taşıyor. Araç, ölçtüğünü sandığı şeyi değil
+kendi ortamını raporluyordu.
+
+### Gözlenen / beklenen
+
+| | |
+|---|---|
+| **Gözlenen** (önce) | `NEXT_PUBLIC_TURNSTILE_SITE_KEY is empty — captcha is disabled.` |
+| **Beklenen** (sonra) | `production ships a Turnstile site key (0x4AAAAAAFL-yuC1YeNRT3FB) — captcha is enforced on auth forms.` |
+
+### Kanıt — SSR HTML tuzağı
+
+AGENTS.md uyarısı: Turnstile alanı bir effect içinde render edilir, bu yüzden sunucu
+HTML'i her zaman **boş** `<div class="editorial-turnstile"><div></div></div>`
+kapsayıcısı içerir — widget canlı olsa bile. SSR'ı grep'lemek "captcha kapalı" der.
+Doğru kanıt **dağıtılmış istemci paketi**dir: SDK yükleyicisi
+(`challenges.cloudflare.com/turnstile`) yalnızca bir anahtar ayarlıysa çekilir, yanındaki
+`0x4A…` anahtarı onu adlandırır.
+
+**Düzeltme.** `detectDeployedCaptcha(origin)` `/login` sayfasını çeker, `_next/static/chunks/*.js`
+referanslarını toplar ve ilk Turnstile anahtarını bulur; `main()` artık yerel env var
+yerine bu durumu okur. Paket okunamazsa "captcha kapalı" **değil**, "ölçülemedi"
+notu düşülür (yanlış-negatifin tam tersi). `fetchText` 15 sn sınırlı; ağ hatası `""`
+döner. `turnstileSiteKeyInBundle` ve `detectDeployedCaptcha` dışa açık, `fetchImpl`
+enjekte edilebilir — ağ olmadan test edilir.
+
+### Canlı ölçüm (2026-11-10 ~10:15 UTC, düzeltmeden sonra)
+
+```
+node scripts/verify-auth-config.mjs
+  Project: uwmhquvzbilbfzdrlxmb | Origin: https://isbulkktc.com
+  ✅ No configuration inconsistency found.
+  ℹ️ production ships a Turnstile site key (0x4AAAAAAFL-yuC1YeNRT3FB) — captcha is enforced on auth forms.
+  ℹ️ SUPABASE_ACCESS_TOKEN is unset — Supabase checks skipped.
+```
+
+Eşlik eden canlı ölçümler (aynı tur): `verify-indexing` 0 failure / 0 warning / 0 skip;
+`verify-deliverability` 0 failure / 3 warning (SPF kök, DMARC `p=none`, blocklist kısmi).
+
+**Regresyon testi.** `verify-auth-config.test.mjs` 8 test: paket taraması SDK URL'i
+yokken `null`, varken anahtarı döndürür; `detectDeployedCaptcha` HTTP 200 olmayan
+sayfada `checked:false`, anahtarlı pakette `checked:true`, anahtarsız pakette
+`siteKey:null`. Yerel env var ile dağıtılmış durum ayrıştığında araç artık dağıtılmış
+olanı raporlar.
+
+Kapılar: `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`,
+`bun run test:unit` (1022/1022) — yeşil.
