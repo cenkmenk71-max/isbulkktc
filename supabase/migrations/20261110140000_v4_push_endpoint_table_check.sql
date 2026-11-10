@@ -33,14 +33,21 @@
 -- `is_valid_candidate_profile_section`, no client INSERT reaches this CHECK (the
 -- table is revoked from both roles), so there is no grant to preserve.
 --
--- The constraint is added `not valid`: endpoints stored before the allowlist
--- shipped (before 20261110000000) could be arbitrary HTTPS URLs, and a plain
--- ADD CONSTRAINT would scan the table and abort the whole migration if any such
--- row survives. `not valid` enforces the rule on every new INSERT/UPDATE
--- immediately while leaving existing rows alone; the operator can
--- `validate constraint` once the old rows are gone (it is a metadata-only
--- operation at that point). No existing row is deleted here — that is live-data
--- surgery, not this migration's job.
+-- The constraint is added VALID. Endpoints stored before the allowlist shipped
+-- (before 20261110000000) could be an arbitrary HTTPS URL; those rows are dead
+-- weight, because the send sink re-checks `isAllowedPushEndpoint` and refuses to
+-- connect to anything but a push service, so such a row can never receive a
+-- notification. The migration clears them first and then adds the constraint in
+-- the validated state, so the rule protects *every* row, not only the ones
+-- written after the upgrade.
+--
+-- A NOT VALID constraint would guard new writes but silently skip every old row,
+-- and `public_job_integrity.test.sql` ratchets the public schema to *zero* NOT
+-- VALID check constraints ("a constraint left NOT VALID is weaker than it
+-- looks"). The district constraints that shipped NOT VALID were validated by
+-- `20261023110000` for the same reason. Deleting the undeliverable rows is the
+-- only way to make the rule total here, because an arbitrary host has no
+-- push-service equivalent to rewrite the row to.
 
 create or replace function public.is_allowed_push_endpoint(_endpoint text)
 returns boolean
@@ -114,6 +121,16 @@ revoke all on function public.is_allowed_push_endpoint(text)
 alter table public.push_subscriptions
   drop constraint if exists push_subscriptions_endpoint_host_allowed;
 
+-- Drop the rows the new rule rejects — endpoints that are not on a push service
+-- and therefore can never be delivered to. They were stored before the
+-- allowlist shipped and are the only reason the constraint could not be added
+-- VALID. The helper is the exact predicate of the constraint below, so after
+-- this delete the table contains no violating row and the ADD validates without
+-- a scan failure. The delete is a no-op once the table is clean, which keeps the
+-- migration idempotent.
+delete from public.push_subscriptions
+where not public.is_allowed_push_endpoint(endpoint);
+
 alter table public.push_subscriptions
   add constraint push_subscriptions_endpoint_host_allowed
-    check (public.is_allowed_push_endpoint(endpoint)) not valid;
+    check (public.is_allowed_push_endpoint(endpoint));
