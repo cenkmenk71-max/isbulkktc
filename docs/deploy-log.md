@@ -254,3 +254,26 @@ context, not as a measurement.
     above, and `Vercel API: ⏭️ VERCEL_TOKEN not set` no longer able to mask it.
     Regression tests added; the masking test fails against the pre-fix ordering,
     so it pins the bug.
+| 2026-11-10T03:09Z | `df36b2d1` | — | 🚫 **origin disabled** | Direct `git ls-remote` + `build-info` read. Every route (`/`, `/jobs`, `/companies`, `/contact`, `/en`, `/tr`, `/login`, `/api/build-info`) still returns **402** with `x-vercel-error: DEPLOYMENT_DISABLED` — the account block (#319 / issue #518, LANE-INFRA) persists from the 02:12Z checkpoint, so no `main`↔live comparison is possible. `main` is unchanged since the last record (`1599b14a` → `df36b2d1`, the #523 docs merge). Merge queue this round: #526 (lane/guvenlik) `BLOCKED`; #493 (lane/infra) `CLEAN` but changes `.github/workflows/ci.yml` → **not merged** (the brief's "two brakes": a human lands workflow changes). No PR was mergeable by this lane this round. |
+
+### Delivery health findings (2026-11-10, round 3)
+
+16. **`approve-pending-runs.mjs` exited 0 even when a run could not be
+    approved.** The script caught an approval failure, printed it, and then
+    still printed `approved N/M` and returned success. A scheduled caller
+    (`lane-autopilot`) reads that exit code as "the queue is clear", so a run
+    left at `action_required` — a lane sitting BLOCKED with no CI at all —
+    looked like a clean pass. That is the #178 failure mode the script exists to
+    prevent, reintroduced by the exit code. Fixed: an approval failure is now
+    counted, a `N run(s) still need approval; the queue is not clear` line is
+    written to stderr, and the process exits 1. The regression test runs the
+    real script against a fake `gh` that refuses the approve call and asserts
+    exit 1; it fails against the pre-fix script, so it pins the bug.
+
+17. **A failed `gh` call was reported as `Command failed: gh api …`.** The
+    approval catch and the top-level `main().catch` printed only
+    `error.message`. `execFileSync` puts that generic string on `message`; the
+    actionable reason ("Resource not accessible by integration", "Not Found")
+    is on `stderr`, so the log said nothing an operator could act on. Fixed with
+    `ghErrorLine(error)`, which prefers the first non-blank `stderr` line and
+    falls back to `message`. Regression test covers both paths.

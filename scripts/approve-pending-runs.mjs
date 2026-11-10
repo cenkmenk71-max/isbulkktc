@@ -43,6 +43,23 @@ function gh(args, env = ghEnv()) {
   return execFileSync('gh', args, { encoding: 'utf8', env }).trim();
 }
 
+/**
+ * The most useful single line from a failed `gh` call. `execFileSync`'s
+ * `error.message` is only `Command failed: gh api …` — the real reason
+ * ("Resource not accessible by integration", "Not Found") is on `stderr`, so a
+ * failure reported from `message` alone is undiagnosable from the log.
+ */
+export function ghErrorLine(error) {
+  const stderr = error?.stderr ? String(error.stderr).trim() : "";
+  const message = String(error?.message ?? error ?? "");
+  return (
+    (stderr || message)
+      .split("\n")
+      .map((line) => line.trim())
+      .find(Boolean) ?? "unknown error"
+  );
+}
+
 /** Parse the `id\tname\tbranch` rows emitted by the list call. Exported so the
  * row shape is testable without touching `gh`. */
 export function parsePendingRuns(raw) {
@@ -80,6 +97,7 @@ export async function main(argv = process.argv.slice(2)) {
 
   console.log(`${rows.length} run(s) waiting for approval`);
   let approved = 0;
+  let failed = 0;
   for (const run of rows) {
     if (dryRun) {
       console.log(`  would approve ${run.id} ${run.name} (${run.branch})`);
@@ -90,13 +108,24 @@ export async function main(argv = process.argv.slice(2)) {
       approved += 1;
       console.log(`  approved ${run.id} ${run.name} (${run.branch})`);
     } catch (error) {
-      console.error(
-        `  could not approve ${run.id}: ${String(error.message).split('\n')[0]}`,
-      );
+      failed += 1;
+      console.error(`  could not approve ${run.id}: ${ghErrorLine(error)}`);
     }
   }
 
-  if (!dryRun) console.log(`approved ${approved}/${rows.length}`);
+  if (dryRun) return 0;
+
+  console.log(`approved ${approved}/${rows.length}`);
+  // A run that could not be approved is still held, so the queue this script
+  // exists to clear is *not* clear. Exiting 0 would let a scheduled caller read
+  // "success" while a lane sits BLOCKED with no CI — the #178 failure mode.
+  if (failed > 0) {
+    console.error(
+      `${failed} run(s) still need approval; the queue is not clear`,
+    );
+    process.exitCode = 1;
+  }
+  return failed;
 }
 
 // Only run when invoked directly, so the helpers stay importable in tests.
@@ -105,7 +134,7 @@ export async function main(argv = process.argv.slice(2)) {
 // would silently skip `main()`.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
-    console.error(String(error.message).split('\n')[0]);
+    console.error(ghErrorLine(error));
     process.exitCode = 1;
   });
 }

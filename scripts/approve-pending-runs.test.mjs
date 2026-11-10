@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ghEnv, parsePendingRuns } from "./approve-pending-runs.mjs";
+import { ghEnv, ghErrorLine, parsePendingRuns } from "./approve-pending-runs.mjs";
 
 test("a missing token leaves GH_TOKEN unset so gh keeps its stored auth", () => {
   // With neither variable set the old `GH_TOKEN: A ?? B` still produced an
@@ -110,6 +110,72 @@ test("the list call paginates, so a backlog over one page is not half-approved",
     "utf8",
   );
   assert.match(source, /'--paginate'/);
+});
+
+test("the real reason from gh is surfaced, not just 'Command failed'", () => {
+  // `execFileSync`'s message is only `Command failed: gh api …`; the actionable
+  // text ("Resource not accessible by integration") is on stderr. Reporting the
+  // message alone leaves an operator staring at a run that says nothing.
+  const error = Object.assign(
+    new Error("Command failed: gh api repos/x/actions/runs/1/approve"),
+    { stderr: "gh: Resource not accessible by integration\n" },
+  );
+  assert.equal(ghErrorLine(error), "gh: Resource not accessible by integration");
+  // No stderr (e.g. a spawn error) falls back to the message.
+  assert.equal(ghErrorLine(new Error("spawn gh ENOENT")), "spawn gh ENOENT");
+});
+
+test("a failed approval does not exit 0", () => {
+  // A run that could not be approved is still held. Reporting success would let
+  // a scheduled caller read "cleared the queue" while a lane stays BLOCKED with
+  // no CI — the #178 failure mode this script exists to prevent.
+  const source = fileURLToPath(
+    new URL("./approve-pending-runs.mjs", import.meta.url),
+  );
+  const dir = mkdtempSync(join(tmpdir(), "approve-fail "));
+  const bin = join(dir, "bin");
+  try {
+    mkdirSync(bin);
+    const fakeGh = join(bin, "gh");
+    writeFileSync(
+      fakeGh,
+      [
+        "#!/bin/sh",
+        'case "$*" in',
+        '  *"/actions/runs?status=action_required"*)',
+        `    printf '%s\\n' "$(printf '11\\tCI\\tmain')" ;;`,
+        '  *"/actions/runs/11/approve"*)',
+        "    echo 'gh: Resource not accessible by integration' >&2",
+        "    exit 1 ;;",
+        "esac",
+        "exit 0",
+        "",
+      ].join("\n"),
+    );
+    chmodSync(fakeGh, 0o755);
+
+    let status = 0;
+    let stderr = "";
+    try {
+      execFileSync(process.execPath, [source], {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH}`,
+          GH_TOKEN: "ghs_fake",
+          GITHUB_PERSONAL_ACCESS_TOKEN: "",
+        },
+      });
+    } catch (error) {
+      status = error.status;
+      stderr = error.stderr;
+    }
+
+    assert.equal(status, 1);
+    assert.match(stderr, /still need approval/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("every pending run on every page is approved, not just the first page", () => {
