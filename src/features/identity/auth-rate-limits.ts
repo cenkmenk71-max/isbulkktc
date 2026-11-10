@@ -1,16 +1,19 @@
 import { createRateLimiter } from "@/features/abuse/rate-limit";
 
 /**
- * Application-level abuse controls for the credential endpoints (#418 §7).
+ * Application-level abuse controls for the credential endpoints (#418 §7, #505).
  *
  * `signIn` and `requestPasswordReset` are the two endpoints #418 names under
- * "Rate limit: giriş denemesi, şifre sıfırlama talebi". Neither carried a bound:
- * a publishable key is enough to POST `/auth/v1/token?grant_type=password` and
- * `/auth/v1/recover` directly, and the hosted project does not enforce its
- * captcha, so an unlimited password guess and an unlimited reset-mail fan-out
- * both lived one HTTP call away. This limiter runs in the server action, above
- * Supabase, so the app path is bounded the same way the feedback/sales forms
- * already are (`src/features/abuse/limits.ts`).
+ * "Rate limit: giriş denemesi, şifre sıfırlama talebi"; `signUp` and
+ * `resendConfirmation` are their mail-fan-out siblings (#505), which hand
+ * `supabase.auth` an address the caller chose and so mail it a confirmation
+ * link. None of the four carried a bound: a publishable key is enough to POST
+ * `/auth/v1/token?grant_type=password`, `/auth/v1/recover` or `/auth/v1/resend`
+ * directly, and the hosted project does not enforce its captcha, so an unlimited
+ * password guess and an unlimited mail fan-out both lived one HTTP call away.
+ * This limiter runs in the server action, above Supabase, so the app path is
+ * bounded the same way the feedback/sales forms already are
+ * (`src/features/abuse/limits.ts`).
  *
  * The window and the budgets mirror that module's reasoning: ten minutes is
  * short enough to bound a flood and long enough that a visitor whose first
@@ -38,6 +41,33 @@ export const signInThrottle = {
 
 export const passwordResetThrottle = {
   /** Per client address. Caps a reset-mail fan-out from one origin. */
+  address: createRateLimiter({ limit: 10, windowMs }),
+  /** Per submitted address. Keeps one victim mailbox from being flooded. */
+  email: createRateLimiter({ limit: 5, windowMs }),
+};
+
+/**
+ * Sign-up mails a confirmation link to the submitted address, so it is a
+ * mail-fan-out endpoint with the same posture as the reset flow. The budgets
+ * mirror `passwordResetThrottle`: a human signs up once and rarely retries, so
+ * five attempts per mailbox comfortably covers a mistyped form while a loop is
+ * stopped, and the origin budget caps one address without locking out a shared
+ * egress.
+ */
+export const signUpThrottle = {
+  /** Per client address. Caps a sign-up-mail fan-out from one origin. */
+  address: createRateLimiter({ limit: 10, windowMs }),
+  /** Per submitted address. Keeps one victim mailbox from being flooded. */
+  email: createRateLimiter({ limit: 5, windowMs }),
+};
+
+/**
+ * `resendConfirmation` re-mails the confirmation link to an arbitrary address
+ * by design, so it is the loosest fan-out of the four and the one a script
+ * would reach for. Same budgets as `passwordResetThrottle`.
+ */
+export const resendConfirmationThrottle = {
+  /** Per client address. Caps a confirmation-mail fan-out from one origin. */
   address: createRateLimiter({ limit: 10, windowMs }),
   /** Per submitted address. Keeps one victim mailbox from being flooded. */
   email: createRateLimiter({ limit: 5, windowMs }),

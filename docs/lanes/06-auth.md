@@ -1098,3 +1098,80 @@ kullanıcı çıkmış olur; 500 göstermek yalnızca kafa karıştırır.
 ### Sahibin yapması gerekenler
 - **#161**'in "gerçek hesapla üretimde doğrulama" kalemi hâlâ insan gerektiriyor.
 - **#271** (transactional e-posta `lang`/`dir`) ve **#227** (auth SMTP + DKIM) devirde.
+
+---
+
+## Çalıştırma raporu — 2026-11-10 (handoff #505: mail fan-out throttle)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: <açılacak>
+Aldığı issue: #505 (lane:auth, agent:handoff — LANE-GÜVENLİK'ten devir)
+Değişen dosyalar:
+  src/features/identity/auth-rate-limits.ts        (signUpThrottle + resendConfirmationThrottle)
+  src/features/identity/actions.ts                 (signUp/resendConfirmation guard'ları)
+  src/features/identity/auth-rate-limits.test.ts   (yeni birim testleri)
+  docs/lanes/06-auth.md                            (bu rapor)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (902; 900 pass, 2 todo, 0 fail) / test:security ✅ (191; 181 pass, 0 fail, 10 todo) /
+  test:integration ✅ (112) / production build ✅ (NEXT_DIST_DIR=.next-authcheck)
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration/şablon değişmedi)
+```
+
+### Bulgu (#505)
+
+`auth-throttle-surface.test.ts` yalnız `signIn` + `requestPasswordReset`'i sabitliyordu.
+Çağıranın seçtiği adrese **mail gönderen** iki kardeş — `signUp`
+(`supabase.auth.signUp` → doğrulama linki; oturum dönerse `sendWelcomeEmail`) ve
+`resendConfirmation` (`supabase.auth.resend` → keyfî adrese yeniden mail) — ne
+oturum kapısı (`getUser()`) ne de limiter taşıyordu. Yalnız yayınlanabilir anahtar
+yeterliydi; hosted projede captcha kapalı olduğundan Turnstile jetonu da bağlayıcı
+değil → **sınırsız doğrulama-maili dağıtımı** (gelen kutusu seli + Resend gönderim
+kotası tüketimi). `#139`/`#457` ile aynı istismar sınıfı.
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `actions.ts` `signUp` (~:204) | yetki / hata yolu | Mail dağıtımından önce hiçbir limiter yok | `signIn`/`reset` ile aynı limiter deseni | Sınırsız mail fan-out (DoS) | düzeltildi |
+| 2 | `actions.ts` `resendConfirmation` (~:314) | yetki / hata yolu | Aynı; keyfî adrese yeniden mail | Aynı limiter deseni | Sınırsız mail fan-out (DoS) | düzeltildi |
+
+### Düzeltme
+
+`auth-rate-limits.ts`'e `signUpThrottle` ve `resendConfirmationThrottle` eklendi;
+her biri **adres (IP)** ve **e-posta** boyutlu, 10 dakika pencereli, mevcut
+`createRateLimiter` (`@/features/abuse/rate-limit`) ile. Bütçeler `passwordResetThrottle`
+ile aynı: IP 10, e-posta 5 — bir insan bir kez kayıt olur, yanlış yazarsa birkaç kez
+dener; döngü durur ama paylaşılan çıkış (NAT) kilitlenmez.
+
+Guard'lar Supabase çağrısından **önce** çalışır (`signUp`/`resendConfirmation`).
+Throttle'a takılan çağrı, Supabase hatasıyla **aynı** genel mesajı döndürür
+(`signUpFailed` / `resendFailed`) — böylece limit ayrı bir "çok deneme" sinyaliyle
+sızdırılmaz ve adres numaralandırması yapılamaz (mevcut `throttledReset` deseninin
+aynısı).
+
+### Kanıt
+
+- `auth-rate-limits.test.ts` (+5 test, toplam 11): bütçe davranışı (kaynak + kurban
+  mailbox), limiter'ın Supabase'den **önce** çağrıldığı sıra, genel mesajın yeniden
+  kullanıldığı. Guard kaldırılınca test kırmızı olur.
+- **Kapı terfi doğrulaması:** `tests/security/auth-mail-throttle-surface.test.ts`
+  içindeki iki `{ todo }` kaldırıldığında iki kapı da **pass** (4/4). Dosya benim
+  sahipliğimde değil (`tests/security/**` = LANE-GÜVENLİK); terfi onlara devredildi.
+- Production standalone build ✅; E2E akışında benzersiz adreslerle yalnız 3 kayıt +
+  2 yeniden gönderim — bütçelerin çok altında, meşru akış regresyonsuz.
+
+### Güvenlik değerlendirmesi (security skill)
+
+- Saldırı yüzeyi **daraldı**: iki sınırsız mail ucu sınırlandı. Yeni yetki/oturum
+  yolu açılmadı; guard yalnız erken döner.
+- Hata mesajı sızdırmaz: throttle durumu Supabase hatasından ayırt edilemez
+  (ayrı "çok deneme" metni yok) → adres numaralandırması engelli.
+- Limiter anahtarları yalnız `ip:`/`email:` önekli string; secret/log yok.
+
+### Sahibin yapması gerekenler
+
+- **LANE-GÜVENLİK:** `tests/security/auth-mail-throttle-surface.test.ts` içindeki iki
+  `{ todo }`'yu kaldırıp gate'e terfi ettirsin (devir issue'su açıldı). Kabul ölçütü
+  doğrulandı: terfi sonrası 4/4 pass.
+- **#418 §7:** "giriş denemesi / şifre sıfırlama talebi rate limit" maddesi bu iki
+  mail-fan-out ucunu kapsayacak biçimde genişletilmeli (artık karşılanıyor).
+- `tests/security/lockfile-coverage.test.ts` kırmızısı bu değişiklikten **önce de**
+  vardı (eksik `jsqr`,`pngjs`,`qrcode`,`web-push` girdileri) — ilgisiz.
