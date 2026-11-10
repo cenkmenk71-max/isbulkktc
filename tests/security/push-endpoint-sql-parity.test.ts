@@ -21,6 +21,12 @@ import { isAllowedPushEndpoint } from "@/server/push/push-endpoint";
  *      raw segment = `evil.com\.push.apple.com` (endsWith `.push.apple.com`)
  *                                       -> RPC ACCEPTS
  *
+ *   `https://evil.com@x.push.apple.com/x`
+ *      URL host = `x.push.apple.com`, userinfo present
+ *                                       -> app REJECTS (credentials)
+ *      raw segment = `evil.com@x.push.apple.com` (endsWith `.push.apple.com`)
+ *                                       -> RPC ACCEPTS (userinfo is just text)
+ *
  * The RPC is directly callable with the publishable key, so an attacker can
  * store such a row without going through the app. It is not an SSRF today —
  * the send sink re-checks `isAllowedPushEndpoint` before `webpush.sendNotification`
@@ -143,6 +149,20 @@ const acceptedBySqlRejectedByApp = [
 ];
 
 /**
+ * The finding, a second shape of direction 1: the raw authority ends with an
+ * allowed suffix, so the RPC accepts it, but the endpoint carries URL
+ * credentials (`user:pass@host`). The real host *is* a push service, yet the app
+ * rejects the endpoint outright — a push service never issues an endpoint with
+ * credentials, and `isAllowedPushEndpoint` refuses one that has them. `split_part`
+ * has no notion of userinfo, so it sees only the trailing suffix.
+ */
+const acceptedBySqlRejectedByAppForCredentials = [
+  "https://evil.com@x.push.apple.com/x",
+  "https://evil.com@eu.web.push.apple.com/x",
+  "https://evil.com@wns2-par02p.notify.windows.com/x",
+];
+
+/**
  * The finding, direction 2: the real host **is** a push service (the app
  * accepts it), but the raw segment is not, so the SQL string split rejects it.
  * A raw-string rule cannot express either direction.
@@ -151,6 +171,7 @@ const acceptedByAppRejectedBySql = ["https://fcm.googleapis.com\\evil.com/x"];
 
 const divergentEndpoints = [
   ...acceptedBySqlRejectedByApp,
+  ...acceptedBySqlRejectedByAppForCredentials,
   ...acceptedByAppRejectedBySql,
 ];
 
@@ -192,6 +213,11 @@ test("the SQL mirror reproduces the raw-string split, not a URL parse (self-test
   assert.equal(sqlAllowsEndpoint(sql, "https://evil.com\\.push.apple.com/x"), true);
   assert.equal(new URL("https://evil.com\\.push.apple.com/x").hostname, "evil.com");
   assert.equal(isAllowedPushEndpoint("https://evil.com\\.push.apple.com/x"), false);
+  // A URL credential is text to `split_part`, so the raw authority still ends
+  // with an allowed suffix; the app rejects the endpoint for carrying it.
+  assert.equal(sqlAllowsEndpoint(sql, "https://evil.com@x.push.apple.com/x"), true);
+  assert.equal(new URL("https://evil.com@x.push.apple.com/x").hostname, "x.push.apple.com");
+  assert.equal(isAllowedPushEndpoint("https://evil.com@x.push.apple.com/x"), false);
 });
 
 test("the app gate rejects every endpoint whose real host is not a push service", () => {
@@ -250,9 +276,10 @@ test(
   {
     todo:
       "register_push_subscription extracts the host with split_part on the raw " +
-      "string, so `https://evil.com\\.push.apple.com/x` (real host evil.com) and " +
-      "percent-encoded variants are accepted by the RPC while isAllowedPushEndpoint " +
-      "rejects them (owner: LANE-SUPABASE, supabase/migrations/20261110000000_v4_push_endpoint_host_allowlist.sql)",
+      "string, so `https://evil.com\\.push.apple.com/x` (real host evil.com), " +
+      "percent-encoded variants and `https://evil.com@x.push.apple.com/x` (URL " +
+      "credentials) are accepted by the RPC while isAllowedPushEndpoint rejects " +
+      "them (owner: LANE-SUPABASE, supabase/migrations/20261110000000_v4_push_endpoint_host_allowlist.sql)",
   },
   () => {
     const sql = effectivePushRpcSql();
