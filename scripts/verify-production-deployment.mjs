@@ -291,11 +291,45 @@ async function fetchJson(url, init = {}) {
   }
 }
 
+/**
+ * Explain a failed team lookup. Vercel answers an invalid or expired token with
+ * **403** `{"error":{"code":"forbidden","invalidToken":true}}` (and 401 for some
+ * surfaces). The old code ignored the status and read `body.teams ?? []`, so the
+ * empty list fell through to `no team with slug "…"` — blaming the team slug for
+ * a dead credential. The operator then rechecks the slug and project name
+ * instead of rotating `VERCEL_TOKEN`, the same misdiagnosis as an invalid token
+ * reported as a configuration error (#209).
+ */
+export function describeTeamLookupFailure(status, body) {
+  const invalid =
+    status === 401 ||
+    body?.error?.invalidToken === true ||
+    /invalid/i.test(String(body?.error?.code ?? ""));
+  if (invalid) {
+    return `Vercel API rejected the token (HTTP ${status}: invalid or expired VERCEL_TOKEN)`;
+  }
+  return `Vercel API could not list teams (HTTP ${status})`;
+}
+
+/**
+ * Read `VERCEL_TOKEN`, trimmed. A whitespace-only secret is truthy but useless:
+ * untrimmed it would be sent as a bearer token, the API would answer 403, and
+ * the run would report a team/token problem instead of the plain "not set"
+ * state that tells the operator to configure it (#209).
+ */
+export function readVercelToken(source = process.env) {
+  const value = source.VERCEL_TOKEN;
+  return typeof value === "string" ? value.trim() : "";
+}
+
 /** Resolve the team and project ids once; reused by every poll. */
 async function resolveVercelContext(token, teamSlug, projectName) {
   const teams = await fetchJson(`${API}/v2/teams?limit=100`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (teams.status !== 200) {
+    throw new Error(describeTeamLookupFailure(teams.status, teams.body));
+  }
   const team = (teams.body?.teams ?? []).find((entry) => entry.slug === teamSlug);
   if (!team) throw new Error(`no team with slug "${teamSlug}"`);
   const project = await fetchJson(
@@ -457,7 +491,7 @@ async function main() {
   const timeoutSec = parsePositiveInt(process.env.DEPLOY_TIMEOUT_SEC, 900);
   const pollSec = parsePositiveInt(process.env.DEPLOY_POLL_SEC, 20);
   const tipRefreshSec = parsePositiveInt(process.env.DEPLOY_TIP_REFRESH_SEC, 60);
-  const token = process.env.VERCEL_TOKEN;
+  const token = readVercelToken();
 
   if (!normalizeCommit(expectedCommit)) {
     throw new Error("No commit to verify. Pass --expect <sha> or set GITHUB_SHA.");
