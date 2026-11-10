@@ -44,6 +44,7 @@ import {
   fairOrder,
   hasLabelledWork,
   isInfraRejection,
+  modelIsAllowed,
   nextConversationAction,
   poisonedConversations,
   prCapacity,
@@ -71,6 +72,20 @@ const REGISTRY = JSON.parse(readFileSync(join(HERE, 'lanes.json'), 'utf8'));
 // Fallback must stay reachable: `deepseek-v4-pro` was not, and silently
 // stranded every lane (#442).
 const LANE_MODEL = REGISTRY.model ?? 'openhands/deepseek-v4.1-flash';
+// Fail fast when the registry names a model the account cannot call: every spawn
+// would otherwise die on its first turn with 0 tokens and the pass would report
+// "started" (#442). `allowedModels` is the account's reachable set; keep it in
+// step with the platform when the tier changes. The unit test in
+// lane-autopilot-core.test.mjs pins the registry's `model` inside it, so a
+// re-pin to an unreachable model fails CI before it can strand the team.
+if (!modelIsAllowed(LANE_MODEL, REGISTRY.allowedModels)) {
+  console.error(
+    `lanes.json model ${LANE_MODEL} is not in allowedModels ` +
+      `[${(REGISTRY.allowedModels ?? []).join(', ')}] — the account cannot call it, ` +
+      'every spawn would die with 0 tokens (#442)',
+  );
+  process.exit(1);
+}
 // The state file is gitignored. The autopilot workflow caches this exact path
 // between scheduled runs so the attempt counters survive on a fresh runner.
 const STATE_FILE = join(REPO_ROOT, '.lane-state.json');

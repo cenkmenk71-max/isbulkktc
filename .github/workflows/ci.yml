@@ -77,13 +77,16 @@ jobs:
       # nothing enforced it until this step: two lanes could claim the same file
       # or issue and no CI job would notice. The detector reads the ownership
       # table and the open pull requests and fails on an unowned file or a file
-      # two PRs both touch. `GH_TOKEN` comes from the job's `pull-requests: read`
+      # two PRs both touch (queue-wide) and on this PR's own lane editing outside
+      # its globs (scoped by `--pr`). That split is deliberate: a lane's local
+      # ownership slip must break only its own PR, never the whole queue (#552,
+      # #557, #555). `GH_TOKEN` comes from the job's `pull-requests: read`
       # permission, so it never needs a stored secret. A read failure exits
       # non-zero on purpose (see the script) rather than reporting a false green.
       - name: Lane collisions
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/lane-collisions.mjs
+        run: node scripts/lane-collisions.mjs --pr "${{ github.event.pull_request.number }}"
 
       # The security layer is source-level (it reads migrations and modules and
       # attacks sanitise/redirect boundaries), so it needs neither Supabase nor a

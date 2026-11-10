@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -15,6 +16,7 @@ import {
   isCapacityError,
   isInfraRejection,
   laneDelivered,
+  modelIsAllowed,
   nextConversationAction,
   noCommitInWindow,
   poisonedConversations,
@@ -133,6 +135,53 @@ test("a lane's own failure is not an infrastructure rejection", () => {
   assert.equal(isInfraRejection("tests failed"), false);
   assert.equal(isInfraRejection(undefined), false);
   assert.equal(isInfraRejection(null), false);
+});
+
+// ---------------------------------------------------------------------------
+// modelIsAllowed — the registry's model must be one the account can call (#442)
+// ---------------------------------------------------------------------------
+
+test("a model inside the allowed list is reachable", () => {
+  assert.equal(
+    modelIsAllowed("openhands/deepseek-v4.1-flash", [
+      "openhands/deepseek-v4.1-flash",
+      "openhands/deepseek-v4-flash",
+    ]),
+    true,
+  );
+});
+
+test("a model outside the allowed list is rejected", () => {
+  // The #442 case: the account could not call `deepseek-v4-pro`.
+  assert.equal(
+    modelIsAllowed("openhands/deepseek-v4-pro", [
+      "openhands/deepseek-v4.1-flash",
+      "openhands/deepseek-v4-flash",
+    ]),
+    false,
+  );
+});
+
+test("an empty or missing allowlist rejects every model", () => {
+  assert.equal(modelIsAllowed("openhands/x", []), false);
+  assert.equal(modelIsAllowed("openhands/x", undefined), false);
+  assert.equal(modelIsAllowed(undefined, ["openhands/x"]), false);
+});
+
+test("the registry pins a model the account is allowed to call", () => {
+  // The ratchet the issue asked for: `lanes.json` names the model once, and a
+  // re-pin to one outside `allowedModels` must fail here, not silently strand
+  // every lane with 0 tokens. Reads the real registry so the check cannot drift.
+  const registry = JSON.parse(
+    readFileSync(new URL("./lanes.json", import.meta.url), "utf8"),
+  );
+  assert.equal(
+    modelIsAllowed(registry.model, registry.allowedModels),
+    true,
+    `registry model ${registry.model} is not in allowedModels [${(
+      registry.allowedModels ?? []
+    ).join(", ")}]`,
+  );
 });
 
 // ---------------------------------------------------------------------------
