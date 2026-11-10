@@ -671,3 +671,29 @@ test("a missing commit on either side is unknown, never a failure", () => {
   assert.equal(classifyDeployFreshness({ liveCommit: 42, mainCommit: "2b899dc" }).level, "unknown");
   assert.equal(classifyDeployFreshness({ liveCommit: "   ", mainCommit: "2b899dc" }).level, "unknown");
 });
+
+test("build-info's 'unknown'/'development' placeholders are unknown, not a stale deploy", () => {
+  // `src/app/api/build-info/route.ts` falls back to the literal string
+  // "unknown" when `VERCEL_GIT_COMMIT_SHA` is unset. That is "could not
+  // compare", not a commit behind main — reporting a warn here names a commit
+  // that does not exist ("live build unknown is behind main <sha>").
+  const main = "2b899dc6b5129368";
+  for (const placeholder of ["unknown", "development", "main", "v1.2.3"]) {
+    const verdict = classifyDeployFreshness({ liveCommit: placeholder, mainCommit: main });
+    assert.equal(verdict.level, "unknown", `${placeholder} must not be a warn`);
+    assert.ok(!verdict.detail.includes("is behind main"), verdict.detail);
+  }
+});
+
+test("a non-commit on the main side is also unknown, never a fabricated comparison", () => {
+  assert.equal(classifyDeployFreshness({ liveCommit: "2b899dc6b512", mainCommit: "unknown" }).level, "unknown");
+});
+
+test("a real commit compared against a non-commit is unknown, not ok", () => {
+  // The guard must not degrade into "anything matches": two different
+  // non-commits must not compare as equal.
+  assert.notEqual(
+    classifyDeployFreshness({ liveCommit: "unknown", mainCommit: "development" }).level,
+    "ok",
+  );
+});
