@@ -1,6 +1,6 @@
 begin;
 
-select plan(59);
+select plan(61);
 
 -- Web Push tables are capability storage: an endpoint plus its two keys is
 -- enough to deliver a notification to a device. The whole client surface is
@@ -342,7 +342,25 @@ where endpoint = 'https://fcm.googleapis.com\evil.com/x';
 -- arbitrary host. The RPC is a SECURITY DEFINER function and runs as the table
 -- owner, so the check never fires on its path; these assertions write the table
 -- directly to exercise the constraint the RPC path never touches.
+--
+-- The constraint is added *validated*, so it also covers rows written before the
+-- rule shipped; a NOT VALID constraint would guard only new writes. The
+-- assertion below pins that state — a migration that re-added it NOT VALID would
+-- slip past the `public_job_integrity` count and leave old rows unchecked. The
+-- rule fires on UPDATE too, so a direct UPDATE cannot swap a good endpoint for a
+-- metadata address after the fact.
 -- ---------------------------------------------------------------------------
+
+select is(
+  (
+    select convalidated
+    from pg_constraint
+    where conrelid = 'public.push_subscriptions'::regclass
+      and conname = 'push_subscriptions_endpoint_host_allowed'
+  ),
+  true,
+  'the endpoint host check is validated, so it also covers rows written before it shipped'
+);
 
 select throws_ok(
   $$insert into public.push_subscriptions (user_id, endpoint, p256dh, auth_key, locale)
@@ -410,6 +428,17 @@ select lives_ok(
       'en'
     )$$,
   'a direct write accepts a genuine push-service endpoint'
+);
+
+-- The check is a CHECK, not an INSERT-only guard: it fires on UPDATE too, so a
+-- writer cannot store a good endpoint and then mutate it to a metadata address.
+select throws_ok(
+  $$update public.push_subscriptions
+    set endpoint = 'https://169.254.169.254/latest/meta-data/'
+    where endpoint = 'https://wns2-par02p.notify.windows.com/w/?token=' || pg_catalog.repeat('k', 40)$$,
+  '23514',
+  null,
+  'a direct update cannot swap a stored endpoint for a cloud-metadata address'
 );
 
 delete from public.push_subscriptions
