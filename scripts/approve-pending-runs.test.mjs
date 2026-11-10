@@ -6,6 +6,7 @@ import {
   cpSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -13,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ghEnv } from "./approve-pending-runs.mjs";
+import { ghEnv, parsePendingRuns } from "./approve-pending-runs.mjs";
 
 test("a missing token leaves GH_TOKEN unset so gh keeps its stored auth", () => {
   // With neither variable set the old `GH_TOKEN: A ?? B` still produced an
@@ -86,6 +87,74 @@ test("the direct-run guard fires even when the script path holds a space", () =>
     });
 
     assert.match(output, /no runs are waiting for approval/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a blank line never becomes a phantom row with an undefined id", () => {
+  const rows = parsePendingRuns("1\tCI\tmain\n\n2\tE2E\tmain\n");
+  assert.deepEqual(rows, [
+    { id: "1", name: "CI", branch: "main" },
+    { id: "2", name: "E2E", branch: "main" },
+  ]);
+});
+
+test("the list call paginates, so a backlog over one page is not half-approved", () => {
+  // The regression: `per_page=50` with no `--paginate` returns only the first
+  // page. A backlog larger than a page would be approved partially while the
+  // script reported success — exactly the stuck-queue case it exists to clear
+  // (#178). Pin the flag so it cannot be dropped silently.
+  const source = readFileSync(
+    fileURLToPath(new URL("./approve-pending-runs.mjs", import.meta.url)),
+    "utf8",
+  );
+  assert.match(source, /'--paginate'/);
+});
+
+test("every pending run on every page is approved, not just the first page", () => {
+  const source = fileURLToPath(
+    new URL("./approve-pending-runs.mjs", import.meta.url),
+  );
+  const dir = mkdtempSync(join(tmpdir(), "approve-paginate "));
+  const bin = join(dir, "bin");
+  try {
+    mkdirSync(bin);
+    // A fake `gh` that records its argv and answers the list call with two rows.
+    // The `--paginate` flag's presence is what this pins: without it the real
+    // `gh` would stop at page one, so the script could report success having
+    // approved only part of the queue.
+    const log = join(dir, "argv.log");
+    const fakeGh = join(bin, "gh");
+    writeFileSync(
+      fakeGh,
+      [
+        "#!/bin/sh",
+        `printf '%s\\n' "$@" >> ${JSON.stringify(log)}`,
+        'case "$*" in',
+        '  *"/actions/runs?status=action_required"*)',
+        `    printf '%s\\n' "$(printf '11\\tCI\\tmain')" "$(printf '22\\tE2E\\tmain')" ;;`,
+        "esac",
+        "exit 0",
+        "",
+      ].join("\n"),
+    );
+    chmodSync(fakeGh, 0o755);
+
+    const output = execFileSync(process.execPath, [source, "--dry-run"], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: `${bin}:${process.env.PATH}`,
+        GH_TOKEN: "ghs_fake",
+        GITHUB_PERSONAL_ACCESS_TOKEN: "",
+      },
+    });
+
+    assert.match(output, /2 run\(s\) waiting for approval/);
+    assert.match(output, /would approve 11 CI \(main\)/);
+    assert.match(output, /would approve 22 E2E \(main\)/);
+    assert.match(readFileSync(log, "utf8"), /--paginate/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

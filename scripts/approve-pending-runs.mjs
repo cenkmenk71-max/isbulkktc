@@ -43,11 +43,29 @@ function gh(args, env = ghEnv()) {
   return execFileSync('gh', args, { encoding: 'utf8', env }).trim();
 }
 
+/** Parse the `id\tname\tbranch` rows emitted by the list call. Exported so the
+ * row shape is testable without touching `gh`. */
+export function parsePendingRuns(raw) {
+  return raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [id, name, branch] = line.split('\t');
+      return { id, name, branch };
+    });
+}
+
 export async function main(argv = process.argv.slice(2)) {
   const dryRun = argv.includes('--dry-run');
 
+  // `--paginate` is required: the API caps `per_page` at 100 and this default
+  // returns only the first page, so a backlog of more than one page would be
+  // approved partially while the script reported success. The whole point is to
+  // clear the queue that has no human watching it (#178).
   const raw = gh([
     'api',
+    '--paginate',
     `repos/${REPO}/actions/runs?status=action_required&per_page=50`,
     '--jq',
     '.workflow_runs[] | "\\(.id)\\t\\(.name)\\t\\(.head_branch)"',
@@ -58,13 +76,7 @@ export async function main(argv = process.argv.slice(2)) {
     return;
   }
 
-  const rows = raw
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => {
-      const [id, name, branch] = line.split('\t');
-      return { id, name, branch };
-    });
+  const rows = parsePendingRuns(raw);
 
   console.log(`${rows.length} run(s) waiting for approval`);
   let approved = 0;

@@ -193,3 +193,23 @@ context, not as a measurement.
     regression tests added: a moving tip skips (exit 0); a static tip still fails
     loudly; a push run recovers when the workflow's initial `ls-remote` returned
     empty. The mid-run test fails against the pre-fix script, so it pins the bug.
+
+## 2026-11-10
+
+| Checked (UTC) | main tip | live | verdict | Note |
+|---|---|---|---|---|
+| 2026-11-10T00:15Z | `8f4a50e3` | `8f4a50e3` | ✅ in sync | Direct `git ls-remote` + `build-info` read. Full `verify-production-deployment.mjs --expect 8f4a50e3` run: exit 0, confirmed via HTTP, 5/5 smoke routes 200. `main` advanced twice since the last record (`713d8fe` → `1101321` PR #504 → `8f4a50e3` PR #507, lane/icerik i18n privacy/cookie); production followed both, so no freeze this round. |
+
+### Delivery health findings (2026-11-10)
+
+14. **`approve-pending-runs.mjs` read only the first page of stuck runs
+    (`scripts/approve-pending-runs.mjs`).** The list call used
+    `per_page=50` with no `--paginate`, and the GitHub API caps `per_page` at 100
+    and returns only the first page by default. A backlog larger than one page
+    would be approved partially while the script still printed `approved N/N` and
+    exited 0 — the exact failure it exists to prevent (#178, the queue nobody
+    watches). Latent today (`action_required` total_count is 0), but a real
+    correctness gap: it can only surface as a silently half-cleared queue. Fixed
+    by adding `--paginate` and extracting `parsePendingRuns()` so the row shape is
+    testable without `gh`. Three regression tests added; the `--paginate`-presence
+    test fails against the pre-fix script, so it pins the bug.

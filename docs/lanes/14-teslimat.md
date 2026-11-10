@@ -246,3 +246,42 @@ işin yanlış kırmızıya düşmesini engeller.
 **Kapılar (rebase sonrası, `a141996` üzerine).** `lint` ✅, `typecheck` ✅,
 `check:frontend-source` ✅, `test:unit` **894 test / 892 pass / 0 fail / 2 todo**
 (yeni: `verify-production-deployment.test.mjs` +5 test → toplam 9).
+
+---
+
+## Tur 6 — 2026-11-10 (lane/teslimat)
+
+**Kapsam.** #427 kapalı ve düzeltmesi `main`'de (PR #503, `713d8fe`). Açık
+`lane:teslimat` issue yok. Bu tur: sahip olunan dosyaların denetimi (AUDIT
+boyutları), bir gerçek hata düzeltmesi, canlı doğrulama, merge kaydı.
+
+**Bulgular.**
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `scripts/approve-pending-runs.mjs` (liste çağrısı) | hata yolu / sınır girdi | `per_page=50`, `--paginate` yok → API varsayılanı yalnız **ilk sayfayı** döndürür | tüm sayfalar okunmalı | Bir sayfadan büyük `action_required` birikimi **kısmen** onaylanır ama script `approved N/N` deyip exit 0 verir — #178'in (kimsenin izlemediği kuyruk) tam da kendisi | **düzeltildi** (`--paginate`) + `parsePendingRuns()` + 3 test |
+
+**Kanıt (bulgu 1).** `--paginate` bayrağını tek başına kaldırıp testleri koştum:
+`the list call paginates…` ve `every pending run…` **kırmızı** (2 fail / 6 pass);
+bayrak geri gelince 8/8 yeşil. Yani testler gerçekten eksikliği pinliyor. Bugün
+`action_required` `total_count` = 0 olduğundan latent; ama sessizce yarım
+temizlenmiş kuyruk olarak tezahür eder, bu yüzden doğruluk boşluğu.
+
+**Canlı ölçüm (görev 3).** 00:15Z: `main` = canlı = `8f4a50e3` ✅. Tam koşu
+`--expect 8f4a50e3` → exit 0, HTTP kanalı ulaşılabilir, 5/5 smoke route 200.
+Bu turda `main` iki kez ilerledi (`713d8fe` → `1101321` #504 → `8f4a50e3` #507) ve
+üretim ikisini de takip etti — **donma yok** (#319 bu turda nüks etmedi).
+
+**Merge kuyruğu (görev 1).** Açık PR: yalnız **#493** (lane/infra). Zorunlu
+kontroller (`Quality, database and E2E`, Static, Database, E2E 1–4) **hepsi yeşil**,
+`CLEAN`/`MERGEABLE` — **ama `.github/workflows/ci.yml` değiştiriyor → "iki fren"
+gereği merge edilmedi (insan).** Doğru davranış; not olarak bırakıldı.
+
+**Devredilenler (sahibi başka lane).** #306 (bozuk guard ×3 + çift onay bloğu),
+#305 (push workflow'ları auto-merge'de koşmuyor), #319 (Vercel build rate limit)
+hâlâ açık ve LANE-INFRA'nın; bu lane yalnız kendi dosyasındaki sayfalama
+boşluğunu kapattı, #306'nın geri kalanına dokunmadı.
+
+**Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅, `test:unit`
+**898 test / 896 pass / 0 fail / 2 todo** (yeni: `approve-pending-runs.test.mjs`
++3 test → toplam 8).
