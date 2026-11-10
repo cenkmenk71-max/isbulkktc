@@ -540,3 +540,54 @@ birim testle sabitlendi.
 
 Kapılar: `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`,
 `bun run test:unit` (1018/1018) — yeşil.
+
+## Tur 11 — IndexNow anahtarı dosya adına göre seçiliyordu: doğrulayıcının kendi sessiz yanlış-PASS'i (2026-11-10, LANE-VERIFY #309)
+
+**Boyut: mantık / sınır girdi (araç doğruluğu).**
+
+`scripts/verify-indexing.mjs` IndexNow anahtar dosyasını `entries.find(/^[a-z0-9]{8,128}\.txt$/i)`
+ile seçiyordu — yani **alfabetik ilk** şekle-uyan `.txt`. IndexNow protokolü anahtar
+dosyasını "adı == gövdesi" olarak tanımlar; adı uyan ama gövdesi anahtar olmayan
+ikinci bir dosya (ör. `security.txt`, `ads.txt`, bir site-doğrulama `.txt`'si) araya
+girdiğinde doğrulayıcı **yanlış dosyayı** çeker. Araç çektiği dosyayı kendi seçtiği
+için, yanlış-ama-tutarlı ad/gövde çifti **PASS** verir: sessiz bir yanlış-pozitif,
+tam da bu lane'in yakalamak için var olduğu sınıf.
+
+`scripts/submit-indexnow.mjs` zaten paylaşılan `readIndexNowKey` (ad == gövde)
+yardımcısına delege edilmişti; doğrulayıcı bu düzeltmeden ayrı düşmüştü.
+
+| Boyut | Gözlenen (önce) | Beklenen (sonra) | Etki |
+|---|---|---|---|
+| mantık / sınır girdi | `entries.find(...)` → alfabetik ilk `.txt` | `readIndexNowKey` → ad == gövde | Şekle-uyan ikinci `.txt` doğrulamayı sahte PASS'a çevirebiliyordu |
+
+**Kanıt (önce/sonra, aynı dizin — `aaasecurity.txt` + gerçek anahtar):**
+
+```
+files: aaasecurity.txt, isbulkktcada1d9ce6917a3363df4ff8fccc7629a.txt
+OLD picks: aaasecurity.txt | body: "Contact: mailto:security@example.com"
+NEW picks: isbulkktcada1d9ce6917a3363df4ff8fccc7629a.txt | body: "isbulkktcada1d9ce6917a3363df4ff8fccc7629a"
+```
+
+Eski mantıkta seçilen dosyanın adı gövdesine eşit değil; doğrulayıcı yine de onu
+çekip "eşleşiyor" derdi. Yeni mantık gerçek anahtarı seçer.
+
+**Düzeltme.** `verify-indexing.mjs` `readIndexNowKey`'e delege eder; `readdir`/`readFile`
+ithalatı kalktı, `entries.find` deseni gitti. Regresyon testi
+(`verify-indexing.test.mjs`) ithalatı `assert.match` ile sabitler ve `entries.find(`
+kullanımını `assert.doesNotMatch` ile yasaklar — iki IndexNow çağrı yeri bir daha
+ayrışamaz.
+
+**Canlı ölçüm (2026-11-10 ~10:30 UTC, düzeltmeden sonra):**
+
+```
+node scripts/verify-indexing.mjs
+  PASS robots    allows crawling; sitemap https://isbulkktc.com/sitemap.xml
+  PASS sitemap   207 URLs, all on-origin canonical; 186 with the full hreflang set, 21 single-locale
+  PASS single-loc 3 single-locale entries: the localized duplicate canonicalises back
+  PASS pages     8 sampled pages are 200, indexable, with a matching canonical
+  PASS indexnow  key file matches isbulkkt…
+  0 failure(s), 0 warning(s), 0 skipped
+```
+
+Kapılar: `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`,
+`bun run test:unit` (1020/1020) — yeşil.
