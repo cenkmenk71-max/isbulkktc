@@ -876,8 +876,12 @@ Sahibin yapması gerekenler: N-18 (WAF `/.git` kuralını eğiksiz + `url_decode
 Sonraki lane için notlar: (1) `curl --path-as-is` kullan (yoksa curl yolu normalleştirir,
             kaçışı maskeler). (2) 402 kesintisinde 403=WAF / 402=origin ayrımı kanıt sağlar.
             (3) Kural literali `/.git/` ise `/.git` (eğiksiz), `/.git;/x`, `/.git,/x`,
-            `/.git%09/config` atlanır — kaçış yalnız `%2F` değil. (4) Yeni kimlik: `N-18`,
-            `N-19` (tur 26/27 `N-11..N-16` WAF kümesinin devamı).
+            `/.git%09/config`, `/.git./config`, `/.git%2e/config`, `/.git%5cconfig`,
+            `/.git%20/config`, `/.git+config` atlanır — kaçış yalnız `%2F` değil, **tek
+            karakter sınıfı da değil**; literalin `/`'sini bozan her biçim atlar. Karşı
+            örnek: `/wp-admin` (literalinde `/` yok) ve `/.env` (prefix) bu varyantlarda
+            **403** kalır. (4) Yeni kimlik: `N-18`, `N-19` (tur 26/27 `N-11..N-16` WAF
+            kümesinin devamı).
 ```
 
 - **N-18 (orta):** WAF `/.git/` kuralı **literale** bağlı. Eğiksiz `/.git`,
