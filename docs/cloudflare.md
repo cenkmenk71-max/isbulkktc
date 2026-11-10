@@ -3760,7 +3760,7 @@ kayıtlı `Expires` değeriyle **uyuşmadığı** görüldü:
 
 | Kaynak | Değer |
 |---|---|
-| Canlı (`isbulkktc.com`, `www.isbulkktc.com`, `isbulkktc-amber.vercel.app` — üçü de **200**) | `Expires: 2027-09-06T14:49:41.258Z` |
+| Canlı (`isbulkktc.com`, `www.isbulkktc.com`, `isbulkktc-amber.vercel.app` — üçü de **200**) | `Expires: 2027-09-06T14:49:41.258Z` — **anlık** değer; kaynak onu **dinamik** üretir (bkz. aşağıdaki düzeltme) |
 | Doküman (5 satır) | `2027-09-01` (U-16) · `2027-09-02` (U-07, V-10, W-18-24, özet) |
 
 Doküman kendi içinde de **tutarsızdı** (09-01 vs 09-02) ve ikisi de canlıdan sapıyordu.
@@ -3770,6 +3770,20 @@ Kanıt: `curl -sS https://isbulkktc.com/.well-known/security.txt` → `Expires:
 sayılır; yanlış (daha erken) tarih, dosyanın süresi dolmuş gibi okunmasına yol
 açabilirdi. Canlı dosya geçerli (`Contact`/`Canonical`/`Preferred-Languages` tam).
 
-Not (iyileştirme, sahibin onayı): `Expires` **sabit** yazılmış; RFC 9116 bir yıldan
-uzun ömür önermez. Otomatik/derleme zamanlı tazeleme (ör. yıllık rotasyon) eklenirse
-bayat tarih riski kalkar.
+**Düzeltme (tur 39 devam — canlı kaynak okuması):** Yukarıdaki ilk not "`Expires`
+sabit yazılmış" diyordu; bu **yanlıştı**. Kaynak
+`src/app/.well-known/security.txt/route.ts` değeri **dinamik** üretir:
+
+```
+export const dynamic = "force-static";
+export const revalidate = 86400;                              // günlük ISR
+const expires = new Date(Date.now() + 300 * 24 * 60 * 60 * 1000); // now + 300 gün
+```
+
+Ardışık iki ölçüm (`14:49:41.258Z` → `15:41:21.365Z`, ~52 dk arayla) değerin her ISR
+tazelemesinde ileri kaydığını doğruladı. Sonuç: **bayatlama riski yok** — `Expires`
+her zaman gelecekte olduğundan RFC 9116'nın "gelecekte olmalı" şartı sürekli
+karşılanır; 300 gün < 1 yıl olduğundan "bir yıldan kısa öner" tavsiyesi de zaten
+uygulanıyor. Yani ek rotasyon **gerekmez**; yukarıdaki "sabit tarih" ifadeleri
+kalıcı kayıt değil, **günlük kayan anlık görüntüdür** — kalıcı kayıt formüldür
+(`now + 300 gün`, günlük ISR).

@@ -1160,6 +1160,12 @@ Canlı build `14629df` (= main) üzerinde taze ölçüm; yıkıcı CF değişikl
   **2027-09-06T14:49:41.258Z** (apex + `www` + Vercel alias, üçü de 200). Doküman
   5 satırda **2027-09-01/02** yazıyordu (kendi içinde tutarsız) → canlı değere
   çekildi (`docs/cloudflare.md` U-16/U-07/V-10/W-18-24 + özet).
+  **Nüans (tur 39 devam):** değer **sabit değil** — kaynak
+  `src/app/.well-known/security.txt/route.ts` `Expires = now + 300 gün` üretir ve
+  günlük ISR (`revalidate = 86400`) ile tazeler. Ardışık iki ölçüm (~52 dk arayla)
+  değerin ileri kaydığını doğruladı. Yani **bayatlama riski yok**; dokümandaki
+  `2027-09-06` bir anlık görüntüdür, kalıcı kayıt formüldür. (İlk nottaki "sabit
+  tarih / rotasyon ekle" önerisi geçersiz kılındı — kod zaten yapıyor.)
 - **V-01 teyit:** `google-site-verification` meta etiketi **hâlâ yok**
   (`grep -c` = 0; `/`, `/en`, `/de`, `/en/jobs`, alias). DNS TXT'te token var,
   HTML'de yok → GSC mülkü doğrulanmamış olabilir. Sahip: LANE-SEO/env.
