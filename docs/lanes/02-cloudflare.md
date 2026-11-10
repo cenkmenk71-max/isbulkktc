@@ -811,3 +811,54 @@ kopuk değil (arama botları 200, `cf-mitigated` yok).
 **Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01 (SR-01 davranışı
 açık; yalnız **iddiası** SR-01r ile düzeltildi).
 **Devir:** N-15 → **#437**, N-13 → **#441** (ikisi de açık, `lane:infra`).
+
+## Tur 29 (2026-11-10) — canlı kesinti (O-01) + WAF matrisi
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma)
+Sahibin yapması gerekenler: O-01 (Vercel 402 — LANE-INFRA, acil) · N-11r · H-01r ·
+            H-02 · R-01 · G-01 · F-08 · #227
+Sonraki lane için notlar: (1) Ölçümden önce `curl -sI https://isbulkktc.com/` ile
+            origin'in canlı olduğunu doğrula; 402 dönerse cache/başlık bulguları
+            ölçülemez. (2) 402 `DEPLOYMENT_DISABLED` origin tarafıdır (alias da
+            verir) — CF'ye yazma. (3) WAF matrisi 402 altında bile ölçülebilir.
+```
+
+**O-01 (kritik, LANE-INFRA):** bu turda canlı site **402 `DEPLOYMENT_DISABLED`**
+döndü — her rota, statik varlık ve `/api/*` dahil; CF'yi atlayan alias
+`isbulkktc-amber.vercel.app` de doğrudan 402 (`server: Vercel`). Yani kesinti
+**origin'de**, CF'de değil. Ayrıntı: `docs/cloudflare.md` → "Tur 29".
+
+**N-17 (bilgi):** WAF matrisi 402 altında da temiz — 10 saldırı yolu **403**,
+meşru 17 rota **403 değil**.
+
+**D-21:** origin düşükken cache/başlık bulguları (H-02, SR-01, cache matrisi)
+ölçülemez; 402 gövdesinin `cache-control`'u **Vercel'in** 402 sayfasına aittir.
+Origin dönünce yeniden ölçülmeli.
+
+## Tur 30 (2026-11-10) — DNS sertleştirme + O-01 yeniden ölçüm + kimlik şeması
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: #520
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma)
+Sahibin yapması gerekenler: O-01 (#518, LANE-INFRA, acil) · N-11r · H-01r ·
+            H-02 · R-01 · G-01 · F-08 · #227
+Sonraki lane için notlar: (1) Origin 402 verirken cache/başlık bulguları (H-02,
+            SR-01) ölçülemez → D-21. (2) `O-` öneki artık kimlik şemasında (D-22).
+```
+
+- **D-22:** tur 29 `O-01`'i kullandı ama `O-` önekini kimlik şemasına eklemedi →
+  eklendi (`docs/cloudflare.md` → "Bulgu kimliği şeması").
+- **F-30 (temiz):** apex + 28 yaygın alt alan tarandı; wildcard yok, grey-cloud
+  sızıntısı yok, `rsend` CNAME dangling değil, DNSSEC açık. MTA-STS/TLS-RPT/BIMI
+  kaydı yok → düşük öncelikli öneri (onay bekliyor).
+- **O-01r:** origin hâlâ 402 (`DYNAMIC`, cache'lenmiyor → poisoning yüzeyi yok);
+  CF/TLS/WAF katmanı 402 altında da sağlam.
+- **D-23:** O-01 → **#518** (açık, `lane:infra`); #319'dan ayrı kök neden.
+- **D-24:** tur 30 blok başlığında "Değişen dosyalar" yalnız `docs/cloudflare.md`
+  diyordu → iki dosya + `PR: #520` olarak düzeltildi (blok ↔ gerçek diff uyumu).

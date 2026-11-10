@@ -63,6 +63,7 @@ atıfları belirsizleştirir; bu dokümanda iki kez yaşandı: tur 18'de `V-01`
 | `W-` | **İki kapsam:** `W-01` WAF bulgusu; `W-18`/`W-19`/`W-20` tur-bazlı canlı ölçüm tabloları (tur 18/19/20, sonuncusu HSTS preload) | tur 10+ |
 | `N-` | **İki ayrı aralık:** `N-01..N-08` negatif-cache (tur 12–25); `N-11..N-16` WAF `%2F` kümesi (tur 26+) | tur 12+ |
 | `D-` | Doküman düzeltmeleri / drift kayıtları | tur 14+ |
+| `O-` | Canlı kesinti / origin erişilebilirliği (ör. `O-01` Vercel `402 DEPLOYMENT_DISABLED`) | tur 29 |
 | `M-` | Panel/manuel gözlemler + meta kayıtlar | tur 25 |
 | `P-` | Kapanan kayıtlar (ör. `P-01` prerender cache) | tur 22 |
 | `SW-` | Service worker cache | tur 14 |
@@ -2769,3 +2770,169 @@ preload `pending`.
 5. **G-01:** Email Obfuscation OFF.
 6. **F-08:** Vercel Deployment Protection.
 7. **#227:** Resend DKIM 2048-bit.
+
+---
+
+## Tur 29 (2026-11-10) — canlı kesinti ölçümü + WAF negatif matrisi
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: O-01 (Vercel origin 402 `DEPLOYMENT_DISABLED` — LANE-INFRA
+            acil) · N-11r · H-01r · H-02 · R-01 · G-01 · F-08 · #227
+```
+
+### O-01 (kritik — canlı kesinti, LANE-INFRA) — origin her istekte `402 DEPLOYMENT_DISABLED`
+
+Bu turda ölçüm yapılırken **canlı site tamamen düştü**. `isbulkktc.com` üzerinden
+yapılan **her** istek — ana sayfa, `/jobs`, statik varlıklar, `/api/*` dahil —
+**402** döndü. Gövde `Payment required` + `DEPLOYMENT_DISABLED`; başlık
+`x-vercel-error: DEPLOYMENT_DISABLED`. Kesinti **CF'de değil origin'de**: aynı
+yanıtı CF'yi atlayan `isbulkktc-amber.vercel.app` alias'ı **doğrudan** (`server:
+Vercel`) veriyor.
+
+Kanıt (canlı `curl`, 2026-11-10 ~02:04 UTC):
+
+| İstek | Sonuç |
+|---|---|
+| `https://isbulkktc.com/` (5×) | `402` ×5, `server: cloudflare`, `cf-cache-status: DYNAMIC` |
+| `https://isbulkktc.com/jobs` | `402` `x-vercel-error: DEPLOYMENT_DISABLED` |
+| `https://isbulkktc.com/robots.txt` · `/sitemap.xml` · `/sw.js` · `/images/*` | `402` |
+| `https://isbulkktc.com/api/build-info` | `402` |
+| `https://isbulkktc-amber.vercel.app/` (alias, CF bypass) | `402`, `server: Vercel` |
+
+`x-vercel-error: DEPLOYMENT_DISABLED` Vercel'in **hesap/dondurulmuş dağıtım**
+yoludur (plan/ödeme/faturalandırma kaynaklı); `server: Vercel` yanıtın CF'yi
+atlayan origin'den geldiğini doğrular. **Bu CF tarafında bir arıza değildir** ve
+bu lane'in düzeltebileceği bir şey değildir. **Sahip: LANE-INFRA** (Vercel
+hesabı/plan durumu). CF katmanı doğru çalışıyor: WAF, TLS ve cache kuralları 402
+yanıtında bile uygulanıyor.
+
+### N-17 (bilgi) — WAF negatif/pozitif matrisi 402 altında da korunuyor
+
+Origin 402 verirken WAF kural seti **değişmedi**: 10 saldırı yolu **403**, meşru
+rotalar **403 vermiyor** (origin 402). Yani kesinti sırasında bile WAF bypass'ı yok.
+
+| Sınıf | Yol | Kod |
+|---|---|---|
+| VCS | `/.git/config`, `/.svn/entries` | 403 |
+| dotfile/secret | `/.env`, `/.aws/credentials` | 403 |
+| CMS | `/wp-admin`, `/wp-login.php`, `/phpmyadmin`, `/xmlrpc.php` | 403 |
+| api/devtools | `/api/devtools/` | 403 |
+| tedarik zinciri | `/vendor/phpunit/phpunit` | 403 |
+| meşru (17) | `/`, `/jobs`, `/companies`, `/blog`, `/contact`, `/freelance`, `/about`, `/privacy`, `/terms`, `/sss`, `/rehber`, `/packages`, `/login`, `/api/build-info`, `/robots.txt`, `/sitemap.xml`, `/llms.txt` | 402 (WAF değil) |
+
+### D-21 (doküman doğruluğu — çürüyen canlı kanıt)
+
+Bu turdaki bulgular origin'in **çalışır** olduğunu varsayan tüm eski canlı
+kanıtları geçersiz kılar. Origin tekrar 200 dönene kadar:
+
+- `docs/cloudflare.md`'deki "canlı build `<sha>`", "dinamik HTML `private,
+  no-store`", "`/robots.txt` edge `2628000`" gibi satırlar **o günün** ölçümüdür;
+  bugünkü durumu yansıtmaz.
+- 402 `DEPLOYMENT_DISABLED` yanıtı `cache-control: public, max-age=0,
+  must-revalidate` **taşır** — yani yukarıdaki 402 satırlarında görülen cache
+  başlıkları **Vercel'in 402 sayfasına** aittir, uygulamanın değil. **H-02
+  bulgusu bu yanıttan doğrulanamaz/çürütülemez.**
+- Origin döndüğünde (O-01 kapandığında) H-02, SR-01 ve cache matrisi **yeniden
+  ölçülmelidir**; bu turda yalnız WAF matrisi ve kesintinin **CF'de olmadığı**
+  sonucu geçerlidir.
+
+**Devir:** O-01 → `lane:infra` (+ gerekirse insan; Vercel hesap durumu).
+
+**Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01.
+**Yeni:** O-01 (kesinti, LANE-INFRA), N-17 (bilgi), D-21 (kanıt çürümesi).
+
+### Tazelenen (canlı, origin düşükken de ölçülebilen)
+
+Origin 402 verirken **CF/TLS/DNS katmanı** ölçüldü — hepsi tur 25–28 ile tutarlı:
+
+| Nokta | Ölçüm (2026-11-10) | Durum |
+|---|---|---|
+| Apex A / AAAA | `104.21.29.3`, `172.67.171.53` / `2606:4700:3034::ac43:ab35`, `…3036::6815:1d03` | CF proxied — OK |
+| `www` | ayrı CNAME yok, apex ile aynı CF IP'leri | OK |
+| MX | `route{1,2,3}.mx.cloudflare.net` | OK |
+| Kök SPF | `v=spf1 include:_spf.mx.cloudflare.net ~all` | OK |
+| `send.` SPF | `v=spf1 include:amazonses.com ~all` | OK |
+| DKIM `cf2024-1` | 2048-bit | OK |
+| DKIM `resend` | **1024-bit** | **#227 açık** |
+| DMARC | `p=none; rua=…; fo=1` | #170 açık (quarantine önerisi) |
+| MTA-STS / TLS-RPT | kayıt **yok** | bilgi (opsiyonel) |
+| TLS min | 1.2 (`tls1`/`tls1_1` → *no protocols*) | OK |
+| Edge HSTS | `max-age=31536000` (origin config `63072000`) | **H-01r açık** |
+
+`resend._domainkey` **1024-bit** teyit edildi (`openssl rsa -pubin` → `Public-Key:
+(1024 bit)`), `cf2024-1` 2048. TLS 1.2 altı reddediliyor.
+
+## Tur 30 (2026-11-10) — DNS sertleştirme taraması + O-01 yeniden ölçümü + issue kaydı
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: #520
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: O-01 (#518, LANE-INFRA, acil) · N-11r · H-01r ·
+            H-02 · R-01 · G-01 · F-08 · #227
+Sonraki lane için notlar: (1) Origin 402 verirken yalnız CF/TLS/DNS + WAF matrisi
+            ölçülebilir; cache/başlık bulguları (H-02, SR-01) O-01 kapanana kadar
+            D-21 gereği "çürük" sayılır. (2) `D-22` artık `O-` önekini kimlik
+            şemasına kaydetti — yeni bulgudan önce aralığı `grep` ile doğrula.
+```
+
+### F-30 (bilgi — temiz) — apex/alt alan DNS sertleştirmesi
+
+Apex ve yaygın alt alanlar tarandı; **grey-cloud (doğrudan origin) sızıntısı yok**:
+
+| Kontrol | Ölçüm (DoH, 2026-11-10) | Sonuç |
+|---|---|---|
+| Wildcard `*.isbulkktc.com` | kayıt **yok** | ✔ sızıntı yok |
+| 28 yaygın alt alan (`dev`, `staging`, `api`, `admin`, `origin`, `git`, `ci`, …) | hepsi **NXDOMAIN** | ✔ yalnız `send`/`rsend`/`www` yayında |
+| `www` | ayrı CNAME **yok**, apex ile aynı CF IP'leri | ✔ (F-03 ile tutarlı) |
+| `rsend` CNAME | `send.forge.rmta.net.` (dangling değil) | ✔ (tur 25 teyidi) |
+| Apex NS / DS | `lex`+`serenity.ns.cloudflare.com`; DS `2371 13 2 36e0…775b` | ✔ DNSSEC açık (F-13) |
+| `_mta-sts` / `_smtp._tls` / `_bimi` | kayıt **yok** | bilgi (opsiyonel, aşağıda) |
+
+**Öneri (onay bekliyor, düşük öncelik):** MTA-STS (`_mta-sts` TXT + `mta-sts.`
+policy host) ve TLS-RPT (`_smtp._tls` TXT) eklemek inbound TLS zorlamasını
+güçlendirir; DMARC `p=quarantine` rollout'uyla aynı fazda yapılabilir. Bu lane
+yazmaz — sahibin onayı gerekir.
+
+### O-01r (yeniden ölçüm) — origin hâlâ 402; CF katmanı 402 altında da sağlam
+
+Tur 29'daki kesinti **sürüyor** (2026-11-10 ~02:0x UTC):
+
+| İstek | Sonuç |
+|---|---|
+| `https://isbulkktc.com/` (ardışık 2×) | `402`, `cf-cache-status: DYNAMIC` (cache'lenmiyor) |
+| `https://isbulkktc-amber.vercel.app/` (CF bypass) | `402`, `server: Vercel` |
+| `PUT`/`DELETE`/`PATCH` `/` | `402` (origin); `TRACE` → `405` (F-21 ile tutarlı) |
+| WAF: `/.git/config`, `/.env`, `/wp-admin`, `/phpmyadmin`, `/api/devtools/` | `403` |
+| `/cdn-cgi/trace` | `colo=ORD`, `tls=TLSv1.3`, `sni=plaintext`, `warp=off` |
+
+- 402 gövdesinin `cache-control: public, max-age=0, must-revalidate`'i **Vercel'in
+  402 sayfasına** aittir; `cf-cache-status: DYNAMIC` olduğu için edge'e
+  **yazılmıyor** → **cache-poisoning / zehirli-hata yüzeyi yok** (N-01 sınıfından
+  farklı: orada `404` `public, max-age=31536000` ile cache'leniyordu).
+- Kesinti **CF'de değil**; WAF/TLS/cache/rate-limit katmanı doğru çalışıyor.
+
+### D-23 (doküman doğruluğu) — O-01 artık izlenebilir issue
+
+Tur 29'un `O-01` bulgusu **#518** olarak açıldı
+(`lane:infra`, `agent:handoff`); **#319**'dan (build rate limit — geçici) **ayrı
+kök neden** (hesap/plan, `Payment required`). #319'a da bu ağırlaşma yorumlandı.
+Bu kayıt, `O-01`'in sahipsiz kalmadığını belgeler.
+
+### D-24 (doküman doğruluğu) — tur 30 blok başlığı "Değişen dosyalar" eksikti
+
+Tur 30 kaydı `docs/cloudflare.md`'ye eklenirken blok başlığı yalnız
+`docs/cloudflare.md`'yi "Değişen dosyalar" olarak listeledi; oysa tur 30 lane
+brief'i (`docs/lanes/02-cloudflare.md`) de değiştirdi. Başlık iki dosyayı ve
+`PR: #520`'yi gösterecek şekilde düzeltildi — rapor bloğu ile gerçek diff
+arasındaki tutarsızlık giderildi.
+
+**Devir:** O-01 → **#518** (açık).
+**Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01.
+**Yeni:** F-30 (temiz), O-01r (yeniden ölçüm), D-22 (O- öneki), D-23 (#518 kaydı),
+D-24 (tur 30 blok başlığı düzeltmesi).
