@@ -76,9 +76,21 @@ const anonymousWriteRpcs = [
   "submit_sales_lead(text, text, text, text, text, integer, text, text)",
 ];
 
-/** A statement that mutates a table, as opposed to a read-only select. */
+/**
+ * A statement that mutates a table, as opposed to a read-only select. The schema
+ * qualifier is optional on all three forms: `insert into` already matched without
+ * `public.`, but `update`/`delete` required it, so a body that wrote
+ * `update profiles set …` (resolved through `search_path`) was read as read-only
+ * and its RPC escaped the throttle gate below.
+ *
+ * `update` may name the table and then alias it (`update public.outbox as o set …`),
+ * which the real migrations do — the alias is part of the statement, so the
+ * matcher allows one optional identifier between the target and `set`. Requiring
+ * `set` is what keeps row-locking clauses (`for update`, `for update of`,
+ * `update on`) out: none of them reach a `set`.
+ */
 const writeStatement =
-  /\b(?:insert\s+into|update\s+public\.|delete\s+from\s+public\.)\b/i;
+  /\b(?:insert\s+into|update\s+(?:only\s+)?(?:public\.)?[a-z_][a-z_0-9]*(?:\s+(?:as\s+)?[a-z_][a-z_0-9]*)?\s+set\b|delete\s+from\s+(?:only\s+)?(?:public\.)?[a-z_][a-z_0-9]*)/i;
 
 function stripSqlComments(sql: string): string {
   return sql.replace(/--[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
@@ -156,6 +168,23 @@ test("the anon-write discovery sees the two known RPCs and rejects read-only one
   // The classifier reads the body, not the name: a body with no write is a read.
   assert.equal(writeStatement.test("select * from public.jobs"), false);
   assert.equal(writeStatement.test("insert into public.jobs (id) values (1)"), true);
+  // The schema qualifier is optional (search_path resolves it) — the earlier
+  // matcher required `public.` on update/delete and so read an unqualified write
+  // as read-only.
+  assert.equal(writeStatement.test("update profiles set status = 'x'"), true);
+  assert.equal(writeStatement.test("delete from jobs where id = 1"), true);
+  // A table alias before `set` is still an update; the real claim_* functions use
+  // `update public.outbox as o set …`, and a matcher that stops at the alias
+  // silently drops them from the write set.
+  assert.equal(
+    writeStatement.test("update public.notification_email_outbox as o set claimed_at = now()"),
+    true,
+  );
+  assert.equal(writeStatement.test("update public.outbox o set sent_at = now()"), true);
+  // Row-locking and trigger clauses mention `update` but mutate nothing here.
+  assert.equal(writeStatement.test("select id from jobs for update skip locked"), false);
+  assert.equal(writeStatement.test("select id from jobs for update of id"), false);
+  assert.equal(writeStatement.test("create trigger t after update on public.jobs"), false);
 });
 
 test("the server action applies a throttle before it calls the RPC", () => {
