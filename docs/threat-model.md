@@ -291,41 +291,48 @@ issue açar.
    altındaki diğer tüm sır-okuyan modüller bu işareti taşıyor; eksik olan, yanlış
    bir istemci içe aktarımını derleme hatası yerine sessiz bir sızıntıya çevirir.
    Kanıt: `tests/security/client-boundary.test.ts` (`todo`).
-3. **Push endpoint allowlist'inin DB yarısı app kuralıyla ayrışıyor** (sahibi:
-   `supabase/migrations/**` -> LANE-SUPABASE). `register_push_subscription`
-   host'u **ham string** üzerinden çıkarıyor —
-   `lower(split_part(split_part(endpoint, '/', 3), ':', 1))`
-   (`20261110000000_v4_push_endpoint_host_allowlist.sql:51-52`) — app ise
-   `new URL(endpoint).hostname` kullanıyor (`src/server/push/push-endpoint.ts:67,76`).
-   `split_part` için ters bölü ve yüzde-kodlu ayraç sıradan host karakteridir;
-   `new URL` için ayraçtır. İki katman bu yüzden ayrışır:
-
-   | endpoint | `new URL().hostname` | app (`isAllowedPushEndpoint`) | DB (`split_part`) |
-   |---|---|---|---|
-   | `https://evil.com\.push.apple.com/x` | `evil.com` | **reddeder** | **kabul eder** |
-   | `https://evil.com\.notify.windows.com/x` | `evil.com` | reddeder | kabul eder |
-   | `https://evil.com%2f.push.apple.com/x` | ayrıştırılamaz | reddeder | kabul eder |
-   | `https://evil.com%5c.push.apple.com/x` | ayrıştırılamaz | reddeder | kabul eder |
-   | `https://fcm.googleapis.com\evil.com/x` | `fcm.googleapis.com` | kabul eder | **reddeder** |
-
-   RPC publishable anahtarla **doğrudan çağrılabilir**, yani saldırgan app
-   kapısını atlayıp böyle bir satırı tabloya yazabilir (kayıt akışındaki
-   `z.string().url()` ayrıştırılamayan biçimleri zaten reddeder; RPC etmez).
-   **Bugün SSRF değil**: gönderim havuzu (`src/server/push/vapid.ts:104`) satırı
-   `webpush.sendNotification`'dan önce `isAllowedPushEndpoint` ile yeniden
-   denetliyor ve bloke satırı kalıcı olarak emekliye ayırıyor. Etki: DB guard'ı
-   iddia ettiği kuralı uygulamıyor; iki katman sessizce ayrışabilir ve ayrışma
-   yönü **kabul** olduğundan "savunma derinliği" katmanı savunma değil. Önerilen
-   düzeltme: SQL de host'u URL ayrıştırmasıyla çıkarsın (ör. `v_endpoint ~
-   '^https://[A-Za-z0-9.\-]+(:[0-9]+)?/'` ile yetki bölümünü kısıtla) ya da
-   host'u app'in `hostname` çıktısıyla aynı yapıp ters bölü/yüzde-kodlu ayraçları
-   reddetsin; ayrışma kapandığında `todo` kendiliğinden yeşile döner. Kanıt:
-   `tests/security/push-endpoint-sql-parity.test.ts` (`todo`; parity gate +
-   self-test'ler kapı). Gerçek Postgres 17'de ölçüldü (migration'ın tam ifadesi):
-   `evil.com\.push.apple.com` -> `t`, `fcm.googleapis.com\evil.com` -> `f`.
-   Devir: LANE-SUPABASE (`agent:handoff`, #536).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
+
+- **Push endpoint allowlist'inin DB yarısı app kuralıyla ayrışıyordu** (sahibi: `supabase/migrations/**`, LANE-SUPABASE; **#536 ile düzeltildi**, mirror #568'de güncellendi).
+  `register_push_subscription` host'u **ham string** üzerinden çıkarıyordu —
+  `lower(split_part(split_part(endpoint, '/', 3), ':', 1))`
+  (`20261110000000_v4_push_endpoint_host_allowlist.sql:51-52`) — app ise
+  `new URL(endpoint).hostname` kullanıyor (`src/server/push/push-endpoint.ts:67,76`).
+  `split_part` için ters bölü ve yüzde-kodlu ayraç sıradan host karakteriydi;
+  `new URL` için ayraçtır. İki katman bu yüzden ayrışıyordu:
+
+  | endpoint | `new URL().hostname` | app (`isAllowedPushEndpoint`) | eski DB (`split_part`) | yeni DB (#536) |
+  |---|---|---|---|---|
+  | `https://evil.com\.push.apple.com/x` | `evil.com` | reddeder | kabul ederdi | **reddeder** |
+  | `https://evil.com\.notify.windows.com/x` | `evil.com` | reddeder | kabul ederdi | **reddeder** |
+  | `https://evil.com%2f.push.apple.com/x` | ayrıştırılamaz | reddeder | kabul ederdi | **reddeder** |
+  | `https://evil.com%5c.push.apple.com/x` | ayrıştırılamaz | reddeder | kabul ederdi | **reddeder** |
+  | `https://fcm.googleapis.com\evil.com/x` | `fcm.googleapis.com` | kabul eder | reddederdi | **kabul eder** |
+  | `https://evil.com@x.push.apple.com/x` | `x.push.apple.com` (userinfo var) | reddeder | kabul ederdi | **reddeder** |
+  | `https://fcm.googleapis.com:65536/x` | `new URL` fırlatır | reddeder | kabul ederdi | **reddeder** |
+
+  RPC publishable anahtarla **doğrudan çağrılabilir**, yani saldırgan app
+  kapısını atlayıp böyle bir satırı tabloya yazabilirdi (kayıt akışındaki
+  `z.string().url()` ayrıştırılamayan biçimleri zaten reddeder; RPC etmezdi).
+  **SSRF değildi**: gönderim havuzu (`src/server/push/vapid.ts:104`) satırı
+  `webpush.sendNotification`'dan önce `isAllowedPushEndpoint` ile yeniden
+  denetliyor ve bloke satırı kalıcı olarak emekliye ayırıyor. Etki: DB guard'ı
+  iddia ettiği kuralı uygulamıyordu; ayrışma yönü **kabul** olduğundan
+  "savunma derinliği" katmanı savunma değildi.
+  **Düzeltme (#536, `20261110130000_v4_push_endpoint_authority_guard.sql`):**
+  SQL de host'u URL ayrıştırması gibi çıkarıyor — yetki bölümü ilk `/`, `\`,
+  `?` ya da `#` karakterinde biter, sonra yalnız çıplak host adı ve isteğe bağlı
+  tam-sayı port (`<= 65535`) kabul edilir; `@` (URL kimlik bilgisi) ve
+  yüzde-kodlu ayraç reddedilir. **#282**
+  (`20261110140000_v4_push_endpoint_table_check.sql`) aynı kuralı tabloya CHECK
+  olarak taşıdı, yani kural her yazıcı için geçerli. İki katman artık yukarıdaki
+  tablonun tamamında anlaşıyor. Kanıt ve ratchet:
+  `tests/security/push-endpoint-sql-parity.test.ts` — parity gate + şekil
+  self-test'leri **kapı** (eski `todo`, #568'de LANE-GÜVENLİK mirror'ı yeni
+  kurala güncelleyince yeşile döndü). Gerçek Postgres 17'de ölçüldü (migration'ın
+  tam ifadesi): eski kuralda `evil.com\.push.apple.com` -> `t`,
+  `fcm.googleapis.com\evil.com` -> `f`.
 
 - **İkinci, bayat kilit dosyası ve Dependabot kör noktası** (sahibi:
   `package.json` + kilit dosyaları, LANE-INFRA; devir **#188** — kapandı).
