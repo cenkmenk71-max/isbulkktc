@@ -351,3 +351,70 @@ doğrulanmamış iddia yok.
 
 Testler: `verify-indexing.test.mjs` 23/23, `verify-deliverability.test.mjs` 11/11,
 `verify-auth-config.test.mjs` 5/5 (toplam 39).
+
+## Tur 8 — canlı site düşükken doğrulayıcı yanlış negatif veriyordu (2026-11-10, LANE-VERIFY #187)
+
+Bu turda **katman 1 (arama görünürlüğü)** ölçülemedi, ama ölçüm girişiminin
+kendisi bir araç kusuru ortaya çıkardı: canlı origin düşükken doğrulayıcı
+"indexing başarısız" diyordu.
+
+### Canlı durum (ölçülen, 2026-11-10 ~03:50 UTC)
+
+`isbulkktc.com` hesap düzeyinde kapalı. Her istek **402** + `x-vercel-error:
+DEPLOYMENT_DISABLED` dönüyor (kök neden LANE-INFRA'nın #518'i):
+
+```
+/          -> 402   server: cloudflare   x-vercel-error: DEPLOYMENT_DISABLED
+/robots.txt-> 402
+/sitemap.xml -> 402
+/tr        -> 402
+```
+
+### Araç kusuru (düzeltildi, kendi dosyam)
+
+`verify-indexing.mjs` bir **hesap düzeyi kesintiyi** (402 `DEPLOYMENT_DISABLED`)
+indexing sinyali sanıyordu: robots/sitemap/key dosyası `fail` görünüyordu. Oysa
+her ziyaretçinin paylaştığı bu durum sitenin crawl yüzeyi hakkında hiçbir şey
+söylemez — `skip` olmalı (Cloudflare challenge ile aynı sınıf). İlk yazımda
+mesaj dilbilgisi de bozuktu ("robots.txt is the deployment is disabled").
+
+| Boyut | Gözlenen (öncesi) | Beklenen (sonrası) | Etki |
+|---|---|---|---|
+| hata yolu | 402 → `fail robots`/`fail sitemap`/`fail indexnow` | `skip` + "deployment is disabled" | Site düşükken doğrulayıcı indexing'i "bozuk" raporluyordu |
+
+Düzeltme: `isDeploymentDisabled(status, vercelError)` + `unmeasurableReason(...)`
+dışa aktarıldı; robots, sitemap, canonical probe, örnek sayfalar ve IndexNow key
+kontrolü bu durumu `skip` sayıyor. Regresyon testi: `verify-indexing.test.mjs`
+"a disabled deployment is not evidence about indexing".
+
+### Canlı ölçüm (düzeltmeden sonra)
+
+```
+node scripts/verify-indexing.mjs
+  SKIP robots   robots.txt is unmeasurable: the deployment is disabled (HTTP 402, DEPLOYMENT_DISABLED) — the site is down for every visitor
+  SKIP sitemap  sitemap is unmeasurable: the deployment is disabled (HTTP 402, DEPLOYMENT_DISABLED) — the site is down for every visitor
+  SKIP indexnow key file is unmeasurable: the deployment is disabled (HTTP 402, DEPLOYMENT_DISABLED) — the site is down for every visitor
+  0 failure(s), 0 warning(s), 3 skipped
+```
+
+Doğru okuma: **indexing ölçülemedi** (site düşük), "indexing bozuk" değil.
+
+### Katman 1 teslim edilebilirlik (değişmedi)
+
+```
+node scripts/verify-deliverability.mjs
+  WARN SPF         kök kayıt göndereni yetkilendirmiyor; Return-Path alt alanı yetkili + DMARC hizalı
+  PASS SPF         send.isbulkktc.com (Return-Path) yetkili
+  PASS DKIM        resend._domainkey, 216 karakter
+  WARN DMARC       p=none (yalnız izler, uygulamaz)
+  PASS MX          3 Cloudflare route
+  WARN Blocklists  surbl/spamhaus-zen/spamcop temiz; dbl.spamhaus.org sorgulanamadı (datacenter IP)
+  FAIL Resend      anahtar `re_` ile başlamıyor (len 36) → #186 (insan)
+```
+
+Katman 2/3 (gerçek gönderim, mail-tester spam skoru, 3 adreste yerleşim) hâlâ
+#186 (Resend anahtarı — insan) + #170 (SPF `amazonses.com` — LANE-CLOUDFLARE)
+yüzünden ölçülemez. Doğrulanmamış iddia yok.
+
+Testler: `verify-indexing.test.mjs` 24/24, `verify-deliverability.test.mjs` 11/11,
+`verify-auth-config.test.mjs` 5/5, `verify-production-deployment.test.mjs` 14/14.

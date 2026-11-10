@@ -8,12 +8,14 @@ import {
   findCanonical,
   findMetaContents,
   hasLocalePrefix,
+  isDeploymentDisabled,
   isPathAllowed,
   isSameOrigin,
   parseRobots,
   parseSitemap,
   sampleUrls,
   stripRobotsAgent,
+  unmeasurableReason,
   validateHreflang,
   validateLoc,
   verdictForPage,
@@ -226,6 +228,25 @@ test("the IndexNow key is only valid when the served body matches", () => {
   assert.equal(evaluateIndexNowKey({ status: 200, body: "other", key }).state, "mismatch");
   assert.equal(evaluateIndexNowKey({ status: 404, body: "", key }).state, "unreachable");
   assert.equal(evaluateIndexNowKey({ status: 0, body: "", key, error: "ETIMEDOUT" }).state, "unreachable");
+});
+
+test("a disabled deployment is not evidence about indexing", () => {
+  // Vercel's blocked-account state: 402 with `x-vercel-error: DEPLOYMENT_DISABLED`.
+  assert.equal(isDeploymentDisabled(402, ""), true);
+  assert.equal(isDeploymentDisabled(200, "DEPLOYMENT_DISABLED"), true);
+  assert.equal(isDeploymentDisabled(200, " deployment_disabled "), true);
+  assert.equal(isDeploymentDisabled(200, "NOT_FOUND"), false);
+  assert.equal(isDeploymentDisabled(500, ""), false);
+
+  // The site's outage is reported as unmeasurable (skip), not as a robots/sitemap
+  // failure — a 402 for the whole origin says nothing about the crawl surface.
+  assert.match(unmeasurableReason(402, "Payment required\n\nDEPLOYMENT_DISABLED", ""), /disabled/);
+  assert.match(unmeasurableReason(200, "", "DEPLOYMENT_DISABLED"), /disabled/);
+  // A genuine challenge still skips, and a normal answer is measurable.
+  assert.match(unmeasurableReason(403, "", ""), /challenge/);
+  assert.match(unmeasurableReason(200, "Just a moment...", ""), /challenge/);
+  assert.equal(unmeasurableReason(200, "<html>ok</html>", ""), null);
+  assert.equal(unmeasurableReason(404, "not found", ""), null);
 });
 
 test("isSameOrigin rejects a lookalike host a prefix test would accept", () => {
