@@ -12,10 +12,12 @@
 //   4. IndexNow — the key file the scheduler publishes is reachable and its
 //      body matches the key it claims.
 //
-// These checks are deterministic and need no credentials. The canonical host is
-// behind Cloudflare, which may challenge datacenter egress (CI runners are), so
-// a challenge is reported as `skip`, never a false `fail` — run it from a
-// residential/office host for the full picture.
+// These checks are deterministic and need no credentials. Two origin states are
+// not evidence about indexing and are reported as `skip`, never a false `fail`:
+// a Cloudflare challenge (which datacenter egress such as CI runners often gets)
+// and a disabled Vercel deployment (402 `x-vercel-error: DEPLOYMENT_DISABLED`,
+// an account-level outage the whole site shares). Run from a residential/office
+// host, against a live deployment, for the full picture.
 //
 // Usage:
 //   node scripts/verify-indexing.mjs
@@ -503,29 +505,62 @@ async function fetchText(url, { userAgent, timeoutMs = 20_000 } = {}) {
       // `<meta name="robots">` in the HTML — so the header must be read, not
       // assumed absent.
       xRobotsTag: response.headers.get("x-robots-tag"),
+      // Vercel marks a disabled deployment (blocked/suspended/over-quota
+      // account) on the response header as well as the 402 status.
+      vercelError: response.headers.get("x-vercel-error"),
       error: null,
     };
   } catch (error) {
-    return { status: 0, body: "", xRobotsTag: null, error: error.message };
+    return { status: 0, body: "", xRobotsTag: null, vercelError: null, error: error.message };
   } finally {
     clearTimeout(timer);
   }
 }
 
-/** A Cloudflare/interstitial challenge is a `skip`, not evidence about the site. */
-function looksChallenged(status, body) {
-  if (status === 403 || status === 429 || status === 503) return true;
-  return /just a moment|cf-challenge|enable javascript and cookies/i.test(body ?? "");
+/**
+ * Vercel answers a disabled deployment (blocked/suspended/over-quota account)
+ * with **402** and `x-vercel-error: DEPLOYMENT_DISABLED`. That is an account
+ * state, not a property of the site's indexing configuration: every request to
+ * the origin shares it, so reading it as `fail robots`/`fail sitemap` blames the
+ * crawler surface for an outage that has nothing to do with it. Mirrors
+ * `verify-production-deployment.mjs`, which treats the same state distinctly.
+ */
+export function isDeploymentDisabled(status, vercelError) {
+  if (status === 402) return true;
+  return (
+    typeof vercelError === "string" &&
+    vercelError.trim().toUpperCase() === "DEPLOYMENT_DISABLED"
+  );
+}
+
+/**
+ * Why the origin could not be measured, or `null` when it answered normally.
+ * A disabled deployment and a Cloudflare/interstitial challenge both leave the
+ * indexing surface unmeasurable from here; neither is evidence about the site,
+ * so both are a `skip`. A disabled deployment is checked first: it is an
+ * account-level outage, and the challenge heuristic would otherwise only partly
+ * cover it.
+ */
+export function unmeasurableReason(status, body, vercelError) {
+  if (isDeploymentDisabled(status, vercelError)) {
+    return "the deployment is disabled (HTTP 402, DEPLOYMENT_DISABLED) — the site is down for every visitor";
+  }
+  if (status === 403 || status === 429 || status === 503) return `behind a challenge (HTTP ${status})`;
+  if (/just a moment|cf-challenge|enable javascript and cookies/i.test(body ?? "")) {
+    return "behind a challenge";
+  }
+  return null;
 }
 
 async function checkRobots() {
-  const { status, body, error } = await fetchText(`${ORIGIN}/robots.txt`);
+  const { status, body, vercelError, error } = await fetchText(`${ORIGIN}/robots.txt`);
   if (error) {
     record("robots", "skip", `could not fetch robots.txt: ${error}`);
     return null;
   }
-  if (looksChallenged(status, body)) {
-    record("robots", "skip", `robots.txt is behind a challenge (HTTP ${status})`);
+  const unmeasurable = unmeasurableReason(status, body, vercelError);
+  if (unmeasurable) {
+    record("robots", "skip", `robots.txt is ${unmeasurable}`);
     return null;
   }
   if (status !== 200) {
@@ -547,9 +582,10 @@ async function checkRobots() {
 }
 
 async function checkSitemap(sitemapUrl) {
-  const { status, body, error } = await fetchText(sitemapUrl);
-  if (error || looksChallenged(status, body)) {
-    record("sitemap", "skip", `sitemap not reachable from here (${error ?? `HTTP ${status}`})`);
+  const { status, body, vercelError, error } = await fetchText(sitemapUrl);
+  const unmeasurable = unmeasurableReason(status, body, vercelError);
+  if (error || unmeasurable) {
+    record("sitemap", "skip", `sitemap not reachable from here (${error ?? unmeasurable})`);
     return null;
   }
   if (status !== 200) {
@@ -613,10 +649,10 @@ async function checkSingleLocaleConsolidation(parsed) {
     const path = pathOf(loc);
     if (!path) continue;
     const variant = `${ORIGIN}/en${path === "/" ? "" : path}`;
-    const { status, body, error } = await fetchText(variant, {
+    const { status, body, vercelError, error } = await fetchText(variant, {
       userAgent: "Googlebot/2.1 (+http://www.google.com/bot.html)",
     });
-    if (error || looksChallenged(status, body)) continue;
+    if (error || unmeasurableReason(status, body, vercelError)) continue;
     const { canonical } = extractPageSignals(body);
     checked += 1;
     if ((canonical ?? "").replace(/\/$/, "") !== loc.replace(/\/$/, "")) {
@@ -666,10 +702,10 @@ async function checkPages(parsed) {
   let checked = 0;
   const failures = [];
   for (const loc of locs) {
-    const { status, body, xRobotsTag, error } = await fetchText(loc, {
+    const { status, body, xRobotsTag, vercelError, error } = await fetchText(loc, {
       userAgent: "Googlebot/2.1 (+http://www.google.com/bot.html)",
     });
-    if (error || looksChallenged(status, body)) continue;
+    if (error || unmeasurableReason(status, body, vercelError)) continue;
     const verdict = verdictForPage({ status, body, xRobotsTag, loc, origin: ORIGIN });
     checked += 1;
     if (!verdict.ok) failures.push(`${loc}: ${verdict.reason}`);
