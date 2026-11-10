@@ -8,9 +8,9 @@
 // The key file is read from `public/<key>.txt`; IndexNow requires it to be
 // reachable at https://<host>/<key>.txt, which the deployed site serves.
 
-import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { readIndexNowKey } from "./indexnow-key.mjs";
 
 // The generic endpoint shares a submission with every IndexNow participant, but
 // it refuses hosts whose key it has not finished validating. Bing's own endpoint
@@ -27,13 +27,13 @@ const projectRoot = path.resolve(
 
 async function readKey() {
   const publicDir = path.join(projectRoot, "public");
-  const entries = await readdir(publicDir);
-  const keyFile = entries.find((name) => /^[a-z0-9]{8,128}\.txt$/i.test(name));
-  if (!keyFile) {
-    throw new Error("No IndexNow key file found in public/.");
+  const found = await readIndexNowKey(publicDir);
+  if (!found) {
+    throw new Error(
+      "No IndexNow key file found in public/ (filename must equal its body).",
+    );
   }
-  const key = (await readFile(path.join(publicDir, keyFile), "utf8")).trim();
-  return key;
+  return found.key;
 }
 
 async function readSitemapUrls(sourceOrigin) {

@@ -13,8 +13,16 @@ kullanıcı sırlarına dokunmaz. Yetkili ürün mimarisi hâlâ
 - [`.github/instructions/`](../.github/instructions/): Next.js 16, Supabase
   SQL/RLS ve test dosyalarına göre yüklenen dar kapsamlı talimatlar.
 - [`.github/skills/`](../.github/skills/): `next16-app-router`,
-  `v4-database-workflow`, `project-e2e` ve `deep-audit` iş akışları. Skill
-  içerikleri ihtiyaç oldukça yüklenir; her sohbete topluca eklenmez.
+  `v4-database-workflow`, `project-e2e` ve `deep-audit` iş akışları. **Bu dizin
+  yalnız VS Code Copilot içindir; OpenHands lane'leri buradaki skill'leri
+  görmez.** OpenHands proje skill'lerini tek bir yerden yükler:
+  `.agents/skills/` (resmî doküman: Skills → Skill Locations; `.github/skills/`
+  orada listelenmez). Lane'lerin yordamsal bilgisi `AGENTS.md` ve
+  `docs/lanes/<ad>.md` brief'lerindedir. **Taşıma kararı (#475): bu dört iş
+  akışı `.agents/skills/`'e taşınmaz** — lane brief'leri proje-özgü yordamsal
+  bilgiyi (RLS/`search_path`, RPC grant'leri, pgTAP bağımsızlığı, Next 16
+  sunucu/istemci sınırı) zaten taşır; ikinci bir kopya sapma yüzeyi yaratırdı.
+  Skill içerikleri ihtiyaç oldukça yüklenir; her sohbete topluca eklenmez.
 - [`.agents/skills/playwright-cli/`](../.agents/skills/playwright-cli/SKILL.md):
   Playwright'ın resmi CLI agent skill'i; browser araçlarını context-efficient
   biçimde kullanır ve `@playwright/cli` ile aynı sürümde tutulur.
@@ -24,9 +32,14 @@ kullanıcı sırlarına dokunmaz. Yetkili ürün mimarisi hâlâ
 - [`.github/agents/v4-reviewer.agent.md`](../.github/agents/v4-reviewer.agent.md):
   komut çalıştırmayan, salt-okunur V4 inceleyicisi.
 - [`.mcp.json`](../.mcp.json): güncel kütüphane dokümantasyonu için yalnız
-  Context7 HTTP MCP. Uzak servise sadece sorulan doküman sorgusu gönderilmelidir;
-  proje kaynak kodu, sır veya özel kullanıcı verisi prompta eklenmemelidir.
-  Kütüphane API/config araştırmasında ajandan `use context7` isteyin.
+  Context7 HTTP MCP. **Bu dosyayı yalnız VS Code Copilot okur; OpenHands
+  proje-seviyesi MCP yapılandırması okumaz** (MCP app-seviyesinde, kullanıcı
+  ayarlarından yönetilir; resmî doküman: MCP Settings → "There is no
+  per-project MCP configuration file"). Yani Context7 MCP lane'lerde bu
+  dosyayla etkinleşmez. Uzak servise sadece sorulan doküman sorgusu
+  gönderilmelidir; proje kaynak kodu, sır veya özel kullanıcı verisi prompta
+  eklenmemelidir. Kütüphane API/config araştırmasında ajandan `use context7`
+  isteyin.
 - [`.vscode/extensions.json`](../.vscode/extensions.json): workspace için
   önerilen eklentilerin kaynağıdır. `npm run tools:vscode-extensions` listedeki
   eklentileri workspace'in `.tools/vscode-extensions/` dizinine kurar ve

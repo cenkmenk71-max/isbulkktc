@@ -1,5 +1,16 @@
 version: 2
 
+# The package manager is bun (`bun.lock`); `npm ci` fails against it (AGENTS.md).
+# A committed `package-lock.json` used to be the only lockfile Dependabot
+# audited, so alerts piled up against a manifest that had drifted from
+# `package.json` while the real lockfile went unscanned. That file is gone
+# (gitignored); this config now watches the ecosystem the build actually uses.
+#
+# Dependabot supports bun from 1.1.39 (text `bun.lock`; the legacy binary
+# `bun.lockb` is not supported), and this repo pins bun 1.4, so it is in range.
+# The old `npm` entry is intentionally gone: with `package-lock.json` removed it
+# has no lockfile to read, and its alerts would only reappear stale.
+#
 # The repository already had Dependabot *security* updates enabled, but no
 # configuration file. Without one, the scheduled "Dependabot Updates" job fails
 # on every run whenever it finds an advisory it cannot act on, which is exactly
@@ -16,7 +27,7 @@ version: 2
 # rather than the package name so the alert returns automatically once a
 # resolvable patched version exists.
 updates:
-  - package-ecosystem: "npm"
+  - package-ecosystem: "bun"
     directory: "/"
     schedule:
       # Required by the schema. Version-update pull requests are switched off

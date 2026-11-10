@@ -25,3 +25,11 @@ supabase/.branches/
 
 # Lane autopilot local state
 .lane-state.json
+
+# The package manager is bun (`bun.lock`); `npm install`/`npm ci` are not used
+# and `npm ci` fails against `bun.lock` (see AGENTS.md). A committed
+# `package-lock.json` was a second, stale manifest that drifted from
+# `package.json` and was the only lockfile Dependabot audited. Dependabot now
+# watches the real `bun.lock` (`.github/dependabot.yml`), so keep npm's lockfile
+# out of the tree.
+package-lock.json

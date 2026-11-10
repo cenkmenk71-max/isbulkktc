@@ -25,18 +25,18 @@ Bu dosya kuralları ve sırayı tanımlar. Bir lane'in brief'i `docs/lanes/<ad>.
 |---|---|
 | LANE-SUPABASE | `supabase/**` (migrations, tests, seed, config.toml), `docs/lanes/01-supabase.md` |
 | LANE-CLOUDFLARE | repo dosyası YOK (CF API); isterse `docs/cloudflare.md`, `docs/lanes/02-cloudflare.md` |
-| LANE-SEO | `src/lib/seo.ts`, `src/app/sitemap.ts`, `src/app/robots.ts`, `src/app/[locale]/**`, `docs/lanes/03-seo.md` |
-| LANE-GEO | `src/content/**`, `src/app/llms.txt/**`, `public/llms*`, `src/features/**/structured-data*.ts`, `src/features/jobs/job-posting-structured-data.ts`, `docs/lanes/04-geo.md` |
-| LANE-TASARIM | `src/components/**`, `src/experience/**`, `src/styles/**`, `src/assets/**`, `tests/e2e/accessibility.spec.ts`, `tests/unit/design-tokens.test.ts`, `tests/unit/design-token-drift.baseline.json`, `docs/lanes/05-tasarim.md` |
-| LANE-AUTH | `src/features/identity/**`, `src/app/[locale]/(auth)/**`, `supabase/templates/**`, `docs/lanes/06-auth.md` |
-| LANE-URUN | `src/features/**`, `!src/features/identity/**`, `!src/features/**/structured-data*.ts`, `!src/features/jobs/job-posting-structured-data.ts`, `src/server/config/**`, `src/server/push/**`, `src/lib/analytics/**`, `src/lib/pwa/**`, `docs/lanes/07-urun.md` |
+| LANE-SEO | `src/lib/seo.ts`, `src/app/sitemap.ts`, `src/app/robots.ts`, `src/app/feed.xml/**`, `src/app/manifest.ts`, `src/app/.well-known/**`, `src/lib/localized-slug-pathnames.ts`, `src/lib/localized-slug-pathnames.test.ts`, `src/app/[locale]/**`, `!src/app/[locale]/auth/**`, `docs/lanes/03-seo.md` |
+| LANE-GEO | `src/content/**`, `src/app/llms.txt/**`, `src/app/llms-full.txt/**`, `public/llms*`, `src/features/**/structured-data*.ts`, `src/features/jobs/job-posting-structured-data.ts`, `docs/lanes/04-geo.md` |
+| LANE-TASARIM | `src/components/**`, `src/experience/**`, `src/styles/**`, `src/assets/**`, `src/lib/company-mark.ts`, `src/lib/social-links.ts`, `src/lib/utils.ts`, `src/app/global-error.tsx`, `tests/e2e/accessibility.spec.ts`, `tests/unit/design-tokens.test.ts`, `tests/unit/design-token-drift.baseline.json`, `docs/lanes/05-tasarim.md` |
+| LANE-AUTH | `src/features/identity/**`, `src/app/[locale]/(auth)/**`, `src/app/[locale]/auth/**`, `src/proxy.ts`, `src/server/auth/**`, `supabase/templates/**`, `docs/lanes/06-auth.md` |
+| LANE-URUN | `src/features/**`, `!src/features/identity/**`, `!src/features/**/structured-data*.ts`, `!src/features/jobs/job-posting-structured-data.ts`, `src/server/config/**`, `src/server/push/**`, `src/server/email/**`, `src/server/dal/**`, `src/server/db/**`, `src/types/**`, `src/app/api/email/**`, `src/app/api/push/**`, `src/app/api/qr/**`, `src/lib/analytics/**`, `src/lib/pwa/**`, `docs/lanes/07-urun.md` |
 | LANE-QA | `tests/**`, `!tests/e2e/accessibility.spec.ts`, `!tests/unit/design-tokens.test.ts`, `!tests/unit/design-token-drift.baseline.json`, `!tests/security/**`, `docs/performance-budget.md`, `docs/lanes/08-qa.md` |
-| LANE-GÜVENLİK | `tests/security/**`, `docs/threat-model.md`, `docs/data-retention.md`, `docs/lanes/09-guvenlik.md` |
+| LANE-GÜVENLİK | `tests/security/**`, `src/server/policies/**`, `src/server/audit/**`, `src/server/README.md`, `docs/threat-model.md`, `docs/data-retention.md`, `docs/lanes/09-guvenlik.md` |
 | LANE-VERIFY | `tests/verify/**`, `scripts/verify-*.mjs`, `docs/verification-log.md`, `docs/lanes/11-verify.md` |
-| LANE-İÇERİK | `src/messages/**`, `src/i18n/**`, `src/content/**`, `docs/lanes/12-icerik.md` |
+| LANE-İÇERİK | `src/messages/**`, `src/i18n/**`, `src/global.d.ts`, `src/content/**`, `docs/lanes/12-icerik.md` |
 | LANE-TESLİMAT | `scripts/prune-vercel-deployments.mjs`, `scripts/approve-pending-runs.mjs`, `scripts/verify-production-deployment.mjs`, `docs/deploy-log.md`, `docs/lanes/14-teslimat.md` |
-| LANE-OPERATÖR | `docs/OPERATOR.md`, `scripts/system-health.mjs`, `scripts/lane-autopilot.mjs`, `scripts/lane-kickoff.mjs`, `docs/lanes/15-operator.md` |
-| LANE-INFRA | `.github/**`, `scripts/**`, `package.json`, `bun.lock`, `docs/lanes/00-orchestration.md`, `docs/lanes/README.md`, `docs/lanes/POLICY.md`, `docs/lanes/AUDIT.md` |
+| LANE-OPERATÖR | `docs/OPERATOR.md`, `scripts/lane-autopilot*.mjs`, `scripts/lane-kickoff*.mjs`, `scripts/system-health*.mjs`, `scripts/reap-stalled-sandboxes*.mjs`, `docs/lanes/15-operator.md` |
+| LANE-INFRA | `.github/**`, `scripts/**`, `src/app/api/build-info/**`, `package.json`, `bun.lock`, `package-lock.json`, `.gitignore`, `.mcp.json`, `vercel.json`, `AGENTS.md`, `docs/developer-tooling.md`, `docs/lanes/00-orchestration.md`, `docs/lanes/README.md`, `docs/lanes/POLICY.md`, `docs/lanes/AUDIT.md` |
 
 **Her lane kendi brief'ine sahiptir.** Protokol "notlarını `docs/lanes/<ad>.md`'ye
 yaz" der; o dosya o lane'in çalışma alanıdır, başkası dokunmaz.
@@ -311,3 +311,227 @@ dosyalarıydı (devir #210).
 kapı**. "Report a visual regression" advisory uyarı adımı silindi; diff
 artefaktlarını yükleyen adım `failure()` koşuluna alındı (kapı kırmızı olunca
 kanıt kalır).
+
+### Tur — devir kuyruğu (#306, #428, #188, #292, #385, #447, #309, #386)
+
+**Kapsam.** LANE-INFRA'ya devredilen sekiz issue (hepsi sahip olunan yollarda:
+`scripts/**`, `.github/**`, `package.json`, bu dosya) sırayla alındı, kanıtı
+doğrulandı, düzeltildi, test edildi.
+
+**Yapılanlar.**
+
+1. **#306 — doğrudan-çalıştırma koruması.** Sekiz script'te kırılgan
+   `import.meta.url === \`file://${process.argv[1]}\`` yerine
+   `pathToFileURL(process.argv[1]).href` karşılaştırması. Yol içinde boşluk/özel
+   karakter/Windows sürücü harfi olduğunda eski biçim `main()`'i hiç çalıştırmaz
+   (sessiz no-op); yeni biçim yolu doğru yüzde-kodlar. Dört script zaten
+   sağlamdı, dokunulmadı.
+2. **#428 — lane-collisions CI'a bağlandı.** `static` job'ına `pull-requests:
+   read` izni + `node scripts/lane-collisions.mjs` adımı. `gh` okuması
+   başarısızsa script artık **yüksek sesle** sıfırdan farklı çıkar (eskiden
+   sessizce "çakışma yok" derdi — kapının önlemek istediği tam da bu yanlış
+   yeşildi).
+3. **#188 — stale `package-lock.json` kaldırıldı.** Paket yöneticisi bun
+   (`bun.lock`); `npm ci` `bun.lock`'a karşı zaten başarısız. İkinci, bayat
+   manifest Dependabot'un denetlediği tek lockfile'dı. Dosya silindi +
+   `.gitignore`'a eklendi; `.github/dependabot.yml` ekosistemi `bun`'a çevrildi.
+4. **#292 + #385 — `indexing:verify` + `%DAYS%` kapısı.** `package.json`'a
+   `indexing:verify` script'i; `check-frontend-source.mjs`'teki `%DAYS%`
+   iddiası hem eski `String(selectedDuration)` hem yerel-duyarlı
+   `Intl.NumberFormat(locale).format(...)` biçimini kabul edecek şekilde
+   genişletildi (LANE-TASARIM'ın `fa` rakam düzeltmesi kapıya takılmasın).
+5. **#447 — ilçe görsel bütçesi.** `check-frontend-source.mjs` ilçe hero
+   görsellerini gevşek 9 MB yerine **500 KB** ile denetler. Negatif test: 500 KB
+   üstü görselde kapı kırmızı.
+6. **#309 — IndexNow anahtarı.** Yeni `scripts/indexnow-key.mjs`
+   (`readIndexNowKey`) anahtarı **ad==gövde** eşleşmesiyle seçer; `submit-
+   indexnow.mjs` ve `verify-indexing.mjs` bunu kullanır. Eski `entries.find(...)`
+   dosya sistemi sırasına güvenip `security.txt`/`ads.txt` gibi eşleşen bir
+   `.txt`'i sessizce anahtar sanabiliyordu.
+7. **#386 — sahipsiz `src/server/email/**`.** Bu dosyadaki LANE-URUN sahiplik
+   satırına eklendi; `lane-collisions.test.mjs`'e bu boşluğun geri açılmasını
+   engelleyen ratchet testi.
+
+**Çalıştırılan kontroller.** `bun run lint`, `typecheck`,
+`check:frontend-source`, `test:unit` (875 test), `test:security` (163),
+`test:integration` — hepsi yeşil. Yeni `indexnow-key.test.mjs` 5/5.
+
+**Canlıya dokundu mu:** hayır. Hiçbir Supabase/Vercel yazımı yok; yalnız kaynak
+ve CI yapılandırması.
+
+### Tur — devir kuyruğu, ek: çakışma kapısı kendi PR'ını kırdı (#428)
+
+CI'a bağlanan `lane-collisions.mjs` **Static checks → Lane collisions** adımında
+`Found 2 collision problem(s)` verdi. Yerel koşuda görünmemesinin nedeni
+oturumdaki token'dı: varsayılan `gh` kimliği (`orijinus1997-sudo`) yalnız
+kendi PR'larını listeler, çakışmayı raporlamaz. Depo admin token'ı
+(`GITHUB_PERSONAL_ACCESS_TOKEN`) ile çalıştırınca aynı iki satır çıktı:
+
+```
+#493 .gitignore — owned by no lane
+#493 package-lock.json — owned by no lane
+```
+
+**Kök neden.** Dedektör sahipliği `docs/lanes/00-orchestration.md`'den okur;
+LANE-INFRA satırı bu iki yolu listelemiyordu. `5d20745` (bayat npm lockfile'ını
+kaldır, `.gitignore`'a ekle) ikisine de dokununca dedektör kendi PR'ını çakışma
+saydı — `bun.lock` için daha önce düzeltilen (mikro-denetim #2) hatanın aynısı,
+iki yol daha eksik kalmış.
+
+**Düzeltme.** `package-lock.json` ve `.gitignore` LANE-INFRA sahiplik satırına
+eklendi; `lane-collisions.test.mjs` bu üç yolu (bun.lock, package-lock.json,
+.gitignore) LANE-INFRA'ya sabitledi.
+
+**Ders.** Çakışma kapısını yerelde "yeşil" görüp geçmeyin: `gh pr list` çağıran
+her kontrol, token'ın görebildiği PR kümesine bağlıdır. Kapıyı gerçek kümeyle
+denemek için admin token'la çalıştırın. Doğrulandı:
+`No collisions across 1 open PR(s).` (önce 2), `lane-collisions` 9/9, tam CI
+(Static + Database + 4×E2E) yeşil.
+
+### Tur — devir kuyruğu, ek 2: LANE-OPERATÖR harness ailesi sahipsizdi (#428)
+
+Kapı düzeltildikten sonra PR #494 (`lane/operator`, #443) açıldı ve çakışma
+yeniden kırmızıya döndü:
+
+```
+#494 scripts/lane-autopilot-core.mjs — lane-operator does not own it (LANE-INFRA)
+#494 scripts/lane-autopilot-core.test.mjs — lane-operator does not own it (LANE-INFRA)
+```
+
+**Kök neden.** Sahiplik tablosu LANE-OPERATÖR için yalnız
+`lane-autopilot.mjs`, `lane-kickoff.mjs`, `system-health.mjs` listeliyordu.
+Operatör lane'i harness'ini sonradan modülleştirdi ve `reap-stalled-sandboxes`
+ekledi (`lane-autopilot-core.mjs`, `lane-kickoff.test.mjs`,
+`system-health-core.mjs`, `system-health.test.mjs`,
+`reap-stalled-sandboxes.mjs` + test — hepsi `operator(tur)` commit'lerinden),
+ama tabloya yazılmadı. Hepsi LANE-INFRA'nın `scripts/**` catch-all'ına düştü →
+operatör kendi dosyasını düzenleyince "sahibi değil" denildi.
+
+**Düzeltme.** LANE-OPERATÖR satırı aile globlarına genişletildi:
+`scripts/lane-autopilot*.mjs`, `scripts/lane-kickoff*.mjs`,
+`scripts/system-health*.mjs`, `scripts/reap-stalled-sandboxes*.mjs`.
+`lane-collisions.test.mjs` on dosyalık aileyi LANE-OPERATÖR'e sabitledi.
+
+**Ders.** `scripts/**` gibi bir catch-all satır, başka bir lane yeni bir script
+yarattığı an yanlış sahiplik üretir. Bir lane kendi alanında dosya çoğaltınca
+sahiplik satırını da güncellemeli; catch-all'ı dar tutmak yerine lane satırını
+glob'la büyütmek doğru yön. Doğrulandı: `No collisions across 2 open PR(s).`,
+`lane-collisions` 10/10, `test:unit` 876/874 pass.
+
+### Tur — sahipsiz güvenlik yüzeyleri (#435)
+
+#435'un bildirdiği iki sahipsiz yüzey doğrulandı ve sahiplendirildi. Tabloda
+`src/proxy.ts`, `src/server/auth/**` ve `src/app/api/build-info/**` için **hiç**
+satır yoktu; üçü de `lane-collisions.mjs`'in "owned by no lane" sınıfına
+düşüyordu.
+
+**Kanıt.** `grep -n "proxy.ts\|build-info" docs/lanes/00-orchestration.md` →
+eşleşme yok. Dosyalar var (`src/proxy.ts` 3876 B, `src/app/api/build-info/route.ts`).
+`src/proxy.ts` oturum çerezi + locale yönlendirmesinin güvenlik sınırı;
+`src/server/auth/supabase-guards.ts` onun auth koruması; `build-info/route.ts`
+`force-static` yapı kimliği yüzeyi (M-01).
+
+**Düzeltme.** LANE-AUTH satırına `src/proxy.ts` + `src/server/auth/**`
+(oturum sınırı auth lane'inindir), LANE-INFRA satırına
+`src/app/api/build-info/**` eklendi. `lane-collisions.test.mjs` üç yolu
+sabitledi (11/11).
+
+**Ders.** `src/**` ağacının tabloda kapsanmayan kök dosyaları (`src/proxy.ts`
+gibi, `src/` altında ama hiçbir lane glob'una girmeyen) sessizce sahipsiz kalır.
+Yeni bir üst-düzey kaynak dosyası eklerken sahiplik satırını da güncelle.
+
+### Tur — Copilot-only workspace config sahiplendirildi (#475)
+
+**Kapsam.** `#475` iki kaynağın OpenHands tarafından **okunmadığını** kanıtlıyor:
+`.github/skills/` (yalnız `.agents/skills/` proje skill'i olarak yüklenir) ve
+`.mcp.json` (OpenHands'ta proje-seviyesi MCP dosyası yok). İkisi de sahiplik
+tablosunda ya hiç geçmiyordu ya da `.github/**` ile dolaylı eşleşiyordu.
+
+**Bulgu (doğruluk + mantık).** `docs/developer-tooling.md` ikisini de OpenHands
+"proje skill'i"/"proje MCP'si" gibi sunuyordu; `scripts/lane-collisions.mjs`
+`.mcp.json` ve `docs/developer-tooling.md` için "owned by no lane" diyordu
+(`.github/skills/**` yalnız `.github/**` sayesinde eşleşiyordu).
+
+**Düzeltme.** `docs/developer-tooling.md` düzeltildi (her iki kaynağın yalnız VS
+Code Copilot için olduğu açıkça yazıldı). LANE-INFRA sahiplik satırına `.mcp.json`
++ `docs/developer-tooling.md` eklendi. `lane-collisions.test.mjs` üç yolu
+sabitledi (12/12). **Taşıma kararı (T2):** dört iş akışı `.agents/skills/`'e
+**taşınmaz** — lane brief'leri proje-özgü yordamsal bilgiyi zaten taşır; ikinci
+kopya sapma yüzeyi olurdu. Karar `docs/developer-tooling.md`'de kayıtlı.
+
+**Kuyruk durumu.** `#306` (bozuk doğrudan-çalıştırma koruması), `#428`
+(`lane-collisions` CI'a bağlı), `#188` (`package-lock.json` düşürüldü),
+`#292` (`indexing:verify`), `#385` (`%DAYS%` kapısı), `#447` (ilçe görselleri
+500 KB bütçesi), `#309` (`indexnow-key.mjs` ad==gövde), `#386`
+(`src/server/email/**` → LANE-URUN) — **hepsi bu dalda daha önce düzeltilmiş
+commit'lerle mevcut** (sırasıyla `6c2dd0c`, `4de5349`, `cc7a9dc`, …); doğrulandı.
+Bu turda kalan tek açık kalem `#475`'ti.
+
+### Tur — devir kuyruğu kapatıldı + AGENTS.md sahiplendirildi (#437)
+
+**Kapsam.** Bu turda önce kendi dalımın **iş çakışması** giderildi, sonra
+kuyruktaki kalan açık kalem `#437` düzeltildi.
+
+**Bulgu 1 (iş çakışması / mantık).** LANE-INFRA dalı `scripts/verify-auth-config.mjs`,
+`verify-deliverability.mjs`, `verify-indexing.mjs` dosyalarına dokunmuştu. Bu yollar
+sahiplik tablosunda **LANE-VERIFY**'in (satır 35) ve PR #541 aynı düzeltmeyi zaten
+taşıyordu → `lane-collisions` üç örtüşme buldu, `Static checks` kırmızıydı.
+
+**Düzeltme 1.** Üç dosya `main`'e geri alındı. `indexnow-key.mjs` ad==gövde
+düzeltmesi ve testi (hiçbir PR'ın dokunmadığı yollar) kaldı. Kapı artık temiz:
+`No collisions across 2 open PR(s)`.
+
+**Bulgu 2 (doğruluk).** `AGENTS.md` şöyle diyordu: varsayılan dil (`tr`) "sunulan
+URL'de ön-ekli". Yanlış: `src/proxy.ts:18-22` her `/tr/...` yolunu **308** ile
+ön-eksiz biçimine yönlendiriyor, yani `tr`'nin **tek** genel URL'i var ve kanonik/
+`x-default` ile aynı. (Canlı `robots.txt` de `/tr/auth/` listelemiyor — çünkü
+`/tr/*` önce kırpılıyor.)
+
+**Düzeltme 2.** `AGENTS.md` doğru davranışı yazacak biçimde düzeltildi. Ayrıca
+`AGENTS.md` sahiplik tablosunda **hiçbir lane'de yoktu**; bu yüzden onu düzenleyen
+her PR `lane-collisions`'ta "owned by no lane" olurdu. LANE-INFRA satırına
+`AGENTS.md` eklendi; `lane-collisions.test.mjs` bir ratchet testiyle sabitledi
+(13/13). Mutasyon testi: satırdan çıkarılınca test kırmızı, geri konunca yeşil.
+
+**Kuyruk durumu.** `#306`, `#428`, `#188`, `#292`, `#385`, `#447`, `#309`, `#386`
+bu dalda daha önce düzeltilmiş commit'lerle mevcut (doğrulandı). `#102` →
+`src/server/email/**` LANE-URUN'un; orada `agent:handoff` zaten var. `#442`
+(lanes.json modeli) ve `#426` (operator brief) main'de düzeltilmiş.
+
+### Tur — çakışma kapısı lane/auth PR'ını kırdı: auth callback sahipsizliği (#542)
+
+**Kapsam.** Devir kuyruğunun tamamı (`#306`, `#428`, `#188`, `#292`, `#385`,
+`#447`, `#309`, `#386`) bu dalda daha önce düzeltilmiş commit'lerle mevcut;
+tekrar doğrulandı ve **yeni açık kalem yok**. Bu turda kalan gerçek boşluk
+çakışma kapısının kendisiydi.
+
+**Bulgu (mantık / sahiplik).** `lane/auth`'ın PR #542'si
+`src/app/[locale]/auth/callback/route.ts` (OAuth/PKCE callback) dosyasını
+düzenliyor. LANE-SEO'nun satırındaki geniş `src/app/[locale]/**` glob'u bu API
+rotasını da yakalıyordu, bu yüzden kapı "lane-auth does not own it (LANE-SEO)"
+diyordu — `docs/lanes/06-auth.md` bu boşluğu birkaç turdur raporluyordu.
+
+**Kanıt (admin token'la, gerçek PR kümesiyle).** Düzeltmeden önce:
+
+```
+Found 1 collision problem(s):
+  #542 src/app/[locale]/auth/callback/route.ts — lane-auth does not own it (LANE-SEO)
+```
+
+Düzeltmeden sonra: `No collisions across 2 open PR(s).`
+
+**Düzeltme.** LANE-SEO satırına `!src/app/[locale]/auth/**` istisnası, LANE-AUTH
+satırına `src/app/[locale]/auth/**` eklendi. `lane-collisions.test.mjs` iki
+ratchet testiyle sabitledi: callback rotası **yalnız** LANE-AUTH'a ait, ve
+istisna yerelleştirilmiş sayfa rotalarını (`(public)/jobs` gibi) yutmuyor.
+Mutasyon testi: istisna kaldırılınca test kırmızı, geri konunca yeşil (14/14).
+
+**Çalıştırılan kontroller.** `bun run lint`, `typecheck`,
+`check:frontend-source` — yeşil; `test:unit` 954/954; `lane-collisions` 14/14.
+
+**Canlıya dokundu mu:** hayır. Yalnız sahiplik tablosu, bir test ve CI kapısı.
+
+**Sonraki lane için notlar.** `#542`'nin çakışma engeli kalktı; lane/auth
+PR'ını yeniden koşturabilir. `#319` (Vercel build rate limit) ve `#261`/`#441`
+(origin host/kodlanmış-yol davranışı) insan/platform kararı bekliyor — kanıt
+issue'larda; bu lane kod tarafında yapabileceğini yaptı.

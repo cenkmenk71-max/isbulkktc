@@ -49,7 +49,8 @@
     "auth:set-turnstile-secret": "node scripts/set-turnstile-secret.mjs",
     "auth:enable-provider": "node scripts/enable-oauth-provider.mjs",
     "seed:managed-content": "tsx scripts/generate-managed-content-seed.ts",
-    "db:verify": "node scripts/db-verify.mjs"
+    "db:verify": "node scripts/db-verify.mjs",
+    "indexing:verify": "node scripts/verify-indexing.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
