@@ -124,6 +124,21 @@ test("the operator harness family is owned by LANE-OPERATÖR", () => {
   }
 });
 
+test("the Copilot-only workspace config is owned by LANE-INFRA", () => {
+  // `.github/skills/` and `.mcp.json` look like project sources but OpenHands
+  // reads neither: it loads project skills only from `.agents/skills/` and has
+  // no per-project MCP file (#475). They are still VS Code Copilot's workspace
+  // config, which is LANE-INFRA's `.github/**` territory. `.github/skills/**`
+  // matched `.github/**` already; `.mcp.json` (root file) and the doc that
+  // describes the tooling did not, so editing either reported "owned by no
+  // lane". Pin them.
+  assert.deepEqual(ownersOf(".mcp.json", table), ["LANE-INFRA"]);
+  assert.deepEqual(ownersOf("docs/developer-tooling.md", table), ["LANE-INFRA"]);
+  assert.ok(
+    ownersOf(".github/skills/deep-audit/SKILL.md", table).includes("LANE-INFRA"),
+  );
+});
+
 test("foldName folds the Turkish lane name to ASCII", () => {
   assert.equal(foldName("LANE-GÜVENLİK"), "lane-guvenlik");
   assert.equal(foldName("LANE-İÇERİK"), "lane-icerik");
