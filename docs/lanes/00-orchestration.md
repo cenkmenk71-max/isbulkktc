@@ -25,16 +25,16 @@ Bu dosya kuralları ve sırayı tanımlar. Bir lane'in brief'i `docs/lanes/<ad>.
 |---|---|
 | LANE-SUPABASE | `supabase/**` (migrations, tests, seed, config.toml), `docs/lanes/01-supabase.md` |
 | LANE-CLOUDFLARE | repo dosyası YOK (CF API); isterse `docs/cloudflare.md`, `docs/lanes/02-cloudflare.md` |
-| LANE-SEO | `src/lib/seo.ts`, `src/app/sitemap.ts`, `src/app/robots.ts`, `src/app/feed.xml/**`, `src/app/manifest.ts`, `src/app/.well-known/**`, `src/lib/localized-slug-pathnames.ts`, `src/lib/localized-slug-pathnames.test.ts`, `src/app/[locale]/**`, `!src/app/[locale]/auth/**`, `docs/lanes/03-seo.md` |
-| LANE-GEO | `src/content/**`, `src/app/llms.txt/**`, `src/app/llms-full.txt/**`, `public/llms*`, `src/features/**/structured-data*.ts`, `src/features/jobs/job-posting-structured-data.ts`, `docs/lanes/04-geo.md` |
-| LANE-TASARIM | `src/components/**`, `src/experience/**`, `src/styles/**`, `src/assets/**`, `src/lib/company-mark.ts`, `src/lib/social-links.ts`, `src/lib/utils.ts`, `src/app/global-error.tsx`, `tests/e2e/accessibility.spec.ts`, `tests/unit/design-tokens.test.ts`, `tests/unit/design-token-drift.baseline.json`, `docs/lanes/05-tasarim.md` |
+| LANE-SEO | `src/lib/seo.ts`, `src/app/sitemap.ts`, `src/app/robots.ts`, `src/app/feed.xml/**`, `src/app/manifest.ts`, `src/app/.well-known/**`, `src/lib/localized-slug-pathnames.ts`, `src/lib/localized-slug-pathnames.test.ts`, `src/app/[locale]/**`, `!src/app/[locale]/auth/**`, `!src/app/[locale]/(auth)/**`, `docs/lanes/03-seo.md` |
+| LANE-GEO | `src/content/ai-visibility/**`, `src/app/llms.txt/**`, `src/app/llms-full.txt/**`, `public/llms*`, `src/features/**/structured-data*.ts`, `src/features/jobs/job-posting-structured-data.ts`, `docs/lanes/04-geo.md`, `supabase/seed-managed-content.sql` |
+| LANE-TASARIM | `src/components/**`, `src/experience/**`, `src/styles/**`, `src/assets/**`, `src/lib/company-mark.ts`, `src/lib/social-links.ts`, `src/lib/utils.ts`, `src/app/global-error.tsx`, `tests/e2e/accessibility.spec.ts`, `tests/unit/design-tokens.test.ts`, `tests/unit/design-token-drift.baseline.json`, `docs/lanes/05-tasarim.md`, `supabase/seed-managed-content.sql` |
 | LANE-AUTH | `src/features/identity/**`, `src/app/[locale]/(auth)/**`, `src/app/[locale]/auth/**`, `src/proxy.ts`, `src/server/auth/**`, `supabase/templates/**`, `docs/lanes/06-auth.md` |
-| LANE-URUN | `src/features/**`, `!src/features/identity/**`, `!src/features/**/structured-data*.ts`, `!src/features/jobs/job-posting-structured-data.ts`, `src/server/config/**`, `src/server/push/**`, `src/server/email/**`, `src/server/dal/**`, `src/server/db/**`, `src/types/**`, `src/app/api/email/**`, `src/app/api/push/**`, `src/app/api/qr/**`, `src/lib/analytics/**`, `src/lib/pwa/**`, `docs/lanes/07-urun.md` |
+| LANE-URUN | `src/features/**`, `!src/features/identity/**`, `!src/features/**/structured-data*.ts`, `!src/features/jobs/job-posting-structured-data.ts`, `src/server/config/**`, `src/server/push/**`, `src/server/email/**`, `src/server/dal/**`, `src/server/db/**`, `src/types/**`, `src/app/api/email/**`, `src/app/api/push/**`, `src/app/api/qr/**`, `src/lib/analytics/**`, `src/lib/pwa/**`, `docs/lanes/07-urun.md`, `supabase/seed-managed-content.sql` |
 | LANE-QA | `tests/**`, `!tests/e2e/accessibility.spec.ts`, `!tests/unit/design-tokens.test.ts`, `!tests/unit/design-token-drift.baseline.json`, `!tests/security/**`, `docs/performance-budget.md`, `docs/lanes/08-qa.md` |
 | LANE-GÜVENLİK | `tests/security/**`, `src/server/policies/**`, `src/server/audit/**`, `src/server/README.md`, `docs/threat-model.md`, `docs/data-retention.md`, `docs/lanes/09-guvenlik.md` |
 | LANE-VERIFY | `tests/verify/**`, `scripts/verify-*.mjs`, `docs/verification-log.md`, `docs/lanes/11-verify.md` |
-| LANE-İÇERİK | `src/messages/**`, `src/i18n/**`, `src/global.d.ts`, `src/content/**`, `docs/lanes/12-icerik.md` |
-| LANE-TESLİMAT | `scripts/prune-vercel-deployments.mjs`, `scripts/approve-pending-runs.mjs`, `scripts/verify-production-deployment.mjs`, `docs/deploy-log.md`, `docs/lanes/14-teslimat.md` |
+| LANE-İÇERİK | `src/messages/**`, `src/i18n/**`, `src/global.d.ts`, `src/content/**`, `!src/content/ai-visibility/**`, `docs/lanes/12-icerik.md`, `supabase/seed-managed-content.sql` |
+| LANE-TESLİMAT | `scripts/prune-vercel-deployments*.mjs`, `scripts/approve-pending-runs*.mjs`, `scripts/verify-production-deployment*.mjs`, `docs/deploy-log.md`, `docs/lanes/14-teslimat.md` |
 | LANE-OPERATÖR | `docs/OPERATOR.md`, `scripts/lane-autopilot*.mjs`, `scripts/lane-kickoff*.mjs`, `scripts/system-health*.mjs`, `scripts/reap-stalled-sandboxes*.mjs`, `docs/lanes/15-operator.md` |
 | LANE-INFRA | `.github/**`, `scripts/**`, `src/app/api/build-info/**`, `package.json`, `bun.lock`, `package-lock.json`, `.gitignore`, `.mcp.json`, `vercel.json`, `AGENTS.md`, `docs/developer-tooling.md`, `docs/lanes/00-orchestration.md`, `docs/lanes/README.md`, `docs/lanes/POLICY.md`, `docs/lanes/AUDIT.md` |
 
@@ -50,6 +50,49 @@ hariç" demektir. Dedektör (`scripts/lane-collisions.mjs`) bu sözdizimini anla
 hem URUN'un dizininde hem GEO'nun modülünde; `tests/e2e/accessibility.spec.ts`
 hem QA'nın katmanında hem TASARIM'ın guard'ında. Dizin düzeyinde sahiplik bu iki
 dosyada örtüşüyordu — dışlama bunu kesin biçimde çözer.
+
+**Dedektörün iki kapsamı var: kuyruk-geneli ve PR-yerel.** `lane-collisions.mjs`
+üç tür bulgu üretir ve bunları **ayırmak** zorundadır, yoksa bir lane'in kendi
+sınır kayması tüm kuyruğu kırar (tıkanıklık ailesi #5/#7; #552 → #557 → #555):
+
+| Bulgu | Kapsam | Kırdığı koşu |
+|---|---|---|
+| `<yol> — owned by no lane` | kuyruk-geneli (hiçbir lane sahibi değil) | **her** PR |
+| `<yol> — edited by #a and #b` | kuyruk-geneli (iki PR aynı dosya) | **her** PR |
+| `<lane> does not own it` | PR-yerel (yalnız o PR'ın kendi denetimi) | yalnız **o** PR |
+
+**Silme bir sahiplik ihlali değildir.** Bir PR'ın **sildiği** (`changeType:
+DELETED`, REST'te `status: removed`) sahipsiz bir yol "owned by no lane" sayılmaz:
+sahiplik bir lane'in neyi *yazdığını* yönetir; silinen yol birleşince hiçbir lane'in
+alanında durmaz. Aksi hâlde artık bir yer tutucuyu (`src/app/api/.gitkeep` gibi)
+silmek **kuyruk-geneli** bir bulgu üretir ve tüm açık PR'ları yeniden kilitler —
+#552'nin kaldırdığı kilit sınıfı. Muafiyet dardır: sahipsiz bir yolu **düzenlemek**
+(`MODIFIED`) hâlâ her PR'ı bağlar.
+
+CI, `static` job'ında `node scripts/lane-collisions.mjs --pr
+"${{ github.event.pull_request.number }}"` çalıştırır: kuyruk-geneli iki kural her
+PR'ı bağlar, üçüncü kural **yalnız o PR'ı**. Böylece bir lane sahip olmadığı bir
+dosyayı düzenlerse kırmızı **kendi PR'ında** çıkar; kuyruktaki diğer PR'lar
+beklemez. Geliştirici `--pr` vermeden çalıştırırsa üçüncü kural yine tüm açık
+PR'lar için raporlanır (yerel farkındalık için).
+
+**Üretilen dosyalar birden çok lane'e açıkça yazılır.** Kural "bir dosyanın TEK
+sahibi" olsa da, üretilen (generated) bir artefakt tek bir lane'in kaynaklarından
+türemez; onu üreten lane'lerin tümü yeniden üretebilmelidir. Aksi hâlde üretici
+lane artefaktı tazeleyince dedektör "lane ... does not own it" der; bu artık
+PR-yerel bir bulgu olsa da (yukarıdaki tablo) gereksiz bir kırmızıdır.
+`supabase/seed-managed-content.sql` bu yüzden beş satırda listelenir. Onu
+`scripts/generate-managed-content-seed.ts` üretir ve şu kaynaklardan toplar:
+
+- LANE-İÇERİK → `src/messages/*.json` (legal bloklar)
+- LANE-GEO → `src/content/ai-visibility/faq.ts`
+- LANE-URUN → `src/features/companies/data/company-*.json` (dizin)
+- LANE-TASARIM → `src/components/packages/package-tiers.ts` (planlar)
+- LANE-SUPABASE → dosyanın kendisi (`supabase/**`); `bun run seed:managed-content` buradan koşar
+
+`tests/unit/managed-content-seed.test.ts` üretileni commit'lenmiş dosyayla
+karşılaştırdığı için bu lane'lerden **biri** kaynağını değiştirdiğinde seed'i
+tazelemek zorundadır; çok-sahiplik bunu çakışma saymaz.
 
 ### Lane → skill eşlemesi
 
@@ -535,3 +578,74 @@ Mutasyon testi: istisna kaldırılınca test kırmızı, geri konunca yeşil (14
 PR'ını yeniden koşturabilir. `#319` (Vercel build rate limit) ve `#261`/`#441`
 (origin host/kodlanmış-yol davranışı) insan/platform kararı bekliyor — kanıt
 issue'larda; bu lane kod tarafında yapabileceğini yaptı.
+
+### Tur — çakışma kapısı tüm kuyruğu kilitledi: PR-yerel/kuyruk-geneli ayrımı (#552)
+
+**Kapsam.** Devir issue'su `#552` (`lane:infra`). `main` üzerindeki **her** açık
+PR'ın "Static checks" işinde kırmızı adım **`Lane collisions`**'tı (`#548`,
+`#549`), bu yüzden zorunlu `Quality, database and E2E` kontrolü hiçbir PR'da
+geçemiyordu — merge kuyruğu donmuştu.
+
+**Bulgu (mantık / sahiplik kapsamı).** `lane-collisions.mjs` üç bulguyu tek kovada
+toplayıp hepsiyle `exit 1` veriyordu. Oysa `<lane> does not own <path>` bulgusu
+**yalnız o lane'in kendi PR'ının** özelliğidir; kapı ise açık PR'ların tümünü
+okuduğu için bir lane'in sahiplik kayması kuyruktaki **her** PR'ı kırdı. `#549`
+(`lane/teslimat`) kendi test kardeşini (`scripts/verify-production-deployment.test.mjs`)
+düzenleyince hem kendi PR'ı hem kardeş PR `#548` kırmızı oldu: yerel bir eksik,
+global bir kırmızı üretti (tıkanıklık ailesi #5/#7).
+
+**Kanıt.** Düzeltmeden önce (issue gövdesi):
+
+```
+Found 1 collision problem(s):
+  #549 scripts/verify-production-deployment.test.mjs — lane-teslimat does not own it (LANE-VERIFY, LANE-INFRA)
+```
+
+Düzeltmeden sonra, canlı simülasyon (ihlal eden `#557` + masum `#555`): masum PR
+`exit 0`, ihlal eden `exit 1`. Gerçek açık PR kümesi (2 PR) temiz:
+`No collisions across 2 open PR(s).`
+
+Silme muafiyetinin kanıtı (aynı sahipsiz yol, iki değişiklik türü):
+
+```
+src/app/api/.gitkeep MODIFIED => global: ["#9999 src/app/api/.gitkeep — owned by no lane"]
+src/app/api/.gitkeep DELETED  => global: [], local: []
+```
+
+**Düzeltme.**
+
+1. **Sahiplik tablosu.** LANE-TESLİMAT satırı test kardeşini kapsayacak glob'a
+   çevrildi (`prune-vercel-deployments*.mjs`, `approve-pending-runs*.mjs`,
+   `verify-production-deployment*.mjs`). Ayrıca üretilen
+   `supabase/seed-managed-content.sql` beş kaynak lane'e açıkça yazıldı
+   (İÇERİK/GEO/URUN/TASARIM/SUPABASE) — üretici lane artefaktı tazelediğinde
+   gereksiz kırmızı doğmasın.
+2. **Dedektör.** Bulgular iki kapsama ayrıldı: **kuyruk-geneli** (sahipsiz dosya,
+   iki PR aynı dosya) her PR'ı bağlar; **PR-yerel** (`<lane> does not own it`)
+   yalnız ilgili PR'ı. Yeni saf `evaluateCollisions` + `currentPullRequestNumber`
+   (`--pr <n>` / `--pr=<n>`).
+3. **CI.** `static` job'ı `node scripts/lane-collisions.mjs --pr
+   "${{ github.event.pull_request.number }}"` çalıştırır.
+4. **Silme muafiyeti (ek bulgu, aynı kilit sınıfı).** Kapsam ayrımı yapıldıktan
+   sonra bile bu dalın kendisi kuyruğu kilitleyebilirdi: dal, artık gereksiz bir
+   yer tutucuyu (`src/app/api/.gitkeep`) **siliyor** ve o yol hiçbir lane'e ait
+   değil. `gh pr list --json files` silmeleri de listelediği için (`#493`
+   `package-lock.json`'u `DELETED` gösterdi) sahipsiz-silme bulgusu **kuyruk-geneli**
+   sayılıp her PR'ı kıracaktı. Düzeltme: `isDeletion` (her iki API şekli:
+   `changeType: DELETED`, `status: removed`) ve `evaluateCollisions`'ta "owned by
+   no lane" kontrolünün silmeleri atlaması. Sahiplik bir lane'in neyi *yazdığını*
+   yönetir; silinen yol birleşince hiçbir alanda durmaz. Muafiyet dar: sahipsiz
+   bir yolu **düzenlemek** hâlâ her PR'ı bağlar.
+
+**Çalıştırılan kontroller.** `bun run lint`, `typecheck`,
+`check:frontend-source` — yeşil; `test:unit` **996/996**; `lane-collisions`
+**29/29**. Mutasyon: CI adımından `--pr` kaldırılınca ratchet testi kırmızı.
+
+**Canlıya dokundu mu:** hayır. Yalnız sahiplik tablosu, dedektör, CI adımı ve
+testler.
+
+**Sonraki lane için notlar.** PR-yerel kapsam `--pr`'a bağlıdır; iş akışına bir
+`push` tetikleyicisi eklenirse adım `--pr ""` alır ve bilinçli olarak kapsamsız
+(tüm PR'lar) moda düşer — o durumda kuyruk-geneli iki kural yine her PR'ı bağlar,
+yalnız PR-yerel üçüncü kural kuyruğu yeniden kırabilir. `push` eklerken adımı
+atlamak ya da kapsamsız çalıştırmak gerekir.
