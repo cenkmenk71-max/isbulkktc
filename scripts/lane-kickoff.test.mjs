@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
 import { kickoff } from "./lane-kickoff.mjs";
@@ -152,3 +153,44 @@ test("a conflict respawn tells the lane to rebase, not to read a check log", () 
   assert.match(prompt, /rebase origin\/main/);
   assert.doesNotMatch(prompt, /gh pr checks 493/);
 });
+
+// The kickoff tells the lane to load its skills from `.agents/skills/` — the only
+// project skill location OpenHands reads. When `lanes.json` names a skill that
+// was never vendored there, the instruction is a dead end: the lane is told to
+// use something it cannot load. Both `plain-english-content` and
+// `technical-writing` sat in the icerik lane's list while absent from disk.
+// Reads the real registry so the drift cannot return.
+const registry = JSON.parse(readFileSync("scripts/lanes.json", "utf8"));
+
+test("every skill a lane names is vendored under .agents/skills/", () => {
+  for (const [name, entry] of Object.entries(registry.lanes)) {
+    for (const skill of entry.skills ?? []) {
+      assert.ok(
+        existsSync(`.agents/skills/${skill}/SKILL.md`),
+        `lane "${name}" names skill "${skill}" but .agents/skills/${skill}/SKILL.md is missing`,
+      );
+    }
+  }
+});
+
+test("every vendored skill directory carries a SKILL.md", () => {
+  for (const dir of readdirSync(".agents/skills")) {
+    assert.ok(
+      existsSync(`.agents/skills/${dir}/SKILL.md`),
+      `.agents/skills/${dir} has no SKILL.md`,
+    );
+  }
+});
+
+// The same dead-end class on the brief: the kickoff opens
+// `docs/lanes/<brief>.md`, so a brief key with no file leaves the lane with no
+// task text (the operator entry once pointed at the nonexistent `OPERATOR.md`).
+test("every lane's brief resolves to a file under docs/lanes/", () => {
+  for (const [name, entry] of Object.entries(registry.lanes)) {
+    assert.ok(
+      existsSync(`docs/lanes/${entry.brief}.md`),
+      `lane "${name}" brief "${entry.brief}" has no docs/lanes/${entry.brief}.md`,
+    );
+  }
+});
+

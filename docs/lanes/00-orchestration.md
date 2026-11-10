@@ -36,7 +36,7 @@ Bu dosya kuralları ve sırayı tanımlar. Bir lane'in brief'i `docs/lanes/<ad>.
 | LANE-İÇERİK | `src/messages/**`, `src/i18n/**`, `src/global.d.ts`, `src/content/**`, `!src/content/ai-visibility/**`, `docs/lanes/12-icerik.md`, `supabase/seed-managed-content.sql` |
 | LANE-TESLİMAT | `scripts/prune-vercel-deployments*.mjs`, `scripts/approve-pending-runs*.mjs`, `scripts/verify-production-deployment*.mjs`, `docs/deploy-log.md`, `docs/lanes/14-teslimat.md` |
 | LANE-OPERATÖR | `docs/OPERATOR.md`, `scripts/lane-autopilot*.mjs`, `scripts/lane-kickoff*.mjs`, `scripts/system-health*.mjs`, `scripts/reap-stalled-sandboxes*.mjs`, `docs/lanes/15-operator.md` |
-| LANE-INFRA | `.github/**`, `scripts/**`, `src/app/api/build-info/**`, `package.json`, `bun.lock`, `package-lock.json`, `.gitignore`, `.mcp.json`, `vercel.json`, `AGENTS.md`, `docs/developer-tooling.md`, `docs/lanes/00-orchestration.md`, `docs/lanes/README.md`, `docs/lanes/POLICY.md`, `docs/lanes/AUDIT.md` |
+| LANE-INFRA | `.agents/skills/**`, `.github/**`, `scripts/**`, `src/app/api/build-info/**`, `package.json`, `bun.lock`, `package-lock.json`, `.gitignore`, `.mcp.json`, `vercel.json`, `AGENTS.md`, `docs/developer-tooling.md`, `docs/lanes/00-orchestration.md`, `docs/lanes/README.md`, `docs/lanes/POLICY.md`, `docs/lanes/AUDIT.md` |
 
 **Her lane kendi brief'ine sahiptir.** Protokol "notlarını `docs/lanes/<ad>.md`'ye
 yaz" der; o dosya o lane'in çalışma alanıdır, başkası dokunmaz.
@@ -649,3 +649,77 @@ testler.
 (tüm PR'lar) moda düşer — o durumda kuyruk-geneli iki kural yine her PR'ı bağlar,
 yalnız PR-yerel üçüncü kural kuyruğu yeniden kırabilir. `push` eklerken adımı
 atlamak ya da kapsamsız çalıştırmak gerekir.
+
+### Tur — skill/brief drift + sahipsiz `.agents/skills/**` (2026-11-10)
+
+**Kapsam.** `lane:infra` kuyruğu tarandı; en yüksek etkili, sınırlı iş seçildi.
+Aday olan `#426` (operator.brief) ve `#475` (`.github/skills/`, `.mcp.json`)
+zaten düzeltilmişti (kanıt: `lanes.json` → `"brief": "15-operator"`;
+`docs/developer-tooling.md` iki kaynağı da "yalnız VS Code Copilot" diye
+etiketliyor).
+
+**Bulgu 1 (mantık / ölü işaretçi).** `scripts/lanes.json` → `icerik` lane'i
+`plain-english-content` ve `technical-writing` skill'lerini istiyor, ama ikisi de
+`.agents/skills/` altında **yoktu**. Kickoff metni "Kullanacağın skill'ler
+(.agents/skills/ altında): …" der; lane yükleyemeyeceği bir skill'i kullanmaya
+yönlendiriliyordu. İkisi de resmî OpenHands extensions kayıt defterinden
+birebir vendor'landı (diğer dokuz skill ile aynı revizyon).
+
+**Bulgu 2 (kilit sınıfı — #552 ailesi).** `.agents/skills/**` sahiplik tablosunda
+**hiçbir lane'e ait değildi**. Dedektör (`scripts/lane-collisions.mjs:231`)
+sahipsiz bir yolu **düzenlemeyi** kuyruk-geneli bulgu sayar → skill vendor'lamak
+(gerçek bir infra işi) her açık PR'ı "owned by no lane" ile kilitlerdi. Ağaç
+LANE-INFRA satırına sabitlendi.
+
+**Bulgu 3 (ratchet).** Kickoff'un işaret ettiği iki yol (`docs/lanes/<brief>.md`
+ve `.agents/skills/<skill>/SKILL.md`) hiçbir testle denetlenmiyordu. Üç
+dosya-sistemi ratchet testi eklendi (gerçek `lanes.json`'u okur): her skill
+vendor'lu, her vendor dizininde `SKILL.md` var, her brief dosyaya çözülüyor.
+Mutasyon: `technical-writing` geçici kaldırılınca test kırmızı (18 pass/1 fail),
+geri konunca yeşil.
+
+**Çalıştırılan kontroller.** `bun run lint`, `typecheck`, `check:frontend-source`
+— yeşil; `test:unit` **999/999**; `lane-collisions` + `lane-kickoff` **48/48**.
+
+**Canlıya dokundu mu:** hayır. Yalnız `.agents/skills/**`, `scripts/lanes.json`
+okuma, testler ve sahiplik tablosu.
+
+### Tur — kuyruk kilidi: yanlış sahiplikteki IndexNow düzeltmesi geri alındı (`#309`, 2026-11-10)
+
+**Kapsam.** `lane:infra` kuyruğundaki açık issue'lar yeniden doğrulandı. `#426`,
+`#475`, `#292`, `#303`, `#306`, `#442`, `#385`, `#447` **main'de zaten
+düzeltilmişti** (her biri ilgili dosyada doğrulandı). Bir önceki tur `#309`'un
+ikinci yarısını düzeltmeye çalıştı — ama **yanlış dosyada**.
+
+**Bulgu (sahiplik / kuyruk-geneli kilit).** Bir önceki tur `scripts/verify-indexing.mjs`
+ve `scripts/verify-indexing.test.mjs`'i düzenledi. Bu iki dosya **LANE-VERIFY'ın**:
+sahiplik tablosunda `scripts/verify-*.mjs` glob'u var ve INFRA'nın `scripts/**`
+catch-all'ından önce gelir (belirli glob genel olanı yener). LANE-VERIFY'ın PR'ı
+`#561` de aynı iki dosyayı düzenliyor → `lane-collisions.mjs` **kuyruk-geneli**
+bulgu üretir ve `static` job'ında **her** PR kırmızı olur.
+
+**Kanıt.** Düzeltmeden önce CI `static` (run 42798325067, job 129769409295):
+
+```
+Found 2 queue-wide collision problem(s):
+  scripts/verify-indexing.mjs — edited by #561 and #560
+  scripts/verify-indexing.test.mjs — edited by #561 and #560
+##[error]Process completed with exit code 1.
+```
+
+**Düzeltme.** İki dosya `origin/main`'e geri alındı; PR #560 artık LANE-VERIFY'ın
+alanına dokunmuyor. `#309`'un ikinci yarısı (aynı bulgu) **LANE-VERIFY'a devredildi**
+(`lane:verify` + `agent:handoff`): `verify-indexing.mjs:741` hâlâ
+`entries.find(...)` ile anahtarı **ad sırasına göre** seçiyor; araç kendi seçtiği
+dosyayı kendi gövdesiyle karşılaştırdığı için `public/`'a şekle uyan ikinci bir
+`.txt` (ör. `security.txt`) eklendiğinde **yanlış PASS** üretir. Sahibi düzeltsin.
+
+**Ders.** `scripts/**` catch-all'ı bir lane'e ait **görünse** de, daha belirli bir
+glob (`scripts/verify-*.mjs`) o yolu başka lane'e verir. Bir dosyayı düzenlemeden
+önce **kendi sahiplik satırında mı** diye bak, "INFRA `scripts/**` sahibi" diye
+varsayma — aksi hâlde kuyruk-geneli kilit çıkar.
+
+**Çalıştırılan kontroller.** `bun run lint`, `typecheck`, `check:frontend-source`
+— yeşil; `test:unit` yeşil; `lane-collisions --pr 560` temiz.
+
+**Canlıya dokundu mu:** hayır. Yalnız bu dosya (tur notu).
