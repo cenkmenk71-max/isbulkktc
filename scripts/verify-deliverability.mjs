@@ -530,6 +530,20 @@ async function sendingIpAddresses() {
   return ips;
 }
 
+/**
+ * Maps a non-OK Resend HTTP status to a verdict. A 429 (`rate_limit_exceeded`,
+ * `daily_quota_exceeded`) and any 5xx (`application_error`, `service_unavailable`)
+ * are transient provider states: they say nothing about the key, so they are
+ * `warn` (a note), never `fail`. A `fail` exits non-zero and would blame the
+ * credential for a rate limit or an outage — the same false-negative class as an
+ * unqueryable DNS record reading as "not present". Every other 4xx is a real,
+ * deterministic rejection (401/403 = the key itself), so it stays `fail`.
+ */
+export function classifyResendStatus(status) {
+  if (status === 429 || status >= 500) return "warn";
+  return "fail";
+}
+
 async function checkResend() {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
@@ -549,7 +563,14 @@ async function checkResend() {
       headers: { Authorization: `Bearer ${key}` },
     });
     if (!response.ok) {
-      record("Resend", "fail", `API rejected the key (HTTP ${response.status})`);
+      const verdict = classifyResendStatus(response.status);
+      const why =
+        response.status === 429
+          ? "rate limited — the key may be fine, retry later"
+          : response.status >= 500
+            ? "Resend API error — provider-side, retry later"
+            : "API rejected the key";
+      record("Resend", verdict, `${why} (HTTP ${response.status})`);
       return;
     }
     const body = await response.json();
@@ -599,7 +620,14 @@ async function sendTestEmail(to) {
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      record("Send", "fail", `Resend rejected the message (HTTP ${response.status}): ${body.message ?? ""}`);
+      const verdict = classifyResendStatus(response.status);
+      const why =
+        response.status === 429
+          ? "rate limited — the message was not sent, retry later"
+          : response.status >= 500
+            ? "Resend API error — provider-side, the message was not sent"
+            : "Resend rejected the message";
+      record("Send", verdict, `${why} (HTTP ${response.status}): ${body.message ?? ""}`);
       return;
     }
     record(

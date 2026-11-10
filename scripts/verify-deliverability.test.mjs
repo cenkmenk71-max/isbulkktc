@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   classifyDnsblAnswer,
   classifyDnsResult,
+  classifyResendStatus,
   countSpfDnsLookups,
   evaluateBlocklistZone,
   interpretDnsResponse,
@@ -216,4 +217,20 @@ test("an unqueryable Return-Path subdomain is a skip, never a FAIL", () => {
     rootSpfVerdict({ rootAuthorises: false, aligned: true, queryFailed: false }),
     "warn",
   );
+});
+
+test("a Resend rate limit or outage is a warn, not a FAIL that blames the key", () => {
+  // The regression: every non-OK response was recorded as `fail` with the message
+  // "API rejected the key". A 429 (rate_limit_exceeded / daily_quota_exceeded) or
+  // a 5xx (application_error / service_unavailable) says nothing about the key —
+  // and `fail` exits non-zero, so a busy provider read as a broken credential.
+  assert.equal(classifyResendStatus(429), "warn");
+  assert.equal(classifyResendStatus(500), "warn");
+  assert.equal(classifyResendStatus(503), "warn");
+  // A deterministic client rejection is a real FAIL: 401/403 mean the key itself
+  // was rejected (validation_error / restricted_api_key / suspended_api_key).
+  assert.equal(classifyResendStatus(401), "fail");
+  assert.equal(classifyResendStatus(403), "fail");
+  assert.equal(classifyResendStatus(400), "fail");
+  assert.equal(classifyResendStatus(422), "fail");
 });
