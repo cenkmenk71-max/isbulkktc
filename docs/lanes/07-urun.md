@@ -1266,7 +1266,7 @@ Canlıya dokunulmadı (secret/DB/migration yok).
 ### Tur 21 — rapor bloğu
 
 ```
-Lane: LANE-URUN        Branch: lane/urun        PR: <açılacak>
+Lane: LANE-URUN        Branch: lane/urun        PR: #567
 Görev: #465 — işveren profil gönderimi kimseyi bilgilendirmiyordu
 Değişen dosyalar: src/features/companies/actions.ts,
   src/server/email/company-profile-copy.ts (yeni),
