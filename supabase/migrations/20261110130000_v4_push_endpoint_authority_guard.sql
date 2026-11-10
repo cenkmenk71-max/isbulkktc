@@ -81,7 +81,7 @@ begin
   -- before the allowlist, so the RPC cannot accept a host the URL parser would
   -- resolve elsewhere.
   v_authority := pg_catalog.split_part(v_endpoint, '/', 3);
-  v_authority := pg_catalog.split_part(v_authority, '\', 1);
+  v_authority := pg_catalog.split_part(v_authority, E'\\', 1);
   v_authority := pg_catalog.split_part(v_authority, '?', 1);
   v_authority := pg_catalog.split_part(v_authority, '#', 1);
 
