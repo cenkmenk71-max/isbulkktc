@@ -51,12 +51,29 @@ hem URUN'un dizininde hem GEO'nun modülünde; `tests/e2e/accessibility.spec.ts`
 hem QA'nın katmanında hem TASARIM'ın guard'ında. Dizin düzeyinde sahiplik bu iki
 dosyada örtüşüyordu — dışlama bunu kesin biçimde çözer.
 
+**Dedektörün iki kapsamı var: kuyruk-geneli ve PR-yerel.** `lane-collisions.mjs`
+üç tür bulgu üretir ve bunları **ayırmak** zorundadır, yoksa bir lane'in kendi
+sınır kayması tüm kuyruğu kırar (tıkanıklık ailesi #5/#7; #552 → #557 → #555):
+
+| Bulgu | Kapsam | Kırdığı koşu |
+|---|---|---|
+| `<yol> — owned by no lane` | kuyruk-geneli (hiçbir lane sahibi değil) | **her** PR |
+| `<yol> — edited by #a and #b` | kuyruk-geneli (iki PR aynı dosya) | **her** PR |
+| `<lane> does not own it` | PR-yerel (yalnız o PR'ın kendi denetimi) | yalnız **o** PR |
+
+CI, `static` job'ında `node scripts/lane-collisions.mjs --pr
+"${{ github.event.pull_request.number }}"` çalıştırır: kuyruk-geneli iki kural her
+PR'ı bağlar, üçüncü kural **yalnız o PR'ı**. Böylece bir lane sahip olmadığı bir
+dosyayı düzenlerse kırmızı **kendi PR'ında** çıkar; kuyruktaki diğer PR'lar
+beklemez. Geliştirici `--pr` vermeden çalıştırırsa üçüncü kural yine tüm açık
+PR'lar için raporlanır (yerel farkındalık için).
+
 **Üretilen dosyalar birden çok lane'e açıkça yazılır.** Kural "bir dosyanın TEK
 sahibi" olsa da, üretilen (generated) bir artefakt tek bir lane'in kaynaklarından
 türemez; onu üreten lane'lerin tümü yeniden üretebilmelidir. Aksi hâlde üretici
-lane artefaktı tazeleyince dedektör "lane ... does not own it" der ve — dedektör
-**her açık PR'ı** okuduğu için — bu tek satır kuyruğun tamamını kırmızıya çevirir.
-`supabase/seed-managed-content.sql` bu yüzden dört satırda listelenir. Onu
+lane artefaktı tazeleyince dedektör "lane ... does not own it" der; bu artık
+PR-yerel bir bulgu olsa da (yukarıdaki tablo) gereksiz bir kırmızıdır.
+`supabase/seed-managed-content.sql` bu yüzden beş satırda listelenir. Onu
 `scripts/generate-managed-content-seed.ts` üretir ve şu kaynaklardan toplar:
 
 - LANE-İÇERİK → `src/messages/*.json` (legal bloklar)

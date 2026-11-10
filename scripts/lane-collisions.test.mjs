@@ -377,3 +377,16 @@ test("scoping does not hide a PR's own slip behind a clean sibling", () => {
   // …and scoped to the clean PR 8, the same slip is invisible.
   assert.deepEqual(evaluateCollisions(prs, lanesFixture, 8).local, []);
 });
+
+test("CI scopes the ownership check to the current PR", () => {
+  // The whole point of the split is the `--pr` flag: without it the ownership
+  // slip is reported for every open PR again, which is the queue-global freeze
+  // this fix removes (#552). Pin the CI invocation so dropping the flag fails
+  // here instead of silently re-locking the queue.
+  const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
+  assert.match(
+    workflow,
+    /lane-collisions\.mjs --pr "\$\{\{ github\.event\.pull_request\.number \}\}"/,
+    "the Lane collisions step must pass --pr <this PR> to stay PR-scoped",
+  );
+});
