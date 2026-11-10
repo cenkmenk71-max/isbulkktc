@@ -1944,3 +1944,111 @@ LANE-AUTH'tur. Erişilebilirlik/kontrast/RTL bu lane'de kapsam dışı.
 ### Devir
 
 Yeni devir yok. #514 bu PR ile kapanır; sıra+kapsam invariantı artık kalıcı kapı.
+
+## Durum (2026-11-10, 47. tur) — push endpoint: DB/app allowlist ayrışması
+
+Brief'in 3. hedefi (girdi: yol/URL manipülasyonu) ve 1. hedefi (yetki sınırı)
+kesişiminde yeni bir bulgu kanıtlandı. Tur başlarken main'e **#533** inmişti
+(`c18a51c`, LANE-SUPABASE): `register_push_subscription` artık bir host allowlist
+uyguluyor. Bulgu **kapandı değil, yarısı geldi** — kural var ama app kuralıyla
+aynı dili konuşmuyor.
+
+### Bulgu (kanıtlı) — DB host kuralı ham string, app URL ayrıştırıyor
+
+- **SQL** (`supabase/migrations/20261110000000_v4_push_endpoint_host_allowlist.sql:51-52`):
+  `v_host := lower(split_part(split_part(v_endpoint, '/', 3), ':', 1))` — host
+  **ham string** diliminden çıkarılır.
+- **TS** (`src/server/push/push-endpoint.ts:67,76`):
+  `new URL(endpoint).hostname` — host **URL ayrıştırmasıyla** çıkarılır.
+- `split_part` için `\` ve `%2f`/`%5c` sıradan host karakteridir; `new URL` için
+  ayraçtır/geçersizdir. İki katman bu yüzden ayrışır.
+
+**Gerçek Postgres 17 kanıtı** (migration'ın *tam* ifadesi, `split_part` +
+`lower` + allowlist koşulu):
+
+| endpoint | DB host (`split_part`) | DB kabul | app kabul |
+|---|---|---|---|
+| `https://evil.com\.push.apple.com/x` | `evil.com\.push.apple.com` | **t** | f (host `evil.com`) |
+| `https://evil.com\.notify.windows.com/x` | `evil.com\.notify.windows.com` | **t** | f |
+| `https://evil.com%2f.push.apple.com/x` | `evil.com%2f.push.apple.com` | **t** | f (ayrıştırılamaz) |
+| `https://evil.com%5c.push.apple.com/x` | `evil.com%5c.push.apple.com` | **t** | f |
+| `https://fcm.googleapis.com\evil.com/x` | `fcm.googleapis.com\evil.com` | f | **t** (host `fcm.googleapis.com`) |
+| `https://fcm.googleapis.com/fcm/send/abc` | `fcm.googleapis.com` | t | t |
+| `https://evil.example/x` | `evil.example` | f | f |
+
+- **Gözlenen:** RPC, gerçek host'u `evil.com` olan bir endpoint'i **kabul eder**;
+  app onu reddeder. Ters yönde de ayrışır.
+- **Beklenen:** iki katman aynı endpoint kümesini kabul/reddetmeli.
+- **Etki:** RPC publishable anahtarla **doğrudan çağrılabilir**, yani saldırgan
+  app kapısını atlayıp böyle bir satırı `push_subscriptions`'a yazabilir. Kayıt
+  akışındaki `z.string().url()` ayrıştırılamayan `%2f`/`%5c` biçimlerini zaten
+  reddeder; **RPC etmez**. **Bugün SSRF değil**: gönderim havuzu
+  (`src/server/push/vapid.ts:104`) satırı `webpush.sendNotification`'dan önce
+  `isAllowedPushEndpoint` ile yeniden denetler. Ama DB guard'ı iddia ettiği
+  kuralı uygulamıyor ve ayrışma yönü **kabul** olduğundan "savunma derinliği"
+  katmanı fiilen savunma değil.
+- **Önerilen düzeltme (sahibi LANE-SUPABASE):** SQL de host'u URL ayrıştırmasıyla
+  çıkarsın ya da ters bölü / yüzde-kodlu ayraçları reddetsin; böylece DB kuralı
+  app'in `hostname` çıktısıyla aynı olur.
+
+### Kapı + kanıt dosyası
+
+`tests/security/push-endpoint-sql-parity.test.ts` (yeni, 6 test):
+
+1. **Extractor self-test'i** — efektif RPC gövdesi (son migration tanımı) doğru
+   dilimlenir; grant/revoke kuyruğu gövdeye karışmaz.
+2. **SQL allowlist extractor self-test'i** — gerçek `not in (...)` listesi ve
+   `not like '%.suffix'` listesi okunur; şekil kaybolursa `assert` düşer.
+3. **Raw-string split mirror self-test'i** — mirror `split_part` semantiğini
+   üretir (`\` sıradan karakter → suffix eşleşir), `new URL` ise reddeder.
+4. **Invariant — app kapısı, gerçek host'u push servisi olmayan her endpoint'i
+   reddeder.** Ayrışmayı "app allowlist'ini genişlet" yönünde yanlış düzeltmeye
+   karşı bekçi.
+5. **Parity gate — app ve SQL, mutabık korpusta anlaşır** (gerçek + reddedilen
+   endpoint'ler); non-vacuity assert'i ile.
+6. **`todo` — ayrışma bulgusu.** `acceptedBySqlRejectedByApp` +
+   `acceptedByAppRejectedBySql` üzerinde iki katman eşit mi? Bugün **kırmızı**;
+   sahibi SQL'i düzeltince kendiliğinden yeşile döner.
+
+**Mutasyon:** SQL host ifadesi app'in `hostname` çıktısıyla aynı olacak şekilde
+(ham dilim yerine URL-benzeri çıkarım) değiştirilirse `todo` testi geçer —
+yani test bulguyu gerçekten ölçüyor, vakumlu değil.
+
+### Dokümanlar
+
+- `docs/threat-model.md`: "Açık bulgular"a **4.** madde (tablo + Postgres kanıtı +
+  öneri + devir).
+- `tests/security/README.md`: kapsam tablosuna satır + bulgular tablosuna satır.
+
+### Kapılar (yeşil)
+
+- `bun run test:security` → 201 test / 192 pass / **0 fail** / 9 todo.
+- `bun run lint` ✓ · `bun run typecheck` ✓ · `bun run check:frontend-source` ✓.
+- `bun run test:unit` → 931 test / 931 pass / 0 fail / 0 todo.
+
+### Bakılmayan / değişmeyen
+
+`src/server/push/**`, `supabase/migrations/**` **değiştirilmedi** (görev
+ayrılığı: denetçi kendi bulgusunu düzeltmez). Gerçek Postgres 17 yalnız **yerel
+sandbox'ta** kuruldu ve yalnız `split_part` semantiğini ölçtü — canlı Supabase'e
+**yazılmadı**. Erişilebilirlik/kontrast/RTL bu lane'de kapsam dışı.
+
+### Devir
+
+LANE-SUPABASE (`agent:handoff`, #536): `supabase/migrations/**` sahibi. `agent:blocked`
+**kullanılmadı** — bu insan gerektiren tıkanma değil, başka lane'in işi.
+
+```
+Lane: LANE-GÜVENLİK            Branch: lane/guvenlik            PR: bu PR (tur 47)
+Değişen dosyalar: tests/security/push-endpoint-sql-parity.test.ts (yeni),
+                  tests/security/README.md, docs/threat-model.md,
+                  docs/lanes/09-guvenlik.md
+Çalıştırılan kontroller: lint ✓ / typecheck ✓ / check:frontend-source ✓ /
+  test:unit ✓ (931/931/0/0) / test:security ✓ (201/192/0/9)
+Canlıya dokundu mu: HAYIR (yerel Postgres 17'de salt-okuma semantik ölçümü)
+Sahibin yapması gerekenler: LANE-SUPABASE — `register_push_subscription` host
+  çıkarımını URL ayrıştırmasıyla hizala; `todo` kendiliğinden kapanır.
+Sonraki lane için notlar: Bu bulgu #533'ün **kısmi** düzeltmesini tamamlar;
+  #533 yalnız "host allowlist var mı" sorusunu kapattı, "app ile aynı mı"
+  sorusunu açık bıraktı.
+```

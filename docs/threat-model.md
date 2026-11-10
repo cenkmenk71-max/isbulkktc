@@ -301,6 +301,39 @@ issue açar.
    `package-lock.json`'ı sil (tercih edilen) ya da `package.json` ile aynı
    değişiklikte yeniden üret. Kanıt: `tests/security/lockfile-coverage.test.ts`
    (`todo`; `bun.lock` tarafı kapı). Devir: **#188** (`agent:handoff`, LANE-INFRA).
+4. **Push endpoint allowlist'inin DB yarısı app kuralıyla ayrışıyor** (sahibi:
+   `supabase/migrations/**` -> LANE-SUPABASE). `register_push_subscription`
+   host'u **ham string** üzerinden çıkarıyor —
+   `lower(split_part(split_part(endpoint, '/', 3), ':', 1))`
+   (`20261110000000_v4_push_endpoint_host_allowlist.sql:51-52`) — app ise
+   `new URL(endpoint).hostname` kullanıyor (`src/server/push/push-endpoint.ts:67,76`).
+   `split_part` için ters bölü ve yüzde-kodlu ayraç sıradan host karakteridir;
+   `new URL` için ayraçtır. İki katman bu yüzden ayrışır:
+
+   | endpoint | `new URL().hostname` | app (`isAllowedPushEndpoint`) | DB (`split_part`) |
+   |---|---|---|---|
+   | `https://evil.com\.push.apple.com/x` | `evil.com` | **reddeder** | **kabul eder** |
+   | `https://evil.com\.notify.windows.com/x` | `evil.com` | reddeder | kabul eder |
+   | `https://evil.com%2f.push.apple.com/x` | ayrıştırılamaz | reddeder | kabul eder |
+   | `https://evil.com%5c.push.apple.com/x` | ayrıştırılamaz | reddeder | kabul eder |
+   | `https://fcm.googleapis.com\evil.com/x` | `fcm.googleapis.com` | kabul eder | **reddeder** |
+
+   RPC publishable anahtarla **doğrudan çağrılabilir**, yani saldırgan app
+   kapısını atlayıp böyle bir satırı tabloya yazabilir (kayıt akışındaki
+   `z.string().url()` ayrıştırılamayan biçimleri zaten reddeder; RPC etmez).
+   **Bugün SSRF değil**: gönderim havuzu (`src/server/push/vapid.ts:104`) satırı
+   `webpush.sendNotification`'dan önce `isAllowedPushEndpoint` ile yeniden
+   denetliyor ve bloke satırı kalıcı olarak emekliye ayırıyor. Etki: DB guard'ı
+   iddia ettiği kuralı uygulamıyor; iki katman sessizce ayrışabilir ve ayrışma
+   yönü **kabul** olduğundan "savunma derinliği" katmanı savunma değil. Önerilen
+   düzeltme: SQL de host'u URL ayrıştırmasıyla çıkarsın (ör. `v_endpoint ~
+   '^https://[A-Za-z0-9.\-]+(:[0-9]+)?/'` ile yetki bölümünü kısıtla) ya da
+   host'u app'in `hostname` çıktısıyla aynı yapıp ters bölü/yüzde-kodlu ayraçları
+   reddetsin; ayrışma kapandığında `todo` kendiliğinden yeşile döner. Kanıt:
+   `tests/security/push-endpoint-sql-parity.test.ts` (`todo`; parity gate +
+   self-test'ler kapı). Gerçek Postgres 17'de ölçüldü (migration'ın tam ifadesi):
+   `evil.com\.push.apple.com` -> `t`, `fcm.googleapis.com\evil.com` -> `f`.
+   Devir: LANE-SUPABASE (`agent:handoff`, #536).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
 
