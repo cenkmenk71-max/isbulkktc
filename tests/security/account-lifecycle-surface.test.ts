@@ -132,26 +132,34 @@ test(
 );
 
 // ---------------------------------------------------------------------------
-// 3. Open gap: signing in never consults the kill switch.
+// 3. The kill switch is consulted at sign-in (closed by LANE-AUTH in #542).
+//
+// This was an open finding: `signIn` called `signInWithPassword` and redirected
+// without reading `profiles.status`, so a suspended/closed account still got a
+// working session. LANE-AUTH closed it in `19f197f` (`#542`) by reading the
+// caller's own row and dropping the session when the account is not active.
+// The `todo` is gone; the assertion is now a gate, so the read cannot be
+// removed without turning the suite red.
 // ---------------------------------------------------------------------------
 
-test(
-  "sign-in refuses an account whose profile is not active",
-  { todo: "signIn calls signInWithPassword and redirects without reading profiles.status, so a suspended/closed account still gets a session (owner: LANE-AUTH, #400)" },
-  () => {
-    const signIn = source.match(
-      /export async function signIn\b[\s\S]*?\n\}/,
-    );
-    assert.ok(signIn, "signIn is not defined");
-    // A fix must read the caller's own profile row and act on its status. Any
-    // shape counts as long as it consults `profiles` before the redirect.
-    assert.match(
-      signIn[0],
-      /from\(\s*["'`]profiles["'`]\)[\s\S]{0,300}?status/i,
-      "signIn does not check profiles.status before granting a session",
-    );
-  },
-);
+test("sign-in refuses an account whose profile is not active", () => {
+  const signIn = source.match(/export async function signIn\b[\s\S]*?\n\}/);
+  assert.ok(signIn, "signIn is not defined");
+  // A fix must read the caller's own profile row *and* act on its status. The
+  // read alone is not enough: a suspended account must not keep the session, so
+  // the block path has to sign the caller out (directly or through the shared
+  // kill-switch helper).
+  assert.match(
+    signIn[0],
+    /from\(\s*["'`]profiles["'`]\)[\s\S]{0,300}?status/i,
+    "signIn does not check profiles.status before granting a session",
+  );
+  assert.match(
+    signIn[0],
+    /isAccountBlocked|signOut\s*\(/,
+    "signIn reads profiles.status but never acts on it, so a blocked account keeps its session",
+  );
+});
 
 // ---------------------------------------------------------------------------
 // 4. Open gap: there is no deletion path at all.
