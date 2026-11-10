@@ -212,6 +212,26 @@ export function decideVerification({ vercel, http }) {
 }
 
 /**
+ * Build the summary's verdict headline from the *full* failure set, so the
+ * headline can never disagree with the exit code. The commit check and the
+ * smoke routes are separate questions, and the run exits non-zero when either
+ * fails; a headline that looked only at the commit check printed `✅` next to a
+ * failing job whenever a reachable route was unhealthy — a false green that
+ * reads as "the deploy is fine".
+ */
+export function describeVerdict(decision, routeFailures) {
+  const healthy = decision.verified && routeFailures.length === 0;
+  if (!decision.verified) return { healthy, reason: decision.reason };
+  if (routeFailures.length > 0) {
+    return {
+      healthy,
+      reason: `commit confirmed via ${decision.method}, but ${routeFailures.length} smoke route(s) unhealthy`,
+    };
+  }
+  return { healthy, reason: decision.reason };
+}
+
+/**
  * The starting Vercel-channel state. `configured` means "a token was supplied",
  * not "the API answered" — a set-but-unreachable token (bad token, unknown team
  * slug, API blip) must not be reported as `VERCEL_TOKEN not set`, or the operator
@@ -563,25 +583,16 @@ async function main() {
   }
   failures.push(...routeFailures);
 
-  // The headline verdict must agree with the exit code. The commit can be
-  // confirmed while a reachable route is unhealthy — freshness and health are
-  // separate, but the run still exits 1. Printing `verdict: ✅` next to a
-  // failing job is a false green that reads as "the deploy is fine"; name the
-  // route failures in the headline instead.
-  const healthy = failures.length === 0;
-  const verdictReason =
-    !decision.verified
-      ? decision.reason
-      : routeFailures.length > 0
-        ? `commit confirmed via ${decision.method}, but ${routeFailures.length} smoke route(s) unhealthy`
-        : decision.reason;
+  // The headline verdict must agree with the exit code: derive both from the
+  // same failure set (`describeVerdict`).
+  const verdict = describeVerdict(decision, routeFailures);
 
   const summary = [
     "## Production deploy verification",
     "",
     `- origin: \`${origin}\``,
     `- expected commit: \`${expectedCommit.slice(0, 8)}\``,
-    `- verdict: ${healthy ? "✅" : "❌"} ${verdictReason}`,
+    `- verdict: ${verdict.healthy ? "✅" : "❌"} ${verdict.reason}`,
     `- confirmed via: ${decision.verified ? decision.method : "—"}`,
     `- Vercel API: ${vercel.configured ? (vercel.ok ? "✅" : "❌") : "⏭️"} ${vercel.reason}`,
     `- HTTP build identity: ${http.disabled ? "🚫 disabled" : http.blocked ? "⏭️ blocked" : http.ok ? "✅" : "❌"} ${http.reason}`,
