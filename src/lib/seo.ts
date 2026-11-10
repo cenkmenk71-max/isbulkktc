@@ -85,6 +85,7 @@ export function createLocalizedPageMetadata({
   description,
   contentLocale,
   openGraphType = "website",
+  articleTimes,
 }: {
   locale: AppLocale;
   pathname: string;
@@ -112,6 +113,13 @@ export function createLocalizedPageMetadata({
    * `@type`; everything else is the default `website`.
    */
   openGraphType?: "website" | "article";
+  /**
+   * OGP `article:published_time` / `article:modified_time`. The Open Graph
+   * protocol defines both for `og:type=article`, and they are the social-graph
+   * twin of the page's own `Article.datePublished` / `dateModified`. Omitted for
+   * `website` pages, where the properties do not apply.
+   */
+  articleTimes?: { published: string; modified: string };
 }): Metadata {
   const baseUrl = getAppBaseUrl();
   // Next.js treats a `URL` instance passed as `alternates.canonical` as a base and
@@ -191,6 +199,12 @@ export function createLocalizedPageMetadata({
           alt: getLocalizedSocialImageAlt(locale),
         },
       ],
+      ...(articleTimes && openGraphType === "article"
+        ? {
+            publishedTime: articleTimes.published,
+            modifiedTime: articleTimes.modified,
+          }
+        : {}),
     },
     twitter: {
       card: "summary_large_image",

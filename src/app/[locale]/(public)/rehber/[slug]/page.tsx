@@ -72,6 +72,11 @@ export async function generateMetadata({
     // The page carries `Article` structured data, so the social graph must
     // agree; `website` would contradict the page's own `@type`.
     openGraphType: "article",
+    // A guide tracks a single authored date, so it is both its publication and
+    // its edit date — the same value the Article graph's `datePublished` /
+    // `dateModified` default to. Emitting the pair keeps the unfurl consistent
+    // with the markup rather than leaving the article timestamps unset.
+    articleTimes: { published: guide.updated, modified: guide.updated },
   });
 }
 
