@@ -151,6 +151,13 @@ function cookieStoreReceivers(source: string): Set<string> {
  * bound name to track. `?.` / `!.` are allowed between the receiver and `.set`,
  * since `jar?.set(…)` and `jar!.set(…)` are the same write.
  *
+ * Every member access is read in both spellings the language allows — `x.set`
+ * and `x["set"]`, `x.cookies` and `x["cookies"]`. A detector that reads only the
+ * dot form lets a bracket-notation write ship with the inventory still green;
+ * this is the same false-negative class the sibling detectors were hardened
+ * against (`log-safety`'s `console["error"]`, `client-boundary`'s
+ * `process.env["NAME"]`, `cookie-inventory`'s `document["cookie"]`).
+ *
  * Conscious limit: a method extracted before the call
  * (`const { set } = cookieStore; set(…)`) is not seen — no such code exists
  * today, and the inventory ratchet would flag any new file that introduces it.
@@ -158,8 +165,20 @@ function cookieStoreReceivers(source: string): Set<string> {
 function serverCookieWrites(source: string): WriteSite[] {
   const receivers = cookieStoreReceivers(source);
   const sites: WriteSite[] = [];
-  const re =
-    /\(\s*await\s+cookies\s*\(\s*\)\s*\)\s*[?!]?\s*\.\s*(set|delete)\s*\(|\b(\w+)\s*[?!]?\s*\.\s*cookies\s*[?!]?\s*\.\s*(set|delete)\s*\(|\bcookies\s*\(\s*\)\s*[?!]?\s*\.\s*(set|delete)\s*\(|\b(\w+)\s*[?!]?\s*\.\s*(set|delete)\s*\(/g;
+  // `(set|delete)` is the single capturing group the branches key off; the
+  // bracket form closes with the matching quote then `]`, the dot form with a
+  // word boundary (so `.setting(` is not a `.set`).
+  const method = String.raw`(?:\.\s*|\[\s*["'\x60])(set|delete)(?:["'\x60]\s*\]|\b)`;
+  const cookiesMember = String.raw`(?:\.\s*|\[\s*["'\x60])cookies(?:["'\x60]\s*\]|\b)`;
+  const re = new RegExp(
+    [
+      String.raw`\(\s*await\s+cookies\s*\(\s*\)\s*\)\s*[?!]?\s*${method}\s*\(`,
+      String.raw`\b(\w+)\s*[?!]?\s*${cookiesMember}\s*[?!]?\s*${method}\s*\(`,
+      String.raw`\bcookies\s*\(\s*\)\s*[?!]?\s*${method}\s*\(`,
+      String.raw`\b(\w+)\s*[?!]?\s*${method}\s*\(`,
+    ].join("|"),
+    "g",
+  );
   let match: RegExpExecArray | null;
   while ((match = re.exec(source)) !== null) {
     let receiver: string;
@@ -339,4 +358,35 @@ test("the write detector sees optional-chaining and non-null writes (self-test)"
       `a ${operator} write is the same write as a plain .set`,
     );
   }
+});
+
+test("the write detector reads bracket-notation member access (self-test)", () => {
+  // `x["set"]` is the same property as `x.set`, and `x["cookies"]` the same as
+  // `x.cookies`; a detector that reads only the dot form lets a bracket write
+  // ship with the inventory still green.
+  assert.deepEqual(
+    serverCookieWrites("(await cookies())['set']('ib_evil', '1');").map((s) => [s.receiver, s.kind]),
+    [["cookies()", "set"]],
+    "the inline bracket form must be seen",
+  );
+  assert.deepEqual(
+    serverCookieWrites('response["cookies"]["set"](name, value, options);').map((s) => [
+      s.receiver,
+      s.kind,
+      s.firstArg,
+    ]),
+    [["response", "set", "name"]],
+    "the X.cookies.set shape must be seen in bracket form too",
+  );
+  assert.deepEqual(
+    serverCookieWrites("const jar = await cookies();\njar['set']('ib_evil', '1');").map((s) => [
+      s.receiver,
+      s.kind,
+    ]),
+    [["jar", "set"]],
+    "a bracket write through a bound cookies() store must be inventoried",
+  );
+  // A different method name must not match (the boundary keeps `setting` out).
+  assert.deepEqual(serverCookieWrites("const jar = await cookies();\njar['setting']('x');"), []);
+  assert.deepEqual(serverCookieWrites("const jar = await cookies();\njar.setting('x');"), []);
 });

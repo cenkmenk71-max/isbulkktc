@@ -26,7 +26,11 @@ import { envReadNames } from "./env-access";
  * This is a **ratchet**: the codebase is clean today (measured: 0 credential
  * expressions in any `console.*` call across `src`, `supabase/functions` and
  * `scripts`, 1 non-literal first argument — the sanctioned `EMAIL_HEALTH_EVENT`).
- * The gate keeps it clean.
+ * The gate keeps it clean. The call scanner recognises every spelling a console
+ * call can take — dot, bracket (`console["error"]`), optional chain
+ * (`console?.error`) and an object alias (`const c = console`) — because a
+ * matcher narrower than the language lets a credential-bearing call through with
+ * the file still green.
  */
 
 const ROOTS = ["src", "supabase/functions", "scripts"];
@@ -52,9 +56,47 @@ const sourceFiles = ROOTS.flatMap((root) => walk(root));
  */
 const literalFirstArgumentFiles = sourceFiles.filter((file) => !file.startsWith("scripts/"));
 
-/** The argument text of every `console.<method>(…)` call, parens balanced. */
+/** Every console method name the scanner recognises. */
+const CONSOLE_METHODS = "log|error|warn|info|debug|trace";
+
+/**
+ * Identifiers bound to the console object (`const c = console`), so a call made
+ * through the alias is scanned too. `const log = console.log` binds the *method*,
+ * not the object, and is deliberately not an alias: a bare `log(…)` call cannot
+ * be told apart from an unrelated function of the same name.
+ */
+function consoleReceiverAliases(code: string): string[] {
+  const aliases: string[] = [];
+  for (const match of code.matchAll(
+    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:globalThis\.|window\.)?console\s*(?![\w$.])/g,
+  )) {
+    aliases.push(match[1]!);
+  }
+  return aliases;
+}
+
+/**
+ * The argument text of every `console.<method>(…)` call, parens balanced.
+ *
+ * The matcher must see every spelling a console call can take, or the rule is
+ * only as wide as the narrowest one: a `console["error"](…)`, a
+ * `console?.error(…)` or a call through an alias (`const c = console; c.error(…)`)
+ * — all valid JavaScript — hid their argument from *both* rules while the file
+ * stayed green. This is the same false-negative class the sibling detectors were
+ * hardened against (`client-boundary`'s env reader, `sql-hardening`'s
+ * table/body/grant patterns): a guard whose matcher is too narrow guards a
+ * boundary with holes. A method destructured off the object
+ * (`const { error } = console`) is not covered — matching a bare `error(…)` call
+ * would flag every unrelated function of that name — and no such code exists.
+ */
 function consoleArguments(code: string): string[] {
-  const callPattern = /console\s*\.\s*(?:log|error|warn|info|debug|trace)\s*\(/g;
+  const receivers = ["console", ...consoleReceiverAliases(code)]
+    .map((name) => name.replace(/\$/g, "\\$"))
+    .join("|");
+  const callPattern = new RegExp(
+    `\\b(?:${receivers})\\s*(?:\\.\\s*(?:${CONSOLE_METHODS})|\\?\\.\\s*(?:${CONSOLE_METHODS})|\\[\\s*["'\`](?:${CONSOLE_METHODS})["'\`]\\s*\\])\\s*(?:\\?\\.\\s*)?\\(`,
+    "g",
+  );
   const args: string[] = [];
   for (const match of code.matchAll(callPattern)) {
     let depth = 1;
@@ -225,6 +267,30 @@ test("the scan covers scripts/ for the credential rule but not the label rule (s
     literalFirstArgumentFiles.length > 0,
     "the label rule must still cover src/ and supabase/functions/",
   );
+});
+
+test("the console-call scanner sees every console spelling (self-test)", () => {
+  // Guards the guard: a matcher that only knows `console.error(` leaves a
+  // credential visible to neither rule when the call is written any other way.
+  // Every spelling below is valid JavaScript and every one reaches the log.
+  const spellings = [
+    'console.error("x", { password })',
+    'console["error"]("x", { password })',
+    "console['warn']('x', { token })",
+    'console?.error("x", { password })',
+    "console?.log(`x`, { secret })",
+    'const c = console; c.error("x", { password })',
+  ];
+  for (const code of spellings) {
+    const args = consoleArguments(code);
+    assert.equal(args.length, 1, `scanner missed: ${code}`);
+    assert.match(args[0]!, /password|token|secret/, `argument not captured: ${code}`);
+  }
+  // An aliased method binding is not an object alias, so a bare `log(…)` of an
+  // unrelated function is not mistaken for a console call.
+  assert.deepEqual(consoleArguments("const log = console.log; log('plain')"), []);
+  // A plain `console.table` is not one of the recognised methods.
+  assert.deepEqual(consoleArguments("console.table(rows)"), []);
 });
 
 test("the credential-expression rule catches the real leak shapes (self-test)", () => {
