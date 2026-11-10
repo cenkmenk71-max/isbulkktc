@@ -15,7 +15,7 @@
 
 import { execFileSync } from 'node:child_process';
 
-import { classifyDeployFreshness, classifyProductionProbe, classifyRedRuns, deployFreshnessFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests } from './system-health-core.mjs';
+import { classifyCronFreshness, classifyDeployFreshness, classifyProductionProbe, classifyRedRuns, deployFreshnessFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
 const asJson = process.argv.includes('--json');
@@ -139,12 +139,11 @@ if (runs.length === 0) {
 } else {
   const newest = new Date(runs[0].createdAt);
   const minutes = (Date.now() - newest.getTime()) / 60000;
-  if (minutes > 75) {
-    note('fail', 'cron', `last autopilot run was ${minutes.toFixed(0)} min ago`);
-  } else if (minutes > 45) {
-    note('warn', 'cron', `last run ${minutes.toFixed(0)} min ago (expected ~20)`);
+  const freshness = classifyCronFreshness(minutes);
+  if (freshness) {
+    note(freshness.level, 'cron', freshness.detail);
   } else {
-    note('ok', 'cron', `last run ${minutes.toFixed(0)} min ago`);
+    note('warn', 'cron', `unreadable last-run time (${runs[0].createdAt})`);
   }
   const failed = runs.filter((r) => r.conclusion && r.conclusion !== 'success');
   if (failed.length > 0) {
