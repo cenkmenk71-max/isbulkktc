@@ -153,6 +153,23 @@ test("AGENTS.md has an owner", () => {
   assert.deepEqual(ownersOf("AGENTS.md", table), ["LANE-INFRA"]);
 });
 
+test("the auth callback route belongs to LANE-AUTH, not LANE-SEO", () => {
+  // `src/app/[locale]/**` (LANE-SEO) is broad, so the OAuth/PKCE callback
+  // route matched it and LANE-AUTH — the lane that actually maintains it —
+  // was reported as not owning its own file (#542). LANE-AUTH's brief had
+  // flagged the gap for several turns. The exclusion narrows SEO to the page
+  // routes and hands the callback API route to AUTH alone.
+  assert.deepEqual(ownersOf("src/app/[locale]/auth/callback/route.ts", table), [
+    "LANE-AUTH",
+  ]);
+  // The exclusion must not swallow the localized page routes.
+  assert.ok(
+    ownersOf("src/app/[locale]/(public)/jobs/page.tsx", table).includes(
+      "LANE-SEO",
+    ),
+  );
+});
+
 test("the security-critical surfaces of #424/#435 have an owner", () => {
   // `src/proxy.ts` is the session/locale security boundary, `src/server/auth/**`
   // holds its auth guards, and `src/app/api/build-info/**` is the `force-static`
