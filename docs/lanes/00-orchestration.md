@@ -683,3 +683,34 @@ geri konunca yeşil.
 
 **Canlıya dokundu mu:** hayır. Yalnız `.agents/skills/**`, `scripts/lanes.json`
 okuma, testler ve sahiplik tablosu.
+
+### Tur — IndexNow anahtar seçimi: düzeltmenin yarısı (`#309`, 2026-11-10)
+
+**Kapsam.** `lane:infra` kuyruğundaki açık issue'lar yeniden doğrulandı. `#426`,
+`#475`, `#292`, `#303`, `#306`, `#442`, `#385`, `#447` **main'de zaten
+düzeltilmişti** (her biri ilgili dosyada doğrulandı). Kalan tek gerçek açık iş
+`#309`'un ikinci yarısıydı.
+
+**Bulgu (doğruluk / yanlış-PASS).** `#309` IndexNow anahtar dosyasının **ad
+sırasına göre** (`entries.find(...)`) seçilmesini bildiriyordu. Düzeltme
+`scripts/submit-indexnow.mjs`'e uygulanmış (`readIndexNowKey`), ama
+`scripts/verify-indexing.mjs:741` hâlâ eski `find()` biçimindeydi. Araç
+**kendi seçtiği** dosyayı çekip **kendi gövdesiyle** karşılaştırdığı için,
+`public/`'a şekle uyan ikinci bir `.txt` (ör. `security.txt`, bir Google
+doğrulama kalıntısı) eklendiğinde "key file matches" kontrolü yanlış dosyaya
+bakar ve **yanlış PASS** üretir — aracın kendi kusurunun sonuç gibi okunması
+sınıfı.
+
+**Düzeltme.** `verify-indexing.mjs` anahtar seçimini paylaşılan
+`readIndexNowKey` yardımcısına devretti (kullanılmayan `readFile` import'u
+kaldırıldı). Kaynak-düzeyi ratchet testi eklendi: `verify-indexing.mjs`
+`readIndexNowKey`'i import etmeli ve `entries.find(` içermemeli — iki IndexNow
+çağrı yeri bir daha ayrışamaz.
+
+**Kanıt (kırmızı→yeşil).** Düzeltme geri alınınca `verify-indexing.test.mjs`
+**25 pass/1 fail**; düzeltmeyle **26/26**.
+
+**Çalıştırılan kontroller.** `bun run lint`, `typecheck`, `check:frontend-source`
+— yeşil; `test:unit` **1000/1000**.
+
+**Canlıya dokundu mu:** hayır. Yalnız `scripts/**` ve testler.
