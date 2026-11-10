@@ -11,6 +11,8 @@ import { isAllowedPushEndpoint } from "./push-endpoint";
 test("accepts endpoints from the real push services", () => {
   for (const endpoint of [
     "https://fcm.googleapis.com/fcm/send/abc123",
+    // Chromium's staging FCM host — real devices on non-stable channels (#500).
+    "https://jmt17.google.com/fcm/send/dOBGGJ9ZWp4",
     "https://updates.push.services.mozilla.com/wpush/v2/gAAAA",
     "https://web.push.apple.com/xyz",
     "https://wns2-par02p.notify.windows.com/w/?token=abc",
@@ -46,6 +48,9 @@ test("rejects non-push hosts, non-https and malformed values", () => {
     "https://evil.example/x",
     "https://fcm.googleapis.com.evil.example/x",
     "https://notfcm.googleapis.com/x",
+    // Look-alikes of the staging host must not slip through the exact match.
+    "https://jmt17.google.com.evil.example/x",
+    "https://notjmt17.google.com/x",
     "http://fcm.googleapis.com/fcm/send/x",
     "ftp://fcm.googleapis.com/x",
     "https://user:pass@fcm.googleapis.com/x",

@@ -86,6 +86,8 @@ test("every push-endpoint write path is discovered (self-test)", () => {
 test("the allowlist accepts real push-service endpoints", () => {
   for (const endpoint of [
     "https://fcm.googleapis.com/fcm/send/abc123",
+    // Chromium's staging FCM host, issued to non-stable channels (#500).
+    "https://jmt17.google.com/fcm/send/dOBGGJ9ZWp4",
     "https://updates.push.services.mozilla.com/wpush/v2/gAAAA",
     "https://web.push.apple.com/xyz",
     "https://wns2-par02p.notify.windows.com/w/?token=abc",
@@ -117,6 +119,9 @@ test("the allowlist rejects internal, loopback and metadata addresses (the SSRF)
     // A host that merely ends with an allowed suffix but is not on it.
     "https://fcm.googleapis.com.evil.example/x",
     "https://notfcm.googleapis.com/x",
+    // Look-alikes of the staging host: the exact match must not leak (#500).
+    "https://jmt17.google.com.evil.example/x",
+    "https://notjmt17.google.com/x",
   ]) {
     assert.equal(isAllowedPushEndpoint(endpoint), false, `${endpoint} must be rejected`);
   }
@@ -187,6 +192,7 @@ test("the allowlist module names the real push services", () => {
   const source = read("src/server/push/push-endpoint.ts");
   for (const host of [
     "fcm.googleapis.com",
+    "jmt17.google.com",
     "updates.push.services.mozilla.com",
     "web.push.apple.com",
     "notify.windows.com",

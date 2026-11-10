@@ -204,6 +204,8 @@ function sqlHelperAllowsEndpoint(sql: string, endpoint: string): boolean {
 const acceptedEndpoints = [
   "https://fcm.googleapis.com/fcm/send/abc123",
   "https://android.googleapis.com/gcm/send/abc",
+  // Chromium's staging FCM host — real devices on non-stable channels (#500).
+  "https://jmt17.google.com/fcm/send/dOBGGJ9ZWp4",
   "https://updates.push.services.mozilla.com/wpush/v2/gAAAA",
   "https://web.push.apple.com/xyz",
   "https://wns2-par02p.notify.windows.com/w/?token=abc",
@@ -221,6 +223,9 @@ const rejectedEndpoints = [
   "https://evil.example/collect",
   "https://fcm.googleapis.com.evil.example/x",
   "https://notfcm.googleapis.com/x",
+  // Look-alikes of the staging host: the exact match must not leak (#500).
+  "https://jmt17.google.com.evil.example/x",
+  "https://notjmt17.google.com/x",
 ];
 
 /**
@@ -305,6 +310,7 @@ test("the SQL allowlist extractor reads the real rule (self-test)", () => {
     for (const host of [
       "fcm.googleapis.com",
       "android.googleapis.com",
+      "jmt17.google.com",
       "updates.push.services.mozilla.com",
       "web.push.apple.com",
     ]) {

@@ -25,6 +25,11 @@ const allowedPushHosts = new Set([
   // Chrome / Edge / Brave / Opera (FCM), and the legacy GCM host.
   "fcm.googleapis.com",
   "android.googleapis.com",
+  // Chromium's staging FCM host (`kPushMessagingStagingGcmEndpoint`,
+  // components/push_messaging/push_messaging_constants.cc). Every non-stable
+  // channel — Beta/Dev/Canary, unbranded Chromium, Android WebView — is issued
+  // an endpoint here, so real devices subscribe on it (#500).
+  "jmt17.google.com",
   // Firefox (autopush).
   "updates.push.services.mozilla.com",
   // Safari on macOS and iOS 16.4+.

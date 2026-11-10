@@ -1,6 +1,6 @@
 begin;
 
-select plan(61);
+select plan(63);
 
 -- Web Push tables are capability storage: an endpoint plus its two keys is
 -- enough to deliver a notification to a device. The whole client surface is
@@ -429,6 +429,39 @@ select lives_ok(
     )$$,
   'a direct write accepts a genuine push-service endpoint'
 );
+
+-- Chromium's staging FCM host (`jmt17.google.com`) is a real push service:
+-- every non-stable channel is issued an endpoint there (#500).
+select lives_ok(
+  $$insert into public.push_subscriptions (user_id, endpoint, p256dh, auth_key, locale)
+    values (
+      '86000000-0000-4000-8000-000000000001',
+      'https://jmt17.google.com/fcm/send/dOBGGJ9ZWp4',
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      'en'
+    )$$,
+  'a direct write accepts the staging FCM host'
+);
+
+-- The staging host is an exact match, never a `.google.com` suffix, so a
+-- look-alike cannot ride in on it.
+select throws_ok(
+  $$insert into public.push_subscriptions (user_id, endpoint, p256dh, auth_key, locale)
+    values (
+      '86000000-0000-4000-8000-000000000001',
+      'https://jmt17.google.com.evil.example/fcm/send/x',
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      'en'
+    )$$,
+  '23514',
+  null,
+  'a direct write rejects a look-alike of the staging host'
+);
+
+delete from public.push_subscriptions
+where endpoint = 'https://jmt17.google.com/fcm/send/dOBGGJ9ZWp4';
 
 -- The check is a CHECK, not an INSERT-only guard: it fires on UPDATE too, so a
 -- writer cannot store a good endpoint and then mutate it to a metadata address.
