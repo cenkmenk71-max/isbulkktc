@@ -406,6 +406,93 @@ test("every animation a rule plays has a matching @keyframes", () => {
 });
 
 /**
+ * A one-shot GSAP tween that writes a transform must release it (`clearProps`)
+ * when it settles. `revealOnScroll`'s below-fold branch animated cards with
+ * `gsap.to(batch, { opacity, y, ... })` but never cleared the props, so GSAP
+ * left `transform: translate(0px, 0px)` inline on every card that revealed on
+ * scroll. An inline style outranks the stylesheet's `:hover { transform }`, so
+ * the jobs list, the sector grid and the freelance profile points all lost
+ * their hover lift while the above-the-fold cards (that branch already clears)
+ * kept theirs. A dangling inline transform is invisible to every other guard —
+ * the entrance still plays and the settled frame looks identical — so assert
+ * the contract on the source: every `gsap.to`/`gsap.fromTo` that sets a
+ * transform property must carry `clearProps` for `transform`, unless it is
+ * scroll-linked (a `scrub` tween's transform *is* its final state).
+ */
+test("one-shot transform tweens release their transform for CSS hover", () => {
+  const motionPath = fileURLToPath(
+    new URL("../../src/components/motion/motion-controller.tsx", import.meta.url),
+  );
+  const source = readFileSync(motionPath, "utf8");
+
+  // Extract each `gsap.to(` / `gsap.fromTo(` call by scanning to its matching
+  // close paren, skipping parens inside strings and comments.
+  const callBlocks = (callee: "to" | "fromTo"): string[] => {
+    const blocks: string[] = [];
+    const matcher = new RegExp(`gsap\\.${callee}\\s*\\(`, "g");
+    let match: RegExpExecArray | null;
+    while ((match = matcher.exec(source)) !== null) {
+      const open = match.index + match[0].length - 1;
+      let depth = 0;
+      let inString: string | null = null;
+      let index = open;
+      for (; index < source.length; index += 1) {
+        const char = source[index];
+        if (inString) {
+          if (char === "\\") index += 1;
+          else if (char === inString) inString = null;
+          continue;
+        }
+        if (char === '"' || char === "'" || char === "`") {
+          inString = char;
+          continue;
+        }
+        if (char === "/" && source[index + 1] === "/") {
+          while (index < source.length && source[index] !== "\n") index += 1;
+          continue;
+        }
+        if (char === "/" && source[index + 1] === "*") {
+          index += 2;
+          while (
+            index < source.length &&
+            !(source[index] === "*" && source[index + 1] === "/")
+          ) {
+            index += 1;
+          }
+          index += 1;
+          continue;
+        }
+        if (char === "(") depth += 1;
+        else if (char === ")") {
+          depth -= 1;
+          if (depth === 0) break;
+        }
+      }
+      blocks.push(source.slice(open, index + 1));
+    }
+    return blocks;
+  };
+
+  const transformKey =
+    /\b(?:x|y|xPercent|yPercent|rotate|rotation|rotateX|rotateY|scale|scaleX|scaleY|skewX|skewY)\s*:/;
+  const clearsTransform =
+    /clearProps\s*:\s*["'`][^"'`]*\btransform\b[^"'`]*["'`]/;
+
+  const offenders = [...callBlocks("to"), ...callBlocks("fromTo")].filter(
+    (block) =>
+      transformKey.test(block) &&
+      !/scrollTrigger\s*:/.test(block) &&
+      !clearsTransform.test(block),
+  );
+
+  assert.deepEqual(
+    offenders,
+    [],
+    `These one-shot tweens set a transform but never clearProps it, so the inline transform sticks and overrides the stylesheet's :hover lift:\n${offenders.join("\n---\n")}`,
+  );
+});
+
+/**
  * The global reduced-motion reset must neutralise the *delay* as well as the
  * duration. `hero-copy-enter` starts at `opacity: 0` and fills `backwards`, so a
  * visitor who asks for reduced motion still sees the hero headline blank for the

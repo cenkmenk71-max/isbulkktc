@@ -1198,3 +1198,72 @@ sahipliği karışık/başka lane'lere devirli olduğu için bu turda **sahip ol
 - Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
   `tests/unit/design-token-drift.baseline.json`, `docs/lanes/05-tasarim.md` —
   hepsi bu lane'in kapsamında.
+
+---
+
+## LANE-TASARIM çalışma notları (2026-11-10, tur 16)
+
+Branch: `lane/tasarim`. Taban: `origin/main` @ `7144c7d`. Kuyrukta `lane:tasarim`
+etiketli dört açık iş var (#461, #455, #436, #191); dördünün de sahipliği
+karışık/başka lane'lere devirli (aşağıda). Bu yüzden sahip olduğum dosyalarda
+duran iki somut kusur alındı: biri motion, biri axe guard kapsamı.
+
+### Bulgu 16 — Scroll-reveal kartları inline transform bırakıyor, `:hover` kaldırması ölüyordu (düzeltildi)
+
+- **Belirti:** `revealOnScroll`'un "below-fold" dalı kartları
+  `gsap.to(batch, { opacity, y, ... })` ile canlandırıyor ama tween bitince
+  özellikleri **bırakmıyordu**. GSAP son kare olarak `transform:
+  translate(0px, 0px)`'i **inline** yazıyor; inline stil, stil sayfasının
+  `:hover { transform: translateY(-4px) }` kuralını yener.
+- **Etki:** kaydırarak açılan her kart donuyordu — sektör ızgarası
+  (`.sector-card`), iş listesi (`.jobs-card`), freelance profil maddeleri.
+  Hover'da kenarlık/gölge değişiyor ama kaldırma hiç hareket etmiyordu. Ekran
+  üstünde (above-fold) kartlar etkilenmiyordu, çünkü o dal zaten temizliyordu.
+- **Kanıt (tarayıcı, sistem chromium, üretim dev sunucusu, 1280×900):**
+  anasayfada tüm sayfa kaydırıldıktan sonra `.sector-card[data-reveal]` sayısı
+  **20**; tween oturduktan sonra inline transform tutan kart sayısı:
+  - **düzeltme geri alınınca: 4/20** (`style.transform = "translate(0px, 0px)"`,
+    `style.opacity = "1"`),
+  - **düzeltmeyle: 0/20.**
+- **Düzeltme:** `src/components/motion/motion-controller.tsx` — below-fold batch
+  tween'ine ve 3.2s güvenlik-ağı tween'ine, above-fold dalının zaten kullandığı
+  `clearProps: "transform,opacity,visibility"` verildi. Entrance oturunca CSS
+  kontrolü geri alıyor.
+- **Guard (negatif test edildi):** `tests/unit/design-tokens.test.ts` — yeni test
+  "one-shot transform tweens release their transform for CSS hover": her
+  `gsap.to`/`gsap.fromTo` çağrısını parantez-eşleyerek çıkarır; transform yazan
+  ve `scrollTrigger` (scrub) taşımayan her tween'in `clearProps` içinde
+  `transform` geçirmesini şart koşar. `clearProps` geri alınınca test **kırmızı**
+  (`✖ one-shot transform tweens…`), geri konunca **yeşil**.
+
+### Bulgu 17 — axe guard'ı hesap-kurtarma rotalarını hiç taramıyordu (düzeltildi)
+
+- **Belirti:** `tests/e2e/accessibility.spec.ts` içindeki `publicRoutes` `/login`
+  ve `/register` ile bitiyordu; `/forgot-password` ve `/reset-password` — kilitli
+  kullanıcının ilk gördüğü iki sayfa — **hiç denetlenmiyordu**.
+- **Düzeltme:** iki rota listeye eklendi. Yetkisiz `/reset-password` →
+  `/forgot-password?error=expired`'e yönlendiği için entry o ulaşılabilir durumu
+  denetler ve yönlendirme bozulursa guard yine yüksek sesle düşer.
+- **Kanıt (canlı axe, sistem chromium):** 6 dil × 2 rota mobil + tr/de/fa masaüstü
+  = **18 kontrol, 0 ihlal.**
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅ (41 token)
+- `bun run test:unit` ✅ **942 pass / 0 fail** (+2 yeni guard)
+- Canlı axe probu: 18 kontrol (6 dil × 2 rota mobil + tr/de/fa masaüstü), 0 ihlal ✅
+- Negatif test: clearProps geri alınınca guard kırmızı ✅
+
+### Sahibin / sonraki lane'lerin yapması gerekenler
+
+- **#461 (QR indirme yüzeyi):** sahiplik çelişkisi — issue `src/features/pwa/**`
+  + `src/app/[locale]/install/**` diyor; tablo `src/app/[locale]/**`'yi LANE-SEO'ya,
+  `src/features/**`'ı LANE-URUN'a veriyor, TASARIM'ın `src/features/**` satırı yok.
+- **#455 (motion site geneli)** ve **#436 (ilçe görselleri)** başka lane'lere
+  devirli/açık.
+- **#191 (e-posta paleti)** LANE-URUN/İÇERİK dosyalarında.
+- Değişen dosyalar: `src/components/motion/motion-controller.tsx`,
+  `tests/unit/design-tokens.test.ts`, `tests/e2e/accessibility.spec.ts`,
+  `docs/lanes/05-tasarim.md` — hepsi bu lane'in kapsamında.

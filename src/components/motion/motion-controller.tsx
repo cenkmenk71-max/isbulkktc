@@ -192,6 +192,12 @@ function revealOnScroll(gsap: Gsap, ScrollTrigger: St, refresh = false) {
           ease: "power3.out",
           stagger: 0.08,
           overwrite: true,
+          // Hand transform back to CSS once the reveal settles. Without this
+          // the tween's final `transform: translate(0px, 0px)` stays inline,
+          // and an inline style outranks the stylesheet's `:hover { transform }`
+          // rules — so every card revealed by scrolling (jobs list, sector
+          // grid, freelance points) silently lost its hover lift.
+          clearProps: "transform,opacity,visibility",
         });
       },
     });
@@ -211,6 +217,7 @@ function revealOnScroll(gsap: Gsap, ScrollTrigger: St, refresh = false) {
             duration: 0.5,
             ease: "power2.out",
             overwrite: true,
+            clearProps: "transform,opacity,visibility",
           });
         }
       }

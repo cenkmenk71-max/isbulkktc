@@ -42,6 +42,16 @@ const publicRoutes = [
   { path: "/contact", name: "contact" },
   { path: "/login", name: "login" },
   { path: "/register", name: "register" },
+  // The two account-recovery routes. They are the first pages a locked-out
+  // visitor reaches, yet they were the only auth routes missing from the guard.
+  // `/forgot-password` renders the request form. `/reset-password` sends an
+  // unauthenticated visitor to `/forgot-password?error=expired`, so the audit
+  // runs against that redirect target — the only state reachable without a
+  // recovery session. Keeping the entry means the guard still fails loudly if
+  // that redirect ever breaks and an unauthenticated new-password form starts
+  // rendering at `/reset-password`.
+  { path: "/forgot-password", name: "forgot-password" },
+  { path: "/reset-password", name: "reset-password" },
   // The PWA install landing page is a real public route reached by scanning a
   // QR code, so it is held to the same standard as the rest of the site.
   { path: "/install", name: "install" },
