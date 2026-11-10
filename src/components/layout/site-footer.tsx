@@ -62,7 +62,7 @@ export async function SiteFooter() {
             </nav>
           )}
         </div>
-          <nav className="footer-links" aria-label={t('footerNavigation')}>
+        <nav className="footer-links" aria-label={t('footerNavigation')}>
           <div data-reveal>
             <span className="footer-label">{t('candidates')}</span>
             <Link href="/jobs">{t('links.jobs')}</Link>
