@@ -22,7 +22,9 @@ import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { clientIp } from "@/features/abuse/request-context";
 import {
   passwordResetThrottle,
+  resendConfirmationThrottle,
   signInThrottle,
+  signUpThrottle,
 } from "./auth-rate-limits";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import { redirectLocalized } from "@/i18n/redirect";
@@ -49,6 +51,17 @@ const throttledSignIn: SignInFormState = {
 const throttledReset: SignInFormState = {
   status: "error",
   message: "resetRequestFailed",
+};
+// Sign-up and confirmation resend answer with the same message they already use
+// on a Supabase failure, so a scripted caller cannot tell a throttled call from
+// a rejected one and probe the limit.
+const throttledSignUp: SignInFormState = {
+  status: "error",
+  message: "signUpFailed",
+};
+const throttledResend: SignInFormState = {
+  status: "error",
+  message: "resendFailed",
 };
 
 // Turnstile renders its widget inside the form and writes the token into this
@@ -191,6 +204,16 @@ export async function signUp(
 
   if (!result.success) return invalidForm;
 
+  // Throttle before the mail fan-out. `signUp` mails the submitted address a
+  // confirmation link, so one origin or one victim mailbox must not be driven
+  // without limit (#505).
+  if (!signUpThrottle.address.check(`ip:${await clientIp()}`).ok) {
+    return throttledSignUp;
+  }
+  if (!signUpThrottle.email.check(`email:${result.data.email}`).ok) {
+    return throttledSignUp;
+  }
+
   const supabase = await createSupabaseServerClient({
     allowCookieWrites: true,
   });
@@ -290,6 +313,16 @@ export async function resendConfirmation(
   });
 
   if (!result.success) return invalidForm;
+
+  // Throttle before the mail fan-out. `resend` re-mails the confirmation link
+  // to an address the caller chose, so it is the loosest of the four and the one
+  // a script would reach for (#505).
+  if (!resendConfirmationThrottle.address.check(`ip:${await clientIp()}`).ok) {
+    return throttledResend;
+  }
+  if (!resendConfirmationThrottle.email.check(`email:${result.data.email}`).ok) {
+    return throttledResend;
+  }
 
   const supabase = await createSupabaseServerClient({
     allowCookieWrites: true,
