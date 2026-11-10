@@ -1209,3 +1209,79 @@ ayırt edilemez; ayrımı yapan şey satırın **detayı adlandırıp adlandırm
 Önce filtreyi olduğu gibi uygulayıp fark testini koşturmak, veri kaybını
 (gizli) sızıntıyla takas ediyordu — diferansiyel fuzz bunu yakaladı.
 
+
+---
+
+## Tur 21 — #465: işveren profil gönderimi artık kimseyi sessiz bırakmıyor
+
+### Alınan issue
+`gh issue list --state open --label lane:urun` → **#465** (`agent:handoff`,
+LANE-GÜVENLİK'in #418 hesap-yolculuğu denetiminden devir). Kabul kriterleri:
+(a) işverene yerelleştirilmiş onay e-postası, (b) platform admin'e yeni gönderim
+bildirimi, (c) gönderim hatası görünür (sessiz başarı yok), (d) şablon 6 dilde,
+`tests/security/log-safety.test.ts` ihlal edilmeden.
+
+### Doğrulanan kanıt
+`submitCompanyProfile` (`src/features/companies/actions.ts`) `company_profile_submissions`
+tablosuna `pending` satır yazıp **hiçbir bildirim göndermiyordu**; `mailer` import
+eden dosyalar arasında `companies` yoktu. Gönderim admin kuyruğu açana kadar
+sessizce bekliyordu — kullanıcının "gönderdim, nereye gitti bilmiyorum" durumu.
+
+### Değişen dosyalar (yalnız sahip olduğum yollar)
+- `src/features/companies/actions.ts` — insert/update sonrası `sendCompanyProfileEmails()`;
+  dönen satırın `id`'si idempotency anahtarı (şirket id'si değil: reddedilen bir
+  gönderim Resend penceresi içinde yeniden gönderilirse onay **bastırılmamalı**).
+  Best-effort `try/catch`; posta hatası kaydı geri almaz, `email_health` sinyali üretir.
+- `src/server/email/company-profile-copy.ts` (yeni) — 6 dil (tr/en/ru/el/fa/de) tam
+  tip; eksik çeviri **derleme hatası**, sessiz TR fallback değil.
+- `src/server/email/company-profile-render.ts` (yeni) — saf renderer'lar; paylaşılan
+  `renderEmailLayout`/`renderEmailText` kabuğu (marka, RTL, `lang` paritesi).
+- `src/server/email/mailer.ts` — `sendCompanyProfileEmails()`; `COMPANY_REVIEW_INBOX_EMAIL`
+  → `getFeedbackInbox()` yedeği. Alıcı yoksa satır atlanır (sessiz kayıp yok, `warn`).
+- `src/server/email/company-profile-email.test.ts` (yeni, 6 test).
+
+### QA — uçtan uca render (gerçek kod, ağ yok)
+`renderCompanyProfileAcknowledgement` / `renderCompanyProfileTeamEmail` gerçek
+girdiyle sürüldü: `fa` → `dir="rtl"` + `lang="fa"`; `<script>` → `&lt;script&gt;`
+(ham etiket yok); düz-metin alternatifi bağlantıyı taşır; iletişim satırı telefon
+verildiğinde telefonu gösterir, boş alanlar satır üretmez.
+
+### Micro-denetim (AUDIT boyutları, bu değişikliğe uygulandı)
+| Boyut | Sonuç |
+|---|---|
+| Doğruluk | ✅ `companyProfileSchema` sınırda; boş alanlar satıra dönüşmez |
+| Hata yolu | ✅ posta hatası best-effort `catch` + `email_health`; kayıt korunur |
+| Yetki | ✅ `getCurrentUser` + `status==='active'` + `getOwnedCompany`; RLS `insert_active_owner` |
+| Sızıntı | ✅ log yalnız `code`/`message`; alıcı adresi loglanmaz (`log-safety` yeşil) |
+| RTL / i18n | ✅ 6 dil; `fa` RTL doğrulandı; eksik çeviri derleme hatası |
+| Linkler | ✅ CTA'lar mutlak (`localeUrl`); `/company/dashboard`, `/admin/company-profiles` gerçek rotalar |
+| Sınır girdi | ✅ HTML kaçışı; `undefined`/`null` alan düşer |
+
+### Kapılar
+lint ✅ / typecheck ✅ / check:frontend-source ✅ / test:unit **1032/1032** ✅ /
+`test:security` 195 pass / 0 fail / 8 todo (todo'lar LANE-SUPABASE sahipli,
+bu değişiklikten bağımsız) / `bun run build` (throwaway `NEXT_DIST_DIR`) ✅.
+Canlıya dokunulmadı (secret/DB/migration yok).
+
+### Tur 21 — rapor bloğu
+
+```
+Lane: LANE-URUN        Branch: lane/urun        PR: <açılacak>
+Görev: #465 — işveren profil gönderimi kimseyi bilgilendirmiyordu
+Değişen dosyalar: src/features/companies/actions.ts,
+  src/server/email/company-profile-copy.ts (yeni),
+  src/server/email/company-profile-render.ts (yeni),
+  src/server/email/mailer.ts,
+  src/server/email/company-profile-email.test.ts (yeni),
+  docs/lanes/07-urun.md
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit 1032/1032 ✅ / test:security 195 pass-8 todo (bağımsız) /
+  build ✅
+Canlıya dokundu mu: hayır (secret yazımı yok, DB yok, migration yok)
+Sahibin yapması gerekenler: PR'ı gözden geçirip merge et. Üretimde
+  COMPANY_REVIEW_INBOX_EMAIL ayarlanmalı; yoksa uyarı e-postası feedback
+  kutusuna düşer.
+Sonraki lane için notlar: #465 kabul kriteri (c) "sessiz başarı yok" posta
+  tarafında repo deseniyle (best-effort + email_health) karşılanıyor; işverene
+  görünür bir "gönderildi" durumu zaten form sonucu (`submitted`) ile veriliyor.
+```
