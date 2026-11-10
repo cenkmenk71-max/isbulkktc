@@ -80,14 +80,25 @@ test("the function extractor returns the named body, not the whole file (self-te
 });
 
 /**
+ * Drop `//` line comments and block comments before matching. Without this the
+ * gates are satisfied by prose: the `// Throttle before the mail fan-out.`
+ * comment sits above `supabase.auth.signUp`, so a body whose *control* had been
+ * moved below the mail call still reported a control offset above it — the
+ * ordering gate passed vacuously (caught by mutation, #514).
+ */
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+}
+
+/**
  * The abuse control must run *before* the mail fan-out, not merely appear in the
  * body. A refactor that moved the limiter below `supabase.auth.signUp`/`resend`
  * would let every rejected call still spend one mail send — a presence-only gate
- * would stay green. Returns the byte offset of the first control reference, or
- * -1 when there is none.
+ * would stay green. Returns the byte offset of the first control reference in the
+ * comment-stripped body, or -1 when there is none.
  */
 function firstThrottleOffset(body: string): number {
-  return body.search(throttleReference);
+  return stripComments(body).search(throttleReference);
 }
 
 test("the ordering helper reports the control position, not just presence (self-test)", () => {
@@ -101,6 +112,14 @@ test("the ordering helper reports the control position, not just presence (self-
   assert.equal(firstThrottleOffset("export async function beta() {}"), -1);
 });
 
+test("a control word that appears only in a comment does not count (self-test)", () => {
+  const commented =
+    "export async function gamma() {\n  // Throttle before the mail fan-out.\n  await supabase.auth.signUp({});\n}";
+  const body = exportedFunctionText(commented, "gamma");
+  assert.equal(firstThrottleOffset(body), -1);
+  assert.equal(throttleReference.test(stripComments(body)), false);
+});
+
 test(
   "sign-up carries an abuse control before it mails a confirmation link",
   () => {
@@ -111,11 +130,15 @@ test(
       `${actionsPath} signUp no longer calls supabase.auth.signUp`,
     );
     assert.ok(
-      throttleReference.test(body),
+      throttleReference.test(stripComments(body)),
       "signUp does not consult any rate limiter before Supabase mails the confirmation link",
     );
+    // Both offsets must come from the same (comment-stripped) text: comparing a
+    // stripped offset against the raw `indexOf` mixes coordinate systems and
+    // passes vacuously once a comment precedes the call (caught by mutation).
+    const stripped = stripComments(body);
     assert.ok(
-      firstThrottleOffset(body) < body.indexOf("supabase.auth.signUp"),
+      stripped.search(throttleReference) < stripped.indexOf("supabase.auth.signUp"),
       "signUp consults the rate limiter only after calling supabase.auth.signUp, so a throttled call still sends one confirmation mail",
     );
   },
@@ -130,11 +153,12 @@ test(
       `${actionsPath} resendConfirmation no longer calls supabase.auth.resend`,
     );
     assert.ok(
-      throttleReference.test(body),
+      throttleReference.test(stripComments(body)),
       "resendConfirmation does not consult any rate limiter before Supabase mails the confirmation link",
     );
+    const stripped = stripComments(body);
     assert.ok(
-      firstThrottleOffset(body) < body.indexOf("supabase.auth.resend"),
+      stripped.search(throttleReference) < stripped.indexOf("supabase.auth.resend"),
       "resendConfirmation consults the rate limiter only after calling supabase.auth.resend, so a throttled call still sends one confirmation mail",
     );
   },
