@@ -432,3 +432,45 @@ test("editing (not deleting) an unowned file is still queue-wide", () => {
   const { global } = evaluateCollisions(prs, lanesFixture, 1);
   assert.deepEqual(global, ["#1 orphan/file.ts — owned by no lane"]);
 });
+
+test("a lane's own new claim is judged against its head table, not the shared one", () => {
+  // #563: PR 1 (`lane/alpha`) vendors `gamma/**` and adds it to its own table.
+  // In PR 1's tree `gamma/vendor.ts` is owned; the shared table (main) does not
+  // carry the row yet. Judging PR 1 against its own head table must not report a
+  // queue-wide "owned by no lane", which would redden every other open PR until
+  // the claim merges.
+  const headTable = [
+    { lane: "LANE-ALPHA", globs: ["alpha/**", "gamma/**"] },
+    { lane: "LANE-BETA", globs: ["beta/**"] },
+  ];
+  const prs = [
+    { number: 1, headRefName: "lane/alpha", files: ["gamma/vendor.ts"], lanes: headTable },
+  ];
+  const { global, local } = evaluateCollisions(prs, lanesFixture, 2);
+  assert.deepEqual(global, []);
+  assert.deepEqual(local, []);
+});
+
+test("a new claim in one PR does not excuse another PR's genuine orphan", () => {
+  // The head-table read must not weaken the rule for everyone: PR 2 leaves a
+  // path unowned in *its* own head table too, so it is still queue-wide.
+  const headTable = [
+    { lane: "LANE-ALPHA", globs: ["alpha/**", "gamma/**"] },
+    { lane: "LANE-BETA", globs: ["beta/**"] },
+  ];
+  const prs = [
+    { number: 1, headRefName: "lane/alpha", files: ["gamma/vendor.ts"], lanes: headTable },
+    { number: 2, headRefName: "lane/beta", files: ["orphan/file.ts"], lanes: headTable },
+  ];
+  const { global } = evaluateCollisions(prs, lanesFixture, 2);
+  assert.deepEqual(global, ["#2 orphan/file.ts — owned by no lane"]);
+});
+
+test("a PR with no readable head table falls back to the shared table", () => {
+  // A deleted branch or a failed API read leaves `lanes` null. The file must
+  // then be judged against the shared table, so the fallback reports the same
+  // result the pre-#563 behaviour did instead of inventing ownership.
+  const prs = [{ number: 1, headRefName: "lane/alpha", files: ["orphan/file.ts"], lanes: null }];
+  const { global } = evaluateCollisions(prs, lanesFixture, 1);
+  assert.deepEqual(global, ["#1 orphan/file.ts — owned by no lane"]);
+});
