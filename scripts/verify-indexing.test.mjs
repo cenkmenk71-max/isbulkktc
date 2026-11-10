@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -264,7 +263,6 @@ test("verdictForPage consults the X-Robots-Tag header, not just the meta tag", (
   // Regression: the page fetch read the header but `checkPages` passed a
   // hardcoded `null`, so a header-only `noindex` was invisible to the live run.
   const loc = `${ORIGIN}/en`;
-
   const html = `<link rel="canonical" href="${loc}">`;
   assert.equal(
     verdictForPage({ status: 200, body: html, xRobotsTag: null, loc, origin: ORIGIN }).ok,
@@ -479,27 +477,4 @@ test("the direct-run guard fires even when the script path holds a space or #", 
   assert.equal(isDirectRun(url, undefined), false);
   assert.equal(isDirectRun(url, ""), false);
   assert.equal(isDirectRun("file:///repo/scripts/other.mjs", "/repo/scripts/verify-indexing.mjs"), false);
-});
-
-test("the IndexNow key is read by name==body, never by filename order (#309)", () => {
-  // `submit-indexnow.mjs` was fixed to delegate to `readIndexNowKey`, but this
-  // verifier kept picking the key with `entries.find()` — the alphabetically
-  // first shape-matching `.txt`. A second such file (e.g. `security.txt`) would
-  // then be checked against its own body, and since the tool fetches the file it
-  // *chose*, a wrong-but-consistent pair reports a **false PASS**. Pin the shared
-  // helper so the two IndexNow call sites cannot drift apart again.
-  const source = readFileSync(
-    new URL("./verify-indexing.mjs", import.meta.url),
-    "utf8",
-  );
-  assert.match(
-    source,
-    /import \{ readIndexNowKey \} from "\.\/indexnow-key\.mjs"/,
-    "verify-indexing.mjs must delegate key selection to readIndexNowKey",
-  );
-  assert.doesNotMatch(
-    source,
-    /entries\.find\(/,
-    "verify-indexing.mjs must not select the key by filename order",
-  );
 });

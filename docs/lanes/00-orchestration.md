@@ -684,33 +684,42 @@ geri konunca yeşil.
 **Canlıya dokundu mu:** hayır. Yalnız `.agents/skills/**`, `scripts/lanes.json`
 okuma, testler ve sahiplik tablosu.
 
-### Tur — IndexNow anahtar seçimi: düzeltmenin yarısı (`#309`, 2026-11-10)
+### Tur — kuyruk kilidi: yanlış sahiplikteki IndexNow düzeltmesi geri alındı (`#309`, 2026-11-10)
 
 **Kapsam.** `lane:infra` kuyruğundaki açık issue'lar yeniden doğrulandı. `#426`,
 `#475`, `#292`, `#303`, `#306`, `#442`, `#385`, `#447` **main'de zaten
-düzeltilmişti** (her biri ilgili dosyada doğrulandı). Kalan tek gerçek açık iş
-`#309`'un ikinci yarısıydı.
+düzeltilmişti** (her biri ilgili dosyada doğrulandı). Bir önceki tur `#309`'un
+ikinci yarısını düzeltmeye çalıştı — ama **yanlış dosyada**.
 
-**Bulgu (doğruluk / yanlış-PASS).** `#309` IndexNow anahtar dosyasının **ad
-sırasına göre** (`entries.find(...)`) seçilmesini bildiriyordu. Düzeltme
-`scripts/submit-indexnow.mjs`'e uygulanmış (`readIndexNowKey`), ama
-`scripts/verify-indexing.mjs:741` hâlâ eski `find()` biçimindeydi. Araç
-**kendi seçtiği** dosyayı çekip **kendi gövdesiyle** karşılaştırdığı için,
-`public/`'a şekle uyan ikinci bir `.txt` (ör. `security.txt`, bir Google
-doğrulama kalıntısı) eklendiğinde "key file matches" kontrolü yanlış dosyaya
-bakar ve **yanlış PASS** üretir — aracın kendi kusurunun sonuç gibi okunması
-sınıfı.
+**Bulgu (sahiplik / kuyruk-geneli kilit).** Bir önceki tur `scripts/verify-indexing.mjs`
+ve `scripts/verify-indexing.test.mjs`'i düzenledi. Bu iki dosya **LANE-VERIFY'ın**:
+sahiplik tablosunda `scripts/verify-*.mjs` glob'u var ve INFRA'nın `scripts/**`
+catch-all'ından önce gelir (belirli glob genel olanı yener). LANE-VERIFY'ın PR'ı
+`#561` de aynı iki dosyayı düzenliyor → `lane-collisions.mjs` **kuyruk-geneli**
+bulgu üretir ve `static` job'ında **her** PR kırmızı olur.
 
-**Düzeltme.** `verify-indexing.mjs` anahtar seçimini paylaşılan
-`readIndexNowKey` yardımcısına devretti (kullanılmayan `readFile` import'u
-kaldırıldı). Kaynak-düzeyi ratchet testi eklendi: `verify-indexing.mjs`
-`readIndexNowKey`'i import etmeli ve `entries.find(` içermemeli — iki IndexNow
-çağrı yeri bir daha ayrışamaz.
+**Kanıt.** Düzeltmeden önce CI `static` (run 42798325067, job 129769409295):
 
-**Kanıt (kırmızı→yeşil).** Düzeltme geri alınınca `verify-indexing.test.mjs`
-**25 pass/1 fail**; düzeltmeyle **26/26**.
+```
+Found 2 queue-wide collision problem(s):
+  scripts/verify-indexing.mjs — edited by #561 and #560
+  scripts/verify-indexing.test.mjs — edited by #561 and #560
+##[error]Process completed with exit code 1.
+```
+
+**Düzeltme.** İki dosya `origin/main`'e geri alındı; PR #560 artık LANE-VERIFY'ın
+alanına dokunmuyor. `#309`'un ikinci yarısı (aynı bulgu) **LANE-VERIFY'a devredildi**
+(`lane:verify` + `agent:handoff`): `verify-indexing.mjs:741` hâlâ
+`entries.find(...)` ile anahtarı **ad sırasına göre** seçiyor; araç kendi seçtiği
+dosyayı kendi gövdesiyle karşılaştırdığı için `public/`'a şekle uyan ikinci bir
+`.txt` (ör. `security.txt`) eklendiğinde **yanlış PASS** üretir. Sahibi düzeltsin.
+
+**Ders.** `scripts/**` catch-all'ı bir lane'e ait **görünse** de, daha belirli bir
+glob (`scripts/verify-*.mjs`) o yolu başka lane'e verir. Bir dosyayı düzenlemeden
+önce **kendi sahiplik satırında mı** diye bak, "INFRA `scripts/**` sahibi" diye
+varsayma — aksi hâlde kuyruk-geneli kilit çıkar.
 
 **Çalıştırılan kontroller.** `bun run lint`, `typecheck`, `check:frontend-source`
-— yeşil; `test:unit` **1000/1000**.
+— yeşil; `test:unit` yeşil; `lane-collisions --pr 560` temiz.
 
-**Canlıya dokundu mu:** hayır. Yalnız `scripts/**` ve testler.
+**Canlıya dokundu mu:** hayır. Yalnız bu dosya (tur notu).
