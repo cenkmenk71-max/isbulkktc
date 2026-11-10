@@ -546,9 +546,17 @@ async function main() {
   const failures = [];
   if (!decision.verified) {
     failures.push(decision.reason);
-  } else {
-    // Smoke-test the origin only when it is reachable. A Cloudflare 403 for the
-    // runner is expected and must not fail the run.
+  }
+
+  // Freshness and health are separate questions: production behind `main` says
+  // nothing about whether it answers, and a red verdict that never probed the
+  // origin cannot tell "stale but healthy" from "stale and broken". Smoke
+  // whenever the origin answers. On a red run the routes only append detail to
+  // an already-red verdict; on a green run this is the same gate as before, so
+  // the change is strictly additive. A disabled deployment is down for every
+  // visitor, so it is the one state worth skipping.
+  if (!http.disabled) {
+    // A Cloudflare 403 for the runner is expected and must not fail the run.
     const results = await smokeTest(origin);
     const smoke = summarizeSmokeResults(results);
     const blocked = results.every((result) => result.skipped);
