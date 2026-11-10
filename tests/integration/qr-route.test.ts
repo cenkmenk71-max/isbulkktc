@@ -289,28 +289,47 @@ test("a version outside the supported range falls back to auto-sizing", async ()
 });
 
 /**
- * Failure path (finding, handed to the route owner as #544).
+ * Failure path (was finding #544, now fixed).
  *
  * `buildQrRenderOptions` passes any version in 1..40 straight to the generator,
  * and `Number.parseInt` truncates `1.5` to `1`. The default `/install?next=/jobs`
- * payload needs version 3, so `?version=1` and `?version=2` reach `QRCode` with a
- * symbol too small to hold the data and throw **unhandled** — a 500 from a public,
- * cacheable route. `tests/security/qr-render-capacity-surface.test.ts` pins the
- * same defect as *source text*; this is the functional half: it calls the route
- * and observes the throw. When the owner adds a capacity check or a try/catch
- * (#544), this flips red and the assertion should be replaced by the controlled
- * status.
+ * payload needs version 3, so `?version=1` and `?version=2` used to reach
+ * `QRCode` with a symbol too small to hold the data and throw **unhandled** — a
+ * 500 from a public, cacheable route. The route now drops an unrenderable pin and
+ * auto-sizes, so the request still answers a scannable symbol (the same fallback
+ * an out-of-range version gets) instead of a 500.
  */
-test("a too-small pinned version throws out of the route with no error handling (finding)", async () => {
+test("a too-small pinned version falls back to auto-sizing instead of a 500", async () => {
   const restore = withEnv({ NEXT_PUBLIC_APP_URL: APP_ORIGIN, APP_URL: undefined });
   try {
     for (const version of ["1", "2", "1.5", "2.9"]) {
-      await assert.rejects(
-        () => get(`?format=png&version=${version}`),
-        /QR Code/i,
-        `version=${version} is advertised as valid yet cannot render the payload`,
+      const response = await get(`?format=png&version=${version}`);
+      assert.equal(response.status, 200, `version=${version} must not 500`);
+      assert.equal(
+        await decodePng(response),
+        "https://isbulkktc.com/install?next=%2Fjobs",
+        `version=${version} must still encode the install URL`,
       );
     }
+  } finally {
+    restore();
+  }
+});
+
+/**
+ * The other half of #544: a `next` the 2048-*character* cap lets through but
+ * that percent-encodes past version 40's byte ceiling. No version can hold it,
+ * so auto-sizing also throws — the route must answer a controlled status, never
+ * a 500.
+ */
+test("a payload past every version's capacity answers a controlled status", async () => {
+  const restore = withEnv({ NEXT_PUBLIC_APP_URL: APP_ORIGIN, APP_URL: undefined });
+  try {
+    const response = await get(`?format=png&next=/${"%C3%A9".repeat(680)}`);
+    assert.ok(
+      response.status >= 400 && response.status < 500,
+      `an unencodable payload must answer a 4xx, got ${response.status}`,
+    );
   } finally {
     restore();
   }
