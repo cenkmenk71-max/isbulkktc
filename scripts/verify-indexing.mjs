@@ -534,20 +534,22 @@ export function isDeploymentDisabled(status, vercelError) {
 }
 
 /**
- * Why the origin could not be measured, or `null` when it answered normally.
- * A disabled deployment and a Cloudflare/interstitial challenge both leave the
- * indexing surface unmeasurable from here; neither is evidence about the site,
- * so both are a `skip`. A disabled deployment is checked first: it is an
- * account-level outage, and the challenge heuristic would otherwise only partly
- * cover it.
+ * A clause explaining why the origin could not be measured, or `null` when it
+ * answered normally. A disabled deployment and a Cloudflare/interstitial
+ * challenge both leave the indexing surface unmeasurable from here; neither is
+ * evidence about the site, so both are a `skip`. A disabled deployment is
+ * checked first: it is an account-level outage, and the challenge heuristic
+ * would otherwise only partly cover it.
  */
 export function unmeasurableReason(status, body, vercelError) {
   if (isDeploymentDisabled(status, vercelError)) {
     return "the deployment is disabled (HTTP 402, DEPLOYMENT_DISABLED) — the site is down for every visitor";
   }
-  if (status === 403 || status === 429 || status === 503) return `behind a challenge (HTTP ${status})`;
+  if (status === 403 || status === 429 || status === 503) {
+    return `it is behind a challenge (HTTP ${status})`;
+  }
   if (/just a moment|cf-challenge|enable javascript and cookies/i.test(body ?? "")) {
-    return "behind a challenge";
+    return "it is behind a challenge (interstitial page)";
   }
   return null;
 }
@@ -560,7 +562,7 @@ async function checkRobots() {
   }
   const unmeasurable = unmeasurableReason(status, body, vercelError);
   if (unmeasurable) {
-    record("robots", "skip", `robots.txt is ${unmeasurable}`);
+    record("robots", "skip", `robots.txt is unmeasurable: ${unmeasurable}`);
     return null;
   }
   if (status !== 200) {
@@ -585,7 +587,7 @@ async function checkSitemap(sitemapUrl) {
   const { status, body, vercelError, error } = await fetchText(sitemapUrl);
   const unmeasurable = unmeasurableReason(status, body, vercelError);
   if (error || unmeasurable) {
-    record("sitemap", "skip", `sitemap not reachable from here (${error ?? unmeasurable})`);
+    record("sitemap", "skip", `sitemap is unmeasurable: ${error ?? unmeasurable}`);
     return null;
   }
   if (status !== 200) {
@@ -736,8 +738,13 @@ async function checkIndexNow() {
     return;
   }
   const key = (await readFile(path.join(publicDir, keyFile), "utf8")).trim();
-  const { status, body, error } = await fetchText(`${ORIGIN}/${keyFile}`);
+  const { status, body, vercelError, error } = await fetchText(`${ORIGIN}/${keyFile}`);
+  const unmeasurable = unmeasurableReason(status, body, vercelError);
   const verdict = evaluateIndexNowKey({ status, body, key, error });
+  if (!verdict.ok && unmeasurable) {
+    record("indexnow", "skip", `key file is unmeasurable: ${unmeasurable}`);
+    return;
+  }
   record("indexnow", verdict.ok ? "pass" : verdict.state === "unreachable" ? "skip" : "fail", verdict.reason);
 }
 
