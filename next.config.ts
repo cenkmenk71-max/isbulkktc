@@ -146,6 +146,23 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    // Canonicalise the `www` host to the apex. Cloudflare redirects `http` to
+    // `https` but does not touch the host, and Vercel's domain-level "redirect
+    // to apex" is off, so `www.isbulkktc.com` served the exact same 200 as the
+    // apex — two indexable hosts for one site (issue #595). The page-level
+    // canonical already points at the apex, but a host-level redirect is what
+    // search engines actually consolidate on. 308 keeps the method and is what
+    // the rest of the app uses for permanent moves.
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www\\.isbulkktc\\.com" }],
+        destination: "https://isbulkktc.com/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
