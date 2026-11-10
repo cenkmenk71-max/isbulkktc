@@ -36,7 +36,7 @@ Bu dosya kuralları ve sırayı tanımlar. Bir lane'in brief'i `docs/lanes/<ad>.
 | LANE-İÇERİK | `src/messages/**`, `src/i18n/**`, `src/global.d.ts`, `src/content/**`, `!src/content/ai-visibility/**`, `docs/lanes/12-icerik.md`, `supabase/seed-managed-content.sql` |
 | LANE-TESLİMAT | `scripts/prune-vercel-deployments*.mjs`, `scripts/approve-pending-runs*.mjs`, `scripts/verify-production-deployment*.mjs`, `docs/deploy-log.md`, `docs/lanes/14-teslimat.md` |
 | LANE-OPERATÖR | `docs/OPERATOR.md`, `scripts/lane-autopilot*.mjs`, `scripts/lane-kickoff*.mjs`, `scripts/system-health*.mjs`, `scripts/reap-stalled-sandboxes*.mjs`, `docs/lanes/15-operator.md` |
-| LANE-INFRA | `.github/**`, `scripts/**`, `src/app/api/build-info/**`, `package.json`, `bun.lock`, `package-lock.json`, `.gitignore`, `.mcp.json`, `vercel.json`, `AGENTS.md`, `docs/developer-tooling.md`, `docs/lanes/00-orchestration.md`, `docs/lanes/README.md`, `docs/lanes/POLICY.md`, `docs/lanes/AUDIT.md` |
+| LANE-INFRA | `.agents/skills/**`, `.github/**`, `scripts/**`, `src/app/api/build-info/**`, `package.json`, `bun.lock`, `package-lock.json`, `.gitignore`, `.mcp.json`, `vercel.json`, `AGENTS.md`, `docs/developer-tooling.md`, `docs/lanes/00-orchestration.md`, `docs/lanes/README.md`, `docs/lanes/POLICY.md`, `docs/lanes/AUDIT.md` |
 
 **Her lane kendi brief'ine sahiptir.** Protokol "notlarını `docs/lanes/<ad>.md`'ye
 yaz" der; o dosya o lane'in çalışma alanıdır, başkası dokunmaz.
