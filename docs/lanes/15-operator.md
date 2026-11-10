@@ -979,3 +979,159 @@ açlık üretir. Kuyruk işlerinde ya en-eski seç ya sıralamayı açıkça bel
 Ayrıca FIFO'ya geçince "aynı iş birden çok sahibe" sınıfı ortaya çıktı — çoklu
 etiketli issue'da talep kümesi şart; yoksa israfı bir kapıdan kapatırken diğerinden
 açarsın.
+
+## Tur notu — `build-info` yer tutucusu bayat deploy değildir (2026-11-10)
+
+**Bulgu (doğruluk / hata yolu).** `system-health`'in `deploy` satırı, canlının
+`/api/build-info` commit'ini `main` HEAD ile karşılaştırıp **eşleşmeyen her string**
+için `warn` yazıyordu. `src/app/api/build-info/route.ts` ise
+`VERCEL_GIT_COMMIT_SHA` yokken literal **`"unknown"`** (ve `"development"`) döner.
+Sonuç, var olmayan bir commit'i adlandıran uydurma bir uyarıydı:
+
+```
+WARN deploy  live build unknown is behind main 1c103de — merged work is not deployed
+```
+
+`unknown` bir commit değil; "karşılaştıramadım" demek. Operatörü olmayan bir bayat
+deploy'un peşine salıyordu — 8. ailenin ("gösterge kendi hatasını okuyor") deploy
+ekseni.
+
+**Düzeltme.** `classifyDeployFreshness` her iki tarafta da hex SHA şartı arar
+(`/^[0-9a-f]{7,40}$/`); commit olmayan değer `unknown` döner (asla `warn`) ve
+çağıran `unknown` satırını zaten yazmaz. `verify-production-deployment.mjs`'in
+`normalizeCommit` guard'ıyla aynı şekil. Guard "her şey eşleşir"e düşmez: iki
+farklı commit-dışı değer `ok` sayılmaz.
+
+**Kanıt.** Mutasyon: guard silinince 2 yeni test kırmızı (`actual:'warn'`,
+`expected:'unknown'`), geri konunca `system-health.test.mjs` **58/58**. Canlı
+`"3644cbe"` (gerçek, bayat) hâlâ `warn`; `"unknown"` artık satır üretmiyor.
+
+**#551 kapandı — zaten düzeltilmişti.** Devir issue'su (`system-health-core`
+404 `DEPLOYMENT_NOT_FOUND`'u tanımıyor) **main'de çözülü** (PR #555,
+`vercelAccountState`). Kanıtlandı: `isDeploymentDisabled(404,'DEPLOYMENT_NOT_FOUND')`
+→ `true`; `classify` → `fail — DOWN: HTTP 404 DEPLOYMENT_NOT_FOUND`; çıplak 404
+hâlâ genel. Issue kanıtla kapatıldı; bu turda yeniden uygulanmadı.
+
+**Açık kalan (bu lane'in dosyası değil).** Canlı `system-health` turu
+`FAIL main CI` (Verify production deployment) ile `WARN deploy` (canlı build
+`3644cbe` geride) **aynı kök nedeni** paylaşıyor: yeni Vercel hesabında otomatik
+Git deploy yok (#547, `agent:blocked`). Ayrıca `verify-production-deployment`
+koşucusu origin'den **HTTP 403** alıyor (yerelde 200) — edge/WAF runner'ı
+engelliyor, yani doğrulamanın HTTP yarısı CI'da yeşile dönemez. İkisi de
+LANE-INFRA/LANE-TESLİMAT dosyalarında; burada yalnızca kanıt bırakıldı.
+
+**Not — autopilot abort'u geçiciydi.** `lane-autopilot.mjs --dry-run` bir kez
+`autopilot API read failed (start-tasks, sandboxes, conversations)` ile düştü.
+Üç okuma yolu (HTTP) elle denendi: üçü de `200` + geçerli JSON. Yeniden çalıştırma
+temiz geçti (5 sandbox RUNNING, 3 açık PR, `operator` "task in progress").
+Yani bu bir **API timeout**'u (hata yolu doğru davrandı: ölçemediği hâlde karar
+vermedi), kod hatası değil.
+
+## Tur notu — doğrulanamayan deploy sessiz kalmamalı (2026-11-10)
+
+Bir önceki tur `classifyDeployFreshness`'e "commit-dışı değer `unknown` döner"
+guard'ını ekledi ve şunu yazdı: "çağıran `unknown` satırını **zaten yazmaz**".
+Bu tur o kararın **yanlış** olduğunu canlı koşuyla buldu: `unknown` satırını
+yazmamak, tam da sağlık kontrolünün **gözetimsiz** çalıştığı yerde deploy'u
+görünmez kılıyordu.
+
+**Bulgu (gösterge kendi kanıtsızlığını sağlık sanıyor).** `system-health.mjs`:
+
+```js
+if (freshness.level !== 'unknown') note(freshness.level, 'deploy', freshness.detail);
+```
+
+`unknown` sessizce düşürülüyordu. Ama bu iş yalnız **GitHub runner'ında**
+(gözetimsiz, saatlik `system-health.yml`) koşar; orada origin'i **Cloudflare
+403** ile yanıtlar, `fetchLiveCommit()` `null` döner ve hüküm **her zaman**
+`unknown`'dır. Kanıt — gerçek koşu `42811471015` (`schedule`, `success`):
+
+```
+  WARN production   HTTP 403 (edge blocked the probe — could not verify)
+  0 failure(s), 2 warning(s)
+```
+
+Yani yeşil koşu, `deploy` satırı **hiç yokken** — üstelik canlı build `main`'in
+gerisinde (#547) — "sağlıklı" dedi. Sessizlik sağlık diye okundu; bu tam da
+9. ailenin ("serving ≠ güncel") kapatmak için var olduğu hata.
+
+**Düzeltme (LANE-OPERATÖR dosyaları).** `system-health-core.mjs`'e
+`deployFreshnessFinding(freshness)`: `unknown` → görünür **`warn`**
+(`could not verify (<neden>)`), `ok`/`warn` aynen geçer, geçersiz girdi `null`.
+`system-health.mjs` artık satırı bu helper'la yazar. **Bilinçli olarak `fail`
+değil:** veri yokluğu bayat deploy kanıtı değildir; çıkış kodu yalnız `fail`
+sayar (`process.exit(bad > 0 ? 1 : 0)`), yani bu uyarı CI'ı kırmızıya çevirmez.
+Ama sessiz de kalamaz — basılır ve uyarı sayacını artırır.
+
+**Kanıt (mutasyon).** `HEALTH_ORIGIN` okunamaz kılınınca (CI koşulunun aynısı):
+
+```
+önce:  WARN production   could not reach the origin (fetch failed)
+       (deploy satırı YOK)
+sonra: WARN production   could not reach the origin (fetch failed)
+       WARN deploy       could not verify (no build-info to compare against main)
+```
+
+Yerelde (origin okunur) gerçek hüküm korunuyor:
+`WARN deploy  live build 3644cbe is behind main 9042883 — merged work is not deployed`.
+`system-health.test.mjs` **61/61** (yeni 3 test), `test:unit` **1062/1062**,
+`lint`/`typecheck`/`check:frontend-source` temiz.
+
+**Ders.** Bir sinyalin "yazacak kanıtım yok" hâli **de** bir bulgudur. Sessizlik
+nötr değildir; gözetimsiz bir koşuda tek kanıt kanalı kapandığında (burada edge
+403), "hiç satır yok" operatör için "sorun yok" demektir. Ölçemediğini **yaz**,
+ama **fail** sayma: ikisi ayrı şeydir.
+
+**Kapsam notu (başka lane'e devredilmedi, gerek yok).** Gerçek bayat-deploy
+hükmü zaten `.github/workflows/verify-production-deployment.yml` (LANE-TESLİMAT,
+her `main` push'unda koşar) tarafından **Vercel API** kanalıyla veriliyor —
+`main`'deki mevcut kırmızı tam olarak bu. Yani `system-health`'e Vercel yedeği
+eklemek aynı sinyali çiftler ve `VERCEL` secret'ını `system-health.yml`'e
+(GENİŞLİK: LANE-INFRA `.github/**`) eklemeyi gerektirirdi. Bu turda **yapılmadı**;
+bu lane'in sınırı "sessizliği kaldır", "hükmü çiftle" değil.
+
+
+## Tur notu — autopilot raporu merge adımıyla çelişmesin (2026-11-10)
+
+Aynı geçişte iki satır birbirini yalanlıyordu: `decide()` "PR #579 ready to merge"
+diyordu, `mergeReadyPullRequests` ise aynı PR'ı merge etmeyi reddedip "STALLED PRs
+(need a human)" altında listeliyordu. Kök neden: `decide()` yalnız **issue**
+etiketlerini okuyordu, PR'ın kendi etiketlerini okumuyordu. Lane "ready to merge"
+üzerine hiçbir şey yapamaz — merge adımı merge etmez, etiketi başka hiçbir şey
+temizlemez — yani cümle **yanlıştı**.
+
+**Düzeltme.** `heldForHuman(labels)` helper'ı (`lane-autopilot-core.mjs`)
+`agent:hold` / `agent:blocked` arar; `decide()` içinde `CLEAN` dalından **önce**
+kontrol edilir ve gerçek durumu yazar. `mergeReadyPullRequests` de artık aynı
+helper'ı çağırır — tek kaynak, çünkü iki kopya (satır içi test + helper) sürüklenir.
+
+**İkinci sessizlik — draft PR.** `mergeReadyPullRequests` bir draft'ta
+`if (pr.isDraft) continue;` ile **sessizce** atlıyordu. Draft'ı hiçbir şey
+un-draft etmez; yeşil bir draft ne merge olur ne de açık-PR kotasını (4) bırakır.
+#584 tam da buydu: her zorunlu kontrol yeşil, `autoMergeRequest: null`, ama
+görünmez — çünkü onu adlandıracak tek satır `continue`'nun atladığı satırdı.
+`isDraftPullRequest(pr)` helper'ı draft'ı "STALLED" altında **raporlar**;
+`decide()` de draft için "ready to merge" demez.
+
+**Kanıt (canlı, gerçek `gh pr list` çıktısıyla).** Önce `origin/main` worktree,
+sonra lane head, aynı canlı kuyruk:
+
+```
+önce:  infra       wait      PR #579 ready to merge (resume)
+sonra: infra       wait      PR #579 held for a human (agent:blocked) (resume)
+       STALLED PRs (need a human): 1
+         #579 — held for a human (agent:blocked)
+```
+
+İki satır artık **uyuşur**. Classifier'lar gerçek payload şekliyle beslendi
+(`labels: [{name}], isDraft`): `#579 → held`, `#584 → draft`, `#587 → mergeable`
+— üçü de merge adımının fiilen yapacağıyla aynı.
+
+**Ders.** Bir rapor satırı ile bir eylem satırı aynı kaynağı anlatıyorsa, ikisi de
+aynı helper'ı çağırmalı. "ready to merge" diyen rapor, merge etmeyen adımın yanında
+duruyorsa, rapor **yalan** söylüyordur — ve operatör o yalana göre karar verir.
+Aynı şekilde: bir `continue`, bir durumu **hem** kuyruktan **hem** rapordan
+düşürüyorsa, o durum görünmezdir; sessiz atlama değil, açık rapor yaz.
+
+**Sınır.** #579 `agent:blocked` (LANE-INFRA) — insan gerektirir, bu lane'in işi
+değil; yalnızca raporu doğru yapıldı. #584 bu lane'in PR'ı.

@@ -346,6 +346,9 @@ export function classifyProductionProbe(probe) {
   return { level: 'fail', detail: `origin answered HTTP ${status}` };
 }
 
+/** A hex commit SHA (7–40 chars); anything else is not a commit and cannot be compared. */
+const COMMIT_SHA = /^[0-9a-f]{7,40}$/;
+
 /**
  * Compare the commit the live origin serves to the default branch head.
  *
@@ -372,8 +375,6 @@ export function classifyProductionProbe(probe) {
  * @param {{liveCommit?: string|null, mainCommit?: string|null}} [input]
  * @returns {{level: 'ok'|'warn'|'unknown', detail: string}}
  */
-const COMMIT_SHA = /^[0-9a-f]{7,40}$/;
-
 export function classifyDeployFreshness({ liveCommit, mainCommit } = {}) {
   const live = typeof liveCommit === 'string' ? liveCommit.trim().toLowerCase() : '';
   const main = typeof mainCommit === 'string' ? mainCommit.trim().toLowerCase() : '';
@@ -394,4 +395,37 @@ export function classifyDeployFreshness({ liveCommit, mainCommit } = {}) {
     level: 'warn',
     detail: `live build ${live.slice(0, 7)} is behind main ${main.slice(0, 7)} — merged work is not deployed`,
   };
+}
+
+/**
+ * Turn a deploy-freshness verdict into a finding, or `null` when there is
+ * nothing to report.
+ *
+ * `classifyDeployFreshness` has three levels, but `unknown` is not one of the
+ * report's icons (OK/WARN/FAIL). The caller must still surface it: the health
+ * check runs unattended on a GitHub runner, and Cloudflare answers those IPs
+ * with 403, so `fetchLiveCommit()` fails and every comparison returns `unknown`.
+ * Dropping that row made the report **silent about the deploy** exactly where it
+ * runs on a schedule — `OK production serving (HTTP 200)` sat alone while a
+ * commit behind `main` was live, which is #547 (the stale deploy) the freshness
+ * check exists to catch. Silence is read as health.
+ *
+ * So `unknown` maps to a **warning** that names the missing evidence. It is
+ * deliberately not a failure: no data is not evidence of a stale deploy, and the
+ * local probe (which can reach the origin) still reports a real mismatch as
+ * `warn`. A warning cannot silently pass — it prints and bumps the exit summary —
+ * which is the point.
+ *
+ * @param {{level: 'ok'|'warn'|'unknown', detail: string}} [freshness]
+ * @returns {{level: 'ok'|'warn', area: 'deploy', detail: string}|null}
+ */
+export function deployFreshnessFinding(freshness) {
+  if (!freshness || typeof freshness.detail !== 'string') return null;
+  if (freshness.level === 'unknown') {
+    return { level: 'warn', area: 'deploy', detail: `could not verify (${freshness.detail})` };
+  }
+  if (freshness.level === 'ok' || freshness.level === 'warn') {
+    return { level: freshness.level, area: 'deploy', detail: freshness.detail };
+  }
+  return null;
 }

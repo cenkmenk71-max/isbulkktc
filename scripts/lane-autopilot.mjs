@@ -42,6 +42,8 @@ import {
   failedApiFetches,
   failedRequiredChecks,
   fairOrder,
+  heldForHuman,
+  isDraftPullRequest,
   isInfraRejection,
   modelIsAllowed,
   nextConversationAction,
@@ -363,14 +365,20 @@ function mergeReadyPullRequests(prs, dryRun) {
     // A PR that carries a brake is deliberately left for a human. Say so, so a
     // stalled PR is visible instead of silent — #193 sat CLEAN with no
     // auto-merge and nothing reported it.
-    if (labels.includes('agent:hold') || labels.includes('agent:blocked')) {
+    if (heldForHuman(labels)) {
       stalled.push({
         number: pr.number,
         reason: `held for a human (${labels.filter((l) => l.startsWith('agent:')).join(', ')})`,
       });
       continue;
     }
-    if (pr.isDraft) continue;
+    if (isDraftPullRequest(pr)) {
+      // A draft is never auto-merged, and nothing in the system un-drafts one,
+      // so a green draft can neither land nor free its open-PR slot. Report it
+      // instead of skipping in silence: an unmentioned draft held the queue.
+      stalled.push({ number: pr.number, reason: 'draft — mark ready for review so it can merge' });
+      continue;
+    }
     const files = JSON.parse(
       gh(['pr', 'view', String(pr.number), '--json', 'files', '--jq', '.files']),
     );
@@ -738,6 +746,23 @@ async function decide(name, ctx) {
       };
     }
     const state_ = pr.mergeStateStatus;
+    // A PR carrying agent:hold / agent:blocked is parked for a human, and
+    // `mergeReadyPullRequests` refuses to merge it. Reporting "ready to merge"
+    // here contradicted that refusal in the very same pass (#579: `wait — ready
+    // to merge` printed directly above `STALLED PRs (need a human): #579`). Say
+    // what the merge step will actually do.
+    const prLabels = (pr.labels ?? []).map((l) => l.name ?? l);
+    if (heldForHuman(prLabels)) {
+      return {
+        action: 'wait',
+        reason: `PR #${pr.number} held for a human (${prLabels.filter((l) => String(l).startsWith('agent:')).join(', ')})`,
+      };
+    }
+    // A draft is never auto-merged, so "ready to merge" would be false here for
+    // the same reason it was for a held PR: the merge step will not touch it.
+    if (isDraftPullRequest(pr)) {
+      return { action: 'wait', reason: `PR #${pr.number} is a draft — mark ready for review` };
+    }
     if (state_ === 'CLEAN') return { action: 'wait', reason: `PR #${pr.number} ready to merge` };
     return { action: 'wait', reason: `PR #${pr.number} in flight (${state_})` };
   }

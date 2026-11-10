@@ -16,7 +16,9 @@ import {
   failedRequiredChecks,
   fairOrder,
   hasLabelledWork,
+  heldForHuman,
   isCapacityError,
+  isDraftPullRequest,
   isInfraRejection,
   laneDelivered,
   modelIsAllowed,
@@ -746,6 +748,39 @@ test("a mergeable or not-yet-computed PR is not a conflict", () => {
   assert.equal(pullRequestConflicts({}), false);
   assert.equal(pullRequestConflicts(undefined), false);
   assert.equal(pullRequestConflicts(null), false);
+});
+
+// ---------------------------------------------------------------------------
+// heldForHuman — a CLEAN PR the merge step refuses to touch is not "ready"
+// ---------------------------------------------------------------------------
+
+test("agent:hold and agent:blocked park a PR for a human", () => {
+  assert.equal(heldForHuman([{ name: "agent:hold" }]), true);
+  assert.equal(heldForHuman([{ name: "agent:blocked" }]), true);
+  // `gh pr list --json labels` can also yield bare strings; both shapes count.
+  assert.equal(heldForHuman(["agent:blocked"]), true);
+  assert.equal(heldForHuman([{ name: "lane:infra" }, { name: "agent:blocked" }]), true);
+});
+
+test("a PR without a brake is not held for a human", () => {
+  assert.equal(heldForHuman([{ name: "lane:infra" }]), false);
+  assert.equal(heldForHuman(["agent:handoff"]), false);
+  assert.equal(heldForHuman([]), false);
+  assert.equal(heldForHuman(undefined), false);
+  assert.equal(heldForHuman(null), false);
+});
+
+// ---------------------------------------------------------------------------
+// isDraftPullRequest — a draft is never auto-merged, so it must be reported
+// ---------------------------------------------------------------------------
+
+test("only a draft is a draft", () => {
+  assert.equal(isDraftPullRequest({ isDraft: true }), true);
+  assert.equal(isDraftPullRequest({ isDraft: false }), false);
+  // A missing field must not read as a draft, or every PR would be reported.
+  assert.equal(isDraftPullRequest({}), false);
+  assert.equal(isDraftPullRequest(undefined), false);
+  assert.equal(isDraftPullRequest(null), false);
 });
 
 // ---------------------------------------------------------------------------

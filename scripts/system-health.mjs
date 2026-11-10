@@ -15,7 +15,7 @@
 
 import { execFileSync } from 'node:child_process';
 
-import { classifyDeployFreshness, classifyProductionProbe, classifyRedRuns, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests } from './system-health-core.mjs';
+import { classifyDeployFreshness, classifyProductionProbe, classifyRedRuns, deployFreshnessFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
 const asJson = process.argv.includes('--json');
@@ -277,7 +277,8 @@ const freshness = classifyDeployFreshness({
   liveCommit: await fetchLiveCommit(),
   mainCommit: mainCommitSha(),
 });
-if (freshness.level !== 'unknown') note(freshness.level, 'deploy', freshness.detail);
+const deployFinding = deployFreshnessFinding(freshness);
+if (deployFinding) note(deployFinding.level, deployFinding.area, deployFinding.detail);
 
 // 4. Runs held for approval: invisible unless asked for.
 const held = gh(['api', `repos/${REPO}/actions/runs?status=action_required&per_page=20`, '--jq', '.total_count']);
