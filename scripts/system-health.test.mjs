@@ -8,6 +8,7 @@ import {
   classifyDeployFreshness,
   classifyProductionProbe,
   classifyRedRuns,
+  deployFreshnessFinding,
   failingWorkflows,
   isDeploymentDisabled,
   isRedCheck,
@@ -696,4 +697,46 @@ test("a real commit compared against a non-commit is unknown, not ok", () => {
     classifyDeployFreshness({ liveCommit: "unknown", mainCommit: "development" }).level,
     "ok",
   );
+});
+
+// --- deployFreshnessFinding ------------------------------------------------
+//
+// The bug this guards: `system-health.mjs` dropped the `deploy` row whenever
+// `classifyDeployFreshness` returned `unknown` (`if (freshness.level !==
+// 'unknown')`). The check runs unattended on a GitHub runner, and Cloudflare
+// answers those IPs with 403, so `fetchLiveCommit()` returns null and the
+// verdict is *always* `unknown` in CI. The scheduled report therefore printed
+// `OK production serving (HTTP 200)` with no deploy line at all while a commit
+// behind `main` was live (#547) — the exact failure the freshness check exists
+// to catch, hidden by silence where it runs on a schedule.
+
+test("an unverifiable deploy is a visible warning, never dropped", () => {
+  const finding = deployFreshnessFinding({
+    level: "unknown",
+    detail: "no build-info to compare against main",
+  });
+  assert.equal(finding.level, "warn");
+  assert.equal(finding.area, "deploy");
+  assert.match(finding.detail, /could not verify/);
+  assert.match(finding.detail, /no build-info to compare against main/);
+});
+
+test("a stale deploy stays a warning that names both SHAs", () => {
+  const finding = deployFreshnessFinding(
+    classifyDeployFreshness({ liveCommit: "3644cbe3501b", mainCommit: "2b899dc6b512" }),
+  );
+  assert.equal(finding.level, "warn");
+  assert.equal(finding.area, "deploy");
+  assert.match(finding.detail, /3644cbe/);
+  assert.match(finding.detail, /2b899dc/);
+});
+
+test("a current deploy reports ok, and a missing verdict reports nothing", () => {
+  const ok = deployFreshnessFinding(
+    classifyDeployFreshness({ liveCommit: "2b899dc6b512", mainCommit: "2b899dc6b512" }),
+  );
+  assert.equal(ok.level, "ok");
+  assert.equal(deployFreshnessFinding(undefined), null);
+  assert.equal(deployFreshnessFinding(null), null);
+  assert.equal(deployFreshnessFinding({ level: "bogus", detail: "x" }), null);
 });
