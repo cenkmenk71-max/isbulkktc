@@ -210,7 +210,11 @@ export function CompanyDirectory({
               );
 
             return (
-              <article className="company-directory-card" key={company.id}>
+              <article
+                className="company-directory-card"
+                key={company.id}
+                data-reveal
+              >
                 <div className="company-directory-card-top">
                   <EmployerLogo
                     companyName={company.name}
