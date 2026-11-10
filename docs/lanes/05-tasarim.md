@@ -1135,3 +1135,66 @@ Bakılmayan dosya yok; sahip olunan tüm yollar tarandı.
 `public/images/account-gallery/vuni-sarayi.webp`,
 `tests/unit/design-tokens.test.ts`, `docs/lanes/05-tasarim.md` — hepsi bu lane'in
 kapsamında.
+
+---
+
+## LANE-TASARIM çalışma notları (2026-11-10, tur 15)
+
+Branch: `lane/tasarim`. Taban: `origin/main` @ `de853df`. Kurtarma turu — alan
+taranmadı, brief'ten **tek küçük, sınırlı** bulgu seçildi ve commit edildi.
+Kuyrukta `lane:tasarim` etiketli üç açık iş var (#461, #455, #436); üçünün de
+sahipliği karışık/başka lane'lere devirli olduğu için bu turda **sahip olduğum
+`src/styles/global.css` + guard'ım** üzerinde duran somut bir kusur alındı.
+
+### Bulgu 15 — Yönetici hata metni **tanımsız** bir renk token'ı tüketiyordu (düzeltildi)
+
+- **Gözlem:** `src/styles/global.css:8013`
+  `.admin-package-message[data-status="error"]`, `.admin-mfa-error` kuralı
+  `color: var(--color-status-danger, #a13632);` diyordu. `--color-status-danger`
+  **tüm repoda hiçbir yerde tanımlı değil** (`grep -rn` → yalnız bu tüketim;
+  palet `--color-status-{success,warning,error}*` içeriyor, `danger` yok). Yani
+  bildirim sessizce satır içi `#a13632`'ye düşüyordu.
+- **Etki:** yönetici panelindeki hata mesajları — `admin-mfa-gate.tsx:103`
+  `role="alert"` dâhil — hiçbir token'ın tarif etmediği bir renkle boyanıyordu.
+  Kanonik hata token'ı `--color-status-error: #b42318`; `#a13632` onun
+  neredeyse-ama-farklı bir kopyası. Kontrast her ikisinde de AA üstü
+  (`#a13632`→`#fffdf8` 6.69:1, `#b42318`→6.47:1), yani **kontrast kapısı
+  göremezdi**; kusur "iki farklı kırmızı" sınıfı ve tanımsız-token sızıntısı.
+- **Kök neden:** CSS'te tanımsız bir custom property hata değildir; `var()` fallback'e
+  çözülür. Bu yüzden ne `check:frontend-source` ne `test:unit` ne axe düştü.
+  `design-token-drift.baseline.json` ise bu satırı **meşrulaştırmıştı** (kayıtlı
+  hardcoded hex), yani guard onu "izinli" sayıyordu.
+- **Düzeltme:** tüketim kanonik `var(--color-status-error)`'a çevrildi; artık
+  ham hex yok, fallback yok. Baseline'daki ilgili satır **çıkarıldı**
+  (ratchet yalnız küçülür; `count` 53→52).
+- **Kanıt (kontrast, WCAG formülü):** `#b42318` üzerinde `#fffdf8` = **6.47:1**,
+  `#ffffff` = 6.57:1 → AA/AAA metin için rahat; seçilen renk yönetici hata
+  yüzeylerinin (açık kanvas) üstünde okunur kalıyor.
+- **Guard (negatif test edildi):** `tests/unit/design-tokens.test.ts` — yeni test
+  "every colour token a rule consumes is declared": yorumları çıkarır, `var()`
+  içinde tüketilen her `--color-*`'ı toplar ve her birinin sheet'te tanımlı
+  olmasını şart koşar. Düzeltme geri alınınca test **`--color-status-danger`**
+  değeriyle kırmızı düştü; geri konunca yeşil.
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅ (41 token)
+- `bun run test:unit` ✅ **919 pass / 0 fail / 2 todo** (+1 yeni guard)
+- Negatif test: yeni guard tanımsız token geri konunca kırmızı ✅
+
+### Sahibin / sonraki lane'lerin yapması gerekenler
+
+- **#461 (QR indirme yüzeyi):** sahiplik çelişkisi — issue `src/features/pwa/**`
+  + `src/app/[locale]/install/**` diyor ama tablo `src/app/[locale]/**`'yi
+  LANE-SEO'ya, `src/features/pwa/**`'yı da LANE-URUN'a (`src/features/**`) veriyor;
+  TASARIM'ın `src/features/**` satırı yok. QR görselini `/install` sayfasına
+  eklemek `src/app/[locale]/install/page.tsx` (LANE-SEO) veya
+  `src/features/pwa/install-experience.tsx` (LANE-URUN) dokunmayı gerektiriyor.
+  Sahiplik netleşmeli; benim dosyalarımdan birine QR eklemek yanlış katman olur.
+- **#455 (motion site geneli)** ve **#436 (ilçe görselleri)** zaten başka
+  lane'lere devirli/açık.
+- Değişen dosyalar: `src/styles/global.css`, `tests/unit/design-tokens.test.ts`,
+  `tests/unit/design-token-drift.baseline.json`, `docs/lanes/05-tasarim.md` —
+  hepsi bu lane'in kapsamında.
