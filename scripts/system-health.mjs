@@ -15,9 +15,10 @@
 
 import { execFileSync } from 'node:child_process';
 
-import { classifyCronFreshness, classifyDeployFreshness, classifyProductionProbe, classifyRedRuns, deployFreshnessFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests, supabaseTokenProblem } from './system-health-core.mjs';
+import { classifyCronFreshness, classifyDeployFreshness, classifyProductionProbe, classifyRedRuns, classifyTokenProbe, deployFreshnessFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests, supabaseTokenProblem } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
+const SUPABASE_PROJECT_REF = process.env.SUPABASE_PROJECT_REF ?? 'uwmhquvzbilbfzdrlxmb';
 const asJson = process.argv.includes('--json');
 
 function gh(args) {
@@ -78,6 +79,31 @@ async function probeProduction() {
     });
   } catch (error) {
     return classifyProductionProbe({ networkError: String(error?.message ?? error) });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Whether the Supabase Management API accepts the token for our project.
+ *
+ * `GET /v1/projects/{ref}` is the cheapest authenticated call — the exact API
+ * #209 used to show the 401 — so a 200 proves the token is usable and a
+ * 401/403 proves it is not. Returns the verdict from the pure
+ * `classifyTokenProbe`; this only fetches, so a network failure is a warning
+ * and never a false red.
+ */
+async function probeSupabaseToken(token, projectRef) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(`https://api.supabase.com/v1/projects/${projectRef}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    });
+    return classifyTokenProbe({ status: response.status });
+  } catch (error) {
+    return classifyTokenProbe({ networkError: String(error?.message ?? error) });
   } finally {
     clearTimeout(timer);
   }
@@ -299,6 +325,17 @@ const tokenProblem = supabaseTokenProblem({
 });
 if (tokenProblem) {
   note(tokenProblem.status === 'present' ? 'ok' : 'fail', 'secrets', tokenProblem.reason);
+  // A well-shaped token can still be revoked or expired (#209 one level down):
+  // the shape check cannot see that, so only a correctly-shaped token is put to
+  // the API and its answer is what decides. The ref is interpolated so the URL
+  // documents which project the call is about.
+  if (tokenProblem.status === 'present') {
+    const verdict = await probeSupabaseToken(
+      process.env.SUPABASE_ACCESS_TOKEN,
+      SUPABASE_PROJECT_REF,
+    );
+    if (verdict) note(verdict.level, 'supabase', verdict.reason);
+  }
 }
 
 const ICON = { ok: 'OK  ', warn: 'WARN', fail: 'FAIL' };
