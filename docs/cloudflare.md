@@ -2869,8 +2869,8 @@ Origin 402 verirken **CF/TLS/DNS katmanı** ölçüldü — hepsi tur 25–28 il
 ## Tur 30 (2026-11-10) — DNS sertleştirme taraması + O-01 yeniden ölçümü + issue kaydı
 
 ```
-Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare
-Değişen dosyalar: docs/cloudflare.md
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: #520
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
 Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
 Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
 Sahibin yapması gerekenler: O-01 (#518, LANE-INFRA, acil) · N-11r · H-01r ·
@@ -2924,6 +2924,15 @@ Tur 29'un `O-01` bulgusu **#518** olarak açıldı
 kök neden** (hesap/plan, `Payment required`). #319'a da bu ağırlaşma yorumlandı.
 Bu kayıt, `O-01`'in sahipsiz kalmadığını belgeler.
 
+### D-24 (doküman doğruluğu) — tur 30 blok başlığı "Değişen dosyalar" eksikti
+
+Tur 30 kaydı `docs/cloudflare.md`'ye eklenirken blok başlığı yalnız
+`docs/cloudflare.md`'yi "Değişen dosyalar" olarak listeledi; oysa tur 30 lane
+brief'i (`docs/lanes/02-cloudflare.md`) de değiştirdi. Başlık iki dosyayı ve
+`PR: #520`'yi gösterecek şekilde düzeltildi — rapor bloğu ile gerçek diff
+arasındaki tutarsızlık giderildi.
+
 **Devir:** O-01 → **#518** (açık).
 **Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01.
-**Yeni:** F-30 (temiz), O-01r (yeniden ölçüm), D-22 (O- öneki), D-23 (#518 kaydı).
+**Yeni:** F-30 (temiz), O-01r (yeniden ölçüm), D-22 (O- öneki), D-23 (#518 kaydı),
+D-24 (tur 30 blok başlığı düzeltmesi).

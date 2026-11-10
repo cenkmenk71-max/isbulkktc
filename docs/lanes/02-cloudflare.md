@@ -842,7 +842,7 @@ Origin dönünce yeniden ölçülmeli.
 ## Tur 30 (2026-11-10) — DNS sertleştirme + O-01 yeniden ölçüm + kimlik şeması
 
 ```
-Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: #520
 Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
 Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
 Canlıya dokundu mu: hayır (salt-okuma)
@@ -860,3 +860,5 @@ Sonraki lane için notlar: (1) Origin 402 verirken cache/başlık bulguları (H-
 - **O-01r:** origin hâlâ 402 (`DYNAMIC`, cache'lenmiyor → poisoning yüzeyi yok);
   CF/TLS/WAF katmanı 402 altında da sağlam.
 - **D-23:** O-01 → **#518** (açık, `lane:infra`); #319'dan ayrı kök neden.
+- **D-24:** tur 30 blok başlığında "Değişen dosyalar" yalnız `docs/cloudflare.md`
+  diyordu → iki dosya + `PR: #520` olarak düzeltildi (blok ↔ gerçek diff uyumu).
