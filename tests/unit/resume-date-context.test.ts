@@ -165,11 +165,8 @@ test("parse then merge puts each extracted field in its own profile box", () => 
 test("a personal-data line contributes no date to work experience", () => {
   // #217's context filter. Before it, "1995-2000 doğumlu" was a job period.
   //
-  // Deliberately narrow: *no date* may come from such a line. That invariant
-  // holds before and after #367 — today the entry survives with empty dates,
-  // after the fix there is no entry at all — so this test does not couple
-  // LANE-URUN's fix to a LANE-QA edit. The stronger §B6 contract is pinned as a
-  // `todo` below.
+  // Deliberately narrow: *no date* may come from such a line. The stronger §B6
+  // contract — the line reaches no field at all — is asserted directly below.
   for (const line of ["1995-2000 doğumlu", "Yaş: 29 (1995)", "TC: 2019"]) {
     const dated = experienceOf(line).filter((entry) => entry.startDate || entry.endDate);
     assert.deepEqual(dated, [], `${line} must not carry a date`);
@@ -177,54 +174,44 @@ test("a personal-data line contributes no date to work experience", () => {
 });
 
 // ---------------------------------------------------------------------------
-// #367 residue — open in `resume-parser.ts` (LANE-URUN). The unlabelled path
-// was filtered by #343, but a personal-data line *under an explicit section
-// heading* bypassed the filter and the field parsers wrote it straight into the
-// draft, so a phone number reached the profile. §B6 asks the line to reach no
-// field at all; the fix is one line in `sectionLines`' `activeSection` branch,
-// which LANE-QA does not own. Pinned here as `todo` markers so the day the
-// parser is fixed they turn into real failures, exactly as the #217/#331
-// markers did — and so LANE-URUN's fix is not blocked by a red QA test.
+// #367 — shipped in `resume-parser.ts` (LANE-URUN). The unlabelled path was
+// filtered by #343, but a personal-data line *under an explicit section heading*
+// bypassed the filter and the field parsers wrote it straight into the draft, so
+// a phone number reached the profile. §B6 asks the line to reach no field at
+// all; the fix is one line in `sectionLines`' `activeSection` branch. These were
+// `todo` markers until the fix landed; they are asserted directly now, because a
+// marker that keeps asserting a fixed bug is a lie about the code.
 // ---------------------------------------------------------------------------
 
-test(
-  "a personal-data line reaches no field, labelled or not",
-  { todo: "#367 — `sectionLines` must skip `isPersonalDataLine` under an active section" },
-  () => {
-    // Measured on main. Unlabelled, the line still survives as an entry with the
-    // raw text in `description`; under a heading it is written into the section's
-    // own field (experience.description / education.institution /
-    // certifications.name / languages.name / skills).
-    for (const line of ["1995-2000 doğumlu", "Yaş: 29 (1995)", "TC: 2019"]) {
-      assert.deepEqual(experienceOf(line), [], `${line} must not become an experience entry`);
-    }
+test("a personal-data line reaches no field, labelled or not", () => {
+  // Unlabelled, the line must not become an entry; under a heading it must not
+  // be written into the section's own field (experience.description /
+  // education.institution / certifications.name / languages.name / skills).
+  for (const line of ["1995-2000 doğumlu", "Yaş: 29 (1995)", "TC: 2019"]) {
+    assert.deepEqual(experienceOf(line), [], `${line} must not become an experience entry`);
+  }
 
-    for (const heading of ["DENEYİM", "EĞİTİM", "SERTİFİKALAR", "DİLLER", "BECERİLER"]) {
-      const draft = parseResumeText([heading, "Telefon: 0533 123 45 67"].join("\n"));
-      assert.deepEqual(draft, {}, `${heading}: a phone line must reach no field`);
-    }
-  },
-);
+  for (const heading of ["DENEYİM", "EĞİTİM", "SERTİFİKALAR", "DİLLER", "BECERİLER"]) {
+    const draft = parseResumeText([heading, "Telefon: 0533 123 45 67"].join("\n"));
+    assert.deepEqual(draft, {}, `${heading}: a phone line must reach no field`);
+  }
+});
 
-test(
-  "a personal-data line is dropped without disturbing its neighbours",
-  { todo: "#367 — the filter must remove only the offending line, not the section" },
-  () => {
-    const draft = parseResumeText(
-      [
-        "DENEYİM",
-        "Acme - Dev - 2019 - 2022",
-        "Telefon: 0533 123 45 67",
-        "Beta - QA - 2020 - 2022",
-      ].join("\n"),
-    );
+test("a personal-data line is dropped without disturbing its neighbours", () => {
+  const draft = parseResumeText(
+    [
+      "DENEYİM",
+      "Acme - Dev - 2019 - 2022",
+      "Telefon: 0533 123 45 67",
+      "Beta - QA - 2020 - 2022",
+    ].join("\n"),
+  );
 
-    assert.deepEqual(draft.experience, [
-      { role: "Acme", organization: "Dev", location: "", startDate: "2019", endDate: "2022", description: "" },
-      { role: "Beta", organization: "QA", location: "", startDate: "2020", endDate: "2022", description: "" },
-    ]);
-  },
-);
+  assert.deepEqual(draft.experience, [
+    { role: "Acme", organization: "Dev", location: "", startDate: "2019", endDate: "2022", description: "" },
+    { role: "Beta", organization: "QA", location: "", startDate: "2020", endDate: "2022", description: "" },
+  ]);
+});
 
 test("a real role whose title carries a personal-data word is kept", () => {
   // The boundary #367 draws, and the guard against a naive "drop any line with a
