@@ -70,6 +70,11 @@ export async function generateMetadata({
     // The page carries `Article` structured data, so the social graph must
     // agree; `website` would contradict the page's own `@type`.
     openGraphType: "article",
+    // OGP's `article:published_time` / `article:modified_time` mirror the
+    // `datePublished` / `dateModified` the page already asserts in its Article
+    // graph, so an unfurl cannot claim a different publication date than the
+    // markup a crawler reads.
+    articleTimes: { published: article.published, modified: article.updated },
   });
 }
 
