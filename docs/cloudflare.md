@@ -2769,3 +2769,77 @@ preload `pending`.
 5. **G-01:** Email Obfuscation OFF.
 6. **F-08:** Vercel Deployment Protection.
 7. **#227:** Resend DKIM 2048-bit.
+
+---
+
+## Tur 29 (2026-11-10) — canlı kesinti ölçümü + WAF negatif matrisi
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: O-01 (Vercel origin 402 `DEPLOYMENT_DISABLED` — LANE-INFRA
+            acil) · N-11r · H-01r · H-02 · R-01 · G-01 · F-08 · #227
+```
+
+### O-01 (kritik — canlı kesinti, LANE-INFRA) — origin her istekte `402 DEPLOYMENT_DISABLED`
+
+Bu turda ölçüm yapılırken **canlı site tamamen düştü**. `isbulkktc.com` üzerinden
+yapılan **her** istek — ana sayfa, `/jobs`, statik varlıklar, `/api/*` dahil —
+**402** döndü. Gövde `Payment required` + `DEPLOYMENT_DISABLED`; başlık
+`x-vercel-error: DEPLOYMENT_DISABLED`. Kesinti **CF'de değil origin'de**: aynı
+yanıtı CF'yi atlayan `isbulkktc-amber.vercel.app` alias'ı **doğrudan** (`server:
+Vercel`) veriyor.
+
+Kanıt (canlı `curl`, 2026-11-10 ~02:04 UTC):
+
+| İstek | Sonuç |
+|---|---|
+| `https://isbulkktc.com/` (5×) | `402` ×5, `server: cloudflare`, `cf-cache-status: DYNAMIC` |
+| `https://isbulkktc.com/jobs` | `402` `x-vercel-error: DEPLOYMENT_DISABLED` |
+| `https://isbulkktc.com/robots.txt` · `/sitemap.xml` · `/sw.js` · `/images/*` | `402` |
+| `https://isbulkktc.com/api/build-info` | `402` |
+| `https://isbulkktc-amber.vercel.app/` (alias, CF bypass) | `402`, `server: Vercel` |
+
+`x-vercel-error: DEPLOYMENT_DISABLED` Vercel'in **hesap/dondurulmuş dağıtım**
+yoludur (plan/ödeme/faturalandırma kaynaklı); `server: Vercel` yanıtın CF'yi
+atlayan origin'den geldiğini doğrular. **Bu CF tarafında bir arıza değildir** ve
+bu lane'in düzeltebileceği bir şey değildir. **Sahip: LANE-INFRA** (Vercel
+hesabı/plan durumu). CF katmanı doğru çalışıyor: WAF, TLS ve cache kuralları 402
+yanıtında bile uygulanıyor.
+
+### N-17 (bilgi) — WAF negatif/pozitif matrisi 402 altında da korunuyor
+
+Origin 402 verirken WAF kural seti **değişmedi**: 10 saldırı yolu **403**, meşru
+rotalar **403 vermiyor** (origin 402). Yani kesinti sırasında bile WAF bypass'ı yok.
+
+| Sınıf | Yol | Kod |
+|---|---|---|
+| VCS | `/.git/config`, `/.svn/entries` | 403 |
+| dotfile/secret | `/.env`, `/.aws/credentials` | 403 |
+| CMS | `/wp-admin`, `/wp-login.php`, `/phpmyadmin`, `/xmlrpc.php` | 403 |
+| api/devtools | `/api/devtools/` | 403 |
+| tedarik zinciri | `/vendor/phpunit/phpunit` | 403 |
+| meşru (17) | `/`, `/jobs`, `/companies`, `/blog`, `/contact`, `/freelance`, `/about`, `/privacy`, `/terms`, `/sss`, `/rehber`, `/packages`, `/login`, `/api/build-info`, `/robots.txt`, `/sitemap.xml`, `/llms.txt` | 402 (WAF değil) |
+
+### D-21 (doküman doğruluğu — çürüyen canlı kanıt)
+
+Bu turdaki bulgular origin'in **çalışır** olduğunu varsayan tüm eski canlı
+kanıtları geçersiz kılar. Origin tekrar 200 dönene kadar:
+
+- `docs/cloudflare.md`'deki "canlı build `<sha>`", "dinamik HTML `private,
+  no-store`", "`/robots.txt` edge `2628000`" gibi satırlar **o günün** ölçümüdür;
+  bugünkü durumu yansıtmaz.
+- 402 `DEPLOYMENT_DISABLED` yanıtı `cache-control: public, max-age=0,
+  must-revalidate` **taşır** — yani yukarıdaki 402 satırlarında görülen cache
+  başlıkları **Vercel'in 402 sayfasına** aittir, uygulamanın değil. **H-02
+  bulgusu bu yanıttan doğrulanamaz/çürütülemez.**
+- Origin döndüğünde (O-01 kapandığında) H-02, SR-01 ve cache matrisi **yeniden
+  ölçülmelidir**; bu turda yalnız WAF matrisi ve kesintinin **CF'de olmadığı**
+  sonucu geçerlidir.
+
+**Devir:** O-01 → `lane:infra` (+ gerekirse insan; Vercel hesap durumu).
+
+**Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01.
+**Yeni:** O-01 (kesinti, LANE-INFRA), N-17 (bilgi), D-21 (kanıt çürümesi).

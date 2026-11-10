@@ -811,3 +811,30 @@ kopuk değil (arama botları 200, `cf-mitigated` yok).
 **Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01 (SR-01 davranışı
 açık; yalnız **iddiası** SR-01r ile düzeltildi).
 **Devir:** N-15 → **#437**, N-13 → **#441** (ikisi de açık, `lane:infra`).
+
+## Tur 29 (2026-11-10) — canlı kesinti (O-01) + WAF matrisi
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma)
+Sahibin yapması gerekenler: O-01 (Vercel 402 — LANE-INFRA, acil) · N-11r · H-01r ·
+            H-02 · R-01 · G-01 · F-08 · #227
+Sonraki lane için notlar: (1) Ölçümden önce `curl -sI https://isbulkktc.com/` ile
+            origin'in canlı olduğunu doğrula; 402 dönerse cache/başlık bulguları
+            ölçülemez. (2) 402 `DEPLOYMENT_DISABLED` origin tarafıdır (alias da
+            verir) — CF'ye yazma. (3) WAF matrisi 402 altında bile ölçülebilir.
+```
+
+**O-01 (kritik, LANE-INFRA):** bu turda canlı site **402 `DEPLOYMENT_DISABLED`**
+döndü — her rota, statik varlık ve `/api/*` dahil; CF'yi atlayan alias
+`isbulkktc-amber.vercel.app` de doğrudan 402 (`server: Vercel`). Yani kesinti
+**origin'de**, CF'de değil. Ayrıntı: `docs/cloudflare.md` → "Tur 29".
+
+**N-17 (bilgi):** WAF matrisi 402 altında da temiz — 10 saldırı yolu **403**,
+meşru 17 rota **403 değil**.
+
+**D-21:** origin düşükken cache/başlık bulguları (H-02, SR-01, cache matrisi)
+ölçülemez; 402 gövdesinin `cache-control`'u **Vercel'in** 402 sayfasına aittir.
+Origin dönünce yeniden ölçülmeli.
