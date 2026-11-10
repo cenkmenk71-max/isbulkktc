@@ -591,3 +591,59 @@ node scripts/verify-indexing.mjs
 
 Kapılar: `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`,
 `bun run test:unit` (1020/1020) — yeşil.
+
+## Tur 12 — auth-config doğrulayıcısı canlı captcha'yı "kapalı" sanıyordu (2026-11-10, LANE-VERIFY)
+
+**Boyut: doğruluk / yanlış-NEGATİF (araç doğruluğu).**
+
+`scripts/verify-auth-config.mjs` Turnstile durumunu **yerel**
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY` ortam değişkeninden okuyordu. O değer *bu ağaçta*
+derleme anında gömülen değerdir; üretim ise Vercel tarafından **kendi ortamıyla**
+derlenir. Yerel değişken boş olduğunda araç "captcha is disabled" diye not düşüyordu
+— oysa üretim paketi canlı bir anahtar taşıyor. Araç, ölçtüğünü sandığı şeyi değil
+kendi ortamını raporluyordu.
+
+### Gözlenen / beklenen
+
+| | |
+|---|---|
+| **Gözlenen** (önce) | `NEXT_PUBLIC_TURNSTILE_SITE_KEY is empty — captcha is disabled.` |
+| **Beklenen** (sonra) | `production ships a Turnstile site key (0x4AAAAAAFL-yuC1YeNRT3FB) — captcha is enforced on auth forms.` |
+
+### Kanıt — SSR HTML tuzağı
+
+AGENTS.md uyarısı: Turnstile alanı bir effect içinde render edilir, bu yüzden sunucu
+HTML'i her zaman **boş** `<div class="editorial-turnstile"><div></div></div>`
+kapsayıcısı içerir — widget canlı olsa bile. SSR'ı grep'lemek "captcha kapalı" der.
+Doğru kanıt **dağıtılmış istemci paketi**dir: SDK yükleyicisi
+(`challenges.cloudflare.com/turnstile`) yalnızca bir anahtar ayarlıysa çekilir, yanındaki
+`0x4A…` anahtarı onu adlandırır.
+
+**Düzeltme.** `detectDeployedCaptcha(origin)` `/login` sayfasını çeker, `_next/static/chunks/*.js`
+referanslarını toplar ve ilk Turnstile anahtarını bulur; `main()` artık yerel env var
+yerine bu durumu okur. Paket okunamazsa "captcha kapalı" **değil**, "ölçülemedi"
+notu düşülür (yanlış-negatifin tam tersi). `fetchText` 15 sn sınırlı; ağ hatası `""`
+döner. `turnstileSiteKeyInBundle` ve `detectDeployedCaptcha` dışa açık, `fetchImpl`
+enjekte edilebilir — ağ olmadan test edilir.
+
+### Canlı ölçüm (2026-11-10 ~10:15 UTC, düzeltmeden sonra)
+
+```
+node scripts/verify-auth-config.mjs
+  Project: uwmhquvzbilbfzdrlxmb | Origin: https://isbulkktc.com
+  ✅ No configuration inconsistency found.
+  ℹ️ production ships a Turnstile site key (0x4AAAAAAFL-yuC1YeNRT3FB) — captcha is enforced on auth forms.
+  ℹ️ SUPABASE_ACCESS_TOKEN is unset — Supabase checks skipped.
+```
+
+Eşlik eden canlı ölçümler (aynı tur): `verify-indexing` 0 failure / 0 warning / 0 skip;
+`verify-deliverability` 0 failure / 3 warning (SPF kök, DMARC `p=none`, blocklist kısmi).
+
+**Regresyon testi.** `verify-auth-config.test.mjs` 8 test: paket taraması SDK URL'i
+yokken `null`, varken anahtarı döndürür; `detectDeployedCaptcha` HTTP 200 olmayan
+sayfada `checked:false`, anahtarlı pakette `checked:true`, anahtarsız pakette
+`siteKey:null`. Yerel env var ile dağıtılmış durum ayrıştığında araç artık dağıtılmış
+olanı raporlar.
+
+Kapılar: `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`,
+`bun run test:unit` (1022/1022) — yeşil.
