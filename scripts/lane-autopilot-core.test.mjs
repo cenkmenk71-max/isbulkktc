@@ -7,6 +7,7 @@ import {
   deadConversationLanes,
   diedWithoutWorking,
   exhaustedCooldownElapsed,
+  exemptFixes,
   failedApiFetches,
   failedRequiredChecks,
   fairOrder,
@@ -18,6 +19,7 @@ import {
   noCommitInWindow,
   poisonedConversations,
   prCapacity,
+  pullRequestConflicts,
   readApiList,
   requiredCheckFailed,
   selectSlots,
@@ -515,6 +517,48 @@ test("a slot one group cannot fill is handed to the other, not wasted", () => {
 
 
 // ---------------------------------------------------------------------------
+// exemptFixes — a fix round must not wait behind the PR cap (deadlock, #493)
+// ---------------------------------------------------------------------------
+
+test("a deferred fix is promoted ahead of allowed work", () => {
+  // The deadlock: the cap is full of stuck PRs, the fixes that would empty it
+  // are deferred behind that same cap, so nothing ever drains.
+  const allowed = [{ name: "fresh", action: "spawn", context: {} }];
+  const deferred = [
+    { name: "infra", action: "spawn", context: { redPr: { number: 493, checks: [] } } },
+  ];
+  const out = exemptFixes(allowed, deferred);
+  assert.deepEqual(out.allowed.map((d) => d.name), ["infra", "fresh"]);
+  assert.deepEqual(out.deferred, []);
+});
+
+test("non-fix deferred decisions keep their place", () => {
+  const allowed = [{ name: "a", action: "spawn", context: {} }];
+  const deferred = [
+    { name: "fix", action: "spawn", context: { redPr: { number: 1, checks: [] } } },
+    { name: "plain", action: "spawn", context: {} },
+  ];
+  const out = exemptFixes(allowed, deferred);
+  assert.deepEqual(out.allowed.map((d) => d.name), ["fix", "a"]);
+  assert.deepEqual(out.deferred.map((d) => d.name), ["plain"]);
+});
+
+test("with no fixes both lists are returned unchanged", () => {
+  const allowed = [{ name: "a", action: "spawn", context: {} }];
+  const deferred = [{ name: "b", action: "spawn", context: {} }];
+  const out = exemptFixes(allowed, deferred);
+  assert.deepEqual(out.allowed, allowed);
+  assert.deepEqual(out.deferred, deferred);
+});
+
+test("missing context or lists are handled without throwing", () => {
+  assert.deepEqual(exemptFixes(undefined, undefined), { allowed: [], deferred: [] });
+  const out = exemptFixes([{ name: "a", action: "spawn" }], [{ name: "b", action: "spawn" }]);
+  assert.deepEqual(out.allowed.map((d) => d.name), ["a"]);
+  assert.deepEqual(out.deferred.map((d) => d.name), ["b"]);
+});
+
+// ---------------------------------------------------------------------------
 // failedRequiredChecks — a red required check must respawn the lane (issue #453)
 // ---------------------------------------------------------------------------
 
@@ -568,6 +612,32 @@ test("no configured required checks means nothing can fail", () => {
   const checks = [{ name: "Quality, database and E2E", conclusion: "FAILURE" }];
   assert.equal(requiredCheckFailed(checks, []), false);
   assert.equal(requiredCheckFailed(checks, undefined), false);
+});
+
+// ---------------------------------------------------------------------------
+// pullRequestConflicts — a CONFLICTING head gets no CI, so it must wake a lane
+// ---------------------------------------------------------------------------
+
+test("a CONFLICTING head is a conflict", () => {
+  assert.equal(pullRequestConflicts({ mergeable: "CONFLICTING" }), true);
+});
+
+test("a DIRTY merge state is a conflict even without `mergeable`", () => {
+  // `gh pr list` omits `mergeable` unless requested; `mergeStateStatus` is the
+  // fallback that still catches the conflict.
+  assert.equal(pullRequestConflicts({ mergeStateStatus: "DIRTY" }), true);
+  assert.equal(pullRequestConflicts({ mergeable: "CONFLICTING", mergeStateStatus: "DIRTY" }), true);
+});
+
+test("a mergeable or not-yet-computed PR is not a conflict", () => {
+  assert.equal(pullRequestConflicts({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" }), false);
+  assert.equal(pullRequestConflicts({ mergeable: "MERGEABLE", mergeStateStatus: "UNSTABLE" }), false);
+  // GitHub reports `null`/UNKNOWN until it computes the merge; guessing there
+  // would wake a lane for a PR that is actually fine.
+  assert.equal(pullRequestConflicts({ mergeable: null, mergeStateStatus: "UNKNOWN" }), false);
+  assert.equal(pullRequestConflicts({}), false);
+  assert.equal(pullRequestConflicts(undefined), false);
+  assert.equal(pullRequestConflicts(null), false);
 });
 
 // ---------------------------------------------------------------------------
