@@ -527,3 +527,46 @@ auto-merge ile inmişti.
 `agent:blocked`) yeni kanıtla (22 geride, `total_count: 0`) hâlâ geçerli; bu lane
 dokunmadı.
 
+
+---
+
+## Tur 12 — 2026-11-10 (lane/teslimat)
+
+**Kapsam.** Atanmış açık `lane:teslimat` issue yok; açık PR yok. Kurtarma turu: alan
+taranmadı, tek sınırlı düzeltme — kural 4'ün **kendi kayıt PR'ını yine yutması**
+(finding 23). PR #578 (`docs(teslimat)`, Tur 11'in kural-4 kaydı) merge edildi ama
+`docs/deploy-log.md`'de **hiç satırı yoktu**: deploy-log'un son kaydı #575/#576/#577
+satırıydı (12:37Z). Bu tur onu kapatır.
+
+**Neden bu iş gerçek.** Kural 4 — "her merge kaydedilir: ne, ne zaman, canlıda
+doğrulandı mı" — #578 için ihlal edilmiş durumdaydı. Bu, **üçüncü tekrar**: Tur 10
+#574'ün kaydını yazarken aynı boşluk, Tur 11 #575–#577 için, şimdi #578 için. Boşluk
+kendi kendini besliyor: bir kayıt PR'ı merge olduğunda onu yazan el ondan sonra
+durduğu için, kayıt PR'ının kendi kaydı hep bir sonraki tura kalıyor. Kayıt
+zincirinde bir tane eksik halka varsa zincir kopar.
+
+**Bulgu (finding 23) — kayıt boşluğu üçüncü kez.** Kural 4, merge ile kayıt arasına
+bir eşik koymuyor ve kayıt *kendi PR'ını* kapsamıyor. Tur 10/11/12 aynı boşluğun üç
+örneğidir; bu tur #578 için tek satırla kapatır.
+
+**Teslim edildi (kural 4).** PR **#578** `app/github-actions` auto-merge (squash) ile
+**12:50:41Z'de merge edildi** (`main` `f2a1a1c` → `b39718d`, merge commit
+`b39718d35f69dcaf82590ac9a368649e0f258936`); tüm zorunlu kontroller yeşil. Kayıt bu
+turda `docs/deploy-log.md`'ye eklendi.
+
+**Canlı ölçüm (görev 3) — 🔴 teslim doğrulanamadı, nedeni adıyla kondu.** 13:00Z:
+`main` = `b39718d`, canlı = `3644cbe3` (**23 geride**, ve `3644cbe3` `main`'in
+atası — ayrışmış değil). `GET /` **200**, `GET /api/build-info` → `3644cbe3` → **stale
+but healthy**. Tip `b39718d`'de **hiç `Vercel` status girdisi yok** (`total_count: 0`)
+→ **#547** durumu (yeni Vercel hesabında GitHub Git bağlantısı yok), #319 rate-limit
+salınımı **değil**. Depodan düzeltilemez; sahip tarafı (Vercel Dashboard → Git) veya
+LANE-INFRA `VERCEL_TOKEN` deploy workflow'u. Bu lane'in altıncı doğrulanamayan
+teslimi ve sebebi dışsaldır.
+
+**Merge kuyruğu (görev 1).** `gh pr list --state open` bu turda **boş** — merge
+edilebilir bekleyen PR yok.
+
+**Devredilenler.** #547 (teslim donmasının kök nedeni, `agent:infra` +
+`agent:blocked`) yeni kanıtla (23 geride, `total_count: 0`) hâlâ geçerli; bu lane
+dokunmadı.
+
