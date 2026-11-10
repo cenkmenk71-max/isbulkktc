@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { execFile, execFileSync } from "node:child_process";
 import { createServer } from "node:http";
-import { cpSync, mkdtempSync, rmSync, writeFileSync, chmodSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -381,3 +381,25 @@ test("a disabled route response is a failure, not a skipped 4xx", () => {
   assert.equal(evaluateRouteResponse("/", 403, 0).skipped, true);
   assert.equal(evaluateRouteResponse("/", 429, 0).skipped, true);
 });
+
+test("the verifier runs on a schedule, not only on a push to main", () => {
+  // The gap this pins (#319): a merge made with the default Actions token fires
+  // no workflow run at all, and a run that does fire skips as superseded when a
+  // newer commit already owns the tip. So a `push`-only trigger leaves the
+  // Actions tab green while production serves an old build. A scheduled run
+  // verifies whatever `main` currently is, independent of how the commit landed.
+  const workflow = readFileSync(
+    new URL("../.github/workflows/verify-production-deployment.yml", import.meta.url),
+    "utf8",
+  );
+  assert.match(workflow, /^\s*schedule:/m, "must declare a schedule trigger");
+  assert.match(workflow, /cron:\s*["']/, "the schedule must carry a cron expression");
+  // A scheduled event has no `github.sha` to fall back on, so the tip-resolution
+  // step must run for it too (it is gated on `!= workflow_dispatch`, not `== push`).
+  assert.match(
+    workflow,
+    /if:\s*github\.event_name\s*!=\s*['"]workflow_dispatch['"]/,
+    "the branch-tip step must cover scheduled runs as well as pushes",
+  );
+});
+
