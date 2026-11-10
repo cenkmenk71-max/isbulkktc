@@ -47,17 +47,55 @@ export function nextConversationAction({ reuses, maxReuses }) {
  * @param {Array<{labels?: Array<{name?: string}|string>}>} issues open issues
  * @returns {boolean}
  */
-export function hasLabelledWork(lane, issues) {
+export function namesLane(lane, issue) {
   const laneLabel = lane?.laneLabel;
   const broadLabel = lane?.label;
   if (!laneLabel && !broadLabel) return false;
-  return (issues ?? []).some((issue) => {
-    const labels = (issue?.labels ?? []).map((label) => label?.name ?? label);
-    if (laneLabel && labels.includes(laneLabel)) return true;
-    if (!broadLabel || !labels.includes(broadLabel)) return false;
-    // The broad label only applies when no lane has claimed the issue precisely.
-    return !labels.some((name) => typeof name === 'string' && name.startsWith('lane:'));
-  });
+  const labels = (issue?.labels ?? []).map((label) => label?.name ?? label);
+  if (laneLabel && labels.includes(laneLabel)) return true;
+  if (!broadLabel || !labels.includes(broadLabel)) return false;
+  // The broad label only applies when no lane has claimed the issue precisely.
+  return !labels.some((name) => typeof name === 'string' && name.startsWith('lane:'));
+}
+
+/**
+ * Whether any open issue names this lane.
+ *
+ * @param {{label?: string, laneLabel?: string}} lane
+ * @param {Array<{labels?: Array<{name?: string}|string>}>} issues open issues
+ * @returns {boolean}
+ */
+export function hasLabelledWork(lane, issues) {
+  return (issues ?? []).some((issue) => namesLane(lane, issue));
+}
+
+/**
+ * The oldest open issue that names this lane, or null.
+ *
+ * `gh issue list` returns newest-first, and the autopilot used to take the first
+ * match — so a lane with a steady stream of fresh handoffs never reached an
+ * older issue that named it only by label. #398 ("canlı destek yok") is exactly
+ * that case: label-only, older than every current handoff, so no owning lane
+ * ever picked it and the owner saw the gap days later. Choosing the *oldest*
+ * named work (FIFO) means every issue is reached in turn instead of starving.
+ * Issue numbers are monotonic with creation, so the lowest number is oldest.
+ *
+ * @param {{label?: string, laneLabel?: string}} lane
+ * @param {Array<{number?: number, labels?: Array<{name?: string}|string>}>} issues open issues
+ * @param {Set<number>} [claimed] issue numbers already taken by another lane this pass
+ * @returns {object|null}
+ */
+export function pickLaneWork(lane, issues, claimed) {
+  const skip = claimed ?? new Set();
+  const candidates = (issues ?? []).filter(
+    (issue) => namesLane(lane, issue) && !skip.has(Number(issue?.number)),
+  );
+  if (candidates.length === 0) return null;
+  const num = (issue) => {
+    const n = Number(issue?.number);
+    return Number.isFinite(n) ? n : Infinity;
+  };
+  return candidates.reduce((oldest, issue) => (num(issue) < num(oldest) ? issue : oldest));
 }
 
 /**
