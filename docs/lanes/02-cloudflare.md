@@ -1063,3 +1063,36 @@ Sonraki lane için notlar: (1) origin artık sağlıklı → kesinti rejimi bitt
   www==apex; gerçek-olmayan yol 404 `DYNAMIC` (negatif cache yok); apex root 200
   `DYNAMIC`.
 - **O-01r6:** origin **sağlıklı** (önceki `404 DEPLOYMENT_NOT_FOUND` rejimi bitti).
+
+## Tur 37 (2026-11-10) — `www` yönlendirmesi şemayı düzeltiyor ama host'u kanonikleştirmiyor (H-03r, R-14) + tur 36 "bayt-özdeş" daraltması (D-31)
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: H-03r/R-14 (CF Redirect Rule: host `www` → 301 apex,
+            yol+sorgu korunur — "Always Use HTTPS" host'a dokunmuyor) · H-02r/N-23 ·
+            N-22 · N-21 · N-20 · N-18 · N-19 · N-11r · H-01r · R-01 · G-01 · F-08 ·
+            #227 · #163 · #170 · O-01 (#518)
+Sonraki lane için notlar: (1) `http://www` → 301 **www'yi koruyor** (yalnız şema
+            düzeltmesi) → zincir 2 hop, **www'de bitiyor**, apex'e varmıyor; host
+            kanonikleştirmesi ayrı bir kural ister. (2) tur 36'nın "bayt-özdeş"
+            iddiası dar: apex/www gövdeleri **origin'de** özdeş, ama CF 2 rastgele
+            token enjekte ediyor (`__CF$cv$params` + email-protection) → ham md5
+            farklı. (3) `www/sitemap.xml` **yalnız apex URL** listeliyor → kanonik
+            hedef apex, doğrulandı. (4) Yeni kimlik: H-03r, R-14, D-31.
+```
+
+- **H-03r / R-14 (orta-yüksek, taze kanıt):** `www` host'u apex'e
+  **kanonikleşmiyor**. Üç bağımsız ölçüm:
+  - `https://www.isbulkktc.com/` → **200** (yönlendirme **yok**), `server: cloudflare`, `cf-ray` dolu.
+  - `http://www.isbulkktc.com/` → **301**, `Location: https://www.isbulkktc.com/` → **`www`'yi koruyor** (yalnız şema yükseltmesi). Yol+sorgu korunur (`/freelance?q=test` → aynen).
+  - `https://www.isbulkktc.com/sitemap.xml` → **200**, içindeki **1509 URL'nin tamamı** `https://isbulkktc.com` (apex); hiç `www` URL yok → kanonik hedef apex.
+  - `https://www.isbulkktc.com/robots.txt` apex ile **aynı** gövde; `https://www…/.git/config` → **403** (WAF kuralı host-bağımsız çalışıyor).
+  - **Etki:** zincir `http://www…/jobs?q=x` → 301 → `https://www…/jobs?q=x` → **200**: **2 hop, son durak `www`**, apex'e hiç varmıyor. `www` tam gövdeyi 200 servis ediyor → duplicate-content yüzeyi (H-03) sürüyor.
+  - **Düzeltme (devir — CF paneli, sahibin onayı):** Redirect Rule
+    `http.host eq "www.isbulkktc.com"` → `concat("https://isbulkktc.com", http.request.uri.path)`, **301**, sorgu korunur. "Always Use HTTPS" zaten var; eksik olan **host** kuralıdır.
+- **D-31 (doğruluk):** tur 36 `www/freelance` için "apex ile **bayt-özdeş** (139 342 B)" dedi. Ölçüm: boyut özdeş ama **ham md5 farklı** (apex `27209a42…`, www `bfc412de…`). CF iki **rastgele** token enjekte ediyor — `window.__CF$cv$params` (bot yönetimi) ve `/cdn-cgi/l/email-protection` (G-01 email obfuscation). Bu iki blok normalize edilince gövdeler **origin'de özdeş**. İfade "origin gövdesi özdeş; yalnız CF-injected token farkı" olarak daraltıldı.
+- **Teyit (temiz):** apex/www `strict-transport-security` **aynı** (`max-age=31536000; includeSubDomains; preload`); `www` üzerinde gerçek-olmayan yol → **404** `DYNAMIC` (negatif cache yok); apex root **200** `DYNAMIC` (HTML cache'lenmiyor).
+- **O-01r6:** değişmedi — origin sağlıklı.
