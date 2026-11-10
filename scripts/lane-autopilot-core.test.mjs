@@ -22,6 +22,7 @@ import {
   modelIsAllowed,
   nextConversationAction,
   noCommitInWindow,
+  pickLaneWork,
   poisonedConversations,
   prCapacity,
   pullRequestConflicts,
@@ -100,6 +101,60 @@ test("string labels are accepted as well as label objects", () => {
 
 test("a lane with no labels configured never reports work", () => {
   assert.equal(hasLabelledWork({}, [{ labels: ["agent:infra"] }]), false);
+});
+
+// ---------------------------------------------------------------------------
+// pickLaneWork — the *oldest* named issue wins, so none starves (#398)
+// ---------------------------------------------------------------------------
+
+test("the oldest named issue is chosen even when the list is newest-first", () => {
+  // `gh issue list` returns newest-first; taking the first match starved the
+  // older ones. The picker must reach the lowest issue number instead.
+  const issues = [
+    { number: 568, labels: ["agent:handoff", "lane:infra"] },
+    { number: 465, labels: ["agent:handoff", "lane:infra"] },
+    { number: 139, labels: ["agent:handoff", "lane:infra"] },
+  ];
+  assert.equal(pickLaneWork(infraLane, issues).number, 139);
+});
+
+test("a label-only issue older than every handoff is still reached", () => {
+  // #398 is exactly this: labelled for the lane but older than all handoffs, so
+  // a handoffs-first pick never saw it.
+  const issues = [
+    { number: 568, labels: ["agent:handoff", "lane:infra"] },
+    { number: 398, labels: ["lane:infra"] },
+  ];
+  assert.equal(pickLaneWork(infraLane, issues).number, 398);
+});
+
+test("nothing named for the lane yields null", () => {
+  assert.equal(pickLaneWork(infraLane, [{ number: 1, labels: ["lane:seo"] }]), null);
+  assert.equal(pickLaneWork(infraLane, []), null);
+  assert.equal(pickLaneWork(infraLane, undefined), null);
+});
+
+test("an issue with no usable number never outranks a numbered one", () => {
+  const issues = [
+    { labels: ["lane:infra"] }, // no number → treated as unknown, not oldest
+    { number: 42, labels: ["lane:infra"] },
+  ];
+  assert.equal(pickLaneWork(infraLane, issues).number, 42);
+});
+
+test("an issue another lane already claimed this pass is skipped", () => {
+  // #398 names both guvenlik and icerik. Without the claim both spawn a
+  // conversation for it — the same work paid twice.
+  const issues = [
+    { number: 568, labels: ["lane:infra"] },
+    { number: 398, labels: ["lane:infra"] },
+  ];
+  assert.equal(pickLaneWork(infraLane, issues, new Set([398])).number, 568);
+});
+
+test("claiming the only named issue leaves the lane with no work", () => {
+  const issues = [{ number: 398, labels: ["lane:infra"] }];
+  assert.equal(pickLaneWork(infraLane, issues, new Set([398])), null);
 });
 
 // ---------------------------------------------------------------------------

@@ -42,10 +42,10 @@ import {
   failedApiFetches,
   failedRequiredChecks,
   fairOrder,
-  hasLabelledWork,
   isInfraRejection,
   modelIsAllowed,
   nextConversationAction,
+  pickLaneWork,
   poisonedConversations,
   prCapacity,
   pullRequestConflicts,
@@ -636,11 +636,21 @@ function blockedForLane(name, issues) {
   );
 }
 
-/** Issues handed to this lane by another lane, to fix. */
-function handoffForLane(name, issues) {
-  const laneLabel = LANES[name].laneLabel ?? `lane:${name}`;
-  return issues.find((issue) =>
-    (issue.labels ?? []).some((l) => (l.name ?? l) === laneLabel),
+/**
+ * The oldest open issue that names this lane — a handoff to fix, or work that
+ * carries the lane's own label.
+ *
+ * The two lists are searched together, not handoffs-first: `gh` returns issues
+ * newest-first and the pass used to take the first match, so a lane with a
+ * stream of fresh handoffs never reached an older issue that named it only by
+ * label (#398). Oldest-first (FIFO) reaches every issue in turn.
+ */
+function workForLane(name, ctx) {
+  const lane = LANES[name];
+  return pickLaneWork(
+    lane,
+    [...(ctx.handoffs ?? []), ...(ctx.laneIssues ?? [])],
+    ctx.claimed,
   );
 }
 
@@ -650,7 +660,9 @@ async function decide(name, ctx) {
   const pr = ctx.prs.find((p) => p.headRefName === lane.branch);
   const branchExists = ctx.branches.includes(`origin/${lane.branch}`);
   const blocked = blockedForLane(name, ctx.blocked);
-  const handoff = handoffForLane(name, ctx.handoffs);
+  const named = workForLane(name, ctx);
+  const isHandoff = (named?.labels ?? []).some((l) => (l.name ?? l) === 'agent:handoff');
+  const handoff = named;
 
   // The retry budget is per *piece of work*, not per lane lifetime. A lane that
   // delivered, or whose assignment changed, starts its next attempt with a clean
@@ -754,22 +766,25 @@ async function decide(name, ctx) {
       reason: `${state.attempts} attempts used; needs a human`,
     };
   }
-  // A handoff names the work. Without one, only start the lane if some open
+  // A named issue is the work. Without one, only start the lane if some open
   // issue names it — a lane with nothing to do would otherwise burn a full
   // conversation before discovering that (docs/lanes/POLICY.md: "a lane is only
   // started when it has concrete, bounded work").
-  if (REQUIRE_LABELLED_WORK && !handoff && !hasLabelledWork(lane, ctx.laneIssues)) {
+  if (REQUIRE_LABELLED_WORK && !named) {
     return { action: 'idle', reason: 'no labelled issue to work' };
   }
   return {
     action: 'spawn',
-    reason: handoff
-      ? `handoff #${handoff.number} to fix`
+    reason: named
+      ? isHandoff
+        ? `handoff #${named.number} to fix`
+        : `issue #${named.number} labelled for this lane`
       : branchExists
         ? 'stale branch, restarting'
         : state.attempts === 0
           ? 'labelled work'
           : `retry ${state.attempts + 1}/${MAX_ATTEMPTS}`,
+    issueNumber: named ? Number(named.number) : undefined,
     context: { previousError: state.lastError, work },
   };
 }
@@ -961,7 +976,21 @@ async function main() {
     ...busyConversations,
   ]);
 
-  const ctx = { prs, blocked, handoffs, laneIssues: issues, branches, state, working };
+  const ctx = {
+    prs,
+    blocked,
+    handoffs,
+    laneIssues: issues,
+    branches,
+    state,
+    working,
+    // Issue numbers already taken by a lane this pass. An issue can name several
+    // lanes at once (#398 carries `lane:guvenlik` and `lane:icerik`), and FIFO
+    // makes them all reach it in the same pass; without a claim each spawns a
+    // conversation for the same issue — the same work paid for several times,
+    // and two PRs colliding on the same files.
+    claimed: new Set(),
+  };
   const decisions = [];
   let running = sandboxes.length;
 
@@ -970,7 +999,15 @@ async function main() {
       decisions.push({ name, action: 'running', reason: 'task in progress' });
       continue;
     }
-    decisions.push({ name, ...(await decide(name, ctx)) });
+    const decision = await decide(name, ctx);
+    // Claim on spawn. A lane that is blocked or exhausted never reaches here, so
+    // it cannot hold an issue away from a lane that can work it. (A spawn later
+    // deferred by the PR cap or sandbox budget still claims, but only for this
+    // pass: the issue is still the oldest, so its lane re-picks it next pass.)
+    if (decision.action === 'spawn' && decision.issueNumber) {
+      ctx.claimed.add(decision.issueNumber);
+    }
+    decisions.push({ name, ...decision });
   }
 
   const toSpawn = decisions.filter((d) => d.action === 'spawn');

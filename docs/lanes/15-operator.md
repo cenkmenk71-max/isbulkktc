@@ -935,3 +935,47 @@ checks`'i yeşile çevirdi. İkisi bağımsız: #559 düzeltici, bu düzeltme sa
 **Kanıt.** `scripts/lane-autopilot-core.test.mjs` yeni 8 test (115/115),
 `test:unit` **995/995**; toplayıcı adının ci.yml'de `needs:` taşıdığı testle
 sabitlendi. Canlı: `system-health` "Static checks is red on 2 PRs (#557, #555)".
+
+## Tur notu — en eski adlandırılmış iş kazanır; bir issue tek lane (2026-11-08)
+
+İki tıkanıklık ailesi bu turda kapandı; ikisi de **israf** sınıfından.
+
+**Bulgu 1 — LIFO açlığı.** `handoffForLane()` `gh issue list`'in döndürdüğü
+**en-yeni-önce** listesi üzerinde `.find()` çağırıyordu; yani her lane her pass
+kendi **en yeni** devrini alıyordu. Sürekli taze devir alan bir lane, kendisini
+yalnız `lane:*` etiketiyle adlandıran **eski** issue'ya hiç ulaşamıyordu. Kanıt:
+`lane:urun` #465'i (yeni) seçip #139'u (eski) atlıyordu; `lane:supabase` #496 vs
+#139. #398 ("canlı destek yok") tam bu durumdu: etiket-only, her devirden eski →
+hiçbir sahip lane onu almadı, sahibi boşluğu günler sonra gördü.
+
+**Düzeltme 1.** Saf `pickLaneWork(lane, issues)` (core): adlandırılmış işler
+arasından **en düşük issue numarasını** (en eski) seçer. `handoffForLane()`
+yerine `workForLane(name, ctx)` devir ve lane-issue listelerini **birlikte**
+bu picker'a verir; seçim FIFO olur, hiçbir iş açlığa düşmez.
+
+**Bulgu 2 — aynı issue'ya çoklu spawn.** FIFO görünür kılınca ortaya çıktı:
+#398 aynı anda `lane:guvenlik` **ve** `lane:icerik` (ayrıca supabase, urun)
+taşıyor. Eskiden LIFO herkesi farklı taze devire dağıttığı için görünmüyordu;
+FIFO ile birden çok lane aynı pass'te #398'e yönelip **aynı işi birkaç kez**
+(sandbox + konuşma + PR) ödüyordu.
+
+**Düzeltme 2.** Pass başına **talep kümesi** (`ctx.claimed`). `decide()` bir
+lane için spawn döndürdüğünde issue numarası kümeye eklenir; sonraki lane'ler
+onu atlar ve bir sonraki en-eski işlerine düşer. Talep **yalnız spawn'da** konur:
+bloklu/bitkin lane bir issue'yu başka lane'den **kapamaz** (aşağı bir seviyede
+aynı açlık olurdu). PR-kapasitesi/sandbox bütçesi yüzünden ertelenen spawn de
+yalnız o pass için talep eder; issue hâlâ en eski olduğundan lane'i sonraki
+pass'te onu yeniden seçer.
+
+**Kanıt.** `lane-autopilot-core.test.mjs` yeni 6 test (125/125): en-eski seçim,
+etiket-only eski issue, numarasız issue en-eski sayılmaz, talep edilen atlanır,
+talep tek işi tüketince `null`. Canlı `--dry-run` önce `guvenlik` **ve** `icerik`
+ikisi de #398'i seçiyordu; sonra yalnız `guvenlik` #398, `icerik` #418'e düştü.
+`scripts/**/*.test.mjs` **341/341**, `eslint` temiz, `lane-collisions`
+"No collisions across 3 open PR(s)."
+
+**Ders.** Bir liste "en yeni önce" geliyorsa `.find()` **LIFO**'dur ve sessiz
+açlık üretir. Kuyruk işlerinde ya en-eski seç ya sıralamayı açıkça belirt.
+Ayrıca FIFO'ya geçince "aynı iş birden çok sahibe" sınıfı ortaya çıktı — çoklu
+etiketli issue'da talep kümesi şart; yoksa israfı bir kapıdan kapatırken diğerinden
+açarsın.
