@@ -361,14 +361,31 @@ export function classifyProductionProbe(probe) {
  * could not compare, and inventing a failure from no data is the very bug this
  * family is about.
  *
+ * `build-info` reports the literal `"unknown"` (and `"development"`) when
+ * `VERCEL_GIT_COMMIT_SHA` is unset, which is a non-Git deploy, not a stale one.
+ * A value that is not a commit at all is "could not compare", so it must return
+ * `unknown` too — otherwise the check prints "live build unknown is behind main
+ * <sha> — merged work is not deployed", a fabricated warning naming a commit
+ * that does not exist. Requiring a hex SHA is the same guard
+ * `verify-production-deployment.mjs`'s `normalizeCommit` uses.
+ *
  * @param {{liveCommit?: string|null, mainCommit?: string|null}} [input]
  * @returns {{level: 'ok'|'warn'|'unknown', detail: string}}
  */
+const COMMIT_SHA = /^[0-9a-f]{7,40}$/;
+
 export function classifyDeployFreshness({ liveCommit, mainCommit } = {}) {
   const live = typeof liveCommit === 'string' ? liveCommit.trim().toLowerCase() : '';
   const main = typeof mainCommit === 'string' ? mainCommit.trim().toLowerCase() : '';
   if (!live || !main) {
     return { level: 'unknown', detail: 'no build-info to compare against main' };
+  }
+  if (!COMMIT_SHA.test(live) || !COMMIT_SHA.test(main)) {
+    const reported = COMMIT_SHA.test(live) ? main : live;
+    return {
+      level: 'unknown',
+      detail: `build-info reported "${reported.slice(0, 16)}" instead of a commit — cannot compare`,
+    };
   }
   if (live === main || live.startsWith(main) || main.startsWith(live)) {
     return { level: 'ok', detail: `live build matches main (${live.slice(0, 7)})` };
