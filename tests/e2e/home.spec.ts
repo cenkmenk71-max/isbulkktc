@@ -271,6 +271,78 @@ test("homepage cycles through local district photos with an animated light-ray l
     .toBeGreaterThan(0.9);
 });
 
+/**
+ * #448: the hero assertions above run at a 1440px desktop viewport. The report
+ * behind this issue ("mobile only shows Girne") was measured on a phone, where a
+ * slide whose image never decodes is invisible: `opacity` still animates and the
+ * `complete && naturalWidth > 0` contract was only ever checked on desktop. Pin
+ * the same contract on a 375x667 mobile viewport, and add the mobile transfer
+ * ceiling the issue asks for.
+ */
+test("mobile homepage hero photos all decode and stay inside the mobile transfer budget", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 375, height: 667 });
+
+  await page.goto("/tr?district=invalid");
+
+  const slides = page.locator(".home-hero-slide");
+  await expect(slides).toHaveCount(6);
+  await expect
+    .poll(
+      () =>
+        slides.evaluateAll((images: HTMLImageElement[]) =>
+          images.every((image) => image.complete && image.naturalWidth > 0),
+        ),
+      { timeout: 20_000, message: "every mobile hero slide image must decode" },
+    )
+    .toBe(true);
+
+  // Byte counts come from Resource Timing on each slide's own `currentSrc`. The
+  // optimizer rewrites `url=` to a hashed `/_next/static/media/*` path, so the
+  // response URL cannot be matched back to a district by name; the element's
+  // `currentSrc` can. This measures what the mobile visitor actually downloads.
+  const transfers = await slides.evaluateAll(
+    (images: HTMLImageElement[]) => {
+      const entries = performance.getEntriesByType(
+        "resource",
+      ) as PerformanceResourceTiming[];
+      return images.map((image) => {
+        const entry = entries.find((r) => r.name === image.currentSrc);
+        return {
+          district: image.dataset.homeHeroPhoto ?? "",
+          requestedWidth: Number(
+            new URL(image.currentSrc).searchParams.get("w"),
+          ),
+          encodedBodySize: entry?.encodedBodySize ?? 0,
+        };
+      });
+    },
+  );
+
+  // Non-vacuous: a decoding guard says nothing about bytes. Require every one of
+  // the six slides to have reported a positive encoded size for its own request.
+  expect(transfers).toHaveLength(6);
+  for (const { district, requestedWidth, encodedBodySize } of transfers) {
+    expect(requestedWidth, `${district} optimizer width`).toBeLessThanOrEqual(
+      750,
+    );
+    expect(encodedBodySize, `${district} transfer bytes`).toBeGreaterThan(0);
+  }
+
+  const totalBytes = transfers.reduce(
+    (sum, { encodedBodySize }) => sum + encodedBodySize,
+    0,
+  );
+  // Mobile (375px, DPR 1) hero budget. `docs/performance-budget.md` measures the
+  // whole homepage (6 hero + 4 sector photos) at ~3.1 MB for DPR 1; the hero
+  // slice on a phone is a fraction of that. 1.5 MB leaves headroom for encoder
+  // jitter while still failing loudly if the optimizer starts shipping the
+  // originals (490 KB x 6 ~= 2.9 MB) to mobile visitors.
+  expect(totalBytes, "mobile hero transfer budget").toBeLessThan(1_500_000);
+});
+
 test("homepage requests hero image variants for high-density screens", async ({
   browser,
 }) => {
