@@ -1267,3 +1267,55 @@ duran iki somut kusur alındı: biri motion, biri axe guard kapsamı.
 - Değişen dosyalar: `src/components/motion/motion-controller.tsx`,
   `tests/unit/design-tokens.test.ts`, `tests/e2e/accessibility.spec.ts`,
   `docs/lanes/05-tasarim.md` — hepsi bu lane'in kapsamında.
+
+---
+
+## LANE-TASARIM çalışma notları (2026-11-10, tur 17)
+
+Branch: `lane/tasarim`. Taban: `origin/main` @ `9da8c57`. Kurtarma turu — alan
+taranmadı. Kuyrukta `lane:tasarim` etiketli dört açık iş var (#461, #455, #436,
+#191); dördünün de sahipliği başka lane'lere devirli ya da karışık (aşağıda).
+Bu yüzden **sahip olduğum guard'ın kendi içindeki** somut bir kusur alındı.
+
+### Bulgu 18 — drift ratchet'i yalnız büyümeyi engelliyordu; iki bayat satır kalıcı istisna olmuştu (düzeltildi)
+
+- **Gözlem:** `tests/unit/design-token-drift.baseline.json` kendini "tek yönlü
+  ratchet: yalnız küçülebilir, asla büyüyemez" diye tanımlıyor, ama **küçülme
+  yönünü hiçbir test zorlamıyordu**. İki satır artık stylesheet'te var olmayan
+  hex değerlerini adlandırıyordu:
+  - `--provider-background: #4267b2;` (sheet'te yalnız `#1765cc` ve `#0b6a92` kaldı)
+  - `color: #e1c184;`
+  Her ikisi de `grep -rn` ile tüm repoda **bulunamadı** (`src/` altında yok).
+- **Etki:** bayat bir baseline satırı **önceden yetkilendirilmiş istisnadır**.
+  `color: #e1c184;` değerini `global.css`'e geri yapıştırmak büyüme kontrolünü
+  **sessizce geçer**, çünkü baseline hâlâ o satırı listeliyor → guard yeşil
+  kalırken engellemesi gereken sapma geri girer. Ratchet yalnızca kendi listesi
+  sheet'le senkron tutulursa ratchet'tir.
+- **Düzeltme:** iki bayat satır silindi (`count` 52 → 50); yeni ve **negatif
+  test edilmiş** guard `"the drift baseline keeps no stale entries"` eklendi:
+  `@theme` dışındaki her satırı toplar, baseline'daki her satırın hâlâ orada
+  olduğunu ve `count === lines.length` olduğunu şart koşar.
+- **Negatif test:** baseline'a `color: #e1c184;` geri eklenince yeni test
+  **kırmızı** düştü (AssertionError, tam o değerle); kaldırılınca **yeşil**.
+
+### Çalıştırılan kontroller
+
+- `bun run lint` ✅
+- `bun run typecheck` ✅
+- `bun run check:frontend-source` ✅ (41 token)
+- `bun run test:unit` ✅ **1045 pass / 0 fail** (+1 yeni guard)
+- Negatif test: bayat satır geri eklenince yeni guard kırmızı ✅
+
+### Sahibin / sonraki lane'lerin yapması gerekenler
+
+- **#461 (QR indirme yüzeyi):** sahiplik çelişkisi — issue `src/features/pwa/**`
+  + `src/app/[locale]/install/**` diyor; tablo `src/app/[locale]/**`'yi LANE-SEO'ya,
+  `src/features/**`'ı LANE-URUN'a veriyor; TASARIM'ın `src/features/**` satırı yok.
+- **#455 (motion site geneli):** `src/components/jobs/jobs-experience.tsx`'te
+  `data-reveal` kart seviyesinde var; ama `/about`, `/contact`, `/blog`, `/rehber`,
+  `/sss` içerikleri `src/features/editorial/**`'ta (LANE-URUN) render ediliyor,
+  bu yüzden o yüzeylere motion eklemek TASARIM'ın dosyalarından geçmiyor.
+- **#436 (ilçe görselleri)** ve **#191 (e-posta paleti)** başka lane'lere devirli.
+- Değişen dosyalar: `tests/unit/design-token-drift.baseline.json`,
+  `tests/unit/design-tokens.test.ts`, `docs/lanes/05-tasarim.md` — hepsi bu
+  lane'in kapsamında.
