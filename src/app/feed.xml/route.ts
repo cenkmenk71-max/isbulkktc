@@ -3,6 +3,8 @@ import { getArticles } from "@/content/editorial";
 import { getGuides } from "@/content/guides";
 import { routing } from "@/i18n/routing";
 
+import { renderFeed, type FeedItem } from "./render";
+
 export const dynamic = "force-static";
 
 /**
@@ -13,21 +15,12 @@ export const dynamic = "force-static";
  * other outlets' items in. It only ever lists pages the site publishes itself,
  * at their default-locale canonical URLs.
  */
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
-
 export function GET() {
   const baseUrl = getAppBaseUrl();
   const site = baseUrl.origin;
   const locale = routing.defaultLocale;
 
-  const items = [
+  const items: FeedItem[] = [
     ...getGuides(locale).map((guide) => ({
       title: guide.title,
       description: guide.description,
@@ -50,39 +43,9 @@ export function GET() {
       updated: article.updated,
       category: article.category,
     })),
-  ].sort((a, b) => b.published.localeCompare(a.published));
+  ];
 
-  const lastBuild = items.reduce(
-    (latest, item) => (item.updated > latest ? item.updated : latest),
-    items[0]?.updated ?? new Date().toISOString().slice(0, 10),
-  );
-
-  const body = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>İşBul KKTC — Kariyer Rehberleri ve Yazıları</title>
-    <link>${site}</link>
-    <description>Kuzey Kıbrıs iş piyasası, kariyer rehberleri ve işveren yazıları.</description>
-    <language>${locale}</language>
-    <lastBuildDate>${new Date(lastBuild).toUTCString()}</lastBuildDate>
-    <atom:link href="${site}/feed.xml" rel="self" type="application/rss+xml" />
-${items
-  .map(
-    (item) => `    <item>
-      <title>${escapeXml(item.title)}</title>
-      <link>${item.url}</link>
-      <guid isPermaLink="true">${item.url}</guid>
-      <description>${escapeXml(item.description)}</description>
-      <category>${escapeXml(item.category)}</category>
-      <pubDate>${new Date(item.published).toUTCString()}</pubDate>
-    </item>`,
-  )
-  .join("\n")}
-  </channel>
-</rss>
-`;
-
-  return new Response(body, {
+  return new Response(renderFeed({ site, locale, items }), {
     headers: {
       "Content-Type": "application/rss+xml; charset=utf-8",
       "Cache-Control": "public, max-age=3600",
