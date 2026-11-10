@@ -15,7 +15,7 @@
 
 import { execFileSync } from 'node:child_process';
 
-import { classifyRedRuns, redRunsOnMain, stuckPullRequests } from './system-health-core.mjs';
+import { classifyProductionProbe, classifyRedRuns, redRunsOnMain, stuckPullRequests } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
 const asJson = process.argv.includes('--json');
@@ -45,6 +45,41 @@ function jobCountOf(runId) {
     );
   } catch {
     return null;
+  }
+}
+
+/**
+ * Probe the production origin and report its real status.
+ *
+ * None of the GitHub-derived checks above can tell that the site is *gone*: a
+ * red workflow names a symptom, and the origin can answer 402 to every visitor
+ * while the Actions tab only shows a scheduled job failing. On 2026-11-10 the
+ * site returned `402 DEPLOYMENT_DISABLED` (Vercel account blocked/over quota)
+ * and this check never said so. Read the origin directly.
+ *
+ * The probe is a HEAD with a bounded timeout; the verdict is decided by the pure
+ * `classifyProductionProbe`, so the classification is unit-tested and this only
+ * fetches. A network error is a warning, not a failure — the probe has no
+ * evidence the site is down, only that it could not look.
+ */
+async function probeProduction() {
+  const origin = process.env.HEALTH_ORIGIN || 'https://isbulkktc.com';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(origin, {
+      method: 'HEAD',
+      redirect: 'manual',
+      signal: controller.signal,
+    });
+    return classifyProductionProbe({
+      status: response.status,
+      vercelError: response.headers.get('x-vercel-error'),
+    });
+  } catch (error) {
+    return classifyProductionProbe({ networkError: String(error?.message ?? error) });
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -170,6 +205,11 @@ if (branchRuns.length === 0) {
 } else {
   note('ok', 'main CI', `every workflow on main is green`);
 }
+
+// 3b. The production origin itself. A red workflow is a symptom; "the site is
+// down" is a finding, and only the origin can answer it. See probeProduction.
+const production = await probeProduction();
+note(production.level, 'production', production.detail);
 
 // 4. Runs held for approval: invisible unless asked for.
 const held = gh(['api', `repos/${REPO}/actions/runs?status=action_required&per_page=20`, '--jq', '.total_count']);

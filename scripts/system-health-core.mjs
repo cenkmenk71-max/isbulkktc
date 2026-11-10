@@ -153,3 +153,67 @@ export function stuckPullRequests(prs, { now = Date.now(), maxAgeHours = 3 } = {
     return pr.mergeStateStatus !== 'CLEAN' && ageHours > maxAgeHours;
   });
 }
+
+/**
+ * Vercel's marker for a deployment the account is no longer allowed to serve.
+ *
+ * `402 Payment Required` with `x-vercel-error: DEPLOYMENT_DISABLED` means the
+ * account is blocked, suspended or over quota. It is an account state, not an
+ * application bug: the origin is down for every visitor and redeploying does not
+ * fix it. Kept as a pure predicate (mirroring `verify-production-deployment.mjs`)
+ * so the probe's verdict is testable without the network.
+ *
+ * @param {number|null|undefined} status
+ * @param {string|null|undefined} vercelError
+ * @returns {boolean}
+ */
+export function isDeploymentDisabled(status, vercelError) {
+  if (status === 402) return true;
+  return (
+    typeof vercelError === 'string' &&
+    vercelError.trim().toUpperCase() === 'DEPLOYMENT_DISABLED'
+  );
+}
+
+/**
+ * Classify a reachability probe of the production origin.
+ *
+ * The operator's other checks read GitHub's view of the world: a red workflow, a
+ * stalled PR. None of them can see that the site itself is gone. On 2026-11-10
+ * `push-dispatch` had been failing every ten minutes for two hours while the
+ * health check only named the symptom workflow — and the origin answered
+ * `402 DEPLOYMENT_DISABLED` to everyone. A red workflow is a symptom; "the site
+ * is down" is the finding, and it must be read directly from the origin.
+ *
+ * A 402 / `DEPLOYMENT_DISABLED` is a hard failure: the site is down for real
+ * visitors, which outranks a workflow that merely reports it. A 403/429 is the
+ * edge blocking the probe (Cloudflare answers datacenter IPs that way) — that is
+ * "could not verify", a warning, never a failure. A network error is likewise
+ * "could not verify" rather than "down": the probe has no evidence either way,
+ * so it warns instead of inventing an outage.
+ *
+ * @param {{status?: number|null, vercelError?: string|null, networkError?: string|null}} probe
+ * @returns {{level: 'ok'|'warn'|'fail', detail: string}}
+ */
+export function classifyProductionProbe(probe) {
+  const { status, vercelError, networkError } = probe ?? {};
+  if (networkError) {
+    return { level: 'warn', detail: `could not reach the origin (${networkError})` };
+  }
+  if (typeof status !== 'number') {
+    return { level: 'warn', detail: 'probe returned no status' };
+  }
+  if (isDeploymentDisabled(status, vercelError)) {
+    return {
+      level: 'fail',
+      detail: `DOWN: HTTP ${status} DEPLOYMENT_DISABLED (Vercel account blocked or over quota)`,
+    };
+  }
+  if (status >= 200 && status < 400) {
+    return { level: 'ok', detail: `serving (HTTP ${status})` };
+  }
+  if (status === 403 || status === 429) {
+    return { level: 'warn', detail: `HTTP ${status} (edge blocked the probe — could not verify)` };
+  }
+  return { level: 'fail', detail: `origin answered HTTP ${status}` };
+}
