@@ -1,6 +1,6 @@
 {
   "_comment": "Hardcoded hex values outside the @theme block. This is a ratchet: the list may shrink but must never grow. Move values into @theme tokens instead of adding entries here.",
-  "count": 53,
+  "count": 52,
   "lines": [
     "#1d5d46 0%,",
     "#264e3e 0%,",
@@ -47,7 +47,6 @@
     "color: #fff;",
     "color: #fffdf8;",
     "color: #ffffff;",
-    "color: var(--color-status-danger, #a13632);",
     "linear-gradient(125deg, #102e24 0%, #193f32 56%, #285442 100%);",
     "linear-gradient(128deg, #101b18 0%, #10271e 52%, #123829 100%);",
     "linear-gradient(135deg, #f2f7f2, var(--surface-raised));",

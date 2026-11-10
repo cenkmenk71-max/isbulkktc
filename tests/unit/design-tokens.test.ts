@@ -315,6 +315,35 @@ test("hardcoded hex values do not grow beyond the recorded baseline", () => {
 });
 
 /**
+ * Every `--color-*` a rule consumes must be declared somewhere in the sheet.
+ * `.admin-package-message[data-status="error"]` / `.admin-mfa-error` asked for
+ * `--color-status-danger`, which was never declared anywhere: the declaration
+ * silently fell back to the inline `#a13632` in `var(--color-status-danger,
+ * #a13632)`, so the admin error text (an MFA `role="alert"` among them) painted
+ * a colour no token described and no test knew about. A missing custom property
+ * is not an error in CSS — it resolves to the fallback — so nothing failed.
+ * Assert the whole set: collect every `--color-*` referenced through `var()`
+ * and require each to be declared.
+ */
+test("every colour token a rule consumes is declared", () => {
+  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const declared = new Set(
+    [...withoutComments.matchAll(/(--color-[\w-]+)\s*:/g)].map((match) => match[1]),
+  );
+  const consumed = new Set(
+    [...withoutComments.matchAll(/var\(\s*(--color-[\w-]+)/g)].map((match) => match[1]),
+  );
+  const undefinedTokens = [...consumed]
+    .filter((name) => !declared.has(name))
+    .sort();
+  assert.deepEqual(
+    undefinedTokens,
+    [],
+    `These colour tokens are consumed but never declared, so they silently fall back to whatever is inline:\n${undefinedTokens.join("\n")}`,
+  );
+});
+
+/**
  * Every `animation-name` a rule plays must resolve to a declared `@keyframes`.
  * `.packages-hero-copy` asked for `packages-rise-in` for the whole life of the
  * packages page, but the keyframe was never declared, so the hero copy just
