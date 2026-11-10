@@ -48,7 +48,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Verify the live site serves the pushed commit
+    name: Verify the live site serves the expected commit
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
