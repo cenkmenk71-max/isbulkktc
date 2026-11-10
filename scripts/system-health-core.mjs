@@ -16,6 +16,23 @@
 export const HEALTH_WORKFLOW = 'System health';
 
 /**
+ * CI job names that only aggregate other jobs, so they carry no gate of their own.
+ *
+ * `Quality, database and E2E` in `.github/workflows/ci.yml` declares
+ * `needs: [static, database, e2e]` and does nothing but fail when any of them
+ * failed; branch protection still requires it so the required-check name never
+ * moves. Because it mirrors its dependencies, it is red on every PR exactly when
+ * `static` is red, which makes `queueGlobalGates` read one shared cause as two
+ * independent gates ("Static checks" *and* "Quality, database and E2E"). Naming
+ * the aggregator as a second cause inflates one freeze into two and hides that
+ * the aggregator has no failure to fix — the cause is always its dependency.
+ *
+ * Kept here, and asserted against the workflow file by a unit test, so renaming
+ * the aggregator job cannot silently re-introduce the double count.
+ */
+export const CI_AGGREGATOR_CHECKS = new Set(['Quality, database and E2E']);
+
+/**
  * The newest completed run of each workflow that ran on the default branch.
  *
  * The gate on `main` is not one fixed workflow. `isbulkktc CI` ran on push until
@@ -230,6 +247,10 @@ export function redPullRequests(prs) {
  * PRs. One PR alone cannot distinguish "my gate is broken" from "a shared gate
  * is broken", so a single red is deliberately not reported here.
  *
+ * Aggregator checks (`CI_AGGREGATOR_CHECKS`) are excluded: they only mirror their
+ * dependencies, so counting them would report one shared cause as two gates and
+ * point the operator at a job that has nothing of its own to fix.
+ *
  * @param {Array<object>} prs same shape as {@link redPullRequests}
  * @returns {Array<{check: string, prs: number[]}>}
  */
@@ -237,6 +258,7 @@ export function queueGlobalGates(prs) {
   const byCheck = new Map();
   for (const pr of redPullRequests(prs)) {
     for (const check of pr.redChecks) {
+      if (CI_AGGREGATOR_CHECKS.has(check)) continue;
       if (!byCheck.has(check)) byCheck.set(check, []);
       byCheck.get(check).push(pr.number);
     }

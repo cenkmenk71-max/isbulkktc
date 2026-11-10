@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  CI_AGGREGATOR_CHECKS,
   HEALTH_WORKFLOW,
   classifyProductionProbe,
   classifyRedRuns,
@@ -475,6 +476,35 @@ test("a shared gate and a private failure are separated", () => {
 test("queueGlobalGates tolerates missing input", () => {
   assert.deepEqual(queueGlobalGates(undefined), []);
   assert.deepEqual(queueGlobalGates([]), []);
+});
+
+test("the aggregator job is not named as its own queue-global gate", () => {
+  // `Quality, database and E2E` only mirrors its `needs:`; when `Static checks`
+  // is red on the queue, the aggregator is red too. Counting both would report
+  // one freeze as two gates and point at a job with nothing to fix.
+  assert.deepEqual(
+    queueGlobalGates([
+      prWithCheck(555, "Static checks"),
+      prWithCheck(557, "Static checks"),
+      prWithCheck(555, "Quality, database and E2E"),
+      prWithCheck(557, "Quality, database and E2E"),
+    ]),
+    [{ check: "Static checks", prs: [555, 557] }],
+  );
+});
+
+test("the excluded aggregator name matches the workflow file, so a rename cannot slip past", () => {
+  const workflow = readFileSync(
+    new URL("../.github/workflows/ci.yml", import.meta.url),
+    "utf8",
+  );
+  for (const name of CI_AGGREGATOR_CHECKS) {
+    const job = workflow
+      .split(/^  [a-z0-9_-]+:/m)
+      .find((block) => block.includes(`name: ${name}`));
+    assert.ok(job, `no CI job declares name: ${name}`);
+    assert.match(job, /needs:\s*\[/);
+  }
 });
 
 // ---------------------------------------------------------------------------
