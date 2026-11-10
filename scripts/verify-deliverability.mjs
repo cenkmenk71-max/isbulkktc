@@ -25,6 +25,17 @@
  */
 
 import { promises as dns } from "node:dns";
+import { pathToFileURL } from "node:url";
+
+/**
+ * True when the module was launched directly (`node script.mjs`) rather than
+ * imported by a test. `pathToFileURL` percent-encodes the path, so a directory
+ * name holding a space or `#` still matches; the naive `file://${argv[1]}`
+ * comparison never does, and the script exits 0 having verified nothing.
+ */
+export function isDirectRun(moduleUrl, argv1) {
+  return Boolean(argv1) && moduleUrl === pathToFileURL(argv1).href;
+}
 
 const args = process.argv.slice(2);
 function argValue(flag) {
@@ -202,6 +213,22 @@ export function isRelaxedAligned(authDomain, fromDomain) {
   return a === f || a.endsWith(`.${f}`) || f.endsWith(`.${a}`);
 }
 
+/**
+ * Decides the SPF verdict for the From domain's root record.
+ *
+ * The root record need not name the sending network when a DMARC-aligned
+ * Return-Path subdomain does. But "the subdomain could not be queried" is *not*
+ * "the subdomain does not authorise the sender": a transient DNS failure on the
+ * subdomain must not turn into a hard FAIL, which is the false negative the
+ * script's header forbids. That case is `skip` — the state is unknown, not
+ * negative.
+ */
+export function rootSpfVerdict({ rootAuthorises, aligned, queryFailed }) {
+  if (rootAuthorises) return "pass";
+  if (aligned) return "warn";
+  return queryFailed ? "skip" : "fail";
+}
+
 const results = [];
 function record(area, status, detail) {
   results.push({ area, status, detail });
@@ -232,22 +259,36 @@ async function checkSpf() {
   const aligned = await returnPathAlignment();
   if (lookups > 10) {
     record("SPF", "warn", `${detail} — over the 10-lookup limit, receivers may permerror`);
-  } else if (spfAuthorisesSender(spf)) {
-    record("SPF", "pass", detail);
-  } else if (aligned.aligned) {
-    record(
-      "SPF",
-      "warn",
-      `${detail} — the root record does not authorise the sender, but the Return-Path ` +
-        `subdomain ${aligned.domain} does and is DMARC-aligned with ${FROM_DOMAIN}`,
-    );
   } else {
-    record(
-      "SPF",
-      "fail",
-      `${detail} — does NOT authorise the sending network (amazonses.com) and no ` +
-        `aligned Return-Path subdomain does either`,
-    );
+    const verdict = rootSpfVerdict({
+      rootAuthorises: spfAuthorisesSender(spf),
+      aligned: aligned.aligned,
+      queryFailed: aligned.queryFailed,
+    });
+    if (verdict === "pass") {
+      record("SPF", "pass", detail);
+    } else if (verdict === "warn") {
+      record(
+        "SPF",
+        "warn",
+        `${detail} — the root record does not authorise the sender, but the Return-Path ` +
+          `subdomain ${aligned.domain} does and is DMARC-aligned with ${FROM_DOMAIN}`,
+      );
+    } else if (verdict === "skip") {
+      record(
+        "SPF",
+        "skip",
+        `${detail} — the root record does not authorise the sender, and a Return-Path ` +
+          `subdomain could not be queried, so whether the envelope aligns is unknown`,
+      );
+    } else {
+      record(
+        "SPF",
+        "fail",
+        `${detail} — does NOT authorise the sending network (amazonses.com) and no ` +
+          `aligned Return-Path subdomain does either`,
+      );
+    }
   }
 
   if (aligned.checked) {
@@ -261,10 +302,19 @@ async function checkSpf() {
  */
 async function returnPathAlignment() {
   const notes = [];
+  let queryFailed = false;
   for (const sub of RETURN_PATH_SUBDOMAINS) {
     const domain = `${sub}.${DOMAIN}`;
     const { answers, error } = await resolve(domain, "TXT");
-    if (classifyDnsResult({ answers, error }) !== "present") continue;
+    const state = classifyDnsResult({ answers, error });
+    if (state === "error") {
+      // A query failure on the subdomain is not evidence the subdomain lacks an
+      // SPF record; record it so the caller can report `skip` rather than FAIL.
+      queryFailed = true;
+      notes.push(`${domain} TXT could not be queried: ${error}`);
+      continue;
+    }
+    if (state !== "present") continue;
     const spf = answers.find((t) => /^v=spf1(\s|$)/i.test(t));
     if (!spf) continue;
     if (!spfAuthorisesSender(spf)) {
@@ -275,9 +325,9 @@ async function returnPathAlignment() {
     notes.push(
       `${domain} (Return-Path) SPF authorises the sender${aligned ? "" : " but is not aligned"}`,
     );
-    return { checked: true, aligned, domain, notes };
+    return { checked: true, aligned, queryFailed, domain, notes };
   }
-  return { checked: false, aligned: false, domain: null, notes };
+  return { checked: false, aligned: false, queryFailed, domain: null, notes };
 }
 
 async function checkDkim() {
@@ -480,6 +530,20 @@ async function sendingIpAddresses() {
   return ips;
 }
 
+/**
+ * Maps a non-OK Resend HTTP status to a verdict. A 429 (`rate_limit_exceeded`,
+ * `daily_quota_exceeded`) and any 5xx (`application_error`, `service_unavailable`)
+ * are transient provider states: they say nothing about the key, so they are
+ * `warn` (a note), never `fail`. A `fail` exits non-zero and would blame the
+ * credential for a rate limit or an outage — the same false-negative class as an
+ * unqueryable DNS record reading as "not present". Every other 4xx is a real,
+ * deterministic rejection (401/403 = the key itself), so it stays `fail`.
+ */
+export function classifyResendStatus(status) {
+  if (status === 429 || status >= 500) return "warn";
+  return "fail";
+}
+
 async function checkResend() {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
@@ -499,7 +563,14 @@ async function checkResend() {
       headers: { Authorization: `Bearer ${key}` },
     });
     if (!response.ok) {
-      record("Resend", "fail", `API rejected the key (HTTP ${response.status})`);
+      const verdict = classifyResendStatus(response.status);
+      const why =
+        response.status === 429
+          ? "rate limited — the key may be fine, retry later"
+          : response.status >= 500
+            ? "Resend API error — provider-side, retry later"
+            : "API rejected the key";
+      record("Resend", verdict, `${why} (HTTP ${response.status})`);
       return;
     }
     const body = await response.json();
@@ -549,7 +620,14 @@ async function sendTestEmail(to) {
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      record("Send", "fail", `Resend rejected the message (HTTP ${response.status}): ${body.message ?? ""}`);
+      const verdict = classifyResendStatus(response.status);
+      const why =
+        response.status === 429
+          ? "rate limited — the message was not sent, retry later"
+          : response.status >= 500
+            ? "Resend API error — provider-side, the message was not sent"
+            : "Resend rejected the message";
+      record("Send", verdict, `${why} (HTTP ${response.status}): ${body.message ?? ""}`);
       return;
     }
     record(
@@ -588,7 +666,7 @@ async function main() {
 }
 
 // Only run when invoked directly, so the pure helpers stay importable in tests.
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   main().catch((error) => {
     console.error(error);
     process.exit(1);

@@ -418,3 +418,77 @@ yüzünden ölçülemez. Doğrulanmamış iddia yok.
 
 Testler: `verify-indexing.test.mjs` 24/24, `verify-deliverability.test.mjs` 11/11,
 `verify-auth-config.test.mjs` 5/5, `verify-production-deployment.test.mjs` 14/14.
+
+## Tur 9 — doğrulayıcının kendi hata yolu denetlendi (2026-11-10, LANE-VERIFY #187)
+
+Bu turda ölçülecek yeni bir katman yok (katman 2/3 hâlâ #186 + #170'e bağlı).
+Bunun yerine **ölçüm aracının kendisi** denetlendi: "doğrulanamayan bir durum
+negatif sanılır mı?" sorusu üç bağımsız kusur ortaya çıkardı. Üçü de aynı sınıf —
+bilinmeyen/geçici durumun sert bir `fail`'e (ya da sessiz bir no-op'a) çökmesi.
+
+### Kusur 1 — doğrudan çalıştırma koruması yolda boşluk/`#` varken sessizce düşüyordu
+
+Üç script (`verify-deliverability`, `verify-indexing`, `verify-auth-config`)
+`import.meta.url === \`file://${process.argv[1]}\`` ile "doğrudan mı çağrıldım?"
+kontrol ediyordu. `file://${path}` yolu yüzde-kodlamaz; dizin adında boşluk ya da
+`#` varsa eşleşme tutmaz → script **hiçbir şey doğrulamadan `exit 0`** verir.
+
+| Boyut | Gözlenen (önce) | Beklenen (sonra) | Etki |
+|---|---|---|---|
+| mantık / sınır girdi | yol `#` ya da boşluk içeriyorsa guard tutmaz, `exit 0` | `pathToFileURL(argv[1]).href` ile karşılaştır | "Yeşil" görünen ama hiçbir şey ölçmeyen bir doğrulama koşusu |
+
+Düzeltme: dışa aktarılan `isDirectRun(moduleUrl, argv1)` (`pathToFileURL`).
+Regresyon: her üç `.test.mjs` içinde birer guard testi.
+
+### Kusur 2 — sorgulanamayan Return-Path alt alanı `FAIL`'e çöküyordu
+
+Kök SPF göndereni yetkilendirmiyor **ve** Return-Path alt alanı TXT sorgusu
+geçici bir DNS hatasıyla düşüyorsa, eski kod hatayı `aligned:false`'a indirip
+sert `FAIL` ("hiçbir hizalı alt alan da yetkilendirmiyor") veriyordu. Bu durum
+*negatif* değil *bilinmiyor*; script başlığı bunu tam olarak yasaklıyor.
+
+| Boyut | Gözlenen (önce) | Beklenen (sonra) | Etki |
+|---|---|---|---|
+| hata yolu | alt alan sorgusu düştü → `fail` | `skip` (durum bilinmiyor) | Geçici DNS hatası "SPF bozuk" olarak raporlanıyordu |
+
+Düzeltme: dışa aktarılan `rootSpfVerdict({rootAuthorises, aligned, queryFailed})`;
+sorgu düştüyse `skip`, yanıt verip yetkilendirmiyorsa gerçek `fail`.
+
+### Kusur 3 — Resend 429/5xx "anahtar reddedildi" sanılıyordu (bu tur)
+
+`checkResend` her non-OK yanıtı `fail` + "API rejected the key" olarak yazıyordu.
+Resmî Resend hata dokümanına göre 429 (`rate_limit_exceeded`,
+`daily_quota_exceeded`) ve 5xx (`application_error`, `service_unavailable`)
+**yeniden denenebilir sağlayıcı durumlarıdır** — anahtar hakkında hiçbir şey
+söylemez. `fail` exit kodunu 1 yaptığı için meşgul/geçici-düşük bir sağlayıcı
+"bozuk kimlik bilgisi" olarak okunuyordu (kusur 2 ile aynı sınıf).
+
+| Boyut | Gözlenen (önce) | Beklenen (sonra) | Etki |
+|---|---|---|---|
+| hata yolu / yetki | 429/5xx → `fail` "API rejected the key" | 429/5xx → `warn`; 401/403/400/422 → `fail` | Rate limit ya da kesinti, kullanıcıyı yanlışlıkla anahtar peşinde koşturuyordu |
+
+Düzeltme: dışa aktarılan `classifyResendStatus(status)`; `checkResend` **ve**
+`sendTestEmail` kullanıyor. Kaynak: Resend Errors sayfası
+(<https://resend.com/docs/api-reference/errors>). Regresyon: "a Resend rate
+limit or outage is a warn, not a FAIL that blames the key".
+
+### Canlı ölçüm (2026-11-10 ~06:55 UTC)
+
+```
+node scripts/verify-deliverability.mjs
+  WARN SPF         kök kayıt göndereni yetkilendirmiyor; Return-Path alt alanı yetkili + DMARC hizalı
+  PASS SPF         send.isbulkktc.com (Return-Path) yetkili
+  PASS DKIM        resend._domainkey, 216 karakter
+  WARN DMARC       p=none (yalnız izler, uygulamaz)
+  PASS MX          3 Cloudflare route
+  WARN Blocklists  surbl/spamcop temiz; dbl.spamhaus.org + zen.spamhaus.org sorgulanamadı
+  SKIP Resend      RESEND_API_KEY not set
+  0 failure(s), 3 warning(s), 1 skipped
+```
+
+`isbulkktc.com` hâlâ 402 `DEPLOYMENT_DISABLED` (#518, LANE-INFRA); katman 2/3
+(#186 anahtar, #170 SPF) ölçülemez. **Doğrulanmamış iddia yok.**
+
+Testler: `verify-deliverability.test.mjs` 14/14 (üç kusurun regresyonu dahil).
+Kapılar: `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`,
+`bun run test:unit` (946/946) — yeşil.

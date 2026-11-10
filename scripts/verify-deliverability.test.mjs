@@ -4,11 +4,14 @@ import test from "node:test";
 import {
   classifyDnsblAnswer,
   classifyDnsResult,
+  classifyResendStatus,
   countSpfDnsLookups,
   evaluateBlocklistZone,
   interpretDnsResponse,
+  isDirectRun,
   isRelaxedAligned,
   reverseIpv4,
+  rootSpfVerdict,
   spfAuthorisesSender,
   spfIpEntries,
 } from "./verify-deliverability.mjs";
@@ -172,4 +175,62 @@ test("a resolver failure is an error, not an absent record", () => {
   // NXDOMAIN still classifies as absent, which is what makes an SPF/DKIM record
   // genuinely missing a real FAIL rather than a skip.
   assert.equal(classifyDnsResult(interpretDnsResponse(3, undefined)), "absent");
+});
+
+test("the direct-run guard fires even when the script path holds a space or #", () => {
+  // The naive `file://${argv[1]}` guard never equals `import.meta.url` when the
+  // path holds a space or `#`, so `node`-invoked runs exited 0 having verified
+  // nothing. `pathToFileURL` percent-encodes both, so the guard matches.
+  const url = "file:///tmp/verify%23guard%20x/verify-deliverability.mjs";
+  assert.equal(isDirectRun(url, "/tmp/verify#guard x/verify-deliverability.mjs"), true);
+  // A plain path still matches.
+  assert.equal(isDirectRun("file:///repo/scripts/verify-deliverability.mjs", "/repo/scripts/verify-deliverability.mjs"), true);
+  // A missing argv[1] (imported, not launched) must never fire.
+  assert.equal(isDirectRun(url, undefined), false);
+  assert.equal(isDirectRun(url, ""), false);
+  // A different script on the same path must not fire.
+  assert.equal(isDirectRun("file:///repo/scripts/other.mjs", "/repo/scripts/verify-deliverability.mjs"), false);
+});
+
+test("an unqueryable Return-Path subdomain is a skip, never a FAIL", () => {
+  // The regression: the root record does not authorise the sender and the
+  // Return-Path subdomain query fails (transient SERVFAIL). The old code
+  // collapsed the error to `aligned:false` and emitted a hard FAIL — "no aligned
+  // Return-Path subdomain does either" — a false negative for a state that is
+  // unknown, not negative. The script's own header forbids exactly this.
+  assert.equal(
+    rootSpfVerdict({ rootAuthorises: false, aligned: false, queryFailed: true }),
+    "skip",
+  );
+  // A subdomain that answered and does not authorise is still a real FAIL.
+  assert.equal(
+    rootSpfVerdict({ rootAuthorises: false, aligned: false, queryFailed: false }),
+    "fail",
+  );
+  // The root record authorising the sender is a pass regardless.
+  assert.equal(
+    rootSpfVerdict({ rootAuthorises: true, aligned: false, queryFailed: true }),
+    "pass",
+  );
+  // A DMARC-aligned subdomain that does authorise is the warn case.
+  assert.equal(
+    rootSpfVerdict({ rootAuthorises: false, aligned: true, queryFailed: false }),
+    "warn",
+  );
+});
+
+test("a Resend rate limit or outage is a warn, not a FAIL that blames the key", () => {
+  // The regression: every non-OK response was recorded as `fail` with the message
+  // "API rejected the key". A 429 (rate_limit_exceeded / daily_quota_exceeded) or
+  // a 5xx (application_error / service_unavailable) says nothing about the key —
+  // and `fail` exits non-zero, so a busy provider read as a broken credential.
+  assert.equal(classifyResendStatus(429), "warn");
+  assert.equal(classifyResendStatus(500), "warn");
+  assert.equal(classifyResendStatus(503), "warn");
+  // A deterministic client rejection is a real FAIL: 401/403 mean the key itself
+  // was rejected (validation_error / restricted_api_key / suspended_api_key).
+  assert.equal(classifyResendStatus(401), "fail");
+  assert.equal(classifyResendStatus(403), "fail");
+  assert.equal(classifyResendStatus(400), "fail");
+  assert.equal(classifyResendStatus(422), "fail");
 });

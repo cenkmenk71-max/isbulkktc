@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { callbackIsAllowed, evaluateCaptchaProbe } from "./verify-auth-config.mjs";
+import { callbackIsAllowed, evaluateCaptchaProbe, isDirectRun } from "./verify-auth-config.mjs";
 
 const ORIGIN = "https://isbulkktc.com";
 
@@ -54,4 +54,16 @@ test("a rate-limited captcha probe is unreachable, not a false pass", () => {
   assert.equal(throttled.ok, false);
   // A 5xx is likewise inconclusive.
   assert.equal(evaluateCaptchaProbe(503, {}).state, "unreachable");
+});
+
+test("the direct-run guard fires even when the script path holds a space or #", () => {
+  // The naive `file://${argv[1]}` guard never equals `import.meta.url` when the
+  // path holds a space or `#`, so `node`-invoked runs exited 0 having verified
+  // nothing. `pathToFileURL` percent-encodes both, so the guard matches.
+  const url = "file:///tmp/verify%23guard%20x/verify-auth-config.mjs";
+  assert.equal(isDirectRun(url, "/tmp/verify#guard x/verify-auth-config.mjs"), true);
+  assert.equal(isDirectRun("file:///repo/scripts/verify-auth-config.mjs", "/repo/scripts/verify-auth-config.mjs"), true);
+  assert.equal(isDirectRun(url, undefined), false);
+  assert.equal(isDirectRun(url, ""), false);
+  assert.equal(isDirectRun("file:///repo/scripts/other.mjs", "/repo/scripts/verify-auth-config.mjs"), false);
 });
