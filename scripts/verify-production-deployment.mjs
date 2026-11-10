@@ -212,6 +212,26 @@ export function decideVerification({ vercel, http }) {
 }
 
 /**
+ * Build the summary's verdict headline from the *full* failure set, so the
+ * headline can never disagree with the exit code. The commit check and the
+ * smoke routes are separate questions, and the run exits non-zero when either
+ * fails; a headline that looked only at the commit check printed `✅` next to a
+ * failing job whenever a reachable route was unhealthy — a false green that
+ * reads as "the deploy is fine".
+ */
+export function describeVerdict(decision, routeFailures) {
+  const healthy = decision.verified && routeFailures.length === 0;
+  if (!decision.verified) return { healthy, reason: decision.reason };
+  if (routeFailures.length > 0) {
+    return {
+      healthy,
+      reason: `commit confirmed via ${decision.method}, but ${routeFailures.length} smoke route(s) unhealthy`,
+    };
+  }
+  return { healthy, reason: decision.reason };
+}
+
+/**
  * The starting Vercel-channel state. `configured` means "a token was supplied",
  * not "the API answered" — a set-but-unreachable token (bad token, unknown team
  * slug, API blip) must not be reported as `VERCEL_TOKEN not set`, or the operator
@@ -532,17 +552,6 @@ async function main() {
   }
 
   const decision = decideVerification({ vercel, http });
-  const summary = [
-    "## Production deploy verification",
-    "",
-    `- origin: \`${origin}\``,
-    `- expected commit: \`${expectedCommit.slice(0, 8)}\``,
-    `- verdict: ${decision.verified ? "✅" : "❌"} ${decision.reason}`,
-    `- confirmed via: ${decision.verified ? decision.method : "—"}`,
-    `- Vercel API: ${vercel.configured ? (vercel.ok ? "✅" : "❌") : "⏭️"} ${vercel.reason}`,
-    `- HTTP build identity: ${http.disabled ? "🚫 disabled" : http.blocked ? "⏭️ blocked" : http.ok ? "✅" : "❌"} ${http.reason}`,
-  ];
-
   const failures = [];
   if (!decision.verified) {
     failures.push(decision.reason);
@@ -555,21 +564,40 @@ async function main() {
   // an already-red verdict; on a green run this is the same gate as before, so
   // the change is strictly additive. A disabled deployment is down for every
   // visitor, so it is the one state worth skipping.
+  const routeFailures = [];
+  const smokeSummary = [];
   if (!http.disabled) {
     // A Cloudflare 403 for the runner is expected and must not fail the run.
     const results = await smokeTest(origin);
     const smoke = summarizeSmokeResults(results);
     const blocked = results.every((result) => result.skipped);
-    summary.push(
+    smokeSummary.push(
       `- smoke routes: ${blocked ? "⏭️ skipped" : smoke.ok ? "✅" : "❌"} ${smoke.passed} passed, ${smoke.skipped} skipped, ${smoke.failed.length} failed`,
     );
     for (const result of results) {
-      summary.push(`  - \`${result.route}\`: ${result.reason}`);
+      smokeSummary.push(`  - \`${result.route}\`: ${result.reason}`);
     }
     for (const failure of smoke.failed) {
-      failures.push(`route ${failure.route}: ${failure.reason}`);
+      routeFailures.push(`route ${failure.route}: ${failure.reason}`);
     }
   }
+  failures.push(...routeFailures);
+
+  // The headline verdict must agree with the exit code: derive both from the
+  // same failure set (`describeVerdict`).
+  const verdict = describeVerdict(decision, routeFailures);
+
+  const summary = [
+    "## Production deploy verification",
+    "",
+    `- origin: \`${origin}\``,
+    `- expected commit: \`${expectedCommit.slice(0, 8)}\``,
+    `- verdict: ${verdict.healthy ? "✅" : "❌"} ${verdict.reason}`,
+    `- confirmed via: ${decision.verified ? decision.method : "—"}`,
+    `- Vercel API: ${vercel.configured ? (vercel.ok ? "✅" : "❌") : "⏭️"} ${vercel.reason}`,
+    `- HTTP build identity: ${http.disabled ? "🚫 disabled" : http.blocked ? "⏭️ blocked" : http.ok ? "✅" : "❌"} ${http.reason}`,
+    ...smokeSummary,
+  ];
 
   const summaryFile = process.env.GITHUB_STEP_SUMMARY;
   if (summaryFile) {
