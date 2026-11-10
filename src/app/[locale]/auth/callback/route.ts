@@ -74,6 +74,26 @@ function redirectAndClearOAuthIntent(url: URL): NextResponse {
 }
 
 /**
+ * The blocked-account exit: drop the session the exchange just minted, then
+ * send the visitor to the login page's `error=account` branch.
+ *
+ * `signIn` drops the session itself before redirecting, so a refused account
+ * holds no cookie it cannot use; the callback must match, or a suspended/closed
+ * account that completes any link keeps a working session until it clicks the
+ * branch's sign-out button. The exchange writes the auth cookies through the
+ * same `cookies()` store this client clears, so `signOut()` is what turns
+ * "blocked" into "not signed in" — and it clears the local cookies even when the
+ * remote call fails.
+ */
+async function redirectBlockedAccount(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  url: URL,
+): Promise<NextResponse> {
+  await supabase.auth.signOut();
+  return redirectAndClearOAuthIntent(url);
+}
+
+/**
  * The callback mints a session for every successful exchange, including OAuth,
  * e-mail confirmation and recovery. `profiles.status` is the account kill
  * switch, so a non-active account must not keep that session (#467/#418) — the
@@ -192,7 +212,8 @@ export async function GET(request: NextRequest) {
     // The retry path minted (or found) a live session too, so the kill switch
     // applies here as well.
     if (await isCallbackAccountBlocked(supabase, sessionUser.id)) {
-      return redirectAndClearOAuthIntent(
+      return redirectBlockedAccount(
+        supabase,
         new URL(resolveAccountBlockedPath(locale, audience), appBaseUrl),
       );
     }
@@ -221,10 +242,12 @@ export async function GET(request: NextRequest) {
   // The exchange minted a session, but `profiles.status` is the account kill
   // switch (#467/#418) — a suspended/closed account must not keep it. This gate
   // runs before every success exit, the reset flow included, so no branch hands
-  // a non-active account a working session. The visitor lands on the login
-  // page's `error=account` branch, which explains the refusal and signs out.
+  // a non-active account a working session. The session is dropped here, not
+  // left for the visitor to clear: the login page's `error=account` branch
+  // explains the refusal, but only this client can actually revoke the cookie.
   if (user && (await isCallbackAccountBlocked(supabase, user.id))) {
-    return redirectAndClearOAuthIntent(
+    return redirectBlockedAccount(
+      supabase,
       new URL(resolveAccountBlockedPath(locale, audience), appBaseUrl),
     );
   }

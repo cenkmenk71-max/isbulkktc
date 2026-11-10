@@ -80,6 +80,26 @@ test("every session-minting callback exit is gated by the kill switch", () => {
   );
 });
 
+test("the callback drops the session it minted for a blocked account", () => {
+  const source = callbackSource();
+
+  // `signIn` signs the session out before redirecting; the callback must match,
+  // or a blocked account keeps a live cookie until it clicks the branch's
+  // sign-out button. Both gate sites must go through the sign-out exit.
+  assert.match(
+    source,
+    /async function redirectBlockedAccount\([\s\S]{0,300}?await supabase\.auth\.signOut\(\)/,
+    "the blocked-account exit must sign the session out",
+  );
+  const gateSites = source.match(/redirectBlockedAccount\(/g) ?? [];
+  // One definition plus the two gate call sites (retry path, main path).
+  assert.equal(
+    gateSites.length,
+    3,
+    "both kill-switch gates must drop the session through redirectBlockedAccount",
+  );
+});
+
 test("the login page renders the branch the callback sends blocked accounts to", () => {
   const loginSource = readFileSync(
     new URL("../../app/[locale]/(auth)/login/page.tsx", import.meta.url),
