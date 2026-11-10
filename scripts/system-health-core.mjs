@@ -16,6 +16,23 @@
 export const HEALTH_WORKFLOW = 'System health';
 
 /**
+ * CI job names that only aggregate other jobs, so they carry no gate of their own.
+ *
+ * `Quality, database and E2E` in `.github/workflows/ci.yml` declares
+ * `needs: [static, database, e2e]` and does nothing but fail when any of them
+ * failed; branch protection still requires it so the required-check name never
+ * moves. Because it mirrors its dependencies, it is red on every PR exactly when
+ * `static` is red, which makes `queueGlobalGates` read one shared cause as two
+ * independent gates ("Static checks" *and* "Quality, database and E2E"). Naming
+ * the aggregator as a second cause inflates one freeze into two and hides that
+ * the aggregator has no failure to fix — the cause is always its dependency.
+ *
+ * Kept here, and asserted against the workflow file by a unit test, so renaming
+ * the aggregator job cannot silently re-introduce the double count.
+ */
+export const CI_AGGREGATOR_CHECKS = new Set(['Quality, database and E2E']);
+
+/**
  * The newest completed run of each workflow that ran on the default branch.
  *
  * The gate on `main` is not one fixed workflow. `isbulkktc CI` ran on push until
@@ -216,13 +233,56 @@ export function redPullRequests(prs) {
 }
 
 /**
+ * Red checks that refuse more than one open pull request at once.
+ *
+ * Some gates read *every* open PR instead of just the one they run on:
+ * `lane-collisions.mjs` fails when any lane edits a file it does not own, so a
+ * single lane's mistake marks that check red on *every* PR in the queue. That is
+ * a self-inflicted freeze — the queue cannot drain no matter how healthy each
+ * individual PR is — and it is a different diagnosis from a PR failing its own
+ * tests. `redPullRequests` names the gate per PR but cannot say it is shared, so
+ * the operator sees two unrelated reds instead of one systemic cause.
+ *
+ * A check is queue-global when the same check name is red on two or more open
+ * PRs. One PR alone cannot distinguish "my gate is broken" from "a shared gate
+ * is broken", so a single red is deliberately not reported here.
+ *
+ * Aggregator checks (`CI_AGGREGATOR_CHECKS`) are excluded: they only mirror their
+ * dependencies, so counting them would report one shared cause as two gates and
+ * point the operator at a job that has nothing of its own to fix.
+ *
+ * @param {Array<object>} prs same shape as {@link redPullRequests}
+ * @returns {Array<{check: string, prs: number[]}>}
+ */
+export function queueGlobalGates(prs) {
+  const byCheck = new Map();
+  for (const pr of redPullRequests(prs)) {
+    for (const check of pr.redChecks) {
+      if (CI_AGGREGATOR_CHECKS.has(check)) continue;
+      if (!byCheck.has(check)) byCheck.set(check, []);
+      byCheck.get(check).push(pr.number);
+    }
+  }
+  const gates = [];
+  for (const [check, numbers] of byCheck) {
+    if (numbers.length > 1) gates.push({ check, prs: numbers });
+  }
+  return gates;
+}
+
+/**
  * Vercel's marker for a deployment the account is no longer allowed to serve.
  *
  * `402 Payment Required` with `x-vercel-error: DEPLOYMENT_DISABLED` means the
  * account is blocked, suspended or over quota. It is an account state, not an
  * application bug: the origin is down for every visitor and redeploying does not
- * fix it. Kept as a pure predicate (mirroring `verify-production-deployment.mjs`)
- * so the probe's verdict is testable without the network.
+ * fix it. On 2026-11-10 the live origin switched to **404** with
+ * `x-vercel-error: DEPLOYMENT_NOT_FOUND` — same account-level state, different
+ * marker. A bare 404 must NOT match: a healthy origin answers 404 for every path
+ * it does not own, so only the `x-vercel-error` header disambiguates it (the 402
+ * is unambiguous on its own). Kept as a pure predicate (mirroring
+ * `verify-production-deployment.mjs`) so the probe's verdict is testable without
+ * the network.
  *
  * @param {number|null|undefined} status
  * @param {string|null|undefined} vercelError
@@ -230,10 +290,14 @@ export function redPullRequests(prs) {
  */
 export function isDeploymentDisabled(status, vercelError) {
   if (status === 402) return true;
-  return (
-    typeof vercelError === 'string' &&
-    vercelError.trim().toUpperCase() === 'DEPLOYMENT_DISABLED'
-  );
+  return vercelAccountState(vercelError) !== '';
+}
+
+/** The account-state marker Vercel sent, normalised, or "" when there is none. */
+function vercelAccountState(vercelError) {
+  if (typeof vercelError !== 'string') return '';
+  const marker = vercelError.trim().toUpperCase();
+  return marker === 'DEPLOYMENT_DISABLED' || marker === 'DEPLOYMENT_NOT_FOUND' ? marker : '';
 }
 
 /**
@@ -246,12 +310,12 @@ export function isDeploymentDisabled(status, vercelError) {
  * `402 DEPLOYMENT_DISABLED` to everyone. A red workflow is a symptom; "the site
  * is down" is the finding, and it must be read directly from the origin.
  *
- * A 402 / `DEPLOYMENT_DISABLED` is a hard failure: the site is down for real
- * visitors, which outranks a workflow that merely reports it. A 403/429 is the
- * edge blocking the probe (Cloudflare answers datacenter IPs that way) — that is
- * "could not verify", a warning, never a failure. A network error is likewise
- * "could not verify" rather than "down": the probe has no evidence either way,
- * so it warns instead of inventing an outage.
+ * A 402 / `DEPLOYMENT_DISABLED` / `DEPLOYMENT_NOT_FOUND` is a hard failure: the
+ * site is down for real visitors, which outranks a workflow that merely reports
+ * it. A 403/429 is the edge blocking the probe (Cloudflare answers datacenter IPs
+ * that way) — that is "could not verify", a warning, never a failure. A network
+ * error is likewise "could not verify" rather than "down": the probe has no
+ * evidence either way, so it warns instead of inventing an outage.
  *
  * @param {{status?: number|null, vercelError?: string|null, networkError?: string|null}} probe
  * @returns {{level: 'ok'|'warn'|'fail', detail: string}}
@@ -265,9 +329,12 @@ export function classifyProductionProbe(probe) {
     return { level: 'warn', detail: 'probe returned no status' };
   }
   if (isDeploymentDisabled(status, vercelError)) {
+    const state = vercelAccountState(vercelError);
     return {
       level: 'fail',
-      detail: `DOWN: HTTP ${status} DEPLOYMENT_DISABLED (Vercel account blocked or over quota)`,
+      detail: state
+        ? `DOWN: HTTP ${status} ${state} (Vercel account/deployment is not being served)`
+        : `DOWN: HTTP ${status} (Vercel account blocked or over quota)`,
     };
   }
   if (status >= 200 && status < 400) {
@@ -277,4 +344,37 @@ export function classifyProductionProbe(probe) {
     return { level: 'warn', detail: `HTTP ${status} (edge blocked the probe — could not verify)` };
   }
   return { level: 'fail', detail: `origin answered HTTP ${status}` };
+}
+
+/**
+ * Compare the commit the live origin serves to the default branch head.
+ *
+ * "Serving HTTP 200" is not "serving the current build". On 2026-11-10 the
+ * origin answered 200 while it was four commits behind `main` (the new Vercel
+ * account has no Git auto-deploy, #547): every check that reads GitHub's view
+ * said green while the work the team just merged was not live. The origin's
+ * `/api/build-info` reports the commit it was built from; compare it here.
+ *
+ * A short SHA on either side counts as current when it prefixes the other, so a
+ * trimmed `build-info` still matches. Missing or non-string input is `unknown`,
+ * never a failure — the probe has no evidence of a stale deploy, only that it
+ * could not compare, and inventing a failure from no data is the very bug this
+ * family is about.
+ *
+ * @param {{liveCommit?: string|null, mainCommit?: string|null}} [input]
+ * @returns {{level: 'ok'|'warn'|'unknown', detail: string}}
+ */
+export function classifyDeployFreshness({ liveCommit, mainCommit } = {}) {
+  const live = typeof liveCommit === 'string' ? liveCommit.trim().toLowerCase() : '';
+  const main = typeof mainCommit === 'string' ? mainCommit.trim().toLowerCase() : '';
+  if (!live || !main) {
+    return { level: 'unknown', detail: 'no build-info to compare against main' };
+  }
+  if (live === main || live.startsWith(main) || main.startsWith(live)) {
+    return { level: 'ok', detail: `live build matches main (${live.slice(0, 7)})` };
+  }
+  return {
+    level: 'warn',
+    detail: `live build ${live.slice(0, 7)} is behind main ${main.slice(0, 7)} — merged work is not deployed`,
+  };
 }

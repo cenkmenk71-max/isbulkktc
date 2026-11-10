@@ -15,7 +15,7 @@
 
 import { execFileSync } from 'node:child_process';
 
-import { classifyProductionProbe, classifyRedRuns, redPullRequests, redRunsOnMain, stuckPullRequests } from './system-health-core.mjs';
+import { classifyDeployFreshness, classifyProductionProbe, classifyRedRuns, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
 const asJson = process.argv.includes('--json');
@@ -80,6 +80,39 @@ async function probeProduction() {
     return classifyProductionProbe({ networkError: String(error?.message ?? error) });
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/**
+ * The commit the live origin reports it was built from, or `null` if it cannot
+ * be read. Used only to compare against the default branch head; a failure here
+ * is "could not verify", never evidence of a stale deploy.
+ */
+async function fetchLiveCommit() {
+  const origin = process.env.HEALTH_ORIGIN || 'https://isbulkktc.com';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(`${origin}/api/build-info`, {
+      headers: { accept: 'application/json' },
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const body = await response.json();
+    return typeof body?.commit === 'string' ? body.commit : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** The default branch head, or `null` when GitHub cannot be asked. */
+function mainCommitSha() {
+  try {
+    return gh(['api', `repos/${REPO}/commits/main`, '--jq', '.sha']);
+  } catch {
+    return null;
   }
 }
 
@@ -163,6 +196,19 @@ if (redPRs.length > 0) {
       .join('; ')}`,
   );
 }
+// A check red on more than one PR is not that PR's failure: it is a shared
+// gate (e.g. `lane-collisions`, which reads the whole queue) freezing every
+// PR behind one lane's mistake. Name it once, so the operator fixes the cause
+// instead of chasing N unrelated reds.
+for (const gate of queueGlobalGates(prs)) {
+  note(
+    'warn',
+    'queue-global gate',
+    `${gate.check} is red on ${gate.prs.length} PRs (${gate.prs
+      .map((n) => `#${n}`)
+      .join(', ')}): one lane's mistake freezes the whole queue — fix the cause, not each PR`,
+  );
+}
 if (prs.length === 0) note('ok', 'PRs', 'none open');
 else if (stalled.length === 0 && stuck.length === 0 && redPRs.length === 0) {
   note('ok', 'PRs', `${prs.length} open, all moving`);
@@ -222,6 +268,16 @@ if (branchRuns.length === 0) {
 // down" is a finding, and only the origin can answer it. See probeProduction.
 const production = await probeProduction();
 note(production.level, 'production', production.detail);
+
+// 3c. Is the live build the one we just merged? "Serving HTTP 200" hides a stale
+// deploy: on 2026-11-10 the origin was four commits behind `main` (the new
+// Vercel account has no Git auto-deploy, #547) while every GitHub-derived check
+// read green. Compare the origin's build-info commit to the default branch head.
+const freshness = classifyDeployFreshness({
+  liveCommit: await fetchLiveCommit(),
+  mainCommit: mainCommitSha(),
+});
+if (freshness.level !== 'unknown') note(freshness.level, 'deploy', freshness.detail);
 
 // 4. Runs held for approval: invisible unless asked for.
 const held = gh(['api', `repos/${REPO}/actions/runs?status=action_required&per_page=20`, '--jq', '.total_count']);

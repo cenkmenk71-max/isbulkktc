@@ -58,6 +58,7 @@ node scripts/lane-autopilot.mjs
 | 6 | lane ölü | sayaç başarıda sıfırlanmıyor, iş başına değil lane ömrüne bağlı | iş imzası (`work`) + başarıda sıfırla |
 | 7 | main CI kırmızı | 0 job'lu **geçici GitHub glitch koşusu** gerçek arıza sanılıyor | job sayısına bak: 0 = glitch (warn), >0 = gerçek (fail) |
 | 8 | PR'lar "hareket ediyor" | kuyruk-global kapı (`lane-collisions`) kırmızı → **hiçbiri merge olamaz**; `system-health` yalnız "açık ve yaşlı değil" diye okur | kırmızı adımı yerelde koştur, adı geçen PR'ı bul, sahibine devret |
+| 9 | production "serving (HTTP 200)" | canlı build `main`'in **gerisinde** (yeni Vercel hesabında otomatik Git deploy yok) → birleşen iş yayında değil; GitHub'a bakan her kontrol yeşil okur | `/api/build-info` commit'ini `main` HEAD ile karşılaştır (`deploy` satırı) |
 
 **Yeni bir tıkanıklık görürsen:** aynı sınıfta mı diye sor — "bir sinyal yanlış
 okunuyor mu?" Genelde cevap evet.
@@ -792,3 +793,145 @@ Canlı koşu artık donmayı adlandırıyor: `blocked PRs  2 open with a red che
 **Kalan (başka lane).** Kuyruk donması hâlâ sürüyor; kaynağı #549'un sahiplik
 eksiği (bkz. önceki bölüm), düzeltmesi LANE-INFRA/#552'de. Bekçi artık görünür
 kılıyor ama **çözemez** — bu doğru sınır.
+
+## Tur notları — kuyruk-global kapı (2026-11-10)
+
+Önceki tur "kırmızı check'i adlandır"ı ekledi; bu tur **aynı check'in N PR'da
+kırmızı olması**nın *tek bir sistemik neden* olduğunu görünür kıldı. Aile #8.
+
+**Bulgu.** `redPullRequests` her PR'ın kırmızısını **ayrı ayrı** listeliyordu:
+`blocked PRs 2 open with a red check: #557 (Static checks); #555 (Static checks)`.
+Operatör bunu iki bağımsız arıza sanar; gerçekte **tek** kök var —
+`lane-collisions.mjs` kuyruğun tamamını okur, `#557`'nin sahipsiz dosyası **her**
+PR'ın `Static checks`'ini kırar. Kapı kuyruk-global olduğu için (zorunlu
+`Quality, database and E2E`'yi besler) **hiçbir** PR merge olamaz: N kırmızı,
+1 neden.
+
+**Düzeltme (LANE-OPERATÖR dosyaları).** `system-health-core.mjs`'e
+`queueGlobalGates(prs)`: `redPullRequests` çıktısını check adına göre gruplar;
+aynı ad **2+ PR'da** kırmızıysa tek kayıt döner (`{check, prs}`). Tek PR'daki
+kırmızı bilinçli olarak **sayılmaz** — o PR'ın kendi arızası olabilir, paylaşılan
+kapı olduğu kanıtlanamaz. `system-health.mjs` her kapı için **tek** `queue-global
+gate` uyarısı basar.
+
+**Kanıt.** `scripts/system-health.test.mjs` **48/48** (yeni 6 test). Mutasyon:
+`queueGlobalGates` `[]` döndürecek şekilde bozulunca **46 pass / 2 fail**;
+geri alınınca **48/48**. Canlı koşu artık iki satırı da yazıyor:
+```
+  WARN blocked PRs       2 open with a red check (cannot merge): #557 (Static checks); #555 (Static checks)
+  WARN queue-global gate Static checks is red on 2 PRs (#557, #555): one lane's mistake freezes the whole queue — fix the cause, not each PR
+```
+`lint`/`typecheck`/`check:frontend-source` temiz, `test:unit` **985/985**.
+
+**Ders.** Bir sinyal **kaç varlıkta** tekrarlandığını söylemiyorsa, operatör
+"paylaşılan neden" ile "N bağımsız arıza"yı ayıramaz. Aynı adı taşıyan kırmızıları
+grupla; 2+ ise tek sistemik neden olarak sun. Bekçi yine **çözemez** — kapının
+kendisi global, düzeltme LANE-INFRA'da (#552'ye yapısal bulgu olarak eklendi).
+
+## Tur notları — toplayıcı işi kendi kapısı sanma (2026-11-10)
+
+Önceki tur "aynı check N PR'da kırmızıysa tek neden"i ekledi. Bu tur aynı
+grubun **fazla saydığını** buldu: tek donma **iki** kapı gibi görünüyordu.
+
+**Bulgu.** Canlı koşu iki `queue-global gate` satırı yazıyordu:
+
+```
+  WARN queue-global gate Static checks is red on 2 PRs (#557, #555) ...
+  WARN queue-global gate Quality, database and E2E is red on 2 PRs (#557, #555) ...
+```
+
+`Quality, database and E2E` (`.github/workflows/ci.yml`) **toplayıcı** bir iştir:
+`needs: [static, database, e2e]` ve tek yaptığı, bir bağımlılık düştüyse düşmek;
+**kendi kapısı yok**. `Static checks` kuyrukta kırmızıyken toplayıcı da **her**
+PR'da kırmızıdır. Bu yüzden `queueGlobalGates` **tek** kök nedeni **iki** bağımsız
+kapı gibi gösteriyor ve operatörü düzeltilecek kendi hatası olmayan bir işe
+yönlendiriyordu — 8. ailenin (gösterge yanlış okuyor) sayaç eksenindeki hâli.
+
+**Düzeltme (LANE-OPERATÖR dosyaları).** `system-health-core.mjs`'e
+`CI_AGGREGATOR_CHECKS` eklendi; `queueGlobalGates` toplayıcı adlarını atlar.
+`redPullRequests` **bilinçli olarak filtrelenmedi**: PR başına "bu head kırmızı"
+bilgisi doğru ve eyleme dönüktür. Bir birim testi toplayıcı adının `ci.yml`'de
+`needs:` taşıdığını doğrular (toplayıcı tanımının kanıtı), böylece yeniden
+adlandırma çift sayımı geri getiremez.
+
+**Kanıt.** `scripts/system-health.test.mjs` **50/50** (yeni 2 test). Canlı koşu
+artık tek satır yazıyor:
+```
+  WARN queue-global gate Static checks is red on 2 PRs (#557, #555) ...
+```
+`lint`/`typecheck`/`check:frontend-source` temiz, `test:unit` **987/987**.
+
+**Ders.** Bir kırmızıyı **adlandırdığında** sor: bu iş kendi başına mı karar
+veriyor, yoksa yalnız başka bir işi mi aynalıyor? İkincisiyse ayrı bir neden
+değil, aynı nedenin ikinci görüntüsüdür; raporla, ama çözüm olarak sunma.
+
+## Tur notları — canlı build `main`'in gerisinde: "serving" ≠ "güncel" (2026-11-10)
+
+Sekiz aile de "yeşil görünen kırık"tı; bu tur **dokuzuncuyu** buldu ve kapattı:
+bekçi production'a `OK serving (HTTP 200)` yazıyordu, ama canlı build `main`'in
+**dört commit gerisindeydi** (`3644cbe` ↔ `2b899dc`). Yeni Vercel hesabında
+otomatik Git deploy yok (#547); her birleşen iş bir yere kadar yayına girmiyor.
+
+**Bulgu.** `system-health` yalnız "origin 200 döndü mü?" diye bakıyordu. GitHub'a
+bakan bütün diğer kontroller (main CI, PR'lar) yeşil okur; hiçbiri origin'in
+**hangi commit'i** sunduğunu sormaz. Bu, 8. ailenin (gösterge yanlış okuyor)
+deploy eksenindeki hâli: sağlık "çalışıyor" der, oysa taze iş canlıda yok.
+
+**Düzeltme (LANE-OPERATÖR dosyaları).**
+- `system-health-core.mjs`: `classifyDeployFreshness({liveCommit, mainCommit})` —
+  eşit ya da biri diğerinin öneki ise `ok`; farklıysa `warn` (iki kısa SHA ile);
+  eksik/geçersiz girdi `unknown` (**asla fail** — kanıt yok, uydurma yok).
+- `system-health.mjs`: `fetchLiveCommit()` (`/api/build-info`) + `mainCommitSha()`
+  (`gh api …/commits/main`); yeni **`deploy`** satırı production satırının yanında.
+  Okunamazsa satır hiç yazılmaz (`unknown`), böylece ağ/CI sorunu sahte kırmızı
+  üretmez.
+
+**Kanıt.** `scripts/system-health.test.mjs` **55/55** (yeni 5 test: eşit, kısa-önek
+iki yön, geride, büyük/küçük harf+boşluk, eksik→unknown). Canlı koşu artık yazıyor:
+```
+  OK   production   serving (HTTP 200)
+  WARN deploy       live build 3644cbe is behind main 2b899dc — merged work is not deployed
+```
+`scripts/**/*.test.mjs` **303/303**, `eslint` temiz.
+
+**Ders.** "Servis ayakta" ile "servis güncel" ayrı sorulardır. Bir sağlık kontrolü
+bir kaynağın **durumunu** okuyorsa, ona **sürümünü/yaşını** da sor: 200 dönen ama
+geride kalmış bir origin, yeşil bir yanlış-pozitifler kaynağıdır.
+
+**Not (bu turda kapanmayan).** Kök neden #552/#557/#559: `lane-collisions`
+kuyruk-global; LANE-INFRA'nın düzeltmesi **#559**'da (GLOBAL ↔ PR-LOCAL kapsam
+ayrımı, tasarımı doğru) ama CI kapısını değiştirdiği için **insan merge'i** bekliyor
+(`agent:blocked`). #557 kendi Static işini kırdığı için kuyruktan düşemiyor →
+#559 insan tarafından merge edilene dek kilit sürer. Operatör bu ikisini
+çöz**emez**; sahibe/insana bırakır.
+
+## Tur notu — kuyruk-global kırmızı lane'i yeniden doğurmasın (2026-11-10)
+
+Bir önceki tur **göstergeyi** (system-health) düzeltti: kuyruk-global kapıyı tek
+sistemik neden olarak adlandırdı. Bu tur **uygulayıcıyı** düzeltti: aynı kırmızı,
+`lane-autopilot.mjs`'in `decide()`'ında hâlâ PR-yerel sanılıyordu.
+
+**Bulgu (israf).** `REGISTRY.requiredChecks = ['Quality, database and E2E']`
+(toplaıcı). Kuyruk-global bir kırmızı, `needs:` zinciriyle zorunlu toplayıcıyı
+**her** PR'da kırmızı yapar; `decide()` bunu yerel arıza sanıp her lane'i
+onarım için yeniden doğurur. Lane temiz head bulur, suçlu PR açık olduğu için
+düzeltemez ve pass başına bir sandbox + bir deneme bütçesi yakar.
+
+**Düzeltme.** `redIsQueueGlobal(pr, allPrs, requiredChecks)` (core) + `decide()`
+kapısı: yalnız-kuyruk-global kırmızıda `spawn` yerine `wait`.
+
+**İnce nokta (kendi düzeltmemde yakalandı).** İlk sürüm toplayıcı adını **her
+zaman** global sayıyordu. Bu, *tek* PR'ın kendi arızasını (kendi bağımlılığı
+düştüğü için toplayıcı kırmızı) muaf tutuyordu — PR'ı donduracak bir hata. İkinci
+sürüm toplayıcıyı *atlar* ve yargıyı **bağımlılık işlerine** verir (`Static
+checks`, `E2E (n/4)`). Böylece iki PR'ın birbirinden bağımsız yerel arızaları da
+(ikisinde de toplayıcı kırmızı ama farklı iş kırmızı) yerel kalır; yalnız aynı
+iş 2+ PR'da kırmızıysa kuyruk-global sayılır.
+
+**Sınır.** Bu, **sonucu** (gereksiz respawn) durdurur. **Kök neden** — kapının
+kendi PR'ına kapsamlanması — #559 (LANE-INFRA, #552) işidir; o PR `Static
+checks`'i yeşile çevirdi. İkisi bağımsız: #559 düzeltici, bu düzeltme savunma.
+
+**Kanıt.** `scripts/lane-autopilot-core.test.mjs` yeni 8 test (115/115),
+`test:unit` **995/995**; toplayıcı adının ci.yml'de `needs:` taşıdığı testle
+sabitlendi. Canlı: `system-health` "Static checks is red on 2 PRs (#557, #555)".

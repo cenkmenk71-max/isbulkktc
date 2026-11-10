@@ -3,7 +3,9 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  CI_AGGREGATOR_CHECKS,
   HEALTH_WORKFLOW,
+  classifyDeployFreshness,
   classifyProductionProbe,
   classifyRedRuns,
   failingWorkflows,
@@ -11,6 +13,7 @@ import {
   isRedCheck,
   isUnresolvedMergeState,
   newestRunPerWorkflow,
+  queueGlobalGates,
   redPullRequests,
   redRunsOnMain,
   redWorkflowsOnMain,
@@ -426,6 +429,86 @@ test("redPullRequests tolerates missing input and unnamed checks", () => {
 });
 
 // ---------------------------------------------------------------------------
+// queueGlobalGates — one shared gate red on N PRs is one systemic cause, not N
+// unrelated failures. The bug: `lane-collisions.mjs` reads the whole queue, so
+// one lane editing a file it does not own marked that check red on every PR.
+// The health check named each PR's red separately and the operator could not
+// see the freeze was self-inflicted and single-cause.
+// ---------------------------------------------------------------------------
+
+const prWithCheck = (number, check, mergeStateStatus = "BLOCKED") => ({
+  number,
+  mergeStateStatus,
+  statusCheckRollup: [{ name: check, conclusion: "FAILURE" }],
+});
+
+test("the same check red on two PRs is named once as a queue-global gate", () => {
+  assert.deepEqual(
+    queueGlobalGates([
+      prWithCheck(555, "Lane collisions"),
+      prWithCheck(557, "Lane collisions"),
+    ]),
+    [{ check: "Lane collisions", prs: [555, 557] }],
+  );
+});
+
+test("a check red on only one PR is that PR's own failure, not a shared gate", () => {
+  assert.deepEqual(queueGlobalGates([prWithCheck(555, "E2E (1/4)")]), []);
+});
+
+test("two different checks each red on one PR do not make a queue-global gate", () => {
+  assert.deepEqual(
+    queueGlobalGates([prWithCheck(555, "Static checks"), prWithCheck(556, "E2E (1/4)")]),
+    [],
+  );
+});
+
+test("a shared gate and a private failure are separated", () => {
+  assert.deepEqual(
+    queueGlobalGates([
+      prWithCheck(555, "Lane collisions"),
+      prWithCheck(557, "Lane collisions"),
+      prWithCheck(555, "Database"),
+    ]),
+    [{ check: "Lane collisions", prs: [555, 557] }],
+  );
+});
+
+test("queueGlobalGates tolerates missing input", () => {
+  assert.deepEqual(queueGlobalGates(undefined), []);
+  assert.deepEqual(queueGlobalGates([]), []);
+});
+
+test("the aggregator job is not named as its own queue-global gate", () => {
+  // `Quality, database and E2E` only mirrors its `needs:`; when `Static checks`
+  // is red on the queue, the aggregator is red too. Counting both would report
+  // one freeze as two gates and point at a job with nothing to fix.
+  assert.deepEqual(
+    queueGlobalGates([
+      prWithCheck(555, "Static checks"),
+      prWithCheck(557, "Static checks"),
+      prWithCheck(555, "Quality, database and E2E"),
+      prWithCheck(557, "Quality, database and E2E"),
+    ]),
+    [{ check: "Static checks", prs: [555, 557] }],
+  );
+});
+
+test("the excluded aggregator name matches the workflow file, so a rename cannot slip past", () => {
+  const workflow = readFileSync(
+    new URL("../.github/workflows/ci.yml", import.meta.url),
+    "utf8",
+  );
+  for (const name of CI_AGGREGATOR_CHECKS) {
+    const job = workflow
+      .split(/^  [a-z0-9_-]+:/m)
+      .find((block) => block.includes(`name: ${name}`));
+    assert.ok(job, `no CI job declares name: ${name}`);
+    assert.match(job, /needs:\s*\[/);
+  }
+});
+
+// ---------------------------------------------------------------------------
 // classifyProductionProbe — the site can be *gone* while every GitHub check
 // reads green. A red workflow is a symptom; the origin is the evidence.
 // ---------------------------------------------------------------------------
@@ -500,4 +583,91 @@ test("isDeploymentDisabled matches only the 402 or the Vercel marker", () => {
   assert.equal(isDeploymentDisabled(200, null), false);
   assert.equal(isDeploymentDisabled(403, null), false);
   assert.equal(isDeploymentDisabled(null, null), false);
+});
+
+test("isDeploymentDisabled recognises DEPLOYMENT_NOT_FOUND (404) but not a bare 404", () => {
+  // 2026-11-10: the live origin answered 404 + x-vercel-error on every route.
+  assert.equal(isDeploymentDisabled(404, "DEPLOYMENT_NOT_FOUND"), true);
+  assert.equal(isDeploymentDisabled(404, "  deployment_not_found  "), true);
+  // A healthy origin returns 404 for any path it does not own — without the
+  // header this must stay a plain failure, not an account-state verdict.
+  assert.equal(isDeploymentDisabled(404, null), false);
+  assert.equal(isDeploymentDisabled(404, "NOT_FOUND"), false);
+});
+
+test("classifyProductionProbe names the Vercel account state it saw", () => {
+  assert.deepEqual(classifyProductionProbe({ status: 404, vercelError: "DEPLOYMENT_NOT_FOUND" }), {
+    level: "fail",
+    detail: "DOWN: HTTP 404 DEPLOYMENT_NOT_FOUND (Vercel account/deployment is not being served)",
+  });
+  assert.deepEqual(classifyProductionProbe({ status: 402, vercelError: "DEPLOYMENT_DISABLED" }), {
+    level: "fail",
+    detail: "DOWN: HTTP 402 DEPLOYMENT_DISABLED (Vercel account/deployment is not being served)",
+  });
+  // A bare 404 keeps the generic, non-actionable copy.
+  assert.deepEqual(classifyProductionProbe({ status: 404 }), {
+    level: "fail",
+    detail: "origin answered HTTP 404",
+  });
+});
+
+// The bug this guards: "serving HTTP 200" is not "serving the current build".
+// On 2026-11-10 the origin answered 200 while it was four commits behind `main`
+// (the new Vercel account has no Git auto-deploy, #547): every GitHub-derived
+// check read green and the just-merged work was not live. The watchdog must
+// compare the origin's build-info commit to the default branch head.
+test("a live build equal to main is current", () => {
+  assert.deepEqual(
+    classifyDeployFreshness({ liveCommit: "2b899dc6b512", mainCommit: "2b899dc6b512" }),
+    { level: "ok", detail: "live build matches main (2b899dc)" },
+  );
+});
+
+test("a short live SHA that prefixes main still counts as current", () => {
+  assert.equal(
+    classifyDeployFreshness({ liveCommit: "2b899dc", mainCommit: "2b899dc6b5129368" }).level,
+    "ok",
+  );
+  // and the other direction, so a trimmed main cannot fake a stale deploy
+  assert.equal(
+    classifyDeployFreshness({ liveCommit: "2b899dc6b5129368", mainCommit: "2b899dc" }).level,
+    "ok",
+  );
+});
+
+test("a live build behind main is a stale deploy, named with both SHAs", () => {
+  assert.deepEqual(
+    classifyDeployFreshness({ liveCommit: "3644cbe3501b", mainCommit: "2b899dc6b512" }),
+    {
+      level: "warn",
+      detail: "live build 3644cbe is behind main 2b899dc — merged work is not deployed",
+    },
+  );
+});
+
+test("case and surrounding whitespace in the SHAs do not fake a mismatch", () => {
+  assert.equal(
+    classifyDeployFreshness({ liveCommit: " 2B899DC6B512 ", mainCommit: "2b899dc6b512" }).level,
+    "ok",
+  );
+});
+
+test("a missing commit on either side is unknown, never a failure", () => {
+  // No data is not evidence of a stale deploy — inventing a failure from it is
+  // the very "green but wrong" bug this family exists to kill.
+  assert.deepEqual(classifyDeployFreshness({ mainCommit: "2b899dc" }), {
+    level: "unknown",
+    detail: "no build-info to compare against main",
+  });
+  assert.deepEqual(classifyDeployFreshness({ liveCommit: "2b899dc" }), {
+    level: "unknown",
+    detail: "no build-info to compare against main",
+  });
+  assert.deepEqual(classifyDeployFreshness({}), {
+    level: "unknown",
+    detail: "no build-info to compare against main",
+  });
+  assert.equal(classifyDeployFreshness().level, "unknown");
+  assert.equal(classifyDeployFreshness({ liveCommit: 42, mainCommit: "2b899dc" }).level, "unknown");
+  assert.equal(classifyDeployFreshness({ liveCommit: "   ", mainCommit: "2b899dc" }).level, "unknown");
 });
