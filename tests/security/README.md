@@ -49,6 +49,7 @@ a boundary regression is attributable at a glance.
 | `server-cookie-inventory.test.ts` | the **server**-side cookie write inventory (#418 §6), which `cookie-inventory.test.ts` (client writers) and `session-cookie-flags.test.ts` (known call sites) do not cover: every `cookies().set(…)` / `response.cookies.set(…)` / `cookieStore.set(…)` site in `src/**`, and that the `sb-*` writes take their flags from the shared `cookieOptions` object rather than a forked inline literal |
 | `vercel-deploy-gate.test.ts` | `vercel.json` `git.deploymentEnabled` stays pinned to "only `main` deploys". A build cancelled by Vercel's Ignored Build Step still spends the Hobby build budget, so the gate that decides *before* a build exists is what protects `main`'s deploy availability (#319) |
 | `readme-coverage.test.ts` | this layer's own coverage table is a ratchet: every `tests/security/*.test.ts` has a row in "What is covered" and every row names a file that exists, so the table cannot silently under- or over-report the audited surface |
+| `lockfile-coverage.test.ts` | the supply-chain boundary (#188): every direct dependency `package.json` declares resolves in the lockfile. `bun.lock` is the lock CI installs from and is a gate; `package-lock.json` is the only manifest Dependabot audits and is a `todo` — it omits `qrcode`, `web-push`, `jsqr` and `pngjs` and pins a stale `lucide-react`, so the advisory scan reads a tree that is not what ships |
 
 ## Findings
 
@@ -73,7 +74,7 @@ the test passes on its own — remove the `todo` option to promote it to a gate.
 | The credential endpoints (`signIn`, `requestPasswordReset`) carry no application-level throttle, and the hosted project does **not** enforce the captcha the config claims (issue #418 §7) | LANE-AUTH (`src/features/identity/**`) | open (`auth-throttle-surface.test.ts`; handoff #457) |
 | `/api/build-info` is cross-origin readable (`ACAO: *`), page routes answer write methods, error paths cache (#424) | platform / framework (Vercel + Next.js); no repo file owns it | **triaged** — M-01/M-03/M-04 are Vercel platform behaviour (absent on the local standalone); M-02 is Next.js page handling and a non-GET reject would break Server Actions. Gates in `api-response-surface.test.ts`; ownership gap handed to LANE-INFRA |
 | `/api/qr` renders attacker-influenced input with no error path: a `next` inside the 2048-character cap but past the QR version-40 byte ceiling, and a `version` below the payload's minimum, both throw → 500 (live: `?next=/jobs&version=1` → 500) | route owner (`src/app/api/qr/route.ts`; `src/lib/pwa/**` is LANE-URUN) | open (`qr-render-capacity-surface.test.ts`; handoff) |
-| `package-lock.json` is a stale second lockfile and the only manifest Dependabot audits | LANE-INFRA (`package.json`, lockfiles) | open (handoff #188) |
+| `package-lock.json` is a stale second lockfile and the only manifest Dependabot audits: it resolves none of `qrcode`, `web-push`, `jsqr` or `pngjs`, and pins `lucide-react@1.63.0` where `bun.lock` has `1.62.0`, so the advisory scan reads a tree that is not what CI installs | LANE-INFRA (`package.json`, lockfiles) | open (`lockfile-coverage.test.ts`; handoff #188) |
 
 ### Guard self-tests
 
