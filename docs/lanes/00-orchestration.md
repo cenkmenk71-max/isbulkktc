@@ -649,3 +649,37 @@ testler.
 (tüm PR'lar) moda düşer — o durumda kuyruk-geneli iki kural yine her PR'ı bağlar,
 yalnız PR-yerel üçüncü kural kuyruğu yeniden kırabilir. `push` eklerken adımı
 atlamak ya da kapsamsız çalıştırmak gerekir.
+
+### Tur — skill/brief drift + sahipsiz `.agents/skills/**` (2026-11-10)
+
+**Kapsam.** `lane:infra` kuyruğu tarandı; en yüksek etkili, sınırlı iş seçildi.
+Aday olan `#426` (operator.brief) ve `#475` (`.github/skills/`, `.mcp.json`)
+zaten düzeltilmişti (kanıt: `lanes.json` → `"brief": "15-operator"`;
+`docs/developer-tooling.md` iki kaynağı da "yalnız VS Code Copilot" diye
+etiketliyor).
+
+**Bulgu 1 (mantık / ölü işaretçi).** `scripts/lanes.json` → `icerik` lane'i
+`plain-english-content` ve `technical-writing` skill'lerini istiyor, ama ikisi de
+`.agents/skills/` altında **yoktu**. Kickoff metni "Kullanacağın skill'ler
+(.agents/skills/ altında): …" der; lane yükleyemeyeceği bir skill'i kullanmaya
+yönlendiriliyordu. İkisi de resmî OpenHands extensions kayıt defterinden
+birebir vendor'landı (diğer dokuz skill ile aynı revizyon).
+
+**Bulgu 2 (kilit sınıfı — #552 ailesi).** `.agents/skills/**` sahiplik tablosunda
+**hiçbir lane'e ait değildi**. Dedektör (`scripts/lane-collisions.mjs:231`)
+sahipsiz bir yolu **düzenlemeyi** kuyruk-geneli bulgu sayar → skill vendor'lamak
+(gerçek bir infra işi) her açık PR'ı "owned by no lane" ile kilitlerdi. Ağaç
+LANE-INFRA satırına sabitlendi.
+
+**Bulgu 3 (ratchet).** Kickoff'un işaret ettiği iki yol (`docs/lanes/<brief>.md`
+ve `.agents/skills/<skill>/SKILL.md`) hiçbir testle denetlenmiyordu. Üç
+dosya-sistemi ratchet testi eklendi (gerçek `lanes.json`'u okur): her skill
+vendor'lu, her vendor dizininde `SKILL.md` var, her brief dosyaya çözülüyor.
+Mutasyon: `technical-writing` geçici kaldırılınca test kırmızı (18 pass/1 fail),
+geri konunca yeşil.
+
+**Çalıştırılan kontroller.** `bun run lint`, `typecheck`, `check:frontend-source`
+— yeşil; `test:unit` **999/999**; `lane-collisions` + `lane-kickoff` **48/48**.
+
+**Canlıya dokundu mu:** hayır. Yalnız `.agents/skills/**`, `scripts/lanes.json`
+okuma, testler ve sahiplik tablosu.
