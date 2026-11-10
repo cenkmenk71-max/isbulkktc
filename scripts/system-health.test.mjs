@@ -4,8 +4,10 @@ import test from "node:test";
 
 import {
   HEALTH_WORKFLOW,
+  classifyProductionProbe,
   classifyRedRuns,
   failingWorkflows,
+  isDeploymentDisabled,
   isUnresolvedMergeState,
   newestRunPerWorkflow,
   redRunsOnMain,
@@ -314,4 +316,81 @@ test("isUnresolvedMergeState is exactly UNKNOWN/null/undefined", () => {
   assert.equal(isUnresolvedMergeState("CLEAN"), false);
   assert.equal(isUnresolvedMergeState("BLOCKED"), false);
   assert.equal(isUnresolvedMergeState("DIRTY"), false);
+});
+
+// ---------------------------------------------------------------------------
+// classifyProductionProbe — the site can be *gone* while every GitHub check
+// reads green. A red workflow is a symptom; the origin is the evidence.
+// ---------------------------------------------------------------------------
+
+// The bug this guards: on 2026-11-10 `isbulkktc.com` answered `402
+// DEPLOYMENT_DISABLED` (Vercel account blocked/over quota) to every visitor for
+// hours. The health check only named the failing `Dispatch web push` workflow —
+// a symptom — and never said the site was down, because none of its checks read
+// the origin. The probe must classify the origin's real answer, and the pure
+// classifier is what the probe's verdict rests on.
+
+test("a 402 DEPLOYMENT_DISABLED is a hard failure — the site is down", () => {
+  const verdict = classifyProductionProbe({
+    status: 402,
+    vercelError: "DEPLOYMENT_DISABLED",
+  });
+  assert.equal(verdict.level, "fail");
+  assert.match(verdict.detail, /DOWN/);
+  assert.match(verdict.detail, /402/);
+});
+
+test("a bare 402 fails even without the Vercel header", () => {
+  assert.equal(classifyProductionProbe({ status: 402 }).level, "fail");
+});
+
+test("the Vercel header alone fails even if the status is 200", () => {
+  // The header is Vercel's authoritative marker; trust it over the code.
+  assert.equal(
+    classifyProductionProbe({ status: 200, vercelError: "deployment_disabled" }).level,
+    "fail",
+  );
+});
+
+test("a 2xx/3xx origin is serving", () => {
+  assert.deepEqual(classifyProductionProbe({ status: 200 }), {
+    level: "ok",
+    detail: "serving (HTTP 200)",
+  });
+  assert.equal(classifyProductionProbe({ status: 301 }).level, "ok");
+  assert.equal(classifyProductionProbe({ status: 308 }).level, "ok");
+});
+
+test("a 403 or 429 is the edge blocking the probe — a warning, never a failure", () => {
+  // Cloudflare answers datacenter IPs (including CI runners) with 403. Calling
+  // that an outage would cry wolf on every probe from CI.
+  assert.equal(classifyProductionProbe({ status: 403 }).level, "warn");
+  assert.equal(classifyProductionProbe({ status: 429 }).level, "warn");
+});
+
+test("a network error is 'could not verify', not 'down'", () => {
+  // No evidence either way: warn rather than invent an outage.
+  const verdict = classifyProductionProbe({ networkError: "fetch failed" });
+  assert.equal(verdict.level, "warn");
+  assert.match(verdict.detail, /fetch failed/);
+});
+
+test("a probe with no status is a warning, not a failure", () => {
+  assert.equal(classifyProductionProbe({}).level, "warn");
+  assert.equal(classifyProductionProbe(undefined).level, "warn");
+  assert.equal(classifyProductionProbe(null).level, "warn");
+});
+
+test("any other non-serving status is a failure", () => {
+  assert.equal(classifyProductionProbe({ status: 500 }).level, "fail");
+  assert.equal(classifyProductionProbe({ status: 404 }).level, "fail");
+});
+
+test("isDeploymentDisabled matches only the 402 or the Vercel marker", () => {
+  assert.equal(isDeploymentDisabled(402, null), true);
+  assert.equal(isDeploymentDisabled(200, "DEPLOYMENT_DISABLED"), true);
+  assert.equal(isDeploymentDisabled(200, "  deployment_disabled  "), true);
+  assert.equal(isDeploymentDisabled(200, null), false);
+  assert.equal(isDeploymentDisabled(403, null), false);
+  assert.equal(isDeploymentDisabled(null, null), false);
 });
