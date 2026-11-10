@@ -365,7 +365,7 @@ function mergeReadyPullRequests(prs, dryRun) {
     // A PR that carries a brake is deliberately left for a human. Say so, so a
     // stalled PR is visible instead of silent — #193 sat CLEAN with no
     // auto-merge and nothing reported it.
-    if (labels.includes('agent:hold') || labels.includes('agent:blocked')) {
+    if (heldForHuman(labels)) {
       stalled.push({
         number: pr.number,
         reason: `held for a human (${labels.filter((l) => l.startsWith('agent:')).join(', ')})`,
