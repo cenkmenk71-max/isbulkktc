@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -201,4 +202,28 @@ test("the remaining src/app/api/** routes have an owner", () => {
     assert.deepEqual(ownersOf(route, table), ["LANE-URUN"], route);
   }
   assert.deepEqual(ownersOf("vercel.json", table), ["LANE-INFRA"]);
+});
+
+test("every committed file under src/ is owned by a lane", () => {
+  // The per-path tests above only pin the gaps a handoff happened to report.
+  // `src/app/api/.gitkeep` slipped through all of them: it sat in a directory
+  // that already had six tracked route files, so it was a redundant placeholder,
+  // but it was also in no ownership row — an edit to it would report "owned by
+  // no lane" and no lane was accountable. Enumerate the whole code tree so the
+  // next file that lands outside every glob fails here, in the fast static job,
+  // instead of silently becoming unowned. `-z` sidesteps git's path quoting for
+  // non-ASCII names; the test only reads tracked files, so build artefacts under
+  // src/ can never make it flaky.
+  const tracked = execFileSync("git", ["ls-files", "-z", "src"], {
+    encoding: "utf8",
+  })
+    .split("\0")
+    .filter(Boolean);
+  assert.ok(tracked.length > 0, "expected tracked files under src/");
+  const unowned = tracked.filter((path) => ownersOf(path, table).length === 0);
+  assert.deepEqual(
+    unowned,
+    [],
+    "these src/ files are in no ownership row in docs/lanes/00-orchestration.md",
+  );
 });
