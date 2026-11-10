@@ -63,6 +63,7 @@ atıfları belirsizleştirir; bu dokümanda iki kez yaşandı: tur 18'de `V-01`
 | `W-` | **İki kapsam:** `W-01` WAF bulgusu; `W-18`/`W-19`/`W-20` tur-bazlı canlı ölçüm tabloları (tur 18/19/20, sonuncusu HSTS preload) | tur 10+ |
 | `N-` | **İki ayrı aralık:** `N-01..N-08` negatif-cache (tur 12–25); `N-11..N-16` WAF `%2F` kümesi (tur 26+) | tur 12+ |
 | `D-` | Doküman düzeltmeleri / drift kayıtları | tur 14+ |
+| `O-` | Canlı kesinti / origin erişilebilirliği (ör. `O-01` Vercel `402 DEPLOYMENT_DISABLED`) | tur 29 |
 | `M-` | Panel/manuel gözlemler + meta kayıtlar | tur 25 |
 | `P-` | Kapanan kayıtlar (ör. `P-01` prerender cache) | tur 22 |
 | `SW-` | Service worker cache | tur 14 |
