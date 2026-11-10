@@ -15,7 +15,7 @@
 
 import { execFileSync } from 'node:child_process';
 
-import { classifyRedRuns, redRunsOnMain } from './system-health-core.mjs';
+import { classifyRedRuns, redRunsOnMain, stuckPullRequests } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
 const asJson = process.argv.includes('--json');
@@ -108,10 +108,7 @@ if (stalled.length > 0) {
     `${stalled.length}: ${stalled.map((p) => `#${p.number}`).join(', ')} need a human`,
   );
 }
-const stuck = prs.filter((p) => {
-  const age = (Date.now() - new Date(p.createdAt).getTime()) / 3600000;
-  return p.mergeStateStatus !== 'CLEAN' && age > 3;
-});
+const stuck = stuckPullRequests(prs);
 if (stuck.length > 0) {
   note(
     'warn',

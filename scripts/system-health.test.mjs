@@ -6,9 +6,11 @@ import {
   HEALTH_WORKFLOW,
   classifyRedRuns,
   failingWorkflows,
+  isUnresolvedMergeState,
   newestRunPerWorkflow,
   redRunsOnMain,
   redWorkflowsOnMain,
+  stuckPullRequests,
 } from "./system-health-core.mjs";
 
 // The bug this guards: `system-health.mjs` asked GitHub for one named workflow
@@ -238,4 +240,78 @@ test("a real red and a glitch are separated, not merged", () => {
 test("no red runs classifies to nothing on either side", () => {
   assert.deepEqual(classifyRedRuns([]), { real: [], glitches: [] });
   assert.deepEqual(classifyRedRuns(undefined), { real: [], glitches: [] });
+});
+
+// The bug this guards: `system-health.mjs` computed the "old PRs" warning with
+// `p.mergeStateStatus !== 'CLEAN'`. GitHub computes `mergeStateStatus` lazily,
+// so the first read after a push returns `UNKNOWN`; the very same PR reads
+// `CLEAN` a moment later. Reading `UNKNOWN` as "not moving" flagged a mergeable
+// PR (#493 sat `CLEAN` while the check called it stuck), and a false warning
+// buries the real one behind it.
+
+test("a PR whose merge state is UNKNOWN is not called stuck", () => {
+  const now = Date.parse("2026-11-10T03:00:00Z");
+  const old = new Date(now - 5 * 3600000).toISOString();
+  assert.deepEqual(
+    stuckPullRequests([{ number: 493, mergeStateStatus: "UNKNOWN", createdAt: old }], { now }),
+    [],
+  );
+});
+
+test("a PR with no merge state at all is not called stuck", () => {
+  const now = Date.parse("2026-11-10T03:00:00Z");
+  const old = new Date(now - 5 * 3600000).toISOString();
+  assert.deepEqual(
+    stuckPullRequests(
+      [
+        { number: 1, mergeStateStatus: null, createdAt: old },
+        { number: 2, createdAt: old },
+      ],
+      { now },
+    ),
+    [],
+  );
+});
+
+test("an old PR whose state is known and not CLEAN is stuck", () => {
+  const now = Date.parse("2026-11-10T03:00:00Z");
+  const old = new Date(now - 5 * 3600000).toISOString();
+  const fresh = new Date(now - 1 * 3600000).toISOString();
+  const stuck = stuckPullRequests(
+    [
+      { number: 521, mergeStateStatus: "BLOCKED", createdAt: old },
+      { number: 522, mergeStateStatus: "DIRTY", createdAt: old },
+      { number: 493, mergeStateStatus: "CLEAN", createdAt: old },
+      { number: 999, mergeStateStatus: "BLOCKED", createdAt: fresh },
+    ],
+    { now },
+  );
+  assert.deepEqual(stuck.map((p) => p.number), [521, 522]);
+});
+
+test("an UNKNOWN PR next to a genuinely stuck one does not hide it", () => {
+  const now = Date.parse("2026-11-10T03:00:00Z");
+  const old = new Date(now - 5 * 3600000).toISOString();
+  const stuck = stuckPullRequests(
+    [
+      { number: 493, mergeStateStatus: "UNKNOWN", createdAt: old },
+      { number: 521, mergeStateStatus: "BLOCKED", createdAt: old },
+    ],
+    { now },
+  );
+  assert.deepEqual(stuck.map((p) => p.number), [521]);
+});
+
+test("stuckPullRequests tolerates missing input", () => {
+  assert.deepEqual(stuckPullRequests(undefined), []);
+  assert.deepEqual(stuckPullRequests([null]), []);
+});
+
+test("isUnresolvedMergeState is exactly UNKNOWN/null/undefined", () => {
+  assert.equal(isUnresolvedMergeState("UNKNOWN"), true);
+  assert.equal(isUnresolvedMergeState(null), true);
+  assert.equal(isUnresolvedMergeState(undefined), true);
+  assert.equal(isUnresolvedMergeState("CLEAN"), false);
+  assert.equal(isUnresolvedMergeState("BLOCKED"), false);
+  assert.equal(isUnresolvedMergeState("DIRTY"), false);
 });

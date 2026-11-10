@@ -114,3 +114,42 @@ export function classifyRedRuns(redRuns) {
   }
   return { real, glitches };
 }
+
+/**
+ * Whether GitHub has left a pull request's merge state uncomputed.
+ *
+ * `mergeStateStatus` is computed lazily: the first read after a push returns
+ * `UNKNOWN` ("the merge state could not be computed"), and the very same PR
+ * reads `CLEAN` a moment later. `UNKNOWN` (or a missing value) is therefore
+ * "cannot judge", not "not moving".
+ *
+ * @param {string|null|undefined} status
+ * @returns {boolean}
+ */
+export function isUnresolvedMergeState(status) {
+  return status == null || status === 'UNKNOWN';
+}
+
+/**
+ * Open pull requests that are old and genuinely not moving.
+ *
+ * The point of this warning is to surface a PR nobody is advancing. A PR whose
+ * merge state GitHub has not computed yet is not evidence of that: treating
+ * `UNKNOWN` as "not CLEAN" made the check cry wolf about a mergeable PR (#493
+ * sat `CLEAN` while the check called it stuck), and a false warning buries the
+ * real one behind it — the same "the indicator reads its own error" family as
+ * the zero-job run glitch. A PR is stuck only when its state is *known* and
+ * not `CLEAN`; `UNKNOWN`/missing is skipped so the next pass (by which time
+ * GitHub has resolved it) decides.
+ *
+ * @param {Array<{number: number, mergeStateStatus?: string|null, createdAt?: string}>} prs
+ * @param {{now?: number, maxAgeHours?: number}} [options]
+ * @returns {Array<object>}
+ */
+export function stuckPullRequests(prs, { now = Date.now(), maxAgeHours = 3 } = {}) {
+  return (prs ?? []).filter((pr) => {
+    if (!pr || isUnresolvedMergeState(pr.mergeStateStatus)) return false;
+    const ageHours = (now - new Date(pr.createdAt).getTime()) / 3600000;
+    return pr.mergeStateStatus !== 'CLEAN' && ageHours > maxAgeHours;
+  });
+}
