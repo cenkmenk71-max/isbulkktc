@@ -2936,3 +2936,116 @@ arasındaki tutarsızlık giderildi.
 **Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01.
 **Yeni:** F-30 (temiz), O-01r (yeniden ölçüm), D-22 (O- öneki), D-23 (#518 kaydı),
 D-24 (tur 30 blok başlığı düzeltmesi).
+
+## Tur 31 (2026-11-10) — WAF kaçış matrisi: `/.git` eğiksiz + ayraç kaçışı + eksik dotfile kümesi
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Çalıştırılan kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: N-18 (WAF `/.git` kuralı eğiksiz ve ayraçlı biçimde atlanıyor —
+            onay) · N-19 (eksik dotfile kümesi — onay) · N-11r · H-01r · H-02 · R-01 ·
+            G-01 · F-08 · #227 · O-01 (#518, LANE-INFRA, acil)
+Sonraki lane için notlar: (1) `curl --path-as-is` kullan; onsuz curl yolu normalleştirir ve
+            kaçışı maskeler. (2) Origin 402 verirken ayırt edici: **403 = WAF yakaladı**,
+            **402 = origin'e ulaştı** (`x-vercel-error: DEPLOYMENT_DISABLED`). (3) Kural
+            literali `/.git/` ise `/.git` (eğiksiz) VE `/.git;/x`, `/.git%09/config` atlanır —
+            kaçışı "yalnız `%2F`" sanma, ayraç matrisini ölç. (4) `%2F` tek kaçış değil;
+            `;` `,` `%09` de aynı etkiyi verir. (5) Yeni bulgu kimliği: `N-18`/`N-19`.
+```
+
+### N-18 (orta) — WAF nokta-yolu kuralı `/.git/` **literaline** bağlı; eğiksiz ve ayraçlı biçimler atlanıyor
+
+**Mekanizma.** CF özel WAF kuralı `/.git/` **literal dizesini** arıyor (tur 27'nin
+`/`-literalli kural sınıfı). Bu dizenin **tam** olarak bulunmadığı her biçim
+kuralı atlar ve origin'e ulaşır — kaçış yalnız `%2F` ile sınırlı **değil**:
+
+| Biçim | Yol | Kod | WAF |
+|---|---|---|---|
+| eğikli (temel) | `/.git/config` | **403** | yakalar |
+| **eğiksiz** | `/.git` | **402** | **atlar** |
+| ayraç `;` | `/.git;/x` | **402** | **atlar** |
+| ayraç `,` | `/.git,/x` | **402** | **atlar** |
+| kodlu TAB `%09` | `/.git%09/config` | **402** | **atlar** |
+| kodlu `/` `%2F` | `/.git%2Fconfig` | **402** | **atlar** (tur 27, N-11) |
+| sınıf dışı | `/.gitx/config` | **402** | atlar (kural yok — beklenen) |
+| segment içi | `/x/.git/config` | **403** | yakalar |
+| yanlış ayraç | `/.git%00/config` | **400** | origin (NUL reddi) |
+
+Aynı sınıf `/api/devtools`'ta da doğrulandı: `/api/devtools;/x`,
+`/api/devtools%09/x`, `/api/devtools%2Fx` → **402**; `/api/devtools/` → **403**.
+Kök neden **tek**: kural `contains "/.git/"` (sondaki eğik çizgi dahil) biçiminde
+kurulduğu için `.git` ile `/` arasına giren **herhangi** bir karakter (veya hiç `/`
+olmaması) eşleşmeyi kırıyor. Karşı örnek: dotfile kuralı (`/.env`) prefix/`contains`
+tabanlı olduğundan ayraçtan etkilenmez — `/.env;/x`, `/.env%09/x` → **403**.
+
+**Etki.** WAF'ın `.git` sızıntısına karşı koruması **yanılsama**: kural yalnız tam
+`/.git/` yolunda çalışıyor. Bugün sömürülebilir değil (origin her istekte 402 —
+O-01; Vercel varsayılan olarak `.git`'i servis etmez). O-01 kapandığında da
+**build çıktısına `.git`/`.npmrc` girmediği sürece** içerik sızmaz — ancak
+savunma-derinliği katmanı bu yollarda **fiilen yok**, ki bu katmanın tek işi bu.
+
+**Düzeltme (öneri, onay bekliyor — yıkıcı WAF değişikliği).** İfadeyi eğik çizgi
+**olmadan** ve **çözülmüş yol** üzerinden kur (Free plan `matches`'i reddeder;
+`contains`/`lower`/`url_decode` kullan):
+
+```
+(lower(url_decode(http.request.uri.path)) contains "/.git") or
+(lower(url_decode(http.request.uri.path)) contains "/api/devtools")
+```
+
+`url_decode` `%2F`/`%09`'u çözer; `;`/`,` kodlanmamış olduğundan **yine de**
+literal dizede kalır ve sondaki eğik çizgi kaldırıldığı için `/.git;/x` de
+yakalanır. Not: bu, `/.gitignore` gibi zararsız yolları da bloklar (kabul
+edilebilir) — gerekirse segment sınırı eklenir.
+
+### N-19 (orta) — WAF dotfile kümesi **eksik**: `.npmrc`, `.git-credentials`, `.netrc`, `.pypirc` … bloklu değil
+
+Dotfile kuralı **kuralın kendisi yok** olduğu için değil, **liste eksik** olduğu
+için boşluk bırakıyor. Taranan 18 dotfile'ın yarısı bloklu değil:
+
+| Bloklu (403) | Bloklu **değil** (402 → origin) |
+|---|---|
+| `/.env`, `/.htpasswd` | `/.npmrc` |
+| `/.aws/config` | `/.git-credentials` |
+| `/.ssh/known_hosts` | `/.netrc` |
+| `/.vscode/settings.json` | `/.pypirc` |
+| | `/.bash_history` |
+| | `/.kube/config` |
+| | `/.gem/credentials` |
+| | `/.docker/config.json` |
+| | `/.gitignore`, `/.gitattributes`, `/.travis.yml` |
+
+Bunlar **her ekosistemin kanonik sır dosyasıdır** (npm registry token'ı, git
+kimlik bilgisi, netrc, PyPI token'ı, kube kubeconfig, gem credentials, Docker
+registry auth). Bloklu olanlar (`/.env`, `/.aws/…`, `/.ssh/…`) daha yaygın
+hedefler olduğu için kuralın **o kadarıyla** yetindiği anlaşılıyor.
+
+**Etki.** N-18 ile aynı sınıf (savunma-derinliği boşluğu, canlı sızıntı yok — 402
++ repo'da bu dosyalar yok). Ancak liste eksikliği bir "yapılandırma hatası" değil,
+**kapsam kararı**; kapatılması için ek `contains` girdileri gerekir.
+
+**Düzeltme (öneri, onay bekliyor).** Dotfile kuralına şu literalleri ekle (tek
+`or` zinciri): `/.npmrc`, `/.netrc`, `/.pypirc`, `/.git-credentials`,
+`/.kube/config`, `/.gem/credentials`, `/.docker/config.json`, `/.bash_history`.
+
+### D-25 (doküman doğruluğu) — tur 29'un "kesinti sırasında bile WAF bypass'ı yok" (N-17) iddiası fazla genişti
+
+N-17 (tur 29) yalnız **eğikli** yolları denedi (`/.git/config`, `/.svn/entries`,
+`/.env`, `/.aws/credentials`, `/wp-admin`, `/wp-login.php`, `/phpmyadmin`,
+`/xmlrpc.php`, `/api/devtools/`) ve hepsi 403 döndü → "WAF bypass'ı yok" yazıldı.
+Bu tur, **eğiksiz ve ayraçlı** biçimlerin (N-18) ve **kural dışı dotfile'ların**
+(N-19) atlandığını gösterdi. N-17'nin matrisi **doğruydu ama kapsamı dardı**;
+iddiası "denenen eğikli biçimlerde bypass yok" olarak daraltılmalı.
+
+### O-01r2 (yeniden ölçüm) — origin hâlâ 402; CF katmanı sağlam
+
+Bu turun tüm ölçümleri **402 kesintisi altında** alındı (O-01 sürüyor). 403/402
+ayrımı bu koşulda **daha** net: 403 yalnız CF'ten gelir, 402 yalnız origin'den.
+Tur 30'un bulguları (F-30 temiz, WAF/TLS/DNS sağlam) değişmedi.
+
+**Devir:** N-18, N-19 → CF paneli (sahibin onayı) — bu lane yazmaz. O-01 → **#518** (açık).
+**Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01.
+**Yeni:** N-18 (eğiksiz/ayraçlı `.git` kaçışı), N-19 (eksik dotfile kümesi),
+D-25 (N-17 kapsam daraltması), O-01r2 (yeniden ölçüm).
