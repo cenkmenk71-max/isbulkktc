@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EmployerLogo } from "@/components/jobs/employer-logo";
 import {
   getCompanyDirectoryContacts,
@@ -72,6 +72,17 @@ export function CompanyDirectory({
     firstResult + pageSize,
   );
   const hasFilters = Boolean(query || category || district);
+
+  // Paging and filtering swap the mounted cards in place, so the motion layer
+  // never measures the new ones. Announce the layout once the fresh cards are
+  // in the DOM (same contract as `SectorDirectory`), otherwise only the first
+  // page ever reveals and the rest stay static.
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("isbulkktc:motion-refresh"));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [currentPage, filteredCompanies]);
 
   function clearFilters() {
     setQuery("");
