@@ -3509,3 +3509,27 @@ Origin **sağlıklı** (önceki `404 DEPLOYMENT_NOT_FOUND` rejimi bitti). #518
 
 **Devir:** H-03 → CF paneli **Redirect Rule** + Vercel domain (sahibin onayı).
 **Yeni:** H-03 (`www` yönlendirmesi yok → 200 duplicate content), D-30, O-01r6.
+
+### H-02r/N-23 teyidi (sağlıklı origin, tur 36) — negatif cache origin'den bağımsız
+
+Tur 34'ün bulgusu (origin kesintideyken) **sağlıklı origin'de de** aynen geçerli,
+yani kesinti artefaktı **değil**:
+
+| İstek (sağlıklı origin) | Origin (Vercel alias) | Edge (CF) |
+|---|---|---|
+| `/_next/static/chunks/does-not-exist-*.js` | **404**, `public, max-age=0, must-revalidate` | **404**, `public, max-age=31536000, must-revalidate` — 1. istek `MISS`, 2. istek **`HIT`** |
+| `/_next/static/chunks/<gerçek>.js` | `public, max-age=31536000, immutable` | `max-age=31536000, immutable`, `HIT` |
+| `/icon-light-32x32.png` (gerçek) | — | `max-age=2628000`, `REVALIDATED` |
+
+**Çıkarım:** CF Cache Rule `/_next/static/**` önekini **koşulsuz** 1 yıl
+cache'liyor; origin'in gerçek 200 varlıkları zaten `immutable` (doğru) ama
+origin'in **404**'ünü de (`max-age=0`) aynı 1 yıla yükseltiyor. Bir deploy
+sonrası **silinen/rotasyona giren chunk** adı bir kez 404 ile talep edilirse,
+edge onu **1 yıl** "var olmayan" olarak HIT'ler → kullanıcı kalıcı kırık JS alır.
+Düzeltme CF panelinde: Cache Rule'a "**Only cache if origin status is 200**"
+(Edge Cache TTL + Cache Everything + `Origin Status`/`Status Code` koşulu) ya da
+`/_next/static` için **negative cache TTL = 0**. **Sahibin onayı** gerekir.
+
+**Not:** gerçek 200 varlıklarda davranış **doğru** (`immutable`, uzun TTL);
+sorun yalnız **hata yanıtının** uzun TTL ile cache'lenmesi (AUDIT "hata yolu"
+boyutu).
