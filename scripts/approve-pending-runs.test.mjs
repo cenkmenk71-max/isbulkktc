@@ -112,6 +112,59 @@ test("the list call paginates, so a backlog over one page is not half-approved",
   assert.match(source, /'--paginate'/);
 });
 
+test("a failed approval does not exit 0", () => {
+  // A run that could not be approved is still held. Reporting success would let
+  // a scheduled caller read "cleared the queue" while a lane stays BLOCKED with
+  // no CI — the #178 failure mode this script exists to prevent.
+  const source = fileURLToPath(
+    new URL("./approve-pending-runs.mjs", import.meta.url),
+  );
+  const dir = mkdtempSync(join(tmpdir(), "approve-fail "));
+  const bin = join(dir, "bin");
+  try {
+    mkdirSync(bin);
+    const fakeGh = join(bin, "gh");
+    writeFileSync(
+      fakeGh,
+      [
+        "#!/bin/sh",
+        'case "$*" in',
+        '  *"/actions/runs?status=action_required"*)',
+        `    printf '%s\\n' "$(printf '11\\tCI\\tmain')" ;;`,
+        '  *"/actions/runs/11/approve"*)',
+        "    echo 'gh: Resource not accessible by integration' >&2",
+        "    exit 1 ;;",
+        "esac",
+        "exit 0",
+        "",
+      ].join("\n"),
+    );
+    chmodSync(fakeGh, 0o755);
+
+    let status = 0;
+    let stderr = "";
+    try {
+      execFileSync(process.execPath, [source], {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH}`,
+          GH_TOKEN: "ghs_fake",
+          GITHUB_PERSONAL_ACCESS_TOKEN: "",
+        },
+      });
+    } catch (error) {
+      status = error.status;
+      stderr = error.stderr;
+    }
+
+    assert.equal(status, 1);
+    assert.match(stderr, /still need approval/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("every pending run on every page is approved, not just the first page", () => {
   const source = fileURLToPath(
     new URL("./approve-pending-runs.mjs", import.meta.url),
