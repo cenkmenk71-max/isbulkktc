@@ -277,9 +277,14 @@ function latestFunctionBodies(prefix: string): Map<string, string> {
   return bodies;
 }
 
-/** Removes `--` line comments so a mention in prose does not count as code. */
+/**
+ * Removes `--` line comments and C-style block comments so a mention in prose
+ * does not count as code. Stripping only line comments was a false negative: a
+ * guard named solely inside a block comment satisfied the matchers below, so a
+ * function that had *lost* its guard still passed the gate.
+ */
 function stripSqlComments(sql: string): string {
-  return sql.replace(/--[^\n]*/g, "");
+  return sql.replace(/--[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
 test("the admin-guard matcher ignores comments and reads the latest body (self-test)", () => {
@@ -287,6 +292,15 @@ test("the admin-guard matcher ignores comments and reads the latest body (self-t
   assert.equal(
     /public\.has_platform_role\s*\(\s*'platform_admin'\s*\)/.test(
       stripSqlComments("begin -- public.has_platform_role('platform_admin')\n return; end;"),
+    ),
+    false,
+  );
+  // Nor may a *block* comment; stripping only `--` left this case green.
+  assert.equal(
+    /public\.has_platform_role\s*\(\s*'platform_admin'\s*\)/.test(
+      stripSqlComments(
+        "begin /* public.has_platform_role('platform_admin') */ delete from public.users; end;",
+      ),
     ),
     false,
   );
@@ -419,6 +433,13 @@ test("the service-role guard matcher reads the latest body and ignores comments 
   );
   assert.equal(
     serviceRoleGuard.test(stripSqlComments("begin -- auth.role() <> 'service_role'\n return; end;")),
+    false,
+  );
+  // A block comment must not count either.
+  assert.equal(
+    serviceRoleGuard.test(
+      stripSqlComments("begin /* auth.role() <> 'service_role' */ insert into public.t values (1); end;"),
+    ),
     false,
   );
 });
