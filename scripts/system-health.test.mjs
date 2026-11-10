@@ -11,6 +11,7 @@ import {
   classifyProductionProbe,
   classifyRedRuns,
   classifySupabaseToken,
+  classifyTokenProbe,
   deployFreshnessFinding,
   failingWorkflows,
   isDeploymentDisabled,
@@ -839,4 +840,38 @@ test("a well-formed, distinct token is ok", () => {
   });
   assert.equal(problem.status, "present");
   assert.match(problem.reason, /shape ok/);
+});
+
+// #209 one level down: the shape check above says "ok" for a well-formed token,
+// but a *revoked or expired* `sbp_` token has the very same shape, so every
+// production-log read still answered 401 while the health check stayed green.
+// The token must be put to the Management API and its answer must decide.
+
+test("a 200 from the Management API is the only proof the token works", () => {
+  const verdict = classifyTokenProbe({ status: 200 });
+  assert.equal(verdict.level, "ok");
+  assert.match(verdict.reason, /authenticates/);
+});
+
+test("a 401 is a failure — the exact #209 symptom the shape check cannot see", () => {
+  const verdict = classifyTokenProbe({ status: 401 });
+  assert.equal(verdict.level, "fail");
+  assert.match(verdict.reason, /HTTP 401/);
+  assert.match(verdict.reason, /logs stay unreadable/);
+  // 403 is the same story: the token exists but the API will not accept it.
+  assert.equal(classifyTokenProbe({ status: 403 }).level, "fail");
+});
+
+test("a network error warns, never fails — no evidence the token is wrong", () => {
+  const verdict = classifyTokenProbe({ networkError: "fetch failed" });
+  assert.equal(verdict.level, "warn");
+  assert.match(verdict.reason, /could not verify/);
+  assert.match(verdict.reason, /fetch failed/);
+});
+
+test("an unexpected status warns and an absent status prints nothing", () => {
+  assert.equal(classifyTokenProbe({ status: 500 }).level, "warn");
+  assert.match(classifyTokenProbe({ status: 500 }).reason, /HTTP 500/);
+  assert.equal(classifyTokenProbe({}), null);
+  assert.equal(classifyTokenProbe(), null);
 });

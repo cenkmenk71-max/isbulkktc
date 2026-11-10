@@ -1170,3 +1170,63 @@ dönse de `POST /v1/projects/<ref>/analytics/endpoints/logs` → **404
 `Cannot POST`** (uç kaldırılmış) ve MCP `supabase_query_logs` → **401
 Unauthorized**. Yani log okuma yetkisi token'la açılmıyor; #207'nin gerçek hata
 kodu bu yüzden hâlâ logdan alınamadı — #209'a not düşüldü.
+
+## Tur notu — token şekli ≠ token çalışıyor (#209, 2026-11-10)
+
+Bir önceki tur şekil denetimi ekledi ve şunu yazdı: "yanlış token yine sessizce
+geçerdi". Bu tur o kapının **bir seviye altını** kapattı: **doğru şekilli ama
+iptal/süresi geçmiş** bir `sbp_` token aynı şekle sahiptir, bu yüzden kapı
+"shape ok" derken her üretim-log okuması hâlâ 401 dönerdi. Şekil denetimi
+yalnız "asla çalışamayacak" değeri yakalar (çıplak UUID); "görünüşü doğru ama
+API reddediyor" değeri **görünmezdi**. Bu, #209'un ta kendisi, bir kat derinde.
+
+**Gözlem (bu tur, canlı).**
+- Token gerçekten **çalışıyor**: `len=44`, `prefix=sbp_`, `GET /v1/projects` →
+  **200**, `GET /v1/projects/<ref>` → **200**, `RESEND_API_KEY` ile eşit **değil**.
+- **Log okuma da açık**: `GET /v1/projects/<ref>/analytics/endpoints/logs`
+  (ClickHouse `logs` tablosu) → **200**; `POST` aynı yola **404 `Cannot POST`**
+  (uç kaldırıldı — bir önceki turun "loglar okunamıyor" hükmü **yanlıştı**,
+  yanlış HTTP metodu kullanılmıştı). `logs.all` → **410 Gone** (kaldırıldı,
+  `logs`'a taşındı). Uç `503 upstream … reset` / `429 ThrottlerException` ile
+  zaman zaman düşer; `iso_timestamp_start/end` (≤24 saat) verilince kararlı
+  `200` döner.
+- **#207 kanıtı çıkarıldı:** `auth_logs`'ta 11× `error_code=captcha_failed`,
+  status 400, `"captcha protection: request disallowed (invalid-input-response)"`,
+  `grant_type=password`, `path=/token`. Yani sosyal/parola girişinde Turnstile
+  doğrulaması reddediliyor — kök neden **auth tarafı** (LANE-AUTH), log artık
+  okunabildiği için teşhis kör değil.
+
+**Düzeltme (bu lane'in dosyaları).** `classifyTokenProbe({status, networkError})`:
+`200` → `ok`; `401`/`403` → **`fail`** (tam #209 belirtisi); ağ hatası → `warn`
+(kanıtsızlık kırmızı değildir); geçersiz girdi → `null` (satır yazılmaz).
+`system-health.mjs` `probeSupabaseToken` (GET `/v1/projects/<ref>`, 15 sn
+timeout) **yalnız şekli doğru** token için çağrılır — şekil zaten yanlışsa probe
+gereksiz. Proje ref'i `SUPABASE_PROJECT_REF ?? 'uwmh…'` (diğer
+`scripts/*.mjs`'lerle aynı desen).
+
+**Kanıt (canlı mutasyon).**
+
+```
+şekli doğru + iptal token:  OK   secrets   shape ok
+                            FAIL supabase  Management API rejected the token (HTTP 401) …
+                            exit=1
+çıplak UUID:                FAIL secrets   not an sbp_ token (len=36, prefix=d81f) …
+                            (supabase satırı YOK — probe çağrılmadı)   exit=1
+canlı token:                OK   secrets   shape ok
+                            OK   supabase  token authenticates against the Management API
+                            exit=0
+```
+
+Yani eski kapı 2. satırı **hiç görmezdi**. `system-health.test.mjs` **77/77**
+(4 yeni), `test:unit` **1094/1094**, `lint`/`typecheck`/`check:frontend-source`
+temiz.
+
+**Sınır / devam.** #596 (LANE-INFRA) hâlâ açık: `system-health.yml` yalnız
+`GH_TOKEN` geçiyor, `SUPABASE_ACCESS_TOKEN` yok → **zamanlanmış** koşuda hem
+şekil hem canlı denetim kör. Bu düzeltme yalnız elle (env'li) koşularda çalışır;
+asıl amacı olan saatlik koşuda görmek için workflow'a secret eklenmeli.
+
+**Ders.** "Şekli doğru" bir sağlık hükmü değildir. Bir kaynağın *biçimini*
+denetlemek onun *çalıştığını* kanıtlamaz; ikisini ayır ve **yanıtı** oku. Bir
+önceki turun "loglar okunamıyor" hükmü de aynı sınıftandı: yanlış metodun (POST)
+404'ü, yetkisizlik sanıldı. Hükmü vermeden önce **doğru çağrıyı** kur.

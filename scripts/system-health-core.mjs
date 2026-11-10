@@ -203,6 +203,44 @@ export function supabaseTokenProblem({ token, resendKey } = {}) {
 }
 
 /**
+ * Verdict on whether a correctly-shaped token actually authenticates.
+ *
+ * The shape check above catches a value that can never work (a bare UUID). It
+ * cannot catch a token that *looks* right but the API rejects: a revoked or
+ * expired `sbp_` token has the same shape as a live one, so the health check
+ * says `shape ok` while every production-log read still answers `401
+ * {"message":"JWT could not be decoded"}`. That is #209 one level down — the
+ * same "the indicator trusts the form, not the answer" family — so the token is
+ * put to the Management API and its answer is what decides.
+ *
+ * `networkError` is a warning, never a failure: the probe has no evidence the
+ * token is wrong, only that it could not ask. A missing verdict (`null`) means
+ * the caller should print nothing.
+ *
+ * @param {{status?: number|null, networkError?: string}} probe
+ * @returns {{level: 'ok'|'warn'|'fail', reason: string}|null}
+ */
+export function classifyTokenProbe({ status, networkError } = {}) {
+  if (networkError) {
+    return { level: "warn", reason: `could not verify the token (${networkError})` };
+  }
+  if (status === 200) {
+    return { level: "ok", reason: "token authenticates against the Management API" };
+  }
+  if (status === 401 || status === 403) {
+    return {
+      level: "fail",
+      reason: `Management API rejected the token (HTTP ${status}) — production logs stay unreadable`,
+    };
+  }
+  if (!Number.isFinite(status)) return null;
+  return {
+    level: "warn",
+    reason: `Management API answered HTTP ${status} — could not confirm the token`,
+  };
+}
+
+/**
  * Whether GitHub has left a pull request's merge state uncomputed.
  *
  * `mergeStateStatus` is computed lazily: the first read after a push returns
