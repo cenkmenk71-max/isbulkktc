@@ -617,3 +617,47 @@ değiştirdiği ve insan-onayı beklediği için bu lane'in kapsamı dışında.
 
 **Devredilenler.** #547 (teslim donmasının kök nedeni, `agent:infra` + `agent:blocked`)
 yeni kanıtla (24 geride, `total_count: 0`) hâlâ geçerli; bu lane dokunmadı.
+
+---
+
+## Tur 14 — 2026-11-10 (lane/teslimat)
+
+**Kapsam.** Atanmış açık `lane:teslimat` issue yok. Kurtarma turu: alan taranmadı;
+tek sınırlı gerçek düzeltme (finding 26, kendi dosyam) + kural 4 kaydı (#581/#582).
+
+**Bulgu (finding 26) — `prune-vercel-deployments.mjs` gövde-okuma iptali tüm koşuyu
+hâlâ düşürebiliyordu, kendi timeout'unu boşa çıkararak.** `apiRequest` `fetch`
+çağrısını try/catch ile koruyup timeout'u `599` sentinel'ine çeviriyordu — ama
+`await response.text()` bu try'ın **dışında** koşuyordu. Gövde okuması da aynı
+`AbortSignal.timeout(REQUEST_TIMEOUT_MS)` kapsamındadır; bu yüzden takılan ya da
+yarıda kesilen bir yanıt, korumanın **ardından** `TimeoutError` atıyor, o throw
+`apiRequestWithRetry`'den (yalnız döndürülen `{ status }` değerini yeniden dener)
+kaçıyor ve **tüm prune koşusunu** iptal ediyordu. Bu, mevcut yorumun amacının tam
+tersi ("retry it like any other transient failure instead of the whole run
+crashing on it"): istek yolu korumalıydı, gövde yolu değildi. Kanıt: `text()`
+`TimeoutError` ile reddeden sahte `fetch` → **eski** kod `THREW: TimeoutError`,
+**yeni** kod `{ status: 599 }` döndürüp retry döngüsüne giriyor. Düzeltme: okuma
+try'ın içine alındı (`apiRequest` de test edilebilsin diye export edildi).
+Regresyon testi: `scripts/prune-vercel-deployments-request.test.mjs` (5 vaka).
+
+**Teslim edildi (kural 4).** PR **#581** ve **#582** için deploy-log'a satır
+eklendi (Tur 11'den sonra inen iki merge kaydedilmemişti; #581 bu lane'in *kendi*
+kayıt PR'ıydı — finding 23'ün tekrarı). Sıra first-parent zincirden okundu
+(`8ce8cfb` #581 → `9042883` #582 → `1c103de` #580), `mergedAt`'ten değil.
+
+**Canlı ölçüm (görev 3) — 🔴 teslim doğrulanamadı, nedeni adıyla kondu.** 13:15Z:
+`main` = `8ce8cfb`, canlı = `3644cbe3` (**26 geride**; `3644cbe3` `main`'in atası,
+ayrışmış değil). `GET /` **200**, `build-info` → `3644cbe3` → **stale but healthy**.
+Tip `8ce8cfb`'de **hiç `Vercel` status girdisi yok** (`total_count: 0`) → **#547**
+durumu (yeni Vercel hesabında GitHub Git bağlantısı yok), #319 rate-limit salınımı
+**değil** (o, `Vercel: Deployment rate limited` girdisi bırakır). Depodan
+düzeltilemez; sahip tarafı (Vercel Dashboard → Git) veya LANE-INFRA `VERCEL_TOKEN`
+workflow'u. Bu lane'in sekizinci doğrulanamayan teslimi ve sebebi dışsaldır.
+
+**Merge kuyruğu (görev 1).** Açık PR: yalnız **#579** (`lane/infra`,
+`agent:blocked` — `.github/workflows/verify-production-deployment.yml` değiştiriyor,
+iki fren gereği insan-onayı bekliyor). Bu lane'in kapsamı dışında; merge edilebilir
+bekleyen PR yoktu.
+
+**Devredilenler.** #547 (teslim donmasının kök nedeni, `agent:infra` +
+`agent:blocked`) yeni kanıtla (26 geride, `total_count: 0`) hâlâ geçerli.
