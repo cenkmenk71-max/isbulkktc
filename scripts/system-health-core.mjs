@@ -33,6 +33,17 @@ export const HEALTH_WORKFLOW = 'System health';
 export const CI_AGGREGATOR_CHECKS = new Set(['Quality, database and E2E']);
 
 /**
+ * The autopilot's declared schedule, in minutes.
+ *
+ * `.github/workflows/lane-autopilot.yml` runs the pass every 20 minutes
+ * (every 20 minutes), with a second `7,27,47` trigger that only tightens the
+ * cadence. The health check measures the gap since the newest run; tying its
+ * thresholds to this number (asserted against the workflow by a unit test)
+ * means a dropped run shows up a cycle earlier and the two cannot drift.
+ */
+export const AUTOPILOT_CADENCE_MINUTES = 20;
+
+/**
  * The newest completed run of each workflow that ran on the default branch.
  *
  * The gate on `main` is not one fixed workflow. `isbulkktc CI` ran on push until
@@ -428,4 +439,25 @@ export function deployFreshnessFinding(freshness) {
     return { level: freshness.level, area: 'deploy', detail: freshness.detail };
   }
   return null;
+}
+
+/**
+ * Classify the gap since the newest scheduled autopilot run.
+ *
+ * The check used to hardcode OK ≤45 min / WARN ≤75 min while quoting "expected
+ * ~20". That let a pass that simply did not fire stay green for two whole
+ * cycles: at a 20-minute cadence, 40 minutes is two missed runs, not health.
+ * The thresholds are now multiples of the cadence — a single missed cycle warns,
+ * three missed cycles fail — so one dropped run is visible a cycle earlier.
+ *
+ * @param {number} minutes minutes since the newest run
+ * @param {number} [cadence] the schedule in minutes (defaults to the workflow's)
+ * @returns {{level: 'ok'|'warn'|'fail', detail: string}|null}
+ */
+export function classifyCronFreshness(minutes, cadence = AUTOPILOT_CADENCE_MINUTES) {
+  if (!Number.isFinite(minutes) || minutes < 0) return null;
+  const detail = `last run ${minutes.toFixed(0)} min ago (expected ~${cadence})`;
+  if (minutes > cadence * 3) return { level: 'fail', detail };
+  if (minutes > cadence * 1.5) return { level: 'warn', detail };
+  return { level: 'ok', detail };
 }

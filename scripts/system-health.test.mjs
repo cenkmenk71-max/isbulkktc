@@ -3,8 +3,10 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  AUTOPILOT_CADENCE_MINUTES,
   CI_AGGREGATOR_CHECKS,
   HEALTH_WORKFLOW,
+  classifyCronFreshness,
   classifyDeployFreshness,
   classifyProductionProbe,
   classifyRedRuns,
@@ -739,4 +741,44 @@ test("a current deploy reports ok, and a missing verdict reports nothing", () =>
   assert.equal(deployFreshnessFinding(undefined), null);
   assert.equal(deployFreshnessFinding(null), null);
   assert.equal(deployFreshnessFinding({ level: "bogus", detail: "x" }), null);
+});
+
+// The bug this guards: the cron check hardcoded OK ≤45 / WARN ≤75 while its own
+// message said "expected ~20". At a 20-minute cadence, 40 minutes is two missed
+// runs, so a pass that never fired stayed green for two cycles. Thresholds must
+// scale with the cadence: one missed cycle warns, three fail.
+
+test("cron freshness scales with the cadence, not a hardcoded minute count", () => {
+  assert.equal(classifyCronFreshness(10).level, "ok");
+  assert.equal(classifyCronFreshness(20).level, "ok");
+  assert.equal(classifyCronFreshness(31).level, "warn");
+  assert.equal(classifyCronFreshness(61).level, "fail");
+});
+
+test("two missed cycles at the declared cadence is no longer green", () => {
+  const twoCycles = AUTOPILOT_CADENCE_MINUTES * 2;
+  assert.equal(classifyCronFreshness(twoCycles).level, "warn");
+});
+
+test("a cadence the caller passes wins over the default", () => {
+  assert.equal(classifyCronFreshness(50, 30).level, "warn");
+  assert.equal(classifyCronFreshness(20, 30).level, "ok");
+});
+
+test("an unreadable gap is reported, never silently ok", () => {
+  assert.equal(classifyCronFreshness(Number.NaN), null);
+  assert.equal(classifyCronFreshness(-5), null);
+  assert.match(classifyCronFreshness(10).detail, /expected ~20/);
+});
+
+test("the declared cadence matches the autopilot workflow's cron", () => {
+  const workflow = readFileSync(".github/workflows/lane-autopilot.yml", "utf8");
+  const crons = [...workflow.matchAll(/cron:\s*'([^']+)'/g)].map((m) => m[1]);
+  assert.ok(crons.length > 0, "lane-autopilot.yml must declare a cron");
+  // The fastest trigger defines the cadence; `*/N` is the base period.
+  const periods = crons
+    .map((c) => (c.startsWith("*/") ? Number(c.slice(2).split(" ")[0]) : null))
+    .filter((n) => Number.isFinite(n));
+  assert.ok(periods.length > 0, "expected a `*/N` cron entry");
+  assert.equal(Math.min(...periods), AUTOPILOT_CADENCE_MINUTES);
 });
