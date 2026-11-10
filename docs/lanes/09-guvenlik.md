@@ -2035,7 +2035,7 @@ sandbox'ta** kuruldu ve yalnız `split_part` semantiğini ölçtü — canlı Su
 
 ### Devir
 
-LANE-SUPABASE (`agent:handoff`): `supabase/migrations/**` sahibi. `agent:blocked`
+LANE-SUPABASE (`agent:handoff`, #536): `supabase/migrations/**` sahibi. `agent:blocked`
 **kullanılmadı** — bu insan gerektiren tıkanma değil, başka lane'in işi.
 
 ```

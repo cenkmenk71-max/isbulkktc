@@ -333,7 +333,7 @@ issue açar.
    `tests/security/push-endpoint-sql-parity.test.ts` (`todo`; parity gate +
    self-test'ler kapı). Gerçek Postgres 17'de ölçüldü (migration'ın tam ifadesi):
    `evil.com\.push.apple.com` -> `t`, `fcm.googleapis.com\evil.com` -> `f`.
-   Devir: LANE-SUPABASE (`agent:handoff`).
+   Devir: LANE-SUPABASE (`agent:handoff`, #536).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
 
