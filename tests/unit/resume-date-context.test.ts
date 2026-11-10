@@ -12,12 +12,12 @@ import { mergeResumeDraft } from "../../src/features/candidates/resume-profile-d
  * work history. The first half pins the contracts that hold, including the
  * negative invariant "personal data never becomes a profile field".
  *
- * The second half records the defects that are still open in
- * `resume-parser.ts` (LANE-URUN's file) as `todo` tests: each asserts the
- * behaviour #208 asks for, so the day the parser is fixed the `todo` turns into
- * a real failure and the marker can be dropped. They are `todo`, not skipped,
- * because `node:test` reports a `todo` that starts passing — a skipped test
- * never would.
+ * Defects still open in `resume-parser.ts` (LANE-URUN's file) were once recorded
+ * here as `todo` tests: each asserted the behaviour #208 asks for, so the day the
+ * parser was fixed the `todo` would turn into a real failure and the marker could
+ * be dropped. They were `todo`, not skipped, because `node:test` reports a `todo`
+ * that starts passing — a skipped test never would. No `todo` markers remain: the
+ * last two (#367) became real contracts once LANE-URUN's fix landed.
  *
  * That is the trap this file was in once. LANE-URUN's #217 landed a partial fix
  * (the personal-data context filter and a forwards-and-≤60-years rule), and
@@ -36,10 +36,10 @@ import { mergeResumeDraft } from "../../src/features/candidates/resume-profile-d
  * headline). Those markers all became contracts.
  *
  * Re-reconciled again for #367: a personal-data line *under an explicit section
- * heading* still reached a profile field (`sectionLines` pushed it into the
- * active section without the `isPersonalDataLine` filter). The source fix is
- * LANE-URUN's; this file pins the target as `todo` markers and keeps the
- * neighbouring contracts asserted directly, so LANE-URUN's PR does not start red.
+ * heading* reached a profile field (`sectionLines` pushed it into the active
+ * section without the `isPersonalDataLine` filter). LANE-URUN's #411 fixed the
+ * source; the two markers that pinned it have been converted to real contracts
+ * here, so nothing in this file is left as a dead `todo` (#413).
  *
  * Owner of the source: LANE-URUN. Owner of this test: LANE-QA. Every "observed"
  * value below was produced by running the parser, not read off the source.
