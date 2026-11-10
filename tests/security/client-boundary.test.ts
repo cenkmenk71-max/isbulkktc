@@ -151,29 +151,22 @@ test("no NEXT_PUBLIC_ variable is named like a secret", () => {
 // ---------------------------------------------------------------------------
 // 4. Server modules that read secrets declare the server-only boundary.
 //
-// Every secret-reading module under `src/server/**` imports `server-only` except
-// `unsubscribe-token-core.ts` (it reads `ENGAGEMENT_UNSUBSCRIBE_SECRET` /
-// `RESEND_API_KEY`). The marker is what turns an accidental client import into a
-// build failure; without it the mistake compiles. Marked `todo` because the fix
-// belongs to the owner of `src/server/email/**`; once the import is added this
-// starts passing and the `todo` can be dropped. See `docs/threat-model.md`.
+// Every secret-reading module under `src/server/**` imports `server-only`. The
+// marker is what turns an accidental client import into a build failure; without
+// it the mistake compiles. See `docs/threat-model.md`.
 // ---------------------------------------------------------------------------
 
-test(
-  "every server module reading a secret imports server-only",
-  { todo: "src/server/email/unsubscribe-token-core.ts is unguarded (see docs/threat-model.md)" },
-  () => {
-    const offenders: string[] = [];
-    for (const path of sourceFiles) {
-      if (!path.includes("/src/server/")) continue;
-      const source = read(path);
-      if (nonPublicEnvNames(source).length === 0) continue;
-      if (!/import\s+["']server-only["']/.test(source)) offenders.push(relative(path));
-    }
-    assert.deepEqual(
-      offenders,
-      [],
-      `secret-reading server modules without the server-only marker: ${offenders.join(", ")}`,
-    );
-  },
-);
+test("every server module reading a secret imports server-only", () => {
+  const offenders: string[] = [];
+  for (const path of sourceFiles) {
+    if (!path.includes("/src/server/")) continue;
+    const source = read(path);
+    if (nonPublicEnvNames(source).length === 0) continue;
+    if (!/import\s+["']server-only["']/.test(source)) offenders.push(relative(path));
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `secret-reading server modules without the server-only marker: ${offenders.join(", ")}`,
+  );
+});

@@ -285,14 +285,17 @@ issue açar.
    `global.headers` ile `cf-connecting-ip` eklesin), RPC de o argümanı başlığa
    tercih etsin. Kanıt: `tests/security/anonymous-rpc-throttle.test.ts` (`todo`).
    Devir: **#206** (`agent:handoff`, LANE-URUN + LANE-SUPABASE).
-2. **`server-only` sınırı eksik** (sahibi: `src/server/email/**`, LANE-URUN).
-   `src/server/email/unsubscribe-token-core.ts` `ENGAGEMENT_UNSUBSCRIBE_SECRET`
-   ve `RESEND_API_KEY` okuyor ama `import "server-only"` taşımıyor. `src/server`
-   altındaki diğer tüm sır-okuyan modüller bu işareti taşıyor; eksik olan, yanlış
-   bir istemci içe aktarımını derleme hatası yerine sessiz bir sızıntıya çevirir.
-   Kanıt: `tests/security/client-boundary.test.ts` (`todo`).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
+
+- **`server-only` sınırı eksikti** (sahibi: `src/server/email/**`, LANE-URUN; **#102 ile düzeltildi**).
+  `src/server/email/unsubscribe-token-core.ts` `ENGAGEMENT_UNSUBSCRIBE_SECRET`
+  ve `RESEND_API_KEY` okuyordu ama `import "server-only"` taşımıyordu; eksik
+  olan, yanlış bir istemci içe aktarımını derleme hatası yerine sessiz bir
+  sızıntıya çeviriyordu. İşaret eklendi ve `tests/unit/support/server-only-hook.ts`
+  çözücüsü (`tsx --test` altında `server-only`'yi boş modüle eşler) davranış
+  testinin gerçek HMAC gövdesiyle birlikte yaşamasını sağladı. Kanıt:
+  `tests/security/client-boundary.test.ts` (artık `todo` değil, kapı).
 
 - **Push endpoint allowlist'inin DB yarısı app kuralıyla ayrışıyordu** (sahibi: `supabase/migrations/**`, LANE-SUPABASE; **#536 ile düzeltildi**, mirror #568'de güncellendi).
   `register_push_subscription` host'u **ham string** üzerinden çıkarıyordu —
