@@ -624,3 +624,43 @@ test("the cookie policy states each cookie's real lifetime", () => {
     }
   }
 });
+
+// The privacy policy's retention paragraph (`Legal.privacy.sections.s3.p2`)
+// tells the visitor what happens when an account is removed. The product has no
+// self-service deletion — the visitor deletes nothing themselves, they ask us
+// (the "Your rights" section already routes every request through contact). The
+// paragraph used to promise "when you delete your account your personal data is
+// deleted or anonymised": a control the visitor would hunt for and never find
+// (#418 §6). The copy now names the real path, and this gate keeps it honest in
+// both directions: no locale may promise automatic deletion, and every locale
+// must describe how the deletion is requested.
+const ACCOUNT_DELETION_COPY: Record<
+  AppLocale,
+  { forbidden: readonly string[]; requestStem: string }
+> = {
+  tr: { forbidden: ["hesabınızı sildiğinizde"], requestStem: "iletişime geç" },
+  en: { forbidden: ["when you delete your account"], requestStem: "contacting us" },
+  ru: { forbidden: ["при удалении аккаунта"], requestStem: "связавшись" },
+  el: { forbidden: ["όταν διαγράφετε τον λογαριασμό"], requestStem: "επικοινωνώντας" },
+  fa: { forbidden: ["با حذف حساب"], requestStem: "تماس" },
+  de: { forbidden: ["wenn Sie Ihr Konto löschen"], requestStem: "kontaktieren" },
+};
+
+test("the privacy policy describes the real account-deletion path", () => {
+  for (const locale of locales) {
+    const text = (
+      flatten(readMessages(locale))["Legal.privacy.sections.s3.p2"] ?? ""
+    ).toLowerCase();
+    const { forbidden, requestStem } = ACCOUNT_DELETION_COPY[locale];
+    for (const phrase of forbidden) {
+      assert.ok(
+        !text.includes(phrase.toLowerCase()),
+        `${locale} privacy policy again promises automatic deletion ("${phrase}") though the product has no self-service deletion`,
+      );
+    }
+    assert.ok(
+      text.includes(requestStem.toLowerCase()),
+      `${locale} privacy policy does not describe how the visitor requests deletion ("${requestStem}")`,
+    );
+  }
+});

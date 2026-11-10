@@ -1296,7 +1296,7 @@
     "privacy": {
       "title": "Gizlilik Politikası",
       "intro": "İşBul KKTC olarak kişisel verilerinizi KVKK ve GDPR ilkelerine uygun şekilde, yalnızca hizmeti sunmak için gerekli olduğu ölçüde işliyoruz.",
-      "updated": "29 Ekim 2026",
+      "updated": "9 Kasım 2026",
       "sections": {
         "s1": {
           "title": "Topladığımız veriler",
@@ -1311,7 +1311,7 @@
         "s3": {
           "title": "Paylaşım ve saklama",
           "p1": "Başvurduğunuz işverenler, başvuru kapsamında paylaştığınız profil bilgilerini görür. Verilerinizi reklam amacıyla üçüncü taraflara satmayız.",
-          "p2": "Verilerinizi, hizmetin gerektirdiği süre boyunca ve yasal yükümlülüklerimiz kadar saklarız; hesabınızı sildiğinizde kişisel verileriniz silinir veya anonim hale getirilir."
+          "p2": "Verilerinizi, hizmetin gerektirdiği süre boyunca ve yasal yükümlülüklerimiz kadar saklarız. Hesabınızın ve verilerinizin silinmesini bizimle iletişime geçerek talep edebilirsiniz."
         },
         "s4": {
           "title": "Haklarınız",
@@ -1323,7 +1323,7 @@
     "cookies": {
       "title": "Çerez Politikası",
       "intro": "Çerezler, siteyi düzgün çalıştırmak ve tercihlerinizi hatırlamak için tarayıcınıza kaydedilen küçük metin dosyalarıdır.",
-      "updated": "29 Ekim 2026",
+      "updated": "10 Kasım 2026",
       "sections": {
         "s1": {
           "title": "Zorunlu çerezler",

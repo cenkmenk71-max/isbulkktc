@@ -804,3 +804,86 @@ Sahibin yapması gerekenler: PR'ı merge et
 Sonraki lane için notlar: çerez ömürleri artık belgeli; ömür sabiti değişirse
   metin de güncellenir (consent 180 gün, oauth 15 dk, session 400 gün).
 ```
+
+## Tur 11 — mikro-denetim: gizlilik politikası olmayan bir hesap-silme yeteneğini vaat ediyor (2026-11-10)
+
+**PR:** (bu PR) · **Issue:** #418 §6 (hesap + çerez denetimi; sahibin en öncelikli
+maddesi) · **Branch:** `lane/icerik`
+
+### Bulgu
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `src/messages/{tr,en,ru,el,fa,de}.json` → `Legal.privacy.sections.s3.p2` | doğruluk/gizlilik | "…hesabınızı sildiğinizde kişisel verileriniz silinir veya anonim hale getirilir" (6 dilde) | Ürünün gerçekte sunduğu silme yolu | Cümle, ziyaretçinin **kendi başına** hesabını silmesini anlatıyor; ama üründe **hiç self-servis silme yok**. Ziyaretçi politikada okuduğu denetimi arar, bulamaz. KVKK/GDPR şeffaflık açığı ve kullanıcıyı yanıltan bir taahhüt | düzeltildi |
+
+### Kök neden
+
+`src/features/identity/account-panel.tsx` yalnız ad/soyad/e-posta/giriş yöntemi
+gösterir. `src/` genelinde hesap silme arayüzü, Server Action veya rota yoktur
+(`grep -rniE "delete.?account|deleteUser|removeUser"` → 0 eşleşme). Buna karşılık
+gizlilik politikasının saklama paragrafı silmeyi otomatik bir sonuçmuş gibi
+anlatıyordu. Aynı belgenin "Haklarınız" bölümü (`s4`) ise silme talebinin
+**iletişim üzerinden** yapıldığını zaten söylüyordu — iki bölüm çelişiyordu.
+
+### Düzeltme
+
+`s3.p2` artık ziyaretçinin kendi eylemini doğru anlatıyor: veri saklama süresi
+korunuyor, silme **talep edilen** bir iş olarak yazılıyor ("Hesabınızın ve
+verilerinizin silinmesini bizimle iletişime geçerek talep edebilirsiniz"). 6 dilin
+hepsinde, dilin doğal sözcükleriyle (kelime kelime çeviri değil). `s4` ile
+tutarlı hâle geldi.
+
+### Kanıt (ratchet — kırmızı→yeşil)
+
+**Yeni gerçek kapı (bu lane'in dosyası):** `src/i18n/message-catalogs.test.ts` —
+"the privacy policy describes the real account-deletion path". İki yönlü assert:
+(a) hiçbir dil otomatik silme vaadini geri getiremez, (b) her dil silmenin nasıl
+**talep edildiğini** anlatmalı. `en` `s3.p2`'sine eski cümle geri konunca test
+**kırmızı**, düzeltme geri gelince **yeşil** (kanıtlandı).
+
+### Seed yeniden üretimi (zorunlu, kapsam ihlali değil)
+
+`supabase/seed-managed-content.sql` **`src/messages/*.json`'dan üretilir** ve
+`tests/unit/managed-content-seed.test.ts` üretileni commit'lenmiş dosyayla
+karşılaştırır. `bun run seed:managed-content` → **6 satır** değişti (her dil için
+`legal.privacy`), başka satır yok.
+
+### Boyut taraması (AUDIT.md, seçilen düzeltmeye uygulandı)
+
+| Alan | Sonuç |
+|---|---|
+| Doğruluk (politika ↔ ürün yeteneği) | 1 bulgu, düzeltildi (yukarıda) |
+| İç sistem sözlüğü (6 dil) | 0 eşleşme |
+| 6 dil paritesi | 0 eksik/fazla; yalnız `s3.p2` değişti |
+| Placeholder paritesi | değişmedi (bu anahtarda placeholder yok) |
+| ICU / JSON round-trip | dosya başına 1 satır değişti; tam yeniden biçimlendirme yok |
+| RTL (`fa`) / uzun metin (`de`) | metin değişikliği; yeni renk/ikon yok |
+| Erişilebilirlik/kontrast | dokunulmadı |
+| Legal revizyon tarihi | `privacy.updated` 2026-11-09 (Tur 10 ile aynı gün) — bu düzeltme aynı revizyona girer |
+
+### Kapılar
+
+lint ✅ · typecheck ✅ · check:frontend-source ✅ · test:unit ✅ (CI'da koşar)
+
+### Devir
+
+- **LANE-AUTH / LANE-URUN:** ürüne gerçek self-servis hesap silme eklenirse bu
+  lane'in ratchet'i kırmızıya döner (otomatik silme vaadi yasağı) — o zaman
+  `s3.p2` ve ratchet birlikte güncellenir; haber verin. Kanıt: bu PR.
+- **LANE-SUPABASE:** seed bu PR'da yalnız üretici çıktısı olarak güncellendi (6 satır).
+
+### Rapor (00-orchestration formatı)
+
+```
+Lane: icerik            Branch: lane/icerik            PR: (bu PR)
+Değişen dosyalar: src/messages/{tr,en,ru,el,fa,de}.json,
+  src/i18n/message-catalogs.test.ts, supabase/seed-managed-content.sql,
+  docs/lanes/12-icerik.md
+Çalıştırılan kontroller:
+  lint -> pass | typecheck -> pass | check:frontend-source -> pass
+  test:unit -> pass | e2e -> CI'da | database -> CI'da
+Canlıya dokundu mu: hayır
+Sahibin yapması gerekenler: PR'ı merge et
+Sonraki lane için notlar: gizlilik politikası ürünün gerçek silme yolunu anlatıyor;
+  self-servis silme eklenirse metin + ratchet birlikte güncellenir.
+```
