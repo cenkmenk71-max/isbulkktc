@@ -1,6 +1,6 @@
 begin;
 
-select plan(48);
+select plan(54);
 
 -- Web Push tables are capability storage: an endpoint plus its two keys is
 -- enough to deliver a notification to a device. The whole client surface is
@@ -249,6 +249,90 @@ reset role;
 delete from public.push_subscriptions
 where endpoint =
   'https://wns2-par02p.notify.windows.com/w/?token=' || pg_catalog.repeat('w', 40);
+
+set local "request.jwt.claims" =
+  '{"sub":"86000000-0000-4000-8000-000000000001","role":"authenticated"}';
+set local role authenticated;
+
+-- The authority guard (#536, 20261110130000): the RPC takes the URL authority
+-- the way the URL parser does — ending at the first `/`, `\`, `?` or `#` — then
+-- requires a bare hostname and an optional all-digit port before the allowlist
+-- is consulted. Each shape below is one the app gate (`isAllowedPushEndpoint`)
+-- already rejects; the database must agree, because the RPC is directly
+-- callable with the publishable key.
+select throws_ok(
+  $$select public.register_push_subscription(
+      'https://evil.com\.push.apple.com/x',
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      null
+    )$$,
+  '22023',
+  null,
+  'a backslash-separated host that only ends with a push suffix is rejected'
+);
+
+select throws_ok(
+  $$select public.register_push_subscription(
+      'https://evil.com%2f.push.apple.com/x',
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      null
+    )$$,
+  '22023',
+  null,
+  'a percent-encoded slash in the host is rejected'
+);
+
+select throws_ok(
+  $$select public.register_push_subscription(
+      'https://evil.com%5c.push.apple.com/x',
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      null
+    )$$,
+  '22023',
+  null,
+  'a percent-encoded backslash in the host is rejected'
+);
+
+select throws_ok(
+  $$select public.register_push_subscription(
+      'https://evil.com@x.push.apple.com/x',
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      null
+    )$$,
+  '22023',
+  null,
+  'URL credentials before a push host are rejected'
+);
+
+select throws_ok(
+  $$select public.register_push_subscription(
+      'https://fcm.googleapis.com:65536/x',
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      null
+    )$$,
+  '22023',
+  null,
+  'a port above 65535 is rejected, matching new URL()'
+);
+
+select lives_ok(
+  $$select public.register_push_subscription(
+      'https://fcm.googleapis.com\evil.com/x',
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      null
+    )$$,
+  'a push host followed by a backslash path is accepted, matching the URL parse'
+);
+
+reset role;
+delete from public.push_subscriptions
+where endpoint = 'https://fcm.googleapis.com\evil.com/x';
 
 -- ---------------------------------------------------------------------------
 -- An endpoint is a browser, not an account: registering it again reassigns it
