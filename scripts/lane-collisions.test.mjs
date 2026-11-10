@@ -181,3 +181,24 @@ test("the security-critical surfaces of #424/#435 have an owner", () => {
   assert.deepEqual(ownersOf("src/server/auth/supabase-guards.ts", table), ["LANE-AUTH"]);
   assert.deepEqual(ownersOf("src/app/api/build-info/route.ts", table), ["LANE-INFRA"]);
 });
+
+test("the remaining src/app/api/** routes have an owner", () => {
+  // #435 and #441 both report that `src/app/api/**` was in no ownership row, so
+  // a fix to any of these routes (the `%2F` 500 in #441, the write-method
+  // contract in #435) reported "owned by no lane" and no lane was accountable.
+  // They are thin adapters over LANE-URUN's `src/server/email/**` and
+  // `src/server/push/**` (and #262 already assigned `api/push` to URUN), and
+  // `api/qr` imports only `src/server/config/app-url` + `src/lib/pwa/qr`, both
+  // URUN. `vercel.json` is the deploy-config surface behind #319, so it belongs
+  // to LANE-INFRA next to `.github/**`.
+  for (const route of [
+    "src/app/api/email/unsubscribe/route.ts",
+    "src/app/api/email/engagement-digest/route.ts",
+    "src/app/api/push/subscriptions/route.ts",
+    "src/app/api/push/dispatch/route.ts",
+    "src/app/api/qr/route.ts",
+  ]) {
+    assert.deepEqual(ownersOf(route, table), ["LANE-URUN"], route);
+  }
+  assert.deepEqual(ownersOf("vercel.json", table), ["LANE-INFRA"]);
+});
