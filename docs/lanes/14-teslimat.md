@@ -661,3 +661,39 @@ bekleyen PR yoktu.
 
 **Devredilenler.** #547 (teslim donmasının kök nedeni, `agent:infra` +
 `agent:blocked`) yeni kanıtla (26 geride, `total_count: 0`) hâlâ geçerli.
+
+---
+
+## Tur 15 — 2026-11-10 (delivery restored)
+
+**Kapsam.** Teslim döngüsünün *sonunda* duran soru: `main` ile canlı site ayrıştı
+mı? Sekiz turdur cevap "evet, 26 commit geride" idi ve sebep **#547** (yeni Vercel
+hesabında GitHub Git bağlantısı yok) olarak adlandırılmıştı. Bu tur o durumun
+**bittiğini** kaydediyor.
+
+**Merge kuyruğu (görev 1).** Bu lane'in PR'ı **#586** (finding 26 — prune
+body-read abort) zorunlu kontrolü geçtikten sonra `app/github-actions` tarafından
+**14:15:57Z**'de squash ile merge edildi (`main` `df691cd` → `ce0ccee`). Aynı
+dakikada `lane/qa`'nın **#585**'i de indi (`089a534`). **#583** (`df691cd`) ise
+13:15Z kontrolünden sonra inmiş ve kaydedilmemişti — kural 4 gereği üçü birlikte
+kaydedildi. Sıra first-parent zincirden okundu, `mergedAt`'ten değil.
+
+**Canlı ölçüm (görev 3) — ✅ ilk doğrulanmış teslim.** 14:20Z: `main` = `089a534`,
+canlı = `089a534` — **eşit**. `verify-production-deployment.mjs --expect 089a5348`
+→ exit 0, `verdict: ✅ serving 089a5348`, HTTP kanalıyla doğrulandı, 5/5 smoke
+route 200. `Vercel` commit status'u — ~11:13Z'den beri **hiç yoktu**
+(`total_count: 0`, #547'nin donmuş hâli) — **14:16:07Z'de geri geldi**:
+`pending — "Vercel is deploying your app"`, ardından `success — "Deployment has
+completed"`. Donma **bitti**; prodüksiyon merge'den ~90 sn sonra `main`'i izledi.
+
+**Ayırt etme dersi (finding 27).** "Donmuş" ile "entegrasyon çalışıyor" **status'un
+varlığı** ile ayrılır, *durumu* ile değil: `Vercel` girdisi **yoksa** Git
+entegrasyonu kapalıdır (hiç build istenmemiş — #547); **varsa** — `pending`
+iken bile — entegrasyon canlıdır ve build uçmaktadır. `pending` bir girdiyi
+#319 rate-limit salınımı (o *kırmızı* bırakır) sanmak yanıltıcı olurdu. Kod
+değişikliği gerekmedi; `verify-production-deployment.mjs` iki kanalı zaten ayrı
+raporluyor. Bu turda yapılan, durumu doğru okumak ve değişimi kaydetmekti.
+
+**Merge kuyruğu (kalan).** Açık PR'lar: **#585** (`lane/qa`) ve **#584**
+(`lane/operator`) — ikisi de bu turda inmiş/merge edilmiş durumda; kalan açık
+PR yok. `agent:blocked` PR yok. Bu lane'in merge edecek bekleyen işi kalmadı.
