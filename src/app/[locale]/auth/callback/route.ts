@@ -13,7 +13,7 @@ import {
   resolveAuthDestination,
   resolveAuthFailurePath,
 } from "@/features/identity/auth-routing";
-import { accountBlockedMessage } from "@/features/identity/account-status";
+import { isAccountBlocked } from "@/features/identity/account-status";
 import {
   isNewOAuthAccount,
   mergeLocaleIntoUserMetadata,
@@ -85,7 +85,7 @@ function redirectAndClearOAuthIntent(url: URL): NextResponse {
  * exactly what this guard exists to withhold. A missing profile row (the trigger
  * has not created it yet) is not a suspension, matching `signIn`.
  */
-async function accountIsBlocked(
+async function isCallbackAccountBlocked(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   userId: string,
 ): Promise<boolean> {
@@ -102,7 +102,7 @@ async function accountIsBlocked(
     return true;
   }
 
-  return accountBlockedMessage(data?.status) !== null;
+  return isAccountBlocked(data?.status);
 }
 
 export async function GET(request: NextRequest) {
@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
 
     // The retry path minted (or found) a live session too, so the kill switch
     // applies here as well.
-    if (await accountIsBlocked(supabase, sessionUser.id)) {
+    if (await isCallbackAccountBlocked(supabase, sessionUser.id)) {
       return redirectAndClearOAuthIntent(
         new URL(resolveAccountBlockedPath(locale, audience), appBaseUrl),
       );
@@ -223,7 +223,7 @@ export async function GET(request: NextRequest) {
   // runs before every success exit, the reset flow included, so no branch hands
   // a non-active account a working session. The visitor lands on the login
   // page's `error=account` branch, which explains the refusal and signs out.
-  if (user && (await accountIsBlocked(supabase, user.id))) {
+  if (user && (await isCallbackAccountBlocked(supabase, user.id))) {
     return redirectAndClearOAuthIntent(
       new URL(resolveAccountBlockedPath(locale, audience), appBaseUrl),
     );

@@ -14,9 +14,10 @@ import {
 } from "./schemas";
 import { parseEnabledOAuthProviders, resolveEnabledOAuthProviders } from "./oauth-providers";
 import { messageForAuthErrorCode } from "./auth-errors";
-import { accountBlockedMessage } from "./account-status";
+import { isAccountBlocked } from "./account-status";
 import {
   callbackAudienceParam,
+  resolveAccountBlockedPath,
   resolveAuthDestination,
 } from "./auth-routing";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
@@ -192,9 +193,10 @@ export async function signIn(
   // Handing a suspended/closed account a working session would only surface as
   // `42501` on the next write, so read the caller's own row (RLS
   // `profiles_read_own` permits it) and, when the account is not active, drop
-  // the session before answering. A read failure is denied too: we cannot
-  // confirm the account is active, and a session we cannot justify is exactly
-  // the gap this closes.
+  // the session and send the visitor to the login page's `error=account`
+  // branch, which shows the inactive message and a sign-out. A read failure is
+  // refused too: we cannot confirm the account is active, and a session we
+  // cannot justify is exactly the gap this closes.
   const statusResult = await supabase
     .from("profiles")
     .select("status")
@@ -209,10 +211,11 @@ export async function signIn(
     return { status: "error", message: "signInFailed" };
   }
 
-  const blockedMessage = accountBlockedMessage(statusResult.data?.status);
-  if (blockedMessage) {
+  if (isAccountBlocked(statusResult.data?.status)) {
     await supabase.auth.signOut();
-    return { status: "error", message: blockedMessage };
+    redirect(
+      resolveAccountBlockedPath(result.data.locale, result.data.audience),
+    );
   }
 
   redirect(resolveAuthDestination(result.data.audience, result.data.locale));

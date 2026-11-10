@@ -1,5 +1,3 @@
-import type { AuthMessage } from "./auth-errors";
-
 /**
  * The account kill switch, as the sign-in path reads it.
  *
@@ -11,16 +9,16 @@ import type { AuthMessage } from "./auth-errors";
  * than a disabled account. A session must not be minted for a non-active
  * account.
  *
- * Returns the message to show, or `null` when the account may sign in. `active`
- * and any value that is missing or unrecognised (a transient read failure, a
- * row the `handle_new_auth_user` trigger should have created) are *allowed*:
- * the caller decides how to fail closed on a read error, and inventing a status
- * the database does not use would lock out legitimate visitors.
+ * `active` and any value that is missing or unrecognised (a transient read
+ * failure, a row the `handle_new_auth_user` trigger should have created) are
+ * *allowed*: the caller decides how to fail closed on a read error, and
+ * inventing a status the database does not use would lock out legitimate
+ * visitors.
+ *
+ * Callers surface the refusal through the login page's existing `error=account`
+ * branch, which already shows the inactive message and a sign-out button, so no
+ * new user-facing copy is introduced here.
  */
-export function accountBlockedMessage(
-  status: string | null | undefined,
-): AuthMessage | null {
-  if (status === "suspended") return "accountInactive";
-  if (status === "closed") return "accountClosed";
-  return null;
+export function isAccountBlocked(status: string | null | undefined): boolean {
+  return status === "suspended" || status === "closed";
 }

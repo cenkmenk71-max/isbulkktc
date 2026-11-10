@@ -45,8 +45,8 @@ test("the callback reads profiles.status through the shared kill switch", () => 
   );
   assert.match(
     source,
-    /accountBlockedMessage\(data\?\.status\)/,
-    "the callback must decide with the shared accountBlockedMessage helper",
+    /isAccountBlocked\(data\?\.status\)/,
+    "the callback must decide with the shared isAccountBlocked helper",
   );
 });
 
@@ -56,12 +56,12 @@ test("every session-minting callback exit is gated by the kill switch", () => {
   // The already-exchanged retry path mints a session too; it must be gated.
   assert.match(
     source,
-    /already exchanged[\s\S]{0,400}accountIsBlocked\(supabase, sessionUser\.id\)/,
+    /already exchanged[\s\S]{0,400}isCallbackAccountBlocked\(supabase, sessionUser\.id\)/,
     "the already-exchanged retry path must apply the kill switch",
   );
 
   // The main success path must be gated before it redirects to a destination.
-  const guardIndex = source.indexOf("accountIsBlocked(supabase, user.id)");
+  const guardIndex = source.indexOf("isCallbackAccountBlocked(supabase, user.id)");
   const destinationIndex = source.lastIndexOf(
     "resolveAuthDestination(audience, locale)",
   );
