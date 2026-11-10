@@ -10,6 +10,7 @@ import {
   classifyDeployFreshness,
   classifyProductionProbe,
   classifyRedRuns,
+  classifySupabaseToken,
   deployFreshnessFinding,
   failingWorkflows,
   isDeploymentDisabled,
@@ -21,6 +22,7 @@ import {
   redRunsOnMain,
   redWorkflowsOnMain,
   stuckPullRequests,
+  supabaseTokenProblem,
 } from "./system-health-core.mjs";
 
 // The bug this guards: `system-health.mjs` asked GitHub for one named workflow
@@ -781,4 +783,60 @@ test("the declared cadence matches the autopilot workflow's cron", () => {
     .filter((n) => Number.isFinite(n));
   assert.ok(periods.length > 0, "expected a `*/N` cron entry");
   assert.equal(Math.min(...periods), AUTOPILOT_CADENCE_MINUTES);
+});
+
+// #209: the SUPABASE_ACCESS_TOKEN was a bare 36-char UUID (not an `sbp_`
+// management token) and the same value sat in RESEND_API_KEY (#186). Every
+// production-log read answered `401 {"message":"JWT could not be decoded"}`
+// while looking like a service outage, so the diagnosis stayed blind. The
+// health check must name the wrong shape instead of staying silent.
+
+test("an sbp_ token is present, whatever the trailing characters", () => {
+  assert.equal(classifySupabaseToken("sbp_0123456789abcdef"), "present");
+  assert.equal(classifySupabaseToken("  sbp_a-b_c-1234  "), "present");
+});
+
+test("a bare UUID — the exact #209 value — is malformed, not missing", () => {
+  // 36-char UUID: present but can never authenticate. Calling it "missing"
+  // would be a lie, and calling it "present" would hide the 401.
+  assert.equal(classifySupabaseToken("d81c0f2e-1a3b-4c5d-8e9f-0123456789ab"), "malformed");
+  assert.equal(classifySupabaseToken("sbx_not_a_supabase_token"), "malformed");
+});
+
+test("empty and absent values are missing, never malformed", () => {
+  assert.equal(classifySupabaseToken(""), "missing");
+  assert.equal(classifySupabaseToken("   "), "missing");
+  assert.equal(classifySupabaseToken(null), "missing");
+  assert.equal(classifySupabaseToken(undefined), "missing");
+});
+
+test("a missing token reports nothing — CI never has it, so it is not a misconfig", () => {
+  // The scheduled health workflow runs with only GH_TOKEN. Flagging the unset
+  // token every hour is exactly the cry-wolf noise this lane removes.
+  assert.equal(supabaseTokenProblem({ token: undefined }), null);
+  assert.equal(supabaseTokenProblem({}), null);
+});
+
+test("a malformed token fails with the length and prefix from the #209 report", () => {
+  const problem = supabaseTokenProblem({ token: "d81c0f2e-1a3b-4c5d-8e9f-0123456789ab" });
+  assert.equal(problem.status, "malformed");
+  assert.match(problem.reason, /not an sbp_ token/);
+  assert.match(problem.reason, /len=36/);
+  assert.match(problem.reason, /prefix=d81c/);
+});
+
+test("a token equal to RESEND_API_KEY is a collision, named as one", () => {
+  const shared = "sbp_shared_secret_value";
+  const problem = supabaseTokenProblem({ token: shared, resendKey: shared });
+  assert.equal(problem.status, "collision");
+  assert.match(problem.reason, /equals RESEND_API_KEY/);
+});
+
+test("a well-formed, distinct token is ok", () => {
+  const problem = supabaseTokenProblem({
+    token: "sbp_0123456789abcdef",
+    resendKey: "re_0123456789abcdef",
+  });
+  assert.equal(problem.status, "present");
+  assert.match(problem.reason, /shape ok/);
 });

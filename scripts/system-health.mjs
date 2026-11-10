@@ -15,7 +15,7 @@
 
 import { execFileSync } from 'node:child_process';
 
-import { classifyCronFreshness, classifyDeployFreshness, classifyProductionProbe, classifyRedRuns, deployFreshnessFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests } from './system-health-core.mjs';
+import { classifyCronFreshness, classifyDeployFreshness, classifyProductionProbe, classifyRedRuns, deployFreshnessFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests, supabaseTokenProblem } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
 const asJson = process.argv.includes('--json');
@@ -285,6 +285,20 @@ if (Number(held) > 0) {
   note('warn', 'held runs', `${held} run(s) waiting for approval`);
 } else {
   note('ok', 'held runs', 'none waiting');
+}
+
+// 5. Secrets that must be usable here. The Management API token is the only
+//    way to read production logs, so a wrong-shaped value makes every diagnosis
+//    blind while looking like a service outage (#209: a bare UUID answered
+//    `401 {"message":"JWT could not be decoded"}`, and the same value had been
+//    copied into RESEND_API_KEY — #186). A missing value is not flagged: CI runs
+//    this with only GH_TOKEN, and "not configured here" is not a misconfig.
+const tokenProblem = supabaseTokenProblem({
+  token: process.env.SUPABASE_ACCESS_TOKEN,
+  resendKey: process.env.RESEND_API_KEY,
+});
+if (tokenProblem) {
+  note(tokenProblem.status === 'present' ? 'ok' : 'fail', 'secrets', tokenProblem.reason);
 }
 
 const ICON = { ok: 'OK  ', warn: 'WARN', fail: 'FAIL' };
