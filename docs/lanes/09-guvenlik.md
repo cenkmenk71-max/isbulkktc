@@ -1816,3 +1816,73 @@ kapsam dışı.
 ### Devir
 
 Yeni devir yok — #508 bu lane'in kendi dosyasındaydı ve kapatıldı.
+
+## Durum (2026-11-09, 45. tur) — tedarik zinciri: kilit dosyası sınırı (#188)
+
+Brief'in 5. hedefi (tedarik zinciri: kilit dosyası) ve açık devir **#188**
+(LANE-INFRA) alındı. Bulgu #188'de zaten kanıtlanmıştı; bu tur onu **kalıcı bir
+kapıya** çevirdi, çünkü bulgu bir `todo`ya bağlıydı ve hiçbir test `bun.lock`'un
+manifesti çözmesini zorlamıyordu.
+
+### Bulgu (kanıtlı) — ikinci kilit dosyası bayat, Dependabot yalnız onu tarıyor
+
+Depo tek paket yöneticisi kullanır: CI her işte `bun install --frozen-lockfile`
+çalıştırır (AGENTS.md: "`npm ci` fails against bun.lock"). Ama
+`package-lock.json` de commit'li ve **Dependabot'un npm ekosistemi yalnız onu
+okur** — yani gerçek kilit dosyası (`bun.lock`) hiç taranmaz.
+
+- **Gözlenen (ölçüldü):** `package-lock.json` (lockfileVersion 3) `package.json`'ın
+  bildirdiği **dört** doğrudan bağımlılığı çözmez — `qrcode`, `web-push` (prod),
+  `jsqr`, `pngjs` (dev) — ve `lucide-react`'i `1.63.0`'ta sabitler (`bun.lock`
+  `1.62.0`; manifest `^1.16.0`).
+- **Beklenen:** kilit dosyası, yanındaki manifestin **her** doğrudan bağımlılığını
+  çözmeli (npm bir eksiği "out of sync" sayıp `npm ci`'ı reddeder).
+- **Etki:** danışma (advisory) taraması **sevk edilenden farklı bir ağacı** okur;
+  bir paketin advisory'si bayat kilitte çözülmemişse görünmez. Açık alert'ler
+  yalnız dev zincirindedir (`bun audit --prod` temiz, 229 paket) → üretim çalışma
+  zamanı etkilenmez; önem **düşük-orta**, ama kör nokta gerçek.
+- **Önerilen düzeltme (sahibi LANE-INFRA):** `package-lock.json`'ı sil (tercih
+  edilen; `.gitignore`) ya da `package.json` ile aynı değişiklikte yeniden üret.
+
+### Kapı + kalıcılaştırma
+
+`tests/security/lockfile-coverage.test.ts` (yeni, 4 test):
+
+1. **Self-test** — çözülmüş ad kümesi hem npm (`node_modules/<ad>`) hem bun
+   (çıplak ad) biçimini normalize ediyor; eksik-çözüm mantığı doğru ayırıyor.
+2. **Kapı — `bun.lock` workspace manifesti `package.json`'a birebir eşit**
+   (`dependencies` + `devDependencies`, sıralı karşılaştırma).
+3. **Kapı — `bun.lock` her doğrudan bağımlılığı çözüyor.**
+4. **`todo` — `package-lock.json` her doğrudan bağımlılığı çözüyor** (açık bulgu
+   #188; LANE-INFRA düzeltince kendi başına yeşile döner).
+
+**Mutasyon (vakumlu değil):** `bun.lock`'un workspace bloğundan `qrcode` silinince
+manifest kapısı **kırmızı** (`fail 1`); geri alınınca yeşil. İnvariant bilerek
+**yalnız doğrudan bağımlılıklara** dar tutuldu — bir kilit dosyasının çözmek
+zorunda olduğu tam küme bu, ve kilit sürümleri arasında kararlı (transitive
+bütünlük bu sınırın dışında, alakasız nedenlerle kayar).
+
+### Dokümanlar
+
+- `docs/threat-model.md`: "Doğrulanan güçlü kontroller" altına **kilit dosyası
+  sınırı** maddesi (CI izinleri maddesinin kardeşi) ve "Açık bulgular"a **5.**
+  madde (bayat ikinci kilit + Dependabot kör noktası, sahibi LANE-INFRA, #188).
+- `tests/security/README.md`: kapsam tablosuna satır + bulgular tablosundaki #188
+  satırı ölçülen dört eksikle ve `lucide-react` sapmasıyla güncellendi.
+
+### Kapılar (yeşil)
+
+- `bun run test:security` → 191 test / 181 pass / **0 fail** / 10 todo.
+- `bun run lint` ✓ · `bun run typecheck` ✓ · `bun run check:frontend-source` ✓.
+- `bun run test:unit` → 895 test / 893 pass / 0 fail / 2 todo.
+
+### Bakılmayan / değişmeyen
+
+`#424` bu turda yeniden triyaj edilmedi (tur 43). `docs/data-retention.md`
+değişmedi. Erişilebilirlik/kontrast/RTL bu lane'de kapsam dışı.
+
+### Devir
+
+Yeni devir yok — #188 zaten açık (`agent:handoff`, LANE-INFRA); bu tur kanıtı
+kapıya çevirdi. Sahibi `package-lock.json`'ı siler/yeniden üretirse `todo`
+kendiliğinden kapanır.
