@@ -338,6 +338,31 @@ test("publishApprovedJob maps a package error to its own copy", async () => {
   }
 });
 
+test("publishApprovedJob maps 42501 to unauthorized and 22023 to publishFailed", async () => {
+  const cases: [string, string][] = [
+    ["42501", "unauthorized"],
+    ["22023", "publishFailed"],
+    ["XX000", "publishFailed"],
+  ];
+
+  for (const [code, expected] of cases) {
+    signedIn({
+      tables: { jobs: { data: { company_id: COMPANY }, error: null } },
+      rpcs: {
+        ...memberRpc(true),
+        publish_approved_job: { data: null, error: { code } },
+      },
+    });
+
+    const { publishApprovedJob } = await actions();
+    const state = await publishApprovedJob(
+      { status: "idle", message: "idle" },
+      form({ jobId: JOB }),
+    );
+    assert.equal(state.message, expected, `RPC code ${code}`);
+  }
+});
+
 test("publishApprovedJob announces the listing by mail after a successful RPC", async () => {
   signedIn({
     tables: {
