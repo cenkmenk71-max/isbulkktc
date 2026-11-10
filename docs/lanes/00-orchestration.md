@@ -439,3 +439,30 @@ sabitledi (11/11).
 **Ders.** `src/**` ağacının tabloda kapsanmayan kök dosyaları (`src/proxy.ts`
 gibi, `src/` altında ama hiçbir lane glob'una girmeyen) sessizce sahipsiz kalır.
 Yeni bir üst-düzey kaynak dosyası eklerken sahiplik satırını da güncelle.
+
+### Tur — Copilot-only workspace config sahiplendirildi (#475)
+
+**Kapsam.** `#475` iki kaynağın OpenHands tarafından **okunmadığını** kanıtlıyor:
+`.github/skills/` (yalnız `.agents/skills/` proje skill'i olarak yüklenir) ve
+`.mcp.json` (OpenHands'ta proje-seviyesi MCP dosyası yok). İkisi de sahiplik
+tablosunda ya hiç geçmiyordu ya da `.github/**` ile dolaylı eşleşiyordu.
+
+**Bulgu (doğruluk + mantık).** `docs/developer-tooling.md` ikisini de OpenHands
+"proje skill'i"/"proje MCP'si" gibi sunuyordu; `scripts/lane-collisions.mjs`
+`.mcp.json` ve `docs/developer-tooling.md` için "owned by no lane" diyordu
+(`.github/skills/**` yalnız `.github/**` sayesinde eşleşiyordu).
+
+**Düzeltme.** `docs/developer-tooling.md` düzeltildi (her iki kaynağın yalnız VS
+Code Copilot için olduğu açıkça yazıldı). LANE-INFRA sahiplik satırına `.mcp.json`
++ `docs/developer-tooling.md` eklendi. `lane-collisions.test.mjs` üç yolu
+sabitledi (12/12). **Taşıma kararı (T2):** dört iş akışı `.agents/skills/`'e
+**taşınmaz** — lane brief'leri proje-özgü yordamsal bilgiyi zaten taşır; ikinci
+kopya sapma yüzeyi olurdu. Karar `docs/developer-tooling.md`'de kayıtlı.
+
+**Kuyruk durumu.** `#306` (bozuk doğrudan-çalıştırma koruması), `#428`
+(`lane-collisions` CI'a bağlı), `#188` (`package-lock.json` düşürüldü),
+`#292` (`indexing:verify`), `#385` (`%DAYS%` kapısı), `#447` (ilçe görselleri
+500 KB bütçesi), `#309` (`indexnow-key.mjs` ad==gövde), `#386`
+(`src/server/email/**` → LANE-URUN) — **hepsi bu dalda daha önce düzeltilmiş
+commit'lerle mevcut** (sırasıyla `6c2dd0c`, `4de5349`, `cc7a9dc`, …); doğrulandı.
+Bu turda kalan tek açık kalem `#475`'ti.
