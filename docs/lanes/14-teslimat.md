@@ -730,3 +730,61 @@ kalır** — bu yüzden log "şu ana kadarki her şey" sayılmaz, zincire karş�
 okunur ve kayıt PR'ı merge olduktan *sonra* uç yeniden kontrol edilir.
 
 **Canlıya dokundu mu:** hayır. Yalnız `docs/deploy-log.md` ve bu dosya.
+
+---
+
+## Tur 17 — 2026-11-10 (kuyruk boş, kayıt yetişti, #209 kanıtı tazelendi)
+
+**Kapsam.** Atanmış iş: açık issue **#209** (`SUPABASE_ACCESS_TOKEN` geçersiz → üretim
+loglarına erişilemiyor). Ayrıca merge kuyruğu okundu, sahip olunan iki script'te
+gerçek bir hata düzeltildi, kural 4 kaydı yazıldı, canlı ölçüm yapıldı.
+
+**#209 kanıtı — bayat.** Issue (2026-11-05) `GET https://api.supabase.com/v1/projects`
+→ **401 `{"message":"JWT could not be decoded"}`**, 36 karakter `d81…` önekli token,
+ve değerin `RESEND_API_KEY` ile **birebir aynı** olduğunu (#186) bildiriyordu. Bu
+turda enjekte edilen secret'a karşı yeniden ölçüldü: token **`sbp_` önekli, 44
+karakter** ve çağrı **HTTP 200** dönüyor — `isbulkktc` projesi
+(`uwmhquvzbilbfzdrlxmb`, `ap-south-1`, `ACTIVE_HEALTHY`). İki secret **farklı**.
+Yani #209'un iki isteği de ortamda karşılanmış: geçerli `sbp_…` token kurulu ve
+secret karışıklığı giderilmiş. **Sahiplik env/secret → insan** (issue'nun kendisi
+böyle diyor); kalan istek (#207'nin gerçek hata kodunu auth loglarından alıp
+eklemek) sahip tarafının işi. Bu lane sahip olmadığı hiçbir dosyaya yazmadı; kanıt
+`docs/deploy-log.md`'ye kaydedildi.
+
+**Bulgu (finding 31) — geçersiz Vercel token'ı, suçu olmayan team slug'ının üstüne
+atılıyordu.** `scripts/verify-production-deployment.mjs` ve
+`scripts/prune-vercel-deployments.mjs`, team listesini alırken HTTP durumunu
+yok sayıp gövdeyi okuyordu. Vercel geçersiz/süresi dolmuş bir token'a **403
+`{"error":{"code":"forbidden","invalidToken":true}}`** döndürür; boş `teams` listesi
+`no team with slug "orijin1"` (veya `Could not list teams (HTTP 403)`) mesajına
+düşüyordu — operatörü **ölü bir kimlik bilgisini döndürmek yerine** slug'ı ve proje
+adını yeniden kontrol etmeye yolluyordu. Boşluk-only bir token da "ayarlanmış"
+sayılıyordu. Düzeltme: `describeTeamLookupFailure()` (401 / `invalidToken` →
+kimlik bilgisi hatası olarak adlandırılır, gerçek sunucu hatası düz HTTP satırında
+kalır) + `readVercelToken()` (trim eder; boş secret "ayarlı değil" okunur). Bu,
+#209'un *sınıfıyla* aynı hata: geçersiz bir token'ın yapılandırma hatası olarak
+raporlanması. Regresyon testleri iki script için de eklendi.
+
+**Kural 4 — kayıt yetiştirildi.** Bu lane'in Tur 16 kaydı (#589) ile ondan sonra
+inen dört merge kaydedilmemişti: **#589** (`14629df`, 14:49:20Z, bu lane'in kendi
+kaydı), **#591** (`a1eebc2`, 15:41:03Z), **#592** (`ddde4b7`, 15:54:37Z), **#593**
+(`7ce7acb`, 15:59:46Z), **#594** (`60fc14e`, 16:13:44Z). Sıra first-parent
+zincirden okundu (`9f8a57a` → `14629df` → `a1eebc2` → `ddde4b7` → `7ce7acb` →
+`60fc14e`), `mergedAt`'ten değil. Finding 28'in olağan tekrarı: kayıt PR'ı merge
+olduktan *sonra* inen merge'ler bir sonraki tura kalır.
+
+**Yayın doğrulaması (görev 3) — ✅ doğrulandı.** 16:20Z: `main` = canlı =
+`60fc14e`. `GET /api/build-info` → `{"commit":"60fc14e2…","environment":"production"}`;
+`GET /` **200**. `Vercel` status'u uçta **mevcut**: `success — "Deployment has
+completed"` (16:14:21Z, #594 merge'inden ~37 sn sonra) — #547'nin dondurduğu Git
+entegrasyonu çalışıyor, her merge dakikanın altında canlıya iniyor.
+
+**Merge kuyruğu (görev 1).** `gh pr list --state open` bu turda **tek** PR döndü:
+**#579** (`lane/infra`, `agent:blocked`) — `.github/workflows/**` değiştiriyor, brief
+kuralı gereği (iki fren) bu lane merge etmez; insan onayı bekliyor. Merge edilebilir
+bekleyen iş yoktu.
+
+**Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅, `test:unit` ✅.
+
+**Canlıya dokundu mu:** hayır. Yalnız `scripts/verify-production-deployment.mjs`,
+`scripts/prune-vercel-deployments.mjs` (+ testleri) ve bu iki doküman.
