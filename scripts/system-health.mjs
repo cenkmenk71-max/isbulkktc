@@ -15,7 +15,7 @@
 
 import { execFileSync } from 'node:child_process';
 
-import { classifyProductionProbe, classifyRedRuns, redPullRequests, redRunsOnMain, stuckPullRequests } from './system-health-core.mjs';
+import { classifyProductionProbe, classifyRedRuns, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
 const asJson = process.argv.includes('--json');
@@ -161,6 +161,19 @@ if (redPRs.length > 0) {
     `${redPRs.length} open with a red check (cannot merge): ${redPRs
       .map((p) => `#${p.number} (${p.redChecks.join(', ')})`)
       .join('; ')}`,
+  );
+}
+// A check red on more than one PR is not that PR's failure: it is a shared
+// gate (e.g. `lane-collisions`, which reads the whole queue) freezing every
+// PR behind one lane's mistake. Name it once, so the operator fixes the cause
+// instead of chasing N unrelated reds.
+for (const gate of queueGlobalGates(prs)) {
+  note(
+    'warn',
+    'queue-global gate',
+    `${gate.check} is red on ${gate.prs.length} PRs (${gate.prs
+      .map((n) => `#${n}`)
+      .join(', ')}): one lane's mistake freezes the whole queue — fix the cause, not each PR`,
   );
 }
 if (prs.length === 0) note('ok', 'PRs', 'none open');

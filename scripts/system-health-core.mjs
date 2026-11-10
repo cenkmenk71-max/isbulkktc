@@ -216,6 +216,39 @@ export function redPullRequests(prs) {
 }
 
 /**
+ * Red checks that refuse more than one open pull request at once.
+ *
+ * Some gates read *every* open PR instead of just the one they run on:
+ * `lane-collisions.mjs` fails when any lane edits a file it does not own, so a
+ * single lane's mistake marks that check red on *every* PR in the queue. That is
+ * a self-inflicted freeze — the queue cannot drain no matter how healthy each
+ * individual PR is — and it is a different diagnosis from a PR failing its own
+ * tests. `redPullRequests` names the gate per PR but cannot say it is shared, so
+ * the operator sees two unrelated reds instead of one systemic cause.
+ *
+ * A check is queue-global when the same check name is red on two or more open
+ * PRs. One PR alone cannot distinguish "my gate is broken" from "a shared gate
+ * is broken", so a single red is deliberately not reported here.
+ *
+ * @param {Array<object>} prs same shape as {@link redPullRequests}
+ * @returns {Array<{check: string, prs: number[]}>}
+ */
+export function queueGlobalGates(prs) {
+  const byCheck = new Map();
+  for (const pr of redPullRequests(prs)) {
+    for (const check of pr.redChecks) {
+      if (!byCheck.has(check)) byCheck.set(check, []);
+      byCheck.get(check).push(pr.number);
+    }
+  }
+  const gates = [];
+  for (const [check, numbers] of byCheck) {
+    if (numbers.length > 1) gates.push({ check, prs: numbers });
+  }
+  return gates;
+}
+
+/**
  * Vercel's marker for a deployment the account is no longer allowed to serve.
  *
  * `402 Payment Required` with `x-vercel-error: DEPLOYMENT_DISABLED` means the

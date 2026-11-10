@@ -11,6 +11,7 @@ import {
   isRedCheck,
   isUnresolvedMergeState,
   newestRunPerWorkflow,
+  queueGlobalGates,
   redPullRequests,
   redRunsOnMain,
   redWorkflowsOnMain,
@@ -423,6 +424,57 @@ test("redPullRequests tolerates missing input and unnamed checks", () => {
     ]),
     [{ number: 7, redChecks: ["(unnamed check)"] }],
   );
+});
+
+// ---------------------------------------------------------------------------
+// queueGlobalGates — one shared gate red on N PRs is one systemic cause, not N
+// unrelated failures. The bug: `lane-collisions.mjs` reads the whole queue, so
+// one lane editing a file it does not own marked that check red on every PR.
+// The health check named each PR's red separately and the operator could not
+// see the freeze was self-inflicted and single-cause.
+// ---------------------------------------------------------------------------
+
+const prWithCheck = (number, check, mergeStateStatus = "BLOCKED") => ({
+  number,
+  mergeStateStatus,
+  statusCheckRollup: [{ name: check, conclusion: "FAILURE" }],
+});
+
+test("the same check red on two PRs is named once as a queue-global gate", () => {
+  assert.deepEqual(
+    queueGlobalGates([
+      prWithCheck(555, "Lane collisions"),
+      prWithCheck(557, "Lane collisions"),
+    ]),
+    [{ check: "Lane collisions", prs: [555, 557] }],
+  );
+});
+
+test("a check red on only one PR is that PR's own failure, not a shared gate", () => {
+  assert.deepEqual(queueGlobalGates([prWithCheck(555, "E2E (1/4)")]), []);
+});
+
+test("two different checks each red on one PR do not make a queue-global gate", () => {
+  assert.deepEqual(
+    queueGlobalGates([prWithCheck(555, "Static checks"), prWithCheck(556, "E2E (1/4)")]),
+    [],
+  );
+});
+
+test("a shared gate and a private failure are separated", () => {
+  assert.deepEqual(
+    queueGlobalGates([
+      prWithCheck(555, "Lane collisions"),
+      prWithCheck(557, "Lane collisions"),
+      prWithCheck(555, "Database"),
+    ]),
+    [{ check: "Lane collisions", prs: [555, 557] }],
+  );
+});
+
+test("queueGlobalGates tolerates missing input", () => {
+  assert.deepEqual(queueGlobalGates(undefined), []);
+  assert.deepEqual(queueGlobalGates([]), []);
 });
 
 // ---------------------------------------------------------------------------
