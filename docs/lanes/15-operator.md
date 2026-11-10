@@ -792,3 +792,37 @@ Canlı koşu artık donmayı adlandırıyor: `blocked PRs  2 open with a red che
 **Kalan (başka lane).** Kuyruk donması hâlâ sürüyor; kaynağı #549'un sahiplik
 eksiği (bkz. önceki bölüm), düzeltmesi LANE-INFRA/#552'de. Bekçi artık görünür
 kılıyor ama **çözemez** — bu doğru sınır.
+
+## Tur notları — kuyruk-global kapı (2026-11-10)
+
+Önceki tur "kırmızı check'i adlandır"ı ekledi; bu tur **aynı check'in N PR'da
+kırmızı olması**nın *tek bir sistemik neden* olduğunu görünür kıldı. Aile #8.
+
+**Bulgu.** `redPullRequests` her PR'ın kırmızısını **ayrı ayrı** listeliyordu:
+`blocked PRs 2 open with a red check: #557 (Static checks); #555 (Static checks)`.
+Operatör bunu iki bağımsız arıza sanar; gerçekte **tek** kök var —
+`lane-collisions.mjs` kuyruğun tamamını okur, `#557`'nin sahipsiz dosyası **her**
+PR'ın `Static checks`'ini kırar. Kapı kuyruk-global olduğu için (zorunlu
+`Quality, database and E2E`'yi besler) **hiçbir** PR merge olamaz: N kırmızı,
+1 neden.
+
+**Düzeltme (LANE-OPERATÖR dosyaları).** `system-health-core.mjs`'e
+`queueGlobalGates(prs)`: `redPullRequests` çıktısını check adına göre gruplar;
+aynı ad **2+ PR'da** kırmızıysa tek kayıt döner (`{check, prs}`). Tek PR'daki
+kırmızı bilinçli olarak **sayılmaz** — o PR'ın kendi arızası olabilir, paylaşılan
+kapı olduğu kanıtlanamaz. `system-health.mjs` her kapı için **tek** `queue-global
+gate` uyarısı basar.
+
+**Kanıt.** `scripts/system-health.test.mjs` **48/48** (yeni 6 test). Mutasyon:
+`queueGlobalGates` `[]` döndürecek şekilde bozulunca **46 pass / 2 fail**;
+geri alınınca **48/48**. Canlı koşu artık iki satırı da yazıyor:
+```
+  WARN blocked PRs       2 open with a red check (cannot merge): #557 (Static checks); #555 (Static checks)
+  WARN queue-global gate Static checks is red on 2 PRs (#557, #555): one lane's mistake freezes the whole queue — fix the cause, not each PR
+```
+`lint`/`typecheck`/`check:frontend-source` temiz, `test:unit` **985/985**.
+
+**Ders.** Bir sinyal **kaç varlıkta** tekrarlandığını söylemiyorsa, operatör
+"paylaşılan neden" ile "N bağımsız arıza"yı ayıramaz. Aynı adı taşıyan kırmızıları
+grupla; 2+ ise tek sistemik neden olarak sun. Bekçi yine **çözemez** — kapının
+kendisi global, düzeltme LANE-INFRA'da (#552'ye yapısal bulgu olarak eklendi).
