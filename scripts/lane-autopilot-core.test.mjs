@@ -792,16 +792,17 @@ test("noCommitInWindow cannot judge without a start time or with the window disa
 // poisonedConversations — the commit signal is the third way in
 // ---------------------------------------------------------------------------
 
-test("a running lane with no commit in the window is poisoned even while updated_at moves", () => {
-  // The read-only loop: greps and re-reads forever, so `updated_at` is current
-  // and the idle signal never fires. The commit signal sees the branch has not
-  // moved since the conversation started and catches it.
-  const looping = runningLane({
+test("a stopped lane with no commit in the window is poisoned", () => {
+  // A lane that stopped with nothing on its branch: the transcript only grows,
+  // so it must not be resumed. The commit signal catches it because "never
+  // pushed" really does mean "never landed anything" once the lane is stopped.
+  const stalled = runningLane({
     title: "LANE-infra",
     created_at: hoursAgo(1),
     updated_at: new Date(NOW - 60_000).toISOString(),
+    execution_status: "finished",
   });
-  const poisoned = poisonedConversations([looping], {
+  const poisoned = poisonedConversations([stalled], {
     now: NOW,
     noCommitMs: 20 * 60_000,
     commitsByLane: new Map([["infra", NOW - 2 * 3600_000]]),
@@ -809,11 +810,34 @@ test("a running lane with no commit in the window is poisoned even while updated
   assert.equal(poisoned.length, 1);
 });
 
+test("a running lane is never judged commit-less — its remote branch lags its local work", () => {
+  // The false positive: a lane commits locally and pushes only at PR time, so
+  // its remote branch reads stale while it is working. `updated_at` is current
+  // (it is mid-turn), the ceiling has not fired, so no signal may poison it —
+  // interrupting it would kill live work. This is LANE-supabase, which held
+  // local commits at 23:05/23:08 while `refs/heads/lane/supabase` still read
+  // 17:49, and the dry run said `would interrupt stalled`.
+  const working = runningLane({
+    title: "LANE-supabase",
+    created_at: hoursAgo(1),
+    updated_at: new Date(NOW - 60_000).toISOString(),
+  });
+  assert.deepEqual(
+    poisonedConversations([working], {
+      now: NOW,
+      noCommitMs: 20 * 60_000,
+      commitsByLane: new Map([["supabase", NOW - 2 * 3600_000]]),
+    }),
+    [],
+  );
+});
+
 test("a lane that committed since it started is spared by the commit signal", () => {
   const working = runningLane({
     title: "LANE-infra",
     created_at: hoursAgo(1),
     updated_at: new Date(NOW - 60_000).toISOString(),
+    execution_status: "finished",
   });
   assert.deepEqual(
     poisonedConversations([working], {
@@ -832,6 +856,7 @@ test("an unreadable commit map leaves the lane unjudged on the commit signal", (
     title: "LANE-infra",
     created_at: hoursAgo(1),
     updated_at: new Date(NOW - 60_000).toISOString(),
+    execution_status: "finished",
   });
   assert.deepEqual(
     poisonedConversations([laneConv], { now: NOW, noCommitMs: 20 * 60_000, commitsByLane: new Map() }),
