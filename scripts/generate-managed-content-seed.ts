@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   packageTierColors,
   packageTierPlanCodes,
@@ -91,180 +91,203 @@ async function readMessages(locale: Locale): Promise<Messages> {
   return JSON.parse(raw) as Messages;
 }
 
-const statements: string[] = [];
+type SeedBuild = {
+  sql: string;
+  legalCount: number;
+  faqCount: number;
+  planCount: number;
+  directoryCount: number;
+  locationCount: number;
+};
 
-// Managed tables, cleared in dependency order. `site_content` and `faq_entries`
-// carry no foreign keys, so the order only matters for the directory pair.
-statements.push(
-  "delete from public.directory_locations;",
-  "delete from public.directory_companies;",
-  "delete from public.faq_entries;",
-  "delete from public.site_content;",
-  "delete from public.listing_plans;",
-);
+// Builds the full SQL text for `supabase/seed-managed-content.sql`. Exported so
+// `tests/unit/managed-content-seed.test.ts` can assert the committed file matches
+// a fresh build (the seed drifted once: the #345 FAQ rewording never reached it).
+export async function buildSeedSql(): Promise<SeedBuild> {
+  const statements: string[] = [];
 
-// Legal documents ----------------------------------------------------------
-
-let legalCount = 0;
-for (const locale of LOCALES) {
-  const messages = await readMessages(locale);
-  const legal = messages.Legal;
-  for (const page of ["privacy", "cookies", "terms"] as const) {
-    const document = parseLegalDocument(legal[page]);
-    statements.push(
-      `insert into public.site_content (content_key, locale, document) values (` +
-        `${sqlText(`legal.${page}`)}, ${sqlText(locale)}, ` +
-        `${sqlText(JSON.stringify(document))}::jsonb);`,
-    );
-    legalCount += 1;
-  }
-}
-
-// FAQ ----------------------------------------------------------------------
-
-const faqSource = await readFile(
-  fileURLToPath(new URL("../src/content/ai-visibility/faq.ts", import.meta.url)),
-  "utf8",
-);
-const faqByLocale = parseFaqSource(faqSource);
-
-let faqCount = 0;
-for (const locale of LOCALES) {
-  faqByLocale[locale].forEach((entry, index) => {
-    statements.push(
-      `insert into public.faq_entries (locale, question, answer, sort_order, is_published) values (` +
-        `${sqlText(locale)}, ${sqlText(entry.question)}, ${sqlText(entry.answer)}, ` +
-        `${index}, true);`,
-    );
-    faqCount += 1;
-  });
-}
-
-// Listing plans ------------------------------------------------------------
-
-const planRows = await buildPlanRows();
-for (const row of planRows) {
+  // Managed tables, cleared in dependency order. `site_content` and `faq_entries`
+  // carry no foreign keys, so the order only matters for the directory pair.
   statements.push(
-    `insert into public.listing_plans (` +
-      `code, audience, name, blurb, features, color, listing_count, ` +
-      `price_1, price_7, price_30, is_active, sort_order) values (` +
-      [
-        sqlText(row.code),
-        sqlText(row.audience),
-        sqlText(row.name),
-        sqlText(row.blurb),
-        sqlTextArray(row.features),
-        sqlText(row.color),
-        row.listingCount === null ? "null" : String(row.listingCount),
-        String(row.price1),
-        String(row.price7),
-        String(row.price30),
-        "true",
-        String(row.sortOrder),
-      ].join(", ") +
-      ");",
+    "delete from public.directory_locations;",
+    "delete from public.directory_companies;",
+    "delete from public.faq_entries;",
+    "delete from public.site_content;",
+    "delete from public.listing_plans;",
   );
-}
 
-// Company directory --------------------------------------------------------
+  // Legal documents ----------------------------------------------------------
 
-const directoryRaw = await readFile(
-  fileURLToPath(
-    new URL(
-      "../src/features/companies/data/company-directory.json",
-      import.meta.url,
-    ),
-  ),
-  "utf8",
-);
-const logoManifest = JSON.parse(
-  await readFile(
+  let legalCount = 0;
+  for (const locale of LOCALES) {
+    const messages = await readMessages(locale);
+    const legal = messages.Legal;
+    for (const page of ["privacy", "cookies", "terms"] as const) {
+      const document = parseLegalDocument(legal[page]);
+      statements.push(
+        `insert into public.site_content (content_key, locale, document) values (` +
+          `${sqlText(`legal.${page}`)}, ${sqlText(locale)}, ` +
+          `${sqlText(JSON.stringify(document))}::jsonb);`,
+      );
+      legalCount += 1;
+    }
+  }
+
+  // FAQ ----------------------------------------------------------------------
+
+  const faqSource = await readFile(
+    fileURLToPath(new URL("../src/content/ai-visibility/faq.ts", import.meta.url)),
+    "utf8",
+  );
+  const faqByLocale = parseFaqSource(faqSource);
+
+  let faqCount = 0;
+  for (const locale of LOCALES) {
+    faqByLocale[locale].forEach((entry, index) => {
+      statements.push(
+        `insert into public.faq_entries (locale, question, answer, sort_order, is_published) values (` +
+          `${sqlText(locale)}, ${sqlText(entry.question)}, ${sqlText(entry.answer)}, ` +
+          `${index}, true);`,
+      );
+      faqCount += 1;
+    });
+  }
+
+  // Listing plans ------------------------------------------------------------
+
+  const planRows = await buildPlanRows();
+  for (const row of planRows) {
+    statements.push(
+      `insert into public.listing_plans (` +
+        `code, audience, name, blurb, features, color, listing_count, ` +
+        `price_1, price_7, price_30, is_active, sort_order) values (` +
+        [
+          sqlText(row.code),
+          sqlText(row.audience),
+          sqlText(row.name),
+          sqlText(row.blurb),
+          sqlTextArray(row.features),
+          sqlText(row.color),
+          row.listingCount === null ? "null" : String(row.listingCount),
+          String(row.price1),
+          String(row.price7),
+          String(row.price30),
+          "true",
+          String(row.sortOrder),
+        ].join(", ") +
+        ");",
+    );
+  }
+
+  // Company directory --------------------------------------------------------
+
+  const directoryRaw = await readFile(
     fileURLToPath(
       new URL(
-        "../src/features/companies/data/company-logos.json",
+        "../src/features/companies/data/company-directory.json",
         import.meta.url,
       ),
     ),
     "utf8",
-  ),
-) as {
-  logos: Record<
-    string,
-    { file: string; domain: string; width?: number; height?: number }
-  >;
-};
-
-const directory = JSON.parse(directoryRaw) as {
-  id: string;
-  name: string;
-  categories: string[];
-  locations: {
-    address: string | null;
-    municipality: string | null;
-    phone: string | null;
-    website?: string | null;
-    email?: string | null;
-  }[];
-}[];
-
-const logoRecords = logoManifest.logos ?? {};
-const logoByDomain = new Map<string, { file: string; width?: number; height?: number }>();
-for (const record of Object.values(logoRecords)) {
-  if (record?.domain && record?.file && !logoByDomain.has(record.domain)) {
-    logoByDomain.set(record.domain, record);
-  }
-}
-
-function domainOf(website: string | null | undefined): string | null {
-  if (!website) return null;
-  try {
-    return new URL(website).hostname.replace(/^www\./, "").toLowerCase();
-  } catch {
-    return null;
-  }
-}
-
-let locationCount = 0;
-for (const entry of directory) {
-  const direct = logoRecords[entry.id];
-  const byDomain = entry.locations
-    .map((location) => domainOf(location.website))
-    .map((domain) => (domain ? logoByDomain.get(domain) : undefined))
-    .find((record) => Boolean(record?.file));
-  const logo = direct ?? byDomain;
-
-  statements.push(
-    `insert into public.directory_companies (` +
-      `directory_entry_id, name, categories, logo_file, logo_domain, logo_width, logo_height) values (` +
-      [
-        sqlText(entry.id),
-        sqlText(entry.name),
-        sqlTextArray(entry.categories),
-        sqlNullableText(logo?.file),
-        sqlNullableText(logo?.domain),
-        logo?.width ? String(logo.width) : "null",
-        logo?.height ? String(logo.height) : "null",
-      ].join(", ") +
-      ");",
   );
+  const logoManifest = JSON.parse(
+    await readFile(
+      fileURLToPath(
+        new URL(
+          "../src/features/companies/data/company-logos.json",
+          import.meta.url,
+        ),
+      ),
+      "utf8",
+    ),
+  ) as {
+    logos: Record<
+      string,
+      { file: string; domain: string; width?: number; height?: number }
+    >;
+  };
 
-  entry.locations.forEach((location, index) => {
+  const directory = JSON.parse(directoryRaw) as {
+    id: string;
+    name: string;
+    categories: string[];
+    locations: {
+      address: string | null;
+      municipality: string | null;
+      phone: string | null;
+      website?: string | null;
+      email?: string | null;
+    }[];
+  }[];
+
+  const logoRecords = logoManifest.logos ?? {};
+  const logoByDomain = new Map<string, { file: string; width?: number; height?: number }>();
+  for (const record of Object.values(logoRecords)) {
+    if (record?.domain && record?.file && !logoByDomain.has(record.domain)) {
+      logoByDomain.set(record.domain, record);
+    }
+  }
+
+  function domainOf(website: string | null | undefined): string | null {
+    if (!website) return null;
+    try {
+      return new URL(website).hostname.replace(/^www\./, "").toLowerCase();
+    } catch {
+      return null;
+    }
+  }
+
+  let locationCount = 0;
+  for (const entry of directory) {
+    const direct = logoRecords[entry.id];
+    const byDomain = entry.locations
+      .map((location) => domainOf(location.website))
+      .map((domain) => (domain ? logoByDomain.get(domain) : undefined))
+      .find((record) => Boolean(record?.file));
+    const logo = direct ?? byDomain;
+
     statements.push(
-      `insert into public.directory_locations (` +
-        `directory_entry_id, location_index, address, municipality, phone, website, email) values (` +
+      `insert into public.directory_companies (` +
+        `directory_entry_id, name, categories, logo_file, logo_domain, logo_width, logo_height) values (` +
         [
           sqlText(entry.id),
-          String(index),
-          sqlNullableText(location.address),
-          sqlNullableText(location.municipality),
-          sqlNullableText(location.phone),
-          sqlNullableText(location.website),
-          sqlNullableText(location.email),
+          sqlText(entry.name),
+          sqlTextArray(entry.categories),
+          sqlNullableText(logo?.file),
+          sqlNullableText(logo?.domain),
+          logo?.width ? String(logo.width) : "null",
+          logo?.height ? String(logo.height) : "null",
         ].join(", ") +
         ");",
     );
-    locationCount += 1;
-  });
+
+    entry.locations.forEach((location, index) => {
+      statements.push(
+        `insert into public.directory_locations (` +
+          `directory_entry_id, location_index, address, municipality, phone, website, email) values (` +
+          [
+            sqlText(entry.id),
+            String(index),
+            sqlNullableText(location.address),
+            sqlNullableText(location.municipality),
+            sqlNullableText(location.phone),
+            sqlNullableText(location.website),
+            sqlNullableText(location.email),
+          ].join(", ") +
+          ");",
+      );
+      locationCount += 1;
+    });
+  }
+
+  return {
+    sql: `${header}${statements.join("\n")}\n${footer}`,
+    legalCount,
+    faqCount,
+    planCount: planRows.length,
+    directoryCount: directory.length,
+    locationCount,
+  };
 }
 
 const header = [
@@ -285,13 +308,23 @@ const footer = [
 const outputPath = fileURLToPath(
   new URL("../supabase/seed-managed-content.sql", import.meta.url),
 );
-await writeFile(outputPath, `${header}${statements.join("\n")}\n${footer}`, "utf8");
 
-console.info(
-  `Wrote ${statements.length} statements to supabase/seed-managed-content.sql ` +
-    `(${legalCount} legal documents, ${faqCount} FAQ entries, ${planRows.length} listing plans, ` +
-    `${directory.length} directory companies, ${locationCount} branches).`,
-);
+async function main(): Promise<void> {
+  const { sql, ...stats } = await buildSeedSql();
+  await writeFile(outputPath, sql, "utf8");
+
+  console.info(
+    `Wrote supabase/seed-managed-content.sql (${stats.legalCount} legal documents, ` +
+      `${stats.faqCount} FAQ entries, ${stats.planCount} listing plans, ` +
+      `${stats.directoryCount} directory companies, ${stats.locationCount} branches).`,
+  );
+}
+
+// Only write when invoked as a script; importing `buildSeedSql` (the unit test
+// that guards against seed drift) must not touch the committed file.
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  await main();
+}
 
 // ---------------------------------------------------------------------------
 
