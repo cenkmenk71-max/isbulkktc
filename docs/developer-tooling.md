@@ -18,8 +18,11 @@ kullanıcı sırlarına dokunmaz. Yetkili ürün mimarisi hâlâ
   görmez.** OpenHands proje skill'lerini tek bir yerden yükler:
   `.agents/skills/` (resmî doküman: Skills → Skill Locations; `.github/skills/`
   orada listelenmez). Lane'lerin yordamsal bilgisi `AGENTS.md` ve
-  `docs/lanes/<ad>.md` brief'lerindedir. Skill içerikleri ihtiyaç oldukça
-  yüklenir; her sohbete topluca eklenmez.
+  `docs/lanes/<ad>.md` brief'lerindedir. **Taşıma kararı (#475): bu dört iş
+  akışı `.agents/skills/`'e taşınmaz** — lane brief'leri proje-özgü yordamsal
+  bilgiyi (RLS/`search_path`, RPC grant'leri, pgTAP bağımsızlığı, Next 16
+  sunucu/istemci sınırı) zaten taşır; ikinci bir kopya sapma yüzeyi yaratırdı.
+  Skill içerikleri ihtiyaç oldukça yüklenir; her sohbete topluca eklenmez.
 - [`.agents/skills/playwright-cli/`](../.agents/skills/playwright-cli/SKILL.md):
   Playwright'ın resmi CLI agent skill'i; browser araçlarını context-efficient
   biçimde kullanır ve `@playwright/cli` ile aynı sürümde tutulur.
