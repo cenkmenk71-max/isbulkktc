@@ -173,7 +173,7 @@ hayır.** Bu halka kopuk değil; kanıt aşağıda.
 | C-10 | `http://` → `https://` | 301 (doğru) | `HTTP` |
 | C-11 | `X-Robots-Tag` (/, /jobs, /companies, /en, robots, sitemap) | **yok** (site geneli noindex yok) | `HTTP` |
 | C-12 | `<meta name="robots">` (/, /jobs, /en) | yok = varsayılan index,follow | `HTTP` |
-| C-13 | `google-site-verification` meta (üretim HTML) | **var** — `1zuidCsJ2y0GCfp_g-AmsYuagg_fIDDCo36POZr0wSM` | `HTTP` |
+| C-13 | `google-site-verification` meta (üretim HTML) | **YOK** — `grep -c site-verification` = **0** (6 dilde, 2026-11-10). Eski "var" kaydı **yanlıştı** → **V-01** (tur 38) | `HTTP` |
 | C-14 | Yandex doğrulama | DNS TXT `yandex-verification: 556993cbb856e57b` **var** | DoH |
 | C-15 | **Bing doğrulama** | HTML'de `msvalidate.01` **yok**; `/BingSiteAuth.xml` **404**; DNS TXT'te Bing kaydı **yok** | `HTTP`+DoH |
 | C-16 | Vercel alias `/` (CF'yi atlar) | 200 ama `x-robots-tag: noindex, nofollow` + canonical apex → **duplike içerik riski yok** | `HTTP` |
@@ -1262,7 +1262,7 @@ edildi, **A-01c canlıda kapalı**).
 | V-19 | Googlebot/Bingbot/YandexBot/DuckDuckBot/AhrefsBot `/` | hepsi **200**, `cf-mitigated` **yok** | 200 | HTTP |
 | V-02 | çıplak `curl/8.0` `/` | **103** (Early Hints), challenge değil | — | HTTP |
 | V-03 | `sqlmap/1.7` `/` (WAF regresyon) | **403** | 403 | HTTP |
-| V-04 | `google-site-verification` meta (üretim HTML) | **var** | var | HTTP |
+| V-04 | `google-site-verification` meta (üretim HTML) | **YOK** (`grep -c` = 0, 6 dil) | var | HTTP — **V-01** (tur 38; eski "var" yanlıştı) |
 | V-05 | `msvalidate.01` meta + `/BingSiteAuth.xml` | meta yok · **404** | var | HTTP |
 | V-06 | `www.` → apex | **200** (yönlendirme YOK; tur 36'da çürütüldü) | 301 | HTTP — **H-03** |
 | V-07 | Vercel alias `/` (doğrudan) | 200 + `x-robots-tag: noindex, nofollow` | noindex | HTTP |
@@ -2695,9 +2695,12 @@ rotalayamıyor). Sızıntı yok (jenerik `/500` gövdesi). Sahip: `src/app/api/*
 - **Bot engeli yok:** Googlebot/bingbot/YandexBot `/` → **200**, `cf-mitigated` yok.
 - **Sitemap tutarlı:** 207 `<loc>`'un **tamamı** `https://isbulkktc.com` host'unda
   (`www` karışıklığı yok); 75 `<lastmod>`.
-- **Doğrulama etiketi var:** `google-site-verification` **gerçek sayfalarda**
-  (`/`, `/en`, `/de`, `/en/jobs`) mevcut. (`/en/` → 308 `/en`; etiket **hedefte**
-  var — `/en/`'de görünmemesi yanıltıcı değil.)
+- **Doğrulama etiketi YOK:** `google-site-verification` **hiçbir sayfada yok**
+  (`/`, `/en`, `/de`, `/en/jobs`; `grep -c site-verification` = **0**, 2026-11-10).
+  `src/app/[locale]/layout.tsx` etiketi `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`'dan
+  okuyor; env **üretimde tanımsız** → etiket basılmıyor. **Önceki "gerçek sayfalarda
+  mevcut" kaydı YANLIŞTI** (bkz. tur 38 / **V-01**). DNS TXT'te iki token var ama
+  meta yok → GSC mülkü **doğrulanmamış** olabilir.
 - **robots.txt** yalnız `/api/`, `/auth/` ve **varsayılan-olmayan** dilleri listeler.
 
 **Gerçek kopuk halka LANE-SEO'da ve zaten açık:** Bing mülk doğrulaması yok —
