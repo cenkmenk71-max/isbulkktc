@@ -20,6 +20,15 @@ on:
   push:
     branches:
       - main
+  # The push trigger alone cannot see a frozen production. A merge made with the
+  # default Actions token fires no workflow run at all, so most merges to `main`
+  # never reach this check — and a run that does fire skips as superseded when a
+  # newer commit already owns the tip. The result is a green Actions tab for a
+  # site serving an old build (the #319 freeze). A scheduled run verifies
+  # whatever `main` currently is, independent of how the commit landed, so a
+  # silent freeze turns into a red run instead.
+  schedule:
+    - cron: '43 */2 * * *'
   workflow_dispatch:
     inputs:
       expect:
@@ -66,7 +75,11 @@ jobs:
 
       - name: Resolve the branch tip
         id: tip
-        if: github.event_name == 'push'
+        # A push or a scheduled run verifies "whatever main is", so it passes the
+        # tip and lets the script skip if a newer commit takes over mid-run. A
+        # manual dispatch names the commit explicitly and passes no tip, so the
+        # script verifies that exact commit even if it is no longer the tip.
+        if: github.event_name != 'workflow_dispatch'
         run: |
           # `git ls-remote` reads the live remote ref without needing history, so
           # it reports the current head of main even if a newer merge landed
