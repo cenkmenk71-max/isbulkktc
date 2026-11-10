@@ -701,7 +701,7 @@ G-01) hâlâ açık.**
 | U-13 | Sınır girdi | `/%00` / `%0a%0d` yol ve sorgu | `%00` → **400**; CRLF **yansımıyor**, canonical `/jobs` | ✔ |
 | U-14 | Cache | Cacheable statik yola `PUT/POST/DELETE` | **405** `DYNAMIC` (zehirleme yok) | ✔ |
 | U-15 | Analitik | CF Web Analytics beacon (`cloudflareinsights`) | **yok** | ℹ️ bilgi |
-| U-16 | Güvenlik | `security.txt` (RFC 9116) | geçerli: Contact/Expires(2027-09-01)/Canonical/Preferred-Languages | ✔ |
+| U-16 | Güvenlik | `security.txt` (RFC 9116) | geçerli: Contact/Expires(2027-09-06)/Canonical/Preferred-Languages | ✔ |
 | U-17 | TLS | OCSP stapling | `no response sent` (OCSP düşürülüyor; beklenen) | ℹ️ |
 | U-18 | Bilgi | `/cdn-cgi/trace` | **kendi** bağlantı bilgini yansıtır (CF standardı, sızıntı değil) | ℹ️ |
 | U-19 | Bot | UA testleri (Googlebot/bingbot/curl/HeadlessChrome/Semrush/sqlmap) | yalnız `sqlmap` → **403**; gerisi 200, `cf-mitigated` yok | ✔ |
@@ -1352,7 +1352,7 @@ kaldı. **Kapandı.**
 | U-04 | Desteklenmeyen dil | `/ar` → **404** (locales: `tr,en,ru,el,fa,de`) | ✔ |
 | U-05 | Cacheable statikte yazma reddi | `/robots.txt` POST/PUT/DELETE → **405** | ✔ |
 | U-06 | CORS kilitli | yalnız `/api/build-info` → `ACAO: *` (`OPTIONS, GET, HEAD`); `/api/qr`,`/api/email/unsubscribe`,`/api/push/*` → ACAO **yok** | ✔ |
-| U-07 | `/.well-known/security.txt` | var; `Contact: mailto:info@…`, `Expires` 2027-09-02 | ✔ |
+| U-07 | `/.well-known/security.txt` | var; `Contact: mailto:info@…`, `Expires` 2027-09-06 | ✔ |
 | U-08 | Yönlendirmeler | `/tr` → 308 → `/` (`as-needed`, tek sıçrama); **`www` → 200 (yönlenmiyor)** | ⚠️ **H-03** |
 | U-09 | CF → Vercel zinciri | `server: cloudflare` + `cf-ray` + `x-vercel-id` aynı yanıtta | ✔ |
 | U-10 | CAA | 5 issuer (`comodoca`,`digicert`,`letsencrypt`,`pki.goog`,`ssl.com`) + `issuewild` | ✔ |
@@ -1467,7 +1467,7 @@ Canlı build: `/api/build-info` → **`d154e44`**.
 | V-07 | HTTP/3 | `alt-svc: h3=":443"` | ✔ |
 | V-08 | Güvenlik başlıkları | CSP, COOP, Permissions-Policy, Referrer-Policy, HSTS, nosniff, XFO | ✔ |
 | V-09 | Automatic HTTPS Rewrites | HTML'de `http://` referansı yok (mixed content yok) | ✔ |
-| V-10 | `security.txt` | `Contact: mailto:info@…`, `Expires` 2027-09-02 | ✔ |
+| V-10 | `security.txt` | `Contact: mailto:info@…`, `Expires` 2027-09-06 | ✔ |
 | V-11 | HSTS preload | hstspreload API → **`pending`** (değişmemiş) | ℹ️ |
 | V-12 | DNSSEC | DS `2371 13 2 36e0…775b`; apex+çoğu alt alan `AD=true`, `rsend` `AD=false` (tur 18) | ⚠️ kısmi |
 | V-13 | CAA | 5 issuer + `issuewild` (10 kayıt) | ✔ |
@@ -1589,7 +1589,7 @@ Canlı build: `/api/build-info` → **`7b0f7170`**.
 | W-18-21 | Rate limit | `/login` 30× **GET** → 30/30 200; `/api/build-info` 30× → 200. **tur 23 düzeltmesi:** yalnız GET ölçülmüştü; `POST /login` serisi ~10'da 429 (`error code: 1015`) | ⚠️→✔ (CF POST'u limitliyor; F-26/D-12) |
 | W-18-22 | `cdn-cgi` yüzeyi | `/cdn-cgi/trace` 200, `/cdn-cgi/robots/x` 404 | ℹ️ |
 | W-18-23 | `X-Robots-Tag` | site genelinde yok | ✔ |
-| W-18-24 | `security.txt` | `Contact`/`Expires 2027-09-02`/`Canonical`/`Preferred-Languages` tam | ✔ |
+| W-18-24 | `security.txt` | `Contact`/`Expires 2027-09-06`/`Canonical`/`Preferred-Languages` tam | ✔ |
 | W-18-25 | Sitemap host tutarlılığı | 207 `<loc>`, **tek** host `isbulkktc.com` | ✔ |
 
 ### Drift (tur 18 — değişmedi)
@@ -2007,7 +2007,7 @@ geliyor (`text/plain`, `application/xml`, `application/json`, `image/webp`,
   + `yandex-verification` + SPF; `_mta-sts`/`_smtp._tls` **yok**; DKIM
   `cf2024-1` 2048 / `resend` 1024; DNSSEC apex `AD=true`, `rsend` `AD=false`;
   CAA 10 kayıt.
-- **`security.txt`:** 200, `Expires 2027-09-02`, canonical doğru.
+- **`security.txt`:** 200, `Expires 2027-09-06`, canonical doğru.
 - **Sitemap:** tek host `https://isbulkktc.com`; `robots.txt` `noindex`
   sayfaları `Disallow` **etmiyor** (AUDIT kuralı — doğru).
 - **HSTS preload:** API → `pending` (değişmedi).
@@ -3650,3 +3650,121 @@ onu **doğruluyor**. Doğrulanmamış Search Console mülkü **taranmaz/indeksle
 - **O-01r6:** origin sağlıklı.
 
 **Yeni kimlik:** B-01, V-01. **Devir:** #163 halka-2 CF'de değil; halka-1 → LANE-SEO.
+
+---
+
+## Tur 39 (2026-11-10) — doküman↔canlı çelişkisi kapandı + edge tazelik taraması
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Canlı build: /api/build-info → 14629df (= main), environment=production
+Sahibin yapması gerekenler: V-01r (GSC doğrulama env) · H-03r/R-14 (CF Redirect Rule:
+            host www → 301 apex) · H-01r (HSTS max-age) · H-02r/N-01r (Cache Rules
+            "Respect Existing Headers") · N-22/N-21/N-20/N-18/N-19 · R-01 · G-01 ·
+            F-08 · B-02 · #227 · #170 · #163 · O-01 (#518)
+Sonraki lane için notlar: (1) Canlı build 14629df'ye ilerledi (tur 38'deki main).
+            (2) Dokümanın "google-site-verification VAR" kaydı (C-13/V-04 + "Kapalı
+            kayıt") canlıda YANLIŞ; düzeltildi. (3) CF, HTML rotalara
+            challenge-platform precursor script'i enjekte ediyor ama `__cf_bm`/challenge
+            YOK → Bot Fight Mode kapalı (G-02/B-02). (4) `www` hâlâ apex'e 301 değil.
+            Yeni kimlik: C-13r, V-01r, G-02, B-02, SW-01r, N-01r, F-12r.
+```
+
+### C-13r / V-04r — doküman "var" diyordu, canlı **YOK** (tur 38 V-01 doğrulandı)
+
+Önceki tablolarda `C-13` ve `V-04`, `google-site-verification` meta etiketinin üretim
+HTML'inde **var** olduğunu söylüyordu (`1zuidCsJ2…`). Taze ölçüm bunu **çürüttü**:
+
+| Ölçüm | Sonuç |
+|---|---|
+| `curl -sS https://isbulkktc.com/ \| grep -c site-verification` | **0** |
+| 6 dil (`/tr /de /en /ru /el /fa`) | **hepsi 0** |
+| `/en/jobs` | **0** |
+| origin alias (`isbulkktc-amber.vercel.app`) | **0** |
+| token literali (`1zuidCsJ2…` / `7YbjG-3…` / `556993cbb…`) | **0** |
+| `<meta name="…">` envanteri | `googlebot`, `description`, `theme-color`… — **hiç `verification` yok** |
+
+DNS TXT **var** (DoH: iki `google-site-verification=` + `yandex-verification=`), ama
+meta etiket **yok** → `src/app/[locale]/layout.tsx` env'i (`NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`)
+üretimde tanımsız. **Düzeltme yapıldı:** `C-13`, `V-04` satırları ve "Kapalı kayıt —
+#163" bölümü canlı kanıtla güncellendi (yanlış "var" kaydı kaldırıldı). Bu, LANE-SEO'yu
+gerçek düzeltmeden uzaklaştırabilecek bir **doküman hatasıydı**.
+
+### V-01r — GSC doğrulama halkası (sahip: LANE-SEO/env)
+
+#163'ün **halka-1**'i (mülk doğrulama) hâlâ kopuk: meta etiket yok → Search Console
+mülkü doğrulanmamış olabilir → taranmaz. CF panelinde çözülmez. Bing/`msvalidate.01`
+de yok (bkz. #173). **Düzeltme:** env değerlerini gir → GSC/Bing/Yandex doğrula →
+sitemap gönder → kapsam raporu.
+
+### G-02 — CF, HTML rotalara challenge-platform precursor script'i enjekte ediyor
+
+`/`, `/jobs`, `/login`, `/freelance`, `/about` gövdesinde CF-injected
+`/cdn-cgi/challenge-platform/scripts/precursor/main.js?ray=…` script'i **var**
+(`grep -c` = 1); Googlebot UA'da da aynı. `robots.txt` gibi non-HTML'de yok.
+**Ama** hiçbir yanıtta `__cf_bm` / `cf_clearance` çerezi ve `cf-mitigated` başlığı
+**yok** → tam challenge uygulanmıyor. Bu, tur 38'in "challenge platform script'i yok"
+ifadesini **daraltır**: precursor **var**, ama gerçek challenge/koruma **yok**.
+
+### B-02 — Bot Management kapalı (bot koruması zayıf, N-18..N-22 teyit)
+
+Taze UA matrisi (`/`): `sqlmap/1.7` → **403**; ama çıplak `sqlmap`, `SQLMap`, `nikto`,
+`nmap`, `Nuclei`, `ffuf`, `gobuster`, `masscan`, `WPScan` → **hepsi 200**. `__cf_bm`
+çerezi yok + challenge yok → Bot Fight Mode/Bot Management **kapalı**. Etki: WAF
+yalnız imza-bazlı (`sqlmap/` literali), tarayıcı otomasyonu serbest.
+
+### SW-01r / N-01r / H-02r — cache override'ları hâlâ açık (Cache Rules)
+
+| Yol | `cache-control` (edge) | `cf-cache-status` | Not |
+|---|---|---|---|
+| `/sw.js` | `no-cache, no-store, must-revalidate` | **BYPASS** | repo #365 düzeltmesi etkili; edge **yine de** cache kuralı override ediyor → izle |
+| `/robots.txt` | `public, max-age=2628000` | `REVALIDATED` | H-02r açık |
+| `/sitemap.xml` | `public, max-age=3600` | `REVALIDATED` | H-02r açık |
+| `/_next/static/<yok>.js` | (404) | **HIT** | **N-01r açık** — var olmayan chunk 1 yıl cache |
+| `/favicon.ico` (404) | — | `BYPASS` | negatif cache yok (N-02 doğru) |
+| `/` | `private, no-store` | `DYNAMIC` | dinamik HTML cache'lenmiyor ✔ |
+
+Düzeltme değişmedi: **Caching → Cache Rules → "Respect Existing Headers"** (sahibin onayı).
+
+### F-12r — HSTS preload hâlâ `pending`
+
+`hstspreload.org/api/v2/status?domain=isbulkktc.com` → `{"status":"pending"}`. Edge
+HSTS `max-age=31536000` (H-01r: origin `63072000`'i eziyor). Preload asgarisi 1 yıl →
+preload engellenmiyor; F-12 önerisi değişmedi (bekle, DNS/TLS'e dokunma).
+
+### Teyit (değişmeyen açıklar)
+
+- **H-03r / R-14:** `https://www.isbulkktc.com/` → **200** (301 yok); `http://www/jobs?q=x`
+  → 301 **`www`'yi koruyor**; apex/www gövdesi **origin'de özdeş** (139 598 B), yalnız
+  CF-injected token farkı (`__CF$cv$params` ray + email-protection) → tur 37 D-31 teyit.
+- **H-01r:** edge HSTS `31536000` vs origin alias `63072000` (eziyor).
+- **R-01:** `https://isbulkktc.com./` → **404** (`x-vercel-id` dolu → Vercel/Next).
+- **F-08:** alias CF'i atlıyor, `x-robots-tag: noindex, nofollow`.
+- **G-01:** email obfuscation (`/cdn-cgi/l/email-protection#…`) hâlâ aktif.
+- **WAF temeli:** `/.git/config`, `/.GIT/config`, `/%2e%67it/config`, `/.ENV`,
+  `/WP-ADMIN/` → **403** (case/encoding kaçışı yok; F-22 doğru).
+- **Rate limit:** `/login` ×8 → **hepsi 200** (edge rate limit yok; tek kural leak-check'te).
+
+### U-16r — doküman↔canlı drift: `security.txt` `Expires` (yeni bulgu, düzeltildi)
+
+Tur 39 tazelemesinde `/.well-known/security.txt` (RFC 9116) **yeniden ölçüldü** ve
+kayıtlı `Expires` değeriyle **uyuşmadığı** görüldü:
+
+| Kaynak | Değer |
+|---|---|
+| Canlı (`isbulkktc.com`, `www.isbulkktc.com`, `isbulkktc-amber.vercel.app` — üçü de **200**) | `Expires: 2027-09-06T14:49:41.258Z` |
+| Doküman (5 satır) | `2027-09-01` (U-16) · `2027-09-02` (U-07, V-10, W-18-24, özet) |
+
+Doküman kendi içinde de **tutarsızdı** (09-01 vs 09-02) ve ikisi de canlıdan sapıyordu.
+Kanıt: `curl -sS https://isbulkktc.com/.well-known/security.txt` → `Expires:
+2027-09-06T14:49:41.258Z`. **Düzeltme:** beş satırın tamamı canlı değere (2027-09-06)
+çekildi. Etki: `Expires` geçmiş bir `security.txt` RFC 9116 uyarınca **geçersiz**
+sayılır; yanlış (daha erken) tarih, dosyanın süresi dolmuş gibi okunmasına yol
+açabilirdi. Canlı dosya geçerli (`Contact`/`Canonical`/`Preferred-Languages` tam).
+
+Not (iyileştirme, sahibin onayı): `Expires` **sabit** yazılmış; RFC 9116 bir yıldan
+uzun ömür önermez. Otomatik/derleme zamanlı tazeleme (ör. yıllık rotasyon) eklenirse
+bayat tarih riski kalkar.
