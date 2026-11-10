@@ -1135,3 +1135,38 @@ düşürüyorsa, o durum görünmezdir; sessiz atlama değil, açık rapor yaz.
 
 **Sınır.** #579 `agent:blocked` (LANE-INFRA) — insan gerektirir, bu lane'in işi
 değil; yalnızca raporu doğru yapıldı. #584 bu lane'in PR'ı.
+
+## Tur notu — SUPABASE_ACCESS_TOKEN şekli denetlenmiyordu (#209, 2026-11-10)
+
+**Belirti.** #209: `SUPABASE_ACCESS_TOKEN` 36 karakterlik çıplak UUID'ydi
+(`d81…`), geçerli bir Management token `sbp_` ile başlar. `curl … /v1/projects`
+her çağrıya `401 {"message":"JWT could not be decoded"}` dönüyordu; aynı değer
+`RESEND_API_KEY` alanındaydı (#186) — iki secret karışmış. Üretim logları
+okunamadığı için "sosyal giriş neden başarısız" (#207) teşhisi kördü.
+
+**Gözlem (bu tur).** Secret seviyesinde sorun **düzelmiş**: token artık
+`sbp_`/44 karakter ve `RESEND_API_KEY`'den farklı; `/v1/projects` → **200**.
+Ama düzelten hiçbir kapı yoktu — yanlış token yine sessizce geçerdi.
+
+**Kök neden (aile 9: "durum okunuyor, şekil sorulmuyor").** `system-health.mjs`
+token'ın **varlığını** hiç sormuyordu; 401 bir servis kesintisi gibi görünüyordu.
+
+**Çözüm.**
+- `system-health-core.mjs` → saf `classifySupabaseToken` (missing/malformed/
+  present) + `supabaseTokenProblem`: şekil hatası → `len`/`prefix` ile `fail`;
+  `RESEND_API_KEY` ile birebir eşitse `collision`. **Eksik token `null` döner**
+  (CI yalnız `GH_TOKEN` ile koşar; "burada yapılandırılmamış" ≠ yanlış yapılandırma
+  — sahte kırmızı yok).
+- `system-health.mjs` → 5. adım `secrets` bulgusu.
+- 7 test; `system-health.test.mjs` **73/73**, `test:unit` **1086/1086**.
+
+**Kalan iş (devir).** `system-health.yml` yalnız `GH_TOKEN` geçiyor →
+zamanlanmış koşuda denetim **kördü**. `.github/**` LANE-INFRA'nın; `lane:infra` +
+`agent:handoff` ile issue açıldı (env eklenmeli). Bu yapılmadan denetim yalnız elle
+koşularda çalışır.
+
+**Ayrıca.** Geçerli token'la üretim logları **çekilemedi**: token artık 200
+dönse de `POST /v1/projects/<ref>/analytics/endpoints/logs` → **404
+`Cannot POST`** (uç kaldırılmış) ve MCP `supabase_query_logs` → **401
+Unauthorized**. Yani log okuma yetkisi token'la açılmıyor; #207'nin gerçek hata
+kodu bu yüzden hâlâ logdan alınamadı — #209'a not düşüldü.

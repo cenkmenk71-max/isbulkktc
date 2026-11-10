@@ -144,6 +144,65 @@ export function classifyRedRuns(redRuns) {
 }
 
 /**
+ * Supabase management-API access tokens are prefixed `sbp_`.
+ *
+ * A value that is present but not in that shape — a bare UUID, a Resend key, a
+ * truncated paste — can never authenticate: the Management API answers
+ * `401 {"message":"JWT could not be decoded"}`. That is how the token went
+ * unnoticed while every production-log read failed (#209), and the same value
+ * had been copied into the `RESEND_API_KEY` slot (#186), so the two secrets
+ * were mixed. Distinguishing "missing" from "malformed" lets the health check
+ * name the problem instead of a bare 401 that looks like a service outage.
+ *
+ * Deliberately loose on length: the shape check exists to catch a *wrong* value
+ * (a foreign token), not to re-implement Supabase's token format.
+ */
+const supabaseTokenPattern = /^sbp_[A-Za-z0-9_-]{4,}$/;
+
+/**
+ * @param {string|null|undefined} value
+ * @returns {'missing'|'malformed'|'present'}
+ */
+export function classifySupabaseToken(value) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return "missing";
+  return supabaseTokenPattern.test(trimmed) ? "present" : "malformed";
+}
+
+/**
+ * Why a Supabase token is unusable, or `null` when there is nothing to report.
+ *
+ * Returns `null` for a `missing` token: an unset value in a context that never
+ * had it (CI runs the health check with only `GH_TOKEN`) is "not configured
+ * here", not a misconfiguration, and flagging it every scheduled run would be
+ * the same cry-wolf noise this lane keeps removing. A present-but-wrong token
+ * is the real failure and is named with its length and prefix — the two fields
+ * the #209 report used — so the operator sees *why* the 401 happened.
+ *
+ * @param {{token?: string|null, resendKey?: string|null}} secrets
+ * @returns {{status: string, reason: string}|null}
+ */
+export function supabaseTokenProblem({ token, resendKey } = {}) {
+  const status = classifySupabaseToken(token);
+  if (status === "missing") return null;
+  const trimmed = token.trim();
+  if (status === "malformed") {
+    return {
+      status,
+      reason: `SUPABASE_ACCESS_TOKEN is not an sbp_ token (len=${trimmed.length}, prefix=${trimmed.slice(0, 4)}) — Management API returns 401 and production logs stay unreadable.`,
+    };
+  }
+  if (resendKey && trimmed === resendKey.trim()) {
+    return {
+      status: "collision",
+      reason:
+        "SUPABASE_ACCESS_TOKEN equals RESEND_API_KEY — two secrets mixed (#186/#209).",
+    };
+  }
+  return { status, reason: "SUPABASE_ACCESS_TOKEN shape ok" };
+}
+
+/**
  * Whether GitHub has left a pull request's merge state uncomputed.
  *
  * `mergeStateStatus` is computed lazily: the first read after a push returns
