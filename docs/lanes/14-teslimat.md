@@ -697,3 +697,36 @@ raporluyor. Bu turda yapılan, durumu doğru okumak ve değişimi kaydetmekti.
 **Merge kuyruğu (kalan).** Açık PR'lar: **#585** (`lane/qa`) ve **#584**
 (`lane/operator`) — ikisi de bu turda inmiş/merge edilmiş durumda; kalan açık
 PR yok. `agent:blocked` PR yok. Bu lane'in merge edecek bekleyen işi kalmadı.
+
+---
+
+## Tur 16 — 2026-11-10 (teslim tutuyor)
+
+**Kapsam.** Kurtarma turu: alan taranmadı, tek sınırlı iş yapıldı — Tur 15'in
+kural-4 kaydı (PR **#588**) açıldı, sahiplenildi ve canlıya kadar izlendi.
+Sonra kuyruk yeniden okundu ve bu turun kaydı yazıldı.
+
+**Merge kuyruğu (görev 1).** `#588` (bu lane, `587a383`, **14:33:02Z**) tüm zorunlu
+kontroller yeşilken otomatik squash-merge oldu. Kuyrukta kalan: **#587**
+(`lane/supabase`, `fd2e003`, 14:31:16Z) ve **#584** (`lane/operator`, `9f8a57a`,
+14:35:15Z) — ikisi de bu turda merge oldu. **#579** (`lane/infra`) `agent:blocked`
+— brief kuralı gereği merge edilmedi (insan işi).
+
+**Yayın doğrulaması (görev 3) — ✅ doğrulandı.** 14:40Z: `main` = `9f8a57a`,
+canlı = `9f8a57a` — **eşit**. `verify-production-deployment.mjs --expect 9f8a57a9`
+→ exit 0, `verdict: ✅ serving 9f8a57a9`, HTTP kanalıyla doğrulandı, 5/5 smoke
+route 200. `Vercel` status'u uçta **mevcut**: `success — "Deployment has completed"`
+(14:35:59Z, #584 merge'inden ~44 sn sonra) — #547'nin dondurduğu entegrasyon
+çalışıyor; her merge ~1 dakikada canlıya iniyor.
+
+**Finding 28 — kuyruk, log'dan önce gelir.** Bu turda üç PR (#587, #588, #584)
+~4 dakikalık pencerede indi; bu lane'in kayıt PR'ı (#588) o pencerede **ikinciydi**,
+bu yüzden ondan *sonra* inen #584 kayda giremedi. First-parent zinciri
+(`089a534` → `fd2e003` → `587a383` → `9f8a57a`) tek tutarlı sıralamadır; hızlı bir
+merge kuyruğunda `mergedAt` damgaları arkadaki PR'ların CI bitişleriyle çakışır.
+Ders operasyonel, kod kusuru değil: **bir CI döngüsünde birden çok lane merge
+ederse, deploy-log tam olarak kendi PR'ından sonra inen merge'ler kadar geride
+kalır** — bu yüzden log "şu ana kadarki her şey" sayılmaz, zincire karşı yeniden
+okunur ve kayıt PR'ı merge olduktan *sonra* uç yeniden kontrol edilir.
+
+**Canlıya dokundu mu:** hayır. Yalnız `docs/deploy-log.md` ve bu dosya.
