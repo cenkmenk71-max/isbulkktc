@@ -1151,3 +1151,28 @@ Sonraki lane için notlar: (1) #163'ün "CF bot engeli arama motoru botlarını
   korunuyor); `https://www/` → **200**; kanonik `www` ve apex'te de
   `https://isbulkktc.com` (doğru) → sinyal var ama **host redirect** yok.
 - **O-01r6:** origin sağlıklı (değişmedi).
+
+### Tur 39 (2026-11-10) — doküman↔canlı drift taraması (salt-okuma)
+
+Canlı build `14629df` (= main) üzerinde taze ölçüm; yıkıcı CF değişikliği yok.
+
+- **U-16r (düzeltildi):** `/.well-known/security.txt` `Expires` canlıda
+  **2027-09-06T14:49:41.258Z** (apex + `www` + Vercel alias, üçü de 200). Doküman
+  5 satırda **2027-09-01/02** yazıyordu (kendi içinde tutarsız) → canlı değere
+  çekildi (`docs/cloudflare.md` U-16/U-07/V-10/W-18-24 + özet).
+- **V-01 teyit:** `google-site-verification` meta etiketi **hâlâ yok**
+  (`grep -c` = 0; `/`, `/en`, `/de`, `/en/jobs`, alias). DNS TXT'te token var,
+  HTML'de yok → GSC mülkü doğrulanmamış olabilir. Sahip: LANE-SEO/env.
+- **G-02/B-02:** CF, HTML rotalara `challenge-platform/scripts/precursor` script'i
+  enjekte ediyor (`/`, `/jobs`, `/login` = 1; `robots.txt` = 0) ama `__cf_bm`/
+  challenge **yok** → tam koruma kapalı. Bot UA matrisi: `sqlmap/1.7` → 403; çıplak
+  `sqlmap`/`nikto`/`nmap`/`Nuclei`/`ffuf`/`gobuster`/`masscan` → **200**.
+- **N-01r/H-02r:** var olmayan `/_next/static/…js` → **404** ama
+  `cache-control: public, max-age=31536000, must-revalidate`, `cf-cache-status: MISS`
+  (ilk istekte) → negatif yanıt 1 yıl cache'leniyor. Öneri değişmedi: Cache Rules →
+  "Respect Existing Headers".
+- **F-12r:** hstspreload.org → **`pending`**; edge HSTS `31536000`.
+- **Değişmeyenler:** `www` apex'e 301 değil (H-03r/R-14); `/.git/config` vb. → 403;
+  `/login` ×8 rate limit yok; `https://isbulkktc.com./` → 404 (R-01).
+
+**Yeni kimlik:** U-16r, G-02, B-02, N-01r. **Devir:** V-01 → LANE-SEO (#163 halka-1).
