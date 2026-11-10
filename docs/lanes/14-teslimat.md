@@ -441,3 +441,46 @@ LANE-INFRA'nın; bu lane dokunmadı.
 **Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅ (41 token, 16
 sektör görseli), `test:unit` ✅ (bu turun değişikliği CI'da tüm shard'larda yeşil).
 
+
+---
+
+## Tur 10 — 2026-11-10 (lane/teslimat)
+
+**Kapsam.** Atanmış açık `lane:teslimat` issue yok. Kurtarma turu: alan taranmadı,
+tek sınırlı düzeltme — Tur 9'un merge kaydının (kural 4) eksik kalan tamamlanması
+(finding 22 + deploy-log satırı).
+
+**Neden bu iş gerçek.** Tur 9'un PR'ı (#570) `docs/deploy-log.md`'ye merge satırını
+yazmıştı ama bu lane'in *kendi* PR'ı (#574) **hiç kaydedilmemişti**: deploy-log'un
+son satırı #570'di (`1adde86`). Kural 4 — "her merge kaydedilir: ne, ne zaman,
+canlıda doğrulandı mı" — bu merge için ihlal edilmiş durumdaydı. Bu tur onu kapatır.
+
+**Bulgu (finding 22) — `approve-pending-runs.mjs` `gh` çağrıları sınırsızdı.**
+Script `lane-autopilot.mjs` tarafından `execFileSync` ile, kendi timeout'u olmadan
+çağrılıyor; workflow'da `timeout-minutes` da yok. Takılan bir `gh` (asılı bağlantı,
+etkileşimli auth prompt'u) **altı saatlik job tavanına** kadar zamanlanmış lane
+geçişini bloke ediyordu — ne kısmi ilerleme ne hata sinyali. Kardeş lane
+script'lerinde bu sınır var; bunda yoktu. Düzeltme: `ghTimeoutMs(source=process.env)`
+(varsayılan `60_000`, `GH_TIMEOUT_MS` ile geçersiz kılınır; boş/≤0 → varsayılan) her
+`execFileSync('gh', …)` çağrısına `killSignal:'SIGKILL'` ile geçiriliyor; timeout
+mevcut hata yoluna (finding 16) düşüp **sayılıyor** — yani script asılmak yerine
+raporluyor. Regresyon testleri `scripts/approve-pending-runs.test.mjs`'te.
+
+**Teslim edildi (kural 4).** PR **#574** `app/github-actions` auto-merge (squash) ile
+**12:14:09Z'de merge edildi** (`main` `1adde86` → `83d7f3e`); tüm zorunlu kontroller
+yeşil (aggregator dahil). Kayıt bu turda `docs/deploy-log.md`'ye eklendi.
+
+**Canlı ölçüm (görev 3) — 🔴 teslim doğrulanamadı, nedeni adıyla kondu.** 12:17Z:
+`main` = `83d7f3e`, canlı = `3644cbe3` (**19 geride**). `GET /` **200** (stale but
+healthy). Tip `83d7f3e`'de **hiç `Vercel` status girdisi yok** (`total_count: 0`) →
+**#547** durumu (yeni Vercel hesabında GitHub Git bağlantısı yok), #319 rate-limit
+salınımı **değil**. Depodan düzeltilemez; sahip tarafı (Vercel Dashboard → Git) veya
+LANE-INFRA `VERCEL_TOKEN` workflow'u. Bu lane'in dördüncü doğrulanamayan teslimi ve
+sebebi dışsaldır.
+
+**Merge kuyruğu (görev 1).** Bu turda açık PR yok (`gh pr list --state open` boş) —
+diğer lane'lerin PR'ları bu arada auto-merge ile inmiş (`955a82f` #571, `4144425`
+#572, `5214294` #567, `9da8c57` #573). Bu lane'in merge edebileceği bekleyen PR yoktu.
+
+**Devredilenler.** #547 (teslim donmasının kök nedeni, `agent:infra` + `agent:blocked`)
+yeni kanıtla (19 geride, `total_count: 0`) hâlâ geçerli; bu lane dokunmadı.

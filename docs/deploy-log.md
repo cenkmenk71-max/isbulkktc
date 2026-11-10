@@ -301,6 +301,7 @@ context, not as a measurement.
 | 2026-11-10T08:28Z | `3644cbe3` | `3644cbe3` | ✅ **recovered** | **Outage cleared.** The Vercel account block (#319 / issue #518) was lifted and production caught up: `GET https://isbulkktc.com/api/build-info` → `{"commit":"3644cbe3501ba5879aaa3eeb79ba825ee1af34f2","environment":"production"}`, and `main` tip is `3644cbe3` — the two agree for the first time since 2026-11-06. `GET /` answers **200** (site CSP, `NEXT_LOCALE=tr`); the 402 `DEPLOYMENT_DISABLED` on every route is gone, as is the 404 `DEPLOYMENT_NOT_FOUND` state seen mid-day. The sandbox's own probe of `/api/build-info` is edge-blocked with **403** (the documented Cloudflare answer to datacenter IPs), so this comparison was made with `curl`/`gh`, not the verifier's own fetch — the same channel CI uses. |
 | 2026-11-10T11:13Z | `e6d1345` | `3644cbe3` | ⚠️ **behind by 5** | Fresh read before this lane's merge: `main` advanced `3644cbe3` → `e6d1345` (#561/#564/#560/#557/#555 etc.) while production stayed on `3644cbe3` — per **#547** the new Vercel account has **no GitHub Git connection**, so no `main` push since the last manual `vercel deploy --prod` has reached production (this is *not* the old #319 build-rate-limit signature: recent commits carry **no `Vercel` status at all**). `GET /` and all five smoke routes answer **200**, so this is the "stale but healthy" state that finding 20's fix now reports explicitly: `verify-production-deployment.mjs --expect e6d1345` → verdict ❌ (correctly red on freshness) **with** `smoke routes: ✅ 5 passed`, whereas the pre-fix script printed no smoke line at all. |
 | 2026-11-10T11:44Z | `1adde86` | `3644cbe3` | ⚠️ **behind by 14** | **Merge record — PR #570** (finding 20's smoke-on-red fix) auto-merged by `app/github-actions` at **11:44:04Z** (squash; `main` `e6d1345` → `f7b3196` → `1adde86`). All required checks green including the `Quality, database and E2E` aggregator (Static 1m06s, Database 2m00s, E2E 1–4 all pass); no red on the PR. **Verified live: no — cause now named, not guessed.** `GET https://isbulkktc.com/api/build-info` → **`3644cbe3`** (14 commits behind `main`), and the commit status for `1adde86` carries **no `Vercel` entry at all** (`total_count: 0`) — the missing-Git-integration state of **#547**, not the rate-limit state of #319. The new Vercel account has no GitHub connection, so `main` pushes do not auto-deploy and production is frozen at the last manual `vercel deploy --prod`. This merge is **not** live-verifiable from inside the repository; the fix is owner-side (Vercel Dashboard → Git connection, per #547) or a LANE-INFRA `VERCEL_TOKEN` deploy workflow. `main` advanced again `f7b3196` → `1adde86` (#569, lane/qa) before this record. |
+| 2026-11-10T12:17Z | `83d7f3e` | `3644cbe3` | ⚠️ **behind by 19** | **Merge record — PR #574** (finding 22: every `gh` call in `approve-pending-runs.mjs` is now time-bounded) auto-merged by `app/github-actions` at **12:14:09Z** (squash; `main` `1adde86` → `83d7f3e`, landing `955a82f` #571, `4144425` #572, `5214294` #567 and `9da8c57` #573 ahead of it). All required checks green including the `Quality, database and E2E` aggregator. **Verified live: no — cause named, not guessed.** `GET https://isbulkktc.com/api/build-info` → **`3644cbe3`** (19 commits behind `main`); `GET /` answers **200**, so production is stale-but-healthy. The tip `83d7f3e` carries **no `Vercel` status entry at all** (`total_count: 0`) — the missing-Git-integration state of **#547**, not the #319 rate-limit state (that one leaves a red status). The new Vercel account has no GitHub connection, so no `main` push auto-deploys; production is frozen at the last manual `vercel deploy --prod`. Not live-verifiable from inside the repository — owner-side (Vercel Dashboard → Git connection, #547) or a LANE-INFRA `VERCEL_TOKEN` deploy workflow. This lane's fourth unverifiable delivery; the reason is external, not a code defect. |
 
 ### Delivery health findings (2026-11-10, round 5)
 
@@ -391,3 +392,18 @@ context, not as a measurement.
     away; `verify-production-deployment` will keep reporting the freshness gap until it
     is fixed, which is the correct signal.
 
+22. **`approve-pending-runs.mjs` ran every `gh` call unbounded, so a stalled `gh`
+    could hold the whole scheduled lane pass until the six-hour job cap.** The
+    script is invoked by `lane-autopilot.mjs` through `execFileSync` with no timeout
+    of its own, and `.github/workflows/approve-pending-runs.yml` sets no
+    `timeout-minutes`, so a hung connection or an interactive auth prompt blocked
+    the lane pass for hours with no partial progress and no failure signal. The
+    sibling lane scripts already carry this bound; this one did not. Fixed by
+    exporting `ghTimeoutMs(source = process.env)` (default `60_000`, overridable
+    with `GH_TIMEOUT_MS`, non-positive/blank falls back) and passing it, with
+    `killSignal: 'SIGKILL'`, to every `execFileSync('gh', ...)` call. On timeout the
+    throw is caught by the existing failure path (finding 16) and counted, so the
+    run reports instead of hanging. Regression tests in
+    `scripts/approve-pending-runs.test.mjs` pin the default, the override, and the
+    blank/zero/negative fallbacks, and prove a hung `gh` is killed quickly. Merged in
+    PR #574 (`83d7f3e`).
