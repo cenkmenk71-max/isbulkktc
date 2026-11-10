@@ -492,3 +492,51 @@ node scripts/verify-deliverability.mjs
 Testler: `verify-deliverability.test.mjs` 14/14 (üç kusurun regresyonu dahil).
 Kapılar: `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`,
 `bun run test:unit` (946/946) — yeşil.
+
+## Tur 10 — ikinci Vercel kesinti işaretçisi de tanınmıyordu (2026-11-10, LANE-VERIFY #556/#550)
+
+Devir issue'su (#556, kopyası #550): 2026-11-10'da canlı origin **her rotada 404
++ `x-vercel-error: DEPLOYMENT_NOT_FOUND`** döndü — hesap/dağıtım durumu, yol
+hatası değil. `verify-indexing.mjs:538` içindeki `isDeploymentDisabled` yalnız
+**402**'yi ve **`DEPLOYMENT_DISABLED`** işaretçisini tanıyordu; bu ikinci hesap
+durumu `unmeasurableReason()`'dan `null` olarak geçiyordu.
+
+| Boyut | Gözlenen (önce) | Beklenen (sonra) | Etki |
+|---|---|---|---|
+| hata yolu | 404 + `DEPLOYMENT_NOT_FOUND` → `fail robots`/`fail sitemap` | `skip` + gözlenen işaretçi adıyla | Hesap kesintisi "indexing bozuk" diye raporlanıyordu — tam da bu fonksiyonun ayırmaya çalıştığı sınıf |
+
+Düzeltme (issue'nun önerdiği gibi `verify-production-deployment.mjs` ve
+`scripts/system-health-core.mjs` ile aynı şekil): `vercelAccountState(vercelError)`
+yardımcısı çıkarıldı, hem `DEPLOYMENT_DISABLED` hem `DEPLOYMENT_NOT_FOUND`
+eşleştiriliyor ve `unmeasurableReason()` gözlenen işaretçiyi metne taşıyor.
+**Çıplak 404 eşleşmiyor**: sağlıklı origin sahip olmadığı her yol için 404 döner,
+404'ü yalnız `x-vercel-error` başlığı ayrıştırır (402 tek başına kesin).
+
+Regresyon: `verify-indexing.test.mjs` "a disabled deployment is not evidence
+about indexing" — `404 DEPLOYMENT_NOT_FOUND` → `true`, `404 ""`/`404 NOT_FOUND`
+→ `false`, `skip` metni `DEPLOYMENT_NOT_FOUND` içeriyor.
+
+### Canlı ölçüm (2026-11-10 ~10:20 UTC — düzeltmeden sonra)
+
+Kesinti bu turda **çözülmüş**; origin yeniden servis ediyor:
+
+```
+$ curl -s -o /dev/null -w '%{http_code}' https://isbulkktc.com/          -> 200
+$ curl -s -o /dev/null -w '%{http_code}' https://isbulkktc.com/robots.txt -> 200
+
+node scripts/verify-indexing.mjs
+  PASS robots    allows crawling; sitemap https://isbulkktc.com/sitemap.xml
+  PASS sitemap   207 URLs, all on-origin canonical; 186 with the full hreflang set, 21 single-locale (no hreflang)
+  PASS single-loc 3 single-locale entries: the localized duplicate canonicalises back
+  PASS pages     8 sampled pages are 200, indexable, with a matching canonical
+  PASS indexnow  key file matches isbulkkt…
+  0 failure(s), 0 warning(s), 0 skipped
+```
+
+Kesinti sırasında ölçüm (issue kanıtı, düzeltmeden önce): `404 DEPLOYMENT_NOT_FOUND`
+→ `fail robots`. Düzeltmeden sonra aynı girdi `skip` verir; canlı kesinti
+bittiği için `fail`'in `skip`'e döndüğü canlı gösterilemez, ama predicate girdisi
+birim testle sabitlendi.
+
+Kapılar: `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`,
+`bun run test:unit` (1018/1018) — yeşil.
