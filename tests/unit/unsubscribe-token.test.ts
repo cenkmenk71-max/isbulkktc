@@ -1,10 +1,17 @@
+import "./support/server-only-hook";
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  isUnsubscribeSigningConfigured,
-  signUnsubscribeEmail,
-  verifyUnsubscribeSignature,
-} from "../../src/server/email/unsubscribe-token-core";
+
+/**
+ * `src/server/email/unsubscribe-token-core.ts` carries `import "server-only"`
+ * (the secret-reading boundary #102 asks for). Under `tsx --test` the marker
+ * package has no `react-server` condition and throws on import, so the hook
+ * above resolves it to an empty module; the production module body still runs.
+ *
+ * The import is dynamic because a static one is hoisted above the hook's side
+ * effect, so the hook would not be installed in time.
+ */
+const tokenCore = () => import("../../src/server/email/unsubscribe-token-core");
 
 const SECRET = "test-secret-value-with-enough-entropy";
 
@@ -26,7 +33,8 @@ function withSecret<T>(value: string | undefined, run: () => T): T {
   }
 }
 
-test("signing is disabled without a sufficiently long secret", () => {
+test("signing is disabled without a sufficiently long secret", async () => {
+  const { isUnsubscribeSigningConfigured, signUnsubscribeEmail } = await tokenCore();
   withSecret(undefined, () => {
     delete process.env.RESEND_API_KEY;
     assert.equal(isUnsubscribeSigningConfigured(), false);
@@ -37,7 +45,8 @@ test("signing is disabled without a sufficiently long secret", () => {
   });
 });
 
-test("a signature verifies for the exact address and fails otherwise", () => {
+test("a signature verifies for the exact address and fails otherwise", async () => {
+  const { signUnsubscribeEmail, verifyUnsubscribeSignature } = await tokenCore();
   withSecret(SECRET, () => {
     const signature = signUnsubscribeEmail("Ayse@Example.COM");
     assert.ok(signature);
