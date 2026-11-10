@@ -26,9 +26,10 @@
 //
 // Exit code is non-zero only on a real `fail`. `warn` and `skip` are notes.
 
-import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { readIndexNowKey } from "./indexnow-key.mjs";
 
 /**
  * True when the module was launched directly (`node script.mjs`) rather than
@@ -735,19 +736,18 @@ async function checkPages(parsed) {
 
 async function checkIndexNow() {
   const publicDir = path.join(REPO_ROOT, "public");
-  let keyFile;
+  let found;
   try {
-    const entries = await readdir(publicDir);
-    keyFile = entries.find((name) => /^[a-z0-9]{8,128}\.txt$/i.test(name));
+    found = await readIndexNowKey(publicDir);
   } catch (error) {
     record("indexnow", "skip", `could not read public/: ${error.message}`);
     return;
   }
-  if (!keyFile) {
+  if (!found) {
     record("indexnow", "skip", "no IndexNow key file in public/");
     return;
   }
-  const key = (await readFile(path.join(publicDir, keyFile), "utf8")).trim();
+  const { key, file: keyFile } = found;
   const { status, body, vercelError, error } = await fetchText(`${ORIGIN}/${keyFile}`);
   const unmeasurable = unmeasurableReason(status, body, vercelError);
   const verdict = evaluateIndexNowKey({ status, body, key, error });
