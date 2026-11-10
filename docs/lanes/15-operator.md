@@ -1090,3 +1090,48 @@ eklemek aynı sinyali çiftler ve `VERCEL` secret'ını `system-health.yml`'e
 (GENİŞLİK: LANE-INFRA `.github/**`) eklemeyi gerektirirdi. Bu turda **yapılmadı**;
 bu lane'in sınırı "sessizliği kaldır", "hükmü çiftle" değil.
 
+
+## Tur notu — autopilot raporu merge adımıyla çelişmesin (2026-11-10)
+
+Aynı geçişte iki satır birbirini yalanlıyordu: `decide()` "PR #579 ready to merge"
+diyordu, `mergeReadyPullRequests` ise aynı PR'ı merge etmeyi reddedip "STALLED PRs
+(need a human)" altında listeliyordu. Kök neden: `decide()` yalnız **issue**
+etiketlerini okuyordu, PR'ın kendi etiketlerini okumuyordu. Lane "ready to merge"
+üzerine hiçbir şey yapamaz — merge adımı merge etmez, etiketi başka hiçbir şey
+temizlemez — yani cümle **yanlıştı**.
+
+**Düzeltme.** `heldForHuman(labels)` helper'ı (`lane-autopilot-core.mjs`)
+`agent:hold` / `agent:blocked` arar; `decide()` içinde `CLEAN` dalından **önce**
+kontrol edilir ve gerçek durumu yazar. `mergeReadyPullRequests` de artık aynı
+helper'ı çağırır — tek kaynak, çünkü iki kopya (satır içi test + helper) sürüklenir.
+
+**İkinci sessizlik — draft PR.** `mergeReadyPullRequests` bir draft'ta
+`if (pr.isDraft) continue;` ile **sessizce** atlıyordu. Draft'ı hiçbir şey
+un-draft etmez; yeşil bir draft ne merge olur ne de açık-PR kotasını (4) bırakır.
+#584 tam da buydu: her zorunlu kontrol yeşil, `autoMergeRequest: null`, ama
+görünmez — çünkü onu adlandıracak tek satır `continue`'nun atladığı satırdı.
+`isDraftPullRequest(pr)` helper'ı draft'ı "STALLED" altında **raporlar**;
+`decide()` de draft için "ready to merge" demez.
+
+**Kanıt (canlı, gerçek `gh pr list` çıktısıyla).** Önce `origin/main` worktree,
+sonra lane head, aynı canlı kuyruk:
+
+```
+önce:  infra       wait      PR #579 ready to merge (resume)
+sonra: infra       wait      PR #579 held for a human (agent:blocked) (resume)
+       STALLED PRs (need a human): 1
+         #579 — held for a human (agent:blocked)
+```
+
+İki satır artık **uyuşur**. Classifier'lar gerçek payload şekliyle beslendi
+(`labels: [{name}], isDraft`): `#579 → held`, `#584 → draft`, `#587 → mergeable`
+— üçü de merge adımının fiilen yapacağıyla aynı.
+
+**Ders.** Bir rapor satırı ile bir eylem satırı aynı kaynağı anlatıyorsa, ikisi de
+aynı helper'ı çağırmalı. "ready to merge" diyen rapor, merge etmeyen adımın yanında
+duruyorsa, rapor **yalan** söylüyordur — ve operatör o yalana göre karar verir.
+Aynı şekilde: bir `continue`, bir durumu **hem** kuyruktan **hem** rapordan
+düşürüyorsa, o durum görünmezdir; sessiz atlama değil, açık rapor yaz.
+
+**Sınır.** #579 `agent:blocked` (LANE-INFRA) — insan gerektirir, bu lane'in işi
+değil; yalnızca raporu doğru yapıldı. #584 bu lane'in PR'ı.
