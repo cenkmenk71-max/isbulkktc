@@ -1426,6 +1426,29 @@ a {
 .brand-lockup--light {
   color: var(--ink);
 }
+/* The lockup sits on the header's dark gradient, so its wordmark is an
+   AA-fragile label: a fade would drop it below the contrast floor mid-flight.
+   The entrance therefore moves on the transform axis only, and the global
+   reduced-motion reset collapses it straight to the settled state. */
+@keyframes brand-lockup-enter {
+  from {
+    transform: translateY(-12px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.brand-lockup {
+  animation: brand-lockup-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .brand-lockup .brand-waveform {
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .brand-lockup:hover .brand-waveform {
+    transform: scale(1.07);
+  }
+}
 .brand-waveform {
   display: block;
   width: 43px;
