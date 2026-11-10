@@ -3593,3 +3593,57 @@ sayfada da geçerli (normalize sonrası diff = yalnız bu iki blok). H-03'ün
 
 **Devir:** H-03r/R-14 → CF paneli **Redirect Rule** (host `www` → 301 apex).
 **Yeni:** H-03r, R-14, D-31. **Değişmedi:** O-01r6 (origin sağlıklı).
+
+---
+
+## Tur 38 (2026-11-10) — #163: bot engeli çürütüldü (B-01) + doğrulama etiketi yok (V-01)
+
+### B-01 (negatif kanıt) — Cloudflare arama motoru botlarını ENGELLEMİYOR
+
+Issue #163'ün Cloudflare'e atfettiği "bot engeli / `cf-mitigated: challenge` arama
+motoru botlarını da engelliyor" hipotezi **canlı ölçümle çürütüldü**. Aynı gün, taze:
+
+| UA | yol | sonuç | `cf-mitigated` |
+|---|---|---|---|
+| `Googlebot/2.1` | `/robots.txt` | **200** | yok |
+| `bingbot/2.0` | `/robots.txt` | **200** | yok |
+| `YandexBot/3.0` | `/robots.txt` | **200** | yok |
+| `Googlebot/2.1` | `/` | **200** (`DYNAMIC`) | yok |
+| `GPTBot/1.1` | `/` | **200** | yok |
+| `facebookexternalhit/1.1` | `/` | **200** | yok |
+| `Scrapy/2.11` | `/` | **200** | yok |
+| `python-requests/2.31` | `/` | **200** | yok |
+| `curl/7.68` | `/` | **200** | yok |
+| (boş UA) | `/` | **200** | yok |
+
+- `robots.txt`: `Allow: /`; yalnız `/api/`, `/auth/` ve yerel-ek `/en|ru|el|fa|de/auth/`
+  `Disallow`. `Host: https://isbulkktc.com`, `Sitemap: https://isbulkktc.com/sitemap.xml`.
+- `X-Robots-Tag` **yok**; `sitemap.xml` **200** `application/xml`.
+- **Etki:** #163'ün 2. halkası (taranabilirlik) **sağlam**; sorun Cloudflare'de değil.
+  Yükleyici (load-sensitive) hipotezler ve "challenge" iddiaları bu kanıtla düşer.
+
+### V-01 (kopuk halka) — doğrulama meta etiketi YOK
+
+Üretim HTML'inde `google-site-verification` meta etiketi **yok**:
+
+```
+$ curl -sS https://isbulkktc.com/ | grep -c site-verification
+0
+```
+
+AGENTS.md `NEXT_PUBLIC_{GOOGLE,BING,YANDEX}_SITE_VERIFICATION` env'lerinin koda bağlı
+(`src/app/[locale]/layout.tsx`) ama değerlerinin girilmediğini söylüyordu — bu ölçüm
+onu **doğruluyor**. Doğrulanmamış Search Console mülkü **taranmaz/indekslenmez**; bu,
+"isbulkktc.com yazmadıkça çıkmıyor" şikâyetinin **en olası kopuk halkasıdır**.
+
+- **Sahip:** LANE-SEO (+ sahip env erişimi). **CF panelinde çözülmez.**
+- **Düzeltme:** env değerlerini gir → GSC/Bing/Yandex mülkünü doğrula → `sitemap.xml`
+  gönder → kapsam raporunu oku.
+
+### Değişmedi
+
+- **H-03r/R-14:** `www` hâlâ apex'e yönlendirmiyor (`http://www` → 301 → `https://www`,
+  200; host korunuyor). Kanonik etiket apex'i işaret ediyor (doğru) ama host redirect yok.
+- **O-01r6:** origin sağlıklı.
+
+**Yeni kimlik:** B-01, V-01. **Devir:** #163 halka-2 CF'de değil; halka-1 → LANE-SEO.

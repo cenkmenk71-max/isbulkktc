@@ -1096,3 +1096,58 @@ Sonraki lane için notlar: (1) `http://www` → 301 **www'yi koruyor** (yalnız 
 - **D-31 (doğruluk):** tur 36 `www/freelance` için "apex ile **bayt-özdeş** (139 342 B)" dedi. Ölçüm: boyut özdeş ama **ham md5 farklı** (apex `27209a42…`, www `bfc412de…`). CF iki **rastgele** token enjekte ediyor — `window.__CF$cv$params` (bot yönetimi) ve `/cdn-cgi/l/email-protection` (G-01 email obfuscation). Bu iki blok normalize edilince gövdeler **origin'de özdeş**. İfade "origin gövdesi özdeş; yalnız CF-injected token farkı" olarak daraltıldı.
 - **Teyit (temiz):** apex/www `strict-transport-security` **aynı** (`max-age=31536000; includeSubDomains; preload`); `www` üzerinde gerçek-olmayan yol → **404** `DYNAMIC` (negatif cache yok); apex root **200** `DYNAMIC` (HTML cache'lenmiyor).
 - **O-01r6:** değişmedi — origin sağlıklı.
+
+## Tur 38 (2026-11-10) — #163 için "bot engeli" hipotezi ÇÜRÜTÜLDÜ (B-01) + doğrulama etiketi YOK (V-01)
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: V-01 (GSC/Bing/Yandex doğrulama env'i + panel) · #163
+            (kopuk halka aşağıda) · H-03r/R-14 (Redirect Rule) · H-02r/N-23 · N-22 ·
+            N-21 · N-20 · N-18 · N-19 · N-11r · H-01r · R-01 · G-01 · F-08 · #227 · #170
+            · O-01 (#518)
+Sonraki lane için notlar: (1) #163'ün "CF bot engeli arama motoru botlarını
+            engelliyor" halkası **YANLIŞ** — 9 UA (Googlebot/bingbot/YandexBot/GPTBot/
+            facebookexternalhit/Scrapy/python-requests/curl/boş-UA) hepsi **200**,
+            hiç `cf-mitigated` yok. (2) Doğrulama meta etiketi (`google-site-verification`)
+            üretim HTML'inde **YOK** (`grep -c` = 0) → indekslemenin en olası kopuk
+            halkası **burada**, CF'de değil; sahibi LANE-SEO/env. (3) `www` 200 dönmeye
+            devam ediyor (H-03r değişmedi). Yeni kimlik: B-01, V-01.
+```
+
+- **B-01 (yüksek, negatif kanıt — #163 halkası 2):** Issue #163'ün Cloudflare'e
+  atfettiği "arama motoru botlarını challenge engelliyor" hipotezi **çürütüldü**.
+  `https://isbulkktc.com/` ve `/robots.txt` için UA matrisi (canlı, taze):
+  | UA | yol | kod | `cf-mitigated` |
+  |---|---|---|---|
+  | Googlebot/2.1 | `/robots.txt` | **200** | yok |
+  | bingbot/2.0 | `/robots.txt` | **200** | yok |
+  | YandexBot/3.0 | `/robots.txt` | **200** | yok |
+  | Googlebot/2.1 | `/` | **200** `DYNAMIC` | yok |
+  | GPTBot/1.1 | `/` | **200** | yok |
+  | facebookexternalhit/1.1 | `/` | **200** | yok |
+  | Scrapy/2.11 | `/` | **200** | yok |
+  | python-requests/2.31 | `/` | **200** | yok |
+  | curl/7.68 | `/` | **200** | yok |
+  | (boş UA) | `/` | **200** | yok |
+  - `robots.txt` gövdesi izin verici: `Allow: /`, yalnız `/api/` ve `/auth/`
+    (+ yerel-ek `/en|ru|el|fa|de/auth/`) `Disallow`; `Host: https://isbulkktc.com`,
+    `Sitemap: https://isbulkktc.com/sitemap.xml`.
+  - `X-Robots-Tag` başlığı **yok** (kazara `noindex` yok); `sitemap.xml` **200**
+    `application/xml`.
+  - **Sonuç:** Cloudflare **hiçbir** UA'ya challenge/mitigation uygulamıyor. #163'ün
+    bot-engeli halkası **sağlam**; kopuk halka CF'de değil.
+- **V-01 (yüksek — #163 halkası 1, sahibi LANE-SEO/env):** Üretim HTML'inde
+  **`google-site-verification` meta etiketi yok** (`curl … | grep -c site-verification`
+  = **0**). AGENTS.md'nin işaret ettiği `NEXT_PUBLIC_{GOOGLE,BING,YANDEX}_SITE_VERIFICATION`
+  env'i **girilmemiş** görünüyor → Search Console mülkü doğrulanmamış olabilir;
+  doğrulanmamış mülk **taranmaz/indekslenmez**. Bu, "isbulkktc.com yazmadıkça
+  çıkmıyor" şikâyetinin **en olası kopuk halkası**dır ve **CF panelinde çözülmez**.
+  - **Düzeltme (devir — LANE-SEO + sahip):** env değerlerini gir, GSC'de mülkü
+    doğrula, `sitemap.xml`'i GSC'ye gönder, kapsam raporunu oku.
+- **Teyit (H-03r/R-14 değişmedi):** `http://www` → 301 → `https://www` (host
+  korunuyor); `https://www/` → **200**; kanonik `www` ve apex'te de
+  `https://isbulkktc.com` (doğru) → sinyal var ama **host redirect** yok.
+- **O-01r6:** origin sağlıklı (değişmedi).
