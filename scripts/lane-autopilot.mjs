@@ -43,6 +43,7 @@ import {
   failedRequiredChecks,
   fairOrder,
   heldForHuman,
+  isDraftPullRequest,
   isInfraRejection,
   modelIsAllowed,
   nextConversationAction,
@@ -371,7 +372,13 @@ function mergeReadyPullRequests(prs, dryRun) {
       });
       continue;
     }
-    if (pr.isDraft) continue;
+    if (isDraftPullRequest(pr)) {
+      // A draft is never auto-merged, and nothing in the system un-drafts one,
+      // so a green draft can neither land nor free its open-PR slot. Report it
+      // instead of skipping in silence: an unmentioned draft held the queue.
+      stalled.push({ number: pr.number, reason: 'draft — mark ready for review so it can merge' });
+      continue;
+    }
     const files = JSON.parse(
       gh(['pr', 'view', String(pr.number), '--json', 'files', '--jq', '.files']),
     );
@@ -750,6 +757,11 @@ async function decide(name, ctx) {
         action: 'wait',
         reason: `PR #${pr.number} held for a human (${prLabels.filter((l) => String(l).startsWith('agent:')).join(', ')})`,
       };
+    }
+    // A draft is never auto-merged, so "ready to merge" would be false here for
+    // the same reason it was for a held PR: the merge step will not touch it.
+    if (isDraftPullRequest(pr)) {
+      return { action: 'wait', reason: `PR #${pr.number} is a draft — mark ready for review` };
     }
     if (state_ === 'CLEAN') return { action: 'wait', reason: `PR #${pr.number} ready to merge` };
     return { action: 'wait', reason: `PR #${pr.number} in flight (${state_})` };

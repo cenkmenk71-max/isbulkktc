@@ -731,6 +731,25 @@ export function heldForHuman(labels) {
 }
 
 /**
+ * Whether a PR is a draft, which GitHub will never auto-merge.
+ *
+ * `mergeReadyPullRequests` used to `continue` on a draft in silence, so a draft
+ * that turned green stayed out of the merge queue *and* out of the "STALLED
+ * PRs" list. On 2026-11-10 PR #584 was exactly that: a draft, every required
+ * check green, `autoMergeRequest: null`. Nothing in the system un-drafts a PR,
+ * so it could never land — and it held one of the four open-PR slots, which
+ * deferred every other lane (`PR limit: pass may open 0 (open 4, cap 4)`). The
+ * draft was invisible because the only line that would have named it was the
+ * one the `continue` skipped.
+ *
+ * @param {{isDraft?: boolean}|null|undefined} pr
+ * @returns {boolean}
+ */
+export function isDraftPullRequest(pr) {
+  return pr?.isDraft === true;
+}
+
+/**
  * Checks that only aggregate other jobs, so they carry no gate of their own.
  *
  * `Quality, database and E2E` in `.github/workflows/ci.yml` declares

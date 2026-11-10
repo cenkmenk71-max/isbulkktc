@@ -18,6 +18,7 @@ import {
   hasLabelledWork,
   heldForHuman,
   isCapacityError,
+  isDraftPullRequest,
   isInfraRejection,
   laneDelivered,
   modelIsAllowed,
@@ -767,6 +768,19 @@ test("a PR without a brake is not held for a human", () => {
   assert.equal(heldForHuman([]), false);
   assert.equal(heldForHuman(undefined), false);
   assert.equal(heldForHuman(null), false);
+});
+
+// ---------------------------------------------------------------------------
+// isDraftPullRequest — a draft is never auto-merged, so it must be reported
+// ---------------------------------------------------------------------------
+
+test("only a draft is a draft", () => {
+  assert.equal(isDraftPullRequest({ isDraft: true }), true);
+  assert.equal(isDraftPullRequest({ isDraft: false }), false);
+  // A missing field must not read as a draft, or every PR would be reported.
+  assert.equal(isDraftPullRequest({}), false);
+  assert.equal(isDraftPullRequest(undefined), false);
+  assert.equal(isDraftPullRequest(null), false);
 });
 
 // ---------------------------------------------------------------------------
