@@ -2102,3 +2102,62 @@ değişmedi. Erişilebilirlik/kontrast/RTL bu lane'de kapsam dışı. Kardeş
 ### Devir
 
 Yeni devir yok. **#514** kapıya terfi etti (main'de inmiş) — issue kapatılabilir.
+
+## Durum (2026-11-10, 49. tur) — #568: push-endpoint parite mirror'ı #536 kuralına güncellendi
+
+Kuyruktan **#568** alındı (`devir(supabase→guvenlik)`, `agent:handoff`). Kaynak
+düzeltme LANE-SUPABASE'in **#536**'sıydı: `register_push_subscription` artık host'u
+URL ayrıştırıcısı gibi çıkarıyor. Ama `tests/security/push-endpoint-sql-parity.test.ts`
+içindeki **mirror hâlâ eski ham-string kuralını** modelliyordu, bu yüzden `todo`
+testi kendiliğinden yeşile dönmedi.
+
+### Bulgu (kanıtlı) — mirror ile gerçek SQL ayrıştı
+
+- **Gözlenen:** `sqlAllowsEndpoint(sql, 'https://evil.com\\.push.apple.com/x')`
+  hâlâ `true` (ham `split_part` kuralı); oysa yeni SQL (`20261110130000`) reddeder.
+- **Beklenen:** mirror yeni yetki-kuralını modellesin; `todo` gate'e dönsün, yeşil olsun.
+- **Etki:** gate'e çevrilirse **yanlış kırmızı** verir; ayrışma yönü "kabul"
+  olduğundan ratchet'in savunma değeri sıfırlanır.
+- **İkinci kusur (vakum riski):** `assertAuthorityRuleShape`'in ilk `split_part`
+  argümanı `[\w.]+` deseniyle sabitti; gerçek #536 SQL'i `?`/`#` kırpmalarını
+  **başka `split_part` çağrılarının içine** gömdüğü için şekil assertion'ı ham SQL'de
+  eşleşmiyordu.
+
+### Düzeltme
+
+- `sqlAuthority()` mirror'ı gerçek kurala yazıldı: trim, `https://`, uzunluk
+  `[12,1024]`, yetkiyi ilk `/`, `\`, `?`, `#`'te bitir, çıplak host + isteğe bağlı
+  tam-sayı port (`<= 65535`), sonra exact + suffix allowlist.
+- `assertAuthorityRuleShape` şekil assertion'ı gerçek (iç içe) SQL metnine uyacak
+  şekilde gevşetildi (`split_part\([^;]*?<delim>, <n>\)`).
+- `todo` kaldırıldı; parity gate + şekil self-test'leri artık **kapı**.
+
+### Kanıt (mutation)
+
+- Mirror'ı eski ham-string kuralına geri al → `the #536 gate` testi **kırmızı**.
+- Şekil assertion'ını eski `[\w.]+`'ye geri al → self-test **kırmızı**.
+- Probe: tehlikeli yön (SQL kabul / app red) kapalı; kalan uyuşmazlıkların hepsi
+  SQL-daha-sıkı (güvenli yön) ve main'de önceden var.
+
+### Dokümanlar
+
+- `tests/security/README.md`: parity satırı yeni kurala göre yeniden yazıldı;
+  DB-yarısı bulgusu **fixed** (#536 + #282, mirror #568'de güncellendi).
+- `docs/threat-model.md`: bulgu 3 "Kapatılan bulgular"a taşındı; userinfo/`:65536`
+  satırları ve düzeltme (`20261110130000` + `20261110140000`) eklendi.
+
+### Kapılar (yeşil)
+
+- `bun run test:security` → 205 test / 199 pass / **0 fail** / 6 todo.
+- `bun run test:unit` → 1071 test / 1071 pass / 0 fail / 0 todo.
+- `bun run lint` ✓ · `bun run typecheck` ✓ · `bun run check:frontend-source` ✓.
+
+### Bakılmayan / değişmeyen
+
+Alan taranmadı (devir turu). Kalan 6 `todo` main'de önceden var
+(`account-lifecycle`, `anonymous-rpc-throttle`, `client-boundary`) — bilgilendirici
+işaret, gerçek `fail` değil. Erişilebilirlik/kontrast/RTL bu lane'de kapsam dışı.
+
+### Devir
+
+Yeni devir yok. **#568** bu PR ile kapanır. Rule-4 (canlı deploy kaydı) LANE-TESLİMAT'ın işi.
