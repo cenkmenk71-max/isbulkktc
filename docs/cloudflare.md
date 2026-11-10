@@ -3368,3 +3368,65 @@ Origin hâlâ **404 `DEPLOYMENT_NOT_FOUND`**; CF/TLS/WAF katmanı sağlam. Alias
 
 **Devir:** H-02r/N-23 → CF paneli **Cache Rules** (sahibin onayı) — bu lane yazmaz.
 **Yeni:** H-02r (TTL kaynağı Cache Rules), N-23 (`/_next/static` 404 → 1 yıl), O-01r4.
+
+## Tur 35 (2026-11-10) — kesinti altında katman ayrımı: `www→apex` yönlendirmesi ölçülemiyor (R-01r) + N-22/WAF/DNSSEC teyit
+
+**Yöntem:** origin hâlâ `404 DEPLOYMENT_NOT_FOUND` iken brief 1 (DNS/`www`), 4 (WAF)
+ve 6 (rate-limit) noktaları yeniden ölçüldü; her iddia **katman atfı** ile ayrıldı
+(CF mi origin mi).
+
+### R-01r (gözlem — belirsiz, D-29 ile dokümana işlendi)
+
+Doküman (`F-03` satır 79, `C-09`, `V-06`, `W-18-16`, `W-20-3`) `https://www` → **308
+apex** diyor. Bu turda **yönlendirme ateşlenmiyor**: `www` içeriği doğrudan servis
+ediyor (apex ile **aynı gövde**: `/robots.txt` md5 `3f95773253df085be0d6fd831ae2195f`
+== apex).
+
+| İstek | Yanıt | Katman |
+|---|---|---|
+| `http://www.isbulkktc.com/` | **301** → `https://www.isbulkktc.com/` | **CF** (Always Use HTTPS, origin'siz çalışır) |
+| `https://www.isbulkktc.com/` | **404** (`DEPLOYMENT_NOT_FOUND`) — apex'e yönlenmiyor | origin |
+| `https://www.isbulkktc.com/robots.txt` | **200**, apex ile **aynı** gövde | CF cache + origin |
+| `https://www.isbulkktc.com./` | **404** (yönlenmiyor) | origin |
+
+**Katman çıkarımı:** `http→https` CF'de olduğu için **origin düşükken de** çalışıyor
+(301). `https://www → apex` ise **ateşlenmiyor** → bu hop CF edge kuralı **değil**;
+büyük olasılıkla **Vercel domain-level** yönlendirme (deployment yönlendirmesi),
+dolayısıyla deployment yokken uygulanamıyor. Repo'da `www` yönlendirmesi **yok**
+(`next.config.ts` `redirects()` yok; yalnız `*.vercel.app` noindex kuralı var).
+
+**Sonuç:** Bu bir **ölçüm kısıtıdır** (D-21 sınıfı), kanıtlanmış konfig açığı **değil**.
+Sağlıklı origin'de `https://www/<yol>` → 308 apex **yeniden ölçülmeli**; o zaman (a)
+hâlâ 404/200 ise gerçek açık, (b) 308 ise yalnız kesinti artefaktı. Aksi hâlde
+`www`'de **duplicate content** (SEO kanonik riski) sürer.
+
+### D-29 (doküman doğruluğu)
+
+`F-03` satırındaki "`https://www` → **308** apex'e" iddiası koşulsuz yazılmıştı;
+kesinti altında **doğrulanamadığı** (R-01r) notu eklendi.
+
+### Teyit edilen (temiz)
+
+- **WAF yol matrisi (404 rejimi):** 7/7 saldırı yolu **403** (WAF; `cf-ray` dolu,
+  "Attention Required!"): `/.git/config`, `/.env`, `/wp-admin`, `/wp-login.php`,
+  `/phpmyadmin`, `/api/devtools/`, `/composer.json`. 6/6 meşru/atlanan → **404**
+  origin: `/`, `/jobs`, `/about`, `/api/build-info`, `/.git` (eğiksiz, N-18),
+  `/.npmrc` (N-19).
+- **N-22 (bot UA) teyit:** `sqlmap/1.7` **403**; çıplak `sqlmap`, `SQLMap/1.7`,
+  `Mozilla/5.0 sqlmap/1.7`, `nikto`, `Nuclei`, `masscan` → **404** (atlıyor). Bulgu
+  aynen duruyor.
+- **DNSSEC:** `dns.google` `do=1` → **`AD=true`**.
+- **HSTS preload:** `hstspreload.org` → **`status: "pending"`** (dokümanla uyumlu).
+- **`Vary` ayrımı:** `/robots.txt` → **`Vary` yok**; `/sitemap.xml` →
+  `vary: accept-encoding` (T-01/T-07 düzeltmesiyle uyumlu).
+- **H-01r (hâlâ açık):** edge HSTS `max-age=31536000` vs origin `63072000`
+  (`next.config.ts:36`) — CF eziyor, teyit edildi.
+- **`/cdn-cgi` yüzeyi:** `/cdn-cgi/trace` 200, `/cdn-cgi/speculation` 200;
+  `/cdn-cgi/challenge-platform/`, `/cdn-cgi/zaraz/`, `/cdn-cgi/l/email-protection` → 404.
+
+### O-01r5 (yeniden ölçüm)
+
+Origin hâlâ **404 `DEPLOYMENT_NOT_FOUND`**; CF/TLS/WAF katmanı sağlam. #518 (LANE-INFRA) açık.
+
+**Devir:** R-01r → sağlıklı origin'de yeniden ölçüm (LANE-INFRA/CF panel).
+**Yeni:** R-01r (www yönlendirmesi kesinti altında ateşlenmiyor — belirsiz), D-29, O-01r5.
