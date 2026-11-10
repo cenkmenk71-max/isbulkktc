@@ -570,3 +570,50 @@ edilebilir bekleyen PR yok.
 `agent:blocked`) yeni kanıtla (23 geride, `total_count: 0`) hâlâ geçerli; bu lane
 dokunmadı.
 
+
+## Tur 13 — 2026-11-10 (lane/teslimat)
+
+**Kapsam.** Atanmış açık `lane:teslimat` issue yok. Kurtarma turu: alan taranmadı;
+tek sınırlı, gerçek bir düzeltme — PR #580'i kilitlenmekten kurtarıp merge etmek ve
+kural 4 kaydını yazmak.
+
+**Bulgu (finding 24) — deploy doğrulayıcının başlığı kendi exit koduyla çelişebiliyordu.**
+`scripts/verify-production-deployment.mjs` özetin `verdict:` satırını yalnız
+`decision.verified`'dan (tazelik) türetiyordu; `process.exitCode` ise hem tazelik hem
+smoke-rota hatasını taşıyan `failures` dizisinden geliyordu. Sonuç: commit onaylanmış
+ama bir public rota 500 dönüyorsa çıktı `verdict: ✅ commit confirmed …` yazıp iş
+**exit 1** ile kırmızı bitiyordu — insanın ilk okuduğu satırda sahte yeşil. Tek doğruluk
+kaynağıyla düzeltildi: `describeVerdict(decision, routeFailures)` hem başlığı hem exit
+kararını besler; artık yapısal olarak ayrışamazlar.
+
+**Bulgu (finding 25) — lane'e ait bir test, *blocked* bir PR ile aynı dosyayı paylaşınca
+ikisi birden kilitleniyor.** #580'in regresyon testi, #579'un (`lane/infra`,
+`agent:blocked` — insan-only, kendi kendine iyileşemez) düzenlediği
+`scripts/verify-production-deployment.test.mjs` içindeydi. `Lane collisions` kapısı iki
+PR'ı aynı dosyada görünce #580'in Static checks'i kırmızıya döndü ve #580, hareket
+edemeyen bir PR'ın arkasında `BLOCKED` kaldı. Çözüm lane'in kendi glob'unda kaldı:
+regresyon testi **yeni** bir dosyaya (`scripts/verify-production-deployment-verdict.test.mjs`,
+`scripts/verify-production-deployment*.mjs` glob'una girer) taşındı, ortak dosya
+`origin/main`'e birebir geri döndürüldü (diff'ten tamamen çıktı).
+`node scripts/lane-collisions.mjs --pr 580` → `No collisions across 2 open PR(s)`.
+
+**Teslim edildi (kural 4).** PR **#580** `app/github-actions` auto-merge (squash) ile
+**13:40:16Z'de merge edildi** (`main` `b39718d` → `1c103de`, merge commit
+`1c103decd3178cb80c29f00b629c161503766832`); tüm zorunlu kontroller yeşil (Static 1m11s,
+Database 2m05s, E2E 1–4 pass, `Quality, database and E2E` aggregator pass). Kayıt bu
+turda `docs/deploy-log.md`'ye eklendi.
+
+**Canlı ölçüm (görev 3) — 🔴 teslim doğrulanamadı, nedeni adıyla kondu.** 13:40Z:
+`main` = `1c103de`, canlı = `3644cbe3` (**24 geride**, ve `3644cbe3` `main`'in atası —
+ayrışmış değil). `GET /` **200** → **stale but healthy**. Tip `1c103de`'de **hiç `Vercel`
+status girdisi yok** (`total_count: 0`) → **#547** durumu (yeni Vercel hesabında GitHub
+Git bağlantısı yok), #319 rate-limit salınımı **değil**. Depodan düzeltilemez; sahip
+tarafı (Vercel Dashboard → Git) veya LANE-INFRA `VERCEL_TOKEN` deploy workflow'u. Bu
+lane'in yedinci doğrulanamayan teslimi ve sebebi dışsaldır.
+
+**Merge kuyruğu (görev 1).** Bu turda merge edilebilir tek PR #580'di (bu lane'in);
+merge edildi. Kalan açık PR #579 (`lane/infra`, `agent:blocked`) workflow dosyası
+değiştirdiği ve insan-onayı beklediği için bu lane'in kapsamı dışında.
+
+**Devredilenler.** #547 (teslim donmasının kök nedeni, `agent:infra` + `agent:blocked`)
+yeni kanıtla (24 geride, `total_count: 0`) hâlâ geçerli; bu lane dokunmadı.
