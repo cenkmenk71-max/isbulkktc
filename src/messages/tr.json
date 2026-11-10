@@ -1327,16 +1327,16 @@
       "sections": {
         "s1": {
           "title": "Zorunlu çerezler",
-          "p1": "Oturumunuzu açık tutmak, güvenliği sağlamak ve dil tercihinizi hatırlamak için kullanılan çerezler zorunludur; bunlar olmadan site çalışmaz."
+          "p1": "Oturumunuzu açık tutan oturum çerezi, dil tercihinizi hatırlayan NEXT_LOCALE çerezi ve sosyal kayıt sırasında kullanılan güvenlik çerezi zorunludur. Oturum çerezi 400 gün, güvenlik çerezi 15 dakika, NEXT_LOCALE ise yalnızca oturum boyunca geçerlidir; bunlar olmadan site çalışmaz."
         },
         "s2": {
           "title": "Analitik ve pazarlama çerezleri",
-          "p1": "Google Analytics çerezleri yalnızca onayınızı verdiğinizde yüklenir. Bu çerezler ziyaret edilen sayfaları anonim olarak ölçmemize yardımcı olur. Reklam ve pazarlama çerezleri ise yalnızca bu kategoriye onay verdiğinizde etkinleşir ve ilgi alanınıza uygun içerik ile reklam için kullanılır.",
+          "p1": "Google Analytics çerezleri yalnızca onayınızı verdiğinizde yüklenir ve en fazla 2 yıl saklanır; ziyaret edilen sayfaları anonim olarak ölçmemize yardımcı olurlar. Reklam ve pazarlama çerezleri ise yalnızca bu kategoriye onay verdiğinizde etkinleşir ve ilgi alanınıza uygun içerik ile reklam için kullanılır.",
           "p2": "Bu kategorilerden birine onay vermezseniz ilgili betik veya çerez hiç yüklenmez. Tercihinizi site üzerindeki çerez ayarlarından dilediğiniz zaman değiştirebilirsiniz."
         },
         "s3": {
           "title": "Tercihleri yönetme",
-          "p1": "Çerez tercihleriniz tarayıcınızda saklanır ve yalnızca bu siteyi etkiler. Tarayıcı ayarlarınızdan çerezleri tamamen silebilir veya engelleyebilirsiniz.",
+          "p1": "Çerez tercihleriniz tarayıcınızda saklanır ve yalnızca bu siteyi etkiler. Verdiğiniz karar 180 gün sonra geçersiz sayılır ve size yeniden sorulur. Tarayıcı ayarlarınızdan çerezleri tamamen silebilir veya engelleyebilirsiniz.",
           "p2": "Çerezleri engellemeniz durumunda giriş ve profil işlemleri gibi bazı işlevler çalışmayabilir."
         }
       }

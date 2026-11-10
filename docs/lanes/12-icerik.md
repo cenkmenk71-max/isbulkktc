@@ -730,3 +730,77 @@ Sahibin yapması gerekenler: PR'ı merge et; seed (#141) yeniden üretilmeli (LA
 Sonraki lane için notlar: iki hukuki belge (privacy + cookies) artık ortak kategori
   ratchet'ine bağlı; kategori eklenirse ikisi de güncellenir.
 ```
+
+## Tur 10 — çerez politikası ömür bildirmiyor (2026-11-10)
+
+### Bulgu: hiçbir çerez ömrü belgelenmemiş
+
+`Legal.cookies` (6 dil) çerez kategorilerini anlatıyor ama **hiçbir çerez ömrü**
+bildirmiyordu. Ziyaretçi oturumunun, onay kararının ve analitik çerezinin ne kadar
+tutulduğunu öğrenemiyordu; onay kararının **180 gün sonra yeniden sorulduğu** da
+belgelenmemişti. Çerez politikası bu bilgiyi içermeli (ePrivacy/KVKK şeffaflık).
+
+### Gerçek ömürler (kaynaktan doğrulandı)
+
+| Çerez | Ömür | Kanıt |
+|---|---|---|
+| Oturum (Supabase auth) | **400 gün** | `@supabase/ssr` `DEFAULT_COOKIE_OPTIONS.maxAge = 400*24*60*60`; proje override etmiyor — `src/server/db/supabase-server.ts:92` `cookieOptions` yalnız `path`/`sameSite`/`httpOnly`/`secure` |
+| Güvenlik (OAuth kayıt niyeti) | **15 dakika** | `src/features/identity/oauth-signup-intent.ts:4` `oauthSignupIntentMaxAgeSeconds = 15 * 60` |
+| `NEXT_LOCALE` | **oturum boyunca** | `src/i18n/routing.ts` `localeCookie` yalnız `secure` set eder; `maxAge` yok |
+| Onay kararı | **180 gün** | `src/components/analytics/consent.ts:25` `consentCookieMaxAgeSeconds = 180 * 24 * 60 * 60` |
+| Google Analytics `_ga` | **en fazla 2 yıl** | Google resmî destek doc (policies 11397207) |
+
+### Düzeltme
+
+- 6 dilde `sections.s1` (zorunlu), `s2` (analitik) ve `s3` (tercihler) metnine gerçek
+  ömürler eklendi; dilin doğal sözcükleriyle (kelime kelime değil).
+- Taslakta yer alan "pazarlama çerezleri 90 gün" iddiası **kaldırıldı**: uygulamada
+  pazarlama/reklam etiketi yok, yalnız GA var. Bu lane uydurma ömür yazmaz.
+- `fa` sayıları yerel biçimde (۴۰۰، ۱۵، ۱۸۰، ۲).
+
+### Seed yeniden üretimi (zorunlu, kapsam ihlali değil)
+
+`supabase/seed-managed-content.sql` **`src/messages/*.json`'dan üretilir**
+(`scripts/generate-managed-content-seed.ts`) ve
+`tests/unit/managed-content-seed.test.ts` üretileni commit'lenmiş dosyayla
+karşılaştırır. Mesaj dosyaları bu lane'in sahibi olduğu için seed'i yeniden
+üretmek zorunluydu; aksi halde CI kırmızı. `bun run seed:managed-content` çalıştırıldı
+→ **6 satır** değişti (her dil için `legal.cookies`), başka satır yok.
+
+### Boyut taraması (AUDIT.md, seçilen düzeltmeye uygulandı)
+
+| Alan | Sonuç |
+|---|---|
+| Doğruluk (politika ↔ gerçek ömür) | 5 ömür kaynaktan doğrulandı; uydurma ömür yok |
+| İç sistem sözlüğü | "NEXT_LOCALE" bir çerez adıdır, ziyaretçinin tarayıcısında görünür — sızıntı değil |
+| 6 dil paritesi | 0 eksik/fazla; yalnız `p1` alanları değişti |
+| Placeholder paritesi | değişmedi (bu anahtarlarda placeholder yok) |
+| ICU / JSON round-trip | dosya başına 1 satır değişti; tam yeniden biçimlendirme yok |
+| RTL (`fa`) / uzun metin (`de`) | metin değişikliği; yeni renk/ikon yok, akış korunur |
+| Erişilebilirlik/kontrast | dokunulmadı |
+
+### Kapılar
+
+lint ✅ · typecheck ✅ · check:frontend-source ✅ · test:unit 931 pass / 0 fail ✅
+
+### Devir
+
+- **LANE-SUPABASE:** `supabase/seed-managed-content.sql` bu PR'da yalnız üretici
+  çıktısı olarak güncellendi (6 satır). Şema/RPC değişmedi.
+- **LANE-TASARIM** (`src/components/analytics/**`): onay ömrü 180 gün sabiti
+  değişirse `s3.p1` metni de güncellenmeli — bu lane'in işi.
+
+### Rapor (00-orchestration formatı)
+
+```
+Lane: icerik            Branch: lane/icerik            PR: (bu PR)
+Değişen dosyalar: src/messages/{tr,en,ru,el,fa,de}.json,
+  supabase/seed-managed-content.sql, docs/lanes/12-icerik.md
+Çalıştırılan kontroller:
+  lint -> pass | typecheck -> pass | check:frontend-source -> pass
+  test:unit -> 931 pass / 0 fail | e2e -> CI'da | database -> CI'da
+Canlıya dokundu mu: hayır
+Sahibin yapması gerekenler: PR'ı merge et
+Sonraki lane için notlar: çerez ömürleri artık belgeli; ömür sabiti değişirse
+  metin de güncellenir (consent 180 gün, oauth 15 dk, session 400 gün).
+```

@@ -1,13 +1,16 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { DEFAULT_COOKIE_OPTIONS } from "@supabase/ssr";
 import { faqByLocale } from "@/content/ai-visibility/faq";
 import { getArticles } from "@/content/editorial";
 import { getGuides } from "@/content/guides";
 import {
   consentCategories,
+  consentCookieMaxAgeSeconds,
   type ConsentCategory,
 } from "@/components/analytics/consent";
+import { oauthSignupIntentMaxAgeSeconds } from "@/features/identity/oauth-signup-intent";
 import type { AppLocale } from "@/i18n/routing";
 
 const locales = ["tr", "en", "ru", "el", "fa", "de"] as const;
@@ -552,5 +555,72 @@ test("the privacy policy documents every consent category the banner offers", ()
     assertPolicyNamesConsentCategories(locale, "privacy policy", [
       "Legal.privacy.sections.s2.p2",
     ]);
+  }
+});
+
+// The cookie policy states how long each cookie lasts. Those figures describe
+// the running app, not editorial choices: the session cookie's lifetime is
+// `@supabase/ssr`'s default (`DEFAULT_COOKIE_OPTIONS.maxAge`; the project never
+// overrides `maxAge`), the security cookie's is `oauthSignupIntentMaxAgeSeconds`,
+// and the consent decision's is `consentCookieMaxAgeSeconds`. This ratchet
+// derives the documented numbers from those sources and requires each locale to
+// state them in its own numerals, so a lifetime change cannot leave a stale
+// claim on the /cookies page (#418 §6).
+const sessionCookieDays = Math.round(
+  (DEFAULT_COOKIE_OPTIONS.maxAge as number) / (24 * 60 * 60),
+);
+const securityCookieMinutes = Math.round(oauthSignupIntentMaxAgeSeconds / 60);
+const consentCookieDays = Math.round(
+  consentCookieMaxAgeSeconds / (24 * 60 * 60),
+);
+// Google Analytics `_ga` retention is set by Google, not by this project.
+const analyticsCookieYears = 2;
+
+const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+const localizeDigits = (value: number, locale: AppLocale): string => {
+  const western = String(value);
+  return locale === "fa"
+    ? western.replace(/\d/g, (digit) => PERSIAN_DIGITS[Number(digit)])
+    : western;
+};
+
+test("the cookie policy states each cookie's real lifetime", () => {
+  const expectations: ReadonlyArray<{
+    key: string;
+    value: number;
+    label: string;
+  }> = [
+    {
+      key: "Legal.cookies.sections.s1.p1",
+      value: sessionCookieDays,
+      label: "session cookie days",
+    },
+    {
+      key: "Legal.cookies.sections.s1.p1",
+      value: securityCookieMinutes,
+      label: "security cookie minutes",
+    },
+    {
+      key: "Legal.cookies.sections.s2.p1",
+      value: analyticsCookieYears,
+      label: "analytics cookie years",
+    },
+    {
+      key: "Legal.cookies.sections.s3.p1",
+      value: consentCookieDays,
+      label: "consent decision days",
+    },
+  ];
+
+  for (const locale of locales) {
+    const messages = flatten(readMessages(locale));
+    for (const { key, value, label } of expectations) {
+      const text = messages[key] ?? "";
+      const token = localizeDigits(value, locale);
+      assert.ok(
+        text.includes(token),
+        `${locale}.${key} does not state the ${label} (${token}); the policy drifted from the running app`,
+      );
+    }
   }
 });
