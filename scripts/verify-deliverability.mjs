@@ -25,6 +25,17 @@
  */
 
 import { promises as dns } from "node:dns";
+import { pathToFileURL } from "node:url";
+
+/**
+ * True when the module was launched directly (`node script.mjs`) rather than
+ * imported by a test. `pathToFileURL` percent-encodes the path, so a directory
+ * name holding a space or `#` still matches; the naive `file://${argv[1]}`
+ * comparison never does, and the script exits 0 having verified nothing.
+ */
+export function isDirectRun(moduleUrl, argv1) {
+  return Boolean(argv1) && moduleUrl === pathToFileURL(argv1).href;
+}
 
 const args = process.argv.slice(2);
 function argValue(flag) {
@@ -588,7 +599,7 @@ async function main() {
 }
 
 // Only run when invoked directly, so the pure helpers stay importable in tests.
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   main().catch((error) => {
     console.error(error);
     process.exit(1);

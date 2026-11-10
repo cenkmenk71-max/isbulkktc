@@ -7,6 +7,7 @@ import {
   countSpfDnsLookups,
   evaluateBlocklistZone,
   interpretDnsResponse,
+  isDirectRun,
   isRelaxedAligned,
   reverseIpv4,
   spfAuthorisesSender,
@@ -172,4 +173,19 @@ test("a resolver failure is an error, not an absent record", () => {
   // NXDOMAIN still classifies as absent, which is what makes an SPF/DKIM record
   // genuinely missing a real FAIL rather than a skip.
   assert.equal(classifyDnsResult(interpretDnsResponse(3, undefined)), "absent");
+});
+
+test("the direct-run guard fires even when the script path holds a space or #", () => {
+  // The naive `file://${argv[1]}` guard never equals `import.meta.url` when the
+  // path holds a space or `#`, so `node`-invoked runs exited 0 having verified
+  // nothing. `pathToFileURL` percent-encodes both, so the guard matches.
+  const url = "file:///tmp/verify%23guard%20x/verify-deliverability.mjs";
+  assert.equal(isDirectRun(url, "/tmp/verify#guard x/verify-deliverability.mjs"), true);
+  // A plain path still matches.
+  assert.equal(isDirectRun("file:///repo/scripts/verify-deliverability.mjs", "/repo/scripts/verify-deliverability.mjs"), true);
+  // A missing argv[1] (imported, not launched) must never fire.
+  assert.equal(isDirectRun(url, undefined), false);
+  assert.equal(isDirectRun(url, ""), false);
+  // A different script on the same path must not fire.
+  assert.equal(isDirectRun("file:///repo/scripts/other.mjs", "/repo/scripts/verify-deliverability.mjs"), false);
 });

@@ -30,6 +30,18 @@
 // Exits non-zero only on a real inconsistency. Missing credentials skip the
 // dependent checks with a warning, so the guard never blocks on absent secrets.
 
+import { pathToFileURL } from "node:url";
+
+/**
+ * True when the module was launched directly (`node script.mjs`) rather than
+ * imported by a test. `pathToFileURL` percent-encodes the path, so a directory
+ * name holding a space or `#` still matches; the naive `file://${argv[1]}`
+ * comparison never does, and the script exits 0 having verified nothing.
+ */
+export function isDirectRun(moduleUrl, argv1) {
+  return Boolean(argv1) && moduleUrl === pathToFileURL(argv1).href;
+}
+
 const SUPABASE_API = "https://api.supabase.com/v1";
 
 /** Providers Supabase exposes and this app is allowed to advertise. */
@@ -530,6 +542,6 @@ async function main() {
   if (failures.length > 0) process.exitCode = 1;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   await main();
 }
