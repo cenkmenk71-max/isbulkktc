@@ -34,4 +34,16 @@ jobs:
       - name: Run the health check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # The secret-shape check (#209) reads these; without them it is blind
+          # in the scheduled run it was written for (#596). Both are already
+          # defined for `verify-production-deployment.yml`.
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          # The origin channel is blocked from runners (Cloudflare 403), so the
+          # deploy-freshness check reads the Vercel API's production alias
+          # instead (#590). Without the token the run reports the deploy as
+          # unmeasurable rather than measuring nothing.
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || secrets.VERCEL }}
+          VERCEL_TEAM_SLUG: ${{ vars.VERCEL_TEAM_SLUG || 'orijin1' }}
+          VERCEL_PROJECT: ${{ vars.VERCEL_PROJECT || 'isbulkktc' }}
         run: node scripts/system-health.mjs
