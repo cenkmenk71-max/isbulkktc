@@ -345,3 +345,36 @@ export function classifyProductionProbe(probe) {
   }
   return { level: 'fail', detail: `origin answered HTTP ${status}` };
 }
+
+/**
+ * Compare the commit the live origin serves to the default branch head.
+ *
+ * "Serving HTTP 200" is not "serving the current build". On 2026-11-10 the
+ * origin answered 200 while it was four commits behind `main` (the new Vercel
+ * account has no Git auto-deploy, #547): every check that reads GitHub's view
+ * said green while the work the team just merged was not live. The origin's
+ * `/api/build-info` reports the commit it was built from; compare it here.
+ *
+ * A short SHA on either side counts as current when it prefixes the other, so a
+ * trimmed `build-info` still matches. Missing or non-string input is `unknown`,
+ * never a failure — the probe has no evidence of a stale deploy, only that it
+ * could not compare, and inventing a failure from no data is the very bug this
+ * family is about.
+ *
+ * @param {{liveCommit?: string|null, mainCommit?: string|null}} [input]
+ * @returns {{level: 'ok'|'warn'|'unknown', detail: string}}
+ */
+export function classifyDeployFreshness({ liveCommit, mainCommit } = {}) {
+  const live = typeof liveCommit === 'string' ? liveCommit.trim().toLowerCase() : '';
+  const main = typeof mainCommit === 'string' ? mainCommit.trim().toLowerCase() : '';
+  if (!live || !main) {
+    return { level: 'unknown', detail: 'no build-info to compare against main' };
+  }
+  if (live === main || live.startsWith(main) || main.startsWith(live)) {
+    return { level: 'ok', detail: `live build matches main (${live.slice(0, 7)})` };
+  }
+  return {
+    level: 'warn',
+    detail: `live build ${live.slice(0, 7)} is behind main ${main.slice(0, 7)} — merged work is not deployed`,
+  };
+}

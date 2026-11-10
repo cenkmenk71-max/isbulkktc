@@ -58,6 +58,7 @@ node scripts/lane-autopilot.mjs
 | 6 | lane ölü | sayaç başarıda sıfırlanmıyor, iş başına değil lane ömrüne bağlı | iş imzası (`work`) + başarıda sıfırla |
 | 7 | main CI kırmızı | 0 job'lu **geçici GitHub glitch koşusu** gerçek arıza sanılıyor | job sayısına bak: 0 = glitch (warn), >0 = gerçek (fail) |
 | 8 | PR'lar "hareket ediyor" | kuyruk-global kapı (`lane-collisions`) kırmızı → **hiçbiri merge olamaz**; `system-health` yalnız "açık ve yaşlı değil" diye okur | kırmızı adımı yerelde koştur, adı geçen PR'ı bul, sahibine devret |
+| 9 | production "serving (HTTP 200)" | canlı build `main`'in **gerisinde** (yeni Vercel hesabında otomatik Git deploy yok) → birleşen iş yayında değil; GitHub'a bakan her kontrol yeşil okur | `/api/build-info` commit'ini `main` HEAD ile karşılaştır (`deploy` satırı) |
 
 **Yeni bir tıkanıklık görürsen:** aynı sınıfta mı diye sor — "bir sinyal yanlış
 okunuyor mu?" Genelde cevap evet.
@@ -863,3 +864,43 @@ artık tek satır yazıyor:
 **Ders.** Bir kırmızıyı **adlandırdığında** sor: bu iş kendi başına mı karar
 veriyor, yoksa yalnız başka bir işi mi aynalıyor? İkincisiyse ayrı bir neden
 değil, aynı nedenin ikinci görüntüsüdür; raporla, ama çözüm olarak sunma.
+
+## Tur notları — canlı build `main`'in gerisinde: "serving" ≠ "güncel" (2026-11-10)
+
+Sekiz aile de "yeşil görünen kırık"tı; bu tur **dokuzuncuyu** buldu ve kapattı:
+bekçi production'a `OK serving (HTTP 200)` yazıyordu, ama canlı build `main`'in
+**dört commit gerisindeydi** (`3644cbe` ↔ `2b899dc`). Yeni Vercel hesabında
+otomatik Git deploy yok (#547); her birleşen iş bir yere kadar yayına girmiyor.
+
+**Bulgu.** `system-health` yalnız "origin 200 döndü mü?" diye bakıyordu. GitHub'a
+bakan bütün diğer kontroller (main CI, PR'lar) yeşil okur; hiçbiri origin'in
+**hangi commit'i** sunduğunu sormaz. Bu, 8. ailenin (gösterge yanlış okuyor)
+deploy eksenindeki hâli: sağlık "çalışıyor" der, oysa taze iş canlıda yok.
+
+**Düzeltme (LANE-OPERATÖR dosyaları).**
+- `system-health-core.mjs`: `classifyDeployFreshness({liveCommit, mainCommit})` —
+  eşit ya da biri diğerinin öneki ise `ok`; farklıysa `warn` (iki kısa SHA ile);
+  eksik/geçersiz girdi `unknown` (**asla fail** — kanıt yok, uydurma yok).
+- `system-health.mjs`: `fetchLiveCommit()` (`/api/build-info`) + `mainCommitSha()`
+  (`gh api …/commits/main`); yeni **`deploy`** satırı production satırının yanında.
+  Okunamazsa satır hiç yazılmaz (`unknown`), böylece ağ/CI sorunu sahte kırmızı
+  üretmez.
+
+**Kanıt.** `scripts/system-health.test.mjs` **55/55** (yeni 5 test: eşit, kısa-önek
+iki yön, geride, büyük/küçük harf+boşluk, eksik→unknown). Canlı koşu artık yazıyor:
+```
+  OK   production   serving (HTTP 200)
+  WARN deploy       live build 3644cbe is behind main 2b899dc — merged work is not deployed
+```
+`scripts/**/*.test.mjs` **303/303**, `eslint` temiz.
+
+**Ders.** "Servis ayakta" ile "servis güncel" ayrı sorulardır. Bir sağlık kontrolü
+bir kaynağın **durumunu** okuyorsa, ona **sürümünü/yaşını** da sor: 200 dönen ama
+geride kalmış bir origin, yeşil bir yanlış-pozitifler kaynağıdır.
+
+**Not (bu turda kapanmayan).** Kök neden #552/#557/#559: `lane-collisions`
+kuyruk-global; LANE-INFRA'nın düzeltmesi **#559**'da (GLOBAL ↔ PR-LOCAL kapsam
+ayrımı, tasarımı doğru) ama CI kapısını değiştirdiği için **insan merge'i** bekliyor
+(`agent:blocked`). #557 kendi Static işini kırdığı için kuyruktan düşemiyor →
+#559 insan tarafından merge edilene dek kilit sürer. Operatör bu ikisini
+çöz**emez**; sahibe/insana bırakır.

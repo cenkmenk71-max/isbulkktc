@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   CI_AGGREGATOR_CHECKS,
   HEALTH_WORKFLOW,
+  classifyDeployFreshness,
   classifyProductionProbe,
   classifyRedRuns,
   failingWorkflows,
@@ -608,4 +609,65 @@ test("classifyProductionProbe names the Vercel account state it saw", () => {
     level: "fail",
     detail: "origin answered HTTP 404",
   });
+});
+
+// The bug this guards: "serving HTTP 200" is not "serving the current build".
+// On 2026-11-10 the origin answered 200 while it was four commits behind `main`
+// (the new Vercel account has no Git auto-deploy, #547): every GitHub-derived
+// check read green and the just-merged work was not live. The watchdog must
+// compare the origin's build-info commit to the default branch head.
+test("a live build equal to main is current", () => {
+  assert.deepEqual(
+    classifyDeployFreshness({ liveCommit: "2b899dc6b512", mainCommit: "2b899dc6b512" }),
+    { level: "ok", detail: "live build matches main (2b899dc)" },
+  );
+});
+
+test("a short live SHA that prefixes main still counts as current", () => {
+  assert.equal(
+    classifyDeployFreshness({ liveCommit: "2b899dc", mainCommit: "2b899dc6b5129368" }).level,
+    "ok",
+  );
+  // and the other direction, so a trimmed main cannot fake a stale deploy
+  assert.equal(
+    classifyDeployFreshness({ liveCommit: "2b899dc6b5129368", mainCommit: "2b899dc" }).level,
+    "ok",
+  );
+});
+
+test("a live build behind main is a stale deploy, named with both SHAs", () => {
+  assert.deepEqual(
+    classifyDeployFreshness({ liveCommit: "3644cbe3501b", mainCommit: "2b899dc6b512" }),
+    {
+      level: "warn",
+      detail: "live build 3644cbe is behind main 2b899dc — merged work is not deployed",
+    },
+  );
+});
+
+test("case and surrounding whitespace in the SHAs do not fake a mismatch", () => {
+  assert.equal(
+    classifyDeployFreshness({ liveCommit: " 2B899DC6B512 ", mainCommit: "2b899dc6b512" }).level,
+    "ok",
+  );
+});
+
+test("a missing commit on either side is unknown, never a failure", () => {
+  // No data is not evidence of a stale deploy — inventing a failure from it is
+  // the very "green but wrong" bug this family exists to kill.
+  assert.deepEqual(classifyDeployFreshness({ mainCommit: "2b899dc" }), {
+    level: "unknown",
+    detail: "no build-info to compare against main",
+  });
+  assert.deepEqual(classifyDeployFreshness({ liveCommit: "2b899dc" }), {
+    level: "unknown",
+    detail: "no build-info to compare against main",
+  });
+  assert.deepEqual(classifyDeployFreshness({}), {
+    level: "unknown",
+    detail: "no build-info to compare against main",
+  });
+  assert.equal(classifyDeployFreshness().level, "unknown");
+  assert.equal(classifyDeployFreshness({ liveCommit: 42, mainCommit: "2b899dc" }).level, "unknown");
+  assert.equal(classifyDeployFreshness({ liveCommit: "   ", mainCommit: "2b899dc" }).level, "unknown");
 });
