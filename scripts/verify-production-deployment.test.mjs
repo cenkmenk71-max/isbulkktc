@@ -237,10 +237,21 @@ test("a 402 (DEPLOYMENT_DISABLED) is recognised from the status or the header", 
   assert.equal(isDeploymentDisabled(402, ""), true);
   assert.equal(isDeploymentDisabled(200, "DEPLOYMENT_DISABLED"), true);
   assert.equal(isDeploymentDisabled(200, " deployment_disabled "), true);
-  // A plain 4xx/5xx is not this state, and a missing header must not throw.
+  // A plain 5xx is not this state, and a missing header must not throw.
   assert.equal(isDeploymentDisabled(500, ""), false);
-  assert.equal(isDeploymentDisabled(404, undefined), false);
   assert.equal(isDeploymentDisabled(200, "SOMETHING_ELSE"), false);
+});
+
+test("a 404 (DEPLOYMENT_NOT_FOUND) is recognised as a not-served state", () => {
+  // 2026-11-10: the origin stopped answering 402 and began answering 404 with
+  // `x-vercel-error: DEPLOYMENT_NOT_FOUND` on every route. The predicate only
+  // knew the 402 state, so the run fell through to the generic "build-info HTTP
+  // 404 (retrying...)" path and polled until the deadline instead of naming the
+  // account state. Both states mean "down for every visitor".
+  assert.equal(isDeploymentDisabled(404, "DEPLOYMENT_NOT_FOUND"), true);
+  assert.equal(isDeploymentDisabled(404, ""), true);
+  assert.equal(isDeploymentDisabled(200, "deployment_not_found"), true);
+  assert.equal(isDeploymentDisabled(404, " deployment_not_found "), true);
 });
 
 test("a disabled deployment is a failure even when the Vercel alias looks healthy", () => {
@@ -285,8 +296,36 @@ test("a disabled route response is a failure, not a skipped 4xx", () => {
   const disabled = evaluateRouteResponse("/", 402, 78);
   assert.equal(disabled.ok, false);
   assert.equal(disabled.disabled, true);
-  assert.match(disabled.reason, /disabled/);
+  assert.match(disabled.reason, /not being served/);
   // 403/429 stay "blocked" (skipped) — the edge/WAF case, not an outage.
   assert.equal(evaluateRouteResponse("/", 403, 0).skipped, true);
   assert.equal(evaluateRouteResponse("/", 429, 0).skipped, true);
+});
+
+test("a 404 DEPLOYMENT_NOT_FOUND route is a failure, not a generic 4xx", () => {
+  // The not-found state must be named like the disabled one, not fall through to
+  // `{ ok: false, reason: "HTTP 404" }` — that reads as a missing page rather
+  // than "the whole site is not being served".
+  const notFound = evaluateRouteResponse("/", 404, 0);
+  assert.equal(notFound.ok, false);
+  assert.equal(notFound.disabled, true);
+  assert.doesNotMatch(notFound.reason, /^HTTP 404$/);
+  assert.match(notFound.reason, /not being served/);
+});
+
+test("a not-served deployment outranks a healthy Vercel alias", () => {
+  // Same masking shape as the 402 case, for the 404 state: the alias can still
+  // point at a READY deployment while the domain answers 404 to every request.
+  const decision = decideVerification({
+    vercel: { configured: true, ok: true, reason: "alias built from 8d3db245" },
+    http: {
+      ok: false,
+      blocked: false,
+      disabled: true,
+      reason: "HTTP 404 (DEPLOYMENT_NOT_FOUND) — the deployment is not being served",
+    },
+  });
+  assert.equal(decision.verified, false);
+  assert.match(decision.reason, /not a code problem/);
+  assert.match(decision.reason, /not being served/);
 });
