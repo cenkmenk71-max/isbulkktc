@@ -689,3 +689,45 @@ döngü.** Fix'lerin ertelenmesi kotayı asla boşaltamaz.
 erteleyen kapı kendi kuyruğunu asla boşaltamaz. Onarım (mevcut PR'ı düzeltmek)
 yeni iş açmaz; bu yüzden kotaya **sayılmamalı**, hatta öne alınmalıdır.
 
+
+## Round: yeni Vercel hesabı + canlıya alma + CI kırmızılarını kapatma (2026-11-08)
+
+**Belirti.** Eski Vercel hesabı bloke (`Account is blocked.`) → site her istekte
+`402 DEPLOYMENT_DISABLED` / `404 DEPLOYMENT_NOT_FOUND`. Sahip bloke deployment'ı
+sildi, **yeni hesap açıp token verdi**; yeni hesapta proje **yoktu**, operatör
+oluşturdu.
+
+**Yapılan (yeni hesap `is-bulkktc`, `team_I2cTA4dN4vPBccgDZmNceVgD`).**
+- Proje `isbulkktc` (`prj_oEsui6Gj9lPd2ufmoR5S0e9dbCTf`, nextjs, Node 24.x),
+  domainler `isbulkktc.com` + `www.isbulkktc.com`, ortam değişkenleri
+  (`APP_URL`, `NEXT_PUBLIC_SUPABASE_URL`, publishable + service-role anahtarları,
+  `AUTH_OAUTH_PROVIDERS`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `PUSH_CRON_SECRET`).
+- `main` üretime deploy; canlı commit **`3644cbe3`**. Apex/www/api 200.
+
+**CI onarımı (repo ayarı + Vercel, kod değişikliği YOK).** İki zamanlı iş
+kırmızıydı; ikisinin de kökü **eski hesabın alias'ı** `isbulkktc-amber.vercel.app`
+(artık `DEPLOYMENT_NOT_FOUND`):
+1. `Dispatch web push` → alias + yeni projede `PUSH_CRON_SECRET` yoktu (401).
+2. `Submit sitemap to IndexNow` → alias.
+
+Çözüm, sahiplik sınırını aşmadan: (a) `PUSH_CRON_SECRET` **döndürüldü**, hem
+Vercel env (3 ortam) hem repo secret yazıldı; (b) eski alias `isbulkktc-amber.vercel.app`
+**yeni projeye domain olarak eklendi** (public + production'a takip eder) → hardcoded
+referanslar **hiç dokunulmadan** çalışır. (c) `PUSH_DISPATCH_ORIGIN` /
+`INDEXNOW_SITEMAP_ORIGIN` repo değişkenleri yeni stabil alias'a (`isbulkktc-prod.vercel.app`)
+ayarlandı; (d) `VERCEL` secret + `VERCEL_TEAM_SLUG/ID/PROJECT` değişkenleri yeni
+hesaba güncellendi.
+
+**Ders.** `.github/**` ve `scripts/**` **LANE-INFRA**'nın; operator kod değiştirmeden
+sorunu **kaynağında** çözmeli. Kırık bir alias'ı silmek yerine **sahiplenmek**
+(`vercel domains add`) hardcoded referansı tek hamlede onarır. Aynı şekilde eksik
+bir cron secret'ı env'e yazmak, workflow'a varsayılan eklemekten daha az riskli.
+
+**Kanıt.** `Verify production deployment` ✅ (API: "alias built from 3644cbe3"),
+`Prune Vercel deployments` ✅ (yeni token; 2 deployment, 0 silindi),
+`Dispatch web push` ✅ (200), `Submit sitemap` ✅ (207 URL), `system-health`
+**0 failure** ("every workflow on main is green").
+
+**Kalan (sahip/LANE-INFRA).** Yeni hesapta otomatik Git deploy yok
+(`git connect` → 400, GitHub login bağlantısı ister). #547 açıldı; yapılmazsa
+sonraki `main` push'u otomatik deploy olmaz ve `verify` kırmızıya döner.
