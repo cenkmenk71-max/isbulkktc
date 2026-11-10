@@ -403,9 +403,10 @@ function serviceRoleOnlySignatures(sql: string = allSql): string[] {
   // `grantedToClients` reads it. With only `grant execute` here, a worker RPC
   // handed to `service_role` via `grant all on function … to service_role`
   // never entered this set, so its missing `auth.role()` guard was never
-  // checked — the precise false-negative this suite exists to prevent.
+  // checked — the precise false-negative this suite exists to prevent. The
+  // `all privileges` long form is the same grant and must match too.
   const re =
-    /grant\s+(?:execute|all)\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*(?:\(([^)]*)\))?\s+to\s+([^;]+);/gi;
+    /grant\s+(?:execute|all(?:\s+privileges)?)\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*(?:\(([^)]*)\))?\s+to\s+([^;]+);/gi;
   for (const match of sql.matchAll(re)) {
     const roles = match[3].toLowerCase();
     const signature = `${match[1]}(${normalizeArgs(match[2])})`;
@@ -458,6 +459,14 @@ test("the service-role grant scanner sees `grant all` and excludes client grants
       "grant execute on function public.worker_b(integer) to service_role;",
     ),
     ["worker_b(integer)"],
+  );
+  // The `all privileges` long form is the same grant; before the widening it was
+  // invisible here, so such a worker RPC was never checked for its auth.role() guard.
+  assert.deepEqual(
+    serviceRoleOnlySignatures(
+      "grant all privileges on function public.worker_c(text) to service_role;",
+    ),
+    ["worker_c(text)"],
   );
   // A function also reachable by clients (anon/authenticated/public) is not
   // service-role-*only* and must not be reported here.
@@ -521,9 +530,10 @@ function grantedToClients(sql: string): Set<string> {
   // paren-less spelling of a zero-argument function (`grant execute on function
   // public.f to anon;`, which Postgres accepts). All three are exactly the shape
   // the repository revokes; ignoring any of them would let a new migration hand a
-  // function to every caller and still pass.
+  // function to every caller and still pass. The `all privileges` long form is the
+  // same grant as `all` and must match, or that spelling slips past this gate.
   const re =
-    /grant\s+(?:execute|all)\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*(?:\(([^)]*)\))?\s+to\s+([^;]+);/gi;
+    /grant\s+(?:execute|all(?:\s+privileges)?)\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*(?:\(([^)]*)\))?\s+to\s+([^;]+);/gi;
   for (const match of sql.matchAll(re)) {
     if (/\b(?:anon|authenticated|public)\b/.test(match[3].toLowerCase())) {
       granted.add(`${match[1]}(${normalizeArgs(match[2])})`);
@@ -534,8 +544,12 @@ function grantedToClients(sql: string): Set<string> {
 
 function revokedFromClients(sql: string): Set<string> {
   const revoked = new Set<string>();
+  // EXECUTE is the only privilege a function has, so `revoke execute` and
+  // `revoke all privileges` remove exactly what `revoke all` does. Accepting only
+  // `revoke all` meant the other two spellings were invisible, so a paired revoke
+  // written that way read as *missing* and the grant looked unpaired.
   const re =
-    /revoke\s+all\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*(?:\(([^)]*)\))?\s+from\s+([^;]+);/gi;
+    /revoke\s+(?:all(?:\s+privileges)?|execute)\s+on\s+function\s+public\.\s*"?([a-z_0-9]+)"?\s*(?:\(([^)]*)\))?\s+from\s+([^;]+);/gi;
   for (const match of sql.matchAll(re)) {
     const roles = match[3].toLowerCase();
     if (/\banon\b/.test(roles) && /\bauthenticated\b/.test(roles)) {
@@ -556,6 +570,11 @@ test("the grant matcher sees `grant all` and `to public` (self-test)", () => {
   // `grant execute on function public.f to anon;` was invisible to this check.
   assert.deepEqual(granted("grant execute on function public.f to anon;"), ["f()"]);
   assert.deepEqual(granted("grant all on function public.f to public;"), ["f()"]);
+  // The `all privileges` long form is the same grant; the shorter `all`-only
+  // pattern read it as *no grant at all*, so a function handed to every caller
+  // that way slipped past both this check and the service-role scanner.
+  assert.deepEqual(granted("grant all privileges on function public.f(text) to anon;"), ["f(text)"]);
+  assert.deepEqual(granted("grant all privileges on function public.f to public;"), ["f()"]);
 });
 
 test("the revoke matcher sees the paren-less zero-argument form (self-test)", () => {
@@ -565,6 +584,13 @@ test("the revoke matcher sees the paren-less zero-argument form (self-test)", ()
   // `()` and so missed a revoke written without it.
   assert.deepEqual(revoked("revoke all on function public.f from public, anon, authenticated;"), ["f()"]);
   assert.deepEqual(revoked("revoke all on function public.f from anon;"), []);
+  // EXECUTE is a function's only privilege, so these spellings revoke the same
+  // thing; reading only `revoke all` marked their paired grants as unpaired.
+  assert.deepEqual(revoked("revoke execute on function public.f() from anon, authenticated;"), ["f()"]);
+  assert.deepEqual(
+    revoked("revoke all privileges on function public.f() from public, anon, authenticated;"),
+    ["f()"],
+  );
 });
 
 test("every client EXECUTE grant is paired with an explicit anon+authenticated revoke", () => {
