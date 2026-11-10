@@ -9,9 +9,11 @@ import {
   audienceFromCallbackParam,
   parseAuthFlow,
   parsePkceFlowId,
+  resolveAccountBlockedPath,
   resolveAuthDestination,
   resolveAuthFailurePath,
 } from "@/features/identity/auth-routing";
+import { isAccountBlocked } from "@/features/identity/account-status";
 import {
   isNewOAuthAccount,
   mergeLocaleIntoUserMetadata,
@@ -69,6 +71,58 @@ function redirectAndClearOAuthIntent(url: URL): NextResponse {
   const response = NextResponse.redirect(url);
   response.cookies.delete(oauthSignupIntentCookieName);
   return response;
+}
+
+/**
+ * The blocked-account exit: drop the session the exchange just minted, then
+ * send the visitor to the login page's `error=account` branch.
+ *
+ * `signIn` drops the session itself before redirecting, so a refused account
+ * holds no cookie it cannot use; the callback must match, or a suspended/closed
+ * account that completes any link keeps a working session until it clicks the
+ * branch's sign-out button. The exchange writes the auth cookies through the
+ * same `cookies()` store this client clears, so `signOut()` is what turns
+ * "blocked" into "not signed in" — and it clears the local cookies even when the
+ * remote call fails.
+ */
+async function redirectBlockedAccount(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  url: URL,
+): Promise<NextResponse> {
+  await supabase.auth.signOut();
+  return redirectAndClearOAuthIntent(url);
+}
+
+/**
+ * The callback mints a session for every successful exchange, including OAuth,
+ * e-mail confirmation and recovery. `profiles.status` is the account kill
+ * switch, so a non-active account must not keep that session (#467/#418) — the
+ * same gap `signIn` already closes. The cookie is written by the time the
+ * status is known, so the visitor is sent to the login page's `error=account`
+ * branch, which explains the refusal and offers a sign-out.
+ *
+ * Fails closed on a read error: a session whose status cannot be confirmed is
+ * exactly what this guard exists to withhold. A missing profile row (the trigger
+ * has not created it yet) is not a suspension, matching `signIn`.
+ */
+async function isCallbackAccountBlocked(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("status")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("The callback profile status could not be read.", {
+      code: error.code,
+    });
+    return true;
+  }
+
+  return isAccountBlocked(data?.status);
 }
 
 export async function GET(request: NextRequest) {
@@ -155,6 +209,15 @@ export async function GET(request: NextRequest) {
       code: error.code,
     });
 
+    // The retry path minted (or found) a live session too, so the kill switch
+    // applies here as well.
+    if (await isCallbackAccountBlocked(supabase, sessionUser.id)) {
+      return redirectBlockedAccount(
+        supabase,
+        new URL(resolveAccountBlockedPath(locale, audience), appBaseUrl),
+      );
+    }
+
     if (isResetFlow) {
       return redirectAndClearOAuthIntent(
         new URL(`${getLocalePrefix(locale)}/reset-password`, appBaseUrl),
@@ -163,12 +226,6 @@ export async function GET(request: NextRequest) {
 
     return redirectAndClearOAuthIntent(
       new URL(resolveAuthDestination(audience, locale), appBaseUrl),
-    );
-  }
-
-  if (isResetFlow) {
-    return redirectAndClearOAuthIntent(
-      new URL(`${getLocalePrefix(locale)}/reset-password`, appBaseUrl),
     );
   }
 
@@ -181,6 +238,25 @@ export async function GET(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // The exchange minted a session, but `profiles.status` is the account kill
+  // switch (#467/#418) — a suspended/closed account must not keep it. This gate
+  // runs before every success exit, the reset flow included, so no branch hands
+  // a non-active account a working session. The session is dropped here, not
+  // left for the visitor to clear: the login page's `error=account` branch
+  // explains the refusal, but only this client can actually revoke the cookie.
+  if (user && (await isCallbackAccountBlocked(supabase, user.id))) {
+    return redirectBlockedAccount(
+      supabase,
+      new URL(resolveAccountBlockedPath(locale, audience), appBaseUrl),
+    );
+  }
+
+  if (isResetFlow) {
+    return redirectAndClearOAuthIntent(
+      new URL(`${getLocalePrefix(locale)}/reset-password`, appBaseUrl),
+    );
+  }
 
   if (isOAuthFlow) {
     // Pull the provider's own claims (avatar, given/family name) onto the

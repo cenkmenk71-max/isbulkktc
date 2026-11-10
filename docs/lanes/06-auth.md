@@ -1175,3 +1175,89 @@ aynısı).
   mail-fan-out ucunu kapsayacak biçimde genişletilmeli (artık karşılanıyor).
 - `tests/security/lockfile-coverage.test.ts` kırmızısı bu değişiklikten **önce de**
   vardı (eksik `jsqr`,`pngjs`,`qrcode`,`web-push` girdileri) — ilgisiz.
+
+---
+
+## Çalıştırma raporu — 2026-11-10 (kill-switch turu: #467 / #418)
+
+```
+Lane: LANE-AUTH            Branch: lane/auth            PR: #542
+Aldığı issue: #467 (lane:auth + lane:supabase, agent:handoff) — LANE-AUTH yarısı
+Değişen dosyalar:
+  src/features/identity/account-status.ts               (yeni: isAccountBlocked)
+  src/features/identity/account-status.test.ts          (yeni, 6 test)
+  src/features/identity/actions.ts                      (signIn status okuması)
+  src/features/identity/auth-routing.ts                 (resolveAccountBlockedPath)
+  src/app/[locale]/auth/callback/route.ts               (callback kapısı + oturum düşürme)
+  src/features/identity/callback-account-status.test.ts (yeni, 5 test)
+  docs/lanes/06-auth.md                                 (bu rapor)
+Çalıştırılan kontroller: lint ✅ / typecheck ✅ / check:frontend-source ✅ /
+  test:unit ✅ (950; 0 fail) / test:security ✅ (201; 192 pass, 0 fail, 9 todo) /
+  test:integration ✅ (112; 0 fail)
+Canlıya dokundu mu: hayır (Supabase'e yazılmadı; config/migration/şablon değişmedi)
+```
+
+### Bulgu (#467 kalemi 2 / #418 §2)
+
+`public.profiles.status ∈ {active, suspended, closed}` hesabın kill-switch'i;
+neredeyse her yazma RPC'si `status = 'active'` yeniden kontrolü yapıyor. Ama
+**oturum açma yolu onu hiç okumuyordu**: askıya alınmış/kapatılmış hesap yine
+çalışan bir oturum alıyor, sonraki her yazma çıplak `42501` ile düşüyordu —
+kullanıcı bunu "bozuk uygulama" diye okuyordu.
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `actions.ts` `signIn` | yetki | Kimlik doğruysa status okunmadan oturum | `status != active` → oturum yok | Askıya alınmış hesap çalışan oturum alır | düzeltildi |
+| 2 | `auth/callback/route.ts` | yetki | Her başarılı exchange (OAuth/onay/reset) oturum kurar | Aynı kapı | Askıya alınmış hesap linkle oturum alır | düzeltildi |
+| 3 | `auth/callback/route.ts` kapı çıkışı | oturum | Engellenen hesap `error=account` sayfasına gider ama exchange'in yazdığı çerez **kalır** | Oturum düşürülür | Kullanıcı "çıkış yap" düğmesine basana dek canlı oturum | düzeltildi |
+
+### Düzeltme
+
+- `isAccountBlocked(status)` tek yüklem (`account-status.ts`); `active` ve
+  bilinmeyen/eksik değer **izinli** (geçici okuma hatasını icat edilmiş statüyle
+  kilitlememek için).
+- `signIn` kimlik kontrolünden sonra kendi `profiles.status`'unu okur (RLS
+  `profiles_read_own`), engelliyse oturumu kapatıp `/login?error=account`'a gider;
+  okuma hatası **fail-closed** (genel `signInFailed`).
+- Callback aynı yüklemi kullanır ve **her** başarı çıkışından önce (yeniden
+  deneme yolu + reset + ana yol) kapıyı uygular; engellenen hesapta
+  `redirectBlockedAccount` → `supabase.auth.signOut()` (exchange'in yazdığı aynı
+  `cookies()` deposu) → `error=account`. `signIn`'in davranışıyla birebir.
+
+### Kanıt
+
+- **Kapı terfisi (asıl kanıt):** `tests/security/account-lifecycle-surface.test.ts`
+  (LANE-GÜVENLİK'in #466 ile merge ettiği kapı) `sign-in refuses an account whose
+  profile is not active` maddesini **todo** olarak tutuyor. Bu todo kaldırılınca
+  test **pass** (todo 4→3, fail 0). Yani değişikliğim merge edilmiş bir güvenlik
+  kapısının açık maddesini kapatıyor.
+- `account-status.test.ts` (6) + `callback-account-status.test.ts` (5): yüklem,
+  okuma sırası, fail-closed, iki kapı noktası ve oturum düşürme pini. Kapı/çıkış
+  geri alınınca test kırmızı olur.
+- `test:security` 192 pass / 0 fail; `test:unit` 950 / 0 fail.
+
+### Güvenlik değerlendirmesi (security skill)
+
+- Saldırı yüzeyi **daraldı**: iki oturum-kurma yolu (signIn + callback) artık
+  kill-switch'e tabi. Yetki yükseltme yolu açılmadı; yalnız engellenen hesap
+  erken çıkar ve oturumu düşürülür.
+- Okuma kendi satırına (`id = user.id`) ve RLS `profiles_read_own`'a dayanır;
+  başka hesabın statüsü okunamaz. `service_role` kullanılmadı.
+- `error=account` sabit bir sözlük değeri (kullanıcı girdisi değil); açık
+  yönlendirme yok.
+
+### Sahibin yapması gerekenler
+
+- **LANE-SUPABASE (#467 kalemi 1):** `suspend_account(_id)` / `close_account(_id)`
+  RPC — yalnız admin rolü, `security definer`, denetim kaydı, `status` yazar.
+  Yazar olmadan `suspended`/`closed` **ulaşılamaz**; okuma kapım o durumu korur
+  ama o duruma geçiş yolu yok. `account-lifecycle-surface.test.ts`'teki
+  `an account can actually be suspended or closed` todo'su onların.
+- **#418 §7** rate limit maddeleri (#457/#505) ayrı PR'larda.
+
+### Sonraki lane için notlar
+
+- **Invite akışı** (önceki turlardan): GoTrue davet linki implicit
+  (`#access_token=`) döndürüyor; callback yalnız PKCE `?code=` işliyor. Ayrı iş.
+- `src/app/[locale]/auth/callback/route.ts` hâlâ hiçbir lane'e atanmamış; auth
+  ile ilgili olduğundan LANE-AUTH'a açıkça atanmalı (önceki turlardan devam).

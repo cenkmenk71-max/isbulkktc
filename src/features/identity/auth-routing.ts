@@ -120,3 +120,22 @@ export function resolveAuthFailurePath(
 
   return `${prefix}/login?error=verification&audience=${audience}`;
 }
+
+/**
+ * Where a *successful* exchange sends an account whose `profiles.status` is not
+ * `active`.
+ *
+ * A non-active account must not keep the session the exchange just minted
+ * (#467/#418). The cookie has already been written by the time the status is
+ * known, so the callback cannot simply "not sign in"; it hands the visitor a
+ * page that can drop the session for them — the login page's `error=account`
+ * branch renders the inactive message and a sign-out button. Sending them to the
+ * audience dashboard instead would leave a session every write RPC refuses with
+ * `42501`, which the visitor reads as a broken app.
+ */
+export function resolveAccountBlockedPath(
+  locale: AppLocale,
+  audience: AccountAudience,
+): string {
+  return `${getLocalePrefix(locale)}/login?audience=${audience}&error=account`;
+}
