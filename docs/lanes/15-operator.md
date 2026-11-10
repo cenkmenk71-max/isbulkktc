@@ -731,3 +731,25 @@ bir cron secret'ı env'e yazmak, workflow'a varsayılan eklemekten daha az riskl
 **Kalan (sahip/LANE-INFRA).** Yeni hesapta otomatik Git deploy yok
 (`git connect` → 400, GitHub login bağlantısı ister). #547 açıldı; yapılmazsa
 sonraki `main` push'u otomatik deploy olmaz ve `verify` kırmızıya döner.
+
+## Tıkanıklık ailesi 8: yerel eksik → **global** kırmızı (lane-collisions) (2026-11-08)
+
+**Görünen.** Operatörün kendi PR'ı (`#548`, yalnız `docs/lanes/15-operator.md`)
+`Static checks`'te kırmızı. Kod değişikliği yok, sahiplik temiz — neden kırmızı?
+
+**Gerçek.** Kırmızı adım `Lane collisions` ve o adım **tüm açık PR'ları** okur
+(`gh pr list --state open`), yerel farkı değil. Kardeş PR `#549` (`lane/teslimat`),
+sahiplik tablosunda **tam adıyla** listelenen `scripts/verify-production-deployment.mjs`
+dosyasının **test kardeşini** (`…test.mjs`) düzenliyordu; tablo bu kardeşi kapsamıyor,
+ama iki başka lane'in geniş globu (`LANE-VERIFY`, `LANE-INFRA`) kapsıyor. Kapı,
+"PR'ın lane'i sahipler arasında yok" diye hata verdi ve **tek PR'ın yerel eksiği
+tüm kuyruğu** dondurdu (zorunlu `Quality, database and E2E` → `static`'e bağlı).
+
+**Ders.** `lane-collisions.mjs` gibi **kuyruk-global** kapılarda kırmızı, "benim
+PR'ımda hata var" demek **değildir**. Önce suçlanan adımı **yerelde** çalıştır
+(`node scripts/lane-collisions.mjs`), çıktı hangi PR'ı adlandırıyorsa **o** PR
+sorumludur. Operatör bu sınıfta: kırmızıyı **kendi PR'ına mal etme**, kaynağı
+bul, sahibine devret (#552 → LANE-INFRA), kendi PR'ına açıklayıcı yorum bırak.
+
+**Kural eklendi.** "Kuyruk-global kapı kırmızısı, PR-yerel kırmızı değildir:
+kırmızı adımı yerelde koştur, adı geçen PR'ı bul, sahibine devret."
