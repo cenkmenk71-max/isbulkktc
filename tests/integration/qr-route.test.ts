@@ -289,7 +289,7 @@ test("a version outside the supported range falls back to auto-sizing", async ()
 });
 
 /**
- * Failure path (finding, handed to the route owner).
+ * Failure path (finding, handed to the route owner as #544).
  *
  * `buildQrRenderOptions` passes any version in 1..40 straight to the generator,
  * and `Number.parseInt` truncates `1.5` to `1`. The default `/install?next=/jobs`
@@ -297,8 +297,9 @@ test("a version outside the supported range falls back to auto-sizing", async ()
  * symbol too small to hold the data and throw **unhandled** — a 500 from a public,
  * cacheable route. `tests/security/qr-render-capacity-surface.test.ts` pins the
  * same defect as *source text*; this is the functional half: it calls the route
- * and observes the throw. When the owner adds a capacity check or a try/catch,
- * this flips red and the assertion should be replaced by the controlled status.
+ * and observes the throw. When the owner adds a capacity check or a try/catch
+ * (#544), this flips red and the assertion should be replaced by the controlled
+ * status.
  */
 test("a too-small pinned version throws out of the route with no error handling (finding)", async () => {
   const restore = withEnv({ NEXT_PUBLIC_APP_URL: APP_ORIGIN, APP_URL: undefined });
