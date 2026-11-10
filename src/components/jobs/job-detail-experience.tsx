@@ -36,7 +36,7 @@ export async function JobDetailExperience({
           {t("backToListings")}
         </Link>
         <article className="job-detail-card">
-          <header className="job-detail-header">
+          <header className="job-detail-header" data-reveal>
             <p className="jobs-section-kicker">{t("eyebrow")}</p>
             <h1>{job.title}</h1>
             <div className="job-detail-employer">
@@ -93,19 +93,19 @@ export async function JobDetailExperience({
           <div className="job-detail-columns">
             <div className="job-detail-main">
               {job.description ? (
-                <section className="job-detail-section">
+                <section className="job-detail-section" data-reveal>
                   <h2>{t("descriptionTitle")}</h2>
                   <p className="job-detail-body">{job.description}</p>
                 </section>
               ) : null}
               {job.responsibilities ? (
-                <section className="job-detail-section">
+                <section className="job-detail-section" data-reveal>
                   <h2>{t("responsibilitiesTitle")}</h2>
                   <p className="job-detail-body">{job.responsibilities}</p>
                 </section>
               ) : null}
               {job.requirements ? (
-                <section className="job-detail-section">
+                <section className="job-detail-section" data-reveal>
                   <h2>{t("requirementsTitle")}</h2>
                   <p className="job-detail-body">{job.requirements}</p>
                 </section>

@@ -56,7 +56,7 @@ export async function FreelanceExperience({ locale }: { locale: AppLocale }) {
           </div>
           <div className="freelance-profile-points">
             {(["headline", "location", "skills"] as const).map((item) => (
-              <article key={item}>
+              <article key={item} data-reveal>
                 <Check size={17} aria-hidden="true" />
                 <div>
                   <h3>{copy(`points.${item}.title`)}</h3>

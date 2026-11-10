@@ -143,7 +143,7 @@ export async function PackagesExperience({
               const prices = profile.prices;
               return (
                 <li key={profile.id}>
-                  <article className="package-catalog-card">
+                  <article className="package-catalog-card" data-reveal data-tilt>
                     <p className="package-catalog-code">{profile.audience}</p>
                     <h3>{profile.title}</h3>
                     <p className="package-catalog-description">
