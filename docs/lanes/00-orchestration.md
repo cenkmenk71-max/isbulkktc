@@ -26,14 +26,14 @@ Bu dosya kuralları ve sırayı tanımlar. Bir lane'in brief'i `docs/lanes/<ad>.
 | LANE-SUPABASE | `supabase/**` (migrations, tests, seed, config.toml), `docs/lanes/01-supabase.md` |
 | LANE-CLOUDFLARE | repo dosyası YOK (CF API); isterse `docs/cloudflare.md`, `docs/lanes/02-cloudflare.md` |
 | LANE-SEO | `src/lib/seo.ts`, `src/app/sitemap.ts`, `src/app/robots.ts`, `src/app/feed.xml/**`, `src/app/manifest.ts`, `src/app/.well-known/**`, `src/lib/localized-slug-pathnames.ts`, `src/lib/localized-slug-pathnames.test.ts`, `src/app/[locale]/**`, `!src/app/[locale]/auth/**`, `!src/app/[locale]/(auth)/**`, `docs/lanes/03-seo.md` |
-| LANE-GEO | `src/content/ai-visibility/**`, `src/app/llms.txt/**`, `src/app/llms-full.txt/**`, `public/llms*`, `src/features/**/structured-data*.ts`, `src/features/jobs/job-posting-structured-data.ts`, `docs/lanes/04-geo.md` |
-| LANE-TASARIM | `src/components/**`, `src/experience/**`, `src/styles/**`, `src/assets/**`, `src/lib/company-mark.ts`, `src/lib/social-links.ts`, `src/lib/utils.ts`, `src/app/global-error.tsx`, `tests/e2e/accessibility.spec.ts`, `tests/unit/design-tokens.test.ts`, `tests/unit/design-token-drift.baseline.json`, `docs/lanes/05-tasarim.md` |
+| LANE-GEO | `src/content/ai-visibility/**`, `src/app/llms.txt/**`, `src/app/llms-full.txt/**`, `public/llms*`, `src/features/**/structured-data*.ts`, `src/features/jobs/job-posting-structured-data.ts`, `docs/lanes/04-geo.md`, `supabase/seed-managed-content.sql` |
+| LANE-TASARIM | `src/components/**`, `src/experience/**`, `src/styles/**`, `src/assets/**`, `src/lib/company-mark.ts`, `src/lib/social-links.ts`, `src/lib/utils.ts`, `src/app/global-error.tsx`, `tests/e2e/accessibility.spec.ts`, `tests/unit/design-tokens.test.ts`, `tests/unit/design-token-drift.baseline.json`, `docs/lanes/05-tasarim.md`, `supabase/seed-managed-content.sql` |
 | LANE-AUTH | `src/features/identity/**`, `src/app/[locale]/(auth)/**`, `src/app/[locale]/auth/**`, `src/proxy.ts`, `src/server/auth/**`, `supabase/templates/**`, `docs/lanes/06-auth.md` |
-| LANE-URUN | `src/features/**`, `!src/features/identity/**`, `!src/features/**/structured-data*.ts`, `!src/features/jobs/job-posting-structured-data.ts`, `src/server/config/**`, `src/server/push/**`, `src/server/email/**`, `src/server/dal/**`, `src/server/db/**`, `src/types/**`, `src/app/api/email/**`, `src/app/api/push/**`, `src/app/api/qr/**`, `src/lib/analytics/**`, `src/lib/pwa/**`, `docs/lanes/07-urun.md` |
+| LANE-URUN | `src/features/**`, `!src/features/identity/**`, `!src/features/**/structured-data*.ts`, `!src/features/jobs/job-posting-structured-data.ts`, `src/server/config/**`, `src/server/push/**`, `src/server/email/**`, `src/server/dal/**`, `src/server/db/**`, `src/types/**`, `src/app/api/email/**`, `src/app/api/push/**`, `src/app/api/qr/**`, `src/lib/analytics/**`, `src/lib/pwa/**`, `docs/lanes/07-urun.md`, `supabase/seed-managed-content.sql` |
 | LANE-QA | `tests/**`, `!tests/e2e/accessibility.spec.ts`, `!tests/unit/design-tokens.test.ts`, `!tests/unit/design-token-drift.baseline.json`, `!tests/security/**`, `docs/performance-budget.md`, `docs/lanes/08-qa.md` |
 | LANE-GÜVENLİK | `tests/security/**`, `src/server/policies/**`, `src/server/audit/**`, `src/server/README.md`, `docs/threat-model.md`, `docs/data-retention.md`, `docs/lanes/09-guvenlik.md` |
 | LANE-VERIFY | `tests/verify/**`, `scripts/verify-*.mjs`, `docs/verification-log.md`, `docs/lanes/11-verify.md` |
-| LANE-İÇERİK | `src/messages/**`, `src/i18n/**`, `src/global.d.ts`, `src/content/**`, `!src/content/ai-visibility/**`, `docs/lanes/12-icerik.md` |
+| LANE-İÇERİK | `src/messages/**`, `src/i18n/**`, `src/global.d.ts`, `src/content/**`, `!src/content/ai-visibility/**`, `docs/lanes/12-icerik.md`, `supabase/seed-managed-content.sql` |
 | LANE-TESLİMAT | `scripts/prune-vercel-deployments*.mjs`, `scripts/approve-pending-runs*.mjs`, `scripts/verify-production-deployment*.mjs`, `docs/deploy-log.md`, `docs/lanes/14-teslimat.md` |
 | LANE-OPERATÖR | `docs/OPERATOR.md`, `scripts/lane-autopilot*.mjs`, `scripts/lane-kickoff*.mjs`, `scripts/system-health*.mjs`, `scripts/reap-stalled-sandboxes*.mjs`, `docs/lanes/15-operator.md` |
 | LANE-INFRA | `.github/**`, `scripts/**`, `src/app/api/build-info/**`, `package.json`, `bun.lock`, `package-lock.json`, `.gitignore`, `.mcp.json`, `vercel.json`, `AGENTS.md`, `docs/developer-tooling.md`, `docs/lanes/00-orchestration.md`, `docs/lanes/README.md`, `docs/lanes/POLICY.md`, `docs/lanes/AUDIT.md` |
@@ -50,6 +50,24 @@ hariç" demektir. Dedektör (`scripts/lane-collisions.mjs`) bu sözdizimini anla
 hem URUN'un dizininde hem GEO'nun modülünde; `tests/e2e/accessibility.spec.ts`
 hem QA'nın katmanında hem TASARIM'ın guard'ında. Dizin düzeyinde sahiplik bu iki
 dosyada örtüşüyordu — dışlama bunu kesin biçimde çözer.
+
+**Üretilen dosyalar birden çok lane'e açıkça yazılır.** Kural "bir dosyanın TEK
+sahibi" olsa da, üretilen (generated) bir artefakt tek bir lane'in kaynaklarından
+türemez; onu üreten lane'lerin tümü yeniden üretebilmelidir. Aksi hâlde üretici
+lane artefaktı tazeleyince dedektör "lane ... does not own it" der ve — dedektör
+**her açık PR'ı** okuduğu için — bu tek satır kuyruğun tamamını kırmızıya çevirir.
+`supabase/seed-managed-content.sql` bu yüzden dört satırda listelenir. Onu
+`scripts/generate-managed-content-seed.ts` üretir ve şu kaynaklardan toplar:
+
+- LANE-İÇERİK → `src/messages/*.json` (legal bloklar)
+- LANE-GEO → `src/content/ai-visibility/faq.ts`
+- LANE-URUN → `src/features/companies/data/company-*.json` (dizin)
+- LANE-TASARIM → `src/components/packages/package-tiers.ts` (planlar)
+- LANE-SUPABASE → dosyanın kendisi (`supabase/**`); `bun run seed:managed-content` buradan koşar
+
+`tests/unit/managed-content-seed.test.ts` üretileni commit'lenmiş dosyayla
+karşılaştırdığı için bu lane'lerden **biri** kaynağını değiştirdiğinde seed'i
+tazelemek zorundadır; çok-sahiplik bunu çakışma saymaz.
 
 ### Lane → skill eşlemesi
 
