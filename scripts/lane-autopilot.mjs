@@ -50,6 +50,7 @@ import {
   prCapacity,
   pullRequestConflicts,
   readApiList,
+  redIsQueueGlobal,
   selectSlots,
   stalledConversations,
   workSignature,
@@ -675,6 +676,18 @@ async function decide(name, ctx) {
     // quota) must NOT wake a lane, so it is excluded.
     const failed = failedRequiredChecks(pr.statusCheckRollup, REQUIRED_CHECKS);
     const conflicts = pullRequestConflicts(pr);
+    // A red that every open PR shares is a queue-global gate (lane-collisions
+    // reads the whole queue), not a defect in this head. Respawned to repair it,
+    // the lane finds a clean head, cannot land the fix while the offending PR is
+    // open, and burns a sandbox and a retry per pass. The repair belongs to the
+    // PR the gate names, so wait instead of spawning — unless this head also
+    // conflicts with main, which is always this lane's own to fix.
+    if (failed.length > 0 && !conflicts && redIsQueueGlobal(pr, ctx.prs, REQUIRED_CHECKS)) {
+      return {
+        action: 'wait',
+        reason: `PR #${pr.number} red only on a queue-global gate (${failed.join(', ')}) — not this head's to fix`,
+      };
+    }
     if (failed.length > 0 || conflicts) {
       const what = conflicts
         ? `conflicts with main${failed.length > 0 ? ` and is red (${failed.join(', ')})` : ''}`

@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   carriedAttempts,
+  CI_AGGREGATOR_CHECKS,
   confirmOutcome,
   deadConversationLanes,
   diedWithoutWorking,
@@ -23,6 +26,7 @@ import {
   prCapacity,
   pullRequestConflicts,
   readApiList,
+  redIsQueueGlobal,
   requiredCheckFailed,
   selectSlots,
   stalledConversations,
@@ -687,6 +691,87 @@ test("a mergeable or not-yet-computed PR is not a conflict", () => {
   assert.equal(pullRequestConflicts({}), false);
   assert.equal(pullRequestConflicts(undefined), false);
   assert.equal(pullRequestConflicts(null), false);
+});
+
+// ---------------------------------------------------------------------------
+// redIsQueueGlobal — a red shared by the queue is not this head's to fix
+// ---------------------------------------------------------------------------
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+
+const aggregatorRed = { name: "Quality, database and E2E", conclusion: "FAILURE" };
+const staticRed = { name: "Static checks", conclusion: "FAILURE" };
+const staticGreen = { name: "Static checks", conclusion: "SUCCESS" };
+
+test("a lone red — even on the aggregator — is this head's to fix", () => {
+  // One open PR proves nothing is shared: its own failed dependency reddened the
+  // aggregator too. Excusing it would freeze the very PR whose own failure caused
+  // the red.
+  const only = { number: 1, statusCheckRollup: [aggregatorRed] };
+  assert.equal(redIsQueueGlobal(only, [only], REQUIRED), false);
+  const staticOnly = { number: 1, statusCheckRollup: [staticRed, aggregatorRed] };
+  assert.equal(redIsQueueGlobal(staticOnly, [staticOnly], REQUIRED), false);
+});
+
+test("a check red on two PRs is queue-global (lane-collisions freezes the queue)", () => {
+  // `lane-collisions` reads every open PR, so #557's unowned file turns
+  // `Static checks` red on both heads; through `needs:` the aggregator follows.
+  const a = { number: 555, statusCheckRollup: [staticRed, aggregatorRed] };
+  const b = { number: 557, statusCheckRollup: [staticRed, aggregatorRed] };
+  assert.equal(redIsQueueGlobal(a, [a, b], REQUIRED), true);
+  assert.equal(redIsQueueGlobal(b, [a, b], REQUIRED), true);
+});
+
+test("two PRs with unrelated local failures are not queue-global", () => {
+  // Judging the aggregator (red on both) would excuse both lanes at once. The
+  // dependency jobs differ — each PR fails a job the other does not — so neither
+  // red is shared and both lanes must wake to fix their own head.
+  const a = { number: 1, statusCheckRollup: [{ name: "Static checks", conclusion: "FAILURE" }, aggregatorRed] };
+  const b = { number: 2, statusCheckRollup: [{ name: "E2E (1/4)", conclusion: "FAILURE" }, aggregatorRed] };
+  assert.equal(redIsQueueGlobal(a, [a, b], REQUIRED), false);
+  assert.equal(redIsQueueGlobal(b, [a, b], REQUIRED), false);
+});
+
+test("a red unique to this head is this lane's own to fix", () => {
+  const mine = { number: 1, statusCheckRollup: [staticRed] };
+  const other = { number: 2, statusCheckRollup: [staticGreen] };
+  assert.equal(redIsQueueGlobal(mine, [mine, other], REQUIRED), false);
+  // ...and with no other PR open there is nothing shared to blame.
+  assert.equal(redIsQueueGlobal(mine, [mine], REQUIRED), false);
+});
+
+test("a mixed red — one shared, one local — is not queue-global", () => {
+  // `every()` is the rule: if any red is unique to this head, the lane still has
+  // real work, so it must be woken. Only an *all*-shared red is safe to skip.
+  const a = { number: 1, statusCheckRollup: [staticRed, { name: "Lint", conclusion: "FAILURE" }] };
+  const b = { number: 2, statusCheckRollup: [staticRed] };
+  assert.equal(redIsQueueGlobal(a, [a, b], REQUIRED), false);
+});
+
+test("a non-required red is ignored entirely", () => {
+  // A Vercel build-rate limit is an external quota; it must never wake a lane.
+  const a = { number: 1, statusCheckRollup: [{ name: "Vercel", conclusion: "FAILURE" }] };
+  assert.equal(redIsQueueGlobal(a, [a], REQUIRED), false);
+});
+
+test("a green head is never queue-global, and malformed input is safe", () => {
+  const a = { number: 1, statusCheckRollup: [staticGreen, { name: "Quality, database and E2E", conclusion: "SUCCESS" }] };
+  assert.equal(redIsQueueGlobal(a, [a], REQUIRED), false);
+  assert.equal(redIsQueueGlobal(undefined, [], REQUIRED), false);
+  assert.equal(redIsQueueGlobal(null, [], REQUIRED), false);
+  assert.equal(redIsQueueGlobal({}, [], REQUIRED), false);
+});
+
+test("the aggregator name still matches ci.yml's needs: chain", () => {
+  // The exclusion is only sound while the aggregator really aggregates. If the
+  // job is renamed or loses `needs:`, a red aggregator could become a gate of
+  // its own and this predicate would wrongly skip a real failure.
+  const ci = readFileSync(join(HERE, "..", ".github", "workflows", "ci.yml"), "utf8");
+  for (const name of CI_AGGREGATOR_CHECKS) {
+    const job = ci.indexOf(`name: ${name}`);
+    assert.notEqual(job, -1, `${name} is not a job name in ci.yml`);
+    assert.match(ci.slice(job, job + 200), /needs:/, `${name} must declare needs:`);
+  }
 });
 
 // ---------------------------------------------------------------------------

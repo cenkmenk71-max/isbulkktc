@@ -904,3 +904,34 @@ ayrımı, tasarımı doğru) ama CI kapısını değiştirdiği için **insan me
 (`agent:blocked`). #557 kendi Static işini kırdığı için kuyruktan düşemiyor →
 #559 insan tarafından merge edilene dek kilit sürer. Operatör bu ikisini
 çöz**emez**; sahibe/insana bırakır.
+
+## Tur notu — kuyruk-global kırmızı lane'i yeniden doğurmasın (2026-11-10)
+
+Bir önceki tur **göstergeyi** (system-health) düzeltti: kuyruk-global kapıyı tek
+sistemik neden olarak adlandırdı. Bu tur **uygulayıcıyı** düzeltti: aynı kırmızı,
+`lane-autopilot.mjs`'in `decide()`'ında hâlâ PR-yerel sanılıyordu.
+
+**Bulgu (israf).** `REGISTRY.requiredChecks = ['Quality, database and E2E']`
+(toplaıcı). Kuyruk-global bir kırmızı, `needs:` zinciriyle zorunlu toplayıcıyı
+**her** PR'da kırmızı yapar; `decide()` bunu yerel arıza sanıp her lane'i
+onarım için yeniden doğurur. Lane temiz head bulur, suçlu PR açık olduğu için
+düzeltemez ve pass başına bir sandbox + bir deneme bütçesi yakar.
+
+**Düzeltme.** `redIsQueueGlobal(pr, allPrs, requiredChecks)` (core) + `decide()`
+kapısı: yalnız-kuyruk-global kırmızıda `spawn` yerine `wait`.
+
+**İnce nokta (kendi düzeltmemde yakalandı).** İlk sürüm toplayıcı adını **her
+zaman** global sayıyordu. Bu, *tek* PR'ın kendi arızasını (kendi bağımlılığı
+düştüğü için toplayıcı kırmızı) muaf tutuyordu — PR'ı donduracak bir hata. İkinci
+sürüm toplayıcıyı *atlar* ve yargıyı **bağımlılık işlerine** verir (`Static
+checks`, `E2E (n/4)`). Böylece iki PR'ın birbirinden bağımsız yerel arızaları da
+(ikisinde de toplayıcı kırmızı ama farklı iş kırmızı) yerel kalır; yalnız aynı
+iş 2+ PR'da kırmızıysa kuyruk-global sayılır.
+
+**Sınır.** Bu, **sonucu** (gereksiz respawn) durdurur. **Kök neden** — kapının
+kendi PR'ına kapsamlanması — #559 (LANE-INFRA, #552) işidir; o PR `Static
+checks`'i yeşile çevirdi. İkisi bağımsız: #559 düzeltici, bu düzeltme savunma.
+
+**Kanıt.** `scripts/lane-autopilot-core.test.mjs` yeni 8 test (115/115),
+`test:unit` **995/995**; toplayıcı adının ci.yml'de `needs:` taşıdığı testle
+sabitlendi. Canlı: `system-health` "Static checks is red on 2 PRs (#557, #555)".

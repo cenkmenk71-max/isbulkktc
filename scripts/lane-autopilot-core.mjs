@@ -663,6 +663,71 @@ export function pullRequestConflicts(pr) {
 }
 
 /**
+ * Checks that only aggregate other jobs, so they carry no gate of their own.
+ *
+ * `Quality, database and E2E` in `.github/workflows/ci.yml` declares
+ * `needs: [static, database, e2e]` and does nothing but fail when any of them
+ * failed; branch protection still requires it so the required-check name never
+ * moves. Because it mirrors its dependencies it is red on every PR exactly when
+ * one dependency is red, which is why `lanes.json` lists it as the required
+ * check — the *dependency* is the real gate. Kept here, and asserted against the
+ * workflow file by a unit test, so renaming the aggregator job cannot silently
+ * make a queue-global red look like a local failure again.
+ */
+export const CI_AGGREGATOR_CHECKS = new Set(['Quality, database and E2E']);
+
+/**
+ * Whether a PR is red *only* on a queue-global gate — a red every open PR shares,
+ * so the cause lives outside this head.
+ *
+ * `lane-collisions.mjs` (a step inside `Static checks`) reads *every* open PR, so
+ * one PR with an unowned file turns `Static checks` red on all of them and, through
+ * the `needs:` chain, on the required aggregator too. `decide()` would then respawn
+ * *every* lane to repair a red that is not on its own head: the owning lane cannot
+ * land its fix while the other PR is open, and the innocent lanes burn a sandbox
+ * and a retry budget per pass on a head that is already clean. Naming that case is
+ * the same discipline as the operator's `queueGlobalGates`: a shared red is one
+ * cause, not N, and the repair belongs to the PR that names it.
+ *
+ * A red check counts as queue-global only when **two or more** PRs carry it. One PR
+ * alone proves nothing: a red unique to this head is this lane's to fix. The rule
+ * is judged on the *dependency* jobs, not the aggregator — the aggregator is red on
+ * every PR whose dependency failed, so judging it directly would excuse two PRs with
+ * **unrelated** local failures at once. Judging the job behind it (`Static checks`,
+ * `E2E (n/4)`, …) keeps those local: each fails a job the other does not, so neither
+ * is shared, and both lanes are woken to fix their own head.
+ *
+ * @param {object} pr the PR whose head is being judged
+ * @param {Array<object>} allPrs every open PR (including `pr`)
+ * @param {string[]} requiredChecks the required check names (from lanes.json)
+ * @returns {boolean} true when `pr`'s red is a shared, queue-global one
+ */
+export function redIsQueueGlobal(pr, allPrs, requiredChecks) {
+  if (!pr || typeof pr !== 'object') return false;
+  const required = Array.isArray(requiredChecks) ? requiredChecks : [];
+  const reds = (pr.statusCheckRollup ?? [])
+    .filter((c) => c && ['FAILURE', 'TIMED_OUT'].includes(c.conclusion))
+    .map((c) => c.name ?? c.context)
+    .filter(Boolean);
+  // Only a merge-blocking red matters: a required check, or the aggregator that
+  // mirrors one. A red on a check that does not gate the merge must not wake a lane.
+  const blocking = reds.filter((n) => required.includes(n) || CI_AGGREGATOR_CHECKS.has(n));
+  if (blocking.length === 0) return false;
+  // The aggregator carries no gate of its own; its dependencies do. Judge those so
+  // two PRs with unrelated local failures are not both excused. Fall back to the
+  // blocking names when no dependency job is listed (defensive).
+  const causes = reds.filter((n) => !CI_AGGREGATOR_CHECKS.has(n));
+  const judged = causes.length > 0 ? causes : blocking;
+  const others = (allPrs ?? []).filter((p) => p && p !== pr);
+  const redOn = (p, name) =>
+    (p.statusCheckRollup ?? []).some(
+      (c) =>
+        (c?.name ?? c?.context) === name && ['FAILURE', 'TIMED_OUT'].includes(c.conclusion),
+    );
+  return judged.every((name) => others.some((p) => redOn(p, name)));
+}
+
+/**
  * Normalise an `api()` result into a list, *and* whether the read failed.
  *
  * `api()` reports a failure (HTTP error or timeout) as `{ ok: false, body: null }`
