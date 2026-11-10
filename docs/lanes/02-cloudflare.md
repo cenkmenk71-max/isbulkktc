@@ -1217,3 +1217,25 @@ Yeni kimlik: D-32 (sayısal iddia düzeltmesi).
   `http://www` → 301 → `https://www` (host korunuyor); `https://www/` → **200**.
 - **Build-info:** `{"commit":"a1eebc2…","environment":"production"}` = main →
   deploy **güncel** (tur 31 deploy-freshness kontrolü yeşil).
+
+### Tur 41 (2026-11-10) — `www→apex` yönlendirmesi **yok** (R-01r3); iki "308" iddiası canlıya çekildi (D-33/D-34)
+
+**Yöntem:** origin sağlıklı (tur 36'dan beri) → tur 35'in "ölçüm kısıtı" notu
+geçersiz; `www` yönlendirmesi doğrudan ölçüldü.
+
+**Bulgu (R-01r3, gerçek açık):**
+- `https://www.isbulkktc.com/` → **200** (3/3 GET), apex'e yönlenmiyor → duplicate content / kanonik risk.
+- `http://www.isbulkktc.com/` → **301** → `https://www.isbulkktc.com/` (host `www` kalır; CF Always Use HTTPS).
+- `https://www.isbulkktc.com./` → **404** (5/5 GET+HEAD, `x-vercel-id` dolu) — kesinti artefaktı değil.
+- `https://isbulkktc.com./` → **404**; `https://isbulkktc.com./en` → **200** (R-01, origin host eşleştirmesi).
+
+**Doküman düzeltmeleri:**
+- **D-33:** `docs/cloudflare.md` satır 2572 audit tablosu "`www` → **308** apex" → **200** + `⚠️ R-01r3`.
+- **D-34:** `docs/cloudflare.md` satır 588 R-01 kanıt bloğu `www.isbulkktc.com./` → **308** → **404** (satır 566 R-02 ile tutarlı).
+
+**Devir:** `www→apex` yönlendirmesi `next.config.ts` (`lane:infra`) işidir; bu lane
+salt-okur, CF paneli değişikliği yapılmaz.
+
+**Teyit (drift yok):** DKIM (Resend 1024-bit zayıf/E-10, CF 2048-bit OK), CAA 10
+kayıt, DNSSEC `AD=true`, security.txt `Expires` dinamik, WAF 9/9→403 & 12/12→200,
+`/.git%2Fconfig`→404 (N-11 açık), SPF/DMARC değişmedi.
