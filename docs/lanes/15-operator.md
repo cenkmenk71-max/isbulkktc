@@ -57,9 +57,16 @@ node scripts/lane-autopilot.mjs
 | 5 | sistem kırmızı | **gösterge kendi hatasını okuyor** (kendine referans) | kendi workflow'unu hariç tut |
 | 6 | lane ölü | sayaç başarıda sıfırlanmıyor, iş başına değil lane ömrüne bağlı | iş imzası (`work`) + başarıda sıfırla |
 | 7 | main CI kırmızı | 0 job'lu **geçici GitHub glitch koşusu** gerçek arıza sanılıyor | job sayısına bak: 0 = glitch (warn), >0 = gerçek (fail) |
+| 8 | PR'lar "hareket ediyor" | kuyruk-global kapı (`lane-collisions`) kırmızı → **hiçbiri merge olamaz**; `system-health` yalnız "açık ve yaşlı değil" diye okur | kırmızı adımı yerelde koştur, adı geçen PR'ı bul, sahibine devret |
 
 **Yeni bir tıkanıklık görürsen:** aynı sınıfta mı diye sor — "bir sinyal yanlış
 okunuyor mu?" Genelde cevap evet.
+
+**Kuyruk-global kapı uyarısı.** `lane-collisions.mjs` gibi kapılar **tüm açık
+PR'ları** okur; bir PR'ın yerel eksiği tüm kuyruğu `BLOCKED` yapar. Böyle bir
+kırmızıyı **kendi PR'ına mal etme**: adımı yerelde çalıştır, çıktı hangi PR'ı
+adlandırıyorsa sahibine devret. `system-health` bunu "PR'lar hareket ediyor"
+diye yeşil gösterebilir (yalnız yaş bakar) — bu yüzden kırmızı adımı elle koştur.
 
 ## API reçeteleri (kanıtlanmış)
 
@@ -689,3 +696,99 @@ döngü.** Fix'lerin ertelenmesi kotayı asla boşaltamaz.
 erteleyen kapı kendi kuyruğunu asla boşaltamaz. Onarım (mevcut PR'ı düzeltmek)
 yeni iş açmaz; bu yüzden kotaya **sayılmamalı**, hatta öne alınmalıdır.
 
+
+## Round: yeni Vercel hesabı + canlıya alma + CI kırmızılarını kapatma (2026-11-08)
+
+**Belirti.** Eski Vercel hesabı bloke (`Account is blocked.`) → site her istekte
+`402 DEPLOYMENT_DISABLED` / `404 DEPLOYMENT_NOT_FOUND`. Sahip bloke deployment'ı
+sildi, **yeni hesap açıp token verdi**; yeni hesapta proje **yoktu**, operatör
+oluşturdu.
+
+**Yapılan (yeni hesap `is-bulkktc`, `team_I2cTA4dN4vPBccgDZmNceVgD`).**
+- Proje `isbulkktc` (`prj_oEsui6Gj9lPd2ufmoR5S0e9dbCTf`, nextjs, Node 24.x),
+  domainler `isbulkktc.com` + `www.isbulkktc.com`, ortam değişkenleri
+  (`APP_URL`, `NEXT_PUBLIC_SUPABASE_URL`, publishable + service-role anahtarları,
+  `AUTH_OAUTH_PROVIDERS`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `PUSH_CRON_SECRET`).
+- `main` üretime deploy; canlı commit **`3644cbe3`**. Apex/www/api 200.
+
+**CI onarımı (repo ayarı + Vercel, kod değişikliği YOK).** İki zamanlı iş
+kırmızıydı; ikisinin de kökü **eski hesabın alias'ı** `isbulkktc-amber.vercel.app`
+(artık `DEPLOYMENT_NOT_FOUND`):
+1. `Dispatch web push` → alias + yeni projede `PUSH_CRON_SECRET` yoktu (401).
+2. `Submit sitemap to IndexNow` → alias.
+
+Çözüm, sahiplik sınırını aşmadan: (a) `PUSH_CRON_SECRET` **döndürüldü**, hem
+Vercel env (3 ortam) hem repo secret yazıldı; (b) eski alias `isbulkktc-amber.vercel.app`
+**yeni projeye domain olarak eklendi** (public + production'a takip eder) → hardcoded
+referanslar **hiç dokunulmadan** çalışır. (c) `PUSH_DISPATCH_ORIGIN` /
+`INDEXNOW_SITEMAP_ORIGIN` repo değişkenleri yeni stabil alias'a (`isbulkktc-prod.vercel.app`)
+ayarlandı; (d) `VERCEL` secret + `VERCEL_TEAM_SLUG/ID/PROJECT` değişkenleri yeni
+hesaba güncellendi.
+
+**Ders.** `.github/**` ve `scripts/**` **LANE-INFRA**'nın; operator kod değiştirmeden
+sorunu **kaynağında** çözmeli. Kırık bir alias'ı silmek yerine **sahiplenmek**
+(`vercel domains add`) hardcoded referansı tek hamlede onarır. Aynı şekilde eksik
+bir cron secret'ı env'e yazmak, workflow'a varsayılan eklemekten daha az riskli.
+
+**Kanıt.** `Verify production deployment` ✅ (API: "alias built from 3644cbe3"),
+`Prune Vercel deployments` ✅ (yeni token; 2 deployment, 0 silindi),
+`Dispatch web push` ✅ (200), `Submit sitemap` ✅ (207 URL), `system-health`
+**0 failure** ("every workflow on main is green").
+
+**Kalan (sahip/LANE-INFRA).** Yeni hesapta otomatik Git deploy yok
+(`git connect` → 400, GitHub login bağlantısı ister). #547 açıldı; yapılmazsa
+sonraki `main` push'u otomatik deploy olmaz ve `verify` kırmızıya döner.
+
+## Tıkanıklık ailesi 8: yerel eksik → **global** kırmızı (lane-collisions) (2026-11-08)
+
+**Görünen.** Operatörün kendi PR'ı (`#548`, yalnız `docs/lanes/15-operator.md`)
+`Static checks`'te kırmızı. Kod değişikliği yok, sahiplik temiz — neden kırmızı?
+
+**Gerçek.** Kırmızı adım `Lane collisions` ve o adım **tüm açık PR'ları** okur
+(`gh pr list --state open`), yerel farkı değil. Kardeş PR `#549` (`lane/teslimat`),
+sahiplik tablosunda **tam adıyla** listelenen `scripts/verify-production-deployment.mjs`
+dosyasının **test kardeşini** (`…test.mjs`) düzenliyordu; tablo bu kardeşi kapsamıyor,
+ama iki başka lane'in geniş globu (`LANE-VERIFY`, `LANE-INFRA`) kapsıyor. Kapı,
+"PR'ın lane'i sahipler arasında yok" diye hata verdi ve **tek PR'ın yerel eksiği
+tüm kuyruğu** dondurdu (zorunlu `Quality, database and E2E` → `static`'e bağlı).
+
+**Ders.** `lane-collisions.mjs` gibi **kuyruk-global** kapılarda kırmızı, "benim
+PR'ımda hata var" demek **değildir**. Önce suçlanan adımı **yerelde** çalıştır
+(`node scripts/lane-collisions.mjs`), çıktı hangi PR'ı adlandırıyorsa **o** PR
+sorumludur. Operatör bu sınıfta: kırmızıyı **kendi PR'ına mal etme**, kaynağı
+bul, sahibine devret (#552 → LANE-INFRA), kendi PR'ına açıklayıcı yorum bırak.
+
+**Kural eklendi.** "Kuyruk-global kapı kırmızısı, PR-yerel kırmızı değildir:
+kırmızı adımı yerelde koştur, adı geçen PR'ı bul, sahibine devret."
+
+## Round: bekçi "PR'lar hareket ediyor" derken kuyruk donmuştu (#493, 2026-11-10)
+
+**Belirti.** `system-health` yeşil: `PRs: N open, all moving`. Ama gerçekte
+kuyruk donmuştu — kuyruk-global `lane-collisions` kapısı kırmızıydı ve **hiçbir**
+PR merge olamıyordu. Bekçi, donmuş bir kuyruğa "hareket ediyor" dedi.
+
+**Kök neden.** `stuckPullRequests` yalnız **yaşa** bakar: PR 3 saatten eski **ve**
+merge durumu `CLEAN` değilse uyarır. Ama (a) taze PR'ları (<3 saat) hiç görmez,
+(b) *neden* `BLOCKED` olduğunu görmez. `BLOCKED` + kırmızı check = "kimse
+ilerletemiyor çünkü bir kapı reddediyor" — bekçinin **adlandırması gereken** tam
+da bu. Bunun yerine "yaşlanmamış" sinyalini "ilerliyor" diye okudu: 5. aile
+(gösterge yanlış okuyor), bu kez *zaman* ekseninde.
+
+**Düzeltme (LANE-OPERATÖR dosyaları).** `system-health-core.mjs`'e `isRedCheck`
++ `redPullRequests`; `system-health.mjs`'e `blocked PRs` uyarısı (kırmızı check
+adıyla) ve "all moving" koşuluna bu listenin de sıfır olması eklendi. **Yaş
+kapısı bilinçli olarak yok:** `UNKNOWN` merge durumu push-sonrası pencereyi zaten
+kapatıyor ve rollup'taki `FAILURE` geçerli head SHA içindir — kalıcı bir hüküm.
+Yaş kapısı koysaydım donma saatlerce görünmez kalırdı.
+
+**Kanıt.** `scripts/**/*.test.mjs` **289/289** (yeni 8 test), `eslint` temiz.
+Canlı koşu artık donmayı adlandırıyor: `blocked PRs  2 open with a red check
+(cannot merge): #553 (Static checks); #548 (Static checks)`.
+
+**Ders.** Bir sağlık kontrolü "her şey hareket ediyor" diyorsa, önce **neyi
+ölçtüğünü** sor: yalnız zamanı mı, yoksa *sonucu* mu? İkincisi olmadan yeşil,
+"henüz eskimedi" demektir — "ilerliyor" değil.
+
+**Kalan (başka lane).** Kuyruk donması hâlâ sürüyor; kaynağı #549'un sahiplik
+eksiği (bkz. önceki bölüm), düzeltmesi LANE-INFRA/#552'de. Bekçi artık görünür
+kılıyor ama **çözemez** — bu doğru sınır.

@@ -8,8 +8,10 @@ import {
   classifyRedRuns,
   failingWorkflows,
   isDeploymentDisabled,
+  isRedCheck,
   isUnresolvedMergeState,
   newestRunPerWorkflow,
+  redPullRequests,
   redRunsOnMain,
   redWorkflowsOnMain,
   stuckPullRequests,
@@ -316,6 +318,111 @@ test("isUnresolvedMergeState is exactly UNKNOWN/null/undefined", () => {
   assert.equal(isUnresolvedMergeState("CLEAN"), false);
   assert.equal(isUnresolvedMergeState("BLOCKED"), false);
   assert.equal(isUnresolvedMergeState("DIRTY"), false);
+});
+
+// ---------------------------------------------------------------------------
+// redPullRequests — "all moving" was a lie while a queue-global gate was red.
+// ---------------------------------------------------------------------------
+
+// The bug this guards: on 2026-11-10 `lane-collisions` (which scans every open
+// PR) went red on one lane's PR. Every other open PR then read `BLOCKED`, so
+// nothing could merge — yet `system-health` reported "PRs: N open, all moving",
+// because `stuckPullRequests` only ages a PR and never looks at *why* it is not
+// CLEAN. A red check on a blocked PR is the actionable fact and must be named.
+
+test("isRedCheck reads both check-run and status-context shapes", () => {
+  assert.equal(isRedCheck({ conclusion: "FAILURE" }), true);
+  assert.equal(isRedCheck({ conclusion: "failure" }), true);
+  assert.equal(isRedCheck({ state: "FAILURE" }), true);
+  assert.equal(isRedCheck({ state: "error" }), true);
+  assert.equal(isRedCheck({ conclusion: "SUCCESS" }), false);
+  assert.equal(isRedCheck({ state: "PENDING" }), false);
+  assert.equal(isRedCheck({}), false);
+  assert.equal(isRedCheck(null), false);
+});
+
+test("a cancelled check is a superseded push, not a red gate", () => {
+  assert.equal(isRedCheck({ conclusion: "CANCELLED" }), false);
+});
+
+test("an old blocked PR with a red check is named, with the gate", () => {
+  const red = redPullRequests([
+    {
+      number: 548,
+      mergeStateStatus: "BLOCKED",
+      statusCheckRollup: [
+        { name: "Static checks", conclusion: "FAILURE" },
+        { name: "automate", conclusion: "SUCCESS" },
+      ],
+    },
+  ]);
+  assert.deepEqual(red, [{ number: 548, redChecks: ["Static checks"] }]);
+});
+
+test("a blocked PR whose checks are all green or pending is not called red", () => {
+  assert.deepEqual(
+    redPullRequests([
+      {
+        number: 1,
+        mergeStateStatus: "BLOCKED",
+        statusCheckRollup: [
+          { name: "E2E (1/4)", status: "IN_PROGRESS", conclusion: "" },
+          { name: "automate", conclusion: "SUCCESS" },
+        ],
+      },
+    ]),
+    [],
+  );
+});
+
+test("a CLEAN PR with a stale red check is not called blocked", () => {
+  assert.deepEqual(
+    redPullRequests([
+      {
+        number: 1,
+        mergeStateStatus: "CLEAN",
+        statusCheckRollup: [{ name: "Static checks", conclusion: "FAILURE" }],
+      },
+    ]),
+    [],
+  );
+});
+
+test("a fresh red check is named at once — no age window that hides a freeze", () => {
+  assert.deepEqual(
+    redPullRequests([
+      {
+        number: 999,
+        mergeStateStatus: "BLOCKED",
+        statusCheckRollup: [{ name: "Static checks", conclusion: "FAILURE" }],
+      },
+    ]),
+    [{ number: 999, redChecks: ["Static checks"] }],
+  );
+});
+
+test("an UNKNOWN merge state is left alone even if a check reads red", () => {
+  assert.deepEqual(
+    redPullRequests([
+      {
+        number: 493,
+        mergeStateStatus: "UNKNOWN",
+        statusCheckRollup: [{ name: "Static checks", conclusion: "FAILURE" }],
+      },
+    ]),
+    [],
+  );
+});
+
+test("redPullRequests tolerates missing input and unnamed checks", () => {
+  assert.deepEqual(redPullRequests(undefined), []);
+  assert.deepEqual(redPullRequests([null]), []);
+  assert.deepEqual(
+    redPullRequests([
+      { number: 7, mergeStateStatus: "DIRTY", statusCheckRollup: [{ state: "FAILURE" }] },
+    ]),
+    [{ number: 7, redChecks: ["(unnamed check)"] }],
+  );
 });
 
 // ---------------------------------------------------------------------------
