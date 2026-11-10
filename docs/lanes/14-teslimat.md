@@ -338,3 +338,42 @@ Bu turun tek doğrulanamayan merge'i budur ve sebebi dışsaldır — gizlenmedi
 **Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅, `test:unit`
 **911 test / 909 pass / 0 fail / 2 todo** (yeni: `verify-production-deployment.test.mjs`
 +5 test → toplam 14).
+
+---
+
+## Tur 8 — 2026-11-10 (lane/teslimat)
+
+**Kapsam.** Açık `lane:teslimat` issue yok. Bu tur: sahip olunan
+`scripts/approve-pending-runs.mjs`'te iki gerçek hata düzeltildi (finding 16–17),
+tüm statik kapılar yeşile getirildi, canlı ölçüm yapıldı. Üretim hâlâ **kapalı**
+olduğu için hiçbir merge canlıda doğrulanamadı.
+
+**Bulgular.**
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `scripts/approve-pending-runs.mjs` (onay `catch` + dönüş) | hata yolu / mantık | Bir run onaylanamazsa hata yazdırılıyor ama script yine `approved N/M` deyip **exit 0** veriyordu | onaylanamayan run "kuyruk temiz" sayılmamalı | Zamanlanmış çağıran (`lane-autopilot`) exit kodunu "kuyruk temiz" diye okur; `action_required`'da kalan bir run — CI'sız BLOCKED bir lane — başarı gibi görünür. **#178'in ta kendisi** | **düzeltildi** — `failed` sayacı, stderr'e "still need approval" satırı, exit 1 + regresyon testi |
+| 2 | `scripts/approve-pending-runs.mjs` (onay catch + üst düzey `main().catch`) | hata yolu | `execFileSync` hatasında yalnız `error.message` (`Command failed: gh api …`) yazdırılıyordu | asıl sebep (`stderr`) gösterilmeli | Operatör "Resource not accessible by integration" gibi eyleme dönük satırı göremiyor; log hiçbir şey söylemiyor | **düzeltildi** — `ghErrorLine()` (stderr ilk dolu satır, yoksa message) + test |
+
+**Kanıt (bulgu 1).** Sahte `gh` (liste OK, onay reddi + stderr) ile gerçek script
+koşturuldu: **eski** → `approved 0/1`, **exit 0**; **yeni** → `1 run(s) still need
+approval; the queue is not clear`, **exit 1**. Regresyon testi eski script'e karşı
+kırmızı — hatayı gerçekten pinliyor.
+
+**Kanıt (bulgu 2).** `ghErrorLine(new Error("Command failed: …", {stderr:"gh: Resource not accessible by integration"}))`
+→ `"gh: Resource not accessible by integration"`; stderr yoksa `message`'a düşer.
+
+**Canlı ölçüm (görev 3) — 🔴 teslim doğrulanamadı.** 03:09Z: `main` = `df36b2d1`.
+Her route (`/`, `/jobs`, `/companies`, `/contact`, `/en`, `/tr`, `/login`,
+`/api/build-info`) **402** + `x-vercel-error: DEPLOYMENT_DISABLED`. Sebep **hesap
+durumu** (#319 / issue #518, LANE-INFRA), kod hatası değil, bu depodan
+düzeltilemez. `main`↔canlı karşılaştırması yapılamıyor.
+
+**Merge kuyruğu (görev 1).** Açık PR'lar: #526 (lane/guvenlik, `BLOCKED`),
+#493 (lane/infra, `CLEAN` ama `.github/workflows/ci.yml` değiştiriyor →
+**"iki fren" gereği merge edilmedi, insan**). Bu turda bu lane'in merge
+edebileceği PR yoktu.
+
+**Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅, `test:unit`
+**920 test / 918 pass / 0 fail / 2 todo** (yeni: `approve-pending-runs.test.mjs`
++2 test → toplam 10).
