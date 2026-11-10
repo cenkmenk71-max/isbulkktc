@@ -60,6 +60,26 @@ export function hasLabelledWork(lane, issues) {
   });
 }
 
+/**
+ * Whether the registry's model is one the account can actually reach.
+ *
+ * The account may only call a fixed set of models. Naming one outside it makes
+ * every spawn die on its first turn with 0 tokens and nothing to do with the
+ * lane's code (issue #442 — `deepseek-v4-pro` was not in the list, so the whole
+ * team failed instantly and the stall stayed silent). The registry names the
+ * model once; this check turns a re-pin to an unreachable model into a loud,
+ * testable failure instead of a team-wide stall.
+ *
+ * @param {string|undefined|null} model the registry's `model`
+ * @param {string[]|undefined|null} allowed the team's `allowedModels`
+ * @returns {boolean}
+ */
+export function modelIsAllowed(model, allowed) {
+  if (typeof model !== 'string' || model.length === 0) return false;
+  if (!Array.isArray(allowed) || allowed.length === 0) return false;
+  return allowed.includes(model);
+}
+
 /** A quota rejection is the platform's limit, not the lane's failure. */
 export function isCapacityError(detail) {
   const text = String(detail ?? '').toLowerCase();
