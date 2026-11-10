@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
+import { createServer } from "node:http";
 import { cpSync, mkdtempSync, rmSync, writeFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 
 import {
   decideVerification,
@@ -219,6 +223,93 @@ test("a manual run without a tip never re-reads the remote and still fails loudl
   assert.equal(code, 1, output);
   assert.match(output, /FAIL/);
   assert.doesNotMatch(output, /superseded/);
+});
+
+/**
+ * Run the script against a local origin that answers every path with 200 and a
+ * large body, while `--expect` names a commit the origin does not serve. The
+ * commit check fails, so the verdict is red — but the origin is reachable, and
+ * the run must still smoke it rather than skip. Uses the async exec so the local
+ * server's event loop keeps running (a sync spawn would deadlock the server).
+ */
+async function runWithLocalOrigin({ expectedSha }) {
+  const source = fileURLToPath(
+    new URL("./verify-production-deployment.mjs", import.meta.url),
+  );
+  const dir = mkdtempSync(join(tmpdir(), "verify-smoke-"));
+  const server = createServer((req, res) => {
+    if (req.url === "/api/build-info") {
+      // Report a *different* commit than `--expect`, so the commit check fails
+      // exactly like a production that is behind `main`.
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ commit: "2222222222222222222222222222222222222222", environment: "production" }));
+      return;
+    }
+    res.writeHead(200, { "content-type": "text/html" });
+    // A body over 100 bytes so `evaluateRouteResponse` counts it as healthy.
+    res.end(`<!doctype html><html><body>${"ok".repeat(200)}</body></html>`);
+  });
+  try {
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const origin = `http://127.0.0.1:${server.address().port}`;
+    const copy = join(dir, "verify-production-deployment.mjs");
+    cpSync(source, copy);
+
+    let code = 0;
+    let output = "";
+    try {
+      const { stdout } = await execFileAsync(
+        process.execPath,
+        [
+          copy,
+          "--expect",
+          expectedSha,
+          // No `--tip` and no push event: the run verifies `expectedSha` even
+          // though the origin serves a different (older) commit, so it can only
+          // end by deadline.
+          "--url",
+          origin,
+        ],
+        {
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            GITHUB_SHA: "",
+            BRANCH_TIP_SHA: "",
+            GITHUB_EVENT_NAME: "",
+            VERCEL_TOKEN: "",
+            DEPLOY_TIMEOUT_SEC: "2",
+            DEPLOY_POLL_SEC: "1",
+          },
+        },
+      );
+      output = stdout;
+    } catch (error) {
+      code = error.code;
+      output = `${error.stdout ?? ""}${error.stderr ?? ""}`;
+    }
+    return { code, output };
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test("a reachable origin is smoke-tested even when the commit check fails", async () => {
+  // Freshness and health are separate questions (the lane brief's own point).
+  // Production being behind `main` says nothing about whether the site answers,
+  // and a red verdict that never probed the origin cannot tell "stale but
+  // healthy" from "stale and broken". Before the fix the smoke block lived in
+  // the `else` branch of `if (!decision.verified)`, so a stale verdict skipped
+  // it entirely.
+  const { code, output } = await runWithLocalOrigin({
+    expectedSha: "1111111111111111111111111111111111111111",
+  });
+
+  assert.equal(code, 1, output);
+  assert.match(output, /serving/, "the commit check must still fail");
+  assert.match(output, /smoke routes: ✅/, "the reachable origin must be smoked");
+  assert.match(output, /5 passed, 0 skipped, 0 failed/);
 });
 
 test("isSuperseded treats a moved tip as superseded and an unmoved one as not", () => {
