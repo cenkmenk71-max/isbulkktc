@@ -287,48 +287,7 @@ issue açar.
    altındaki diğer tüm sır-okuyan modüller bu işareti taşıyor; eksik olan, yanlış
    bir istemci içe aktarımını derleme hatası yerine sessiz bir sızıntıya çevirir.
    Kanıt: `tests/security/client-boundary.test.ts` (`todo`).
-3. **Kimlik uç noktalarında uygulama-içi hız sınırı yok** (sahibi:
-   `src/features/identity/**` -> LANE-AUTH). `signIn` (`actions.ts:111`) ve
-   `requestPasswordReset` (`actions.ts:302`) doğrudan
-   `signInWithPassword` / `resetPasswordForEmail` çağırıyor; `src/features/abuse/**`
-   limiter'ı yalnız feedback/sales action'larında bağlı, bu ikisinde **hiç yok**.
-   Platform captcha'sı da bir yedek değil: **hosted projede Supabase captcha
-   KAPALI** — `POST /auth/v1/token?grant_type=password` bogus bir
-   `gotrue_meta_security.captcha_token` ile bile `invalid_credentials` döndü
-   (`captcha_failed` değil), `/auth/v1/settings` gövdesinde captcha anahtarı yok.
-   (Yerel `supabase/config.toml:63-66` "hosted projede captcha açık" diyor; bu
-   yorum bayat.) Yayınlanabilir anahtar yeterli: saldırgan `/auth/v1/token` ile
-   sınırsız şifre denemesi, `/auth/v1/recover` ile sınırsız sıfırlama maili
-   gönderebilir; action üstüne hiçbir sınır koymuyor. #418 §7'nin "giriş
-   denemesi / şifre sıfırlama talebi rate limit" maddesi karşılanmamış.
-   Önerilen düzeltme: `src/features/abuse/**` limiter'ını (veya DB-tarafı bir
-   kotayı) `signIn` ve `requestPasswordReset`'e bağla; kullanıcıya nötr bir
-   "çok deneme" mesajı döndür. Kanıt:
-   `tests/security/auth-throttle-surface.test.ts` (`todo`, mutasyonla
-   doğrulandı). Devir: **#457** (`agent:handoff`, LANE-AUTH).
-4. **Mail dağıtan iki kimlik uç noktası daha hız sınırı taşımıyor** (sahibi:
-   `src/features/identity/**` -> LANE-AUTH). Bulgu 3 iki uç noktayı (`signIn`,
-   `requestPasswordReset`) sabitliyor; ama aynı dosyada çağıranın seçtiği
-   adrese mail gönderen iki kardeş var ve ikisinde de ne oturum kapısı
-   (`getUser()`) ne throttle var:
-   - `signUp` (`actions.ts:179`) `supabase.auth.signUp` çağırıyor — Supabase
-     gönderilen adrese doğrulama bağlantısı mail'ler — ve oturum dönerse
-     `sendWelcomeEmail` ile karşılama mail'i dağıtıyor.
-   - `resendConfirmation` (`actions.ts:281`) `supabase.auth.resend` çağırıyor —
-     doğrulama bağlantısını **tasarımı gereği keyfî bir adrese** yeniden
-     mail'ler.
-   Bulgu 3'ün bütün gerekçesi burada da geçerli: yalnız yayınlanabilir anahtar
-   yeter, hosted projede captcha KAPALI olduğundan formların taşıdığı Turnstile
-   jetonu da bağlayıcı değil. Sonuç sınırsız doğrulama-maili dağıtımı: kurban
-   adresi başına bir HTTP çağrısı, gelen kutusu seli ve Resend gönderim
-   kotasının tüketimi. #418 §7'nin "giriş denemesi / şifre sıfırlama talebi rate
-   limit" maddesi bu iki uç noktayı kapsayacak biçimde genişletilmeli. Önerilen
-   düzeltme: bulgu 3 ile aynı limiter'ı `signUp` ve `resendConfirmation`'a bağla
-   (`auth-throttle-surface.test.ts`'in beklediği `signInThrottle` desenini
-   izle). Kanıt: `tests/security/auth-mail-throttle-surface.test.ts` (`todo`,
-   matcher + extractor öz-testleriyle vacuous geçişe karşı korumalı). Devir:
-   **#457** (`agent:handoff`, LANE-AUTH).
-5. **İkinci kilit dosyası bayat ve Dependabot yalnız onu tarıyor** (sahibi:
+3. **İkinci kilit dosyası bayat ve Dependabot yalnız onu tarıyor** (sahibi:
    `package.json`, kilit dosyaları -> LANE-INFRA). Depo tek paket yöneticisi
    kullanır (`bun.lock`; CI `bun install --frozen-lockfile`) ama
    `package-lock.json` de commit'li. Dependabot'un npm ekosistemi yalnız
@@ -344,6 +303,25 @@ issue açar.
    (`todo`; `bun.lock` tarafı kapı). Devir: **#188** (`agent:handoff`, LANE-INFRA).
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
+
+- **Kimlik uç noktalarında uygulama-içi hız sınırı yoktu** (sahibi:
+  `src/features/identity/**`, LANE-AUTH; devir **#457** — kapandı). `signIn` ve
+  `requestPasswordReset` doğrudan `signInWithPassword` / `resetPasswordForEmail`
+  çağırıyordu ve hosted projede Supabase captcha'sı **kapalı** olduğundan
+  yayınlanabilir anahtar sınırsız şifre denemesine ve sıfırlama-maili dağıtımına
+  yetiyordu. LANE-AUTH `src/features/identity/auth-rate-limits.ts` limiter'ını
+  bağladı; `tests/security/auth-throttle-surface.test.ts` artık `todo` değil,
+  kapı (adres + e-posta boyutu, Supabase çağrısından **önce**).
+- **Mail dağıtan iki kardeş uç nokta da throttle taşımıyordu** (sahibi:
+  `src/features/identity/**`, LANE-AUTH; devir **#505** / PR #513, gate terfisi
+  **#514**). `signUp` (Supabase doğrulama maili + `sendWelcomeEmail`) ve
+  `resendConfirmation` (`supabase.auth.resend`, keyfî adrese yeniden gönderim)
+  ne oturum kapısı (`getUser()`) ne throttle taşıyordu → sınırsız doğrulama-maili
+  fan-out'u. LANE-AUTH aynı limiter'ı ikisine de bağladı;
+  `tests/security/auth-mail-throttle-surface.test.ts` iki testi artık `todo`
+  değil **kapı** — ve kapı yalnız varlığı değil **sırayı** da sabitler: kontrol
+  `supabase.auth.signUp`/`resend` çağrısından **önce** olmalı, aksi halde
+  reddedilen her çağrı yine bir mail gönderirdi (mutasyonla doğrulandı).
 
 - **İki `service_role`-only RPC'de gövde-içi rol guard'ı yoktu** (sahibi:
   `supabase/**`, LANE-SUPABASE; devir **#298**). `list_engagement_recipients` ve

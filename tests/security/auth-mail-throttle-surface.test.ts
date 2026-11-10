@@ -27,9 +27,8 @@ import test from "node:test";
  *
  * The gates below mirror `auth-throttle-surface.test.ts`: a matcher self-test so
  * a narrowed matcher cannot pass vacuously, a function-extractor self-test, and
- * one test per endpoint. Both endpoints are open today, so their tests carry
- * `{ todo }` and do not fail the run; when LANE-AUTH binds a throttle the test
- * turns green on its own — remove the `todo` to promote it to a gate.
+ * one test per endpoint. LANE-AUTH bound an address/e-mail throttle to both
+ * endpoints (#505), so the two endpoint gates are promoted to real gates.
  */
 
 const actionsPath = "src/features/identity/actions.ts";
@@ -80,11 +79,49 @@ test("the function extractor returns the named body, not the whole file (self-te
   assert.ok(exportedFunctionText(synthetic, "beta").includes("throttleCheck"));
 });
 
+/**
+ * Drop `//` line comments and block comments before matching. Without this the
+ * gates are satisfied by prose: the `// Throttle before the mail fan-out.`
+ * comment sits above `supabase.auth.signUp`, so a body whose *control* had been
+ * moved below the mail call still reported a control offset above it — the
+ * ordering gate passed vacuously (caught by mutation, #514).
+ */
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+}
+
+/**
+ * The abuse control must run *before* the mail fan-out, not merely appear in the
+ * body. A refactor that moved the limiter below `supabase.auth.signUp`/`resend`
+ * would let every rejected call still spend one mail send — a presence-only gate
+ * would stay green. Returns the byte offset of the first control reference in the
+ * comment-stripped body, or -1 when there is none.
+ */
+function firstThrottleOffset(body: string): number {
+  return stripComments(body).search(throttleReference);
+}
+
+test("the ordering helper reports the control position, not just presence (self-test)", () => {
+  const guarded =
+    "export async function alpha() {\n  if (!signUpThrottle.address.check(x).ok) return;\n  await supabase.auth.signUp({});\n}";
+  const body = exportedFunctionText(guarded, "alpha");
+  assert.ok(firstThrottleOffset(body) > -1);
+  assert.ok(firstThrottleOffset(body) < body.indexOf("supabase.auth.signUp"));
+  // A body with no control at all must report -1, not 0, so the ordering gate
+  // below cannot pass vacuously on an empty match.
+  assert.equal(firstThrottleOffset("export async function beta() {}"), -1);
+});
+
+test("a control word that appears only in a comment does not count (self-test)", () => {
+  const commented =
+    "export async function gamma() {\n  // Throttle before the mail fan-out.\n  await supabase.auth.signUp({});\n}";
+  const body = exportedFunctionText(commented, "gamma");
+  assert.equal(firstThrottleOffset(body), -1);
+  assert.equal(throttleReference.test(stripComments(body)), false);
+});
+
 test(
   "sign-up carries an abuse control before it mails a confirmation link",
-  {
-    todo: "signUp calls supabase.auth.signUp (which mails a confirmation link to the caller-chosen address) with no session gate and no throttle; only signIn/requestPasswordReset are covered by auth-throttle-surface.test.ts (owner: LANE-AUTH, #457)",
-  },
   () => {
     const body = exportedFunctionText(actions, "signUp");
     // Non-vacuity: the endpoint we are talking about must still be the one here.
@@ -93,17 +130,22 @@ test(
       `${actionsPath} signUp no longer calls supabase.auth.signUp`,
     );
     assert.ok(
-      throttleReference.test(body),
+      throttleReference.test(stripComments(body)),
       "signUp does not consult any rate limiter before Supabase mails the confirmation link",
+    );
+    // Both offsets must come from the same (comment-stripped) text: comparing a
+    // stripped offset against the raw `indexOf` mixes coordinate systems and
+    // passes vacuously once a comment precedes the call (caught by mutation).
+    const stripped = stripComments(body);
+    assert.ok(
+      stripped.search(throttleReference) < stripped.indexOf("supabase.auth.signUp"),
+      "signUp consults the rate limiter only after calling supabase.auth.signUp, so a throttled call still sends one confirmation mail",
     );
   },
 );
 
 test(
   "resending the confirmation mail carries an abuse control",
-  {
-    todo: "resendConfirmation calls supabase.auth.resend (a confirmation-mail fan-out to an arbitrary address) with no session gate and no throttle; only signIn/requestPasswordReset are covered by auth-throttle-surface.test.ts (owner: LANE-AUTH, #457)",
-  },
   () => {
     const body = exportedFunctionText(actions, "resendConfirmation");
     assert.ok(
@@ -111,8 +153,13 @@ test(
       `${actionsPath} resendConfirmation no longer calls supabase.auth.resend`,
     );
     assert.ok(
-      throttleReference.test(body),
+      throttleReference.test(stripComments(body)),
       "resendConfirmation does not consult any rate limiter before Supabase mails the confirmation link",
+    );
+    const stripped = stripComments(body);
+    assert.ok(
+      stripped.search(throttleReference) < stripped.indexOf("supabase.auth.resend"),
+      "resendConfirmation consults the rate limiter only after calling supabase.auth.resend, so a throttled call still sends one confirmation mail",
     );
   },
 );
