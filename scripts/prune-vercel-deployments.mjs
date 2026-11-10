@@ -97,29 +97,32 @@ export function selectDeploymentsToDelete(deployments, options) {
 // job cap. Node's fetch has no default timeout.
 const REQUEST_TIMEOUT_MS = 20_000;
 
-async function apiRequest(token, path, method = "GET") {
-  let response;
+export async function apiRequest(token, path, method = "GET") {
   try {
-    response = await fetch(`${API}${path}`, {
+    const response = await fetch(`${API}${path}`, {
       method,
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
+    // Read the body inside the try: the same abort signal covers the body read,
+    // so a stalled or truncated response throws here instead of escaping
+    // `apiRequestWithRetry` and crashing the run.
+    const text = await response.text();
+    let body = {};
+    if (text) {
+      try {
+        body = JSON.parse(text);
+      } catch {
+        body = { raw: text };
+      }
+    }
+    return { status: response.status, body };
   } catch (error) {
-    // Report a timeout/abort as a 5xx so `apiRequestWithRetry` retries it like
-    // any other transient failure instead of the whole run crashing on it.
+    // Report a timeout/abort (or a body-read failure) as a 5xx so
+    // `apiRequestWithRetry` retries it like any other transient failure instead
+    // of the whole run crashing on it.
     return { status: 599, body: { error: error.message } };
   }
-  const text = await response.text();
-  let body = {};
-  if (text) {
-    try {
-      body = JSON.parse(text);
-    } catch {
-      body = { raw: text };
-    }
-  }
-  return { status: response.status, body };
 }
 
 async function apiRequestWithRetry(token, path, method = "GET") {
