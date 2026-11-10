@@ -61,6 +61,14 @@ sınır kayması tüm kuyruğu kırar (tıkanıklık ailesi #5/#7; #552 → #557
 | `<yol> — edited by #a and #b` | kuyruk-geneli (iki PR aynı dosya) | **her** PR |
 | `<lane> does not own it` | PR-yerel (yalnız o PR'ın kendi denetimi) | yalnız **o** PR |
 
+**Silme bir sahiplik ihlali değildir.** Bir PR'ın **sildiği** (`changeType:
+DELETED`, REST'te `status: removed`) sahipsiz bir yol "owned by no lane" sayılmaz:
+sahiplik bir lane'in neyi *yazdığını* yönetir; silinen yol birleşince hiçbir lane'in
+alanında durmaz. Aksi hâlde artık bir yer tutucuyu (`src/app/api/.gitkeep` gibi)
+silmek **kuyruk-geneli** bir bulgu üretir ve tüm açık PR'ları yeniden kilitler —
+#552'nin kaldırdığı kilit sınıfı. Muafiyet dardır: sahipsiz bir yolu **düzenlemek**
+(`MODIFIED`) hâlâ her PR'ı bağlar.
+
 CI, `static` job'ında `node scripts/lane-collisions.mjs --pr
 "${{ github.event.pull_request.number }}"` çalıştırır: kuyruk-geneli iki kural her
 PR'ı bağlar, üçüncü kural **yalnız o PR'ı**. Böylece bir lane sahip olmadığı bir
@@ -597,6 +605,13 @@ Düzeltmeden sonra, canlı simülasyon (ihlal eden `#557` + masum `#555`): masum
 `exit 0`, ihlal eden `exit 1`. Gerçek açık PR kümesi (2 PR) temiz:
 `No collisions across 2 open PR(s).`
 
+Silme muafiyetinin kanıtı (aynı sahipsiz yol, iki değişiklik türü):
+
+```
+src/app/api/.gitkeep MODIFIED => global: ["#9999 src/app/api/.gitkeep — owned by no lane"]
+src/app/api/.gitkeep DELETED  => global: [], local: []
+```
+
 **Düzeltme.**
 
 1. **Sahiplik tablosu.** LANE-TESLİMAT satırı test kardeşini kapsayacak glob'a
@@ -611,10 +626,20 @@ Düzeltmeden sonra, canlı simülasyon (ihlal eden `#557` + masum `#555`): masum
    (`--pr <n>` / `--pr=<n>`).
 3. **CI.** `static` job'ı `node scripts/lane-collisions.mjs --pr
    "${{ github.event.pull_request.number }}"` çalıştırır.
+4. **Silme muafiyeti (ek bulgu, aynı kilit sınıfı).** Kapsam ayrımı yapıldıktan
+   sonra bile bu dalın kendisi kuyruğu kilitleyebilirdi: dal, artık gereksiz bir
+   yer tutucuyu (`src/app/api/.gitkeep`) **siliyor** ve o yol hiçbir lane'e ait
+   değil. `gh pr list --json files` silmeleri de listelediği için (`#493`
+   `package-lock.json`'u `DELETED` gösterdi) sahipsiz-silme bulgusu **kuyruk-geneli**
+   sayılıp her PR'ı kıracaktı. Düzeltme: `isDeletion` (her iki API şekli:
+   `changeType: DELETED`, `status: removed`) ve `evaluateCollisions`'ta "owned by
+   no lane" kontrolünün silmeleri atlaması. Sahiplik bir lane'in neyi *yazdığını*
+   yönetir; silinen yol birleşince hiçbir alanda durmaz. Muafiyet dar: sahipsiz
+   bir yolu **düzenlemek** hâlâ her PR'ı bağlar.
 
 **Çalıştırılan kontroller.** `bun run lint`, `typecheck`,
-`check:frontend-source` — yeşil; `test:unit` **993/993**; `lane-collisions`
-**26/26**. Mutasyon: CI adımından `--pr` kaldırılınca ratchet testi kırmızı.
+`check:frontend-source` — yeşil; `test:unit` **996/996**; `lane-collisions`
+**29/29**. Mutasyon: CI adımından `--pr` kaldırılınca ratchet testi kırmızı.
 
 **Canlıya dokundu mu:** hayır. Yalnız sahiplik tablosu, dedektör, CI adımı ve
 testler.

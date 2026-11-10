@@ -7,6 +7,7 @@ import {
   currentPullRequestNumber,
   evaluateCollisions,
   foldName,
+  isDeletion,
   laneFromBranch,
   ownersOf,
   parseOwnership,
@@ -389,4 +390,45 @@ test("CI scopes the ownership check to the current PR", () => {
     /lane-collisions\.mjs --pr "\$\{\{ github\.event\.pull_request\.number \}\}"/,
     "the Lane collisions step must pass --pr <this PR> to stay PR-scoped",
   );
+});
+
+test("isDeletion recognises both API shapes and a bare path", () => {
+  // gh pr list --json files
+  assert.equal(isDeletion({ path: "x", changeType: "DELETED" }), true);
+  assert.equal(isDeletion({ path: "x", changeType: "MODIFIED" }), false);
+  // REST files endpoint
+  assert.equal(isDeletion({ path: "x", status: "removed" }), true);
+  assert.equal(isDeletion({ path: "x", status: "added" }), false);
+  // bare path string (unit-fixture shape) carries no metadata
+  assert.equal(isDeletion("x"), false);
+});
+
+test("deleting an unowned file is not a queue-wide problem", () => {
+  // #552 bug class: this branch deletes src/app/api/.gitkeep, which no lane
+  // owns. If a deletion counted as "owned by no lane", opening that PR would
+  // report a *global* problem and re-freeze every open PR — the exact freeze
+  // #552 removes. A removed path occupies no lane's territory once merged.
+  const prs = [
+    {
+      number: 1,
+      headRefName: "lane/alpha",
+      files: [{ path: "orphan/placeholder", changeType: "DELETED" }],
+    },
+  ];
+  const { global, local } = evaluateCollisions(prs, lanesFixture, 1);
+  assert.deepEqual(global, []);
+  assert.deepEqual(local, []);
+});
+
+test("editing (not deleting) an unowned file is still queue-wide", () => {
+  // The exemption is narrow: a modified unowned path still reddens every PR.
+  const prs = [
+    {
+      number: 1,
+      headRefName: "lane/alpha",
+      files: [{ path: "orphan/file.ts", changeType: "MODIFIED" }],
+    },
+  ];
+  const { global } = evaluateCollisions(prs, lanesFixture, 1);
+  assert.deepEqual(global, ["#1 orphan/file.ts — owned by no lane"]);
 });

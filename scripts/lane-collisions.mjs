@@ -132,6 +132,23 @@ export function ownersOf(path, lanes) {
   return lanes.filter(({ globs }) => owns(path, globs)).map(({ lane }) => lane);
 }
 
+/**
+ * Whether a changed-file entry describes a deletion.
+ *
+ * `gh pr list --json files` reports `changeType` (`ADDED`, `MODIFIED`,
+ * `DELETED`); the REST files endpoint reports `status` (`added`, `modified`,
+ * `removed`). Both are accepted, and a bare path string (the shape the unit
+ * fixtures use) is never a deletion because it carries no metadata.
+ *
+ * @param {{changeType?:string,status?:string,path?:string}|string} file
+ * @returns {boolean}
+ */
+export function isDeletion(file) {
+  if (typeof file === 'string') return false;
+  const kind = file.changeType ?? file.status ?? '';
+  return kind === 'DELETED' || kind === 'removed';
+}
+
 function openPullRequests() {
   let raw;
   try {
@@ -205,7 +222,13 @@ export function evaluateCollisions(prs, lanes, currentPr = null) {
     for (const file of pr.files ?? []) {
       const path = file.path ?? file;
       const owners = ownersOf(path, lanes);
-      if (owners.length === 0) {
+      // A deletion leaves no file behind, so "owned by no lane" does not apply:
+      // ownership governs what a lane writes, and a removed path occupies no
+      // lane's territory once merged. Without this, deleting a stray unowned
+      // file (a leftover placeholder, say) reports a *queue-wide* problem and
+      // re-freezes every open PR — the very #552 bug class this scope split
+      // exists to remove.
+      if (owners.length === 0 && !isDeletion(file)) {
         global.push(`#${pr.number} ${path} — owned by no lane`);
       }
       // The lane's own slip: reported for the current PR, or for all when the
