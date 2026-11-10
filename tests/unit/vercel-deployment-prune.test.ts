@@ -95,6 +95,32 @@ test("keeps the newest N preview deployments independently of production", () =>
   );
 });
 
+test("never deletes every production deployment when keepProduction is 0", () => {
+  // Regression: with keepProduction 0 (a legal setting) and no live uid pinned,
+  // the policy previously selected every production deployment. The newest
+  // production deployment is the only rollback target and must always survive.
+  const deployments = [
+    deployment("prod-live", 100, { target: "production" }),
+    deployment("prod-old", 200, { target: "production" }),
+    deployment("prev", 1),
+  ];
+
+  const stale = selectDeploymentsToDelete(deployments, {
+    keepProduction: 0,
+    keepPreview: 0,
+    now: NOW,
+  });
+
+  assert.deepEqual(
+    stale.map((d) => d.uid),
+    ["prod-old", "prev"],
+  );
+  assert.ok(
+    !stale.some((d) => d.uid === "prod-live"),
+    "the newest production deployment must survive",
+  );
+});
+
 test("a domain-pinned deployment is excluded from deletion regardless of age", () => {
   // The caller resolves the domain-pinned set from the authoritative aliases
   // endpoint and filters it out; here we prove the retention logic alone would

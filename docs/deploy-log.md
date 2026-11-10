@@ -278,3 +278,21 @@ context, not as a measurement.
     `ghErrorLine(error)`, which prefers the first non-blank `stderr` line and
     falls back to `message`. Regression test covers both paths.
 | 2026-11-10T03:22Z | `feb5ee0d` | — | 🚫 **origin disabled** | **Merge record — PR #527** (findings 16–17: the `approve-pending-runs.mjs` exit-code and `stderr` fixes) auto-merged by `app/github-actions` at 03:20:21Z (squash; `main` `df36b2d1` → `feb5ee0d`). All required checks green including the `Quality, database and E2E` aggregator; the only red is `Vercel — Account is blocked.`, not a required check (the brief's `UNSTABLE` case, not `CONFLICTING`). Live re-check: still **402 on every route** — the account block (#319 / issue #518) persists, so the merge could not be verified live. This is this lane's second unverifiable delivery and the reason is external, not a code defect. `main` also advanced `df36b2d1` → `9fb60c0` (#526, lane/guvenlik) before this merge. |
+
+### Delivery health findings (2026-11-10, round 4)
+
+18. **`selectDeploymentsToDelete` could select every production deployment.**
+    The retention policy's own docstring promises "always keep the live
+    production deployment", but the live deployment was pinned only through
+    `keepUid` (from `targets.production.id`). When that id is absent — a project
+    with no production alias yet, or an API change that drops the field — the
+    newest-N window is the only thing standing between the live deployment and
+    deletion, and `VERCEL_KEEP_PRODUCTION=0` (a legal value; the workflow passes
+    it straight through) removes even that. `selectDeploymentsToDelete` then
+    returned **every** production deployment and `main()` would delete them all,
+    destroying the only rollback target and the deployment that may be serving
+    traffic. Fixed: the production window now keeps `Math.max(1, keepProduction)`
+    deployments, so the newest production deployment always survives, and
+    `main()` logs a warning when `targets.production.id` cannot be resolved.
+    Regression test in both the `node:test` and the `tsx` unit suite; both fail
+    against the pre-fix script.

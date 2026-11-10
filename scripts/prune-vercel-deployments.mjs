@@ -6,7 +6,7 @@
 //
 // Retention policy (all counts configurable):
 //   * always keep the live production deployment (the one the domains point at)
-//   * keep the newest N production deployments   (rollback history)
+//   * keep the newest N production deployments, at least one (rollback history)
 //   * keep the newest M preview deployments      (recent PR/branch builds)
 //   * keep anything younger than a safety window (never race a fresh build)
 // Everything else is deleted, oldest first. Runs as a dry-run unless --apply.
@@ -20,7 +20,7 @@
 //   VERCEL_TEAM_ID          optional; resolved from the slug when absent
 //   VERCEL_TEAM_SLUG        optional; default "orijin1"
 //   VERCEL_PROJECT          optional; default "isbulkktc"
-//   VERCEL_KEEP_PRODUCTION  optional; newest production deploys to keep (5)
+//   VERCEL_KEEP_PRODUCTION  optional; newest production deploys to keep (5, min 1)
 //   VERCEL_KEEP_PREVIEW     optional; newest preview deploys to keep (5)
 //   VERCEL_MIN_AGE_HOURS    optional; keep anything newer than this (1)
 //   VERCEL_MAX_DELETES      optional; hard per-run cap (200)
@@ -66,9 +66,13 @@ export function selectDeploymentsToDelete(deployments, options) {
   if (keepUid) {
     keep.add(keepUid);
   }
+  // Retain at least the newest production deployment even when `keepProduction`
+  // is 0. It is the only rollback target, and when the live deployment id could
+  // not be resolved (`keepUid` absent) it may be the deployment serving traffic —
+  // so a misconfigured run can never delete every production deployment.
   for (const deployment of newestFirst
     .filter(isProduction)
-    .slice(0, Math.max(0, keepProduction))) {
+    .slice(0, Math.max(1, keepProduction))) {
     keep.add(deployment.uid);
   }
   for (const deployment of newestFirst
@@ -244,6 +248,15 @@ async function main() {
   }
   const projectId = project.body.id;
   const liveUid = project.body.targets?.production?.id;
+  if (!liveUid) {
+    // `targets.production.id` is how we learn which deployment the domains serve.
+    // If it is missing we cannot pin it, so the retention policy keeps the newest
+    // production deployment as a fallback. Surface it loudly: this is either a
+    // project with no production deploy yet or an API change.
+    console.log(
+      "warning: could not resolve the live production deployment id (targets.production.id); keeping the newest production deployment as the fallback rollback target.",
+    );
+  }
 
   const deployments = await listAllDeployments(token, teamId, projectId);
   const now = Date.now();
