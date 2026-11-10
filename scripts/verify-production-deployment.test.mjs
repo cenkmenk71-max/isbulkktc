@@ -7,7 +7,10 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  decideVerification,
+  evaluateRouteResponse,
   initialVercelState,
+  isDeploymentDisabled,
   isSuperseded,
   parsePositiveInt,
 } from "./verify-production-deployment.mjs";
@@ -227,4 +230,63 @@ test("isSuperseded treats a moved tip as superseded and an unmoved one as not", 
   assert.equal(isSuperseded(expected, "bbbb222222222222222222222222222222222222"), true);
   // Unknown tip must not trigger a skip.
   assert.equal(isSuperseded(expected, ""), false);
+});
+
+test("a 402 (DEPLOYMENT_DISABLED) is recognised from the status or the header", () => {
+  // Vercel's blocked-account state: 402 with `x-vercel-error: DEPLOYMENT_DISABLED`.
+  assert.equal(isDeploymentDisabled(402, ""), true);
+  assert.equal(isDeploymentDisabled(200, "DEPLOYMENT_DISABLED"), true);
+  assert.equal(isDeploymentDisabled(200, " deployment_disabled "), true);
+  // A plain 4xx/5xx is not this state, and a missing header must not throw.
+  assert.equal(isDeploymentDisabled(500, ""), false);
+  assert.equal(isDeploymentDisabled(404, undefined), false);
+  assert.equal(isDeploymentDisabled(200, "SOMETHING_ELSE"), false);
+});
+
+test("a disabled deployment is a failure even when the Vercel alias looks healthy", () => {
+  // The masking bug this pins: the account is blocked, so every visitor gets
+  // 402, but the Vercel API channel can still report the production alias
+  // pointing at a READY deployment built from the expected commit. The old
+  // `if (vercel.ok) verified` ordering would report a green deploy for a site
+  // that is down for everyone. A disabled origin must outrank `vercel.ok`.
+  const decision = decideVerification({
+    vercel: { configured: true, ok: true, reason: "alias built from 8d3db245" },
+    http: { ok: false, blocked: false, disabled: true, reason: "HTTP 402 (DEPLOYMENT_DISABLED)" },
+  });
+  assert.equal(decision.verified, false);
+  assert.match(decision.reason, /disabled/);
+  assert.match(decision.reason, /not a code problem/);
+});
+
+test("a disabled origin is not reported as healthy when the Vercel channel is absent", () => {
+  const decision = decideVerification({
+    vercel: { configured: false, ok: false, reason: "VERCEL_TOKEN not set" },
+    http: { ok: false, blocked: false, disabled: true, reason: "HTTP 402 (DEPLOYMENT_DISABLED)" },
+  });
+  assert.equal(decision.verified, false);
+  assert.match(decision.reason, /disabled/);
+});
+
+test("a disabled origin is a failure even when the runner is edge-blocked", () => {
+  // The full false-green path: Cloudflare edge-blocks the runner (403), so every
+  // smoke route is *skipped* and nothing downstream can catch it, while the
+  // Vercel alias still looks healthy. The old `if (vercel.ok)`-first ordering
+  // returned verified:true here, so the run exited 0 for a site serving 402 to
+  // every real visitor.
+  const decision = decideVerification({
+    vercel: { configured: true, ok: true, reason: "alias built from 8d3db245" },
+    http: { ok: false, blocked: true, disabled: true, reason: "HTTP 402 (DEPLOYMENT_DISABLED)" },
+  });
+  assert.equal(decision.verified, false);
+  assert.match(decision.reason, /disabled/);
+});
+
+test("a disabled route response is a failure, not a skipped 4xx", () => {
+  const disabled = evaluateRouteResponse("/", 402, 78);
+  assert.equal(disabled.ok, false);
+  assert.equal(disabled.disabled, true);
+  assert.match(disabled.reason, /disabled/);
+  // 403/429 stay "blocked" (skipped) — the edge/WAF case, not an outage.
+  assert.equal(evaluateRouteResponse("/", 403, 0).skipped, true);
+  assert.equal(evaluateRouteResponse("/", 429, 0).skipped, true);
 });

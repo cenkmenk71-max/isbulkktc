@@ -100,9 +100,34 @@ export function classifyHttpStatus(status) {
   return "error";
 }
 
+/**
+ * Vercel answers a disabled deployment with **402** and `x-vercel-error:
+ * DEPLOYMENT_DISABLED`. That is an account state (blocked/suspended/over quota),
+ * not an application bug: the origin is down for every visitor and redeploying
+ * does not fix it until the account is unblocked. Naming it distinctly turns a
+ * bare "HTTP 402" into an actionable line, and — critically — it must outrank
+ * the Vercel API channel, which can still report the alias pointing at a READY
+ * deployment built from the right commit while the site answers 402.
+ */
+export function isDeploymentDisabled(status, vercelError) {
+  if (status === 402) return true;
+  return (
+    typeof vercelError === "string" &&
+    vercelError.trim().toUpperCase() === "DEPLOYMENT_DISABLED"
+  );
+}
+
 /** A route is healthy only on a 2xx with a non-trivial body; blocked is skipped. */
 export function evaluateRouteResponse(route, status, bodyLength) {
   const kind = classifyHttpStatus(status);
+  if (isDeploymentDisabled(status)) {
+    return {
+      route,
+      ok: false,
+      disabled: true,
+      reason: `HTTP ${status} (deployment disabled — account blocked/suspended)`,
+    };
+  }
   if (kind === "blocked") {
     return {
       route,
@@ -137,6 +162,21 @@ export function summarizeSmokeResults(results) {
  * is enough; the HTTP channel is allowed to be blocked without failing the run.
  */
 export function decideVerification({ vercel, http }) {
+  // A disabled deployment outranks every other signal. The Vercel API channel
+  // proves the *alias target* (which deployment the domain points at), not that
+  // the origin serves it: with the account blocked the alias can still resolve
+  // to a READY deployment built from the expected commit while every visitor
+  // gets 402. The old `if (vercel.ok)`-first ordering therefore printed a ✅
+  // verdict for an origin that had just answered 402 — and when Cloudflare
+  // edge-blocked the runner (its usual answer to GitHub datacenter IPs) every
+  // smoke route is skipped, so the run exited 0: a false green for a site that
+  // is down for everyone.
+  if (http.disabled) {
+    return {
+      verified: false,
+      reason: `production deployment is disabled (not a code problem): ${http.reason}`,
+    };
+  }
   if (vercel.ok) return { verified: true, method: "vercel-api", reason: vercel.reason };
   if (http.ok) return { verified: true, method: "http", reason: http.reason };
   if (http.blocked && !vercel.configured) {
@@ -206,7 +246,7 @@ async function fetchJson(url, init = {}) {
         body = null;
       }
     }
-    return { status: response.status, body };
+    return { status: response.status, body, headers: response.headers };
   } finally {
     clearTimeout(timer);
   }
@@ -267,10 +307,19 @@ async function checkVercelAlias(context, token, expectedCommit) {
 /** Poll `GET /api/build-info` on the live origin. */
 async function checkHttpBuildInfo(origin, expectedCommit) {
   try {
-    const { status, body } = await fetchJson(`${origin}/api/build-info`, {
+    const { status, body, headers } = await fetchJson(`${origin}/api/build-info`, {
       headers: { "Cache-Control": "no-cache" },
       redirect: "manual",
     });
+    const vercelError = headers?.get?.("x-vercel-error") ?? "";
+    if (isDeploymentDisabled(status, vercelError)) {
+      return {
+        ok: false,
+        blocked: false,
+        disabled: true,
+        reason: `HTTP ${status}${vercelError ? ` (${vercelError})` : ""} — the deployment is disabled, the site is down for every visitor`,
+      };
+    }
     if (classifyHttpStatus(status) === "blocked") {
       return {
         ok: false,
@@ -443,6 +492,12 @@ async function main() {
 
     if (decideVerification({ vercel, http }).verified || Date.now() >= deadline) break;
 
+    // A disabled deployment is an account state, not a race with a build: the
+    // origin will answer 402 until the account is unblocked, so polling cannot
+    // change the verdict. Stop now and report it instead of burning the full
+    // timeout.
+    if (http.disabled) break;
+
     console.log(
       `  waiting: vercel=${vercel.reason}; http=${http.reason} (retrying in ${pollSec}s)`,
     );
@@ -458,7 +513,7 @@ async function main() {
     `- verdict: ${decision.verified ? "✅" : "❌"} ${decision.reason}`,
     `- confirmed via: ${decision.verified ? decision.method : "—"}`,
     `- Vercel API: ${vercel.configured ? (vercel.ok ? "✅" : "❌") : "⏭️"} ${vercel.reason}`,
-    `- HTTP build identity: ${http.blocked ? "⏭️ blocked" : http.ok ? "✅" : "❌"} ${http.reason}`,
+    `- HTTP build identity: ${http.disabled ? "🚫 disabled" : http.blocked ? "⏭️ blocked" : http.ok ? "✅" : "❌"} ${http.reason}`,
   ];
 
   const failures = [];
