@@ -1682,3 +1682,85 @@ Sahibin yapması gerekenler: #469 (LANE-İÇERİK, NEXT_LOCALE Secure) — canl�
 Sonraki lane için notlar: Canlı çerez bayrağını ölçerken ham başlığı sed'siz oku;
   `/api/build-info` SHA'sı ile main'i karşılaştır (deploy doğrulaması).
 ```
+
+## Tur 43 — micro-denetim: `/api/qr` render kapasitesi hata yolu (#424 devri)
+
+```
+Lane: LANE-GÜVENLİK            Branch: lane/guvenlik
+PR: bu PR (tur 43)
+Değişen dosyalar: tests/security/qr-render-capacity-surface.test.ts (yeni),
+                  tests/security/README.md, docs/lanes/09-guvenlik.md
+Çalıştırılan kontroller: lint ✓ / typecheck ✓ / check:frontend-source ✓ /
+  test:unit ✓ (894 test, 892 pass, 0 fail, 2 todo) /
+  test:security ✓ (183 test, 174 pass, 0 fail, 9 todo)
+Canlıya dokundu mu: HAYIR (yalnız salt-okuma curl: başlık/HTTP kodu ölçümü)
+Sahibin yapması gerekenler: /api/qr rotasına kapasite kontrolü veya try/catch
+  (rota sahibi; devir issue). #424'ün M-01/M-02/M-04'ü platform, kapanış notu
+  aşağıda.
+Sonraki lane için notlar: /api/qr testi rotayı **import edemez** — rota
+  `server-only` (getAppBaseUrl) çekiyor ve `test:security` `tsx`'i
+  `--conditions=react-server` olmadan koşuyor; fonksiyonel rota testi için
+  runner değişikliği LANE-INFRA'nın işi. Bu yüzden bulgu `qrcode` seviyesinde +
+  statik hata-yolu dedektörüyle kanıtlandı.
+```
+
+#424 devrindeki üç maddeye bakıldı; **repo-kontrollü tek yeni açık** `/api/qr`
+hata yoluydu (M-03'ün repo kısmı zaten `account-lifecycle-surface.test.ts`'te
+`todo`). Bu tur o boşluğu kapattı.
+
+### Bulgu (kanıtlı) — `/api/qr` kapasite taşması → 500
+
+`src/app/api/qr/route.ts` payload'ı `buildInstallQrUrl`'den alıp **hata yolu
+olmadan** `QRCode.toString`/`toBuffer`'a veriyor (rota satır 42 ve 52; `try`
+yok). Bu yalnız payload her zaman bir QR sembolüne sığdıkça güvenli; sığmıyor:
+
+- **B-1 — `next` karakterle sınırlı, baytla değil.** `sanitizeNextPath`
+  `next`'i 2048 **karakterde** kesiyor (`src/lib/pwa/destination.ts:23,31`).
+  2047 karakterlik çok-baytlı bir yol (`é` → `%C3%A9`, 3 bayt) payload'ı
+  **12 314 bayt** yapıyor; EC seviyesi M'de version 40 tavanı 2 953 bayt, yani
+  **her** version atıyor (`The amount of data is too big to be stored in a QR Code`).
+- **B-2 — `version` payload'ın altını kabul ediyor.** `isSupportedQrVersion`
+  tüm 1..40'ı geçiriyor (`src/lib/pwa/campaign.ts`); `?version=1` 42 baytlık
+  varsayılan payload'da bile atıyor (`The chosen QR Code version cannot contain
+  this amount of data. Minimum version required… is: 3`). Varsayılan payload'ın
+  **taban** version'ı 3, yani rotanın reklam ettiği aralığın alt ucu hiç render
+  edemiyor.
+
+**Canlı kanıt:** `GET https://isbulkktc.com/api/qr?next=/jobs&version=1` → **500**
+(`/api/qr?next=/jobs` → 200). Aynı sınır yerelde de ölçüldü. Etki: kontrolsüz
+jenerik 500; enjeksiyon/sızıntı/DoS yok (tek ucuz istek), ama public + cacheable
+bir rotanın hata yolu.
+
+**Kapı.** `tests/security/qr-render-capacity-surface.test.ts` (yeni, 5 test):
+B-1 ve B-2 sınırı `qrcode` seviyesinde pinlenir (payload ≥ 2048 karakter, >
+2 953 bayt, render atıyor); version tabanı 1..40 taramasıyla sabitlenir; rotada
+`try` yokluğu statik dedektörle kanıtlanır; dedektör self-test'i (kısa payload
+render ✓, tavan-üstü payload atar ✓) vakumlu olmadığını gösterir. **Mutasyon:**
+rotaya `try {` eklenince statik test kırmızı; geri alındı.
+
+### #424 triyajı (devralınan üç madde)
+
+- **M-01 (ACAO:*)** ve **M-04** — Vercel prerender davranışı, repo kodu değil;
+  `api-response-surface.test.ts` pinli. Kapanış notu tur 41'de yazıldı.
+- **M-02 (sayfa rotalarında PUT/DELETE 200)** — Next.js çerçeve davranışı; blanket
+  reddi Server Actions POST'unu kırar. Platform; repo işi yok.
+- **M-03 (hata yolu cache)** — repo-kontrollü kısım hâlâ açık ve
+  `account-lifecycle-surface.test.ts`'te `todo` (`/api/push/*` ve
+  `/api/email/engagement-digest` hata yanıtları kendi `Cache-Control`'ünü
+  koymuyor). Sahibi LANE-INFRA/LANE-URUN.
+
+### Bakılmayan
+
+Taranan: `src/app/api/qr/route.ts`, `src/lib/pwa/qr.ts`,
+`src/lib/pwa/destination.ts`, `src/lib/pwa/campaign.ts`,
+`src/server/config/app-url.ts`, `tests/security/**`, `tests/security/README.md`.
+`docs/threat-model.md` / `docs/data-retention.md` bu turda değişmedi.
+Erişilebilirlik/kontrast/RTL bu lane'de kapsam dışı.
+
+### Devir (kendi alanım dışı)
+
+- **/api/qr hata yolu** — rota sahibi (`src/app/api/qr/route.ts`; `src/lib/pwa/**`
+  LANE-URUN), `agent:handoff`. Öneri: `buildInstallQrUrl` çıktısını
+  `qrcode`'un bildirdiği minimum version'a karşı doğrula **veya** rotayı
+  `try/catch` ile 4xx/5xx'e bağla (hata yanıtına `Cache-Control: no-store` ekle).
+- **#424** — M-01/M-02/M-04 platform; M-03'ün repo kısmı LANE-INFRA/LANE-URUN.

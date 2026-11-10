@@ -22,6 +22,7 @@ a boundary regression is attributable at a glance.
 | File | Boundary |
 |---|---|
 | `open-redirect.test.ts` | `/[locale]/install?next=` continuation stays same-origin |
+| `qr-render-capacity-surface.test.ts` | the `/api/qr` render capacity boundary: a `next` inside the 2048-character cap but past the version-40 byte ceiling, and a pinned `version` below what the payload needs, both reach an unhandled `qrcode` throw (proven at the generator level + a static route error-path detector; the route cannot be imported without the `react-server` condition) |
 | `auth-redirect-boundary.test.ts` | `/auth/callback` query values (`next`, `flow`, `sb_flow_id`) never become an off-origin path |
 | `sql-hardening.test.ts` | RLS on every table (any `create [unlogged\|temp] table` form), every table revoked from the client roles, `search_path` pinned to the *empty* path (both `=` and `to` spellings, no kept schema), function grant/revoke pairing, the `admin_*` role guard, the AAL2 gate on `has_platform_role`, the in-body `auth.role()` guard on every `service_role`-only RPC, pgTAP ratchet drift |
 | `storage-bucket-privacy.test.ts` | every declared bucket is private unless it is on the explicit public allowlist; the two private buckets (`private-resumes`, `private-payment-receipts`) stay `public=false`; no `storage.objects` policy exists (default deny); no `update storage.buckets` flips a bucket to public |
@@ -66,6 +67,7 @@ the test passes on its own — remove the `todo` option to promote it to a gate.
 | `NEXT_LOCALE` locale cookie has no `Secure` flag (issue #418 §6) | LANE-İÇERİK (`src/i18n/routing.ts`) | open (`locale-cookie-flags.test.ts`; `HttpOnly` is not possible — the language switcher writes it from JS) |
 | The credential endpoints (`signIn`, `requestPasswordReset`) carry no application-level throttle, and the hosted project does **not** enforce the captcha the config claims (issue #418 §7) | LANE-AUTH (`src/features/identity/**`) | open (`auth-throttle-surface.test.ts`; handoff #457) |
 | `/api/build-info` is cross-origin readable (`ACAO: *`), page routes answer write methods, error paths cache (#424) | platform / framework (Vercel + Next.js); no repo file owns it | **triaged** — M-01/M-03/M-04 are Vercel platform behaviour (absent on the local standalone); M-02 is Next.js page handling and a non-GET reject would break Server Actions. Gates in `api-response-surface.test.ts`; ownership gap handed to LANE-INFRA |
+| `/api/qr` renders attacker-influenced input with no error path: a `next` inside the 2048-character cap but past the QR version-40 byte ceiling, and a `version` below the payload's minimum, both throw → 500 (live: `?next=/jobs&version=1` → 500) | route owner (`src/app/api/qr/route.ts`; `src/lib/pwa/**` is LANE-URUN) | open (`qr-render-capacity-surface.test.ts`; handoff) |
 | `package-lock.json` is a stale second lockfile and the only manifest Dependabot audits | LANE-INFRA (`package.json`, lockfiles) | open (handoff #188) |
 
 ### Guard self-tests
