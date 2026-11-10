@@ -2,10 +2,32 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  describeTeamLookupFailure,
   isProtectedHostname,
   isVercelHostname,
+  readVercelToken,
   selectDeploymentsToDelete,
 } from "./prune-vercel-deployments.mjs";
+
+test("an invalid Vercel token is named as such, not as a bad team slug", () => {
+  const rejected = describeTeamLookupFailure(403, {
+    error: { code: "forbidden", message: "Not authorized", invalidToken: true },
+  });
+  assert.match(rejected, /rejected the token/);
+  assert.match(rejected, /403/);
+  assert.doesNotMatch(rejected, /slug/);
+  assert.match(describeTeamLookupFailure(401, {}), /rejected the token/);
+  // A transient server error must not be reported as a credential problem.
+  const server = describeTeamLookupFailure(503, {});
+  assert.match(server, /HTTP 503/);
+  assert.doesNotMatch(server, /rejected the token/);
+});
+
+test("a whitespace-only VERCEL_TOKEN is treated as unset", () => {
+  assert.equal(readVercelToken({ VERCEL_TOKEN: "   " }), "");
+  assert.equal(readVercelToken({}), "");
+  assert.equal(readVercelToken({ VERCEL_TOKEN: " tok " }), "tok");
+});
 
 // The retention decision is the part that can take production down: a wrong
 // result deletes the deployment a real domain points at. These tests pin it.

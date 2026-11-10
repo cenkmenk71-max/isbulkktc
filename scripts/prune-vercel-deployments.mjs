@@ -135,11 +135,34 @@ async function apiRequestWithRetry(token, path, method = "GET") {
   return last;
 }
 
+export function readVercelToken(source = process.env) {
+  const value = source.VERCEL_TOKEN;
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/**
+ * Explain a failed team lookup. Vercel answers an invalid or expired token with
+ * **403** `{"error":{"code":"forbidden","invalidToken":true}}`. Reporting only
+ * the HTTP status hides that, and "No team with slug …" (the old message for an
+ * empty list) actively blames the slug for a dead credential — the operator
+ * rechecks the slug instead of rotating the token (#209).
+ */
+export function describeTeamLookupFailure(status, body) {
+  const invalid =
+    status === 401 ||
+    body?.error?.invalidToken === true ||
+    /invalid/i.test(String(body?.error?.code ?? ""));
+  if (invalid) {
+    return `Vercel API rejected the token (HTTP ${status}: invalid or expired VERCEL_TOKEN).`;
+  }
+  return `Could not list teams (HTTP ${status}).`;
+}
+
 async function resolveTeamId(token, teamId, teamSlug) {
   if (teamId) return teamId;
   const { status, body } = await apiRequest(token, "/v2/teams?limit=100");
   if (status !== 200) {
-    throw new Error(`Could not list teams (HTTP ${status}).`);
+    throw new Error(describeTeamLookupFailure(status, body));
   }
   const team = (body.teams ?? []).find((entry) => entry.slug === teamSlug);
   if (!team) {
@@ -216,7 +239,7 @@ function formatRow(deployment, now) {
 }
 
 async function main() {
-  const token = process.env.VERCEL_TOKEN;
+  const token = readVercelToken();
   if (!token) {
     throw new Error(
       "VERCEL_TOKEN is not set. Create one at https://vercel.com/account/tokens.",
