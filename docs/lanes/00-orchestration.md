@@ -497,3 +497,41 @@ her PR `lane-collisions`'ta "owned by no lane" olurdu. LANE-INFRA satırına
 bu dalda daha önce düzeltilmiş commit'lerle mevcut (doğrulandı). `#102` →
 `src/server/email/**` LANE-URUN'un; orada `agent:handoff` zaten var. `#442`
 (lanes.json modeli) ve `#426` (operator brief) main'de düzeltilmiş.
+
+### Tur — çakışma kapısı lane/auth PR'ını kırdı: auth callback sahipsizliği (#542)
+
+**Kapsam.** Devir kuyruğunun tamamı (`#306`, `#428`, `#188`, `#292`, `#385`,
+`#447`, `#309`, `#386`) bu dalda daha önce düzeltilmiş commit'lerle mevcut;
+tekrar doğrulandı ve **yeni açık kalem yok**. Bu turda kalan gerçek boşluk
+çakışma kapısının kendisiydi.
+
+**Bulgu (mantık / sahiplik).** `lane/auth`'ın PR #542'si
+`src/app/[locale]/auth/callback/route.ts` (OAuth/PKCE callback) dosyasını
+düzenliyor. LANE-SEO'nun satırındaki geniş `src/app/[locale]/**` glob'u bu API
+rotasını da yakalıyordu, bu yüzden kapı "lane-auth does not own it (LANE-SEO)"
+diyordu — `docs/lanes/06-auth.md` bu boşluğu birkaç turdur raporluyordu.
+
+**Kanıt (admin token'la, gerçek PR kümesiyle).** Düzeltmeden önce:
+
+```
+Found 1 collision problem(s):
+  #542 src/app/[locale]/auth/callback/route.ts — lane-auth does not own it (LANE-SEO)
+```
+
+Düzeltmeden sonra: `No collisions across 2 open PR(s).`
+
+**Düzeltme.** LANE-SEO satırına `!src/app/[locale]/auth/**` istisnası, LANE-AUTH
+satırına `src/app/[locale]/auth/**` eklendi. `lane-collisions.test.mjs` iki
+ratchet testiyle sabitledi: callback rotası **yalnız** LANE-AUTH'a ait, ve
+istisna yerelleştirilmiş sayfa rotalarını (`(public)/jobs` gibi) yutmuyor.
+Mutasyon testi: istisna kaldırılınca test kırmızı, geri konunca yeşil (14/14).
+
+**Çalıştırılan kontroller.** `bun run lint`, `typecheck`,
+`check:frontend-source` — yeşil; `test:unit` 954/954; `lane-collisions` 14/14.
+
+**Canlıya dokundu mu:** hayır. Yalnız sahiplik tablosu, bir test ve CI kapısı.
+
+**Sonraki lane için notlar.** `#542`'nin çakışma engeli kalktı; lane/auth
+PR'ını yeniden koşturabilir. `#319` (Vercel build rate limit) ve `#261`/`#441`
+(origin host/kodlanmış-yol davranışı) insan/platform kararı bekliyor — kanıt
+issue'larda; bu lane kod tarafında yapabileceğini yaptı.
