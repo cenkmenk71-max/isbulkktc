@@ -61,7 +61,7 @@ atıfları belirsizleştirir; bu dokümanda iki kez yaşandı: tur 18'de `V-01`
 | `U-` | HTTP semantiği (304 / Range / HEAD / koşullu istek) | tur 10 |
 | `V-` | İstek kaçakçılığı / method semantiği + bot doğrulama | tur 10+ |
 | `W-` | **İki kapsam:** `W-01` WAF bulgusu; `W-18`/`W-19`/`W-20` tur-bazlı canlı ölçüm tabloları (tur 18/19/20, sonuncusu HSTS preload) | tur 10+ |
-| `N-` | **İki ayrı aralık:** `N-01..N-08` negatif-cache (tur 12–25); `N-11..N-16` WAF `%2F` kümesi (tur 26+) | tur 12+ |
+| `N-` | **Üç aralık:** `N-01..N-08` negatif-cache (tur 12–25); `N-11..N-16` WAF `%2F` kümesi (tur 26+); `N-17` bilgi, `N-18..N-22` WAF kaçış/kapsama + bot UA, `N-23` `/_next/static` 404 1-yıl cache (tur 34) | tur 12+ |
 | `D-` | Doküman düzeltmeleri / drift kayıtları | tur 14+ |
 | `O-` | Canlı kesinti / origin erişilebilirliği (ör. `O-01` Vercel `402 DEPLOYMENT_DISABLED`) | tur 29 |
 | `M-` | Panel/manuel gözlemler + meta kayıtlar | tur 25 |
@@ -3311,3 +3311,60 @@ O-01 → **#518** (LANE-INFRA; durum değişimi güncellendi).
 **Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01, N-18, N-19, N-20, N-21.
 **Yeni:** N-22 (bot UA `sqlmap/` literaline sabitli), D-28 (F-25/C-04 kayıt düzeltmesi),
 N-17r (yol matrisi 404 rejiminde tutarlı), O-01r3 (origin 402 → 404).
+
+## Tur 34 (2026-11-10) — CF Cache Rules origin'in `max-age=0`'ını yol-bazlı TTL'lere yükseltiyor; `/_next/static` 404'ü **1 yıl** cache'li (H-02r, N-23)
+
+**Yöntem:** aynı yolu **edge** (`isbulkktc.com`) ve **origin**
+(`isbulkktc-amber.vercel.app`) üzerinden ölçüp `cache-control`'u diff'ledim. Origin
+her yolda **tek** başlık gönderir; edge yol-bazlı **farklı** TTL'ler üretir →
+TTL'ler **CF Cache Rules**'tan gelir, origin'den değil.
+
+### H-02r — TTL kaynağı **CF Cache Rules** olarak kesinleşti (tur 9 tahminini daralttı)
+
+Tur 9 H-02 mekanizmayı "CF **Browser Cache TTL** ayarı" diye tahmin etmişti (panel
+token'sız okunamadığı için). Aynı-path diff bunu daralttı: origin `/`, `/robots.txt`,
+`/sitemap.xml`, `/sw.js`, `/favicon.ico`, `/_next/static/*` için **hepsi**
+`public, max-age=0, must-revalidate` gönderiyor; edge ise **yol-bazlı farklı**
+`max-age` yayıyor. Browser Cache TTL **tek** bir sayıdır, yol ayrımı yapamaz → ayar
+**Cache Rules** (path-pattern) olmalı. Bu, düzeltme adresini değiştirir: Browser
+Cache TTL değil, **Cache Rules**'taki `Edge TTL` / `Browser TTL` override'ları
+gözden geçirilmeli (ya da `Origin` moduna alınmalı).
+
+| Yol | Origin `cache-control` | Edge `cache-control` (CF) | Edge `cf-cache-status` |
+|---|---|---|---|
+| `/` | `max-age=0` | `max-age=0` | `DYNAMIC` |
+| `/robots.txt` | `max-age=0` | **`max-age=2628000`** (≈30 gün) | `HIT`/`EXPIRED` |
+| `/sitemap.xml` | `max-age=0` | **`max-age=3600`** (1 saat) | `EXPIRED` |
+| `/sw.js` | `max-age=0` | **`max-age=2628000`** | `EXPIRED` |
+| `/favicon.ico` | `max-age=0` | **`max-age=2628000`** | `EXPIRED` |
+| `/_next/static/**` (var) | `max-age=0`* | `max-age=31536000, immutable` | `HIT` |
+| `/_next/static/**` (yok) | `max-age=0` | **`max-age=31536000`** | `MISS → HIT` |
+
+\* Origin rejimi `DEPLOYMENT_NOT_FOUND` olduğundan var olan chunk için origin
+`max-age=0` gösterir; sağlıklı origin'de Next.js bu önek için `immutable` gönderir
+(bkz. `next.config.ts:149-183`).
+
+**Doğrulama (MISS→HIT, cache-bust `?cb=`):** `/_next/static/chunks/<yok>.js` 1.
+istek `MISS`, 2. istek **`HIT` + artan `age`**; `/images/*`, `/logos/*`, `/fonts/*`,
+`/assets/*`, `/_next/image/*` 404'leri ise `MISS → EXPIRED` (HIT'e dönmüyor). Yani
+**1 yıllık hata cache'i `/_next/static` öneğine özgüdür**, diğer öneklere sızmaz.
+
+### N-23 (orta, yeni) — Origin **404**'ü `/_next/static` altında **1 yıl** cache'leniyor
+
+N-01 (tur 12) bunu sağlıklı origin'de görmüştü; bu tur origin `DEPLOYMENT_NOT_FOUND`
+(404) verirken de aynının olduğunu ve **diğer öneklerin etkilenmediğini** kanıtlar.
+Kritik ayrım: **404'ler 200 gibi cache'leniyor** → origin düzeldikten **sonra bile**
+edge, var olmayan chunk yolu için 1 yıl boyunca **eski 404**'ü servis eder; yeni
+`?dpl=` anahtarı ayrı cache girdisi ürettiği için (`?dpl=dpl_AAA` → `MISS`) yalnız
+query'siz istekler bu tuzaktan etkilenir. Etki: **dağıtım sonrası kalıcı kırık
+varlık** + purge gerektiren opak durum. Düzeltme N-01/H-02 ile aynı sınıf: Cache
+Rules'ta `/_next/static/**` için edge/browser TTL'i **`Origin`** bırak ya da 404'leri
+cache'lemeyen bir kural (origin 404'te `max-age=0` der).
+
+### O-01r4 (yeniden ölçüm)
+
+Origin hâlâ **404 `DEPLOYMENT_NOT_FOUND`**; CF/TLS/WAF katmanı sağlam. Alias da aynı
+404'ü verir → kesinti origin'de, CF'de değil.
+
+**Devir:** H-02r/N-23 → CF paneli **Cache Rules** (sahibin onayı) — bu lane yazmaz.
+**Yeni:** H-02r (TTL kaynağı Cache Rules), N-23 (`/_next/static` 404 → 1 yıl), O-01r4.

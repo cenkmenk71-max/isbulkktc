@@ -975,3 +975,34 @@ Sonraki lane için notlar: (1) Bot UA'yı tek biçimle ölçme; `sqlmap/1.7`=403
 
 **Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01, N-18, N-19, N-20, N-21.
 **Yeni:** N-22, D-28, N-17r, O-01r3.
+
+## Tur 34 (2026-11-10) — CF Cache Rules TTL yükseltmesi + `/_next/static` 404 1-yıl cache (H-02r, N-23)
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: H-02r/N-23 (Cache Rules → `/_next/static/**` edge+browser
+            TTL = `Origin`; origin `max-age=0`'ını ezme — onay) · N-22 · N-21 · N-20 ·
+            N-18 · N-19 · N-11r · H-01r · R-01 · G-01 · F-08 · #227 · O-01 (#518)
+Sonraki lane için notlar: (1) Cache TTL'i ölçmek için **aynı yolu** edge + alias
+            üzerinden al ve `cache-control`'u diff'le — origin hepsinde `max-age=0`
+            derse TTL CF Cache Rules'tandır (Browser Cache TTL tek sayıdır, yol ayıramaz).
+            (2) 404'ün cache'lenip cache'lenmediğini `?cb=` cache-bust ile MISS→HIT
+            ölç; yalnız `/_next/static/**` 1 yıl, diğer önekler `EXPIRED`/`DYNAMIC`.
+            (3) Yeni kimlik: `H-02r`, `N-23`, `O-01r4`.
+```
+
+- **H-02r (mekanizma daraltma):** tur 9'un "Browser Cache TTL" tahmini **Cache
+  Rules**'a daraltıldı. Kanıt: origin (`isbulkktc-amber.vercel.app`) `/`, `/robots.txt`,
+  `/sitemap.xml`, `/sw.js`, `/favicon.ico`, `/_next/static/*` → **hepsi**
+  `public, max-age=0, must-revalidate`; edge (`isbulkktc.com`) aynı yollarda
+  **yol-bazlı farklı** TTL (`2628000` / `3600` / `31536000`) yayıyor. Tek-sayılık
+  Browser Cache TTL yol ayrımı yapamaz → ayar path-pattern'li **Cache Rules**.
+- **N-23 (orta, yeni):** `/_next/static/**` altındaki **404** `MISS → HIT`, `age`
+  artıyor, `max-age=31536000` → origin düzeldikten sonra da edge 1 yıl **eski 404**
+  servis eder. Diğer önekler (`/images`, `/logos`, `/fonts`, `/assets`,
+  `/_next/image`) 404'ü `EXPIRED` (HIT'e dönmüyor) → sızıntı yalnız bu önekte.
+- **O-01r4:** origin hâlâ **404 `DEPLOYMENT_NOT_FOUND`**; alias da aynı → kesinti
+  origin'de, CF'de değil. #518 (LANE-INFRA) açık.
