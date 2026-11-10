@@ -881,10 +881,14 @@ Sonraki lane için notlar: (1) `curl --path-as-is` kullan (yoksa curl yolu norma
 ```
 
 - **N-18 (orta):** WAF `/.git/` kuralı **literale** bağlı. Eğiksiz `/.git`,
-  ayraçlı `/.git;/x`·`/.git,/x`, kodlu TAB `/.git%09/config` ve kodlu `/`
-  `/.git%2Fconfig` → **402** (origin'e ulaşıyor); yalnız tam `/.git/config` →
-  403. `/api/devtools` aynı sınıfta. Kök neden: kural sondaki eğik çizgiyi dahil
-  ediyor. Düzeltme: eğik çizgisiz + `url_decode(http.request.uri.path)`.
+  ayraçlı `/.git;/x`·`/.git,/x`, kodlu TAB `/.git%09/config`, kodlu `/`
+  `/.git%2Fconfig`, **sonda nokta** `/.git./config`, **kodlu nokta** `/.git%2e/config`
+  ve `%5C`/`%20`/`+` varyantları → **402** (origin'e ulaşıyor); yalnız tam
+  `/.git/config` → 403. `/api/devtools` aynı sınıfta. Kök neden: kural sondaki
+  eğik çizgiyi dahil ediyor; kaçış **tek karakter sınıfı değil**. Düzeltme:
+  eğik çizgisiz + `url_decode(http.request.uri.path)`. Karşı örnek: `/wp-admin`
+  (literalinde `/` yok) ve `/.env` (prefix) ayraç/nokta varyantlarında **403**
+  kalır → asimetri literalin `/` içerip içermemesine bağlı.
 - **N-19 (orta):** dotfile kuralı **eksik**: `/.npmrc`, `/.git-credentials`,
   `/.netrc`, `/.pypirc`, `/.bash_history`, `/.kube/config`, `/.gem/credentials`,
   `/.docker/config.json` → **402** (bloklu değil). `/.env`, `/.htpasswd`,

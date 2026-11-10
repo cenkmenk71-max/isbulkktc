@@ -2969,16 +2969,30 @@ kuralı atlar ve origin'e ulaşır — kaçış yalnız `%2F` ile sınırlı **d
 | ayraç `,` | `/.git,/x` | **402** | **atlar** |
 | kodlu TAB `%09` | `/.git%09/config` | **402** | **atlar** |
 | kodlu `/` `%2F` | `/.git%2Fconfig` | **402** | **atlar** (tur 27, N-11) |
+| **sonda nokta** | `/.git./config` | **402** | **atlar** |
+| kodlu nokta `%2E` | `/.git%2e/config` | **402** | **atlar** |
+| çift nokta segment | `/.git%2e%2e/config` | **402** | **atlar** |
+| kodlu `\` `%5C` | `/.git%5cconfig` | **402** | **atlar** |
+| `+` ayraç | `/.git+config` | **402** | **atlar** |
+| kodlu boşluk `%20` | `/.git%20/config` | **402** | **atlar** |
 | sınıf dışı | `/.gitx/config` | **402** | atlar (kural yok — beklenen) |
 | segment içi | `/x/.git/config` | **403** | yakalar |
+| nokta-segment | `/.git/./config` · `/.git/../.git/config` | **403** | yakalar (CF normalize) |
 | yanlış ayraç | `/.git%00/config` | **400** | origin (NUL reddi) |
 
 Aynı sınıf `/api/devtools`'ta da doğrulandı: `/api/devtools;/x`,
 `/api/devtools%09/x`, `/api/devtools%2Fx` → **402**; `/api/devtools/` → **403**.
 Kök neden **tek**: kural `contains "/.git/"` (sondaki eğik çizgi dahil) biçiminde
 kurulduğu için `.git` ile `/` arasına giren **herhangi** bir karakter (veya hiç `/`
-olmaması) eşleşmeyi kırıyor. Karşı örnek: dotfile kuralı (`/.env`) prefix/`contains`
-tabanlı olduğundan ayraçtan etkilenmez — `/.env;/x`, `/.env%09/x` → **403**.
+olmaması) eşleşmeyi kırıyor. Kaçış kümesi **tek karakter sınıfı değil**: ayraçlar
+(`;` `,` `+`), kodlanmış ayraçlar (`%09` `%20` `%2F` `%5C`), kodlanmış nokta
+(`%2E`) ve segment sonuna eklenen nokta (`.`) aynı sonucu verir — çünkü hepsi
+literal `/.git/` dizesini bozar. Karşı örnek: dotfile kuralı (`/.env`) prefix/`contains`
+tabanlı olduğundan ayraçtan etkilenmez — `/.env;/x`, `/.env%09/x`, `/.env./x`,
+`/.env.bak` → **403**; CMS kuralı (`/wp-admin`, literalinde `/` yok) da
+`/wp-admin;/x`, `/wp-admin%09/x`, `/wp-admin%2Fx`, `/wp-admin./x` → **403**.
+Yani asimetri **kuralın literalinde `/` olup olmamasına** bağlı (tur 27'nin
+`/`-literalli sınıfı), karakter sınıfına değil.
 
 **Etki.** WAF'ın `.git` sızıntısına karşı koruması **yanılsama**: kural yalnız tam
 `/.git/` yolunda çalışıyor. Bugün sömürülebilir değil (origin her istekte 402 —
