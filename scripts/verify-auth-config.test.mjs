@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { callbackIsAllowed, evaluateCaptchaProbe, isDirectRun } from "./verify-auth-config.mjs";
+import { callbackIsAllowed, detectDeployedCaptcha, evaluateCaptchaProbe, isDirectRun, turnstileSiteKeyInBundle } from "./verify-auth-config.mjs";
 
 const ORIGIN = "https://isbulkktc.com";
 
@@ -66,4 +66,41 @@ test("the direct-run guard fires even when the script path holds a space or #", 
   assert.equal(isDirectRun(url, undefined), false);
   assert.equal(isDirectRun(url, ""), false);
   assert.equal(isDirectRun("file:///repo/scripts/other.mjs", "/repo/scripts/verify-auth-config.mjs"), false);
+});
+
+test("the deployed captcha state is read from the bundle, not the local env var", () => {
+  // Regression: the guard reported "captcha is disabled" whenever the *local*
+  // `NEXT_PUBLIC_TURNSTILE_SITE_KEY` was empty, but production is built by
+  // Vercel with its own environment. A live widget was therefore reported as
+  // off. The deployed bundle is the only evidence of what actually shipped.
+  const key = "0x4AAAAAAFL-yuC1YeNRT3FB";
+  const loader = 'loadTurnstileScript(){s.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"}';
+  assert.equal(turnstileSiteKeyInBundle(`${loader}key="${key}"`), key);
+  // The SDK URL without a key still proves a key is configured (minified form).
+  assert.equal(turnstileSiteKeyInBundle(loader), "(present)");
+  // A bundle that never mentions Turnstile is a genuine "no captcha".
+  assert.equal(turnstileSiteKeyInBundle("const x=1;"), null);
+  assert.equal(turnstileSiteKeyInBundle(null), null);
+});
+
+test("detectDeployedCaptcha follows the login page into its chunks", async () => {
+  const key = "0x4AAAAAAFL-yuC1YeNRT3FB";
+  const html = '<script src="/_next/static/chunks/app.js"></script>';
+  const fetchImpl = async (url) => ({
+    status: 200,
+    text: async () =>
+      url.endsWith("/login")
+        ? html
+        : `s.src="https://challenges.cloudflare.com/turnstile/v0/api.js";k="${key}"`,
+  });
+  const found = await detectDeployedCaptcha("https://isbulkktc.com", fetchImpl);
+  assert.equal(found.checked, true);
+  assert.equal(found.siteKey, key);
+
+  // A login page that will not load is "could not tell", never "captcha is off".
+  const unreachable = await detectDeployedCaptcha("https://isbulkktc.com", async () => ({
+    status: 503,
+    text: async () => "",
+  }));
+  assert.equal(unreachable.checked, false);
 });
