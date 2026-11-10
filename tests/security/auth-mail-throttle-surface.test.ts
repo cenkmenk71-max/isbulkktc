@@ -27,9 +27,8 @@ import test from "node:test";
  *
  * The gates below mirror `auth-throttle-surface.test.ts`: a matcher self-test so
  * a narrowed matcher cannot pass vacuously, a function-extractor self-test, and
- * one test per endpoint. Both endpoints are open today, so their tests carry
- * `{ todo }` and do not fail the run; when LANE-AUTH binds a throttle the test
- * turns green on its own — remove the `todo` to promote it to a gate.
+ * one test per endpoint. LANE-AUTH bound an address/e-mail throttle to both
+ * endpoints (#505), so the two endpoint gates are promoted to real gates.
  */
 
 const actionsPath = "src/features/identity/actions.ts";
@@ -82,9 +81,6 @@ test("the function extractor returns the named body, not the whole file (self-te
 
 test(
   "sign-up carries an abuse control before it mails a confirmation link",
-  {
-    todo: "signUp calls supabase.auth.signUp (which mails a confirmation link to the caller-chosen address) with no session gate and no throttle; only signIn/requestPasswordReset are covered by auth-throttle-surface.test.ts (owner: LANE-AUTH, #457)",
-  },
   () => {
     const body = exportedFunctionText(actions, "signUp");
     // Non-vacuity: the endpoint we are talking about must still be the one here.
@@ -101,9 +97,6 @@ test(
 
 test(
   "resending the confirmation mail carries an abuse control",
-  {
-    todo: "resendConfirmation calls supabase.auth.resend (a confirmation-mail fan-out to an arbitrary address) with no session gate and no throttle; only signIn/requestPasswordReset are covered by auth-throttle-surface.test.ts (owner: LANE-AUTH, #457)",
-  },
   () => {
     const body = exportedFunctionText(actions, "resendConfirmation");
     assert.ok(
