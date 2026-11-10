@@ -484,3 +484,46 @@ diğer lane'lerin PR'ları bu arada auto-merge ile inmiş (`955a82f` #571, `4144
 
 **Devredilenler.** #547 (teslim donmasının kök nedeni, `agent:infra` + `agent:blocked`)
 yeni kanıtla (19 geride, `total_count: 0`) hâlâ geçerli; bu lane dokunmadı.
+
+---
+
+## Tur 11 — 2026-11-10 (lane/teslimat)
+
+**Kapsam.** Atanmış açık `lane:teslimat` issue yok. Kurtarma turu: alan taranmadı,
+tek sınırlı düzeltme — Tur 10'un kapattığı kural 4 boşluğu **bir kez daha** açılmıştı
+(PR #575, #576 ve #577 kaydedilmemiş) ve bu tur onu kapatır.
+
+**Neden bu iş gerçek.** Tur 10, PR #574'ün kaydını yazarken `docs/deploy-log.md`'nin
+son satırı #570'ti; aynı boşluk şimdi **üç merge** için tekrarlandı: #574'ten sonra
+inen #575 (infra), #576 (bu lane'in kendi kural-4 kaydı) ve #577 (tasarim) için
+deploy-log'da **hiç satır yoktu**. Kural 4 — "her merge kaydedilir: ne, ne zaman,
+canlıda doğrulandı mı" — üçü için de ihlal edilmiş durumdaydı. Özellikle #576: bu
+lane'in *kendi* kayıt PR'ının kaydı yoktu, yani boşluk kendi çıktısını da yutuyordu.
+
+**Yöntem — sıra timestamp'ten değil zincirden okunur.** GitHub `mergedAt` değerleri
+(#576 12:32:06Z, #575 12:32:18Z, #577 12:34:46Z) `main`'in **first-parent** zinciriyle
+karşılaştırıldı: `83d7f3e` (#574) → `acbbeba` (#576) → `837d581` (#575) → `f2a1a1c`
+(#577). 12 saniyelik pencere yarış durumudur; timestamp sıralamasına güvenmek yerine
+zincir kaynak alındı — üç değerin de tutarlı olduğu tek sıra bu.
+
+**Bulgu (finding 23) — kayıt boşluğu tekrarı.** Kural 4, merge ile kayıt arasına
+bir eşik koymuyor; bu yüzden her turda "kendi merge'ümü yazdım" yetmiyor: **arada
+inen başka lane merge'leri de** yazılmalı. Tur 10 ve Tur 11 aynı boşluğun iki
+örneğidir. Bu tur #575–#577 için tek satırda üç kaydı kapatır.
+
+**Canlı ölçüm (görev 3) — 🔴 teslim doğrulanamadı, nedeni adıyla kondu.** 12:37Z:
+`main` = `f2a1a1c`, canlı = `3644cbe3` (**22 geride**). Beş smoke route (`/`, `/jobs`,
+`/companies`, `/contact`, `/en`) **200** → stale-but-healthy. Tip `f2a1a1c`'de **hiç
+`Vercel` status girdisi yok** (`total_count: 0`) → **#547** durumu (yeni Vercel
+hesabında GitHub Git bağlantısı yok), #319 rate-limit salınımı **değil**. Depodan
+düzeltilemez; sahip tarafı (Vercel Dashboard → Git) veya LANE-INFRA `VERCEL_TOKEN`
+workflow'u. Bu lane'in beşinci doğrulanamayan teslimi ve sebebi dışsaldır.
+
+**Merge kuyruğu (görev 1).** `gh pr list --state open` bu turda **boş** — merge
+edilebilir bekleyen PR yok. #575/#576/#577 bu lane'in oturumu açılmadan az önce
+auto-merge ile inmişti.
+
+**Devredilenler.** #547 (teslim donmasının kök nedeni, `agent:infra` +
+`agent:blocked`) yeni kanıtla (22 geride, `total_count: 0`) hâlâ geçerli; bu lane
+dokunmadı.
+
