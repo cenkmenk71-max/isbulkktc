@@ -110,7 +110,7 @@ Kod bunları otomatik `<meta>` olarak yayınlar (`src/app/[locale]/layout.tsx`).
 ## 5. 🟢 Cloudflare — DENETLENDİ, değişiklik GEREKMİYOR
 
 Bu ortamdan CF API ile tam denetim yapıldı (token yazma yetkisine sahip, doğrulandı).
-**Yapılandırma doğru; yıkıcı değişiklik yapılmadı** (CF lane kuralı: onay önce).
+**Yapılandırma doğru; yıkıcı değişiklik yapılmadı** (CF kuralı: onay önce).
 
 Doğrulananlar:
 - **DNS:** `A isbulkktc.com → 76.76.21.21` (proxied), `www` → `cname.vercel-dns.com` (proxied),

@@ -23,9 +23,6 @@ supabase/.branches/
 # Vercel CLI project link (created by `vercel link`)
 .vercel
 
-# Lane autopilot local state
-.lane-state.json
-
 # The package manager is bun (`bun.lock`); `npm install`/`npm ci` are not used
 # and `npm ci` fails against `bun.lock` (see AGENTS.md). A committed
 # `package-lock.json` was a second, stale manifest that drifted from

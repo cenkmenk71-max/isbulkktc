@@ -136,8 +136,8 @@ test("every multi-route E2E sweep declares its own timeout", () => {
 
 test("the sweep detector still recognises a real sweep and ignores a narrow one", () => {
   // A guard that silently matches nothing is the failure mode this whole suite
-  // exists to prevent (see the integration-layer note in docs/lanes/08-qa.md), so
-  // the detector is exercised against a positive and a negative fixture.
+  // exists to prevent, so the detector is exercised against a positive and a
+  // negative fixture.
   const routes = `const publicRoutes = ["/a", "/b", "/c", "/d"] as const;\n`;
   const sweep = `${routes}test("sweeps", async ({ page }) => {\n  for (const route of publicRoutes) { await page.goto(route); }\n});`;
   const narrow = `${routes}test("narrow", async ({ page }) => {\n  for (const route of ["/a", "/b"]) { await page.goto(route); }\n});`;

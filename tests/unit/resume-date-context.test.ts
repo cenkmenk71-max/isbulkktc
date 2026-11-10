@@ -12,14 +12,14 @@ import { mergeResumeDraft } from "../../src/features/candidates/resume-profile-d
  * work history. The first half pins the contracts that hold, including the
  * negative invariant "personal data never becomes a profile field".
  *
- * Defects still open in `resume-parser.ts` (LANE-URUN's file) were once recorded
+ * Defects still open in `resume-parser.ts` (the product layer's file) were once recorded
  * here as `todo` tests: each asserted the behaviour #208 asks for, so the day the
  * parser was fixed the `todo` would turn into a real failure and the marker could
  * be dropped. They were `todo`, not skipped, because `node:test` reports a `todo`
  * that starts passing — a skipped test never would. No `todo` markers remain: the
- * last two (#367) became real contracts once LANE-URUN's fix landed.
+ * last two (#367) became real contracts once the product layer's fix landed.
  *
- * That is the trap this file was in once. LANE-URUN's #217 landed a partial fix
+ * That is the trap this file was in once. The product layer's #217 landed a partial fix
  * (the personal-data context filter and a forwards-and-≤60-years rule), and
  * three of the markers here went on asserting a bug that no longer existed —
  * a dead `todo` that could never turn green. Worse, one marker asserted the
@@ -30,18 +30,18 @@ import { mergeResumeDraft } from "../../src/features/candidates/resume-profile-d
  * hold are asserted directly, and the markers left are re-measured against the
  * current build, not the build they were written on.
  *
- * Re-reconciled after LANE-URUN's #331 (four more defects: address→location, the
+ * Re-reconciled after the product layer's #331 (four more defects: address→location, the
  * tabular `|` date, "Devam ediyor", and a future-date rule) and #343 (the
  * residue of #339: an *unlabelled* personal line, plus a district list read as a
  * headline). Those markers all became contracts.
  *
  * Re-reconciled again for #367: a personal-data line *under an explicit section
  * heading* reached a profile field (`sectionLines` pushed it into the active
- * section without the `isPersonalDataLine` filter). LANE-URUN's #411 fixed the
+ * section without the `isPersonalDataLine` filter). The product layer's #411 fixed the
  * source; the two markers that pinned it have been converted to real contracts
  * here, so nothing in this file is left as a dead `todo` (#413).
  *
- * Owner of the source: LANE-URUN. Owner of this test: LANE-QA. Every "observed"
+ * Owner of the source: the product layer. Owner of this test: the QA layer. Every "observed"
  * value below was produced by running the parser, not read off the source.
  */
 
@@ -157,7 +157,7 @@ test("parse then merge puts each extracted field in its own profile box", () => 
 });
 
 // ---------------------------------------------------------------------------
-// Contracts shipped by LANE-URUN's #217 (a regression in any of these must go
+// Contracts shipped by the product layer's #217 (a regression in any of these must go
 // red). These were `todo` markers until #217 landed; they are asserted directly
 // now, because a marker that keeps asserting a fixed bug is a lie about the code.
 // ---------------------------------------------------------------------------
@@ -174,7 +174,7 @@ test("a personal-data line contributes no date to work experience", () => {
 });
 
 // ---------------------------------------------------------------------------
-// #367 — shipped in `resume-parser.ts` (LANE-URUN). The unlabelled path was
+// #367 — shipped in `resume-parser.ts` (the product layer). The unlabelled path was
 // filtered by #343, but a personal-data line *under an explicit section heading*
 // bypassed the filter and the field parsers wrote it straight into the draft, so
 // a phone number reached the profile. §B6 asks the line to reach no field at
@@ -262,7 +262,7 @@ test("a university named 'Doğu Akdeniz' is not filtered as a birth line", () =>
 });
 
 // ---------------------------------------------------------------------------
-// Contracts shipped by LANE-URUN's #331. Each was a `todo` marker until #331
+// Contracts shipped by the product layer's #331. Each was a `todo` marker until #331
 // landed; a regression in any of them must go red. Measured on main after the
 // merge, not read off the source.
 // ---------------------------------------------------------------------------
@@ -342,7 +342,7 @@ test("personal lines reach no profile field", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Contracts shipped by LANE-URUN's #343 (the residue of #339). Both were `todo`
+// Contracts shipped by the product layer's #343 (the residue of #339). Both were `todo`
 // markers / open defects until it landed; a regression in either must go red.
 // ---------------------------------------------------------------------------
 

@@ -4,7 +4,7 @@ import test from "node:test";
 
 /**
  * The account-lifecycle boundary (#418 "account journey" micro-audit,
- * LANE-GÜVENLİK).
+ * the security layer).
  *
  * `public.profiles.status` is `active | suspended | closed` and nearly every
  * write RPC re-checks `status = 'active'` before it will act, so the column is
@@ -17,7 +17,7 @@ import test from "node:test";
  * "closed" account is a status nobody can reach.
  *
  * The gates below pin what *is* enforced and record the two open gaps as
- * `todo`s against the owning lanes, so a refactor cannot quietly widen the
+ * `todo`s against the owning modules, so a refactor cannot quietly widen the
  * column grant or drop the status re-checks that already exist.
  */
 
@@ -114,7 +114,7 @@ test("the write RPCs still refuse a non-active profile", () => {
 
 test(
   "an account can actually be suspended or closed",
-  { todo: "profiles.status defaults to 'active' and no migration, RPC or action ever writes another value, so suspended/closed are unreachable and the status re-checks guard a state that cannot occur (owner: LANE-SUPABASE + LANE-AUTH, #400)" },
+  { todo: "profiles.status defaults to 'active' and no migration, RPC or action ever writes another value, so suspended/closed are unreachable and the status re-checks guard a state that cannot occur (owner: the database layer + the auth layer, #400)" },
   () => {
     // The column is only useful if something can move a row off `active`.
     // A writer is an `update ... profiles ... set ... status` statement or an
@@ -132,11 +132,11 @@ test(
 );
 
 // ---------------------------------------------------------------------------
-// 3. The kill switch is consulted at sign-in (closed by LANE-AUTH in #542).
+// 3. The kill switch is consulted at sign-in (closed by the auth layer in #542).
 //
 // This was an open finding: `signIn` called `signInWithPassword` and redirected
 // without reading `profiles.status`, so a suspended/closed account still got a
-// working session. LANE-AUTH closed it in `19f197f` (`#542`) by reading the
+// working session. The auth layer closed it in `19f197f` (`#542`) by reading the
 // caller's own row and dropping the session when the account is not active.
 // The `todo` is gone; the assertion is now a gate, so the read cannot be
 // removed without turning the suite red.
@@ -185,7 +185,7 @@ test("sign-in refuses an account whose profile is not active", () => {
 
 test(
   "a self-service account-deletion path exists",
-  { todo: "no RPC, action or UI deletes a profile; KVKK/GDPR erasure is unmet (owner: LANE-SUPABASE + LANE-AUTH, #400)" },
+  { todo: "no RPC, action or UI deletes a profile; KVKK/GDPR erasure is unmet (owner: the database layer + the auth layer, #400)" },
   () => {
     const deletionStatements = statements.filter(
       (statement) =>
@@ -214,7 +214,7 @@ test(
 
 test(
   "an API route that can answer an error forbids shared caching",
-  { todo: "error responses (4xx/5xx) from /api/push/subscriptions, /api/push/dispatch and /api/email/engagement-digest carry no Cache-Control of their own, so Vercel's `public, max-age=0, must-revalidate` stands (owner: LANE-INFRA/LANE-URUN, #424/#435)" },
+  { todo: "error responses (4xx/5xx) from /api/push/subscriptions, /api/push/dispatch and /api/email/engagement-digest carry no Cache-Control of their own, so Vercel's `public, max-age=0, must-revalidate` stands (owner: the CI/infra layer/the product layer, #424/#435)" },
   () => {
     // #424 M-03 measured `public, max-age=0, must-revalidate` on 405/401/400
     // responses. The route files own the success path but not the error path:

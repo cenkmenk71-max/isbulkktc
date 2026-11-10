@@ -138,8 +138,8 @@ test("no catalog keeps a message key whose rendering code was removed", () => {
   }
 });
 
-// The lane's rule is that a visitor only ever sees their own action explained,
-// never how the pipeline works underneath. `CompanyDirectory.sourceNote` leaked
+// The rule is that a visitor only ever sees their own action explained, never
+// how the pipeline works underneath. `CompanyDirectory.sourceNote` leaked
 // "kaynak koordinatlarına göre" (the brief names that exact phrase as forbidden
 // internal vocabulary), so this ratchet keeps implementation words off the
 // surface. The list is deliberately narrow — only phrases that describe the

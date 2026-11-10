@@ -30,8 +30,8 @@ import test from "node:test";
  * The fix belongs at the boundary the attacker actually uses: a database-side
  * throttle (a per-address counter maintained by a trigger or `pg_cron`), or
  * revoking the direct `anon` grant and proxying the write through a route that
- * re-applies the limiter. The RPC is LANE-SUPABASE's file; the action is
- * LANE-URUN's.
+ * re-applies the limiter. The RPC is the database layer's file; the action is
+ * the product layer's.
  */
 
 const migrationsDir = new URL("../../supabase/migrations/", import.meta.url);
@@ -225,7 +225,7 @@ test("the server action applies a throttle before it calls the RPC", () => {
 });
 
 test("the direct PostgREST path is throttled inside the RPC, not just the form", () => {
-  // LANE-SUPABASE shipped `20261106000000_v4_anon_write_throttle.sql`: the two
+  // the database layer shipped `20261106000000_v4_anon_write_throttle.sql`: the two
   // anon write RPCs now `perform public.consume_anon_write_quota(...)` before the
   // insert, so the bound lives at the boundary the attacker actually reaches.
   // This used to be a `todo`; the fix landed, so it is a gate now.
@@ -304,8 +304,8 @@ test(
     // submission site-wide inside the window is rejected with the generic
     // "failed" copy. The app must pass the visitor address explicitly (an
     // argument or a `global.headers` override) for the IP dimension to mean
-    // anything on this path. Owner: LANE-URUN (`src/features/**`) with
-    // LANE-SUPABASE (`supabase/**`).
+    // anything on this path. Owner: the product layer (`src/features/**`) with
+    // the database layer (`supabase/**`).
     for (const relative of [
       "src/features/feedback/actions.ts",
       "src/features/sales/actions.ts",

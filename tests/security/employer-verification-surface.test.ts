@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import test from "node:test";
 
 /**
- * The employer-verification boundary (#418 account journey, LANE-GÜVENLİK
+ * The employer-verification boundary (#418 account journey, the security layer
  * micro-audit of the employer/candidate split).
  *
  * `public.companies.verification_status` is the gate that decides whether an
@@ -22,7 +22,7 @@ import test from "node:test";
  *
  * The gates below pin the parts that *are* enforced, so a refactor cannot
  * quietly drop the verification requirement; the last test documents the
- * missing writer as an open `todo` against the owning lanes.
+ * missing writer as an open `todo` against the owning module.
  */
 
 const repoRoot = new URL("../../", import.meta.url);
@@ -117,7 +117,7 @@ test("admin_list_verified_companies requires a platform administrator", () => {
 
 test(
   "some code path promotes a company to `verified`",
-  { todo: "employer self-service dead-ends at `pending` — no RPC, action or admin page writes verification_status (owner: LANE-SUPABASE + LANE-URUN, #418)" },
+  { todo: "employer self-service dead-ends at `pending` — no RPC, action or admin page writes verification_status (owner: the database layer + the product layer, #418)" },
   () => {
     // A writer looks like `update public.companies ... set verification_status = …`.
     const writers = statements.filter(

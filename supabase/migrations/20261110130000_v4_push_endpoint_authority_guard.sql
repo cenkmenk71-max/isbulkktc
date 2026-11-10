@@ -35,8 +35,8 @@
 -- The authority is still seeded with `split_part(v_endpoint, '/', 3)`, so the
 -- parity ratchet in `tests/security/push-endpoint-sql-parity.test.ts` keeps
 -- finding the shape it mirrors. That test's `todo` stays until its (old-rule)
--- mirror is updated to this rule by LANE-GÜVENLİK — this migration does not edit
--- another lane's file. The signature is unchanged, so the `function_privileges`
+-- mirror is updated to this rule by the security layer — this migration does not edit
+-- another module's file. The signature is unchanged, so the `function_privileges`
 -- ratchet and the signature-based security tests stay green.
 
 create or replace function public.register_push_subscription(

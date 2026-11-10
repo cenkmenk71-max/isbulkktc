@@ -6,7 +6,7 @@ import test from "node:test";
  * The response-header security controls in `next.config.ts`.
  *
  * `next.config.ts` is the only place this app sets CSP, HSTS, `X-Frame-Options`
- * and the rest of the header set, and it is not owned by any lane's test layer —
+ * and the rest of the header set, and it is not owned by any test layer —
  * so nothing pinned it. A refactor that dropped a header, widened the CSP
  * `script-src`, or re-enabled `X-Powered-By` would ship with every gate green.
  *

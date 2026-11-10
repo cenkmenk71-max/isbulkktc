@@ -147,9 +147,9 @@ Canlı doğrulamalar (curl): apex/http/www → tek hop kanonik; `/robots.txt` 20
 
 ## 9. Yöntem notu (kapsam sınırı)
 
-Bu görev tek bir SEO/indeksleme denetimidir. Projenin paralel "lane" charter'ları
-(`docs/lanes/**`) çok-ajanlı bir program içindir; bu çalışma tek ajanlı, kanıt-öncelikli
-bir denetim + düzeltme turudur ve lane'lerin "main'e merge yok" kuralına tabi değildir
+Bu görev tek bir SEO/indeksleme denetimidir. Projenin paralel çalışma akışları
+çok-ajanlı bir program içindir; bu çalışma tek ajanlı, kanıt-öncelikli
+bir denetim + düzeltme turudur ve "main'e merge yok" kuralına tabi değildir
 (kullanıcı açık talimat verdi). Yine de kapsam, mevcut mimariyi ve çalışan özellikleri
 koruyacak biçimde en küçük değişiklikle sınırlandırıldı; aynı bulgu tekrar tekrar
 raporlanmadı.

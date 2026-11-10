@@ -8,9 +8,9 @@ import { parseResumeText } from "./resume-parser";
 // under "DENEYİM" was written into `experience[].description` and copied into
 // the profile by `mergeResumeDraft`.
 //
-// This file lives under LANE-URUN's own slice (`src/features/candidates/**`);
-// the QA-owned `tests/unit/resume-date-context.test.ts` pins the same contract
-// as `todo` markers that turn green with this fix.
+// This file lives next to the source it tests (`src/features/candidates/**`);
+// the `tests/unit/resume-date-context.test.ts` file pins the same contract as
+// `todo` markers that turn green with this fix.
 
 const experienceOf = (...lines: string[]) =>
   parseResumeText(["EXPERIENCE", ...lines].join("\n")).experience ?? [];

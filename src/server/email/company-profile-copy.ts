@@ -6,10 +6,10 @@
  * not the employer, not the review team. The submission then silently
  * disappeared until an admin happened to open the queue.
  *
- * `supabase/functions/_shared/**` (the shared transactional copy) belongs to
- * LANE-SUPABASE, so this family keeps its copy here, in the Node mailer's own
- * directory. Every locale implements the whole type, so a missing translation
- * is a compile error rather than a silent Turkish/English fallback.
+ * `supabase/functions/_shared/**` holds the shared transactional copy, so this
+ * family keeps its copy here, in the Node mailer's own directory. Every locale
+ * implements the whole type, so a missing translation is a compile error rather
+ * than a silent Turkish/English fallback.
  */
 
 import {

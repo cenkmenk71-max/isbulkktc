@@ -57,7 +57,7 @@ test("the coverage-table extractor reads rows and ignores prose (self-test)", ()
     "",
     "| Finding | Owner | Status |",
     "|---|---|---|",
-    "| `stale.test.ts` lacks a guard | LANE-URUN | open |",
+    "| `stale.test.ts` lacks a guard | the product layer | open |",
   ].join("\n");
   assert.deepEqual(filesInCoverageTable(sample), [
     "open-redirect.test.ts",

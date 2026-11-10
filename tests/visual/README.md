@@ -5,7 +5,7 @@ visual change" claim to be proven with pixels — a Playwright `locator.screensh
 at `deviceScaleFactor: 2` compared buffer-to-buffer with `sharp`. This directory
 is that proof, in a runnable form.
 
-Owned by **LANE-QA**. See `docs/lanes/08-qa.md` and `docs/lanes/AUDIT.md`.
+This directory is part of the QA layer.
 
 ## Why it exists
 
@@ -49,7 +49,7 @@ A failing run writes `test-results/visual/<name>.actual.png` and
 > regression.
 
 > **Not yet a required gate.** `package.json` and `.github/workflows/**` belong
-> to LANE-INFRA. The layer is wired into the `E2E (1/4)` job as an **advisory**
+> to the CI/infra layer. The layer is wired into the `E2E (1/4)` job as an **advisory**
 > step (`continue-on-error`), which still runs all 12 shots, prints the table and
 > uploads the diff images. It becomes required once the baselines match the
 > runner — which is what the committed PNGs now do.

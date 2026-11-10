@@ -19,7 +19,7 @@ installBoundaryMocks();
  * were not, and their contract is the redirect target — the only part of the
  * flow a user feels. The resend path shipped a hardcoded `next=candidate` that
  * landed an employer who re-verified on the candidate dashboard; the existing
- * guard for that is a source-text match in LANE-AUTH's own test, which a
+ * guard for that is a source-text match in the auth layer's own test, which a
  * refactor can satisfy without the value being right. Here the real action body
  * runs and the *actual* `emailRedirectTo` / `redirectTo` is asserted.
  *

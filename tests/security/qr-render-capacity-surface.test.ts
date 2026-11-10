@@ -35,7 +35,7 @@ import { maxQrVersion, minQrVersion } from "@/lib/pwa/campaign";
  * route breaks. The route file cannot be imported from this suite: it pulls in
  * `server-only` (via `getAppBaseUrl`), and `bun run test:security` runs `tsx`
  * without the `react-server` condition, so a functional route test would need a
- * runner change owned by LANE-INFRA. The static half below pins the missing
+ * runner change owned by the CI/infra layer. The static half below pins the missing
  * error path in the route itself.
  */
 

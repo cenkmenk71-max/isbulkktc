@@ -129,7 +129,7 @@ test("a personal detail still reaches no field (the fix must not widen the leak)
   // The positive half of the filter must keep holding: a detail names itself in
   // the line's first field, so the title exception cannot readmit it. Asserted
   // on the loose path, which the filter already covers (#367 is the open
-  // section-heading residue, tracked by LANE-QA).
+  // section-heading residue).
   const lines = [
     "1995-2000 doğumlu",
     "Doğum: 1995-2000",

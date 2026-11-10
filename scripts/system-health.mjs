@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /**
- * System health check — the operator's own loop.
+ * System health check — production and CI monitoring.
  *
- * The autopilot keeps the lanes working. This checks the autopilot itself, plus
- * everything around it: is the schedule firing, are PRs moving, is anything
- * stuck, is token use sane. It is the difference between "the system is running"
- * and "the system is making progress".
+ * It answers the question "is the system actually running and making progress":
+ * is the scheduled check firing, are PRs moving, is anything stuck, is any
+ * workflow red on `main`, is the origin serving, and is the live build current.
+ * It is the difference between "the system is running" and "the system is making
+ * progress".
  *
  * Exit code is non-zero when something needs attention, so a scheduled run can
  * alert on it.
@@ -147,13 +148,13 @@ function note(level, area, detail) {
   findings.push({ level, area, detail });
 }
 
-// 1. Is the autopilot actually firing? Compare the newest run to now.
+// 1. Is the scheduled health check actually firing? Compare the newest run to now.
 const runs = JSON.parse(
   gh([
     'run',
     'list',
     '--workflow',
-    'Lane autopilot',
+    'system-health.yml',
     '--limit',
     '5',
     '--json',
@@ -161,7 +162,7 @@ const runs = JSON.parse(
   ]),
 );
 if (runs.length === 0) {
-  note('fail', 'cron', 'no autopilot run has ever completed');
+  note('fail', 'cron', 'no system-health run has ever completed');
 } else {
   const newest = new Date(runs[0].createdAt);
   const minutes = (Date.now() - newest.getTime()) / 60000;
@@ -222,16 +223,16 @@ if (redPRs.length > 0) {
   );
 }
 // A check red on more than one PR is not that PR's failure: it is a shared
-// gate (e.g. `lane-collisions`, which reads the whole queue) freezing every
-// PR behind one lane's mistake. Name it once, so the operator fixes the cause
-// instead of chasing N unrelated reds.
+// gate (one that scans the whole queue) freezing every PR behind one mistake.
+// Name it once, so the operator fixes the cause instead of chasing N
+// unrelated reds.
 for (const gate of queueGlobalGates(prs)) {
   note(
     'warn',
     'queue-global gate',
     `${gate.check} is red on ${gate.prs.length} PRs (${gate.prs
       .map((n) => `#${n}`)
-      .join(', ')}): one lane's mistake freezes the whole queue — fix the cause, not each PR`,
+      .join(', ')}): one mistake freezes the whole queue — fix the cause, not each PR`,
   );
 }
 if (prs.length === 0) note('ok', 'PRs', 'none open');

@@ -1,8 +1,8 @@
 name: System health
 
-# The operator's own loop. The autopilot keeps the lanes working; this checks
-# that the autopilot is actually running and that nothing is stuck, so a silent
-# stall is caught by the system rather than by the owner noticing.
+# The production and CI health check. It confirms the scheduled check is firing
+# and that nothing is stuck, so a silent stall is caught by the system rather
+# than by the owner noticing.
 #
 # It fails the job when something is broken, which is what makes it useful: a
 # green run means the machinery is healthy, not merely that the script exited.

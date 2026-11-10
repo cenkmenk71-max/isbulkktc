@@ -179,14 +179,13 @@ test("every workflow that runs on a pull request declares top-level permissions"
 });
 
 /**
- * The one reviewed workflow that legitimately needs write on a PR. It only
- * calls `gh pr merge` / `gh pr edit` on a fixed set of GitHub APIs; it never
- * checks out or executes the PR's code, so a write token here cannot run
- * attacker code. Its own gate guard (see below) blocks changes to CI.
+ * No workflow needs write on a pull request. The one that once did — the
+ * auto-merge loop — has been removed, so the allowlist is empty and every
+ * `write` grant on a PR workflow is an offender.
  */
-const writeAllowlist = new Set(["agent-pr-automation.yml"]);
+const writeAllowlist = new Set<string>();
 
-test("only the reviewed auto-merge workflow grants write on pull_request", () => {
+test("no pull_request workflow grants write", () => {
   const offenders: string[] = [];
   for (const workflow of all) {
     if (!workflow.onPullRequest) continue;
@@ -285,22 +284,19 @@ test("the trigger scanner sees every YAML form of `on:` (self-test)", () => {
   assert.equal(has("on:\n  pull_request:\n", "pull_request_target"), false);
 });
 
-test("the lane auto-merge gate refuses to merge a change to the workflows themselves", () => {
-  // `agent-pr-automation.yml` turns on auto-merge for lane PRs. A self-modifying
-  // gate is the most dangerous thing in an autonomous loop, so the workflow must
-  // still (a) detect a change under `.github/workflows/` and (b) skip auto-merge
-  // for it. If the detector is removed the loop could merge a weakened gate.
-  const workflow = all.find((entry) => entry.name === "agent-pr-automation.yml");
-  assert.ok(workflow, "agent-pr-automation.yml is missing");
-
-  assert.match(
-    workflow.yaml,
-    /grep\s+-q\s+'\^\\\.github\/workflows\/'/,
-    "the gate detector for `.github/workflows/` changes was removed",
-  );
-  assert.match(
-    workflow.yaml,
-    /steps\.gate\.outputs\.touches_gate\s*==\s*'false'/,
-    "auto-merge is no longer conditioned on the gate detector",
+test("no pull_request workflow merges pull requests", () => {
+  // The auto-merge loop that once turned on auto-merge for its own PRs is gone.
+  // A self-modifying gate is the most dangerous thing in an autonomous loop, so
+  // this asserts the invariant directly: no workflow that runs on a pull request
+  // may merge or auto-merge anything. If such a loop is ever reintroduced it must
+  // bring its own detector for changes under `.github/workflows/` and skip them.
+  const autoMerge = /gh\s+pr\s+merge|enablePullRequestAutoMerge|--auto\b/;
+  const offenders = all
+    .filter((workflow) => workflow.onPullRequest && autoMerge.test(workflow.yaml))
+    .map((workflow) => workflow.name);
+  assert.deepEqual(
+    offenders,
+    [],
+    `pull_request workflows that merge PRs: ${offenders.join(", ")}`,
   );
 });
