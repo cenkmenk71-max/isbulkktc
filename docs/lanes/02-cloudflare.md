@@ -1006,3 +1006,31 @@ Sonraki lane için notlar: (1) Cache TTL'i ölçmek için **aynı yolu** edge + 
   `/_next/image`) 404'ü `EXPIRED` (HIT'e dönmüyor) → sızıntı yalnız bu önekte.
 - **O-01r4:** origin hâlâ **404 `DEPLOYMENT_NOT_FOUND`**; alias da aynı → kesinti
   origin'de, CF'de değil. #518 (LANE-INFRA) açık.
+
+## Tur 35 (2026-11-10) — `www→apex` yönlendirmesi kesinti altında ölçülemiyor (R-01r) + teyitler
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma)
+Sahibin yapması gerekenler: R-01r (sağlıklı origin'de `https://www/<yol>` → 308 apex
+            yeniden ölç) · H-02r/N-23 · N-22 · N-21 · N-20 · N-18 · N-19 · N-11r ·
+            H-01r · R-01 · G-01 · F-08 · #227 · O-01 (#518)
+Sonraki lane için notlar: (1) `http→https` CF'de (origin'siz çalışır, 301) ama
+            `https://www→apex` origin'de (Vercel domain redirect) → origin düşükken
+            ateşlenmez. (2) Aynı gövde md5'i (www==apex) yönlendirme ateşlenmediğinin
+            kanıtıdır. (3) Yeni kimlik: R-01r, D-29, O-01r5.
+```
+
+- **R-01r (belirsiz):** `https://www.isbulkktc.com/<yol>` → apex'e **yönlenmiyor**;
+  apex ile **aynı gövdeyi** servis ediyor. `http://www` → 301 **çalışıyor** (CF).
+  Katman: www→apex hop **origin/Vercel domain** yönlendirmesi (repo'da yok) →
+  deployment yokken uygulanamaz. **Kanıtlanmış açık değil**, ölçüm kısıtı; sağlıklı
+  origin'de yeniden ölçülmeli.
+- **D-29:** `F-03` satırındaki koşulsuz "`https://www` → 308 apex" iddiası
+  doğrulanamadı olarak notlandı.
+- **Teyit (temiz):** WAF 7/7 saldırı → 403, 6/6 meşru → 404; N-22 bot UA aynı;
+  DNSSEC `AD=true`; HSTS preload `pending`; `/robots.txt` `Vary` yok, `/sitemap.xml`
+  `Vary: accept-encoding`; `/cdn-cgi/trace`+`speculation` 200.
+- **O-01r5:** origin hâlâ 404 `DEPLOYMENT_NOT_FOUND`.
