@@ -101,31 +101,50 @@ export function classifyHttpStatus(status) {
 }
 
 /**
- * Vercel answers a disabled deployment with **402** and `x-vercel-error:
- * DEPLOYMENT_DISABLED`. That is an account state (blocked/suspended/over quota),
- * not an application bug: the origin is down for every visitor and redeploying
- * does not fix it until the account is unblocked. Naming it distinctly turns a
- * bare "HTTP 402" into an actionable line, and — critically — it must outrank
- * the Vercel API channel, which can still report the alias pointing at a READY
- * deployment built from the right commit while the site answers 402.
+ * Vercel's marker for a deployment the account can no longer serve. Two distinct
+ * account-level states exist and both mean "the origin is down for every
+ * visitor", so both must be named rather than collapsed into a bare status code:
+ *
+ * - `402` + `x-vercel-error: DEPLOYMENT_DISABLED` — blocked, suspended or over
+ *   quota. Redeploying does not fix it until the account is unblocked.
+ * - `404` + `x-vercel-error: DEPLOYMENT_NOT_FOUND` — Vercel no longer resolves
+ *   the project to a deployment. The domain answers 404 on every route until a
+ *   fresh production deployment succeeds.
+ *
+ * Naming them distinctly turns a bare status code into an actionable line, and —
+ * critically — either must outrank the Vercel API channel, which can still
+ * report the alias pointing at a READY deployment built from the right commit
+ * while the origin answers 402/404 to every real request.
+ *
+ * A **bare** 404 is deliberately not this state: a healthy origin answers 404
+ * for any path it does not have, so a deployment that predates `/api/build-info`
+ * (or any unrelated missing route) would be misreported as "the site is down for
+ * every visitor" — a false red, and one that masks the Vercel API channel that
+ * still proves the alias serves the expected commit. 402 is unambiguous (Vercel
+ * is the only thing on the origin that answers it), so the status alone suffices
+ * there; 404 needs the header to disambiguate.
  */
 export function isDeploymentDisabled(status, vercelError) {
   if (status === 402) return true;
-  return (
-    typeof vercelError === "string" &&
-    vercelError.trim().toUpperCase() === "DEPLOYMENT_DISABLED"
-  );
+  return vercelAccountState(vercelError) !== "";
+}
+
+/** The account-state marker Vercel sent, normalised, or "" when there is none. */
+function vercelAccountState(vercelError) {
+  if (typeof vercelError !== "string") return "";
+  const marker = vercelError.trim().toUpperCase();
+  return marker === "DEPLOYMENT_DISABLED" || marker === "DEPLOYMENT_NOT_FOUND" ? marker : "";
 }
 
 /** A route is healthy only on a 2xx with a non-trivial body; blocked is skipped. */
-export function evaluateRouteResponse(route, status, bodyLength) {
+export function evaluateRouteResponse(route, status, bodyLength, vercelError) {
   const kind = classifyHttpStatus(status);
-  if (isDeploymentDisabled(status)) {
+  if (isDeploymentDisabled(status, vercelError)) {
     return {
       route,
       ok: false,
       disabled: true,
-      reason: `HTTP ${status} (deployment disabled — account blocked/suspended)`,
+      reason: `HTTP ${status} (deployment disabled — account blocked/suspended or no deployment)`,
     };
   }
   if (kind === "blocked") {
@@ -313,11 +332,12 @@ async function checkHttpBuildInfo(origin, expectedCommit) {
     });
     const vercelError = headers?.get?.("x-vercel-error") ?? "";
     if (isDeploymentDisabled(status, vercelError)) {
+      const state = vercelAccountState(vercelError) || `HTTP ${status}`;
       return {
         ok: false,
         blocked: false,
         disabled: true,
-        reason: `HTTP ${status}${vercelError ? ` (${vercelError})` : ""} — the deployment is disabled, the site is down for every visitor`,
+        reason: `${state} — the deployment is not being served, the site is down for every visitor`,
       };
     }
     if (classifyHttpStatus(status) === "blocked") {
@@ -349,7 +369,14 @@ async function smokeTest(origin) {
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
       const body = await response.text();
-      results.push(evaluateRouteResponse(route, response.status, body.length));
+      results.push(
+        evaluateRouteResponse(
+          route,
+          response.status,
+          body.length,
+          response.headers.get("x-vercel-error"),
+        ),
+      );
     } catch (error) {
       results.push({ route, ok: false, reason: `request failed: ${error.message}` });
     }
@@ -492,10 +519,10 @@ async function main() {
 
     if (decideVerification({ vercel, http }).verified || Date.now() >= deadline) break;
 
-    // A disabled deployment is an account state, not a race with a build: the
-    // origin will answer 402 until the account is unblocked, so polling cannot
-    // change the verdict. Stop now and report it instead of burning the full
-    // timeout.
+    // A disabled or missing deployment is an account state, not a race with a
+    // build: the origin will answer 402/404 until the account is unblocked or a
+    // fresh production deployment succeeds, so polling cannot change the
+    // verdict. Stop now and report it instead of burning the full timeout.
     if (http.disabled) break;
 
     console.log(

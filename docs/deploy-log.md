@@ -297,3 +297,48 @@ context, not as a measurement.
     `main()` logs a warning when `targets.production.id` cannot be resolved.
     Regression test in both the `node:test` and the `tsx` unit suite; both fail
     against the pre-fix script.
+
+| 2026-11-10T08:28Z | `3644cbe3` | `3644cbe3` | ✅ **recovered** | **Outage cleared.** The Vercel account block (#319 / issue #518) was lifted and production caught up: `GET https://isbulkktc.com/api/build-info` → `{"commit":"3644cbe3501ba5879aaa3eeb79ba825ee1af34f2","environment":"production"}`, and `main` tip is `3644cbe3` — the two agree for the first time since 2026-11-06. `GET /` answers **200** (site CSP, `NEXT_LOCALE=tr`); the 402 `DEPLOYMENT_DISABLED` on every route is gone, as is the 404 `DEPLOYMENT_NOT_FOUND` state seen mid-day. The sandbox's own probe of `/api/build-info` is edge-blocked with **403** (the documented Cloudflare answer to datacenter IPs), so this comparison was made with `curl`/`gh`, not the verifier's own fetch — the same channel CI uses. |
+
+### Delivery health findings (2026-11-10, round 5)
+
+19. **`verify-production-deployment.mjs` only recognised the 402 `DEPLOYMENT_DISABLED`
+    account state, not the 404 `DEPLOYMENT_NOT_FOUND` one.** On 2026-11-10 the live
+    origin moved from `402` + `x-vercel-error: DEPLOYMENT_DISABLED` to `404` +
+    `x-vercel-error: DEPLOYMENT_NOT_FOUND` on every route (`/`, `/jobs`, `/api/build-info`).
+    The predicate returned `false` for that pair, so `checkHttpBuildInfo` fell through to
+    the generic `build-info HTTP 404` branch, `decideVerification` did not set the
+    account-state verdict, and `main()` polled to the deadline (up to 900 s) instead of
+    naming the outage in under a second — a false-negative signal for a site that was
+    down for every visitor, exactly the state this lane exists to name. Vercel documents
+    `DEPLOYMENT_NOT_FOUND` as "a request for a deployment that doesn't exist … or has been
+    deleted" (404). Fixed: `isDeploymentDisabled` now also matches the
+    `DEPLOYMENT_NOT_FOUND` marker, and the reported reason carries the real marker.
+
+    The first cut also matched a **bare** status 404, which is too broad — a healthy
+    origin answers 404 for any path it does not have, so a deployment that predates
+    `/api/build-info` would have been reported as "the site is down for every visitor"
+    (a false red that masks the Vercel API channel still proving the alias serves the
+    expected commit). 402 is unambiguous, so the status alone suffices there; the 404
+    state requires the `x-vercel-error` header to disambiguate, and
+    `evaluateRouteResponse` now takes that header so the smoke path names the state the
+    same way.
+
+    **Ownership note.** The first cut also edited
+    `scripts/verify-production-deployment.test.mjs` to pin both directions. That file
+    is **not** this lane's: LANE-VERIFY owns `scripts/verify-*.mjs` (row 35 of
+    `docs/lanes/00-orchestration.md`), and the glob swallows the `-production-deployment`
+    test file while the LANE-TESLİMAT row lists only the three scripts, no test. The
+    collision gate (`CI` "Static checks" → `scripts/lane-collisions.mjs`) therefore
+    failed with `lane-teslimat does not own it (LANE-VERIFY, LANE-INFRA)` and PR #549
+    sat `BLOCKED`. The fix was re-cut to stay inside the file this lane owns: the whole
+    change is now `scripts/verify-production-deployment.mjs` alone, the existing suite
+    passes unchanged (14/14), and the regression tests for the 404 states are handed to
+    LANE-VERIFY. The general lesson: a lane that owns a script but not its `*.test.mjs`
+    must make the source change pass the *existing* suite, or the ownership gate blocks
+    the delivery.
+
+    Sibling blind spots, handed off rather than edited (out of lane):
+    `scripts/system-health-core.mjs` (LANE-OPERATOR) and `scripts/verify-indexing.mjs`
+    (LANE-SEO) carry the same `isDeploymentDisabled` shape and will miss a 404
+    `DEPLOYMENT_NOT_FOUND` outage the same way.
