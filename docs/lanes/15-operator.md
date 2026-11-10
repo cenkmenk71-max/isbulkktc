@@ -57,9 +57,16 @@ node scripts/lane-autopilot.mjs
 | 5 | sistem kırmızı | **gösterge kendi hatasını okuyor** (kendine referans) | kendi workflow'unu hariç tut |
 | 6 | lane ölü | sayaç başarıda sıfırlanmıyor, iş başına değil lane ömrüne bağlı | iş imzası (`work`) + başarıda sıfırla |
 | 7 | main CI kırmızı | 0 job'lu **geçici GitHub glitch koşusu** gerçek arıza sanılıyor | job sayısına bak: 0 = glitch (warn), >0 = gerçek (fail) |
+| 8 | PR'lar "hareket ediyor" | kuyruk-global kapı (`lane-collisions`) kırmızı → **hiçbiri merge olamaz**; `system-health` yalnız "açık ve yaşlı değil" diye okur | kırmızı adımı yerelde koştur, adı geçen PR'ı bul, sahibine devret |
 
 **Yeni bir tıkanıklık görürsen:** aynı sınıfta mı diye sor — "bir sinyal yanlış
 okunuyor mu?" Genelde cevap evet.
+
+**Kuyruk-global kapı uyarısı.** `lane-collisions.mjs` gibi kapılar **tüm açık
+PR'ları** okur; bir PR'ın yerel eksiği tüm kuyruğu `BLOCKED` yapar. Böyle bir
+kırmızıyı **kendi PR'ına mal etme**: adımı yerelde çalıştır, çıktı hangi PR'ı
+adlandırıyorsa sahibine devret. `system-health` bunu "PR'lar hareket ediyor"
+diye yeşil gösterebilir (yalnız yaş bakar) — bu yüzden kırmızı adımı elle koştur.
 
 ## API reçeteleri (kanıtlanmış)
 
@@ -753,3 +760,35 @@ bul, sahibine devret (#552 → LANE-INFRA), kendi PR'ına açıklayıcı yorum b
 
 **Kural eklendi.** "Kuyruk-global kapı kırmızısı, PR-yerel kırmızı değildir:
 kırmızı adımı yerelde koştur, adı geçen PR'ı bul, sahibine devret."
+
+## Round: bekçi "PR'lar hareket ediyor" derken kuyruk donmuştu (#493, 2026-11-10)
+
+**Belirti.** `system-health` yeşil: `PRs: N open, all moving`. Ama gerçekte
+kuyruk donmuştu — kuyruk-global `lane-collisions` kapısı kırmızıydı ve **hiçbir**
+PR merge olamıyordu. Bekçi, donmuş bir kuyruğa "hareket ediyor" dedi.
+
+**Kök neden.** `stuckPullRequests` yalnız **yaşa** bakar: PR 3 saatten eski **ve**
+merge durumu `CLEAN` değilse uyarır. Ama (a) taze PR'ları (<3 saat) hiç görmez,
+(b) *neden* `BLOCKED` olduğunu görmez. `BLOCKED` + kırmızı check = "kimse
+ilerletemiyor çünkü bir kapı reddediyor" — bekçinin **adlandırması gereken** tam
+da bu. Bunun yerine "yaşlanmamış" sinyalini "ilerliyor" diye okudu: 5. aile
+(gösterge yanlış okuyor), bu kez *zaman* ekseninde.
+
+**Düzeltme (LANE-OPERATÖR dosyaları).** `system-health-core.mjs`'e `isRedCheck`
++ `redPullRequests`; `system-health.mjs`'e `blocked PRs` uyarısı (kırmızı check
+adıyla) ve "all moving" koşuluna bu listenin de sıfır olması eklendi. **Yaş
+kapısı bilinçli olarak yok:** `UNKNOWN` merge durumu push-sonrası pencereyi zaten
+kapatıyor ve rollup'taki `FAILURE` geçerli head SHA içindir — kalıcı bir hüküm.
+Yaş kapısı koysaydım donma saatlerce görünmez kalırdı.
+
+**Kanıt.** `scripts/**/*.test.mjs` **289/289** (yeni 8 test), `eslint` temiz.
+Canlı koşu artık donmayı adlandırıyor: `blocked PRs  2 open with a red check
+(cannot merge): #553 (Static checks); #548 (Static checks)`.
+
+**Ders.** Bir sağlık kontrolü "her şey hareket ediyor" diyorsa, önce **neyi
+ölçtüğünü** sor: yalnız zamanı mı, yoksa *sonucu* mu? İkincisi olmadan yeşil,
+"henüz eskimedi" demektir — "ilerliyor" değil.
+
+**Kalan (başka lane).** Kuyruk donması hâlâ sürüyor; kaynağı #549'un sahiplik
+eksiği (bkz. önceki bölüm), düzeltmesi LANE-INFRA/#552'de. Bekçi artık görünür
+kılıyor ama **çözemez** — bu doğru sınır.

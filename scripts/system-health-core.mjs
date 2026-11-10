@@ -155,6 +155,67 @@ export function stuckPullRequests(prs, { now = Date.now(), maxAgeHours = 3 } = {
 }
 
 /**
+ * A check conclusion that means "this gate is red".
+ *
+ * `CANCELLED` is deliberately absent: a back-to-back push cancels the older run
+ * on purpose, so a cancelled check is a superseded push, not a broken gate —
+ * the same distinction `failingWorkflows` draws for workflow runs.
+ */
+const RED_CONCLUSIONS = new Set(['FAILURE', 'ERROR', 'TIMED_OUT']);
+const RED_STATES = new Set(['FAILURE', 'ERROR']);
+
+/**
+ * Whether a single check in a PR's rollup is red.
+ *
+ * The rollup mixes two shapes: Actions check runs carry `conclusion`/`status`,
+ * commit status contexts carry `state`. Read whichever is present.
+ *
+ * @param {{conclusion?: string|null, state?: string|null}} check
+ * @returns {boolean}
+ */
+export function isRedCheck(check) {
+  if (!check) return false;
+  const conclusion = (check.conclusion ?? '').toUpperCase();
+  if (RED_CONCLUSIONS.has(conclusion)) return true;
+  return RED_STATES.has((check.state ?? '').toUpperCase());
+}
+
+/**
+ * Open pull requests that are blocked by a *red* check.
+ *
+ * `stuckPullRequests` only sees the merge state: a PR is "not moving" when its
+ * state is known and not `CLEAN`. That is blind to *why*. On 2026-11-10 the
+ * queue-global `lane-collisions` gate went red on one lane's PR and every other
+ * open PR read `BLOCKED` too; the health check reported "PRs: N open, all
+ * moving" while nothing could merge — the watchdog read "not aged out" as
+ * "advancing". A merge state of `BLOCKED` with a red check is the specific,
+ * actionable state the operator must name: nobody advances it because a gate
+ * refuses it, and it stays red until the owning lane fixes the cause.
+ *
+ * Unlike `stuckPullRequests` this is *not* age-gated. The `UNKNOWN` merge state
+ * already covers the window right after a push (GitHub computes the merge state
+ * lazily), and a `FAILURE` in the rollup is for the current head SHA — a durable
+ * verdict on this commit, not the merge-state churn the age gate exists to
+ * smooth over. Age-gating here would leave a multi-hour blind window in which
+ * the watchdog keeps claiming the queue is moving while it is frozen.
+ *
+ * @param {Array<{number: number, mergeStateStatus?: string|null, statusCheckRollup?: Array<object>|null}>} prs
+ * @returns {Array<{number: number, redChecks: string[]}>}
+ */
+export function redPullRequests(prs) {
+  const red = [];
+  for (const pr of prs ?? []) {
+    if (!pr || isUnresolvedMergeState(pr.mergeStateStatus)) continue;
+    if (pr.mergeStateStatus === 'CLEAN') continue;
+    const redChecks = (pr.statusCheckRollup ?? [])
+      .filter(isRedCheck)
+      .map((check) => check.name ?? check.context ?? '(unnamed check)');
+    if (redChecks.length > 0) red.push({ number: pr.number, redChecks });
+  }
+  return red;
+}
+
+/**
  * Vercel's marker for a deployment the account is no longer allowed to serve.
  *
  * `402 Payment Required` with `x-vercel-error: DEPLOYMENT_DISABLED` means the

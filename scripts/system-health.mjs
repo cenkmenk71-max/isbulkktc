@@ -15,7 +15,7 @@
 
 import { execFileSync } from 'node:child_process';
 
-import { classifyProductionProbe, classifyRedRuns, redRunsOnMain, stuckPullRequests } from './system-health-core.mjs';
+import { classifyProductionProbe, classifyRedRuns, redPullRequests, redRunsOnMain, stuckPullRequests } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
 const asJson = process.argv.includes('--json');
@@ -129,7 +129,7 @@ const prs = JSON.parse(
     '--limit',
     '50',
     '--json',
-    'number,headRefName,mergeStateStatus,labels,createdAt',
+    'number,headRefName,mergeStateStatus,labels,createdAt,statusCheckRollup',
   ]),
 );
 const stalled = prs.filter((p) => {
@@ -151,8 +151,20 @@ if (stuck.length > 0) {
     `${stuck.length} open >3h and not CLEAN: ${stuck.map((p) => `#${p.number}`).join(', ')}`,
   );
 }
+// A PR blocked by a red check is the "all moving" lie: it is old and not CLEAN
+// but `stuckPullRequests` cannot say why. Name the gate that refuses it.
+const redPRs = redPullRequests(prs);
+if (redPRs.length > 0) {
+  note(
+    'warn',
+    'blocked PRs',
+    `${redPRs.length} open with a red check (cannot merge): ${redPRs
+      .map((p) => `#${p.number} (${p.redChecks.join(', ')})`)
+      .join('; ')}`,
+  );
+}
 if (prs.length === 0) note('ok', 'PRs', 'none open');
-else if (stalled.length === 0 && stuck.length === 0) {
+else if (stalled.length === 0 && stuck.length === 0 && redPRs.length === 0) {
   note('ok', 'PRs', `${prs.length} open, all moving`);
 }
 
