@@ -315,6 +315,63 @@ test("hardcoded hex values do not grow beyond the recorded baseline", () => {
 });
 
 /**
+ * The ratchet only ever shrinks: a line removed from the stylesheet must also
+ * leave the baseline. Otherwise the entry lingers as a pre-authorised exception,
+ * so the exact hex value it names can be pasted back into the sheet without the
+ * growth check above ever firing — the guard would stay green while the drift it
+ * exists to prevent walks back in.
+ *
+ * Two entries had gone stale this way: `--provider-background: #4267b2;` and
+ * `color: #e1c184;` named colours no longer present anywhere in the sheet. Assert
+ * the baseline holds no line the sheet no longer contains, so it can only track
+ * live drift.
+ */
+test("the drift baseline keeps no stale entries", () => {
+  const baseline = JSON.parse(
+    readFileSync(
+      new URL("./design-token-drift.baseline.json", import.meta.url),
+      "utf8",
+    ),
+  ) as { lines: string[]; count: number };
+
+  const lines = css.split("\n");
+  const start = lines.findIndex((line) => line.trim().startsWith("@theme"));
+  let depth = 0;
+  let end = -1;
+  for (let index = start; index < lines.length; index += 1) {
+    depth += (lines[index].match(/{/g) ?? []).length;
+    depth -= (lines[index].match(/}/g) ?? []).length;
+    if (index > start && depth === 0) {
+      end = index;
+      break;
+    }
+  }
+
+  const hexPattern = /#[0-9a-fA-F]{3,8}\b/;
+  const outside = new Set<string>();
+  lines.forEach((line, index) => {
+    if (index >= start && index <= end) {
+      return;
+    }
+    if (hexPattern.test(line)) {
+      outside.add(line.trim());
+    }
+  });
+
+  const stale = baseline.lines.filter((line) => !outside.has(line)).sort();
+  assert.deepEqual(
+    stale,
+    [],
+    `Baseline entries no longer present in the sheet must be deleted (the list may only shrink):\n${stale.join("\n")}`,
+  );
+  assert.equal(
+    baseline.count,
+    baseline.lines.length,
+    "the baseline `count` must equal the number of recorded lines",
+  );
+});
+
+/**
  * Every `--color-*` a rule consumes must be declared somewhere in the sheet.
  * `.admin-package-message[data-status="error"]` / `.admin-mfa-error` asked for
  * `--color-status-danger`, which was never declared anywhere: the declaration
