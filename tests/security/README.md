@@ -62,7 +62,7 @@ the test passes on its own — remove the `todo` option to promote it to a gate.
 | Finding | Owner | Status |
 |---|---|---|
 | Open redirect via dot-segment normalisation in `sanitizeNextPath` | (`src/lib/pwa/destination.ts`) | **fixed** (output re-validated) |
-| `src/server/email/unsubscribe-token-core.ts` lacks `import "server-only"` | (`src/server/**`) | open |
+| `src/server/email/unsubscribe-token-core.ts` lacks `import "server-only"` | (`src/server/**`) | **fixed** (#102; now a gate) |
 | `tests/security/**` not collected by any CI job | (`.github/workflows/**`) | **fixed** (`test:security` step) |
 | Anon feedback/sales forms had no captcha or rate limit | (`src/features/**`) | **fixed** (rate limiter in the actions) |
 | The throttle is action-only; the `anon` RPC is directly callable (#139) | (`supabase/**`) | **fixed** (DB throttle inside the RPC; now a gate) |
