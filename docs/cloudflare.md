@@ -98,7 +98,7 @@ atıfları belirsizleştirir; bu dokümanda iki kez yaşandı: tur 18'de `V-01`
 | F-22 | WAF — büyük/küçük harf | `/.GIT/config`, `/WP-LOGIN.PHP`, `/API/DEVTOOLS/` → **403** | `lower()`/case-insensitive çalışıyor | `HTTP` |
 | F-23 | WAF — kaçış (bypass) denemeleri | `/.git%2fconfig`, `/api/devtools%2f`, `/api/devtools` (slash yok) → **404** (WAF tetiklenmiyor ama origin de sunmuyor) | Savunma derinliği: origin 404 verdiği için istismar edilemez | `HTTP` |
 | F-24 | WAF — yanlış pozitif | Meşru arama: `/jobs?q=o'brien`, `union+select`, `drop+table`, `<script>alert(1)</script>`, `../../etc/passwd` → hepsi **200** | Meşru trafiği engellemiyor — **iyi** | `HTTP` |
-| F-25 | Bot koruması | Bot UA `sqlmap/1.7` → **403**; `curl` UA → 200 | Yönetilen bot koruması aktif | `HTTP` |
+| F-25 | Bot koruması | Bot UA `sqlmap/1.7` → **403**; `curl` UA → 200 | Yönetilen bot koruması aktif — **düzeltme (tur 33, N-22): yalnız `sqlmap/`-önekli UA'da; çıplak `sqlmap` ve diğer scanner'lar atlıyor** | `HTTP` |
 | F-26 | Rate limit | **tur 23 — önceki iddia çürütüldü.** CF auth **POST**'larını limitliyor: `POST /login` hızlı seri → ~10 istekte **429** (`error code: 1015`, `retry-after: 10`), kova `/login`+`/register`+`/forgot-password`+`/reset-password` arasında **paylaşımlı**; `GET /login` ve `POST /` limite **girmez**. `isbulkktc-amber.vercel.app` alias'ı (CF'siz) aynı seride 12/12 **200** → limit **CF'ye ait** | Auth brute-force edge'de **korumalı**. Eski "hiç throttle yok" iddiası **yalnız GET** ölçtüğü için yanlıştı (D-12) | `HTTP` |
 | F-27 | Analytics/Logpush | API scope yok → okunamadı | `Zone → Analytics → Read` ekle | — |
 | F-28 | `103 Early Hints` | HTTP/2'de apex, `200`'den önce aynı `Link` ön-yükleme kümesini `103` ile gönderir; origin'de ve HTTP/1.1'de yok (tur 24, D-13) | Doğru — `curl -D -`'nin "çift `link:`"i budur, bug değil | `HTTP` |
@@ -164,7 +164,7 @@ hayır.** Bu halka kopuk değil; kanıt aşağıda.
 | C-01 | `site:` sitemap'teki **207 URL**, Googlebot UA | **207/207 → 200** | `curl` sweep, `/tmp/codes.txt` |
 | C-02 | Googlebot, `/ /robots.txt /sitemap.xml /jobs /companies /en` | hepsi 200, `server: cloudflare` | `HTTP` |
 | C-03 | bingbot / YandexBot / GPTBot / ClaudeBot / AhrefsBot `/` | hepsi **200** | `HTTP` |
-| C-04 | `sqlmap/1.7` `/` | **403** (bot koruması yalnız kötü niyetli UA'yı kesiyor) | `HTTP` |
+| C-04 | `sqlmap/1.7` `/` | **403** (bot koruması yalnız kötü niyetli UA'yı kesiyor) — **tur 33/N-22: `sqlmap/1.7` 403 ama çıplak `sqlmap` 404; eşleşme `sqlmap/` literaline sabitli** | `HTTP` |
 | C-05 | `cf-mitigated` başlığı (tüm probe'lar) | **hiç yok** (`count=0`) | `HTTP` |
 | C-06 | Googlebot gövdesi gerçek sayfa mı | `<title>KKTC İş İlanları…</title>`, 279 KB; `just a moment`/`cf-chl` yok | `HTTP` |
 | C-07 | `robots.txt` / `sitemap.xml` Googlebot vs varsayılan UA | **birebir aynı** (`diff` boş) | `HTTP` |
@@ -3205,3 +3205,109 @@ geçersiz**; ayırt edici, `.com` üzerindeki **403 (CF bloğu, "Attention Requi
 **Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01, N-18, N-19.
 **Yeni:** N-20 (metod kuralı TRACE'i kapsamıyor), N-21 (secret/dotfile kapsaması eksik),
 D-26 (F-21 katman atfı), D-27 (alias challenge).
+
+## Tur 33 (2026-11-10) — WAF bot kuralı `sqlmap/` literaline sabitli (N-22) + origin durum değişimi
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Çalıştırılan kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: N-22 (bot UA kuralını `lower()` + sürüm-bağımsız sınıfa çevir —
+            onay) · N-21 · N-20 · N-18 · N-19 · N-11r · H-01r · H-02 · R-01 · G-01 · F-08 ·
+            #227 · O-01 (#518, LANE-INFRA, acil)
+Sonraki lane için notlar: (1) Bot UA testini **tek biçimle** yapma — `sqlmap/1.7` 403 ama
+            çıplak `sqlmap` 404 (atlıyor); matrisi kur. (2) Origin düşüş rejimi değişti:
+            **403 = WAF bloğu** (Attention Required! / `error code: 1010`), **404 =
+            origin'e ulaştı** (`x-vercel-error: DEPLOYMENT_NOT_FOUND`), **400 = NUL reddi**.
+            (3) `sqlmap` UA bloğunun gövdesi **`error code: 1010`** (CF UA-block imzası),
+            yol kuralınınki "Attention Required!" HTML — ikisi farklı katman/signature.
+            (4) Yeni kimlik: `N-22`, `D-28`, `N-17r`, `O-01r3`.
+```
+
+### N-22 (orta) — WAF bot-UA kuralı `sqlmap/` **literaline** sabitli; çıplak `sqlmap` ve diğer tüm scanner'lar atlıyor
+
+**Mekanizma.** Doküman boyunca `sqlmap` UA'sı **403** (bot koruması) olarak kaydedildi
+(F-25 satır 101, C-04 satır 167, T-19, U-12, V-03, satır 2572). Bu tur, kaydın yalnız
+**`sqlmap/1.7`** biçimini ölçtüğünü gösterdi: kural bir **`sqlmap/` literal ön-ek**
+eşleşmesi, `sqlmap` (sürüm/`/` olmadan) eşleşmiyor ve **origin'e ulaşıyor**.
+
+| UA | Kod | Katman |
+|---|---|---|
+| `sqlmap/1.7` · `sqlmap/1.8` · `sqlmap/2.0` · `sqlmap/1` · `sqlmap/1.7x` · `sqlmap/1.7.2#stable` · `sqlmap/` | **403** | **WAF** (`error code: 1010`) |
+| `sqlmap` (çıplak) | **404** | **origin** (atlıyor) |
+| `SQLMap/1.7` · `Sqlmap/1.7` · `SQLMAP/1.7` · `sQlMaP/1.7` | **404** | **origin** (büyük/küçük harf **duyarlı**) |
+| `Mozilla/5.0 sqlmap/1.7` · `foo/sqlmap/1.7` · `/sqlmap/1.7` | **404** | **origin** (önek değil — tam dize eşleşmesi) |
+| `sqlmap 1.7` | **404** | origin (`/` yok) |
+| `nikto/2.5` · `nmap/7.94` · `WPScan/3.8` · `masscan/1.3` · `zgrab/0.x` · `acunetix/1.0` · `Nuclei/2.9` · `gobuster/3.5` · `feroxbuster/2.10` · `ffuf/2.1` · `httpx/1.3` · `jaeles/0.1` · `commix/3.0` · `wfuzz/3.1` · `dotdotpwn` · `DirBuster-1.0` | **404** | **origin** (imza yok) |
+
+**Eşleşme semantiği (ölçülmüş):** UA dizesinin **başında** (veya tamamı) **küçük-harf
+`sqlmap/`** olmalı. Büyük/küçük harf farkı (→404), `/` eksikliği (→404), ön-ek fazlalığı
+(`Mozilla/5.0 sqlmap/1.7` → 404) hepsi bloklamayı kırıyor; sürüm numarası ve sonrası
+serbest (`sqlmap/1.7x`, `sqlmap/1.7.2#stable` → 403). Bu, `contains "sqlmap/1.7"` değil
+**`lower()` olmadan `starts_with "sqlmap/"`** (veya `equals`) bir eşleşmedir.
+
+**Etki.** WAF'ın bot-UA koruması **tek bir dizeye** ve **tek bir yazıma** bağlı:
+saldırgan `-A sqlmap` yazdığı anda edge geçilir; `nikto`, `nmap`, `Nuclei`, `ffuf` gibi
+**kanonik tarayıcı UA'ları hiç bloklanmaz**. Bugün içerik sızmıyor (O-01: origin 404;
+yol-WAF kuralları `/.env`/`/wp-admin`'i yine 403'ler) ama bot imzasına dayanan katman
+**fiilen tek-kullanımlık** — "User-Agent bazlı koruma" yanılsaması.
+
+**Düzeltme (öneri, onay bekliyor — yıkıcı WAF değişikliği).** Kuralı harf-duyarsız ve
+**sınıf** tabanlı kur (Free plan `matches`'i reddeder; `lower()` + `contains` kullan):
+
+```
+(lower(http.user_agent) contains "sqlmap")
+or (lower(http.user_agent) contains "nikto")
+or (lower(http.user_agent) contains "nmap")
+or (lower(http.user_agent) contains "nuclei")
+or (lower(http.user_agent) contains "wpscan")
+or (lower(http.user_agent) contains "masscan")
+or (lower(http.user_agent) contains "acunetix")
+or (lower(http.user_agent) contains "gobuster")
+or (lower(http.user_agent) contains "ffuf")
+or (lower(http.user_agent) contains "feroxbuster")
+```
+
+Not: UA bloklama **tek başına** yeterli bir savunma değildir (UA istemci tarafından
+serbestçe uydurulur); asıl koruma WAF yol/pattern kuralları + managed ruleset'tir. Bu
+düzeltme yalnız "hazır tarayıcı imzalarını" kapsar, saldırgan-kontrollü UA'yı değil.
+
+### D-28 (doküman doğruluğu) — "`sqlmap` → 403" kayıtları tek biçimi ölçmüş; düzeltildi
+
+F-25 (satır 101), C-04 (satır 167), T-19 (satır 1008), U-12 (satır 1359), V-03 (satır
+1263) ve tur 26 özeti (satır 2572) "`sqlmap` → 403" yazıyor; gerçekte yalnız
+**`sqlmap/1.7`** biçimi bloklanıyor, **çıplak `sqlmap` 404** (atlıyor). Bu satırlar
+N-22'yi işaret edecek biçimde notlandı; "bot koruması aktif" iddiası "yalnız
+`sqlmap/`-önekli UA'da aktif" olarak daraltıldı. T-32 (satır 1216, `nikto`/`masscan`/
+`zgrab` → 200 "imza yok") **doğruydu** ve N-22'nin ilk kanıtıydı — ama tek başına
+"bilgi" olarak bırakılmıştı; artık N-22'nin parçası.
+
+### N-17r (yeniden ölçüm) — WAF yol matrisi yeni origin rejiminde de tutarlı
+
+Tur 29/31'in WAF yol matrisi, origin **402** verirken alınmıştı. Bu tur origin
+**404** (`DEPLOYMENT_NOT_FOUND`) rejiminde yeniden ölçüldü; ayırt edici **değişmedi**:
+
+| Yol | Kod | Katman |
+|---|---|---|
+| `/.git/config` · `/.env` · `/wp-admin` · `/wp-login.php` · `/phpmyadmin` · `/api/devtools/` · `/composer.json` | **403** | **WAF** ("Attention Required!") |
+| `/` · `/api/build-info` · `/jobs` · `/.git` (eğiksiz) · `/.npmrc` | **404** | **origin** (`x-vercel-error: DEPLOYMENT_NOT_FOUND`) |
+| `/../../etc/passwd` | **400** | origin (NUL/yol reddi) |
+
+Tur 31'in N-18 (eğiksiz `.git`) ve N-19 (eksik dotfile kümesi) bulguları **doğrulandı**.
+
+### O-01r3 (yeniden ölçüm) — origin durumu `402 DEPLOYMENT_DISABLED` → `404 DEPLOYMENT_NOT_FOUND`
+
+#518, canlı kesintiyi **`402 Payment required` / `x-vercel-error: DEPLOYMENT_DISABLED`**
+olarak kaydetmişti. Bu tur (2026-11-10 ~08:12 UTC) origin **her** istekte
+**`404`** + **`x-vercel-error: DEPLOYMENT_NOT_FOUND`** + gövde
+`The deployment could not be found on Vercel.` döndürüyor. Bu, **farklı bir Vercel
+hata sınıfıdır** (deployment silinmiş/alias hedefi yok ↔ hesap ödeme engeli) ve
+çözüm adımı farklı olabilir → **#518'e güncelleme** olarak eklendi. CF katmanı her iki
+rejimde de sağlam (WAF/TLS/cache uygulanıyor, `server: cloudflare`).
+
+**Devir:** N-22, N-21, N-20, N-18, N-19 → CF paneli (sahibin onayı) — bu lane yazmaz.
+O-01 → **#518** (LANE-INFRA; durum değişimi güncellendi).
+**Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01, N-18, N-19, N-20, N-21.
+**Yeni:** N-22 (bot UA `sqlmap/` literaline sabitli), D-28 (F-25/C-04 kayıt düzeltmesi),
+N-17r (yol matrisi 404 rejiminde tutarlı), O-01r3 (origin 402 → 404).

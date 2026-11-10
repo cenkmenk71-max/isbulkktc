@@ -946,3 +946,32 @@ Sonraki lane için notlar: (1) Vercel alias (`isbulkktc-amber.vercel.app`) artı
   `server: Vercel`, `retry-after: 30`) → origin testi için kullanılamaz; tur 29/31
   notlarındaki "alias ile origin'i ölç" yönergesi geçersiz.
 - **O-01r3:** tüm ölçümler 402 kesintisi altında; CF/TLS/WAF katmanı sağlam.
+
+## Tur 33 (2026-11-10) — bot UA kuralı `sqlmap/` literaline sabitli (N-22) + origin durum değişimi
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: N-22 (bot UA kuralını `lower()`+sınıf yap — onay) · N-21 · N-20 ·
+            N-18 · N-19 · N-11r · H-01r · H-02 · R-01 · G-01 · F-08 · #227 · O-01 (#518)
+Sonraki lane için notlar: (1) Bot UA'yı tek biçimle ölçme; `sqlmap/1.7`=403 ama çıplak
+            `sqlmap`=404. (2) Yeni origin rejimi: 403=WAF, 404=origin (`DEPLOYMENT_NOT_FOUND`),
+            400=yol reddi. (3) `sqlmap` UA bloğu gövdesi `error code: 1010`; yol kuralı
+            gövdesi "Attention Required!" — farklı signature. (4) Yeni kimlik: N-22, D-28.
+```
+
+- **N-22 (orta, yeni):** WAF bot-UA kuralı **`sqlmap/` literal ön-ekine** sabitli ve
+  **harf-duyarlı**. `sqlmap/1.7`/`1.8`/`2.0`/`1`/`1.7x` → 403; ama **çıplak `sqlmap`**,
+  `SQLMap/1.7`, `sqlmap 1.7`, `Mozilla/5.0 sqlmap/1.7` → **404 (atlıyor)**. `nikto`,
+  `nmap`, `WPScan`, `masscan`, `Nuclei`, `ffuf`, `gobuster` … **hiç bloklanmıyor**.
+  Düzeltme önerisi (onay): `lower(http.user_agent) contains "<scanner>"` sınıfı.
+- **D-28 (doğruluk):** F-25/C-04/T-19/U-12/V-03 "`sqlmap` → 403" kayıtları tek biçimi
+  (`sqlmap/1.7`) ölçmüştü; çıplak `sqlmap` atlıyor. Kayıtlar daraltıldı.
+- **N-17r:** WAF yol matrisi yeni 404 rejiminde tutarlı (403 = WAF, 404 = origin).
+- **O-01r3:** origin `402 DEPLOYMENT_DISABLED` → **`404 DEPLOYMENT_NOT_FOUND`**; #518'e
+  durum güncellemesi eklendi (LANE-INFRA).
+
+**Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01, N-18, N-19, N-20, N-21.
+**Yeni:** N-22, D-28, N-17r, O-01r3.
