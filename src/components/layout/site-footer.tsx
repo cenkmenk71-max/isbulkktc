@@ -62,24 +62,24 @@ export async function SiteFooter() {
             </nav>
           )}
         </div>
-        <nav className="footer-links" aria-label={t('footerNavigation')}>
-          <div>
+          <nav className="footer-links" aria-label={t('footerNavigation')}>
+          <div data-reveal>
             <span className="footer-label">{t('candidates')}</span>
             <Link href="/jobs">{t('links.jobs')}</Link>
             <Link href="/register">{t('links.register')} <ArrowUpRight size={12} aria-hidden="true" /></Link>
             <Link href="/freelance">{t('links.freelance')}</Link>
           </div>
-          <div>
+          <div data-reveal>
             <span className="footer-label">{t('employers')}</span>
             <Link href="/companies">{t('links.directory')}</Link>
             <Link href={{ pathname: "/register", query: { audience: "employer" } }}>{t('links.createCompany')} <ArrowUpRight size={12} aria-hidden="true" /></Link>
           </div>
-          <div>
+          <div data-reveal>
             <span className="footer-label">{t('account')}</span>
             <Link href="/login">{t('links.login')}</Link>
             <Link href="/profile/dashboard">{t('links.profile')}</Link>
           </div>
-          <div>
+          <div data-reveal>
             <span className="footer-label">{t('information')}</span>
             <Link href="/about">{t('links.about')}</Link>
             <Link href="/rehber">{t('links.guides')}</Link>

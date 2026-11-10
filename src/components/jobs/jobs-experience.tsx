@@ -191,7 +191,7 @@ export async function JobsExperience({
               <ul className="jobs-list">
                 {results.jobs.map((job) => (
                   <li className="jobs-list-item" key={job.id}>
-                    <article className="jobs-card" data-reveal data-tilt>
+                    <article className="jobs-card" data-reveal>
                       <div className="jobs-card-topline">
                         <span className="jobs-card-type">
                           {searchCopy(getJobTypeMessageKey(job.job_type))}
