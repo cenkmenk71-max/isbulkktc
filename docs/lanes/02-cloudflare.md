@@ -946,3 +946,208 @@ Sonraki lane için notlar: (1) Vercel alias (`isbulkktc-amber.vercel.app`) artı
   `server: Vercel`, `retry-after: 30`) → origin testi için kullanılamaz; tur 29/31
   notlarındaki "alias ile origin'i ölç" yönergesi geçersiz.
 - **O-01r3:** tüm ölçümler 402 kesintisi altında; CF/TLS/WAF katmanı sağlam.
+
+## Tur 33 (2026-11-10) — bot UA kuralı `sqlmap/` literaline sabitli (N-22) + origin durum değişimi
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: N-22 (bot UA kuralını `lower()`+sınıf yap — onay) · N-21 · N-20 ·
+            N-18 · N-19 · N-11r · H-01r · H-02 · R-01 · G-01 · F-08 · #227 · O-01 (#518)
+Sonraki lane için notlar: (1) Bot UA'yı tek biçimle ölçme; `sqlmap/1.7`=403 ama çıplak
+            `sqlmap`=404. (2) Yeni origin rejimi: 403=WAF, 404=origin (`DEPLOYMENT_NOT_FOUND`),
+            400=yol reddi. (3) `sqlmap` UA bloğu gövdesi `error code: 1010`; yol kuralı
+            gövdesi "Attention Required!" — farklı signature. (4) Yeni kimlik: N-22, D-28.
+```
+
+- **N-22 (orta, yeni):** WAF bot-UA kuralı **`sqlmap/` literal ön-ekine** sabitli ve
+  **harf-duyarlı**. `sqlmap/1.7`/`1.8`/`2.0`/`1`/`1.7x` → 403; ama **çıplak `sqlmap`**,
+  `SQLMap/1.7`, `sqlmap 1.7`, `Mozilla/5.0 sqlmap/1.7` → **404 (atlıyor)**. `nikto`,
+  `nmap`, `WPScan`, `masscan`, `Nuclei`, `ffuf`, `gobuster` … **hiç bloklanmıyor**.
+  Düzeltme önerisi (onay): `lower(http.user_agent) contains "<scanner>"` sınıfı.
+- **D-28 (doğruluk):** F-25/C-04/T-19/U-12/V-03 "`sqlmap` → 403" kayıtları tek biçimi
+  (`sqlmap/1.7`) ölçmüştü; çıplak `sqlmap` atlıyor. Kayıtlar daraltıldı.
+- **N-17r:** WAF yol matrisi yeni 404 rejiminde tutarlı (403 = WAF, 404 = origin).
+- **O-01r3:** origin `402 DEPLOYMENT_DISABLED` → **`404 DEPLOYMENT_NOT_FOUND`**; #518'e
+  durum güncellemesi eklendi (LANE-INFRA).
+
+**Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01, N-18, N-19, N-20, N-21.
+**Yeni:** N-22, D-28, N-17r, O-01r3.
+
+## Tur 34 (2026-11-10) — CF Cache Rules TTL yükseltmesi + `/_next/static` 404 1-yıl cache (H-02r, N-23)
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: H-02r/N-23 (Cache Rules → `/_next/static/**` edge+browser
+            TTL = `Origin`; origin `max-age=0`'ını ezme — onay) · N-22 · N-21 · N-20 ·
+            N-18 · N-19 · N-11r · H-01r · R-01 · G-01 · F-08 · #227 · O-01 (#518)
+Sonraki lane için notlar: (1) Cache TTL'i ölçmek için **aynı yolu** edge + alias
+            üzerinden al ve `cache-control`'u diff'le — origin hepsinde `max-age=0`
+            derse TTL CF Cache Rules'tandır (Browser Cache TTL tek sayıdır, yol ayıramaz).
+            (2) 404'ün cache'lenip cache'lenmediğini `?cb=` cache-bust ile MISS→HIT
+            ölç; yalnız `/_next/static/**` 1 yıl, diğer önekler `EXPIRED`/`DYNAMIC`.
+            (3) Yeni kimlik: `H-02r`, `N-23`, `O-01r4`.
+```
+
+- **H-02r (mekanizma daraltma):** tur 9'un "Browser Cache TTL" tahmini **Cache
+  Rules**'a daraltıldı. Kanıt: origin (`isbulkktc-amber.vercel.app`) `/`, `/robots.txt`,
+  `/sitemap.xml`, `/sw.js`, `/favicon.ico`, `/_next/static/*` → **hepsi**
+  `public, max-age=0, must-revalidate`; edge (`isbulkktc.com`) aynı yollarda
+  **yol-bazlı farklı** TTL (`2628000` / `3600` / `31536000`) yayıyor. Tek-sayılık
+  Browser Cache TTL yol ayrımı yapamaz → ayar path-pattern'li **Cache Rules**.
+- **N-23 (orta, yeni):** `/_next/static/**` altındaki **404** `MISS → HIT`, `age`
+  artıyor, `max-age=31536000` → origin düzeldikten sonra da edge 1 yıl **eski 404**
+  servis eder. Diğer önekler (`/images`, `/logos`, `/fonts`, `/assets`,
+  `/_next/image`) 404'ü `EXPIRED` (HIT'e dönmüyor) → sızıntı yalnız bu önekte.
+- **O-01r4:** origin hâlâ **404 `DEPLOYMENT_NOT_FOUND`**; alias da aynı → kesinti
+  origin'de, CF'de değil. #518 (LANE-INFRA) açık.
+
+## Tur 35 (2026-11-10) — `www→apex` yönlendirmesi kesinti altında ölçülemiyor (R-01r) + teyitler
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma)
+Sahibin yapması gerekenler: R-01r (sağlıklı origin'de `https://www/<yol>` → 308 apex
+            yeniden ölç) · H-02r/N-23 · N-22 · N-21 · N-20 · N-18 · N-19 · N-11r ·
+            H-01r · R-01 · G-01 · F-08 · #227 · O-01 (#518)
+Sonraki lane için notlar: (1) `http→https` CF'de (origin'siz çalışır, 301) ama
+            `https://www→apex` origin'de (Vercel domain redirect) → origin düşükken
+            ateşlenmez. (2) Aynı gövde md5'i (www==apex) yönlendirme ateşlenmediğinin
+            kanıtıdır. (3) Yeni kimlik: R-01r, D-29, O-01r5.
+```
+
+- **R-01r (belirsiz):** `https://www.isbulkktc.com/<yol>` → apex'e **yönlenmiyor**;
+  apex ile **aynı gövdeyi** servis ediyor. `http://www` → 301 **çalışıyor** (CF).
+  Katman: www→apex hop **origin/Vercel domain** yönlendirmesi (repo'da yok) →
+  deployment yokken uygulanamaz. **Kanıtlanmış açık değil**, ölçüm kısıtı; sağlıklı
+  origin'de yeniden ölçülmeli.
+- **D-29:** `F-03` satırındaki koşulsuz "`https://www` → 308 apex" iddiası
+  doğrulanamadı olarak notlandı.
+- **Teyit (temiz):** WAF 7/7 saldırı → 403, 6/6 meşru → 404; N-22 bot UA aynı;
+  DNSSEC `AD=true`; HSTS preload `pending`; `/robots.txt` `Vary` yok, `/sitemap.xml`
+  `Vary: accept-encoding`; `/cdn-cgi/trace`+`speculation` 200.
+- **O-01r5:** origin hâlâ 404 `DEPLOYMENT_NOT_FOUND`.
+
+## Tur 36 (2026-11-10) — origin sağlıklı: `www→apex` yönlendirmesi **YOK**, `www` duplicate content (H-03)
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma)
+Sahibin yapması gerekenler: H-03 (CF Redirect Rule + Vercel domain: `www` → 301 apex) ·
+            H-02r/N-23 · N-22 · N-21 · N-20 · N-18 · N-19 · N-11r · H-01r · R-01 ·
+            G-01 · F-08 · #227 · #163 · #170 · O-01 (#518)
+Sonraki lane için notlar: (1) origin artık sağlıklı → kesinti rejimi bitti, tüm
+            katman ayrımları sağlıklı origin'de yeniden doğrulanabilir. (2) `https://www`
+            200 döner, apex ile **bayt-özdeş**; yönlendirme repo'da da CF edge'de de
+            yok → Vercel domain-level eksik. (3) Yeni kimlik: H-03, D-30, O-01r6.
+            (4) Tur 35 R-01r **kapandı**: kısıt değil, gerçek açık.
+```
+
+- **H-03 (yüksek, yeni):** Sağlıklı origin'de `https://www.isbulkktc.com/<yol>` →
+  **200**, apex'e yönlenmiyor. `/freelance` gövdesi apex ile **birebir aynı**
+  (139 342 B). Dokümanın "308" iddiaları (`F-03`, `C-09`, `V-06`, `W-20-3`, `T-18`,
+  `R-02/04/05`, `U-08`, `V-05`, `W-18-16`, `W-20-7`) **yanlış** → düzeltildi.
+  Katman: `http→https` CF (301), `https→apex` **hiç yok** (ne repo ne edge) →
+  Vercel domain redirect eksik. Duplicate-content/SEO riski (#163 halkası).
+- **D-30:** yukarıdaki satırlarda koşulsuz yazılan "308" düzeltildi; H-03'e atıflandı.
+- **Teyit (temiz, sağlıklı origin):** WAF `www…/.git/config` → 403; `robots.txt`
+  www==apex; gerçek-olmayan yol 404 `DYNAMIC` (negatif cache yok); apex root 200
+  `DYNAMIC`.
+- **O-01r6:** origin **sağlıklı** (önceki `404 DEPLOYMENT_NOT_FOUND` rejimi bitti).
+
+## Tur 37 (2026-11-10) — `www` yönlendirmesi şemayı düzeltiyor ama host'u kanonikleştirmiyor (H-03r, R-14) + tur 36 "bayt-özdeş" daraltması (D-31)
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: H-03r/R-14 (CF Redirect Rule: host `www` → 301 apex,
+            yol+sorgu korunur — "Always Use HTTPS" host'a dokunmuyor) · H-02r/N-23 ·
+            N-22 · N-21 · N-20 · N-18 · N-19 · N-11r · H-01r · R-01 · G-01 · F-08 ·
+            #227 · #163 · #170 · O-01 (#518)
+Sonraki lane için notlar: (1) `http://www` → 301 **www'yi koruyor** (yalnız şema
+            düzeltmesi) → zincir 2 hop, **www'de bitiyor**, apex'e varmıyor; host
+            kanonikleştirmesi ayrı bir kural ister. (2) tur 36'nın "bayt-özdeş"
+            iddiası dar: apex/www gövdeleri **origin'de** özdeş, ama CF 2 rastgele
+            token enjekte ediyor (`__CF$cv$params` + email-protection) → ham md5
+            farklı. (3) `www/sitemap.xml` **yalnız apex URL** listeliyor → kanonik
+            hedef apex, doğrulandı. (4) Yeni kimlik: H-03r, R-14, D-31.
+```
+
+- **H-03r / R-14 (orta-yüksek, taze kanıt):** `www` host'u apex'e
+  **kanonikleşmiyor**. Üç bağımsız ölçüm:
+  - `https://www.isbulkktc.com/` → **200** (yönlendirme **yok**), `server: cloudflare`, `cf-ray` dolu.
+  - `http://www.isbulkktc.com/` → **301**, `Location: https://www.isbulkktc.com/` → **`www`'yi koruyor** (yalnız şema yükseltmesi). Yol+sorgu korunur (`/freelance?q=test` → aynen).
+  - `https://www.isbulkktc.com/sitemap.xml` → **200**, içindeki **1509 URL'nin tamamı** `https://isbulkktc.com` (apex); hiç `www` URL yok → kanonik hedef apex.
+  - `https://www.isbulkktc.com/robots.txt` apex ile **aynı** gövde; `https://www…/.git/config` → **403** (WAF kuralı host-bağımsız çalışıyor).
+  - **Etki:** zincir `http://www…/jobs?q=x` → 301 → `https://www…/jobs?q=x` → **200**: **2 hop, son durak `www`**, apex'e hiç varmıyor. `www` tam gövdeyi 200 servis ediyor → duplicate-content yüzeyi (H-03) sürüyor.
+  - **Düzeltme (devir — CF paneli, sahibin onayı):** Redirect Rule
+    `http.host eq "www.isbulkktc.com"` → `concat("https://isbulkktc.com", http.request.uri.path)`, **301**, sorgu korunur. "Always Use HTTPS" zaten var; eksik olan **host** kuralıdır.
+- **D-31 (doğruluk):** tur 36 `www/freelance` için "apex ile **bayt-özdeş** (139 342 B)" dedi. Ölçüm: boyut özdeş ama **ham md5 farklı** (apex `27209a42…`, www `bfc412de…`). CF iki **rastgele** token enjekte ediyor — `window.__CF$cv$params` (bot yönetimi) ve `/cdn-cgi/l/email-protection` (G-01 email obfuscation). Bu iki blok normalize edilince gövdeler **origin'de özdeş**. İfade "origin gövdesi özdeş; yalnız CF-injected token farkı" olarak daraltıldı.
+- **Teyit (temiz):** apex/www `strict-transport-security` **aynı** (`max-age=31536000; includeSubDomains; preload`); `www` üzerinde gerçek-olmayan yol → **404** `DYNAMIC` (negatif cache yok); apex root **200** `DYNAMIC` (HTML cache'lenmiyor).
+- **O-01r6:** değişmedi — origin sağlıklı.
+
+## Tur 38 (2026-11-10) — #163 için "bot engeli" hipotezi ÇÜRÜTÜLDÜ (B-01) + doğrulama etiketi YOK (V-01)
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: V-01 (GSC/Bing/Yandex doğrulama env'i + panel) · #163
+            (kopuk halka aşağıda) · H-03r/R-14 (Redirect Rule) · H-02r/N-23 · N-22 ·
+            N-21 · N-20 · N-18 · N-19 · N-11r · H-01r · R-01 · G-01 · F-08 · #227 · #170
+            · O-01 (#518)
+Sonraki lane için notlar: (1) #163'ün "CF bot engeli arama motoru botlarını
+            engelliyor" halkası **YANLIŞ** — 9 UA (Googlebot/bingbot/YandexBot/GPTBot/
+            facebookexternalhit/Scrapy/python-requests/curl/boş-UA) hepsi **200**,
+            hiç `cf-mitigated` yok. (2) Doğrulama meta etiketi (`google-site-verification`)
+            üretim HTML'inde **YOK** (`grep -c` = 0) → indekslemenin en olası kopuk
+            halkası **burada**, CF'de değil; sahibi LANE-SEO/env. (3) `www` 200 dönmeye
+            devam ediyor (H-03r değişmedi). Yeni kimlik: B-01, V-01.
+```
+
+- **B-01 (yüksek, negatif kanıt — #163 halkası 2):** Issue #163'ün Cloudflare'e
+  atfettiği "arama motoru botlarını challenge engelliyor" hipotezi **çürütüldü**.
+  `https://isbulkktc.com/` ve `/robots.txt` için UA matrisi (canlı, taze):
+  | UA | yol | kod | `cf-mitigated` |
+  |---|---|---|---|
+  | Googlebot/2.1 | `/robots.txt` | **200** | yok |
+  | bingbot/2.0 | `/robots.txt` | **200** | yok |
+  | YandexBot/3.0 | `/robots.txt` | **200** | yok |
+  | Googlebot/2.1 | `/` | **200** `DYNAMIC` | yok |
+  | GPTBot/1.1 | `/` | **200** | yok |
+  | facebookexternalhit/1.1 | `/` | **200** | yok |
+  | Scrapy/2.11 | `/` | **200** | yok |
+  | python-requests/2.31 | `/` | **200** | yok |
+  | curl/7.68 | `/` | **200** | yok |
+  | (boş UA) | `/` | **200** | yok |
+  - `robots.txt` gövdesi izin verici: `Allow: /`, yalnız `/api/` ve `/auth/`
+    (+ yerel-ek `/en|ru|el|fa|de/auth/`) `Disallow`; `Host: https://isbulkktc.com`,
+    `Sitemap: https://isbulkktc.com/sitemap.xml`.
+  - `X-Robots-Tag` başlığı **yok** (kazara `noindex` yok); `sitemap.xml` **200**
+    `application/xml`.
+  - **Sonuç:** Cloudflare **hiçbir** UA'ya challenge/mitigation uygulamıyor. #163'ün
+    bot-engeli halkası **sağlam**; kopuk halka CF'de değil.
+- **V-01 (yüksek — #163 halkası 1, sahibi LANE-SEO/env):** Üretim HTML'inde
+  **`google-site-verification` meta etiketi yok** (`curl … | grep -c site-verification`
+  = **0**). AGENTS.md'nin işaret ettiği `NEXT_PUBLIC_{GOOGLE,BING,YANDEX}_SITE_VERIFICATION`
+  env'i **girilmemiş** görünüyor → Search Console mülkü doğrulanmamış olabilir;
+  doğrulanmamış mülk **taranmaz/indekslenmez**. Bu, "isbulkktc.com yazmadıkça
+  çıkmıyor" şikâyetinin **en olası kopuk halkası**dır ve **CF panelinde çözülmez**.
+  - **Düzeltme (devir — LANE-SEO + sahip):** env değerlerini gir, GSC'de mülkü
+    doğrula, `sitemap.xml`'i GSC'ye gönder, kapsam raporunu oku.
+- **Teyit (H-03r/R-14 değişmedi):** `http://www` → 301 → `https://www` (host
+  korunuyor); `https://www/` → **200**; kanonik `www` ve apex'te de
+  `https://isbulkktc.com` (doğru) → sinyal var ama **host redirect** yok.
+- **O-01r6:** origin sağlıklı (değişmedi).
