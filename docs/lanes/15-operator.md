@@ -1136,7 +1136,7 @@ düşürüyorsa, o durum görünmezdir; sessiz atlama değil, açık rapor yaz.
 **Sınır.** #579 `agent:blocked` (LANE-INFRA) — insan gerektirir, bu lane'in işi
 değil; yalnızca raporu doğru yapıldı. #584 bu lane'in PR'ı.
 
-## Round: SUPABASE_ACCESS_TOKEN şekli denetlenmiyordu (#209, 2026-11-10)
+## Tur notu — SUPABASE_ACCESS_TOKEN şekli denetlenmiyordu (#209, 2026-11-10)
 
 **Belirti.** #209: `SUPABASE_ACCESS_TOKEN` 36 karakterlik çıplak UUID'ydi
 (`d81…`), geçerli bir Management token `sbp_` ile başlar. `curl … /v1/projects`
@@ -1165,7 +1165,8 @@ zamanlanmış koşuda denetim **kördü**. `.github/**` LANE-INFRA'nın; `lane:i
 `agent:handoff` ile issue açıldı (env eklenmeli). Bu yapılmadan denetim yalnız elle
 koşularda çalışır.
 
-**Ayrıca.** Geçerli token'la üretim logları **çekilemedi**: Management logs
-endpoint'i (`/analytics/endpoints/logs`) `Backend error! Retry your query`
-dönüyor (Supabase tarafı, token değil). #207'nin gerçek hata kodu bu yüzden
-hâlâ logdan alınamadı — #209'a not düşüldü.
+**Ayrıca.** Geçerli token'la üretim logları **çekilemedi**: token artık 200
+dönse de `POST /v1/projects/<ref>/analytics/endpoints/logs` → **404
+`Cannot POST`** (uç kaldırılmış) ve MCP `supabase_query_logs` → **401
+Unauthorized**. Yani log okuma yetkisi token'la açılmıyor; #207'nin gerçek hata
+kodu bu yüzden hâlâ logdan alınamadı — #209'a not düşüldü.
