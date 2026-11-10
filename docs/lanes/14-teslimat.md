@@ -784,7 +784,9 @@ entegrasyonu çalışıyor, her merge dakikanın altında canlıya iniyor.
 kuralı gereği (iki fren) bu lane merge etmez; insan onayı bekliyor. Merge edilebilir
 bekleyen iş yoktu.
 
-**Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅, `test:unit` ✅.
+**Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅,
+`test:unit` **1083/1083**. `lane-collisions` temiz ("No collisions across 1 open
+PR(s)."). Bulgu 31 ayrıca `docs/deploy-log.md`'ye yazıldı.
 
 **Canlıya dokundu mu:** hayır. Yalnız `scripts/verify-production-deployment.mjs`,
 `scripts/prune-vercel-deployments.mjs` (+ testleri) ve bu iki doküman.
