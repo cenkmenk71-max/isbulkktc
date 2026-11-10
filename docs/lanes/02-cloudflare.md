@@ -1088,7 +1088,7 @@ Sonraki lane için notlar: (1) `http://www` → 301 **www'yi koruyor** (yalnız 
   **kanonikleşmiyor**. Üç bağımsız ölçüm:
   - `https://www.isbulkktc.com/` → **200** (yönlendirme **yok**), `server: cloudflare`, `cf-ray` dolu.
   - `http://www.isbulkktc.com/` → **301**, `Location: https://www.isbulkktc.com/` → **`www`'yi koruyor** (yalnız şema yükseltmesi). Yol+sorgu korunur (`/freelance?q=test` → aynen).
-  - `https://www.isbulkktc.com/sitemap.xml` → **200**, içindeki **1509 URL'nin tamamı** `https://isbulkktc.com` (apex); hiç `www` URL yok → kanonik hedef apex.
+  - `https://www.isbulkktc.com/sitemap.xml` → **200**, içindeki **207 `<loc>`'un tamamı** `https://isbulkktc.com` (apex); hiç `www` URL yok → kanonik hedef apex. (Önceki "1509 URL" **yanlıştı** — 1509 gövde boyutunun (~153 061 B) yanlış okunması; tur 39'da `grep -c '<loc>'` = **207**, apex ile birebir aynı ölçüldü.)
   - `https://www.isbulkktc.com/robots.txt` apex ile **aynı** gövde; `https://www…/.git/config` → **403** (WAF kuralı host-bağımsız çalışıyor).
   - **Etki:** zincir `http://www…/jobs?q=x` → 301 → `https://www…/jobs?q=x` → **200**: **2 hop, son durak `www`**, apex'e hiç varmıyor. `www` tam gövdeyi 200 servis ediyor → duplicate-content yüzeyi (H-03) sürüyor.
   - **Düzeltme (devir — CF paneli, sahibin onayı):** Redirect Rule
@@ -1151,3 +1151,91 @@ Sonraki lane için notlar: (1) #163'ün "CF bot engeli arama motoru botlarını
   korunuyor); `https://www/` → **200**; kanonik `www` ve apex'te de
   `https://isbulkktc.com` (doğru) → sinyal var ama **host redirect** yok.
 - **O-01r6:** origin sağlıklı (değişmedi).
+
+### Tur 39 (2026-11-10) — doküman↔canlı drift taraması (salt-okuma)
+
+Canlı build `14629df` (= main) üzerinde taze ölçüm; yıkıcı CF değişikliği yok.
+
+- **U-16r (düzeltildi):** `/.well-known/security.txt` `Expires` canlıda
+  **2027-09-06T14:49:41.258Z** (apex + `www` + Vercel alias, üçü de 200). Doküman
+  5 satırda **2027-09-01/02** yazıyordu (kendi içinde tutarsız) → canlı değere
+  çekildi (`docs/cloudflare.md` U-16/U-07/V-10/W-18-24 + özet).
+  **Nüans (tur 39 devam):** değer **sabit değil** — kaynak
+  `src/app/.well-known/security.txt/route.ts` `Expires = now + 300 gün` üretir ve
+  günlük ISR (`revalidate = 86400`) ile tazeler. Ardışık iki ölçüm (~52 dk arayla)
+  değerin ileri kaydığını doğruladı. Yani **bayatlama riski yok**; dokümandaki
+  `2027-09-06` bir anlık görüntüdür, kalıcı kayıt formüldür. (İlk nottaki "sabit
+  tarih / rotasyon ekle" önerisi geçersiz kılındı — kod zaten yapıyor.)
+- **V-01 teyit:** `google-site-verification` meta etiketi **hâlâ yok**
+  (`grep -c` = 0; `/`, `/en`, `/de`, `/en/jobs`, alias). DNS TXT'te token var,
+  HTML'de yok → GSC mülkü doğrulanmamış olabilir. Sahip: LANE-SEO/env.
+- **G-02/B-02:** CF, HTML rotalara `challenge-platform/scripts/precursor` script'i
+  enjekte ediyor (`/`, `/jobs`, `/login` = 1; `robots.txt` = 0) ama `__cf_bm`/
+  challenge **yok** → tam koruma kapalı. Bot UA matrisi: `sqlmap/1.7` → 403; çıplak
+  `sqlmap`/`nikto`/`nmap`/`Nuclei`/`ffuf`/`gobuster`/`masscan` → **200**.
+- **N-01r/H-02r:** var olmayan `/_next/static/…js` → **404** ama
+  `cache-control: public, max-age=31536000, must-revalidate`, `cf-cache-status: MISS`
+  (ilk istekte) → negatif yanıt 1 yıl cache'leniyor. Öneri değişmedi: Cache Rules →
+  "Respect Existing Headers".
+- **F-12r:** hstspreload.org → **`pending`**; edge HSTS `31536000`.
+- **Değişmeyenler:** `www` apex'e 301 değil (H-03r/R-14); `/.git/config` vb. → 403;
+  `/login` ×8 rate limit yok; `https://isbulkktc.com./` → 404 (R-01).
+
+**Yeni kimlik:** U-16r, G-02, B-02, N-01r. **Devir:** V-01 → LANE-SEO (#163 halka-1).
+
+### Tur 40 (2026-11-10) — sayısal iddia denetimi + canlı tazeleme (salt-okuma)
+
+Canlı build `a1eebc2` (= main) üzerinde taze ölçüm; yıkıcı CF değişikliği yok.
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: #594 (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: H-03r/R-14 (www→apex Redirect Rule) · V-01 (GSC env) ·
+            #163 · #170 · #227 · F-08 · G-01 · N-01r · O-01 (#518)
+Sonraki lane için notlar: (1) Bu turda dokümandaki **sayısal bir iddia yanlış
+            çıktı**: "www/sitemap.xml içeriği 1509 URL" → gerçek **207 `<loc>`**
+            (apex ile birebir aynı). 1509, gövde boyutunun (~153 061 B) yanlış
+            okunmasıdır. (2) www→apex redirect **hâlâ yok** (H-03r/R-14 değişmedi).
+            (3) WAF negatif testi 9/9 saldırı → 403, 12/12 meşru rota → 200.
+Yeni kimlik: D-32 (sayısal iddia düzeltmesi).
+```
+
+- **D-32 (doğruluk, düzeltildi):** `docs/cloudflare.md:3562` ve bu brief'in
+  H-03r/R-14 tablosu, `https://www.isbulkktc.com/sitemap.xml` içeriğini
+  **"1509 URL"** diye yazıyordu. Canlı ölçüm: `grep -c '<loc>'` = **207**, apex
+  sitemap ile **birebir aynı** (gövde 153 061 B). 1509 sayısı, bayt boyutunun
+  URL sayısı sanılmasıdır. İki yerde düzeltildi; sayı artık **207**.
+- **Teyit (drift yok):** security.txt `Expires` **2027-09-06T15:41:21Z** (dinamik,
+  tur 39'daki gibi); apex/`www`/alias 200. SPF `include:_spf.mx.cloudflare.net`,
+  `send.` `include:amazonses.com`, `_dmarc` `p=none`, `resend._domainkey` 1024-bit,
+  apex TXT 2× `google-site-verification` + `yandex-verification` — hepsi değişmedi.
+- **WAF/host:** `/.git/config`,`/.env`,`/wp-login.php`,`/.aws/credentials`,
+  `/phpmyadmin/`,`/xmlrpc.php`,`/.svn/entries`,`/api/devtools/x` → **403**;
+  `/actuator/env` → 404 (kural yok ama origin'de de yok, zararsız).
+  `http://www` → 301 → `https://www` (host korunuyor); `https://www/` → **200**.
+- **Build-info:** `{"commit":"a1eebc2…","environment":"production"}` = main →
+  deploy **güncel** (tur 31 deploy-freshness kontrolü yeşil).
+
+### Tur 41 (2026-11-10) — `www→apex` yönlendirmesi **yok** (R-01r3); iki "308" iddiası canlıya çekildi (D-33/D-34)
+
+**Yöntem:** origin sağlıklı (tur 36'dan beri) → tur 35'in "ölçüm kısıtı" notu
+geçersiz; `www` yönlendirmesi doğrudan ölçüldü.
+
+**Bulgu (R-01r3, gerçek açık):**
+- `https://www.isbulkktc.com/` → **200** (3/3 GET), apex'e yönlenmiyor → host düzeyinde duplicate content riski. Sayfa `<link rel="canonical">` ile apex'i gösteriyor (sayfa düzeyi sinyal var), ama host düzeyi yönlendirme yok.
+- `http://www.isbulkktc.com/` → **301** → `https://www.isbulkktc.com/` (host `www` kalır; CF Always Use HTTPS).
+- `https://www.isbulkktc.com./` → **404** (5/5 GET+HEAD, `x-vercel-id` dolu) — kesinti artefaktı değil.
+- `https://isbulkktc.com./` → **404**; `https://isbulkktc.com./en` → **200** (R-01, origin host eşleştirmesi).
+
+**Doküman düzeltmeleri:**
+- **D-33:** `docs/cloudflare.md` satır 2572 audit tablosu "`www` → **308** apex" → **200** + `⚠️ R-01r3`.
+- **D-34:** `docs/cloudflare.md` satır 588 R-01 kanıt bloğu `www.isbulkktc.com./` → **308** → **404** (satır 566 R-02 ile tutarlı).
+
+**Devir:** `www→apex` yönlendirmesi `next.config.ts` (`lane:infra`) işidir; bu lane
+salt-okur, CF paneli değişikliği yapılmaz.
+
+**Teyit (drift yok):** DKIM (Resend 1024-bit zayıf/E-10, CF 2048-bit OK), CAA 10
+kayıt, DNSSEC `AD=true`, security.txt `Expires` dinamik, WAF 9/9→403 & 12/12→200,
+`/.git%2Fconfig`→404 (N-11 açık), SPF/DMARC değişmedi.
