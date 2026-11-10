@@ -1379,3 +1379,27 @@ test("a failed read reports UNKNOWN with the failed flag, never a bare status", 
     assert.deepEqual(confirmOutcome("t1", read), { status: "UNKNOWN", failed: true });
   }
 });
+
+// ---------------------------------------------------------------------------
+// The claimed issue reaches the kickoff prompt (#398)
+// ---------------------------------------------------------------------------
+
+// The bug this guards (#398): `decide()` computes the issue it picked
+// (`issueNumber`) and *claims* it for the pass, but the spawn call sites only
+// ever passed `d.context` to `laneKickoff`, and `issueNumber` lived as a
+// sibling of `context`. So the claim and the prompt disagreed: the autopilot
+// claimed issue #398 (oldest labelled work) while the lane's prompt left the
+// choice open and the lane re-picked a different issue — #398 was claimed every
+// pass and never produced. `lane-autopilot.mjs` runs `main()` at import time, so
+// it cannot be imported here; pin the wiring at the source, the way the
+// aggregator/ci.yml test above does.
+test("the picked issue is threaded into the kickoff context", () => {
+  const source = readFileSync(join(HERE, "lane-autopilot.mjs"), "utf8");
+  // The kickoff builder forwards it to the prompt.
+  assert.match(source, /issueNumber: context\?\.issueNumber/);
+  // The spawn decisions carry it *inside* `context`, which is the only field the
+  // call sites pass to `laneKickoff`.
+  assert.match(source, /context: \{[^}]*issueNumber[^}]*\}/s);
+  // It is derived once and reused for both the claim and the prompt.
+  assert.match(source, /const issueNumber = named \? Number\(named\.number\) : undefined/);
+});

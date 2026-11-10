@@ -64,6 +64,27 @@ test("a first attempt carries no retry hint", () => {
   assert.doesNotMatch(prompt, /ÖNCEKİ DENEME/);
 });
 
+// The bug this guards (#398): the autopilot picks a lane's work oldest-first
+// across handoffs and labelled issues, and *claims* that exact issue so no other
+// lane takes it — but the prompt left the choice open, so the lane re-picked
+// from its own `gh` list (newest first) and worked a different issue. The
+// claimed oldest issue (#398) was handed to the lane every pass and never
+// produced. When the autopilot names the issue, the prompt must pin it and send
+// the lane to that issue, not back to its label list.
+test("a named issue pins the lane to exactly that issue", () => {
+  const text = kickoff("guvenlik", lane, { issueNumber: 398 });
+  assert.match(text, /TAM OLARAK şu issue üzerinde çalış: #398/);
+  assert.match(text, /gh issue view 398/);
+  assert.match(text, /SEÇME/);
+  assert.doesNotMatch(text, /gh issue list --state open --label/);
+});
+
+test("without a named issue the lane still looks up its label list", () => {
+  const text = kickoff("infra", lane, {});
+  assert.doesNotMatch(text, /TAM OLARAK şu issue/);
+  assert.match(text, /gh issue list --state open --label lane:infra/);
+});
+
 // The bug this guards (#304): parallel lanes push while `main` moves, and a PR
 // whose head conflicts with main gets no CI run at all — GitHub fires no
 // check-run for a CONFLICTING head, so `gh pr checks` shows only an unrelated
