@@ -293,3 +293,48 @@ zorunlu kontroller yeşil (aggregator dahil). `main` `8f4a50e3` → `3fcafbf3`.
 **Canlı teyit (görev 3, merge sonrası).** 00:30Z: `main` = canlı = `3fcafbf3` ✅.
 Tam koşu `--expect 3fcafbf` → exit 0, HTTP kanalı ulaşılabilir, 5/5 smoke route
 200. Üretim merge'i anında takip etti — **donma yok**.
+
+---
+
+## Tur 7 — 2026-11-10 (lane/teslimat)
+
+**Kapsam.** Atanmış açık `lane:teslimat` issue yok. Bu tur: sahip olunan
+`verify-production-deployment.mjs`'te bir gerçek hata düzeltildi (finding 15),
+PR merge edildi, canlı ölçüm yapıldı — ama üretim **kapalı** olduğu için teslim
+canlıda doğrulanamadı.
+
+**Bulgular.**
+
+| # | Dosya:satır | Boyut | Gözlenen | Beklenen | Etki | Durum |
+|---|---|---|---|---|---|---|
+| 1 | `scripts/verify-production-deployment.mjs` (`decideVerification`, eski `if (vercel.ok)` önce) | doğruluk / hata yolu | Vercel hesabı bloklu iken origin **402 `DEPLOYMENT_DISABLED`** döner; alias hâlâ `READY` bir deployment'a işaret edebilir. Eski sıralama önce `vercel.ok`'a bakıp **✅ yeşil** veriyordu | devre dışı deployment her sinyalin **üstünde** olmalı | Runner edge-blocked (403) olduğunda tüm smoke route'lar *atlanır* → eski script **exit 0** = sahte yeşil, hem de site herkese kapalıyken | **düzeltildi** (#522) + 5 regresyon testi |
+
+**Kanıt (bulgu 1).** Sahte `fetch` (sağlıklı Vercel alias + origin 402 + runner 403):
+**eski** → `verdict: ✅ alias built from 8d3db245`, `smoke routes: ⏭️ skipped`,
+**exit 0**. **yeni** → `❌ production deployment is disabled (not a code problem)`,
+**exit 1**. Ayrıca canlı ölçüm: `DEPLOY_TIMEOUT_SEC=45` ile eski script **61 s** poll
+edip 3 `waiting` satırı yazdı, yeni script **<1 s**'de döndü (0 satır). Yeşil-maskeleme
+testi eski sıralamaya karşı kırmızı — testi gerçekten hatayı pinliyor.
+
+**Merge kuyruğu (görev 1).** Açık PR'lar: #520 (cloudflare, BLOCKED), #519
+(guvenlik, BLOCKED), #517 (operator, BLOCKED), #493 (infra, `CLEAN` ama
+`.github/workflows/ci.yml` değiştiriyor → **"iki fren" gereği merge edilmedi,
+insan**). Bu turda zorunlu kontrolü geçip çakışmayan, kendi PR'ım dışında merge
+edilebilir PR yoktu.
+
+**Teslim edildi.** PR **#522** `app/github-actions` auto-merge ile
+02:39:29Z'de **merge edildi** (`main` `2a78026` → `1599b14a`); tüm zorunlu
+kontroller yeşil (aggregator dahil), tek kırmızı `Vercel — Account is blocked.`
+(zorunlu değil → brief'in `UNSTABLE` durumu). Merge kaydı `docs/deploy-log.md`'de.
+
+**Canlı ölçüm (görev 3) — 🔴 teslim doğrulanamadı.** 02:40Z: `main` = `1599b14a`,
+canlı = **402 her route'ta** (`/`, `/jobs`, `/companies`, `/contact`, `/en`).
+`--expect 1599b14a` → exit 1, yeni "production deployment is disabled" verdict'i.
+Bu, üretimin herkese kapalı olduğu anlamına gelir; sebep **hesap durumu** (Vercel
+block, commit status `Vercel: failure — Account is blocked.`), kod hatası değil ve
+bu depodan düzeltilemez. **#319** (`lane:infra`) kapsamında; bu lane dokunmaz.
+Bu turun tek doğrulanamayan merge'i budur ve sebebi dışsaldır — gizlenmedi, adı kondu.
+
+**Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅, `test:unit`
+**911 test / 909 pass / 0 fail / 2 todo** (yeni: `verify-production-deployment.test.mjs`
++5 test → toplam 14).
