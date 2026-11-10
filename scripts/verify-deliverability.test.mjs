@@ -10,6 +10,7 @@ import {
   isDirectRun,
   isRelaxedAligned,
   reverseIpv4,
+  rootSpfVerdict,
   spfAuthorisesSender,
   spfIpEntries,
 } from "./verify-deliverability.mjs";
@@ -188,4 +189,31 @@ test("the direct-run guard fires even when the script path holds a space or #", 
   assert.equal(isDirectRun(url, ""), false);
   // A different script on the same path must not fire.
   assert.equal(isDirectRun("file:///repo/scripts/other.mjs", "/repo/scripts/verify-deliverability.mjs"), false);
+});
+
+test("an unqueryable Return-Path subdomain is a skip, never a FAIL", () => {
+  // The regression: the root record does not authorise the sender and the
+  // Return-Path subdomain query fails (transient SERVFAIL). The old code
+  // collapsed the error to `aligned:false` and emitted a hard FAIL — "no aligned
+  // Return-Path subdomain does either" — a false negative for a state that is
+  // unknown, not negative. The script's own header forbids exactly this.
+  assert.equal(
+    rootSpfVerdict({ rootAuthorises: false, aligned: false, queryFailed: true }),
+    "skip",
+  );
+  // A subdomain that answered and does not authorise is still a real FAIL.
+  assert.equal(
+    rootSpfVerdict({ rootAuthorises: false, aligned: false, queryFailed: false }),
+    "fail",
+  );
+  // The root record authorising the sender is a pass regardless.
+  assert.equal(
+    rootSpfVerdict({ rootAuthorises: true, aligned: false, queryFailed: true }),
+    "pass",
+  );
+  // A DMARC-aligned subdomain that does authorise is the warn case.
+  assert.equal(
+    rootSpfVerdict({ rootAuthorises: false, aligned: true, queryFailed: false }),
+    "warn",
+  );
 });

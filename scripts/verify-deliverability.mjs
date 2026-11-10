@@ -213,6 +213,22 @@ export function isRelaxedAligned(authDomain, fromDomain) {
   return a === f || a.endsWith(`.${f}`) || f.endsWith(`.${a}`);
 }
 
+/**
+ * Decides the SPF verdict for the From domain's root record.
+ *
+ * The root record need not name the sending network when a DMARC-aligned
+ * Return-Path subdomain does. But "the subdomain could not be queried" is *not*
+ * "the subdomain does not authorise the sender": a transient DNS failure on the
+ * subdomain must not turn into a hard FAIL, which is the false negative the
+ * script's header forbids. That case is `skip` — the state is unknown, not
+ * negative.
+ */
+export function rootSpfVerdict({ rootAuthorises, aligned, queryFailed }) {
+  if (rootAuthorises) return "pass";
+  if (aligned) return "warn";
+  return queryFailed ? "skip" : "fail";
+}
+
 const results = [];
 function record(area, status, detail) {
   results.push({ area, status, detail });
@@ -243,22 +259,36 @@ async function checkSpf() {
   const aligned = await returnPathAlignment();
   if (lookups > 10) {
     record("SPF", "warn", `${detail} — over the 10-lookup limit, receivers may permerror`);
-  } else if (spfAuthorisesSender(spf)) {
-    record("SPF", "pass", detail);
-  } else if (aligned.aligned) {
-    record(
-      "SPF",
-      "warn",
-      `${detail} — the root record does not authorise the sender, but the Return-Path ` +
-        `subdomain ${aligned.domain} does and is DMARC-aligned with ${FROM_DOMAIN}`,
-    );
   } else {
-    record(
-      "SPF",
-      "fail",
-      `${detail} — does NOT authorise the sending network (amazonses.com) and no ` +
-        `aligned Return-Path subdomain does either`,
-    );
+    const verdict = rootSpfVerdict({
+      rootAuthorises: spfAuthorisesSender(spf),
+      aligned: aligned.aligned,
+      queryFailed: aligned.queryFailed,
+    });
+    if (verdict === "pass") {
+      record("SPF", "pass", detail);
+    } else if (verdict === "warn") {
+      record(
+        "SPF",
+        "warn",
+        `${detail} — the root record does not authorise the sender, but the Return-Path ` +
+          `subdomain ${aligned.domain} does and is DMARC-aligned with ${FROM_DOMAIN}`,
+      );
+    } else if (verdict === "skip") {
+      record(
+        "SPF",
+        "skip",
+        `${detail} — the root record does not authorise the sender, and a Return-Path ` +
+          `subdomain could not be queried, so whether the envelope aligns is unknown`,
+      );
+    } else {
+      record(
+        "SPF",
+        "fail",
+        `${detail} — does NOT authorise the sending network (amazonses.com) and no ` +
+          `aligned Return-Path subdomain does either`,
+      );
+    }
   }
 
   if (aligned.checked) {
@@ -272,10 +302,19 @@ async function checkSpf() {
  */
 async function returnPathAlignment() {
   const notes = [];
+  let queryFailed = false;
   for (const sub of RETURN_PATH_SUBDOMAINS) {
     const domain = `${sub}.${DOMAIN}`;
     const { answers, error } = await resolve(domain, "TXT");
-    if (classifyDnsResult({ answers, error }) !== "present") continue;
+    const state = classifyDnsResult({ answers, error });
+    if (state === "error") {
+      // A query failure on the subdomain is not evidence the subdomain lacks an
+      // SPF record; record it so the caller can report `skip` rather than FAIL.
+      queryFailed = true;
+      notes.push(`${domain} TXT could not be queried: ${error}`);
+      continue;
+    }
+    if (state !== "present") continue;
     const spf = answers.find((t) => /^v=spf1(\s|$)/i.test(t));
     if (!spf) continue;
     if (!spfAuthorisesSender(spf)) {
@@ -286,9 +325,9 @@ async function returnPathAlignment() {
     notes.push(
       `${domain} (Return-Path) SPF authorises the sender${aligned ? "" : " but is not aligned"}`,
     );
-    return { checked: true, aligned, domain, notes };
+    return { checked: true, aligned, queryFailed, domain, notes };
   }
-  return { checked: false, aligned: false, domain: null, notes };
+  return { checked: false, aligned: false, queryFailed, domain: null, notes };
 }
 
 async function checkDkim() {
