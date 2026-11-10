@@ -538,6 +538,91 @@ export function deployFreshnessFinding(freshness) {
   return null;
 }
 
+/** A value that is a real hex commit, trimmed, or `null` for anything else. */
+function commitOrNull(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim().toLowerCase();
+  return COMMIT_SHA.test(trimmed) ? trimmed : null;
+}
+
+/**
+ * Pick the live commit to trust from the two channels, or say why neither can
+ * answer.
+ *
+ * The health check has two ways to learn what production is serving: the origin's
+ * `/api/build-info` (works from a laptop, blocked from a GitHub runner by
+ * Cloudflare's 403) and the Vercel API's production alias (works from CI, needs
+ * `VERCEL_TOKEN`). `verify-production-deployment.mjs` treats them as two channels
+ * for the same question; the health check must too, or the scheduled run is
+ * blind exactly where it runs (#590). Prefer the origin (it proves the site is
+ * actually reachable) and fall back to the API.
+ *
+ * A non-commit value (`build-info`'s literal `"unknown"`, a placeholder) is not a
+ * live commit: it cannot be compared, so it falls through to the other channel
+ * rather than being trusted and reported as a stale deploy.
+ *
+ * `unmeasurable` is a human phrase naming what was missing, kept for the caller
+ * to print — this check must never drop the deploy row (silence reads as health,
+ * #547/#584), but a 403 with no token is an environment limitation, not a defect,
+ * and must not inflate every scheduled run with a warning (#590).
+ *
+ * @param {{httpCommit?: string|null, httpBlocked?: boolean, vercelCommit?: string|null, vercelConfigured?: boolean}} [channels]
+ * @returns {{liveCommit: string|null, source: 'http'|'vercel'|null, blocked: boolean, unmeasurable: string|null}}
+ */
+export function resolveDeployEvidence({
+  httpCommit,
+  httpBlocked = false,
+  vercelCommit,
+  vercelConfigured = false,
+} = {}) {
+  const http = commitOrNull(httpCommit);
+  if (http) return { liveCommit: http, source: 'http', blocked: httpBlocked, unmeasurable: null };
+  const vercel = commitOrNull(vercelCommit);
+  if (vercel) return { liveCommit: vercel, source: 'vercel', blocked: httpBlocked, unmeasurable: null };
+
+  const reason = httpBlocked
+    ? 'the origin blocked the probe (HTTP 403)'
+    : 'the origin reported no build-info';
+  const fallback = vercelConfigured
+    ? 'the Vercel API returned no commit'
+    : 'no VERCEL_TOKEN is configured';
+  return {
+    liveCommit: null,
+    source: null,
+    blocked: httpBlocked,
+    unmeasurable: `${reason} and ${fallback}`,
+  };
+}
+
+/**
+ * The deploy finding, decided from both channels.
+ *
+ * Wraps {@link resolveDeployEvidence} and {@link deployFreshnessFinding}: when a
+ * channel yields a commit the verdict is the normal freshness comparison; when
+ * neither can, the row is still printed but its level depends on *why*. A 403
+ * with no token is this environment's known blind spot — an `info` line that
+ * prints and is excluded from the warning tally, so the operator keeps seeing it
+ * without the summary crying wolf every hour (#590). Every other unmeasurable
+ * case is unexpected and stays a `warn` (#584's rule: never silently drop).
+ *
+ * @param {{httpCommit?: string|null, httpBlocked?: boolean, vercelCommit?: string|null, vercelConfigured?: boolean, mainCommit?: string|null}} [input]
+ * @returns {{level: 'ok'|'warn'|'info', area: 'deploy', detail: string}|null}
+ */
+export function deployEvidenceFinding(input = {}) {
+  const evidence = resolveDeployEvidence(input);
+  if (evidence.liveCommit) {
+    return deployFreshnessFinding(
+      classifyDeployFreshness({ liveCommit: evidence.liveCommit, mainCommit: input.mainCommit }),
+    );
+  }
+  const expected = evidence.blocked && !input.vercelConfigured;
+  return {
+    level: expected ? 'info' : 'warn',
+    area: 'deploy',
+    detail: `unmeasurable — ${evidence.unmeasurable}`,
+  };
+}
+
 /**
  * Classify the gap since the newest scheduled run of the health workflow.
  *

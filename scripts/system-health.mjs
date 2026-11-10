@@ -16,10 +16,11 @@
 
 import { execFileSync } from 'node:child_process';
 
-import { classifyCronFreshness, classifyDeployFreshness, classifyProductionProbe, classifyRedRuns, classifyTokenProbe, deployFreshnessFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests, supabaseTokenProblem } from './system-health-core.mjs';
+import { classifyCronFreshness, classifyProductionProbe, classifyRedRuns, classifyTokenProbe, deployEvidenceFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests, supabaseTokenProblem } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
 const SUPABASE_PROJECT_REF = process.env.SUPABASE_PROJECT_REF ?? 'uwmhquvzbilbfzdrlxmb';
+const VERCEL_API = 'https://api.vercel.com';
 const asJson = process.argv.includes('--json');
 
 function gh(args) {
@@ -114,6 +115,12 @@ async function probeSupabaseToken(token, projectRef) {
  * The commit the live origin reports it was built from, or `null` if it cannot
  * be read. Used only to compare against the default branch head; a failure here
  * is "could not verify", never evidence of a stale deploy.
+ *
+ * Also reports whether the origin *blocked* the probe (Cloudflare answers
+ * datacenter IPs, including GitHub runners, with 403). That flag separates "the
+ * site is unreachable from here" from "the site answered but had nothing to
+ * say", which decides whether an unmeasurable deploy is this environment's known
+ * blind spot or an unexpected one.
  */
 async function fetchLiveCommit() {
   const origin = process.env.HEALTH_ORIGIN || 'https://isbulkktc.com';
@@ -124,13 +131,69 @@ async function fetchLiveCommit() {
       headers: { accept: 'application/json' },
       signal: controller.signal,
     });
-    if (!response.ok) return null;
+    if (response.status === 403 || response.status === 429) {
+      return { commit: null, blocked: true };
+    }
+    if (!response.ok) return { commit: null, blocked: false };
     const body = await response.json();
-    return typeof body?.commit === 'string' ? body.commit : null;
+    return { commit: typeof body?.commit === 'string' ? body.commit : null, blocked: false };
   } catch {
-    return null;
+    return { commit: null, blocked: false };
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/**
+ * The commit behind the deployment the Vercel production alias points at, or
+ * `null` when the token is absent or the API cannot answer.
+ *
+ * This is the second channel for the same question `fetchLiveCommit` asks. The
+ * origin channel is blocked from CI by Cloudflare's 403, so without this the
+ * hourly check can never measure deploy freshness where it runs (#590). Mirrors
+ * `verify-production-deployment.mjs`'s `resolveVercelContext` + alias read, but
+ * only reads — it needs no polling, just the current alias.
+ *
+ * `configured` distinguishes "no token" from "token set but the API gave no
+ * commit", so the caller can tell a plain missing-secret situation (expected in
+ * this environment) from a real API problem.
+ */
+async function fetchVercelCommit() {
+  const token = (process.env.VERCEL_TOKEN || '').trim();
+  if (!token) return { commit: null, configured: false };
+  const teamSlug = process.env.VERCEL_TEAM_SLUG || 'orijin1';
+  const projectName = process.env.VERCEL_PROJECT || 'isbulkktc';
+  const get = async (url) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      });
+      if (!response.ok) return null;
+      return await response.json();
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  try {
+    const teams = await get(`${VERCEL_API}/v2/teams?limit=100`);
+    const team = (teams?.teams ?? []).find((entry) => entry.slug === teamSlug);
+    if (!team) return { commit: null, configured: true };
+    const project = await get(
+      `${VERCEL_API}/v9/projects/${encodeURIComponent(projectName)}?teamId=${team.id}`,
+    );
+    const liveUid = project?.targets?.production?.id;
+    if (!liveUid) return { commit: null, configured: true };
+    const detail = await get(`${VERCEL_API}/v13/deployments/${liveUid}?teamId=${team.id}`);
+    if (detail?.readyState !== 'READY') return { commit: null, configured: true };
+    const commit = typeof detail?.meta?.githubCommitSha === 'string' ? detail.meta.githubCommitSha : null;
+    return { commit, configured: true };
+  } catch {
+    return { commit: null, configured: true };
   }
 }
 
@@ -299,11 +362,26 @@ note(production.level, 'production', production.detail);
 // deploy: on 2026-11-10 the origin was four commits behind `main` (the new
 // Vercel account has no Git auto-deploy, #547) while every GitHub-derived check
 // read green. Compare the origin's build-info commit to the default branch head.
-const freshness = classifyDeployFreshness({
-  liveCommit: await fetchLiveCommit(),
+//
+// The origin channel is blocked from GitHub runners (Cloudflare answers those
+// IPs with 403), so a second channel carries the verdict from CI exactly as
+// `verify-production-deployment.mjs` does: the Vercel API's production alias.
+// Without it the hourly check was blind where it runs (#590) — `deployEvidenceFinding`
+// decides from both, and an unmeasurable deploy with no token is an `info` line,
+// not the permanent warning that buried the real signal.
+const httpBuild = await fetchLiveCommit();
+// Only ask the Vercel API when the origin channel could not answer — it is the
+// fallback, not a second opinion, and the origin proves reachability when it can.
+const vercelBuild = httpBuild.commit
+  ? { commit: null, configured: Boolean((process.env.VERCEL_TOKEN || '').trim()) }
+  : await fetchVercelCommit();
+const deployFinding = deployEvidenceFinding({
+  httpCommit: httpBuild.commit,
+  httpBlocked: httpBuild.blocked,
+  vercelCommit: vercelBuild.commit,
+  vercelConfigured: vercelBuild.configured,
   mainCommit: mainCommitSha(),
 });
-const deployFinding = deployFreshnessFinding(freshness);
 if (deployFinding) note(deployFinding.level, deployFinding.area, deployFinding.detail);
 
 // 4. Runs held for approval: invisible unless asked for.
@@ -339,12 +417,16 @@ if (tokenProblem) {
   }
 }
 
-const ICON = { ok: 'OK  ', warn: 'WARN', fail: 'FAIL' };
+// `info` is a level below `warn`: a row that prints for the operator's eyes but
+// is not a problem with the system. The deploy line uses it for the known
+// "unmeasurable from CI, no VERCEL_TOKEN" state so that state stays visible
+// without a permanent warning (see `deployEvidenceFinding`).
+const ICON = { ok: 'OK  ', warn: 'WARN', fail: 'FAIL', info: 'INFO' };
 if (asJson) {
   console.log(JSON.stringify(findings, null, 2));
 } else {
   for (const f of findings) {
-    console.log(`  ${ICON[f.level]} ${f.area.padEnd(12)} ${f.detail}`);
+    console.log(`  ${ICON[f.level] ?? f.level.toUpperCase()} ${f.area.padEnd(12)} ${f.detail}`);
   }
 }
 

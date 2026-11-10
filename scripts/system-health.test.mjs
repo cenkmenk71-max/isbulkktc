@@ -12,6 +12,7 @@ import {
   classifyRedRuns,
   classifySupabaseToken,
   classifyTokenProbe,
+  deployEvidenceFinding,
   deployFreshnessFinding,
   failingWorkflows,
   isDeploymentDisabled,
@@ -22,6 +23,7 @@ import {
   redPullRequests,
   redRunsOnMain,
   redWorkflowsOnMain,
+  resolveDeployEvidence,
   stuckPullRequests,
   supabaseTokenProblem,
 } from "./system-health-core.mjs";
@@ -875,4 +877,104 @@ test("an unexpected status warns and an absent status prints nothing", () => {
   assert.match(classifyTokenProbe({ status: 500 }).reason, /HTTP 500/);
   assert.equal(classifyTokenProbe({}), null);
   assert.equal(classifyTokenProbe(), null);
+});
+
+// --- resolveDeployEvidence / deployEvidenceFinding --------------------------
+//
+// #590: the health check measured deploy freshness through one channel only —
+// `GET /api/build-info` on the origin — and Cloudflare answers GitHub runners'
+// datacenter IPs with 403. So `fetchLiveCommit()` returned null on every
+// scheduled run and the deploy verdict was *always* unmeasurable exactly where
+// it runs, while the push-triggered `verify-production-deployment.mjs` carried
+// the same verdict through the Vercel API. The check must read both channels.
+
+test("the origin channel is preferred when it answers with a commit", () => {
+  const evidence = resolveDeployEvidence({
+    httpCommit: "2b899dc6b512",
+    vercelCommit: "111111111111",
+    vercelConfigured: true,
+  });
+  assert.equal(evidence.liveCommit, "2b899dc6b512");
+  assert.equal(evidence.source, "http");
+  assert.equal(evidence.unmeasurable, null);
+});
+
+test("a 403 on the origin falls back to the Vercel API's commit", () => {
+  const evidence = resolveDeployEvidence({
+    httpCommit: null,
+    httpBlocked: true,
+    vercelCommit: "2b899dc6b512",
+    vercelConfigured: true,
+  });
+  assert.equal(evidence.liveCommit, "2b899dc6b512");
+  assert.equal(evidence.source, "vercel");
+  assert.equal(evidence.blocked, true);
+  assert.equal(evidence.unmeasurable, null);
+});
+
+test("build-info's non-commit placeholder falls through to the Vercel channel", () => {
+  // `build-info` reports the literal "unknown" for a non-Git deploy. That is not
+  // a commit to compare, so it must not be trusted as the live build.
+  const evidence = resolveDeployEvidence({
+    httpCommit: "unknown",
+    vercelCommit: "2b899dc6b512",
+    vercelConfigured: true,
+  });
+  assert.equal(evidence.liveCommit, "2b899dc6b512");
+  assert.equal(evidence.source, "vercel");
+});
+
+test("403 with no Vercel token is unmeasurable and names both missing halves", () => {
+  const evidence = resolveDeployEvidence({ httpBlocked: true, vercelConfigured: false });
+  assert.equal(evidence.liveCommit, null);
+  assert.equal(evidence.source, null);
+  assert.match(evidence.unmeasurable, /blocked the probe/);
+  assert.match(evidence.unmeasurable, /no VERCEL_TOKEN/);
+});
+
+test("a configured token that yields no commit is a different unmeasurable case", () => {
+  const evidence = resolveDeployEvidence({ httpBlocked: true, vercelConfigured: true });
+  assert.match(evidence.unmeasurable, /Vercel API returned no commit/);
+  assert.doesNotMatch(evidence.unmeasurable, /no VERCEL_TOKEN/);
+});
+
+test("a measurable deploy is compared to main and reported at its real level", () => {
+  // Live behind main → warn, naming both SHAs (the #547 stale-deploy case), even
+  // when the commit arrived over the Vercel channel.
+  const stale = deployEvidenceFinding({
+    httpBlocked: true,
+    vercelCommit: "3644cbe3501b",
+    vercelConfigured: true,
+    mainCommit: "2b899dc6b512",
+  });
+  assert.equal(stale.level, "warn");
+  assert.match(stale.detail, /3644cbe/);
+  assert.match(stale.detail, /2b899dc/);
+
+  const current = deployEvidenceFinding({
+    httpCommit: "2b899dc6b512",
+    mainCommit: "2b899dc6b512",
+  });
+  assert.equal(current.level, "ok");
+});
+
+test("an unmeasurable deploy with no token is an info line, not a warning", () => {
+  // The 403 + no-token state is this environment's known blind spot. It must
+  // still print (never silently drop, #584) but must not inflate the hourly
+  // summary with a permanent warning that buries the real signal (#590).
+  const finding = deployEvidenceFinding({ httpBlocked: true, vercelConfigured: false });
+  assert.equal(finding.level, "info");
+  assert.equal(finding.area, "deploy");
+  assert.match(finding.detail, /unmeasurable/);
+});
+
+test("any other unmeasurable case stays a warning, never a silent drop", () => {
+  // A configured token that still could not answer is unexpected — a real
+  // problem, not the known no-token blind spot.
+  assert.equal(
+    deployEvidenceFinding({ httpBlocked: true, vercelConfigured: true }).level,
+    "warn",
+  );
+  // The origin answered (200) but carried no commit: also unexpected.
+  assert.equal(deployEvidenceFinding({ httpCommit: null }).level, "warn");
 });
