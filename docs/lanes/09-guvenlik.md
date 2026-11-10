@@ -2052,3 +2052,53 @@ Sonraki lane için notlar: Bu bulgu #533'ün **kısmi** düzeltmesini tamamlar;
   #533 yalnız "host allowlist var mı" sorusunu kapattı, "app ile aynı mı"
   sorusunu açık bıraktı.
 ```
+
+## Durum (2026-11-10, 48. tur) — kurtarma: signIn kapısı vakumluydu
+
+Kurtarma turu: alan taranmadı, tek küçük sınırlı düzeltme. Açık `lane:guvenlik`
+issue'larından **#514** (mail-throttle kapılarını gate'e terfi ettir) `main`'de
+zaten inmişti (`2f453e8`, PR #519) — issue açık kalmış, kapatılabilir.
+
+Bu turda asıl bulgu **kendi katmanımın dedektöründe** çıktı:
+`tests/security/account-lifecycle-surface.test.ts` §3 kapısı (signIn kill-switch)
+`source` birleşiminde `signIn\b` deseniyle eşleşiyordu. `source` tüm `src/**`
+dosyalarının birleşimidir ve kardeş test dosyası
+`src/features/identity/account-status.test.ts:36` şu **dize sabitini** taşır:
+
+```js
+const signIn = source.match(/export async function signIn\b[\s\S]*?\n\}/);
+```
+
+`signIn\b` bu regex **literaline** uyduğu için `signIn[0]` gerçek `actions.ts`
+gövdesi değil, o literalın kopyasıydı — kapı kendine karşı doğruluyor ve gerçek
+kodda **hiç kırmızı olamıyordu**.
+
+- **Gözlenen:** `signIn[0]` = `export async function signIn\b[\s\S]*?\n\}/);…`
+  (`actions.ts` değil).
+- **Beklenen:** `export async function signIn(` ile başlayan gerçek gövde.
+- **Etki:** `signIn` `profiles.status` okumasını veya `signOut()`'u kaybetse bile
+  test yeşil kalırdı — kill-switch kapısı hiçbir şey kanıtlamıyordu.
+- **Düzeltme:** desen `signIn\(` (bildirimin açık parantezi) olacak şekilde
+  daraltıldı; yanına **decoy self-test'i** (`signIn\b` literalini eşleştirmemeli)
+  ve **vakumsuzluk kontrolü** (`signIn[0]` hâlâ `signInWithPassword` içermeli)
+  eklendi. Blok yolu da **sıralı çift** olarak pinlendi:
+  `isAccountBlocked(` … `signOut(`.
+- **Kanıt (mutasyon):** (a) deseni `signIn\b`'ye geri al → kırmızı;
+  (b) blok yolundan `signOut()`'u sil (yalnız okuma kalır) → kırmızı.
+
+### Kapılar (yeşil)
+
+- `bun run test:security` → 204 test / 197 pass / **0 fail** / 7 todo (+1 test).
+- `bun run lint` ✓ · `bun run typecheck` ✓ · `bun run check:frontend-source` ✓.
+- `bun run test:unit` → 1026 test / 1026 pass / 0 fail / 0 todo.
+
+### Bakılmayan / değişmeyen
+
+Alan taranmadı (kurtarma turu). `docs/threat-model.md` / `docs/data-retention.md`
+değişmedi. Erişilebilirlik/kontrast/RTL bu lane'de kapsam dışı. Kardeş
+`deletionRpcs`/`statusWriters` dedektörleri aynı dosyada tarandı: her biri
+`source`'ta aradığı yapıyı kendi dize sabitinde **yazmıyor**, yani vakum riski yok.
+
+### Devir
+
+Yeni devir yok. **#514** kapıya terfi etti (main'de inmiş) — issue kapatılabilir.
