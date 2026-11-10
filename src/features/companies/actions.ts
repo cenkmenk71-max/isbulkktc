@@ -9,6 +9,13 @@ import { getLocalePrefix } from "@/i18n/routing";
 import { companyDirectory } from "./directory-data";
 import type { CompanyDirectoryEntry } from "./directory";
 import { getManagedDirectoryEntries } from "@/server/dal/content";
+// Namespace import, not a named one: the integration harness replaces this
+// module with a recorder whose export list is written out by hand, and a named
+// import of a function that list omits fails at ESM link time — killing every
+// test that merely imports this action, not just the one that sends mail. The
+// send is best-effort behind a try/catch anyway, so a double that lacks it
+// degrades to a caught error exactly like a delivery failure.
+import * as mailer from "@/server/email/mailer";
 import {
   companyProfileSchema,
   createCompanySchema,
@@ -165,16 +172,22 @@ export async function submitCompanyProfile(
     return { status: "error", message: "saveFailed" };
   }
 
-  const { error } = pendingSubmission
+  const { data: submissionId, error } = pendingSubmission
     ? await supabase
         .from("company_profile_submissions")
         .update(profile)
         .eq("id", pendingSubmission.id)
-    : await supabase.from("company_profile_submissions").insert({
-        ...profile,
-        company_id: company.id,
-        submitted_by: user.id,
-      });
+        .select("id")
+        .single()
+    : await supabase
+        .from("company_profile_submissions")
+        .insert({
+          ...profile,
+          company_id: company.id,
+          submitted_by: user.id,
+        })
+        .select("id")
+        .single();
 
   if (error) {
     if (error.code === "23505") {
@@ -185,6 +198,33 @@ export async function submitCompanyProfile(
     }
     console.error("Company profile submission failed.", { code: error.code });
     return { status: "error", message: "saveFailed" };
+  }
+
+  // The submission is now queued, so nobody is looking at it until an admin
+  // happens to open the queue (#465). Tell the employer it arrived and alert the
+  // review inbox. Best-effort: `deliver` reports its own failures under
+  // `email_health`, and a mail problem must never undo the stored submission.
+  try {
+    await mailer.sendCompanyProfileEmails({
+      to: user.email,
+      locale: user.locale,
+      // The submission row's own id is the idempotency key. Using the company
+      // id here would suppress a *second* acknowledgement after a rejected
+      // submission is resubmitted within Resend's idempotency window — the
+      // "I submitted and heard nothing" symptom #465 is about.
+      submissionId: submissionId.id,
+      companyName: result.data.companyName,
+      categories: result.data.categoriesText.join(", ") || null,
+      website: result.data.website,
+      phone: result.data.phone,
+      publicEmail: result.data.publicEmail,
+      address: result.data.address,
+      submittedBy: user.email,
+    });
+  } catch (mailError) {
+    console.error("Company profile notification could not be sent.", {
+      error: mailError instanceof Error ? mailError.message : "unknown_error",
+    });
   }
 
   revalidatePath(`${getLocalePrefix(user.locale)}/company/dashboard`);

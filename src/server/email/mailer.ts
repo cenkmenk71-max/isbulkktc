@@ -18,6 +18,11 @@ import {
   type WelcomeAudience,
 } from "../../../supabase/functions/_shared/email-render.ts";
 import { resolveEmailLocale } from "../../../supabase/functions/_shared/email-copy.ts";
+import {
+  renderCompanyProfileAcknowledgement,
+  renderCompanyProfileTeamEmail,
+  type CompanyProfileSubmission,
+} from "./company-profile-render";
 import { buildEmailHeaders, type EmailHeaders } from "./email-headers";
 import { EMAIL_HEALTH_EVENT, reportDeliveryFailure } from "./delivery-health";
 
@@ -66,6 +71,17 @@ export function getFeedbackInbox(): string | null {
   const inbox =
     process.env.FEEDBACK_INBOX_EMAIL?.trim() ||
     process.env.SALES_CONTACT_EMAIL?.trim();
+  return inbox && inbox.includes("@") ? inbox : null;
+}
+
+/**
+ * Inbox that receives company-profile review alerts (#465); falls back to the
+ * feedback inbox, then the sales contact. Without it a new submission has no
+ * destination and the employer's message disappears silently.
+ */
+export function getCompanyReviewInbox(): string | null {
+  const inbox =
+    process.env.COMPANY_REVIEW_INBOX_EMAIL?.trim() || getFeedbackInbox();
   return inbox && inbox.includes("@") ? inbox : null;
 }
 
@@ -313,4 +329,55 @@ export async function sendEngagementEmail(input: {
   await deliver(email, input.to, `engagement/${input.campaignId}`, {
     unsubscribeUrl: input.unsubscribeUrl,
   });
+}
+
+/**
+ * Company profile submitted for review (#465). Sends the employer an
+ * acknowledgement and alerts the review inbox. Both sends are independent and
+ * best-effort: `deliver` swallows provider errors, and a caller wraps this in
+ * try/catch so a mail problem never fails the primary insert.
+ */
+export async function sendCompanyProfileEmails(
+  input: CompanyProfileSubmission & {
+    /** The submitting employer's account email; the acknowledgement recipient. */
+    to: string | null | undefined;
+    locale: string | null | undefined;
+    submissionId: string;
+  },
+): Promise<void> {
+  const locale = resolveEmailLocale(input.locale);
+  const siteUrl = localeUrl(locale, "/");
+
+  if (input.to) {
+    const acknowledgement = renderCompanyProfileAcknowledgement({
+      locale,
+      siteUrl,
+      companyName: input.companyName,
+      actionUrl: localeUrl(locale, "/company/dashboard"),
+    });
+    await deliver(
+      acknowledgement,
+      input.to,
+      `company-profile-ack/${input.submissionId}`,
+    );
+  }
+
+  const inbox = getCompanyReviewInbox();
+  if (inbox) {
+    const teamEmail = renderCompanyProfileTeamEmail({
+      locale,
+      siteUrl,
+      companyName: input.companyName,
+      categories: input.categories,
+      website: input.website,
+      phone: input.phone,
+      publicEmail: input.publicEmail,
+      address: input.address,
+      submittedBy: input.submittedBy,
+      actionUrl: localeUrl(locale, "/admin/company-profiles"),
+    });
+    await deliver(teamEmail, inbox, `company-profile-team/${input.submissionId}`);
+  } else {
+    console.warn("Company profile review email skipped: no inbox configured.");
+  }
 }
