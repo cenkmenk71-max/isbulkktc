@@ -1,6 +1,6 @@
 begin;
 
-select plan(45);
+select plan(48);
 
 -- Web Push tables are capability storage: an endpoint plus its two keys is
 -- enough to deliver a notification to a device. The whole client surface is
@@ -206,6 +206,49 @@ select throws_ok(
   null,
   'an undersized p256dh key is rejected'
 );
+
+-- The endpoint host must be a known push service (#282). The app already
+-- refuses other hosts, but the RPC is directly callable with the publishable
+-- key, so the database enforces the same rule.
+select throws_ok(
+  $$select public.register_push_subscription(
+      'https://evil.example.test/push',
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      null
+    )$$,
+  '22023',
+  null,
+  'a push endpoint on a non-push host is rejected'
+);
+
+select throws_ok(
+  $$select public.register_push_subscription(
+      'https://127.0.0.1/push',
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      null
+    )$$,
+  '22023',
+  null,
+  'a loopback push endpoint is rejected before it reaches the table'
+);
+
+select lives_ok(
+  $$select public.register_push_subscription(
+      'https://wns2-par02p.notify.windows.com/w/?token=' || pg_catalog.repeat('w', 40),
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      null
+    )$$,
+  'a regional push-service subdomain is accepted'
+);
+
+-- Drop the extra row so the ownership-count assertions below still hold.
+reset role;
+delete from public.push_subscriptions
+where endpoint =
+  'https://wns2-par02p.notify.windows.com/w/?token=' || pg_catalog.repeat('w', 40);
 
 -- ---------------------------------------------------------------------------
 -- An endpoint is a browser, not an account: registering it again reassigns it
