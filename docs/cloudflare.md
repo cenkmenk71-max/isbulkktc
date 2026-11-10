@@ -585,7 +585,7 @@ boyutu tazelendi. **Bir yeni bulgu (R-01)** var; gerisi temiz.
 curl -sSI https://isbulkktc.com./      → HTTP/2 404   (x-matched-path: /[locale]/[...rest])
 curl -sSI https://isbulkktc.com./jobs  → HTTP/2 404
 curl -sSI https://isbulkktc.com./en    → HTTP/2 200
-curl -sSI https://www.isbulkktc.com./  → HTTP/2 308 → https://isbulkktc.com/
+curl -sSI https://www.isbulkktc.com./  → HTTP/2 404  (tur 41 yeniden ölçüm: 5/5 GET + HEAD, x-vercel-id dolu)
 ```
 3/3 tekrarda **404**. TLS el sıkışması başarılı (SNI `isbulkktc.com.` sertifikayla
 eşleşir), CF 404'ü **origin'e** iletir (`x-vercel-id` dolu) → hata **Vercel/Next
@@ -2569,7 +2569,7 @@ LANE-INFRA).
 
 | # | Alan | Ölçüm | Durum |
 |---|---|---|---|
-| 1 | DNS: A/proxied/TTL/`www`/mail | apex+`www` → CF anycast (`104.21.29.3`, `172.67.171.53`), proxied; `www` → **308** apex; SPF/DKIM/DMARC/CAA/DNSSEC değişmedi | ✔ |
+| 1 | DNS: A/proxied/TTL/`www`/mail | apex+`www` → CF anycast (`104.21.29.3`, `172.67.171.53`), proxied; `www` → **200** (apex'e yönlenmiyor — R-01r3); SPF/DKIM/DMARC/CAA/DNSSEC değişmedi | ⚠️ R-01r3 |
 | 2 | SSL/TLS: mod/min/HSTS/AlwaysUseHTTPS | SSL Labs **`A+`** 4/4, yalnız **TLS 1.2+1.3**; `http://` → **301**; HSTS+`includeSubDomains`+`preload`; **H-01r** (12 ay tavanı) | ⚠️ H-01r |
 | 3 | Cache Rules / `Vary` / dinamik yollar | statik `immutable`+`HIT`; dinamik HTML `private, no-store`; **H-02** (Browser Cache TTL: `/robots.txt` 30 gün, `/sitemap.xml` 1 saat) hâlâ açık | ⚠️ H-02 |
 | 4 | WAF: 4 kural + managed; bypass | saldırı **12/12 → 403**; meşru **18/18 → 200**; `sqlmap` **403**; **N-11** (`%2F`) açık | ⚠️ N-11 |
@@ -3789,3 +3789,54 @@ karşılanır; 300 gün < 1 yıl olduğundan "bir yıldan kısa öner" tavsiyesi
 uygulanıyor. Yani ek rotasyon **gerekmez**; yukarıdaki "sabit tarih" ifadeleri
 kalıcı kayıt değil, **günlük kayan anlık görüntüdür** — kalıcı kayıt formüldür
 (`now + 300 gün`, günlük ISR).
+
+## Tur 41 (2026-11-10) — `www→apex` yönlendirmesi **yok** (R-01r3): iki doküman iddiası canlıya çekildi (D-33/D-34)
+
+**Yöntem:** origin **sağlıklı** (tur 36'dan beri), bu yüzden tur 35'in "ölçüm
+kısıtı" (D-21 sınıfı) notu artık geçersiz — `www` yönlendirmesi doğrudan
+ölçülebilir. Üç iddia canlıya karşı sınandı.
+
+### R-01r3 (gerçek bulgu — kesinti artefaktı DEĞİL)
+
+Tur 35 (R-01r) "deployment yokken `https://www → apex` ateşlenmiyor, sağlıklı
+origin'de yeniden ölçülmeli" demişti. Tur 36 (H-03) sağlıklı origin'de **200**
+(apex'e yönlenmiyor) ölçtü. Bu tur **bağımsız olarak teyit edildi**:
+
+| İstek | Yanıt | Katman |
+|---|---|---|
+| `https://www.isbulkktc.com/` (3× GET) | **200** (yönlenmiyor) | origin |
+| `http://www.isbulkktc.com/` | **301** → `https://www.isbulkktc.com/` (host `www` kalır) | **CF** (Always Use HTTPS) |
+| `https://www.isbulkktc.com./` (5× GET+HEAD) | **404** (`x-vercel-id` dolu) | origin |
+| `https://isbulkktc.com./` | **404** | origin |
+| `https://isbulkktc.com./en` | **200** | origin |
+
+**Sonuç:** `www` yönlendirmesi **yalnız şemayı** düzeltir (`http→https`, CF),
+**host'u kanonikleştirmez**. `https://www` apex ile aynı gövdeyi **200** servis
+eder → **duplicate content / kanonik risk** (SEO). Bu artık bir ölçüm kısıtı
+değil, **doğrulanmış konfig eksiği**: `next.config.ts` `redirects()` içinde
+`www→apex` kuralı yok, Vercel domain-level yönlendirme de yok. Apex host'un
+sondaki-nokta (`isbulkktc.com.`) 404'ü ise origin host eşleştirmesinde (R-01),
+CF'de değil.
+
+### D-33 (doküman doğruluğu) — audit tablosu satır 1
+
+`docs/cloudflare.md` satır 2572 (`| 1 | DNS … |`) "`www` → **308** apex" diyordu;
+canlı **200** (yönlenmiyor). Satır **200** + `⚠️ R-01r3` olarak düzeltildi.
+
+### D-34 (doküman doğruluğu) — R-01 kanıt bloğu
+
+Aynı doküman satır 588 (R-01 kanıt bloğu) `https://www.isbulkktc.com./` → **308**
+diyordu; canlı **404** (5/5 GET+HEAD, `x-vercel-id` dolu). Düzeltildi. Bu, satır
+566'daki (R-02, tur 36) **404** ifadesiyle de artık tutarlı.
+
+### Teyit edilen (değişiklik gerekmedi)
+
+- **DKIM:** Resend **1024-bit** (E-10 zayıf, açık), CF Email Routing **2048-bit** (OK).
+- **CAA:** 10 kayıt; `pki.goog`/`letsencrypt.org` yetkili. **DNSSEC:** `AD=true`.
+- **security.txt:** `Expires` dinamik (`now + 300 gün`, günlük ISR) — bayatlama yok.
+- **WAF:** 9/9 saldırı → **403**; 12/12 meşru rota → **200**. **N-11** açık: `/.git%2Fconfig` → 404, `/%2e%2e/…` → 404 (`%2F` bypass).
+- **SPF:** apex `include:_spf.mx.cloudflare.net`, send `include:amazonses.com`; DMARC `p=none`.
+
+**Etki:** yalnız doküman doğruluğu (D-33/D-34) + SEO kanonik riski (R-01r3).
+CF paneli değişikliği **yok** (bu lane salt-okur); `www→apex` yönlendirmesi
+gerekiyorsa sahibi `lane:infra`dır (`next.config.ts`) → handoff.
