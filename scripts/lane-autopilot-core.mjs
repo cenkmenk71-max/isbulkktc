@@ -219,7 +219,10 @@ export function diedWithoutWorking(conversation) {
  *     the window", not age. `updated_at` alone cannot see it — a lane that greps
  *     and re-reads forever keeps `updated_at` moving while landing nothing — so
  *     the caller passes the lane branch's newest commit time (`commitsByLane`).
- *     A lane that just started (window not elapsed) is not judged.
+ *     A lane that just started (window not elapsed) is not judged. This signal
+ *     is read **only for a stopped lane**: it reads the *remote* branch, which a
+ *     still-working lane has not pushed to yet, so a running lane is left to the
+ *     liveness and ceiling signals and is never judged commit-less mid-work.
  *   - **idle** — it is still `running` but has not been touched for `maxIdleMs`.
  *     `updated_at` moves on every turn (tool call, model reply), so a *running*
  *     conversation that stopped moving is a dead sandbox whose agent is gone;
@@ -330,8 +333,23 @@ export function poisonedConversations(conversations, options = {}) {
     // name that does not line up) is left unjudged on this signal rather than
     // assumed commit-less: a naming mismatch would otherwise poison the whole
     // team at once. The idleness and ceiling signals still decide for it.
+    //
+    // The commit signal is read only for a *stopped* lane, never a running one.
+    // It reads the lane branch's newest commit from the remote, but a lane
+    // commits locally and pushes only when it opens or updates its PR (the
+    // kickoff asks it to; the operator lane pushes only at PR time). A lane that
+    // is working right now therefore has a remote branch that lags its local one
+    // by however long it has been working: LANE-supabase held local commits at
+    // 23:05/23:08 while `refs/heads/lane/supabase` still read 17:49, and the
+    // signal reported it stalled mid-work — interrupting it would have killed
+    // live work, the exact "signal reads the wrong thing" family the brief warns
+    // about. A running lane is judged by liveness (`idle`) and the hard ceiling
+    // instead. For a stopped lane the signal is honest: "never pushed anything"
+    // does mean "never landed anything", which is the state a leaked transcript
+    // must not be resumed from.
     const commitAt = commitAtFor(title.replace(/^LANE-/, ''));
     const noCommit =
+      !running &&
       commitAt !== undefined &&
       noCommitInWindow({ commitAt, since: startedAt, now, windowMs: commitLimit });
     if (idle || overCeiling || noCommit) poisoned.push(conversation);

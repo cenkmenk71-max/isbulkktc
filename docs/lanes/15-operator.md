@@ -607,3 +607,44 @@ yakalar.
 **Sonraki.** Bir sonraki `*/20` geçişinde commit sinyalinin gerçek veriyle çalıştığı
 doğrulanmalı (log'da "lane commit times unavailable" görünmemeli). #490'ın attempt
 tavanı da aynı geçişte teyit edilmeli.
+
+## Round: commit sinyali çalışan lane'i yanlış kesiyordu (#218, 2026-11-10)
+
+**Belirti.** Önceki turun "sonraki" maddesi sinyali gerçek veriyle doğrulamayı
+istiyordu. Sinyal **çalıştı** — ve hemen yanlış pozitif üretti: `--dry-run` çıktısı
+`would interrupt stalled LANE-supabase` dedi. Oysa LANE-supabase **canlı çalışıyordu**
+(yerelde 23:05/23:08 commit'leri vardı), yalnız PR açmadığı için uzak dalına henüz
+push etmemişti.
+
+**Kök neden.** Commit sinyali **uzak** dalın son commit'ine bakıyor
+(`refs/heads/lane/*`). Ama bir lane **yerelde** commit'ler ve dalına yalnız PR
+açarken/güncellerken push eder (kickoff bunu söyler; operatör de öyle yapar). Dolayısıyla
+çalışan bir lane'in uzak dalı iş boyunca **geride** kalır: LANE-supabase yerelde
+23:05/23:08 tutarken `refs/heads/lane/supabase` hâlâ **17:49** okunuyordu ve sinyal
+"pencerede commit yok" dedi. Bu, brief'in adlandırdığı **"gösterge yanlış şeyi okuyor"**
+ailesidir: sinyal *uzak dalı* ölçüyor, oysa sorduğu soru "lane ilerliyor mu". Çalışan
+bir lane'i kesmek **canlı işi öldürürdü**.
+
+**Çözüm.** `poisonedConversations` içinde commit sinyali artık yalnızca **duran**
+(`!running`) lane için değerlendirilir:
+
+```js
+const noCommit = !running && commitAt !== undefined && noCommitInWindow({…});
+```
+
+Çalışan lane zaten iki sinyalle yargılanır — boşta kalma (`idle`) ve sert yaş tavanı
+(`overCeiling`) —; "okuma döngüsü"nü yaş tavanı yakalar (mevcut test). Duran bir lane
+için sinyal dürüsttür: "hiç push etmedi" gerçekten "hiçbir şey bırakmadı" demektir;
+sızmış transcript'in devam ettirilmemesi gereken durum tam da budur.
+
+**Test.** `lane-autopilot-core.test.mjs`: eski "çalışan lane commit'siz zehirlenir"
+testi **"duran lane commit'siz zehirlenir"** olarak düzeltildi (`execution_status:
+"finished"`); yeni test **"çalışan lane asla commit'siz yargılanmaz"** eklendi
+(LANE-supabase senaryosu, uzak dal 2 saat geride). Commit sinyalini çağıran diğer
+"spared"/"unreadable map" testleri de duran lane'e çevrildi. `node --test
+scripts/*.test.mjs` **222/222**; `test:unit` **887/0**; `lint`/`typecheck`/
+`check:frontend-source` temiz.
+
+**Ders.** Sinyal eklerken sor: **hangi anlık görüntüyü okuyor, o görüntü kararın
+konusunu gerçekten yansıtıyor mu?** Uzak dal yerel işi gecikmeli yansıtır; gecikmeli
+bir görüntü üzerinden "şu an ilerliyor mu" sorusuna cevap verilemez.
