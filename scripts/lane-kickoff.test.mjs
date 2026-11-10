@@ -141,3 +141,14 @@ test("a red-PR respawn tells the lane to fix that PR, not start new work", () =>
 test("a plain kickoff carries no red-PR instruction", () => {
   assert.doesNotMatch(kickoff("infra", lane), /PR #\d+/);
 });
+
+// The same dead end, subtler (#493): a CONFLICTING head gets no CI run, so the
+// failing-check list is empty. The respawn carries `redPr` with no checks, and
+// the prompt must send the lane to rebase, not to `gh pr checks`.
+test("a conflict respawn tells the lane to rebase, not to read a check log", () => {
+  const prompt = kickoff("infra", lane, { redPr: { number: 493, checks: [] } });
+  assert.match(prompt, /PR #493/);
+  assert.match(prompt, /ÇAKIŞIYOR|CONFLICTING/);
+  assert.match(prompt, /rebase origin\/main/);
+  assert.doesNotMatch(prompt, /gh pr checks 493/);
+});

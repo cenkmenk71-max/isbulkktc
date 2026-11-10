@@ -38,6 +38,7 @@ import {
   confirmOutcome,
   deadConversationLanes,
   exhaustedCooldownElapsed,
+  exemptFixes,
   failedApiFetches,
   failedRequiredChecks,
   fairOrder,
@@ -46,6 +47,7 @@ import {
   nextConversationAction,
   poisonedConversations,
   prCapacity,
+  pullRequestConflicts,
   readApiList,
   selectSlots,
   stalledConversations,
@@ -647,26 +649,37 @@ async function decide(name, ctx) {
     return { action: 'blocked', reason: `issue #${blocked.number} needs a human` };
   }
   if (pr) {
-    // A PR whose *required* check has failed is a dead end: the sandbox that
-    // opened it is gone, so a lane left to "wait" here never moves again — its
-    // own red PR freezes it (issue #453). Re-spawn to fix the failing check.
-    // Only required checks qualify; a non-required failure (Vercel's build-rate
-    // limit is an external quota) must not wake a lane.
+    // An open PR that cannot land is a dead end: the sandbox that opened it is
+    // gone, so a lane left to "wait" here never moves again — its own PR freezes
+    // it. Two kinds qualify. A *required* check that failed (issue #453), and a
+    // head that conflicts with main. The conflict is the subtler one: GitHub
+    // fires **no check-run** for a CONFLICTING head, so `failedRequiredChecks`
+    // is empty, the PR reads as "in flight", and it waits forever while holding
+    // a slot in the open-PR cap (PR #493). Both re-spawn the lane to fix its own
+    // PR. A non-required failure (Vercel's build-rate limit is an external
+    // quota) must NOT wake a lane, so it is excluded.
     const failed = failedRequiredChecks(pr.statusCheckRollup, REQUIRED_CHECKS);
-    if (failed.length > 0) {
+    const conflicts = pullRequestConflicts(pr);
+    if (failed.length > 0 || conflicts) {
+      const what = conflicts
+        ? `conflicts with main${failed.length > 0 ? ` and is red (${failed.join(', ')})` : ''}`
+        : `red (${failed.join(', ')})`;
+      const previousError = conflicts
+        ? `PR #${pr.number} conflicts with main — rebase onto origin/main, resolve, push`
+        : `PR #${pr.number} failed: ${failed.join(', ')}`;
       if (state.attempts >= MAX_ATTEMPTS) {
-        // After the cooldown a red PR is worth one more respawn: its failing
-        // check may have been transient (a quota hiccup), and the merge queue
-        // cannot drain a PR nobody retries. Clear the count so the retry is a
-        // fresh bounded window; otherwise the same gate returns `exhausted`
-        // forever (issue #453).
+        // After the cooldown a stuck PR is worth one more respawn: its failure
+        // may have been transient (a quota hiccup), and the merge queue cannot
+        // drain a PR nobody retries. Clear the count so the retry is a fresh
+        // bounded window; otherwise the same gate returns `exhausted` forever
+        // (issue #453).
         if (exhaustedCooldownElapsed(stored, { cooldownMs: EXHAUSTED_COOLDOWN_MS })) {
           return {
             action: 'spawn',
-            reason: `PR #${pr.number} red (${failed.join(', ')}) — cooldown elapsed, respawn`,
+            reason: `PR #${pr.number} ${what} — cooldown elapsed, respawn`,
             resetAttempts: true,
             context: {
-              previousError: `PR #${pr.number} failed: ${failed.join(', ')}`,
+              previousError,
               work,
               redPr: { number: pr.number, checks: failed },
               recovery: true,
@@ -675,17 +688,13 @@ async function decide(name, ctx) {
         }
         return {
           action: 'exhausted',
-          reason: `PR #${pr.number} red (${failed.join(', ')}); ${state.attempts} attempts used; needs a human`,
+          reason: `PR #${pr.number} ${what}; ${state.attempts} attempts used; needs a human`,
         };
       }
       return {
         action: 'spawn',
-        reason: `PR #${pr.number} red (${failed.join(', ')}) — respawn to fix`,
-        context: {
-          previousError: `PR #${pr.number} failed: ${failed.join(', ')}`,
-          work,
-          redPr: { number: pr.number, checks: failed },
-        },
+        reason: `PR #${pr.number} ${what} — respawn to fix`,
+        context: { previousError, work, redPr: { number: pr.number, checks: failed } },
       };
     }
     const state_ = pr.mergeStateStatus;
@@ -1008,6 +1017,14 @@ async function main() {
       `PR limit: pass may open ${prSlots} (open ${prs.length}, cap ${MAX_OPEN_PRS})`,
     );
   }
+  // A fix round must never be deferred by the PR cap. A lane woken to repair its
+  // own PR (red or conflicting) does not open a *new* PR — it repairs the one it
+  // already holds, so it adds no PR to the queue. Deferring it is a deadlock:
+  // the cap is full, the stuck PRs that fill it cannot be fixed because the
+  // fixes are deferred, and the cap never drains (PR #493). Fixes are allowed
+  // unconditionally and run before fresh work, so a broken PR is repaired first.
+  const { allowed: allowedFinal, deferred: deferredFinal } = exemptFixes(allowed, deferred);
+  for (const d of allowedFinal) if (deferredReason.has(d)) deferredReason.delete(d);
 
   console.log(`sandboxes running: ${running} (budget ${SANDBOX_BUDGET})`);
   if (MAX_OPEN_PRS > 0) console.log(`open PRs: ${prs.length} (limit ${MAX_OPEN_PRS})`);
@@ -1062,7 +1079,7 @@ async function main() {
 
   if (dryRun) return;
 
-  for (const d of allowed) {
+  for (const d of allowedFinal) {
     try {
       // Prefer a sandbox this lane already owns. Creating one may be refused
       // by the daily quota; reusing or resuming one never is.
@@ -1305,9 +1322,9 @@ async function main() {
       );
     }
   }
-  if (deferred.length > 0) {
+  if (deferredFinal.length > 0) {
     const byReason = {};
-    for (const d of deferred) {
+    for (const d of deferredFinal) {
       const reason = deferredReason.get(d) ?? 'deferred';
       (byReason[reason] ??= []).push(d.name);
     }

@@ -131,11 +131,18 @@ export function kickoff(name, lane, context = {}) {
     skillLine,
   ];
   if (context.redPr) {
+    const checks = context.redPr.checks ?? [];
+    const detail =
+      checks.length > 0
+        ? `kırmızı (${checks.join(', ')})`
+        : "main ile ÇAKIŞIYOR (CONFLICTING) — çakışan bir PR'a CI hiç çalışmaz";
+    const fix =
+      checks.length > 0
+        ? `\`gh pr checks ${context.redPr.number}\` ile hatayı oku, düzelt`
+        : '`git fetch origin main && git rebase origin/main` ile çakışmayı çöz';
     parts.push(
-      `KENDİ PR'INI DÜZELT: açık PR #${context.redPr.number} kırmızı ` +
-        `(${context.redPr.checks.join(', ')}). Yeni iş başlatma — önce bu PR'ın ` +
-        'kırmızı kontrolünü yeşile getir. `gh pr checks ' +
-        `${context.redPr.number}\` ile hatayı oku, düzelt, kendi branch'ine ` +
+      `KENDİ PR'INI DÜZELT: açık PR #${context.redPr.number} ${detail}. ` +
+        `Yeni iş başlatma — önce bu PR'ı düzelt: ${fix}, kendi branch'ine ` +
         'commit + push et. PR açık kalır; yeni PR açma.',
     );
   }

@@ -481,6 +481,31 @@ export function prCapacity(openPrs, maxOpenPRs) {
 }
 
 /**
+ * Let a lane woken to repair its *own* PR past the open-PR cap.
+ *
+ * A lane carrying `context.redPr` does not open a new PR — it repairs the one it
+ * already holds, so it adds nothing to the queue and must not spend a PR slot.
+ * Deferring it is a deadlock: the cap is full of stuck PRs, the fixes that would
+ * empty it are deferred behind that same cap, and the queue never drains
+ * (PR #493). Fixes are promoted ahead of fresh work so a broken PR is repaired
+ * first. Every other deferred decision keeps its place.
+ *
+ * @param {Array<object>} allowed decisions the cap admitted this pass
+ * @param {Array<object>} deferred decisions the cap deferred this pass
+ * @returns {{allowed: Array<object>, deferred: Array<object>}}
+ */
+export function exemptFixes(allowed, deferred) {
+  const a = Array.isArray(allowed) ? allowed : [];
+  const d = Array.isArray(deferred) ? deferred : [];
+  const fixes = d.filter((x) => x?.context?.redPr != null);
+  if (fixes.length === 0) return { allowed: a, deferred: d };
+  return {
+    allowed: [...fixes, ...a],
+    deferred: d.filter((x) => x?.context?.redPr == null),
+  };
+}
+
+/**
  * Split the pass's PR slots between the quota-free group and the fresh group so
  * neither starves the other.
  *
@@ -593,6 +618,28 @@ export function failedRequiredChecks(checks, requiredChecks) {
  */
 export function requiredCheckFailed(checks, requiredChecks) {
   return failedRequiredChecks(checks, requiredChecks).length > 0;
+}
+
+/**
+ * Whether an open PR's head conflicts with its base.
+ *
+ * A conflicting head is a silent dead end: GitHub fires **no check-run** for a
+ * CONFLICTING head, so `failedRequiredChecks` is empty and the lane reads as "in
+ * flight" and waits forever while the conflicted PR holds a slot in the open-PR
+ * cap (PR #493). The autopilot must treat the conflict as the thing to fix.
+ *
+ * Only the explicit `'CONFLICTING'` counts: GitHub reports `mergeable` as
+ * `null`/`'UNKNOWN'` until it has computed the merge for the head, and guessing
+ * there would wake a lane for a PR that is actually fine. `mergeStateStatus` is
+ * the fallback — `DIRTY` means the same thing — because the fields the autopilot
+ * requests do not always carry `mergeable`.
+ *
+ * @param {object} pr a PR with `mergeable` and/or `mergeStateStatus`
+ * @returns {boolean}
+ */
+export function pullRequestConflicts(pr) {
+  if (!pr || typeof pr !== 'object') return false;
+  return pr.mergeable === 'CONFLICTING' || pr.mergeStateStatus === 'DIRTY';
 }
 
 /**

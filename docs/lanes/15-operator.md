@@ -648,3 +648,44 @@ scripts/*.test.mjs` **222/222**; `test:unit` **887/0**; `lint`/`typecheck`/
 **Ders.** Sinyal eklerken sor: **hangi anlık görüntüyü okuyor, o görüntü kararın
 konusunu gerçekten yansıtıyor mu?** Uzak dal yerel işi gecikmeli yansıtır; gecikmeli
 bir görüntü üzerinden "şu an ilerliyor mu" sorusuna cevap verilemez.
+
+## Round: çakışan PR lane'i sonsuza dek donduruyor + kota kilidi (#493, 2026-11-08)
+
+**Belirti.** `lane/infra` PR **#493** 7 saat açık, `DIRTY`/`CONFLICTING`, hiç
+dokunulmamış. Tüm kontrolleri **yeşil** (`mergeable: CONFLICTING` ama
+`statusCheckRollup` tümü SUCCESS). PR açık PR kotasını (4) tutuyor ve diğer
+lane'leri tıkıyor olabilir.
+
+**Kök neden 1 — sessiz dead-end.** GitHub `CONFLICTING` bir head için **hiç
+check-run ateşlemez**. Dolayısıyla `failedRequiredChecks` **boş** döner, `decide()`
+PR'ı "in flight" sayar ve lane'i **sonsuza dek `wait`**'e koyar. #453'ün (kırmızı PR
+lane'i dondurur) çakışma için düzeltilmemiş hâli: kırmızı kontrol için çıkış yolu
+vardı, çakışma için yoktu. Sandbox gitmiş, kimse rebase etmez → PR hep çakışır →
+hep kotayı tutar.
+
+**Kök neden 2 — kota kilidi.** `decide()` artık çakışmada da `spawn` (fix) üretse
+bile, fix-spawn **PR kotasına** takılıyordu: `prSlots = cap − openPrs`. Kota doluysa
+fix ertelenir → çakışan PR düzeltilemez → PR kapanmaz → kota açılmaz. **Kilitli
+döngü.** Fix'lerin ertelenmesi kotayı asla boşaltamaz.
+
+**Çözüm.**
+1. `lane-autopilot-core.mjs`: `pullRequestConflicts(pr)` — yalnız açık
+   `mergeable === 'CONFLICTING'` ya da `mergeStateStatus === 'DIRTY'`. `null`/`UNKNOWN`
+   **çakışma sayılmaz** (GitHub merge'i henüz hesaplamamış olabilir; tahmin etmek
+   gereksiz uyandırır).
+2. `lane-autopilot.mjs` `decide()`: `failed.length > 0 || conflicts` tek kapı;
+   çakışmada `redPr.checks` **boş**, `previousError` "rebase onto origin/main" der.
+3. `lane-kickoff.mjs`: `redPr` promptu çakışmada "rebase" der (eskiden `kırmızı ()`
+   yazıyordu), kırmızıda `gh pr checks` der.
+4. `lane-autopilot-core.mjs`: `exemptFixes(allowed, deferred)` — `context.redPr`
+   taşıyan ertelenmiş kararları kotadan **muaf** tutar, `allowed`'un **önüne** koyar.
+   Fix yeni PR açmaz (mevcut PR'ı onarır), yani kuyruğa PR eklemez.
+
+**Test.** `lane-autopilot-core.test.mjs`: `pullRequestConflicts` (4 test) +
+`exemptFixes` (4 test). `lane-kickoff.test.mjs`: çakışma respawn promptu rebase der,
+`gh pr checks` demez. `node --test scripts/*.test.mjs` **261/261**; eslint temiz.
+
+**Ders.** Bir "ertele" kapısı ile "onar" işi aynı kaynağı paylaşıyorsa, onarımı
+erteleyen kapı kendi kuyruğunu asla boşaltamaz. Onarım (mevcut PR'ı düzeltmek)
+yeni iş açmaz; bu yüzden kotaya **sayılmamalı**, hatta öne alınmalıdır.
+
