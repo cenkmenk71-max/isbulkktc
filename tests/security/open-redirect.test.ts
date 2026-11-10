@@ -14,7 +14,7 @@ import { sanitizeNextPath } from "@/lib/pwa/destination";
  * never begin with `//` (protocol-relative → host change), may never carry a
  * scheme, and may never contain a backslash.
  *
- * ## Finding (LANE-GÜVENLİK — resolved)
+ * ## Finding (the security layer — resolved)
  *
  * `sanitizeNextPath` once re-derived its output with
  * `new URL(value, "https://next-path.invalid")` and returned
@@ -93,7 +93,7 @@ test("the install route and non-page handlers are not valid continuations", () =
 
 // ---------------------------------------------------------------------------
 // The invariant the sanitizer must hold: the *output* is never a host change.
-// Both tests used to carry a `todo` while the bug was open; the owning lane
+// Both tests used to carry a `todo` while the bug was open; the owner
 // re-validates the normalised output now, so they are gates.
 // ---------------------------------------------------------------------------
 

@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
-  AUTOPILOT_CADENCE_MINUTES,
   CI_AGGREGATOR_CHECKS,
+  CRON_CADENCE_MINUTES,
   HEALTH_WORKFLOW,
   classifyCronFreshness,
   classifyDeployFreshness,
@@ -333,11 +333,11 @@ test("isUnresolvedMergeState is exactly UNKNOWN/null/undefined", () => {
 // redPullRequests — "all moving" was a lie while a queue-global gate was red.
 // ---------------------------------------------------------------------------
 
-// The bug this guards: on 2026-11-10 `lane-collisions` (which scans every open
-// PR) went red on one lane's PR. Every other open PR then read `BLOCKED`, so
-// nothing could merge — yet `system-health` reported "PRs: N open, all moving",
-// because `stuckPullRequests` only ages a PR and never looks at *why* it is not
-// CLEAN. A red check on a blocked PR is the actionable fact and must be named.
+// The bug this guards: a queue-global gate (one that scans every open PR) went
+// red on one PR. Every other open PR then read `BLOCKED`, so nothing could
+// merge — yet `system-health` reported "PRs: N open, all moving", because
+// `stuckPullRequests` only ages a PR and never looks at *why* it is not CLEAN.
+// A red check on a blocked PR is the actionable fact and must be named.
 
 test("isRedCheck reads both check-run and status-context shapes", () => {
   assert.equal(isRedCheck({ conclusion: "FAILURE" }), true);
@@ -436,10 +436,10 @@ test("redPullRequests tolerates missing input and unnamed checks", () => {
 
 // ---------------------------------------------------------------------------
 // queueGlobalGates — one shared gate red on N PRs is one systemic cause, not N
-// unrelated failures. The bug: `lane-collisions.mjs` reads the whole queue, so
-// one lane editing a file it does not own marked that check red on every PR.
-// The health check named each PR's red separately and the operator could not
-// see the freeze was self-inflicted and single-cause.
+// unrelated failures. The bug: a whole-queue gate reads every open PR, so one
+// PR editing a file it does not own marked that check red on every PR. The
+// health check named each PR's red separately and the operator could not see the
+// freeze was self-inflicted and single-cause.
 // ---------------------------------------------------------------------------
 
 const prWithCheck = (number, check, mergeStateStatus = "BLOCKED") => ({
@@ -451,10 +451,10 @@ const prWithCheck = (number, check, mergeStateStatus = "BLOCKED") => ({
 test("the same check red on two PRs is named once as a queue-global gate", () => {
   assert.deepEqual(
     queueGlobalGates([
-      prWithCheck(555, "Lane collisions"),
-      prWithCheck(557, "Lane collisions"),
+      prWithCheck(555, "Database"),
+      prWithCheck(557, "Database"),
     ]),
-    [{ check: "Lane collisions", prs: [555, 557] }],
+    [{ check: "Database", prs: [555, 557] }],
   );
 });
 
@@ -472,11 +472,11 @@ test("two different checks each red on one PR do not make a queue-global gate", 
 test("a shared gate and a private failure are separated", () => {
   assert.deepEqual(
     queueGlobalGates([
-      prWithCheck(555, "Lane collisions"),
-      prWithCheck(557, "Lane collisions"),
       prWithCheck(555, "Database"),
+      prWithCheck(557, "Database"),
+      prWithCheck(555, "E2E (1/4)"),
     ]),
-    [{ check: "Lane collisions", prs: [555, 557] }],
+    [{ check: "Database", prs: [555, 557] }],
   );
 });
 
@@ -747,19 +747,19 @@ test("a current deploy reports ok, and a missing verdict reports nothing", () =>
 });
 
 // The bug this guards: the cron check hardcoded OK ≤45 / WARN ≤75 while its own
-// message said "expected ~20". At a 20-minute cadence, 40 minutes is two missed
-// runs, so a pass that never fired stayed green for two cycles. Thresholds must
-// scale with the cadence: one missed cycle warns, three fail.
+// message quoted an "expected" cadence. Two missed runs at the declared cadence
+// stayed green for two cycles. Thresholds must scale with the cadence: one
+// missed cycle warns, three fail.
 
 test("cron freshness scales with the cadence, not a hardcoded minute count", () => {
   assert.equal(classifyCronFreshness(10).level, "ok");
-  assert.equal(classifyCronFreshness(20).level, "ok");
-  assert.equal(classifyCronFreshness(31).level, "warn");
-  assert.equal(classifyCronFreshness(61).level, "fail");
+  assert.equal(classifyCronFreshness(CRON_CADENCE_MINUTES).level, "ok");
+  assert.equal(classifyCronFreshness(CRON_CADENCE_MINUTES * 2).level, "warn");
+  assert.equal(classifyCronFreshness(CRON_CADENCE_MINUTES * 4).level, "fail");
 });
 
 test("two missed cycles at the declared cadence is no longer green", () => {
-  const twoCycles = AUTOPILOT_CADENCE_MINUTES * 2;
+  const twoCycles = CRON_CADENCE_MINUTES * 2;
   assert.equal(classifyCronFreshness(twoCycles).level, "warn");
 });
 
@@ -771,19 +771,20 @@ test("a cadence the caller passes wins over the default", () => {
 test("an unreadable gap is reported, never silently ok", () => {
   assert.equal(classifyCronFreshness(Number.NaN), null);
   assert.equal(classifyCronFreshness(-5), null);
-  assert.match(classifyCronFreshness(10).detail, /expected ~20/);
+  assert.match(classifyCronFreshness(10).detail, /expected ~60/);
 });
 
-test("the declared cadence matches the autopilot workflow's cron", () => {
-  const workflow = readFileSync(".github/workflows/lane-autopilot.yml", "utf8");
+test("the declared cadence matches the health workflow's cron", () => {
+  const workflow = readFileSync(
+    new URL("../.github/workflows/system-health.yml", import.meta.url),
+    "utf8",
+  );
   const crons = [...workflow.matchAll(/cron:\s*'([^']+)'/g)].map((m) => m[1]);
-  assert.ok(crons.length > 0, "lane-autopilot.yml must declare a cron");
-  // The fastest trigger defines the cadence; `*/N` is the base period.
-  const periods = crons
-    .map((c) => (c.startsWith("*/") ? Number(c.slice(2).split(" ")[0]) : null))
-    .filter((n) => Number.isFinite(n));
-  assert.ok(periods.length > 0, "expected a `*/N` cron entry");
-  assert.equal(Math.min(...periods), AUTOPILOT_CADENCE_MINUTES);
+  assert.ok(crons.length > 0, "system-health.yml must declare a cron");
+  // `13 * * * *` fires once an hour; the interval is the field after the minute.
+  const everyHour = crons.some((c) => c.split(/\s+/)[1] === "*");
+  assert.ok(everyHour, "expected an hourly cron entry");
+  assert.equal(CRON_CADENCE_MINUTES, 60);
 });
 
 // #209: the SUPABASE_ACCESS_TOKEN was a bare 36-char UUID (not an `sbp_`
@@ -813,7 +814,7 @@ test("empty and absent values are missing, never malformed", () => {
 
 test("a missing token reports nothing — CI never has it, so it is not a misconfig", () => {
   // The scheduled health workflow runs with only GH_TOKEN. Flagging the unset
-  // token every hour is exactly the cry-wolf noise this lane removes.
+  // token every hour is exactly the cry-wolf noise this check removes.
   assert.equal(supabaseTokenProblem({ token: undefined }), null);
   assert.equal(supabaseTokenProblem({}), null);
 });

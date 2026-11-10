@@ -6,8 +6,8 @@ import test from "node:test";
 // removes most of a `<style>` block and Outlook's Word renderer ignores it
 // outright, so the layout, the brand header and the button have to be expressible
 // with inline styles on a table shell. These tests pin that contract on the raw
-// template source; `tests/unit/auth-hardening.test.ts` (LANE-QA) renders them and
-// pins the semantics (locales, GoTrue variables, contrast).
+// template source; `tests/unit/auth-hardening.test.ts` renders them and pins the
+// semantics (locales, GoTrue variables, contrast).
 
 const templateDirectory = new URL("../../../supabase/templates/", import.meta.url);
 

@@ -33,15 +33,14 @@ export const HEALTH_WORKFLOW = 'System health';
 export const CI_AGGREGATOR_CHECKS = new Set(['Quality, database and E2E']);
 
 /**
- * The autopilot's declared schedule, in minutes.
+ * The scheduled cadence of the workflow this check watches, in minutes.
  *
- * `.github/workflows/lane-autopilot.yml` runs the pass every 20 minutes
- * (every 20 minutes), with a second `7,27,47` trigger that only tightens the
- * cadence. The health check measures the gap since the newest run; tying its
- * thresholds to this number (asserted against the workflow by a unit test)
- * means a dropped run shows up a cycle earlier and the two cannot drift.
+ * `.github/workflows/system-health.yml` runs hourly (`13 * * * *`). The health
+ * check measures the gap since the newest run; tying its thresholds to this
+ * number (asserted against the workflow by a unit test) means a dropped run
+ * shows up a cycle earlier and the two cannot drift.
  */
-export const AUTOPILOT_CADENCE_MINUTES = 20;
+export const CRON_CADENCE_MINUTES = 60;
 
 /**
  * The newest completed run of each workflow that ran on the default branch.
@@ -175,7 +174,7 @@ export function classifySupabaseToken(value) {
  * Returns `null` for a `missing` token: an unset value in a context that never
  * had it (CI runs the health check with only `GH_TOKEN`) is "not configured
  * here", not a misconfiguration, and flagging it every scheduled run would be
- * the same cry-wolf noise this lane keeps removing. A present-but-wrong token
+ * the same cry-wolf noise this check keeps removing. A present-but-wrong token
  * is the real failure and is named with its length and prefix — the two fields
  * the #209 report used — so the operator sees *why* the 401 happened.
  *
@@ -309,13 +308,14 @@ export function isRedCheck(check) {
  * Open pull requests that are blocked by a *red* check.
  *
  * `stuckPullRequests` only sees the merge state: a PR is "not moving" when its
- * state is known and not `CLEAN`. That is blind to *why*. On 2026-11-10 the
- * queue-global `lane-collisions` gate went red on one lane's PR and every other
- * open PR read `BLOCKED` too; the health check reported "PRs: N open, all
- * moving" while nothing could merge — the watchdog read "not aged out" as
- * "advancing". A merge state of `BLOCKED` with a red check is the specific,
- * actionable state the operator must name: nobody advances it because a gate
- * refuses it, and it stays red until the owning lane fixes the cause.
+ * state is known and not `CLEAN`. That is blind to *why*. A queue-global gate
+ * (one that scans the whole queue, e.g. a branch-protection check that reads
+ * every open PR) can go red on one PR and leave every other open PR reading
+ * `BLOCKED` too; the health check then reports "PRs: N open, all moving" while
+ * nothing can merge — the watchdog reads "not aged out" as "advancing". A merge
+ * state of `BLOCKED` with a red check is the specific, actionable state the
+ * operator must name: nobody advances it because a gate refuses it, and it stays
+ * red until the underlying cause is fixed.
  *
  * Unlike `stuckPullRequests` this is *not* age-gated. The `UNKNOWN` merge state
  * already covers the window right after a push (GitHub computes the merge state
@@ -343,9 +343,9 @@ export function redPullRequests(prs) {
 /**
  * Red checks that refuse more than one open pull request at once.
  *
- * Some gates read *every* open PR instead of just the one they run on:
- * `lane-collisions.mjs` fails when any lane edits a file it does not own, so a
- * single lane's mistake marks that check red on *every* PR in the queue. That is
+ * Some gates read *every* open PR instead of just the one they run on: a
+ * whole-queue gate fails when any PR edits a file it does not own, so a single
+ * mistake marks that check red on *every* PR in the queue. That is
  * a self-inflicted freeze — the queue cannot drain no matter how healthy each
  * individual PR is — and it is a different diagnosis from a PR failing its own
  * tests. `redPullRequests` names the gate per PR but cannot say it is shared, so
@@ -539,19 +539,19 @@ export function deployFreshnessFinding(freshness) {
 }
 
 /**
- * Classify the gap since the newest scheduled autopilot run.
+ * Classify the gap since the newest scheduled run of the health workflow.
  *
- * The check used to hardcode OK ≤45 min / WARN ≤75 min while quoting "expected
- * ~20". That let a pass that simply did not fire stay green for two whole
- * cycles: at a 20-minute cadence, 40 minutes is two missed runs, not health.
- * The thresholds are now multiples of the cadence — a single missed cycle warns,
- * three missed cycles fail — so one dropped run is visible a cycle earlier.
+ * The check used to hardcode OK ≤45 min / WARN ≤75 min while quoting an
+ * "expected ~N" cadence. That let a pass that simply did not fire stay green for
+ * two whole cycles. The thresholds are multiples of the declared cadence — a
+ * single missed cycle warns, three missed cycles fail — so one dropped run is
+ * visible a cycle earlier.
  *
  * @param {number} minutes minutes since the newest run
  * @param {number} [cadence] the schedule in minutes (defaults to the workflow's)
  * @returns {{level: 'ok'|'warn'|'fail', detail: string}|null}
  */
-export function classifyCronFreshness(minutes, cadence = AUTOPILOT_CADENCE_MINUTES) {
+export function classifyCronFreshness(minutes, cadence = CRON_CADENCE_MINUTES) {
   if (!Number.isFinite(minutes) || minutes < 0) return null;
   const detail = `last run ${minutes.toFixed(0)} min ago (expected ~${cadence})`;
   if (minutes > cadence * 3) return { level: 'fail', detail };

@@ -26,10 +26,10 @@ import test from "node:test";
  * audits. Local HTTP dev needs `secure` conditional on `NODE_ENV`, exactly like
  * the OAuth-intent cookie in `src/features/identity/actions.ts`.
  *
- * Owner: LANE-AUTH (`src/features/identity/**`, "oturum akışı … güvenlik"). The
+ * Owner: the auth layer (`src/features/identity/**`, "oturum akışı … güvenlik"). The
  * call sites live in `src/proxy.ts` and `src/server/db/supabase-server.ts`,
- * which the ownership table does not assign to any lane; the session-lifecycle
- * authority is LANE-AUTH, so the handoff goes there. See `docs/threat-model.md`.
+ * which the ownership table does not assign to any module; the session-lifecycle
+ * authority is the auth layer, so the handoff goes there. See `docs/threat-model.md`.
  */
 
 const srcDir = new URL("../../src/", import.meta.url);
@@ -90,7 +90,7 @@ test("the proxy verifies claims rather than trusting the raw session", () => {
 // ---------------------------------------------------------------------------
 // 3. The session cookie is hardened.
 //
-//    LANE-AUTH shipped the fix (#201): both `createServerClient` call sites now
+//    the auth layer shipped the fix (#201): both `createServerClient` call sites now
 //    pass `cookieOptions: { httpOnly: true, secure: process.env.NODE_ENV ===
 //    "production" }`. The check below used to carry a `todo` while the gap was
 //    open; it is a gate now, so a regression re-opening the cookie fails CI.

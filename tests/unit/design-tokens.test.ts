@@ -883,7 +883,7 @@ test("numbered CSS counters follow the locale's numeral system", () => {
  * at 1.9 MB unnoticed — which is exactly what the owner reported: on a slow link
  * the crossfade (`home-hero-photo-cycle`) runs ahead of the download and only
  * the eager Girne slide is ever seen. Walking the owned components closes that
- * blind spot here and hands the general fix to LANE-INFRA (#447).
+ * blind spot here and hands the general fix to the CI/infra layer (#447).
  */
 test("every image an owned component renders stays under the 500 KB budget", () => {
   const budgetBytes = 500_000;

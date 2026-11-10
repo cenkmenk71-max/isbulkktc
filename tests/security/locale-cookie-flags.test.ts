@@ -16,7 +16,7 @@ import createMiddleware from "next-intl/middleware";
  * preload`), so the value was not exposed on the wire, but a redirect that drops
  * to HTTP — or a mixed-content embed — would have sent the visitor's locale
  * choice in the clear, while every other cookie the app writes carried `Secure`
- * in production. LANE-İÇERİK closed it by adding
+ * in production. The content layer closed it by adding
  * `localeCookie: { secure: process.env.NODE_ENV === "production" }` to
  * `defineRouting` (#469/#498); the gate below now enforces it.
  *
@@ -28,7 +28,7 @@ import createMiddleware from "next-intl/middleware";
  * is not a server-side one-liner; the client write path would have to change
  * first. `Secure` has no such conflict.
  *
- * `src/i18n/routing.ts` is owned by LANE-İÇERİK; this lane reads it and proves
+ * `src/i18n/routing.ts` is owned by the content layer; this suite reads it and proves
  * the behaviour.
  */
 
@@ -127,7 +127,7 @@ test("the production drive detects a Secure locale cookie (self-test)", async ()
 });
 
 // ---------------------------------------------------------------------------
-// 3. In production the cookie must be `Secure`. LANE-İÇERİK added
+// 3. In production the cookie must be `Secure`. The content layer added
 //    `localeCookie: { secure: process.env.NODE_ENV === "production" }` to
 //    `defineRouting` (#469/#498), so this is a gate.
 // ---------------------------------------------------------------------------

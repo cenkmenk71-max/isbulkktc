@@ -931,10 +931,10 @@ test("a template value lands verbatim, whatever characters it contains", () => {
 });
 
 test("the brief describes the product, not the internal pipeline", () => {
-  // `docs/lanes/12-icerik.md` bans the internal system vocabulary on any
-  // user-facing surface. The brief is read by people and answer engines alike,
-  // so "how the data is fed" does not belong in it — only what the platform
-  // offers. #347 was exactly this leak.
+  // The internal system vocabulary is banned on any user-facing surface. The
+  // brief is read by people and answer engines alike, so "how the data is fed"
+  // does not belong in it — only what the platform offers. #347 was exactly this
+  // leak.
   const brief = buildLlmsBrief(BASE_URL);
   const full = buildLlmsFullBrief(BASE_URL);
 

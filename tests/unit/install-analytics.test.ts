@@ -15,8 +15,8 @@ import {
  * carries a truthfulness contract: "the visitor accepted the install prompt" is
  * not "the app was installed", and the two must never be counted together. The
  * module shipped without coverage while its near-identical sibling
- * (`src/lib/analytics/conversion.ts`) had a full suite — the audit in
- * `docs/lanes/08-qa.md` flagged that asymmetry.
+ * (`src/lib/analytics/conversion.ts`) had a full suite — this suite closes that
+ * asymmetry.
  */
 
 type Recorded = { event: InstallEventName; params: InstallEventParams };

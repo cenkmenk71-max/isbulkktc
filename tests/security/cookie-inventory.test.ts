@@ -259,7 +259,7 @@ test("the cookie-name detector sees a declared name and rejects a near-miss (sel
 // ---------------------------------------------------------------------------
 // 5. The §6 table is the audit's single source of truth, so a row must not
 //    drift from the code it summarises. `NEXT_LOCALE`'s row kept reading
-//    "no Secure — open finding" long after LANE-İÇERİK closed it (#469/#498),
+//    "no Secure — open finding" long after the content layer closed it (#469/#498),
 //    which would have misled the next cookie audit into re-opening a fixed
 //    finding. Pin the row to the routing config it describes.
 // ---------------------------------------------------------------------------
@@ -271,7 +271,7 @@ test("the NEXT_LOCALE inventory row matches the routing config it describes", ()
   const row = inventory.split("\n").find((line) => /\|\s*`NEXT_LOCALE`\s*\|/.test(line));
   assert.ok(row, "the §6 table no longer documents the NEXT_LOCALE cookie");
 
-  // `src/i18n/routing.ts` (LANE-İÇERİK) hardens the locale cookie in production.
+  // `src/i18n/routing.ts` (the content layer) hardens the locale cookie in production.
   assert.match(
     routing,
     /localeCookie:\s*\{[^}]*secure:\s*process\.env\.NODE_ENV\s*===\s*["']production["']/,

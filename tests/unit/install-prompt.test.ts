@@ -25,8 +25,7 @@ import {
  * are the behaviours pinned here.
  *
  * `install-prompt.ts` has no reset export and its `installed` flag is monotonic,
- * so the `isAppInstalled()` test asserts the transition only (see the audit note
- * in `docs/lanes/08-qa.md`).
+ * so the `isAppInstalled()` test asserts the transition only.
  */
 
 /** A `beforeinstallprompt`-shaped event; the store only passes it through. */

@@ -6,9 +6,9 @@ import { GET as buildInfoGet } from "@/app/api/build-info/route";
 
 /**
  * The response surface of the App Router API routes (issue #424, findings
- * M-01..M-04, handed over by LANE-CLOUDFLARE).
+ * M-01..M-04, handed over by the edge layer).
  *
- * LANE-CLOUDFLARE measured the live origin and found four things that looked
+ * the edge layer measured the live origin and found four things that looked
  * like origin bugs. Reproducing them locally against the production standalone
  * server shows they are **not** repo code — they are Vercel platform behaviour
  * for a prerendered (`force-static`) response:

@@ -27,7 +27,7 @@ import test from "node:test";
  *
  * The gates below mirror `auth-throttle-surface.test.ts`: a matcher self-test so
  * a narrowed matcher cannot pass vacuously, a function-extractor self-test, and
- * one test per endpoint. LANE-AUTH bound an address/e-mail throttle to both
+ * one test per endpoint. The auth layer bound an address/e-mail throttle to both
  * endpoints (#505), so the two endpoint gates are promoted to real gates.
  */
 

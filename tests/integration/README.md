@@ -6,7 +6,7 @@ It exercises the **real** server action, the **real** data-access layer, the
 process edges they cannot run without — the Supabase/GoTrue client, the Resend
 mailer, `next/headers`, `next/cache` and `next/navigation`.
 
-Owned by **LANE-QA**. See `docs/lanes/08-qa.md` and `docs/lanes/AUDIT.md`.
+This directory is part of the QA layer.
 
 ## Why it exists
 

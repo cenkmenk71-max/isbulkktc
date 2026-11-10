@@ -19,7 +19,7 @@ installBoundaryMocks();
  * real production code throw `TypeError: ….setHeader is not a function` inside
  * this layer. These tests pin the builder contract so that regression is caught
  * here — as a harness defect — instead of surfacing as an unexplained red in a
- * downstream lane's action tests.
+ * downstream action tests.
  */
 
 function rpcCalls(): Extract<SupabaseCall, { kind: "rpc" }>[] {

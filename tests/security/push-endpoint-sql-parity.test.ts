@@ -35,7 +35,7 @@ import { isAllowedPushEndpoint } from "@/server/push/push-endpoint";
  * not just the RPC. The RPC is still directly callable with the publishable key,
  * which is why the two layers must agree — the parity gate below is the ratchet.
  *
- * The finding was owned by LANE-SUPABASE (the migrations) and handed off there;
+ * The finding was owned by the database layer (the migrations) and handed off there;
  * this file proves it and now pins it. See `tests/security/README.md`.
  */
 

@@ -7,9 +7,9 @@ import test from "node:test";
  *
  * The Vercel Hobby build-rate limit is a denial-of-availability control that
  * already fired once: when it trips, `main` keeps merging and the live site
- * stops updating for 24 hours (#319). Every lane branch push used to create its
- * own preview build, and with a dozen active lanes that is what drained the
- * daily build budget.
+ * stops updating for 24 hours (#319). Every feature branch push used to create
+ * its own preview build, and with a dozen active branches that is what drained
+ * the daily build budget.
  *
  * The one lever that does not spend the budget is to not create the deployment:
  * a build cancelled by Vercel's "Ignored Build Step" still counts as a
@@ -67,11 +67,11 @@ test("main still deploys — production must keep shipping", () => {
   );
 });
 
-test("no lane, fix or bot branch deploys — the build budget is spent on main only", () => {
+test("no feature, fix or bot branch deploys — the build budget is spent on main only", () => {
   for (const branch of [
-    "lane/guvenlik",
-    "lane/urun",
-    "lane/infra",
+    "feature/guvenlik",
+    "feature/urun",
+    "feature/infra",
     "fix/model-access-revert",
     "dependabot/npm_and_yarn/next-16.0.1",
     "renovate/zod-4.x",
@@ -94,12 +94,12 @@ test("an unmatched branch defaults to deploy, as Vercel documents", () => {
 });
 
 test("glob semantics are segment-aware, matching Vercel's minimatch", () => {
-  assert.equal(globToRegExp("**").test("lane/x"), true);
-  assert.equal(globToRegExp("*").test("lane/x"), false);
+  assert.equal(globToRegExp("**").test("feature/x"), true);
+  assert.equal(globToRegExp("*").test("feature/x"), false);
   assert.equal(globToRegExp("*").test("main"), true);
-  assert.equal(globToRegExp("lane/*").test("lane/x"), true);
-  assert.equal(globToRegExp("lane/*").test("lane/a/b"), false);
-  assert.equal(globToRegExp("lane/**").test("lane/a/b"), true);
+  assert.equal(globToRegExp("feature/*").test("feature/x"), true);
+  assert.equal(globToRegExp("feature/*").test("feature/a/b"), false);
+  assert.equal(globToRegExp("feature/**").test("feature/a/b"), true);
 });
 
 test("the shipped gate is exactly two rules, nothing broader", () => {

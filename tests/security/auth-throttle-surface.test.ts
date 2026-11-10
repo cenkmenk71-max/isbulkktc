@@ -18,7 +18,7 @@ import test from "node:test";
  * This suite pins a control *before* the Supabase credential call, the same
  * ordering contract `auth-mail-throttle-surface.test.ts` holds for the mail
  * fan-out endpoints. It does not pin the mechanism: any limiter reference
- * satisfies it. A presence-only gate is not enough — LANE-AUTH landed the control
+ * satisfies it. A presence-only gate is not enough — the auth layer landed the control
  * in `src/features/identity/auth-rate-limits.ts`, but a refactor that moved the
  * limiter *below* `signInWithPassword`/`resetPasswordForEmail` would still satisfy
  * presence while letting every rejected attempt reach the credential check. The

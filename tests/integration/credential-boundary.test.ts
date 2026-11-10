@@ -117,7 +117,7 @@ test("a failed password change is reported, not swallowed", async () => {
   // crucially, must not sign the user out, because the password was not changed.
   //
   // The code is deliberately *not* `weak_password`. That one is actionable (the
-  // visitor must pick a stronger value) and LANE-AUTH maps it to its own message;
+  // visitor must pick a stronger value) and the auth layer maps it to its own message;
   // using it here made this test forbid that mapping (#277). A generic example
   // has to be a code with no actionable sibling.
   resetBoundary({

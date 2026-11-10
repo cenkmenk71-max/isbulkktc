@@ -621,7 +621,7 @@ assert.match(packagesPanel, /aria-pressed=/);
 // The quote body must consume the `%DAYS%` placeholder before it reaches the
 // mail client. Accept either the plain `String(selectedDuration)` form or the
 // locale-aware `Intl.NumberFormat(locale).format(selectedDuration)` form so
-// LANE-TASARIM can land the `fa` numeral fix (#385) without the gate pinning
+// the `fa` numeral fix (#385) can land without the gate pinning
 // the Latin-only rendering.
 assert.match(
   packagesPanel,

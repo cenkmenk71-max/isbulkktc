@@ -296,12 +296,11 @@ async function runWithLocalOrigin({ expectedSha }) {
 }
 
 test("a reachable origin is smoke-tested even when the commit check fails", async () => {
-  // Freshness and health are separate questions (the lane brief's own point).
-  // Production being behind `main` says nothing about whether the site answers,
-  // and a red verdict that never probed the origin cannot tell "stale but
-  // healthy" from "stale and broken". Before the fix the smoke block lived in
-  // the `else` branch of `if (!decision.verified)`, so a stale verdict skipped
-  // it entirely.
+  // Freshness and health are separate questions. Production being behind `main`
+  // says nothing about whether the site answers, and a red verdict that never
+  // probed the origin cannot tell "stale but healthy" from "stale and broken".
+  // Before the fix the smoke block lived in the `else` branch of
+  // `if (!decision.verified)`, so a stale verdict skipped it entirely.
   const { code, output } = await runWithLocalOrigin({
     expectedSha: "1111111111111111111111111111111111111111",
   });

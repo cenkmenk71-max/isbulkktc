@@ -11,7 +11,7 @@ import test from "node:test";
  * was a second, stale manifest and the only one Dependabot's npm ecosystem
  * read, so the advisory scan saw a tree that did not match what CI installed
  * while the real lockfile (`bun.lock`, the one `bun install --frozen-lockfile`
- * uses in every job) went unscanned. LANE-INFRA closed it in b1f8d62: the stale
+ * uses in every job) went unscanned. The CI/infra layer closed it in b1f8d62: the stale
  * lock is deleted and gitignored, and `.github/dependabot.yml` now watches the
  * `bun` ecosystem.
  *

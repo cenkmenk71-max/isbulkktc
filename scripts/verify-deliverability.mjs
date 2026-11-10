@@ -13,8 +13,7 @@
  * It reports what it measured and refuses to claim more. A record that could not
  * be queried is reported as `skip`, never as absent or clean: a network failure
  * must not read as "no record" (a false FAIL) or as "not listed" (a false PASS).
- * Inbox placement needs a real mailbox, which the runbook in
- * docs/lanes/11-verify.md covers.
+ * Inbox placement needs a real mailbox, which this script cannot supply.
  *
  * Usage:
  *   node scripts/verify-deliverability.mjs
@@ -45,8 +44,8 @@ function argValue(flag) {
 const DOMAIN = argValue("--domain") ?? "isbulkktc.com";
 
 /**
- * The owner-supplied mailboxes for the human-confirmed placement check
- * (docs/lanes/11-verify.md). `--send` alone uses these; `--send a@b` overrides.
+ * The owner-supplied mailboxes for the human-confirmed placement check.
+ * `--send` alone uses these; `--send a@b` overrides.
  */
 const DEFAULT_SEND_TO = [
   "muhammed.ali.kahraman@outlook.com",
@@ -660,7 +659,7 @@ async function main() {
   console.log(`\n${failed} failure(s), ${warned} warning(s), ${skipped} skipped`);
   console.log(
     "\nInbox placement (spam vs inbox) cannot be checked here — it needs a real\n" +
-      "mailbox. See docs/lanes/11-verify.md for the three-address runbook.",
+      "mailbox. Send to the owner-supplied addresses above to confirm placement.",
   );
   process.exit(failed > 0 ? 1 : 0);
 }
