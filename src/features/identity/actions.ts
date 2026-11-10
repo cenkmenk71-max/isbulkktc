@@ -14,6 +14,7 @@ import {
 } from "./schemas";
 import { parseEnabledOAuthProviders, resolveEnabledOAuthProviders } from "./oauth-providers";
 import { messageForAuthErrorCode } from "./auth-errors";
+import { accountBlockedMessage } from "./account-status";
 import {
   callbackAudienceParam,
   resolveAuthDestination,
@@ -165,7 +166,7 @@ export async function signIn(
   const supabase = await createSupabaseServerClient({
     allowCookieWrites: true,
   });
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: result.data.email,
     password: result.data.password,
     options: { captchaToken: result.data.captchaToken },
@@ -184,6 +185,34 @@ export async function signIn(
       email:
         error.code === "email_not_confirmed" ? result.data.email : undefined,
     };
+  }
+
+  // The credential check just minted a session, but `profiles.status` is the
+  // account's kill switch and the RPCs already refuse a non-active profile.
+  // Handing a suspended/closed account a working session would only surface as
+  // `42501` on the next write, so read the caller's own row (RLS
+  // `profiles_read_own` permits it) and, when the account is not active, drop
+  // the session before answering. A read failure is denied too: we cannot
+  // confirm the account is active, and a session we cannot justify is exactly
+  // the gap this closes.
+  const statusResult = await supabase
+    .from("profiles")
+    .select("status")
+    .eq("id", data.user.id)
+    .maybeSingle();
+
+  if (statusResult.error) {
+    console.error("The signed-in profile status could not be read.", {
+      code: statusResult.error.code,
+    });
+    await supabase.auth.signOut();
+    return { status: "error", message: "signInFailed" };
+  }
+
+  const blockedMessage = accountBlockedMessage(statusResult.data?.status);
+  if (blockedMessage) {
+    await supabase.auth.signOut();
+    return { status: "error", message: blockedMessage };
   }
 
   redirect(resolveAuthDestination(result.data.audience, result.data.locale));

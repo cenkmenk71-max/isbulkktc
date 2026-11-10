@@ -577,6 +577,8 @@
       "invalid": "Bilgileri kontrol edip tekrar deneyin.",
       "signInFailed": "Giriş yapılamadı. E-posta adresinizi ve şifrenizi kontrol edin.",
       "emailNotConfirmed": "Giriş yapmadan önce e-posta adresinizi doğrulamanız gerekiyor. Gelen kutunuza gönderdiğimiz bağlantıyı açın.",
+      "accountInactive": "Hesabınız askıya alındı. Yardım için destek ekibimizle iletişime geçin.",
+      "accountClosed": "Bu hesap kapatıldı. Yardım için destek ekibimizle iletişime geçin.",
       "captchaFailed": "Bot koruması doğrulanamadı. Sayfayı yenileyip tekrar deneyin.",
       "captchaRequired": "Devam etmeden önce güvenlik doğrulamasını tamamlayın.",
       "signUpFailed": "Kayıt tamamlanamadı. Bilgileri kontrol edip tekrar deneyin.",

@@ -577,6 +577,8 @@
       "invalid": "Check your details and try again.",
       "signInFailed": "Could not sign in. Check your email address and password.",
       "emailNotConfirmed": "You must verify your email address before signing in. Open the link we sent to your inbox.",
+      "accountInactive": "Your account is suspended. Contact our support team for help.",
+      "accountClosed": "This account is closed. Contact our support team for help.",
       "captchaFailed": "We could not verify the bot protection. Refresh the page and try again.",
       "captchaRequired": "Complete the security check before continuing.",
       "signUpFailed": "Your account could not be created. Check your details and try again.",

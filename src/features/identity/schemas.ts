@@ -84,6 +84,8 @@ export type SignInFormState = {
     | "invalid"
     | "signInFailed"
     | "emailNotConfirmed"
+    | "accountInactive"
+    | "accountClosed"
     | "captchaRequired"
     | "captchaFailed"
     | "signUpFailed"

@@ -614,6 +614,8 @@
       "invalid": "Prüfen Sie Ihre Angaben und versuchen Sie es erneut.",
       "signInFailed": "Anmeldung nicht möglich. Prüfen Sie Ihre E-Mail-Adresse und Ihr Passwort.",
       "emailNotConfirmed": "Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie sich anmelden. Öffnen Sie den Link in Ihrem Postfach.",
+      "accountInactive": "Ihr Konto ist gesperrt. Wenden Sie sich an unseren Support.",
+      "accountClosed": "Dieses Konto ist geschlossen. Wenden Sie sich an unseren Support.",
       "captchaFailed": "Der Bot-Schutz konnte nicht bestätigt werden. Laden Sie die Seite neu und versuchen Sie es erneut.",
       "captchaRequired": "Schließen Sie die Sicherheitsprüfung ab, bevor Sie fortfahren.",
       "signUpFailed": "Konto konnte nicht erstellt werden. Prüfen Sie Ihre Angaben und versuchen Sie es erneut.",
