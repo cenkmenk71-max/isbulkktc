@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import { authorizationIndex, authorizationLookup } from "./authorization-header";
+import { envReadNames } from "./env-access";
 
 /**
  * The bearer-secret authentication on the two Next.js cron routes.
@@ -50,9 +51,21 @@ function source(file: string): string {
  */
 function isBearerSecretGuard(code: string): boolean {
   return (
-    authorizationLookup.test(code) &&
-    /Bearer\s*\$\{/.test(code) &&
-    /process\.env\.(?!NEXT_PUBLIC_)[A-Z0-9_]*(?:SECRET|TOKEN)\b/.test(code)
+    authorizationLookup.test(code) && /Bearer\s*\$\{/.test(code) && cronSecretNames(code).length > 0
+  );
+}
+
+/**
+ * The non-public `*_SECRET` / `*_TOKEN` env names a route reads, in **every**
+ * access form. The earlier inline regex matched only `process.env.NAME`, so a
+ * guard written as `process.env["PUSH_CRON_SECRET"]` (or a destructured read)
+ * was never discovered — its ordering and fail-closed shape were never checked
+ * while the suite stayed green. `env-access.ts` is the shared, self-tested
+ * reader for all five forms.
+ */
+function cronSecretNames(code: string): string[] {
+  return envReadNames(code).filter(
+    (name) => /(?:SECRET|TOKEN)$/.test(name) && !name.startsWith("NEXT_PUBLIC_"),
   );
 }
 
@@ -82,7 +95,7 @@ const configProbes = ["createSupabaseServiceClient(", "isUnsubscribeSigningConfi
 
 const routes = bearerGuardedRoutes().map((file) => {
   const code = source(file);
-  const secret = /process\.env\.([A-Z0-9_]*(?:SECRET|TOKEN))\b/.exec(code)![1];
+  const secret = cronSecretNames(code)[0];
   const probeIndex = configProbes
     .map((probe) => code.indexOf(probe))
     .filter((index) => index > -1)
@@ -92,9 +105,8 @@ const routes = bearerGuardedRoutes().map((file) => {
 
 for (const route of routes) {
   test(`${route.file} reads its cron secret from the environment`, () => {
-    assert.match(
-      route.code,
-      new RegExp(`process\\.env\\.${route.secret}\\b`),
+    assert.ok(
+      envReadNames(route.code).includes(route.secret),
       `the route no longer reads ${route.secret}`,
     );
   });
@@ -160,6 +172,24 @@ test("the bearer-guard predicate sees the route shape and rejects near-misses (s
       ),
       true,
       `the predicate must recognise ${spelling}`,
+    );
+  }
+  // The secret may be read through any access form; each is a real guard whose
+  // ordering must be checked. A dot-only reader missed the bracket and
+  // destructured forms, so a route written that way was never discovered.
+  for (const read of [
+    "const secret = process.env.PUSH_CRON_SECRET;",
+    'const secret = process.env["PUSH_CRON_SECRET"];',
+    "const secret = process.env?.PUSH_CRON_SECRET;",
+    "const { PUSH_CRON_SECRET: secret } = process.env;",
+  ]) {
+    assert.equal(
+      isBearerSecretGuard(
+        read +
+          'if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {}',
+      ),
+      true,
+      `the predicate must discover a guard that reads its secret via: ${read}`,
     );
   }
   // A route that reads a secret but never compares the header is not a bearer guard.

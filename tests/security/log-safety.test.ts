@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import test from "node:test";
 
+import { envReadNames } from "./env-access";
+
 /**
  * Log safety — no password, token or key may reach a log line (#418 §7,
  * "Log: şifre/token loglanmıyor").
@@ -108,7 +110,22 @@ function isLoggableFirstArgument(argument: string): boolean {
 
 /** A credential-bearing expression that must never appear in a log argument. */
 const CREDENTIAL_VALUE_FORM =
-  /process\.env\.[A-Z0-9_]*(?:SECRET|TOKEN|KEY|PASSWORD|PASSWD|CREDENTIAL)|formData\.get\(\s*["']password["']|\.(?:access|refresh|provider)_token\b|\bapi[_-]?key\b|\bservice[_-]?role\b/i;
+  /formData\.get\(\s*["']password["']|\.(?:access|refresh|provider)_token\b|\bapi[_-]?key\b|\bservice[_-]?role\b/i;
+
+/**
+ * The non-public, credential-shaped env name an argument reads, if any — a name
+ * ending in SECRET/TOKEN/KEY/PASSWORD/PASSWD/CREDENTIAL, through **any** access
+ * form. The earlier inline regex matched only `process.env.NAME`, so a log that
+ * shipped `process.env["RESEND_API_KEY"]` (or a destructured read) was invisible
+ * to the gate. `env-access.ts` is the shared, self-tested reader for all forms.
+ */
+function credentialEnvName(args: string): string | undefined {
+  return envReadNames(args).find(
+    (name) =>
+      !name.startsWith("NEXT_PUBLIC_") &&
+      /(?:SECRET|TOKEN|KEY|PASSWORD|PASSWD|CREDENTIAL)$/.test(name),
+  );
+}
 
 /**
  * A bare credential identifier used as a value. Tested against the argument
@@ -157,9 +174,11 @@ test("no console call mentions a credential-bearing expression", () => {
   const offenders: string[] = [];
   for (const file of sourceFiles) {
     for (const args of consoleArguments(readFileSync(file, "utf8"))) {
+      const env = credentialEnvName(args);
       const form = CREDENTIAL_VALUE_FORM.exec(args);
       const word = CREDENTIAL_WORD.exec(stripStringLiterals(args));
-      if (form) offenders.push(`${file}: ${form[0]}`);
+      if (env) offenders.push(`${file}: ${env}`);
+      else if (form) offenders.push(`${file}: ${form[0]}`);
       else if (word) offenders.push(`${file}: ${word[0]} (bare value)`);
     }
   }
@@ -209,14 +228,26 @@ test("the scan covers scripts/ for the credential rule but not the label rule (s
 });
 
 test("the credential-expression rule catches the real leak shapes (self-test)", () => {
-  // The shapes this gate exists for — a password, an env secret, a bearer token.
+  // The shapes this gate exists for — a password, a bearer token.
   assert.equal(CREDENTIAL_VALUE_FORM.test('{ password: formData.get("password") }'), true);
-  assert.equal(CREDENTIAL_VALUE_FORM.test("process.env.PUSH_CRON_SECRET"), true);
   assert.equal(CREDENTIAL_VALUE_FORM.test("session.access_token"), true);
   // The safe shapes already in the codebase must stay green.
   assert.equal(CREDENTIAL_VALUE_FORM.test("{ code: error.code }"), false);
   assert.equal(CREDENTIAL_VALUE_FORM.test('{ event: "resend_key_malformed" }'), false);
   assert.equal(CREDENTIAL_VALUE_FORM.test("{ userId }"), false);
+
+  // An env secret is caught through every access form, not just dot access — a
+  // dot-only reader let `process.env["RESEND_API_KEY"]` reach a log green.
+  assert.equal(credentialEnvName("process.env.PUSH_CRON_SECRET"), "PUSH_CRON_SECRET");
+  assert.equal(credentialEnvName('process.env["RESEND_API_KEY"]'), "RESEND_API_KEY");
+  assert.equal(
+    credentialEnvName("process.env?.SUPABASE_SERVICE_ROLE_KEY"),
+    "SUPABASE_SERVICE_ROLE_KEY",
+  );
+  assert.equal(credentialEnvName("const { VAPID_PRIVATE_KEY } = process.env"), "VAPID_PRIVATE_KEY");
+  // A public variable and a non-credential name are not findings.
+  assert.equal(credentialEnvName("process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID"), undefined);
+  assert.equal(credentialEnvName("process.env.NODE_ENV"), undefined);
 
   // The bare-value rule: a label mentioning the word is fine, a value is not.
   assert.equal(CREDENTIAL_WORD.test(stripStringLiterals('"Supabase password update failed.", { code }')), false);
