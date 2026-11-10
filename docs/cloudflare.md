@@ -2865,3 +2865,65 @@ Origin 402 verirken **CF/TLS/DNS katmanı** ölçüldü — hepsi tur 25–28 il
 
 `resend._domainkey` **1024-bit** teyit edildi (`openssl rsa -pubin` → `Public-Key:
 (1024 bit)`), `cf2024-1` 2048. TLS 1.2 altı reddediliyor.
+
+## Tur 30 (2026-11-10) — DNS sertleştirme taraması + O-01 yeniden ölçümü + issue kaydı
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare
+Değişen dosyalar: docs/cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: O-01 (#518, LANE-INFRA, acil) · N-11r · H-01r ·
+            H-02 · R-01 · G-01 · F-08 · #227
+Sonraki lane için notlar: (1) Origin 402 verirken yalnız CF/TLS/DNS + WAF matrisi
+            ölçülebilir; cache/başlık bulguları (H-02, SR-01) O-01 kapanana kadar
+            D-21 gereği "çürük" sayılır. (2) `D-22` artık `O-` önekini kimlik
+            şemasına kaydetti — yeni bulgudan önce aralığı `grep` ile doğrula.
+```
+
+### F-30 (bilgi — temiz) — apex/alt alan DNS sertleştirmesi
+
+Apex ve yaygın alt alanlar tarandı; **grey-cloud (doğrudan origin) sızıntısı yok**:
+
+| Kontrol | Ölçüm (DoH, 2026-11-10) | Sonuç |
+|---|---|---|
+| Wildcard `*.isbulkktc.com` | kayıt **yok** | ✔ sızıntı yok |
+| 28 yaygın alt alan (`dev`, `staging`, `api`, `admin`, `origin`, `git`, `ci`, …) | hepsi **NXDOMAIN** | ✔ yalnız `send`/`rsend`/`www` yayında |
+| `www` | ayrı CNAME **yok**, apex ile aynı CF IP'leri | ✔ (F-03 ile tutarlı) |
+| `rsend` CNAME | `send.forge.rmta.net.` (dangling değil) | ✔ (tur 25 teyidi) |
+| Apex NS / DS | `lex`+`serenity.ns.cloudflare.com`; DS `2371 13 2 36e0…775b` | ✔ DNSSEC açık (F-13) |
+| `_mta-sts` / `_smtp._tls` / `_bimi` | kayıt **yok** | bilgi (opsiyonel, aşağıda) |
+
+**Öneri (onay bekliyor, düşük öncelik):** MTA-STS (`_mta-sts` TXT + `mta-sts.`
+policy host) ve TLS-RPT (`_smtp._tls` TXT) eklemek inbound TLS zorlamasını
+güçlendirir; DMARC `p=quarantine` rollout'uyla aynı fazda yapılabilir. Bu lane
+yazmaz — sahibin onayı gerekir.
+
+### O-01r (yeniden ölçüm) — origin hâlâ 402; CF katmanı 402 altında da sağlam
+
+Tur 29'daki kesinti **sürüyor** (2026-11-10 ~02:0x UTC):
+
+| İstek | Sonuç |
+|---|---|
+| `https://isbulkktc.com/` (ardışık 2×) | `402`, `cf-cache-status: DYNAMIC` (cache'lenmiyor) |
+| `https://isbulkktc-amber.vercel.app/` (CF bypass) | `402`, `server: Vercel` |
+| `PUT`/`DELETE`/`PATCH` `/` | `402` (origin); `TRACE` → `405` (F-21 ile tutarlı) |
+| WAF: `/.git/config`, `/.env`, `/wp-admin`, `/phpmyadmin`, `/api/devtools/` | `403` |
+| `/cdn-cgi/trace` | `colo=ORD`, `tls=TLSv1.3`, `sni=plaintext`, `warp=off` |
+
+- 402 gövdesinin `cache-control: public, max-age=0, must-revalidate`'i **Vercel'in
+  402 sayfasına** aittir; `cf-cache-status: DYNAMIC` olduğu için edge'e
+  **yazılmıyor** → **cache-poisoning / zehirli-hata yüzeyi yok** (N-01 sınıfından
+  farklı: orada `404` `public, max-age=31536000` ile cache'leniyordu).
+- Kesinti **CF'de değil**; WAF/TLS/cache/rate-limit katmanı doğru çalışıyor.
+
+### D-23 (doküman doğruluğu) — O-01 artık izlenebilir issue
+
+Tur 29'un `O-01` bulgusu **#518** olarak açıldı
+(`lane:infra`, `agent:handoff`); **#319**'dan (build rate limit — geçici) **ayrı
+kök neden** (hesap/plan, `Payment required`). #319'a da bu ağırlaşma yorumlandı.
+Bu kayıt, `O-01`'in sahipsiz kalmadığını belgeler.
+
+**Devir:** O-01 → **#518** (açık).
+**Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01.
+**Yeni:** F-30 (temiz), O-01r (yeniden ölçüm), D-22 (O- öneki), D-23 (#518 kaydı).
