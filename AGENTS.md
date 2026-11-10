@@ -80,8 +80,11 @@ with merge queue, turn it on — that is the correct fix for the cascade.
   per-test timeouts and rely on the CI retry budget for load-related flakes.
 
 - **Locale routing uses `localePrefix: "as-needed"`.** The default locale (`tr`)
-  is unprefixed in canonical/`x-default` output but prefixed in the served URL.
-  Keep this in mind when asserting on URLs.
+  is unprefixed in the served URL, not only in canonical/`x-default` output.
+  `src/proxy.ts` redirects a prefixed default-locale path to its bare form with
+  a **308** (`/tr/jobs` → `/jobs`, `/tr/auth` → `/auth`), so `tr` has exactly one
+  public URL. Only non-default locales keep their prefix (`/en/jobs`). Assert on
+  URLs accordingly: a request to `/tr/...` never reaches the page, it redirects.
 
 - **Employer logos are square canvases with the mark inside.** Every
   `source_site` company logo is stored on S3 at a 1:1 ratio (verified across the

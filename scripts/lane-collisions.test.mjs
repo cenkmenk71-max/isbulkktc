@@ -144,6 +144,15 @@ test("foldName folds the Turkish lane name to ASCII", () => {
   assert.equal(foldName("LANE-İÇERİK"), "lane-icerik");
 });
 
+test("AGENTS.md has an owner", () => {
+  // The repo's agent rules file is edited by whichever lane finds a stale
+  // claim in it (e.g. #437's locale-routing note), but it was in no ownership
+  // row, so the collision detector reported it "owned by no lane" and the
+  // Static checks job failed on every such fix. It is infrastructure guidance,
+  // so pin it to LANE-INFRA rather than leaving it unowned.
+  assert.deepEqual(ownersOf("AGENTS.md", table), ["LANE-INFRA"]);
+});
+
 test("the security-critical surfaces of #424/#435 have an owner", () => {
   // `src/proxy.ts` is the session/locale security boundary, `src/server/auth/**`
   // holds its auth guards, and `src/app/api/build-info/**` is the `force-static`
