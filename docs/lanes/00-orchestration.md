@@ -733,3 +733,34 @@ varsayma — aksi hâlde kuyruk-geneli kilit çıkar.
 — yeşil; `test:unit` yeşil; `lane-collisions --pr 560` temiz.
 
 **Canlıya dokundu mu:** hayır. Yalnız bu dosya (tur notu).
+
+### Tur — sahiplik sorgulayan ağaca göre okunuyordu: kuyruk kilidi kapsam-ters (#563, 2026-11-10)
+
+**Kapsam.** `lane:infra` kuyruğundan `#563` alındı; kanıt canlı doğrulandı
+(`#560` merge, `lane/infra` dalı main'den tazelendi, `headOwnership` gerçek API'ye
+karşı denendi).
+
+**Bulgu (mantık / kuyruk-geneli kilit).** `lane-collisions.mjs` sahiplik tablosunu
+**yalnız sorgulayan ağacın** (`main`) `docs/lanes/00-orchestration.md` satırlarından
+okuyordu. Bir lane yeni bir yol sahiplenince (`#560`: `.agents/skills/**` → LANE-INFRA)
+hem dosyayı hem satırı düzenler; **kendi** ağacında yol sahipli, kendi CI'ı yeşil.
+Ama başka bir açık PR'ın ağacı o merge edilmemiş satırı taşımaz → dedektör aynı yolu
+sahipsiz görüp **kuyruk-geneli** "owned by no lane" der ve satır main'e inene kadar
+**her** açık PR kırmızı kalır (`#560` yeşil, `#561` kırmızı; #552'nin kapsam-ters eşi).
+
+**Düzeltme.** `headOwnership(ref)` her PR'ın head dalındaki sahiplik tablosunu
+GitHub contents API'siyle okur; `openPullRequests()` tabloyu PR'a iliştirir;
+`evaluateCollisions` dosyaları `pr.lanes ?? lanes` tablosuna göre yargılar. Okuma
+başarısızsa (dal silinmiş, kota, çevrimdışı) paylaşılan tabloya düşer — fallback
+sahte sahiplik **uydurmaz**, yalnız eski davranışı sürdürür.
+
+**Test.** `scripts/lane-collisions.test.mjs` 4 yeni vaka (kendi iddiası global
+sayılmaz; gerçek orphan hâlâ global; tablo okunamazsa fallback; `--pr` kapsamı
+etkilenmez) → **32/32**. Canlı: `headOwnership('main')` → 14 satır;
+`headOwnership('yok-böyle-dal')` → `null`.
+
+**Çalıştırılan kontroller.** `bun run lint`, `typecheck`, `check:frontend-source`
+— yeşil; `test:unit` **1047/1047**; CI `Static checks` (Lane collisions adımı dahil)
+**pass**.
+
+**Canlıya dokundu mu:** hayır. Yalnız `scripts/lane-collisions*.mjs` ve bu dosya.
