@@ -377,3 +377,10 @@ edebileceği PR yoktu.
 **Kapılar.** `lint` ✅, `typecheck` ✅, `check:frontend-source` ✅, `test:unit`
 **920 test / 918 pass / 0 fail / 2 todo** (yeni: `approve-pending-runs.test.mjs`
 +2 test → toplam 10).
+
+**Teslim edildi (kural 4).** PR **#527** `app/github-actions` auto-merge (squash)
+ile **03:20:21Z'de merge edildi** (`main` `df36b2d1` → `feb5ee0d`); tüm zorunlu
+kontroller yeşil (aggregator dahil), tek kırmızı `Vercel — Account is blocked.`
+(zorunlu değil → `UNSTABLE`). Canlı doğrulama **yapılamadı**: her route hâlâ
+**402** (`DEPLOYMENT_DISABLED`) — hesap bloğu (#319 / #518) sürüyor. Merge kaydı
+`docs/deploy-log.md`'de.
