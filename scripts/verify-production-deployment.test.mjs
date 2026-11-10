@@ -232,17 +232,22 @@ test("a manual run without a tip never re-reads the remote and still fails loudl
  * the run must still smoke it rather than skip. Uses the async exec so the local
  * server's event loop keeps running (a sync spawn would deadlock the server).
  */
-async function runWithLocalOrigin({ expectedSha }) {
+async function runWithLocalOrigin({ expectedSha, servedCommit = "2222222222222222222222222222222222222222", brokenRoute = null }) {
   const source = fileURLToPath(
     new URL("./verify-production-deployment.mjs", import.meta.url),
   );
   const dir = mkdtempSync(join(tmpdir(), "verify-smoke-"));
   const server = createServer((req, res) => {
     if (req.url === "/api/build-info") {
-      // Report a *different* commit than `--expect`, so the commit check fails
-      // exactly like a production that is behind `main`.
+      // Report `servedCommit` so a caller can make the commit check fail (the
+      // default, a production behind `main`) or pass (the expected commit).
       res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ commit: "2222222222222222222222222222222222222222", environment: "production" }));
+      res.end(JSON.stringify({ commit: servedCommit, environment: "production" }));
+      return;
+    }
+    if (brokenRoute && req.url === brokenRoute) {
+      res.writeHead(500, { "content-type": "text/html" });
+      res.end("error");
       return;
     }
     res.writeHead(200, { "content-type": "text/html" });
@@ -310,6 +315,26 @@ test("a reachable origin is smoke-tested even when the commit check fails", asyn
   assert.match(output, /serving/, "the commit check must still fail");
   assert.match(output, /smoke routes: ✅/, "the reachable origin must be smoked");
   assert.match(output, /5 passed, 0 skipped, 0 failed/);
+});
+
+test("a confirmed commit with a broken route headlines ❌, matching the exit code", async () => {
+  // Freshness and health are separate: the commit can be confirmed while a
+  // reachable route answers 500. The run must still exit 1 — but the old code
+  // printed `verdict: ✅ <commit confirmed>` next to that failing job, so a
+  // reader (and the deploy log) saw a green deploy for a broken site. The
+  // headline must agree with the exit code and name the unhealthy route.
+  const { code, output } = await runWithLocalOrigin({
+    expectedSha: "2222222222222222222222222222222222222222",
+    servedCommit: "2222222222222222222222222222222222222222",
+    brokenRoute: "/jobs",
+  });
+
+  assert.equal(code, 1, output);
+  assert.match(output, /verdict: ❌/, "a failing run must not headline a green verdict");
+  assert.match(output, /smoke route\(s\) unhealthy/);
+  assert.doesNotMatch(output, /verdict: ✅/);
+  assert.match(output, /smoke routes: ❌ 4 passed, 0 skipped, 1 failed/);
+  assert.match(output, /FAIL route \/jobs: HTTP 500/);
 });
 
 test("isSuperseded treats a moved tip as superseded and an unmoved one as not", () => {
