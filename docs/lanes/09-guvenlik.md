@@ -1764,3 +1764,55 @@ Erişilebilirlik/kontrast/RTL bu lane'de kapsam dışı.
   `qrcode`'un bildirdiği minimum version'a karşı doğrula **veya** rotayı
   `try/catch` ile 4xx/5xx'e bağla (hata yanıtına `Cache-Control: no-store` ekle).
 - **#424** — M-01/M-02/M-04 platform; M-03'ün repo kısmı LANE-INFRA/LANE-URUN.
+
+## Durum (2026-11-09, 44. tur) — #508 devri: bayat çerez satırı + satır ratchet'i
+
+LANE-İÇERİK tur 10'un devri (#508) alındı: `agent:handoff`, engel değil.
+
+### Bulgu (kanıtlı) — §6 envanteri kapanmış bulguyu açık gösteriyor
+
+`tests/security/cookie-inventory.test.ts` §6 tablosunun `NEXT_LOCALE` satırı
+hâlâ şunu diyordu:
+
+```
+| `NEXT_LOCALE` | … | SameSite=Lax, **no Secure** — open finding, `locale-cookie-flags.test.ts` (LANE-İÇERİK) |
+```
+
+Ama bulgu **#469/#498** ile kapandı:
+`src/i18n/routing.ts:14 → localeCookie: { secure: process.env.NODE_ENV === "production" }`
+ve `locale-cookie-flags.test.ts` #502 ile `todo`'dan **gerçek kapıya** terfi etti.
+
+- **Gözlenen:** "**no Secure** — open finding".
+- **Beklenen:** "Secure (prod) — pinned in `locale-cookie-flags.test.ts`".
+- **Etki:** Envanter tablosu denetimin tek doğruluk kaynağı; bayat satır bir
+  sonraki çerez denetimini yanıltıp **kapanmış** bir bulguyu yeniden açar.
+
+### Düzeltme + kalıcılaştırma
+
+Satır `Secure (prod)` olarak güncellendi. Salt metin düzeltmesi bir sonraki
+düzenlemede yeniden bayatlayabilir, bu yüzden yeni bir **satır ratchet'i**
+eklendi (`cookie-inventory.test.ts` §5, `the NEXT_LOCALE inventory row matches
+the routing config it describes`): satırı kaynağı olan `src/i18n/routing.ts`'e
+bağlar — rota prod'da `Secure` kurmazsa **veya** satır yine "no Secure / open
+finding" derse test kırmızı. **Mutasyon:** satır eski hâline döndürülünce test
+kırmızı (✖), geri alınınca yeşil (✔) — dedektör vakumlu değil.
+
+Aynı bayat satırlar `tests/security/README.md`'de de vardı (kapsam tablosu satır
+40 + bulgular tablosu satır 67) — ikisi de güncellendi.
+
+### Kapılar (yeşil)
+
+- `bun run test:security` → 184 test / 175 pass / 0 fail / 9 todo (+1 test).
+- `bun run lint` ✓ · `bun run typecheck` ✓ · `bun run check:frontend-source` ✓.
+- `bun run test:unit` → 895 test / 893 pass / 0 fail / 2 todo.
+
+### Bakılmayan / değişmeyen
+
+`#424` bu turda yeniden triyaj edilmedi (tur 43'te yapıldı: M-01/M-02/M-04
+platform, M-03 repo kısmı LANE-INFRA/URUN). `docs/threat-model.md` /
+`docs/data-retention.md` değişmedi. Erişilebilirlik/kontrast/RTL bu lane'de
+kapsam dışı.
+
+### Devir
+
+Yeni devir yok — #508 bu lane'in kendi dosyasındaydı ve kapatıldı.
