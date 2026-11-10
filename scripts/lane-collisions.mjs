@@ -181,7 +181,7 @@ export function headOwnership(ref) {
         '-H',
         'Accept: application/vnd.github.raw',
       ],
-      { encoding: 'utf8' },
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
     );
     const lanes = parseOwnership(raw);
     return lanes.length > 0 ? lanes : null;

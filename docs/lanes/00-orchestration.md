@@ -69,6 +69,16 @@ silmek **kuyruk-geneli** bir bulgu üretir ve tüm açık PR'ları yeniden kilit
 #552'nin kaldırdığı kilit sınıfı. Muafiyet dardır: sahipsiz bir yolu **düzenlemek**
 (`MODIFIED`) hâlâ her PR'ı bağlar.
 
+**Sahiplik, dosyayı *tanıtan* PR'ın kendi ağacına göre yargılanır.** Bir lane yeni
+bir yol sahiplenince hem dosyayı hem de sahiplik satırını düzenler; yani **kendi**
+ağacında yol sahipli, kendi CI'ı yeşildir. Ama başka bir açık PR'ın ağacı, o PR'ın
+`main`'e merge edilmemiş satırını taşımaz — o sorgulayan ağaçta aynı yol sahipsiz
+görünür ve dedektör **kuyruk-geneli** "owned by no lane" der, ta ki sahiplenen PR
+merge olana kadar **her** açık PR kırmızı kalır (#563, #552'nin kapsam-ters eşi).
+Düzeltme: dedektör her PR'ın dosyalarını o PR'ın **kendi head dalındaki** sahiplik
+tablosuna göre yargılar (`headOwnership`); tablo okunamazsa (dal silinmiş, kota,
+çevrimdışı) paylaşılan tabloya düşer — böylece fallback sahte sahiplik uydurmaz.
+
 CI, `static` job'ında `node scripts/lane-collisions.mjs --pr
 "${{ github.event.pull_request.number }}"` çalıştırır: kuyruk-geneli iki kural her
 PR'ı bağlar, üçüncü kural **yalnız o PR'ı**. Böylece bir lane sahip olmadığı bir
