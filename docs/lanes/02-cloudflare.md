@@ -1034,3 +1034,32 @@ Sonraki lane için notlar: (1) `http→https` CF'de (origin'siz çalışır, 301
   DNSSEC `AD=true`; HSTS preload `pending`; `/robots.txt` `Vary` yok, `/sitemap.xml`
   `Vary: accept-encoding`; `/cdn-cgi/trace`+`speculation` 200.
 - **O-01r5:** origin hâlâ 404 `DEPLOYMENT_NOT_FOUND`.
+
+## Tur 36 (2026-11-10) — origin sağlıklı: `www→apex` yönlendirmesi **YOK**, `www` duplicate content (H-03)
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma)
+Sahibin yapması gerekenler: H-03 (CF Redirect Rule + Vercel domain: `www` → 301 apex) ·
+            H-02r/N-23 · N-22 · N-21 · N-20 · N-18 · N-19 · N-11r · H-01r · R-01 ·
+            G-01 · F-08 · #227 · #163 · #170 · O-01 (#518)
+Sonraki lane için notlar: (1) origin artık sağlıklı → kesinti rejimi bitti, tüm
+            katman ayrımları sağlıklı origin'de yeniden doğrulanabilir. (2) `https://www`
+            200 döner, apex ile **bayt-özdeş**; yönlendirme repo'da da CF edge'de de
+            yok → Vercel domain-level eksik. (3) Yeni kimlik: H-03, D-30, O-01r6.
+            (4) Tur 35 R-01r **kapandı**: kısıt değil, gerçek açık.
+```
+
+- **H-03 (yüksek, yeni):** Sağlıklı origin'de `https://www.isbulkktc.com/<yol>` →
+  **200**, apex'e yönlenmiyor. `/freelance` gövdesi apex ile **birebir aynı**
+  (139 342 B). Dokümanın "308" iddiaları (`F-03`, `C-09`, `V-06`, `W-20-3`, `T-18`,
+  `R-02/04/05`, `U-08`, `V-05`, `W-18-16`, `W-20-7`) **yanlış** → düzeltildi.
+  Katman: `http→https` CF (301), `https→apex` **hiç yok** (ne repo ne edge) →
+  Vercel domain redirect eksik. Duplicate-content/SEO riski (#163 halkası).
+- **D-30:** yukarıdaki satırlarda koşulsuz yazılan "308" düzeltildi; H-03'e atıflandı.
+- **Teyit (temiz, sağlıklı origin):** WAF `www…/.git/config` → 403; `robots.txt`
+  www==apex; gerçek-olmayan yol 404 `DYNAMIC` (negatif cache yok); apex root 200
+  `DYNAMIC`.
+- **O-01r6:** origin **sağlıklı** (önceki `404 DEPLOYMENT_NOT_FOUND` rejimi bitti).
