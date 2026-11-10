@@ -576,6 +576,7 @@ boyutu tazelendi. **Bir yeni bulgu (R-01)** var; gerisi temiz.
 | R-11 | Canonical ↔ servis edilen URL | `/`→`…/` , `/jobs`→`…/jobs` (sorgu düşer, doğru) | Tutarlı | ✔ |
 | R-12 | `hreflang` | 6 dil + `x-default` | Tam | ✔ |
 | R-13 | WAF / cache regresyon | 5/5 saldırı → 403; dinamik `DYNAMIC`, `_next` `HIT` | Değişmemeli | ✔ drift yok |
+| R-14 | `http://www` → **301** `Location: https://www/...` (host **www** kalıyor) | Yalnız **şema** yükselir, host apex'e kanonikleşmez → `www` 200 tam gövde | Host da apex'e 301 olmalı | ❌ **H-03r (tur 37)** |
 
 ### R-01 — sonlu noktalı apex host (yeni bulgu, düşük önem)
 
@@ -3533,3 +3534,62 @@ Düzeltme CF panelinde: Cache Rule'a "**Only cache if origin status is 200**"
 **Not:** gerçek 200 varlıklarda davranış **doğru** (`immutable`, uzun TTL);
 sorun yalnız **hata yanıtının** uzun TTL ile cache'lenmesi (AUDIT "hata yolu"
 boyutu).
+
+## Tur 37 (2026-11-10) — `www` yönlendirmesi **şemayı** düzeltiyor, **host'u** kanonikleştirmiyor (H-03r/R-14); tur 36 "bayt-özdeş" daraltıldı (D-31)
+
+**Yöntem:** origin sağlıklı (tur 36 rejimi). `www`/apex yönlendirme zinciri üç
+bağımsız açıdan (durum kodu, `Location`, gövde) yeniden ölçüldü. Bulgu, H-03'ün
+**mekanizmasını** netleştirir: eksik olan `http→https` değil, **host
+kanonikleştirmesidir**.
+
+### H-03r / R-14 (orta-yüksek) — `http://www` yalnız şemayı yükseltiyor, `www`'yi koruyor
+
+| İstek | Yanıt | `Location` / not |
+|---|---|---|
+| `http://www.isbulkktc.com/` | **301** | `https://www.isbulkktc.com/` — **host www kalıyor** |
+| `http://www.isbulkktc.com/freelance?q=test` | **301** | `https://www.isbulkktc.com/freelance?q=test` (yol+sorgu korunur) |
+| `https://www.isbulkktc.com/` | **200** | yönlendirme **yok**; `server: cloudflare`, `cf-ray` dolu, `x-vercel-cache` dolu |
+| `https://www.isbulkktc.com/sitemap.xml` | **200** | içerik **1509 URL, hepsi `https://isbulkktc.com`** (apex) — hiç `www` URL yok |
+| `https://www.isbulkktc.com/robots.txt` | **200** | apex ile **aynı** gövde |
+| `https://www.isbulkktc.com/.git/config` | **403** | WAF kuralı **host-bağımsız** çalışıyor |
+| `https://www.isbulkktc.com/<olmayan-yol>` | **404** | `cf-cache-status: DYNAMIC` (negatif cache yok) |
+
+- **Katman atfı:** `http→https` hop'u **CF** ("Always Use HTTPS"; origin
+  olmadan da çalışır). **`www`→apex** hop'u **hiç yok** — ne CF edge'de ne
+  repo'da (`next.config.ts` `redirects()` içermiyor). Yani `www` bir kanonik
+  hedef gibi davranıyor, oysa `sitemap.xml`/`robots.txt` kanonik hedefin **apex**
+  olduğunu söylüyor → **tutarsızlık**.
+- **Zincir kanıtı:** `http://www.isbulkktc.com/jobs?q=x` → 301 →
+  `https://www.isbulkktc.com/jobs?q=x` → **200**. **2 hop, son durak `www`**,
+  apex'e hiç varılmıyor.
+- **Etki:** `www` tam gövdeyi 200 servis ediyor (duplicate-content yüzeyi, H-03);
+  "tek sıçrama, apex'te biter" beklentisi karşılanmıyor. #163 (bulunabilirlik)
+  halkasında `www` URL'leri ayrı indekslenebilir.
+- **Düzeltme (devir — CF paneli, sahibin onayı; bu lane yazmaz):** Rules →
+  Redirect Rules: `http.host eq "www.isbulkktc.com"` → Dynamic redirect
+  `concat("https://isbulkktc.com", http.request.uri.path)`, **301**, "Preserve
+  query string" açık. Mevcut "Always Use HTTPS" ile birleşince tek sıçramada
+  `http://www` → `https://apex` olur.
+
+### D-31 (doküman doğruluğu) — "bayt-özdeş" ifadesi daraltıldı
+
+Tur 36 `www/freelance` için "apex ile **bayt-özdeş** (139 342 B)" demişti. Tur 37
+ölçümü: boyut **özdeş** ama **ham md5 farklı** (apex `27209a42330d658d…`, www
+`bfc412de7f55c19d…`). Fark **iki CF-injected rastgele token**:
+1. `window.__CF$cv$params={r:'…',t:'…',u:'…',ut:'…'}` — bot yönetimi imzası.
+2. `/cdn-cgi/l/email-protection#…` + `data-cfemail="…"` — **G-01** email obfuscation.
+
+Bu iki blok normalize edilince gövdeler **origin'de özdeş**. Doğru ifade: "apex
+ile **origin gövdesi** özdeş; yalnız CF-injected token farkı". Aynı durum kök
+sayfada da geçerli (normalize sonrası diff = yalnız bu iki blok). H-03'ün
+"duplicate content" sonucu **değişmez** — kanonik sinyal yine de eksik.
+
+### Teyit edilen (temiz, sağlıklı origin)
+
+- **HSTS:** apex ve `www` **aynı** `max-age=31536000; includeSubDomains; preload`.
+- **Negatif cache:** `www` üzerinde gerçek-olmayan yol → **404**, `DYNAMIC`
+  (H-02r/N-23 rejimi dinamik HTML'de geçerli değil; yalnız `/_next/static/**`).
+- **Apex root:** **200**, `cf-cache-status: DYNAMIC` (HTML asla cache'lenmiyor).
+
+**Devir:** H-03r/R-14 → CF paneli **Redirect Rule** (host `www` → 301 apex).
+**Yeni:** H-03r, R-14, D-31. **Değişmedi:** O-01r6 (origin sağlıklı).
