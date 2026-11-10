@@ -466,3 +466,34 @@ kopya sapma yüzeyi olurdu. Karar `docs/developer-tooling.md`'de kayıtlı.
 (`src/server/email/**` → LANE-URUN) — **hepsi bu dalda daha önce düzeltilmiş
 commit'lerle mevcut** (sırasıyla `6c2dd0c`, `4de5349`, `cc7a9dc`, …); doğrulandı.
 Bu turda kalan tek açık kalem `#475`'ti.
+
+### Tur — devir kuyruğu kapatıldı + AGENTS.md sahiplendirildi (#437)
+
+**Kapsam.** Bu turda önce kendi dalımın **iş çakışması** giderildi, sonra
+kuyruktaki kalan açık kalem `#437` düzeltildi.
+
+**Bulgu 1 (iş çakışması / mantık).** LANE-INFRA dalı `scripts/verify-auth-config.mjs`,
+`verify-deliverability.mjs`, `verify-indexing.mjs` dosyalarına dokunmuştu. Bu yollar
+sahiplik tablosunda **LANE-VERIFY**'in (satır 35) ve PR #541 aynı düzeltmeyi zaten
+taşıyordu → `lane-collisions` üç örtüşme buldu, `Static checks` kırmızıydı.
+
+**Düzeltme 1.** Üç dosya `main`'e geri alındı. `indexnow-key.mjs` ad==gövde
+düzeltmesi ve testi (hiçbir PR'ın dokunmadığı yollar) kaldı. Kapı artık temiz:
+`No collisions across 2 open PR(s)`.
+
+**Bulgu 2 (doğruluk).** `AGENTS.md` şöyle diyordu: varsayılan dil (`tr`) "sunulan
+URL'de ön-ekli". Yanlış: `src/proxy.ts:18-22` her `/tr/...` yolunu **308** ile
+ön-eksiz biçimine yönlendiriyor, yani `tr`'nin **tek** genel URL'i var ve kanonik/
+`x-default` ile aynı. (Canlı `robots.txt` de `/tr/auth/` listelemiyor — çünkü
+`/tr/*` önce kırpılıyor.)
+
+**Düzeltme 2.** `AGENTS.md` doğru davranışı yazacak biçimde düzeltildi. Ayrıca
+`AGENTS.md` sahiplik tablosunda **hiçbir lane'de yoktu**; bu yüzden onu düzenleyen
+her PR `lane-collisions`'ta "owned by no lane" olurdu. LANE-INFRA satırına
+`AGENTS.md` eklendi; `lane-collisions.test.mjs` bir ratchet testiyle sabitledi
+(13/13). Mutasyon testi: satırdan çıkarılınca test kırmızı, geri konunca yeşil.
+
+**Kuyruk durumu.** `#306`, `#428`, `#188`, `#292`, `#385`, `#447`, `#309`, `#386`
+bu dalda daha önce düzeltilmiş commit'lerle mevcut (doğrulandı). `#102` →
+`src/server/email/**` LANE-URUN'un; orada `agent:handoff` zaten var. `#442`
+(lanes.json modeli) ve `#426` (operator brief) main'de düzeltilmiş.
