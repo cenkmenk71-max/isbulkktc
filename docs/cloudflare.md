@@ -3063,3 +3063,145 @@ Tur 30'un bulguları (F-30 temiz, WAF/TLS/DNS sağlam) değişmedi.
 **Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01.
 **Yeni:** N-18 (eğiksiz/ayraçlı `.git` kaçışı), N-19 (eksik dotfile kümesi),
 D-25 (N-17 kapsam daraltması), O-01r2 (yeniden ölçüm).
+
+## Tur 32 (2026-11-10) — metod kuralı kapsamı (TRACE=origin) + secret/dotfile WAF kapsaması
+
+```
+Lane: LANE-CLOUDFLARE  Branch: lane/cloudflare  PR: (bu PR)
+Değişen dosyalar: docs/cloudflare.md, docs/lanes/02-cloudflare.md
+Çalıştırılan kontroller: lint ✅  typecheck ✅  check:frontend-source ✅  test:unit ✅
+Canlıya dokundu mu: hayır (salt-okuma; CF paneli/DNS/WAF/cache değiştirilmedi)
+Sahibin yapması gerekenler: N-20 (metod kuralına TRACE ekle — onay) · N-21 (secret/dotfile
+            kural setini genişlet — onay) · N-18 · N-19 · N-11r · H-01r · H-02 · R-01 ·
+            G-01 · F-08 · #227 · O-01 (#518, LANE-INFRA, acil)
+Sonraki lane için notlar: (1) Vercel **alias** (`isbulkktc-amber.vercel.app`) artık **her
+            yola 403 "Vercel Security Checkpoint"** döner (bot challenge, `server: Vercel`) →
+            origin'de "bloklu mu, serbest mi" testi için kullanılamaz; ayırt edici `.com`
+            üzerinde **403 = CF bloğu** ("Attention Required! | Cloudflare") / **402 =
+            origin'e ulaştı** (`x-vercel-error: DEPLOYMENT_DISABLED`). (2) `405` dönen
+            metod yanıtı WAF değil **origin** olabilir: TRACE'te `cf-ray: -` (tire) ve
+            gövdede `cloudflare` imzası origin'in 405'ini gösterir; WAF bloğu ise `cf-ray`
+            **dolu** + "Attention Required!" gövdesi verir. (3) Metod matrisini ölçerken
+            yalnız TRACK'e değil TRACE/OPTIONS'a da bak. (4) Yeni kimlik: `N-20`, `N-21`.
+```
+
+### N-20 (orta) — WAF "Metod allowlist" kuralı `TRACE`'i yakalamıyor; 405 **origin**'den geliyor
+
+**Mekanizma.** Tur 7'de `F-21` (satır 97) "`TRACE` → **405**, `TRACK` → **403** | OK"
+olarak kaydedildi; bu, iki sonucun da WAF davranışı olduğu izlenimi veriyor. Canlı
+ölçüm bunu **çürütüyor** — `TRACE`'in 405'i origin'den geliyor, WAF değil:
+
+| İstek | Kod | `cf-ray` | Gövde imzası | Katman |
+|---|---|---|---|---|
+| `TRACE https://isbulkktc.com/` | **405** | **`-`** (tire) | `<center>405 Not Allowed</center> … <center>cloudflare</center>` (155 B) | **origin** (Vercel) |
+| `TRACE https://isbulkktc-amber.vercel.app/` (CF atlanır) | **405** | — | `Method not allowed` / `NOT_ALLOWED` (`server: Vercel`) | origin |
+| `TRACK https://isbulkktc.com/` | **403** | `a582b57bd92baa0b-ORD` | `Attention Required! \| Cloudflare` | **WAF** |
+| `OPTIONS https://isbulkktc.com/` | **402** | dolu | `x-vercel-error: DEPLOYMENT_DISABLED` | **WAF atladı** |
+
+Yani metod kuralı `TRACK`'i (ve dokümana göre `CONNECT`) bloklar ama **`TRACE`'i
+bloklamaz**; `TRACE` origin'e ulaşır ve orada 405 alır. `OPTIONS`'un 402 dönmesi de
+kuralın "allowlist" değil **blocklist** olduğunu kanıtlar (yalnız TRACK/CONNECT
+dışlanıyor). Tur 26'da `%2F` için yapılan "eğik çizgiyi değil, kuralı suçla" dersinin
+aynısı: burada **eğik çizgi değil, eksik metod** suçlu.
+
+**Etki.** WAF'ın `TRACE` koruması **yanılsama**: edge, TRACE'i geçiriyor; engelleme
+origin'e (Vercel) devredilmiş. Bu (a) savunma-derinliğini origin'e bağımlı kılar,
+(b) origin değişir/gevşerse TRACE açığa çıkar (klasik XST / Cross-Site Tracing
+vektörü), (c) `F-21`'in "OK" kaydı katmanı yanlış atfediyor. Origin şu an doğru
+davrandığı için bugün sömürülebilir değil.
+
+**Düzeltme (öneri, onay bekliyor — yıkıcı WAF değişikliği).** Metod kuralını
+`http.request.method` üzerinden `TRACE`'i de kapsayacak biçimde genişlet:
+
+```
+(http.request.method in {"TRACE" "TRACK" "CONNECT"})
+```
+
+veya mevcut "VCS/dotfile/secret yolları" kuralı gibi tek bir `in` listesinde topla.
+Doğrulama: `curl -X TRACE -D - https://isbulkktc.com/` → `cf-ray` **dolu** ve gövde
+"Attention Required!" olmalı (bugün `cf-ray: -` + origin 405).
+
+- **D-26:** `F-21` (satır 97) "TRACE→405, TRACK→403 | OK" satırı katman atfını
+  belirsiz bırakıyordu; TRACE 405'i **origin**, TRACK 403'ü **WAF** olarak netleştirildi.
+
+### N-21 (orta) — Gizli-dosya/secret WAF kapsaması hem **eksik** hem **simetrik değil**; ~30 hassas yol bloklanmıyor
+
+**Mekanizma.** Dotfile/secret kuralı belirli adlara bağlı ve **seçici**: kardeş
+uzantıları, `dotfile-olmayan` secret dosyalarını ve birden çok VCS/konteyner sınıfını
+kapsamıyor. Ölçüm: `.com` üzerinde **403 = WAF bloğu** ("Attention Required!"),
+**402 = origin'e ulaştı** (`x-vercel-error: DEPLOYMENT_DISABLED`). `curl --path-as-is`.
+
+**Bloklu (403) — kuralın yakaladığı adlar:**
+
+| Yol | Yol | Yol |
+|---|---|---|
+| `/.env` (ve `/.env.local`, `.production`, `.backup`, `.old`, `.example`) | `/.env/` | `/.git/config`, `/.git/HEAD`, `/.git/index`, `/.git/logs/HEAD` |
+| `/.aws/credentials`, `/.aws/config` | `/.ssh/id_rsa`, `/.ssh/id_ed25519`, `/.ssh/known_hosts` | `/.svn/entries`, `/.svn/wc.db`, `/.hg/hgrc` |
+| `/.htpasswd` | `/.DS_Store` | `/wp-admin`, `/phpmyadmin`, `/xmlrpc.php` |
+| `/web.config` | `/backup.sql`, `/dump.sql`, `/db.sql`, `/database.sql` | `/composer.json` |
+
+**Bloklanmayan (402) — WAF atlıyor, origin'e ulaşıyor:**
+
+| Sınıf | Örnek yollar (hepsi 402) |
+|---|---|
+| `.env` **kardeşleri** | `/env` |
+| diğer VCS | `/.bzr/branch-format`, `/CVS/Entries` |
+| git **yardımcı** dosyaları | `/.gitignore`, `/.gitattributes`, `/.gitmodules`, `/.git-credentials` |
+| konteyner/orchestrator | `/Dockerfile`, `/docker-compose.yml`, `/docker-compose.yaml`, `/.dockerenv` |
+| secret/credential | `/.npmrc`, `/.netrc`, `/.pypirc`, `/.gem/credentials`, `/.kube/config`, `/.docker/config.json`, `/.pgpass`, `/id_rsa` |
+| kabuk/SQL geçmişi | `/.bash_history`, `/.zsh_history`, `/.mysql_history` |
+| IaC state | `/terraform.tfstate`, `/.terraform.tfstate` |
+| yapılandırma | `/config.json`, `/secrets.json`, `/credentials.json`, `/appsettings.json`, `/config.yml` |
+| kilit/artefakt | `/package-lock.json`, `/yarn.lock`, `/composer.lock`, `/Thumbs.db` |
+
+**Simetri kanıtı.** `/.env` → **403** ama `/.env.local` → **403** (aynı taban ad →
+prefix eşleşiyor), buna karşın `/env` → **402**; `/.git/config` → **403** ama
+`/.gitignore`/`/.git-credentials` → **402** (kural tam `.git/` segmentine bağlı,
+`.git*` değil — bu N-18'in kural-mekanizmasıyla aynı kök). Yani bloklama **kural
+listesine**, genel bir gizli-dosya sınıfına değil.
+
+**Etki.** Bugün sömürülebilir değil: O-01 (origin 402) ve Vercel'in varsayılan
+servis etmemesi içerik sızdırmıyor. Ancak WAF'ın bu yollar için sağladığı
+savunma-derinliği **fiilen yok**; O-01 kapandığında `.git`/`.npmrc`/state dosyası
+build çıktısına düşerse edge bloklamayacak.
+
+**Düzeltme (öneri, onay bekliyor — yıkıcı WAF değişikliği).** Ad-listesi yerine
+**sınıf** kuralı; `url_decode` + `lower` ile (Free plan `matches`'i reddeder):
+
+```
+(lower(url_decode(http.request.uri.path)) contains "/.git")
+or (lower(url_decode(http.request.uri.path)) contains "/.svn")
+or (lower(url_decode(http.request.uri.path)) contains "/.hg")
+or (lower(url_decode(http.request.uri.path)) contains "/.bzr")
+or (lower(url_decode(http.request.uri.path)) contains "/cvs/")
+or (lower(url_decode(http.request.uri.path)) contains "/.env")
+or (lower(url_decode(http.request.uri.path)) contains "/.npmrc")
+or (lower(url_decode(http.request.uri.path)) contains "/.netrc")
+or (lower(url_decode(http.request.uri.path)) contains "/.pgpass")
+or (lower(url_decode(http.request.uri.path)) contains "/id_rsa")
+or (lower(url_decode(http.request.uri.path)) contains "tfstate")
+or (lower(url_decode(http.request.uri.path)) contains "/.aws/")
+or (lower(url_decode(http.request.uri.path)) contains "/.ssh/")
+or (lower(url_decode(http.request.uri.path)) contains "/.kube/")
+or (lower(url_decode(http.request.uri.path)) contains "/.docker/")
+or (lower(url_decode(http.request.uri.path)) contains "/.gem/")
+```
+
+Not: `/.gitignore`, `/.gitattributes` gerçek build çıktısında **istenen** dosyalardır
+(Next.js bunları servis etmez ama WAF'ın bloklaması zararsız); kural bunları da
+kapsamalı ki sınıf tutarlı olsun.
+
+### D-27 — Vercel alias artık bot-challenge döndürüyor; origin testi için kullanılamaz
+
+Tur 29/31 notları "alias CF'yi atlar, origin'i doğrudan ölç" diyordu. Bu turda
+`isbulkktc-amber.vercel.app` **her** yola (kök dahil, `/robots.txt`, hatta
+`/nonexistent-xyz-123`) **403 "Vercel Security Checkpoint"** döndürüyor
+(`server: Vercel`, `retry-after: 30`, `data-astro-cid` gövdesi) → Vercel bot
+challenge'ı. Dolayısıyla alias, "origin bu yolu bloklar mı" testi için **artık
+geçersiz**; ayırt edici, `.com` üzerindeki **403 (CF bloğu, "Attention Required!")
+/ 402 (origin'e ulaştı, `x-vercel-error: DEPLOYMENT_DISABLED`)** ayrımıdır.
+
+**Devir:** N-20, N-21 → CF paneli (sahibin onayı) — bu lane yazmaz. O-01 → **#518**.
+**Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01, N-18, N-19.
+**Yeni:** N-20 (metod kuralı TRACE'i kapsamıyor), N-21 (secret/dotfile kapsaması eksik),
+D-26 (F-21 katman atfı), D-27 (alias challenge).
