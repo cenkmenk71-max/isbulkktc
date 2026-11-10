@@ -570,3 +570,57 @@ Mutasyon testi: istisna kaldırılınca test kırmızı, geri konunca yeşil (14
 PR'ını yeniden koşturabilir. `#319` (Vercel build rate limit) ve `#261`/`#441`
 (origin host/kodlanmış-yol davranışı) insan/platform kararı bekliyor — kanıt
 issue'larda; bu lane kod tarafında yapabileceğini yaptı.
+
+### Tur — çakışma kapısı tüm kuyruğu kilitledi: PR-yerel/kuyruk-geneli ayrımı (#552)
+
+**Kapsam.** Devir issue'su `#552` (`lane:infra`). `main` üzerindeki **her** açık
+PR'ın "Static checks" işinde kırmızı adım **`Lane collisions`**'tı (`#548`,
+`#549`), bu yüzden zorunlu `Quality, database and E2E` kontrolü hiçbir PR'da
+geçemiyordu — merge kuyruğu donmuştu.
+
+**Bulgu (mantık / sahiplik kapsamı).** `lane-collisions.mjs` üç bulguyu tek kovada
+toplayıp hepsiyle `exit 1` veriyordu. Oysa `<lane> does not own <path>` bulgusu
+**yalnız o lane'in kendi PR'ının** özelliğidir; kapı ise açık PR'ların tümünü
+okuduğu için bir lane'in sahiplik kayması kuyruktaki **her** PR'ı kırdı. `#549`
+(`lane/teslimat`) kendi test kardeşini (`scripts/verify-production-deployment.test.mjs`)
+düzenleyince hem kendi PR'ı hem kardeş PR `#548` kırmızı oldu: yerel bir eksik,
+global bir kırmızı üretti (tıkanıklık ailesi #5/#7).
+
+**Kanıt.** Düzeltmeden önce (issue gövdesi):
+
+```
+Found 1 collision problem(s):
+  #549 scripts/verify-production-deployment.test.mjs — lane-teslimat does not own it (LANE-VERIFY, LANE-INFRA)
+```
+
+Düzeltmeden sonra, canlı simülasyon (ihlal eden `#557` + masum `#555`): masum PR
+`exit 0`, ihlal eden `exit 1`. Gerçek açık PR kümesi (2 PR) temiz:
+`No collisions across 2 open PR(s).`
+
+**Düzeltme.**
+
+1. **Sahiplik tablosu.** LANE-TESLİMAT satırı test kardeşini kapsayacak glob'a
+   çevrildi (`prune-vercel-deployments*.mjs`, `approve-pending-runs*.mjs`,
+   `verify-production-deployment*.mjs`). Ayrıca üretilen
+   `supabase/seed-managed-content.sql` beş kaynak lane'e açıkça yazıldı
+   (İÇERİK/GEO/URUN/TASARIM/SUPABASE) — üretici lane artefaktı tazelediğinde
+   gereksiz kırmızı doğmasın.
+2. **Dedektör.** Bulgular iki kapsama ayrıldı: **kuyruk-geneli** (sahipsiz dosya,
+   iki PR aynı dosya) her PR'ı bağlar; **PR-yerel** (`<lane> does not own it`)
+   yalnız ilgili PR'ı. Yeni saf `evaluateCollisions` + `currentPullRequestNumber`
+   (`--pr <n>` / `--pr=<n>`).
+3. **CI.** `static` job'ı `node scripts/lane-collisions.mjs --pr
+   "${{ github.event.pull_request.number }}"` çalıştırır.
+
+**Çalıştırılan kontroller.** `bun run lint`, `typecheck`,
+`check:frontend-source` — yeşil; `test:unit` **993/993**; `lane-collisions`
+**26/26**. Mutasyon: CI adımından `--pr` kaldırılınca ratchet testi kırmızı.
+
+**Canlıya dokundu mu:** hayır. Yalnız sahiplik tablosu, dedektör, CI adımı ve
+testler.
+
+**Sonraki lane için notlar.** PR-yerel kapsam `--pr`'a bağlıdır; iş akışına bir
+`push` tetikleyicisi eklenirse adım `--pr ""` alır ve bilinçli olarak kapsamsız
+(tüm PR'lar) moda düşer — o durumda kuyruk-geneli iki kural yine her PR'ı bağlar,
+yalnız PR-yerel üçüncü kural kuyruğu yeniden kırabilir. `push` eklerken adımı
+atlamak ya da kapsamsız çalıştırmak gerekir.
