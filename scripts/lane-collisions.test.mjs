@@ -125,6 +125,29 @@ test("the operator harness family is owned by LANE-OPERATÖR", () => {
   }
 });
 
+test("LANE-TESLİMAT owns its scripts' test siblings", () => {
+  // The delivery row listed its three scripts by exact filename, so their
+  // `*.test.mjs` siblings were not covered. The detector reads *every* open PR,
+  // so a `lane/teslimat` PR editing one reported "lane-teslimat does not own it"
+  // and turned the whole merge queue red (#552, and #549 before it). The row now
+  // uses `*` globs; pin the family so a future exact-name edit cannot silently
+  // reopen the same global blockage.
+  for (const path of [
+    "scripts/verify-production-deployment.mjs",
+    "scripts/verify-production-deployment.test.mjs",
+    "scripts/prune-vercel-deployments.mjs",
+    "scripts/prune-vercel-deployments.test.mjs",
+    "scripts/approve-pending-runs.mjs",
+    "scripts/approve-pending-runs.test.mjs",
+  ]) {
+    assert.ok(
+      ownersOf(path, table).includes("LANE-TESLİMAT"),
+      `${path} must be owned by LANE-TESLİMAT`,
+    );
+  }
+  assert.deepEqual(ownersOf("docs/deploy-log.md", table), ["LANE-TESLİMAT"]);
+});
+
 test("the Copilot-only workspace config is owned by LANE-INFRA", () => {
   // `.github/skills/` and `.mcp.json` look like project sources but OpenHands
   // reads neither: it loads project skills only from `.agents/skills/` and has
@@ -168,6 +191,41 @@ test("the auth callback route belongs to LANE-AUTH, not LANE-SEO", () => {
     ownersOf("src/app/[locale]/(public)/jobs/page.tsx", table).includes(
       "LANE-SEO",
     ),
+  );
+});
+
+test("the (auth) route group belongs to LANE-AUTH, not LANE-SEO", () => {
+  // `src/app/[locale]/**` (LANE-SEO) also matched the Next.js `(auth)` route
+  // group, so all four auth pages had two owners — SEO and AUTH — and an edit to
+  // any of them reported a collision against whichever lane did not touch it.
+  // The earlier exclusion only covered the bare `auth/callback` directory, not
+  // the `(auth)` group. Pin every page in the group to AUTH alone.
+  for (const page of [
+    "src/app/[locale]/(auth)/login/page.tsx",
+    "src/app/[locale]/(auth)/register/page.tsx",
+    "src/app/[locale]/(auth)/forgot-password/page.tsx",
+    "src/app/[locale]/(auth)/reset-password/page.tsx",
+  ]) {
+    assert.deepEqual(ownersOf(page, table), ["LANE-AUTH"], page);
+  }
+});
+
+test("the content tree is split: ai-visibility to GEO, the rest to İÇERİK", () => {
+  // `src/content/**` was claimed by both LANE-GEO and LANE-İÇERİK, so every
+  // file in the tree had two owners. GEO's brief scopes it to the machine-
+  // readable AI-visibility content (JSON-LD, llms brief, structured data) while
+  // İÇERİK owns the user-facing editorial/guide text. Split the glob.
+  assert.deepEqual(
+    ownersOf("src/content/ai-visibility/json-ld.tsx", table),
+    ["LANE-GEO"],
+  );
+  assert.deepEqual(
+    ownersOf("src/content/editorial/tr.ts", table),
+    ["LANE-İÇERİK"],
+  );
+  assert.deepEqual(
+    ownersOf("src/content/guides/en.ts", table),
+    ["LANE-İÇERİK"],
   );
 });
 
