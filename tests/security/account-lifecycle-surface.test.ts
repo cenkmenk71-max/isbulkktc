@@ -132,26 +132,52 @@ test(
 );
 
 // ---------------------------------------------------------------------------
-// 3. Open gap: signing in never consults the kill switch.
+// 3. The kill switch is consulted at sign-in (closed by LANE-AUTH in #542).
+//
+// This was an open finding: `signIn` called `signInWithPassword` and redirected
+// without reading `profiles.status`, so a suspended/closed account still got a
+// working session. LANE-AUTH closed it in `19f197f` (`#542`) by reading the
+// caller's own row and dropping the session when the account is not active.
+// The `todo` is gone; the assertion is now a gate, so the read cannot be
+// removed without turning the suite red.
 // ---------------------------------------------------------------------------
 
-test(
-  "sign-in refuses an account whose profile is not active",
-  { todo: "signIn calls signInWithPassword and redirects without reading profiles.status, so a suspended/closed account still gets a session (owner: LANE-AUTH, #400)" },
-  () => {
-    const signIn = source.match(
-      /export async function signIn\b[\s\S]*?\n\}/,
-    );
-    assert.ok(signIn, "signIn is not defined");
-    // A fix must read the caller's own profile row and act on its status. Any
-    // shape counts as long as it consults `profiles` before the redirect.
-    assert.match(
-      signIn[0],
-      /from\(\s*["'`]profiles["'`]\)[\s\S]{0,300}?status/i,
-      "signIn does not check profiles.status before granting a session",
-    );
-  },
-);
+test("the signIn extractor ignores a regex-literal decoy (self-test)", () => {
+  // `source` is every `src/**` file concatenated, and a sibling test file writes
+  // the shape `/export async function signIn\b…/` as a regex literal. A `signIn\b`
+  // pattern matched that literal, so the gate below asserted against a copy of
+  // itself and could never fail on the real code. Requiring the open paren of a
+  // declaration keeps the match on `actions.ts`.
+  const decoy =
+    'const signIn = source.match(/export async function signIn\\b[\\s\\S]*?\\n\\}/);';
+  assert.equal(/export async function signIn\([\s\S]*?\n\}/.test(decoy), false);
+  const real = "export async function signIn(\n  a: string,\n) {\n  return a;\n}";
+  assert.ok(/export async function signIn\([\s\S]*?\n\}/.test(real));
+});
+
+test("sign-in refuses an account whose profile is not active", () => {
+  const signIn = source.match(/export async function signIn\([\s\S]*?\n\}/);
+  assert.ok(signIn, "signIn is not defined");
+  assert.ok(
+    signIn[0].includes("signInWithPassword"),
+    "signIn extraction matched a decoy, not the function in actions.ts",
+  );
+  // A fix must read the caller's own profile row *and* act on its status. The
+  // read alone is not enough: a suspended account must not keep the session, so
+  // the block path has to sign the caller out. The two calls are pinned in
+  // order — `isAccountBlocked` followed within a short window by `signOut()` —
+  // so removing the sign-out (and leaving only the read) turns the gate red.
+  assert.match(
+    signIn[0],
+    /from\(\s*["'`]profiles["'`]\)[\s\S]{0,300}?status/i,
+    "signIn does not check profiles.status before granting a session",
+  );
+  assert.match(
+    signIn[0],
+    /isAccountBlocked\([\s\S]{0,160}?signOut\s*\(/,
+    "signIn reads profiles.status but never signs the blocked caller out, so a suspended account keeps its session",
+  );
+});
 
 // ---------------------------------------------------------------------------
 // 4. Open gap: there is no deletion path at all.
