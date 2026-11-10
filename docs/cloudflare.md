@@ -1267,7 +1267,7 @@ edildi, **A-01c canlıda kapalı**).
 | V-06 | `www.` → apex | **200** (yönlendirme YOK; tur 36'da çürütüldü) | 301 | HTTP — **H-03** |
 | V-07 | Vercel alias `/` (doğrudan) | 200 + `x-robots-tag: noindex, nofollow` | noindex | HTTP |
 | V-08 | Vercel alias + `Host: isbulkktc.com` | **421 Misdirected** | — | HTTP |
-| V-09 | kök SPF | `include:_spf.mx.cloudflare.net` (**amazonses yok**) | Resend eklenmeli | DoH |
+| V-09 | kök SPF | `include:_spf.mx.cloudflare.net` (**amazonses yok**) | **ekleme** (return-path `send.`'de; bkz. E-03/tur 4) | DoH |
 | V-10 | `_dmarc` | `p=none` | `quarantine` | DoH |
 | V-11 | `resend._domainkey` | **1024-bit** RSA | 2048 | DoH |
 | V-12 | `send.isbulkktc.com` TXT/MX | `spf include:amazonses.com` · `feedback-smtp.eu-west-1.amazonses.com` | doğru | DoH |
@@ -1278,9 +1278,11 @@ edildi, **A-01c canlıda kapalı**).
   tur-4/2026-11-05 bulgularıyla birebir aynı; drift **yok**). Kopuk halka **Bing
   mülk doğrulaması** (V-05, değişmedi) → **LANE-SEO**; sahibin aksiyonu panel.
 - **#170 (spam) ve #227 (DKIM):** DNS tarafı **değişmedi** (V-09/V-10/V-11).
-  SPF'e Resend/amazonses ekleme + DMARC `quarantine` + DKIM 2048-bit rotasyonu
-  **hesap sahibinin panel/DNS onayına** bağlı (bu lane yıkıcı DNS değişikliği
-  yapmaz). `[auth.smtp]` = **LANE-SUPABASE** (#227).
+  DMARC `quarantine` + DKIM 2048-bit rotasyonu **hesap sahibinin panel/DNS onayına**
+  bağlı (bu lane yıkıcı DNS değişikliği yapmaz). **Kök SPF'e `include:amazonses.com`
+  EKLENMEZ** — return-path `send.isbulkktc.com` olduğundan gereksiz ve hatalıdır
+  (E-03/tur 4; `docs/cloudflare.md` → "Ana bulgu: issue'nun SPF teşhisi yanlış").
+  `[auth.smtp]` = **LANE-SUPABASE** (#227).
 - **F-08 netleştirmesi (yeni kanıt):** Vercel alias doğrudan 200 ama
   `Host: isbulkktc.com` ile **421 Misdirected Request** döner (V-08). Bu, alias'ın
   CF zone'undan **geçmediğini** kesinleştirir: CF, `Host`'u tanımadığı için isteği
