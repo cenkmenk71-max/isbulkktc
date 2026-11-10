@@ -8010,7 +8010,7 @@ main :where(p) {
 }
 .admin-package-message[data-status="error"],
 .admin-mfa-error {
-  color: var(--color-status-danger, #a13632);
+  color: var(--color-status-error);
 }
 .admin-package-list,
 .admin-company-list {
