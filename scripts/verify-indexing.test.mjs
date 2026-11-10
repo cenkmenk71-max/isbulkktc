@@ -239,10 +239,22 @@ test("a disabled deployment is not evidence about indexing", () => {
   assert.equal(isDeploymentDisabled(200, "NOT_FOUND"), false);
   assert.equal(isDeploymentDisabled(500, ""), false);
 
+  // Vercel's unresolved-deployment state: 404 with
+  // `x-vercel-error: DEPLOYMENT_NOT_FOUND`. A bare 404 must NOT match — a healthy
+  // origin answers 404 for every path it does not own, so only the header
+  // disambiguates the outage from a genuinely missing route.
+  assert.equal(isDeploymentDisabled(404, "DEPLOYMENT_NOT_FOUND"), true);
+  assert.equal(isDeploymentDisabled(404, " deployment_not_found "), true);
+  assert.equal(isDeploymentDisabled(404, ""), false);
+  assert.equal(isDeploymentDisabled(404, "NOT_FOUND"), false);
+
   // The site's outage is reported as unmeasurable (skip), not as a robots/sitemap
-  // failure — a 402 for the whole origin says nothing about the crawl surface.
-  assert.match(unmeasurableReason(402, "Payment required\n\nDEPLOYMENT_DISABLED", ""), /disabled/);
-  assert.match(unmeasurableReason(200, "", "DEPLOYMENT_DISABLED"), /disabled/);
+  // failure — a 402/404 for the whole origin says nothing about the crawl surface.
+  assert.match(unmeasurableReason(402, "Payment required\n\nDEPLOYMENT_DISABLED", ""), /not being served/);
+  assert.match(unmeasurableReason(200, "", "DEPLOYMENT_DISABLED"), /DEPLOYMENT_DISABLED/);
+  // The 404 outage is named by its marker, not reported as a bare 404.
+  assert.match(unmeasurableReason(404, "", "DEPLOYMENT_NOT_FOUND"), /DEPLOYMENT_NOT_FOUND/);
+  assert.match(unmeasurableReason(404, "", "DEPLOYMENT_NOT_FOUND"), /not being served/);
   // A genuine challenge still skips, and a normal answer is measurable.
   assert.match(unmeasurableReason(403, "", ""), /challenge/);
   assert.match(unmeasurableReason(200, "Just a moment...", ""), /challenge/);
