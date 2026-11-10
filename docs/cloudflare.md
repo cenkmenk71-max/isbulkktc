@@ -2843,3 +2843,24 @@ kanıtları geçersiz kılar. Origin tekrar 200 dönene kadar:
 
 **Açık (değişmedi):** H-01r, H-02, N-11r, R-01, G-01, F-08, SR-01.
 **Yeni:** O-01 (kesinti, LANE-INFRA), N-17 (bilgi), D-21 (kanıt çürümesi).
+
+### Tazelenen (canlı, origin düşükken de ölçülebilen)
+
+Origin 402 verirken **CF/TLS/DNS katmanı** ölçüldü — hepsi tur 25–28 ile tutarlı:
+
+| Nokta | Ölçüm (2026-11-10) | Durum |
+|---|---|---|
+| Apex A / AAAA | `104.21.29.3`, `172.67.171.53` / `2606:4700:3034::ac43:ab35`, `…3036::6815:1d03` | CF proxied — OK |
+| `www` | ayrı CNAME yok, apex ile aynı CF IP'leri | OK |
+| MX | `route{1,2,3}.mx.cloudflare.net` | OK |
+| Kök SPF | `v=spf1 include:_spf.mx.cloudflare.net ~all` | OK |
+| `send.` SPF | `v=spf1 include:amazonses.com ~all` | OK |
+| DKIM `cf2024-1` | 2048-bit | OK |
+| DKIM `resend` | **1024-bit** | **#227 açık** |
+| DMARC | `p=none; rua=…; fo=1` | #170 açık (quarantine önerisi) |
+| MTA-STS / TLS-RPT | kayıt **yok** | bilgi (opsiyonel) |
+| TLS min | 1.2 (`tls1`/`tls1_1` → *no protocols*) | OK |
+| Edge HSTS | `max-age=31536000` (origin config `63072000`) | **H-01r açık** |
+
+`resend._domainkey` **1024-bit** teyit edildi (`openssl rsa -pubin` → `Public-Key:
+(1024 bit)`), `cf2024-1` 2048. TLS 1.2 altı reddediliyor.
