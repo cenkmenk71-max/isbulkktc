@@ -32,19 +32,30 @@ export function GET() {
       title: guide.title,
       description: guide.description,
       url: `${site}/rehber/${guide.slug}`,
-      date: guide.updated,
+      // A guide tracks a single authored date, so it is both its publication
+      // and its edit date.
+      published: guide.updated,
+      updated: guide.updated,
       category: "Rehber",
     })),
     ...getArticles(locale).map((article) => ({
       title: article.title,
       description: article.description,
       url: `${site}/blog/${article.slug}`,
-      date: article.updated,
+      // RSS `<pubDate>` is "when the item was published", so it takes the
+      // article's own publication date; the edit date only feeds
+      // `<lastBuildDate>`. Emitting `updated` here made an edited article
+      // announce its edit date as its publication date.
+      published: article.published,
+      updated: article.updated,
       category: article.category,
     })),
-  ].sort((a, b) => b.date.localeCompare(a.date));
+  ].sort((a, b) => b.published.localeCompare(a.published));
 
-  const lastBuild = items[0]?.date ?? new Date().toISOString().slice(0, 10);
+  const lastBuild = items.reduce(
+    (latest, item) => (item.updated > latest ? item.updated : latest),
+    items[0]?.updated ?? new Date().toISOString().slice(0, 10),
+  );
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -63,7 +74,7 @@ ${items
       <guid isPermaLink="true">${item.url}</guid>
       <description>${escapeXml(item.description)}</description>
       <category>${escapeXml(item.category)}</category>
-      <pubDate>${new Date(item.date).toUTCString()}</pubDate>
+      <pubDate>${new Date(item.published).toUTCString()}</pubDate>
     </item>`,
   )
   .join("\n")}
