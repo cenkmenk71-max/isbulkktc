@@ -1,6 +1,6 @@
 begin;
 
-select plan(54);
+select plan(59);
 
 -- Web Push tables are capability storage: an endpoint plus its two keys is
 -- enough to deliver a notification to a device. The whole client surface is
@@ -333,6 +333,88 @@ select lives_ok(
 reset role;
 delete from public.push_subscriptions
 where endpoint = 'https://fcm.googleapis.com\evil.com/x';
+
+-- ---------------------------------------------------------------------------
+-- The host rule holds for *every* writer, not only the RPC (#282,
+-- 20261110140000). The rule is pinned on the table as a CHECK, so a writer that
+-- bypasses register_push_subscription — a service-role maintenance script, a
+-- data-fix migration, a future RPC — cannot store a metadata address or an
+-- arbitrary host. The RPC is a SECURITY DEFINER function and runs as the table
+-- owner, so the check never fires on its path; these assertions write the table
+-- directly to exercise the constraint the RPC path never touches.
+-- ---------------------------------------------------------------------------
+
+select throws_ok(
+  $$insert into public.push_subscriptions (user_id, endpoint, p256dh, auth_key, locale)
+    values (
+      '86000000-0000-4000-8000-000000000001',
+      'https://169.254.169.254/latest/meta-data/',
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      'en'
+    )$$,
+  '23514',
+  null,
+  'a direct write cannot store a cloud-metadata endpoint'
+);
+
+select throws_ok(
+  $$insert into public.push_subscriptions (user_id, endpoint, p256dh, auth_key, locale)
+    values (
+      '86000000-0000-4000-8000-000000000001',
+      'https://evil.example/collect',
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      'en'
+    )$$,
+  '23514',
+  null,
+  'a direct write cannot store an arbitrary non-push host'
+);
+
+select throws_ok(
+  $$insert into public.push_subscriptions (user_id, endpoint, p256dh, auth_key, locale)
+    values (
+      '86000000-0000-4000-8000-000000000001',
+      'https://evil.com@x.push.apple.com/x',
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      'en'
+    )$$,
+  '23514',
+  null,
+  'a direct write cannot store an authority carrying URL credentials'
+);
+
+select throws_ok(
+  $$insert into public.push_subscriptions (user_id, endpoint, p256dh, auth_key, locale)
+    values (
+      '86000000-0000-4000-8000-000000000001',
+      'https://fcm.googleapis.com:65536/x',
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      'en'
+    )$$,
+  '23514',
+  null,
+  'a direct write cannot store a port above 65535'
+);
+
+select lives_ok(
+  $$insert into public.push_subscriptions (user_id, endpoint, p256dh, auth_key, locale)
+    values (
+      '86000000-0000-4000-8000-000000000001',
+      'https://wns2-par02p.notify.windows.com/w/?token=' || pg_catalog.repeat('k', 40),
+      pg_catalog.repeat('A', 80),
+      pg_catalog.repeat('B', 24),
+      'en'
+    )$$,
+  'a direct write accepts a genuine push-service endpoint'
+);
+
+delete from public.push_subscriptions
+where endpoint =
+  'https://wns2-par02p.notify.windows.com/w/?token=' || pg_catalog.repeat('k', 40);
 
 -- ---------------------------------------------------------------------------
 -- An endpoint is a browser, not an account: registering it again reassigns it
