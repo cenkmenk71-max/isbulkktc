@@ -111,13 +111,21 @@ export function classifyHttpStatus(status) {
  *   the project to a deployment. The domain answers 404 on every route until a
  *   fresh production deployment succeeds.
  *
- * Naming them distinctly turns a bare "HTTP 404" into an actionable line, and —
+ * Naming them distinctly turns a bare status code into an actionable line, and —
  * critically — either must outrank the Vercel API channel, which can still
  * report the alias pointing at a READY deployment built from the right commit
  * while the origin answers 402/404 to every real request.
+ *
+ * A **bare** 404 is deliberately not this state: a healthy origin answers 404
+ * for any path it does not have, so a deployment that predates `/api/build-info`
+ * (or any unrelated missing route) would be misreported as "the site is down for
+ * every visitor" — a false red, and one that masks the Vercel API channel that
+ * still proves the alias serves the expected commit. 402 is unambiguous (Vercel
+ * is the only thing on the origin that answers it), so the status alone suffices
+ * there; 404 needs the header to disambiguate.
  */
 export function isDeploymentDisabled(status, vercelError) {
-  if (status === 402 || status === 404) return true;
+  if (status === 402) return true;
   if (typeof vercelError !== "string") return false;
   const marker = vercelError.trim().toUpperCase();
   return marker === "DEPLOYMENT_DISABLED" || marker === "DEPLOYMENT_NOT_FOUND";
@@ -131,9 +139,9 @@ function vercelAccountState(vercelError) {
 }
 
 /** A route is healthy only on a 2xx with a non-trivial body; blocked is skipped. */
-export function evaluateRouteResponse(route, status, bodyLength) {
+export function evaluateRouteResponse(route, status, bodyLength, vercelError) {
   const kind = classifyHttpStatus(status);
-  if (isDeploymentDisabled(status)) {
+  if (isDeploymentDisabled(status, vercelError)) {
     return {
       route,
       ok: false,
@@ -363,7 +371,14 @@ async function smokeTest(origin) {
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
       const body = await response.text();
-      results.push(evaluateRouteResponse(route, response.status, body.length));
+      results.push(
+        evaluateRouteResponse(
+          route,
+          response.status,
+          body.length,
+          response.headers.get("x-vercel-error"),
+        ),
+      );
     } catch (error) {
       results.push({ route, ok: false, reason: `request failed: ${error.message}` });
     }

@@ -249,9 +249,20 @@ test("a 404 (DEPLOYMENT_NOT_FOUND) is recognised as a not-served state", () => {
   // 404 (retrying...)" path and polled until the deadline instead of naming the
   // account state. Both states mean "down for every visitor".
   assert.equal(isDeploymentDisabled(404, "DEPLOYMENT_NOT_FOUND"), true);
-  assert.equal(isDeploymentDisabled(404, ""), true);
   assert.equal(isDeploymentDisabled(200, "deployment_not_found"), true);
   assert.equal(isDeploymentDisabled(404, " deployment_not_found "), true);
+});
+
+test("a bare 404 without the header is NOT the not-served state", () => {
+  // A healthy origin answers 404 for any path it does not have, so the status
+  // alone must not be read as "the site is down for every visitor": a deployment
+  // that predates `/api/build-info` would be misreported as an outage, and the
+  // false red would mask the Vercel API channel that still proves the alias
+  // serves the expected commit. The header is what disambiguates a real
+  // Vercel not-served state from an ordinary missing path.
+  assert.equal(isDeploymentDisabled(404, ""), false);
+  assert.equal(isDeploymentDisabled(404, undefined), false);
+  assert.equal(isDeploymentDisabled(404, "SOMETHING_ELSE"), false);
 });
 
 test("a disabled deployment is a failure even when the Vercel alias looks healthy", () => {
@@ -302,15 +313,22 @@ test("a disabled route response is a failure, not a skipped 4xx", () => {
   assert.equal(evaluateRouteResponse("/", 429, 0).skipped, true);
 });
 
-test("a 404 DEPLOYMENT_NOT_FOUND route is a failure, not a generic 4xx", () => {
-  // The not-found state must be named like the disabled one, not fall through to
+test("a 404 route is named as not-served only when Vercel sent the header", () => {
+  // With `x-vercel-error: DEPLOYMENT_NOT_FOUND` the route is the whole-site
+  // outage and must be named like the 402 case, not fall through to
   // `{ ok: false, reason: "HTTP 404" }` — that reads as a missing page rather
-  // than "the whole site is not being served".
-  const notFound = evaluateRouteResponse("/", 404, 0);
-  assert.equal(notFound.ok, false);
-  assert.equal(notFound.disabled, true);
-  assert.doesNotMatch(notFound.reason, /^HTTP 404$/);
-  assert.match(notFound.reason, /not being served/);
+  // than "the site is not being served".
+  const notServed = evaluateRouteResponse("/", 404, 0, "DEPLOYMENT_NOT_FOUND");
+  assert.equal(notServed.ok, false);
+  assert.equal(notServed.disabled, true);
+  assert.match(notServed.reason, /not being served/);
+
+  // A bare 404 (no header) stays an ordinary route failure: the status alone
+  // cannot tell a missing path from a missing deployment.
+  const missing = evaluateRouteResponse("/nope", 404, 0, "");
+  assert.equal(missing.ok, false);
+  assert.notEqual(missing.disabled, true);
+  assert.equal(missing.reason, "HTTP 404");
 });
 
 test("a not-served deployment outranks a healthy Vercel alias", () => {
