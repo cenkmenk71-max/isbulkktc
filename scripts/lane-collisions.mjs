@@ -6,15 +6,31 @@
  * a lane writes only the paths it owns, and no two lanes edit the same file.
  * This script turns both into a check. It reads the ownership table straight
  * out of docs/lanes/00-orchestration.md, so the doc stays the single source of
- * truth, then inspects the open pull requests:
+ * truth, then inspects the open pull requests.
  *
- *   1. a file in a PR that no lane owns        -> unowned
- *   2. one file changed by two different PRs   -> overlap
+ * It splits its findings into two scopes, because conflating them is what froze
+ * the merge queue:
  *
- * Exit code is non-zero when either is found, so it can gate CI. It never
- * writes anything.
+ *   1. GLOBAL — true of the queue, whoever is asking:
+ *        - a file in a PR that no lane owns      -> unowned
+ *        - one file changed by two different PRs -> overlap
+ *      These gate every PR's CI: no lane may merge on top of an unowned file or
+ *      a file two lanes both edit.
  *
- * Usage: node scripts/lane-collisions.mjs
+ *   2. PR-LOCAL — true only of the pull request that owns the branch:
+ *        - `<lane> does not own <path>` — the PR's own lane edited a file it
+ *          does not own.
+ *      This is self-audit. It must NOT gate the other lanes, or a single lane's
+ *      ownership slip turns *every* open PR red (#552, #557, #555): the branch
+ *      that owns the offending lane is told to fix it, and no one else waits.
+ *
+ * Exit code is non-zero when either scope finds a problem, so it can gate CI.
+ * It never writes anything.
+ *
+ * Usage:
+ *   node scripts/lane-collisions.mjs            # both scopes, all open PRs
+ *   node scripts/lane-collisions.mjs --pr 557   # global + PR 557's own scope
+ *   node scripts/lane-collisions.mjs --pr=557
  */
 
 import { pathToFileURL } from "node:url";
@@ -145,6 +161,81 @@ function openPullRequests() {
 }
 
 /**
+ * The pull request whose CI run this is, from `--pr <n>` / `--pr=<n>`.
+ *
+ * The ownership slip (`<lane> does not own <path>`) is a property of one branch,
+ * not of the queue, so CI scopes it to the current PR by passing this flag. A
+ * bare run (no flag) keeps the local check on for every PR, which is what a
+ * developer wants from their laptop.
+ *
+ * @returns {number|null} the PR number, or null when the flag is absent or malformed
+ */
+export function currentPullRequestNumber(argv = process.argv.slice(2)) {
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    const inline = arg.match(/^--pr=(.+)$/);
+    if (inline) return Number.parseInt(inline[1], 10) || null;
+    if (arg === '--pr') return Number.parseInt(argv[i + 1], 10) || null;
+  }
+  return null;
+}
+
+/**
+ * Classify a set of pull requests against the ownership table.
+ *
+ * Pure so the two scopes can be tested without `gh`: `global` problems are the
+ * queue-wide invariants (unowned file, file edited by two PRs) and gate every
+ * run; `local` problems are one PR's own lane editing outside its globs and gate
+ * only that PR.
+ *
+ * @param {Array<{number:number,headRefName:string,files:Array}>} prs
+ * @param {Array<{lane:string,globs:string[]}>} lanes the ownership table
+ * @param {number|null} [currentPr] when set, `local` holds only this PR's slips;
+ *   when null, `local` holds every PR's slips (a laptop run)
+ * @returns {{global: string[], local: string[]}}
+ */
+export function evaluateCollisions(prs, lanes, currentPr = null) {
+  const knownLanes = lanes.map((l) => l.lane);
+  const byFile = new Map();
+  const global = [];
+  const local = [];
+
+  for (const pr of prs) {
+    const lane = laneFromBranch(pr.headRefName, knownLanes);
+    for (const file of pr.files ?? []) {
+      const path = file.path ?? file;
+      const owners = ownersOf(path, lanes);
+      if (owners.length === 0) {
+        global.push(`#${pr.number} ${path} — owned by no lane`);
+      }
+      // The lane's own slip: reported for the current PR, or for all when the
+      // check runs unscoped.
+      if (
+        lane &&
+        owners.length > 0 &&
+        !owners.map(foldName).includes(lane) &&
+        (currentPr === null || pr.number === currentPr)
+      ) {
+        local.push(
+          `#${pr.number} ${path} — ${lane} does not own it (${owners.join(', ')})`,
+        );
+      }
+      if (!byFile.has(path)) byFile.set(path, []);
+      byFile.get(path).push(pr.number);
+    }
+  }
+
+  for (const [path, numbers] of byFile) {
+    const unique = [...new Set(numbers)];
+    if (unique.length > 1) {
+      global.push(`${path} — edited by ${unique.map((n) => `#${n}`).join(' and ')}`);
+    }
+  }
+
+  return { global, local };
+}
+
+/**
  * Map a branch name to the lane it belongs to.
  *
  * A lane branch is `lane/<name>`, but a lane may open more than one branch for
@@ -185,45 +276,28 @@ function main() {
     process.exit(1);
   }
 
+  const currentPr = currentPullRequestNumber();
   const prs = openPullRequests();
-  const byFile = new Map();
-  const problems = [];
+  const { global, local } = evaluateCollisions(prs, lanes, currentPr);
 
-  for (const pr of prs) {
-    const lane = laneFromBranch(pr.headRefName, lanes.map((l) => l.lane));
-    for (const file of pr.files ?? []) {
-      const path = file.path ?? file;
-      const owners = ownersOf(path, lanes);
-      const foldedOwners = owners.map(foldName);
-      if (owners.length === 0) {
-        problems.push(`#${pr.number} ${path} — owned by no lane`);
-      }
-      if (lane && owners.length > 0 && !foldedOwners.includes(lane)) {
-        problems.push(
-          `#${pr.number} ${path} — ${lane} does not own it (${owners.join(', ')})`,
-        );
-      }
-      if (!byFile.has(path)) byFile.set(path, []);
-      byFile.get(path).push(pr.number);
-    }
-  }
-
-  for (const [path, numbers] of byFile) {
-    const unique = [...new Set(numbers)];
-    if (unique.length > 1) {
-      problems.push(
-        `${path} — edited by ${unique.map((n) => `#${n}`).join(' and ')}`,
-      );
-    }
-  }
-
-  if (problems.length === 0) {
-    console.log(`No collisions across ${prs.length} open PR(s).`);
+  const scopeNote = currentPr === null ? '' : ` (ownership scoped to #${currentPr})`;
+  if (global.length === 0 && local.length === 0) {
+    console.log(`No collisions across ${prs.length} open PR(s)${scopeNote}.`);
     return;
   }
 
-  console.log(`Found ${problems.length} collision problem(s):`);
-  for (const problem of problems) console.log(`  ${problem}`);
+  if (global.length > 0) {
+    console.log(`Found ${global.length} queue-wide collision problem(s):`);
+    for (const problem of global) console.log(`  ${problem}`);
+  }
+  if (local.length > 0) {
+    console.log(
+      `Found ${local.length} ownership problem(s) in ${
+        currentPr === null ? 'the open pull requests' : `#${currentPr}`
+      }:`,
+    );
+    for (const problem of local) console.log(`  ${problem}`);
+  }
   process.exit(1);
 }
 

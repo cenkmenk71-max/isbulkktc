@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  currentPullRequestNumber,
+  evaluateCollisions,
   foldName,
   laneFromBranch,
   ownersOf,
@@ -307,4 +309,71 @@ test("every committed file under src/ is owned by a lane", () => {
     [],
     "these src/ files are in no ownership row in docs/lanes/00-orchestration.md",
   );
+});
+
+// The gate must not be queue-global: one lane's ownership slip has to break only
+// its own PR (#552, #557, #555). `evaluateCollisions` is pure so the split is
+// testable without `gh`.
+const lanesFixture = [
+  { lane: "LANE-ALPHA", globs: ["alpha/**"] },
+  { lane: "LANE-BETA", globs: ["beta/**"] },
+];
+
+test("--pr is parsed from the bare and inline forms", () => {
+  assert.equal(currentPullRequestNumber(["--pr", "557"]), 557);
+  assert.equal(currentPullRequestNumber(["--pr=557"]), 557);
+  assert.equal(currentPullRequestNumber([]), null);
+  assert.equal(currentPullRequestNumber(["--pr"]), null);
+  assert.equal(currentPullRequestNumber(["--pr=abc"]), null);
+});
+
+test("an unowned file is a queue-wide problem for every PR", () => {
+  const prs = [
+    { number: 1, headRefName: "lane/alpha", files: ["orphan/file.ts"] },
+    { number: 2, headRefName: "lane/beta", files: ["beta/x.ts"] },
+  ];
+  const { global, local } = evaluateCollisions(prs, lanesFixture, 2);
+  assert.deepEqual(global, ["#1 orphan/file.ts — owned by no lane"]);
+  // PR 2 is clean, so scoping to it leaves nothing local: this is what stops an
+  // unowned file in someone else's PR from reddening PR 2.
+  assert.deepEqual(local, []);
+});
+
+test("a lane editing outside its globs is PR-local, not queue-wide", () => {
+  // PR 1 (`lane/alpha`) edits `beta/x.ts`, which LANE-BETA owns. That is PR 1's
+  // own slip and must be reported only when the run is scoped to PR 1 (or
+  // unscoped on a laptop); PR 2 must not see it.
+  const prs = [{ number: 1, headRefName: "lane/alpha", files: ["beta/x.ts"] }];
+  assert.deepEqual(evaluateCollisions(prs, lanesFixture, 1).local, [
+    "#1 beta/x.ts — lane-alpha does not own it (LANE-BETA)",
+  ]);
+  assert.deepEqual(evaluateCollisions(prs, lanesFixture, 2).local, []);
+  // Unscoped (developer laptop) still reports it.
+  assert.deepEqual(evaluateCollisions(prs, lanesFixture, null).local, [
+    "#1 beta/x.ts — lane-alpha does not own it (LANE-BETA)",
+  ]);
+});
+
+test("two PRs touching one file is a queue-wide problem", () => {
+  const prs = [
+    { number: 1, headRefName: "lane/alpha", files: ["alpha/shared.ts"] },
+    { number: 2, headRefName: "lane/beta", files: ["alpha/shared.ts"] },
+  ];
+  const { global } = evaluateCollisions(prs, lanesFixture, 1);
+  assert.deepEqual(global, ["alpha/shared.ts — edited by #1 and #2"]);
+});
+
+test("scoping does not hide a PR's own slip behind a clean sibling", () => {
+  // Regression shape of #552/#557: PR 9 owns the offending lane. Scoped to 9 it
+  // must still fail, even though the other open PRs are clean.
+  const prs = [
+    { number: 8, headRefName: "lane/beta", files: ["beta/x.ts"] },
+    { number: 9, headRefName: "lane/alpha", files: ["beta/x.ts"] },
+  ];
+  const scoped = evaluateCollisions(prs, lanesFixture, 9);
+  assert.deepEqual(scoped.local, [
+    "#9 beta/x.ts — lane-alpha does not own it (LANE-BETA)",
+  ]);
+  // …and scoped to the clean PR 8, the same slip is invisible.
+  assert.deepEqual(evaluateCollisions(prs, lanesFixture, 8).local, []);
 });
