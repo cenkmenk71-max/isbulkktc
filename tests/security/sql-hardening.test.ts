@@ -515,6 +515,7 @@ const deliberatePublicRpcs = new Set([
   "get_public_directory()",
   "submit_feedback(text, text, text, integer, text, text)",
   "submit_sales_lead(text, text, text, text, text, integer, text, text)",
+  "submit_support_message(text, text, text, text, text)",
 ]);
 
 function normalizeArgs(args: string | undefined): string {

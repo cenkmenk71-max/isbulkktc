@@ -74,6 +74,7 @@ function callableByAnon(signature: string): boolean {
 const anonymousWriteRpcs = [
   "submit_feedback(text, text, text, integer, text, text)",
   "submit_sales_lead(text, text, text, text, text, integer, text, text)",
+  "submit_support_message(text, text, text, text, text)",
 ];
 
 /**
@@ -251,7 +252,9 @@ test("the direct PostgREST path is throttled inside the RPC, not just the form",
     // And the throttle must run *before* the insert, or the row is written even
     // when the quota is already spent.
     const throttleAt = body.indexOf("consume_anon_write_quota");
-    const insertAt = body.search(/insert\s+into\s+public\.(feedback_submissions|sales_leads)/i);
+    const insertAt = body.search(
+      /insert\s+into\s+public\.(feedback_submissions|sales_leads|support_threads|support_messages)/i,
+    );
     assert.ok(insertAt > -1, `${name} has no insert to compare against`);
     assert.ok(
       throttleAt < insertAt,
