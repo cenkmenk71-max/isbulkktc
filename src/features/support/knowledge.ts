@@ -11,9 +11,8 @@ import type { AppLocale } from "@/i18n/routing";
  * on-topic question is answered in-process, so the common case costs no token
  * and cannot hallucinate.
  *
- * Off-topic questions fall through to the optional AI layer
- * (`requestAiReply`), and when that is unconfigured or declines, to
- * `fallbackReply`, which is still grounded copy rather than a shrug.
+ * Off-topic questions fall through to `fallbackReply`, which is still grounded
+ * copy rather than a shrug.
  */
 
 const MIN_TOKEN_LENGTH = 3;
@@ -61,9 +60,9 @@ export function answerFromKnowledge(
 }
 
 /**
- * Grounded reply for a question the knowledge base and the AI layer both
- * decline. It restates what the platform is and routes the visitor to the human
- * channels — both taken from the FAQ bundle, so every locale stays truthful.
+ * Grounded reply for a question the knowledge base cannot place. It restates
+ * what the platform is and routes the visitor to the human channels — both
+ * taken from the FAQ bundle, so every locale stays truthful.
  */
 export function fallbackReply(locale: AppLocale): string {
   const summary = siteSummaryByLocale[locale];

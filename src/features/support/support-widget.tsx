@@ -10,10 +10,9 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
  * Visitor-facing live-support chat.
  *
  * A turn is answered by `/api/support/chat`, which resolves it deterministically
- * from the platform's published facts first and only then reaches the optional
- * AI fallback, so the common question is answered instantly and cannot
- * hallucinate. The opening visitor message is also persisted through the frozen
- * anon-write RPC `submit_support_message`
+ * from the platform's published facts, so the common question is answered
+ * instantly and cannot hallucinate. The opening visitor message is also
+ * persisted through the frozen anon-write RPC `submit_support_message`
  * (`supabase/migrations/20261111120000_v4_live_support.sql`), which is the single
  * write surface and carries its own per-address throttle, so the team sees the
  * thread in the console and can follow up.
