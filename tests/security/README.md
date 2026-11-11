@@ -66,7 +66,7 @@ the test passes on its own — remove the `todo` option to promote it to a gate.
 | `tests/security/**` not collected by any CI job | (`.github/workflows/**`) | **fixed** (`test:security` step) |
 | Anon feedback/sales forms had no captcha or rate limit | (`src/features/**`) | **fixed** (rate limiter in the actions) |
 | The throttle is action-only; the `anon` RPC is directly callable (#139) | (`supabase/**`) | **fixed** (DB throttle inside the RPC; now a gate) |
-| The DB throttle's IP dimension is one shared bucket on the app path (the action sends no visitor IP) | (`src/features/**`) + (`supabase/**`) | open (handoff #206) |
+| The DB throttle's IP dimension was one shared bucket on the app path (the action sent no visitor IP) | (`src/features/**`) + (`supabase/**`) | **fixed** (#206; the actions forward `x-client-ip` and the migration keys on it first, keeping the edge address as a coarse per-peer cap; `anonymous-rpc-throttle.test.ts` is now a gate) |
 | Employer self-service dead-ends at `verification_status = 'pending'`: no RPC, server action or admin page promotes a company to `verified`, so an employer can never publish a job | (`supabase/**`) + (`src/features/**`) | open (#418 account journey) |
 | A company-profile submission notifies nobody: the row is inserted `pending` but no e-mail or admin alert is sent, so "review" only happens if an admin polls `/admin/company-profiles` | (`src/features/**` + `src/server/email/**`) | open (#418 account journey) |
 | `info@isbulkktc.com` is published as the support address with Cloudflare Email Routing MX, but SPF authorises only Cloudflare and no mailbox is documented — inbound routing and Resend sending are not both proven | (`docs/cloudflare.md`) | open (see #170 for the SPF/Resend half) |

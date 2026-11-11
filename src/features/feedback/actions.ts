@@ -37,9 +37,11 @@ export async function submitFeedback(
 
   if (!result.success) return invalidForm;
 
+  const ip = await clientIp();
+
   // Throttle before the RPC and the mail it triggers. Per client address and
   // per submitted address, so neither one origin nor one victim mailbox floods.
-  if (!feedbackRateLimiter.check(`ip:${await clientIp()}`).ok) {
+  if (!feedbackRateLimiter.check(`ip:${ip}`).ok) {
     return throttledForm;
   }
   if (
@@ -50,14 +52,20 @@ export async function submitFeedback(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("submit_feedback", {
-    _name: result.data.name || null,
-    _email: result.data.email || null,
-    _category: result.data.category,
-    _rating: result.data.rating ?? null,
-    _message: result.data.message,
-    _locale: result.data.locale,
-  });
+  // Forward the visitor address so the DB throttle keys on it. supabase-js
+  // sends no IP header of its own, and the RPC's edge-written `cf-connecting-ip`
+  // is the platform's shared egress address on this path, so without the
+  // explicit header every app submission collapses onto one bucket (#206).
+  const { data, error } = await supabase
+    .rpc("submit_feedback", {
+      _name: result.data.name || null,
+      _email: result.data.email || null,
+      _category: result.data.category,
+      _rating: result.data.rating ?? null,
+      _message: result.data.message,
+      _locale: result.data.locale,
+    })
+    .setHeader("x-client-ip", ip);
 
   if (error || typeof data !== "string") {
     console.error("Feedback submission failed.", { code: error?.code });

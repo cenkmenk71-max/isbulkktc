@@ -263,30 +263,37 @@ issue açar.
 
 ### Açık bulgular (sahibine bildirildi, düzeltme bekliyor)
 
-1. **DB throttle'ın IP boyutu app yolunda tek kovaya düşüyor** (sahibi:
-   `src/features/**` -> LANE-URUN, `supabase/**` -> LANE-SUPABASE).
-   LANE-SUPABASE `20261106000000_v4_anon_write_throttle.sql` ile throttle'ı RPC
-   gövdesine taşıdı: `submit_feedback` ve `submit_sales_lead` artık insert'ten
-   önce `public.consume_anon_write_quota(...)` çağırıyor ve ledger + helper
-   client rollerinden revoke'lu — yani **doğrudan PostgREST saldırganı artık
-   sınırlı** (eski #139 bulgusunun saldırı yarısı kapandı; kapıya terfi etti,
-   `tests/security/anonymous-rpc-throttle.test.ts`).
-   Kalan sorun IP boyutunda: migration IP'yi `current_setting('request.headers')`
-   (`cf-connecting-ip` / `x-real-ip` / `x-forwarded-for`) üzerinden okuyor, bunlar
-   **PostgREST isteğinin** başlıkları. Doğrudan çağıran bir saldırgan bunları
-   taşır; ama uygulamanın Next.js server action'ı supabase-js ile çağırıyor ve
-   supabase-js ziyaretçi IP'sini **göndermiyor** (kurulu `@supabase/supabase-js`
-   ile ölçüldü: yalnız `apikey`, `authorization`, `content-type`,
-   `x-client-info`). Sonuç: app üzerinden gelen **tüm** gönderimler tek paylaşılan
-   kovaya düşer; migration'ın "eksik başlık tek kovaya düşer" notu app için
-   *normal* durumdur, kenar durum değil. Pencerede site geneli altıncı meşru
-   gönderim generic "failed" ile reddedilir. Önerilen düzeltme: action, ziyaretçi
-   adresini (`clientIp()`) RPC'ye açık bir argümanla geçirsin (ya da supabase-js
-   `global.headers` ile `cf-connecting-ip` eklesin), RPC de o argümanı başlığa
-   tercih etsin. Kanıt: `tests/security/anonymous-rpc-throttle.test.ts` (`todo`).
-   Devir: **#206** (`agent:handoff`, LANE-URUN + LANE-SUPABASE).
+- Şu an açık bulgu yok. (Son açık madde — DB throttle'ın app-yolu IP boyutu, #206 —
+  aşağıda kapatıldı.)
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
+
+- **DB throttle'ın IP boyutu app yolunda tek kovaya düşüyordu** (sahibi:
+  `src/features/**` -> LANE-URUN, `supabase/**` -> LANE-SUPABASE; **#206 ile
+  düzeltildi**). LANE-SUPABASE `20261106000000_v4_anon_write_throttle.sql` ile
+  throttle'ı RPC gövdesine taşımıştı (doğrudan PostgREST saldırganı sınırlı;
+  eski #139'un saldırı yarısı kapalı), ama IP boyutu app yolunda işe yaramıyordu:
+  RPC IP'yi `current_setting('request.headers')` (`cf-connecting-ip` /
+  `x-real-ip` / `x-forwarded-for`) üzerinden okuyordu, bunlar **PostgREST
+  isteğinin** başlıkları. Uygulamanın server action'ı supabase-js ile çağırıyor
+  ve supabase-js ziyaretçi IP'si göndermiyor; app yolunda kenarın yazdığı
+  `cf-connecting-ip` **platformun paylaşılan egress adresi** olduğundan tüm
+  ziyaretçiler tek kovaya düşüyordu (canlı ölçüm: kova `34.136.162.246`), yani
+  pencerede site geneli altıncı meşru gönderim generic "failed" ile
+  reddediliyordu.
+  **Düzeltme iki yarım:** (1) `submitFeedback`/`submitSalesLead` ziyaretçi
+  adresini `clientIp()` ile çözüp RPC'ye `.setHeader("x-client-ip", ip)` ile
+  gönderiyor; (2) yeni migration
+  `20261110160000_v4_anon_write_throttle_app_client_ip.sql` birincil kovayı
+  `x-client-ip`'e taşıyor (kenar başlıkları yedek), ama **doğrudan** bir çağıranın
+  sahte `x-client-ip` ile kova döndürüp #139'un sınırsız-depolama yarısını
+  yeniden açmasını önlemek için kenarın yazdığı `cf-connecting-ip`'i de geniş
+  burst'lu kaba bir per-peer tavan olarak tüketiyor. Sonuç: app yolu anlamlı bir
+  per-ziyaretçi kovası alır, doğrudan saldırgan gerçek adresiyle sınırlı kalır.
+  Kanıt (artık `todo` değil, kapı): `tests/security/anonymous-rpc-throttle.test.ts`,
+  `tests/integration/abuse-throttle.test.ts`,
+  `supabase/tests/database/anon_write_throttle.test.sql` (24 plan).
+  Devir kapandı: **#206**.
 
 - **`server-only` sınırı eksikti** (sahibi: `src/server/email/**`, LANE-URUN; **#102 ile düzeltildi**).
   `src/server/email/unsubscribe-token-core.ts` `ENGAGEMENT_UNSUBSCRIBE_SECRET`

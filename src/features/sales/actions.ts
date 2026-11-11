@@ -35,10 +35,12 @@ export async function submitSalesLead(
 
   if (!result.success) return invalidForm;
 
+  const ip = await clientIp();
+
   // Throttle before the RPC and the mail it triggers: the receipt goes to the
   // submitted address and the team gets a copy. Per address and per origin, so
   // both a single attacker and a single victim mailbox are bounded.
-  if (!salesLeadRateLimiter.check(`ip:${await clientIp()}`).ok) {
+  if (!salesLeadRateLimiter.check(`ip:${ip}`).ok) {
     return throttledForm;
   }
   if (!salesLeadRateLimiter.check(`email:${result.data.email}`).ok) {
@@ -51,16 +53,20 @@ export async function submitSalesLead(
       : null;
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("submit_sales_lead", {
-    _company_name: result.data.companyName || null,
-    _contact_name: result.data.contactName || null,
-    _email: result.data.email,
-    _phone: result.data.phone || null,
-    _plan: result.data.plan || null,
-    _duration_days: durationDays,
-    _note: result.data.note || null,
-    _locale: result.data.locale,
-  });
+  // Forward the visitor address so the DB throttle keys on it (#206); see the
+  // note in `src/features/feedback/actions.ts`.
+  const { data, error } = await supabase
+    .rpc("submit_sales_lead", {
+      _company_name: result.data.companyName || null,
+      _contact_name: result.data.contactName || null,
+      _email: result.data.email,
+      _phone: result.data.phone || null,
+      _plan: result.data.plan || null,
+      _duration_days: durationDays,
+      _note: result.data.note || null,
+      _locale: result.data.locale,
+    })
+    .setHeader("x-client-ip", ip);
 
   if (error || typeof data !== "string") {
     console.error("Sales lead submission failed.", { code: error?.code });

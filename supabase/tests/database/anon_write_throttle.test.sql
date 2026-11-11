@@ -14,7 +14,7 @@ begin;
 
 delete from public.anon_write_throttle;
 
-select plan(20);
+select plan(24);
 
 -- ---------------------------------------------------------------------------
 -- Least privilege: the ledger and the helper are invisible to clients.
@@ -255,10 +255,14 @@ select is(
 );
 
 -- ---------------------------------------------------------------------------
--- App-forwarded address: the server action sets `x-client-ip` because
--- supabase-js sends no IP header of its own, so without it every app submission
--- shared one `unknown` bucket (issue #206). It must key the bucket, and the
--- edge headers must still win when the edge itself wrote one.
+-- App-forwarded address precedence (#206).
+--
+-- The server action sets `x-client-ip` because supabase-js sends no IP header of
+-- its own. On the app path the RPC's edge-written `cf-connecting-ip` is the
+-- platform's *shared egress* address — identical for every visitor — so the
+-- app-forwarded value must key the primary bucket, or every app submission
+-- collapses onto one row. A direct caller can forge `x-client-ip`, so the edge
+-- address is *also* consumed as a coarse per-peer cap.
 -- ---------------------------------------------------------------------------
 
 set local "request.headers" = '{"x-client-ip":"203.0.113.7"}';
@@ -289,8 +293,8 @@ select is(
   'the app-forwarded x-client-ip keys its own bucket, not the shared unknown one'
 );
 
--- The edge header is written by the platform and cannot be forged, so it must
--- outrank the app-forwarded value when both are present.
+-- On the app path the edge writes the platform's egress address, so it must NOT
+-- shadow the app-forwarded visitor address; it is consumed as a per-peer cap.
 set local "request.headers" = '{"cf-connecting-ip":"198.51.100.9","x-client-ip":"203.0.113.7"}';
 set local role anon;
 
@@ -311,12 +315,70 @@ select is(
     where scope = 'ip'
       and subject_hash =
         pg_catalog.encode(
+          pg_catalog.sha256(pg_catalog.convert_to('203.0.113.7', 'UTF8')),
+          'hex'
+        )
+  ),
+  1,
+  'the app-forwarded x-client-ip keys the primary bucket even with an edge header'
+);
+
+select is(
+  (
+    select hits
+    from public.anon_write_throttle
+    where scope = 'ip'
+      and subject_hash =
+        pg_catalog.encode(
           pg_catalog.sha256(pg_catalog.convert_to('198.51.100.9', 'UTF8')),
           'hex'
         )
   ),
   1,
-  'the edge header outranks the app-forwarded x-client-ip'
+  'the edge-written address is still consumed as a coarse per-peer cap'
+);
+
+-- A direct caller can forge `x-client-ip` to mint fresh buckets, so the
+-- edge-written address must accumulate across those forgeries.
+set local "request.headers" = '{"cf-connecting-ip":"192.0.2.50","x-client-ip":"198.51.100.1"}';
+set local role anon;
+
+select lives_ok(
+  $$select public.submit_feedback(
+      'Visitor', null, 'general', 5,
+      'A feedback message long enough to pass validation.', 'tr'
+    )$$,
+  'a forged app address under a known peer is accepted'
+);
+
+reset role;
+
+set local "request.headers" = '{"cf-connecting-ip":"192.0.2.50","x-client-ip":"198.51.100.2"}';
+set local role anon;
+
+select lives_ok(
+  $$select public.submit_feedback(
+      'Visitor', null, 'general', 5,
+      'A feedback message long enough to pass validation.', 'tr'
+    )$$,
+  'a second forged app address from the same peer is accepted'
+);
+
+reset role;
+
+select is(
+  (
+    select hits
+    from public.anon_write_throttle
+    where scope = 'ip'
+      and subject_hash =
+        pg_catalog.encode(
+          pg_catalog.sha256(pg_catalog.convert_to('192.0.2.50', 'UTF8')),
+          'hex'
+        )
+  ),
+  2,
+  'rotating the forged app address still increments one shared per-peer bucket'
 );
 
 -- ---------------------------------------------------------------------------
