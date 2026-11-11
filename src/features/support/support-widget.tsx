@@ -9,13 +9,15 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 /**
  * Visitor-facing live-support chat.
  *
- * A turn is answered by `/api/support/chat`, which resolves it deterministically
- * from the platform's published facts, so the common question is answered
- * instantly and cannot hallucinate. The opening visitor message is also
- * persisted through the frozen anon-write RPC `submit_support_message`
- * (`supabase/migrations/20261111120000_v4_live_support.sql`), which is the single
- * write surface and carries its own per-address throttle, so the team sees the
- * thread in the console and can follow up.
+ * The launcher opens straight into the conversation — there is no gate form.
+ * Each turn is answered by `/api/support/chat`, which resolves definite platform
+ * facts deterministically from the published FAQ copy, so the reply is instant
+ * and cannot hallucinate; an unplaceable question still gets grounded copy, never
+ * a shrug. The visitor's message is also persisted best-effort through the frozen
+ * anon-write RPC `submit_support_message`
+ * (`supabase/migrations/20261111120000_v4_live_support.sql`), which is the
+ * single write surface and carries its own per-address throttle, so the team
+ * sees the thread in the console and can follow up.
  *
  * Message bodies are always rendered as React text nodes; nothing here ever
  * touches `dangerouslySetInnerHTML`.
@@ -30,6 +32,7 @@ interface ChatMessage {
 }
 
 const MAX_BODY_LENGTH = 1000;
+const SUGGESTION_KEYS = ["suggestion1", "suggestion2", "suggestion3"] as const;
 
 function newId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -45,19 +48,22 @@ export function SupportWidget({
   const panelId = useId();
 
   const [open, setOpen] = useState(defaultOpen);
-  const [email, setEmail] = useState("");
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showHuman, setShowHuman] = useState(false);
+  const [email, setEmail] = useState("");
 
   const listRef = useRef<HTMLUListElement | null>(null);
+  // `submit_support_message` opens a *new* thread on every call, so only the
+  // opening message is persisted: one conversation maps to one thread.
   const persistedRef = useRef(false);
 
   useEffect(() => {
     const node = listRef.current;
     if (node) node.scrollTop = node.scrollHeight;
-  }, [messages, open]);
+  }, [messages, open, sending]);
 
   const persistOpeningMessage = useCallback(
     (body: string) => {
@@ -84,10 +90,9 @@ export function SupportWidget({
     [email, locale],
   );
 
-  const handleSubmit = useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const trimmed = input.trim();
+  const sendMessage = useCallback(
+    async (raw: string) => {
+      const trimmed = raw.trim();
       if (sending || trimmed.length === 0) return;
 
       setSending(true);
@@ -120,7 +125,15 @@ export function SupportWidget({
         setSending(false);
       }
     },
-    [input, locale, persistOpeningMessage, sending, t],
+    [locale, persistOpeningMessage, sending, t],
+  );
+
+  const handleSubmit = useCallback(
+    (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      void sendMessage(input);
+    },
+    [input, sendMessage],
   );
 
   const greeting: ChatMessage = {
@@ -129,6 +142,7 @@ export function SupportWidget({
     body: t("greeting"),
   };
   const visibleMessages = [greeting, ...messages];
+  const showSuggestions = messages.length === 0 && !sending;
 
   return (
     <div className="support-widget" data-open={open ? "true" : "false"}>
@@ -155,8 +169,25 @@ export function SupportWidget({
           aria-label={t("panelTitle")}
         >
           <header className="support-widget__header">
-            <h2 className="support-widget__title">{t("panelTitle")}</h2>
-            <p className="support-widget__subtitle">{t("panelSubtitle")}</p>
+            <div className="support-widget__identity">
+              <span className="support-widget__avatar" aria-hidden="true">
+                <MessageCircle size={18} />
+              </span>
+              <span className="support-widget__heading">
+                <span className="support-widget__title">{t("panelTitle")}</span>
+                <span className="support-widget__subtitle">
+                  {t("panelSubtitle")}
+                </span>
+              </span>
+            </div>
+            <button
+              type="button"
+              className="support-widget__icon-button"
+              aria-label={t("close")}
+              onClick={() => setOpen(false)}
+            >
+              <X aria-hidden="true" size={18} />
+            </button>
           </header>
 
           <ul
@@ -169,17 +200,45 @@ export function SupportWidget({
                 key={message.id}
                 className={`support-widget__message support-widget__message--${message.role}`}
               >
-                <span className="support-widget__message-role">
-                  {message.role === "visitor" ? t("youLabel") : t("botLabel")}
-                </span>
-                <span className="support-widget__message-body">
-                  {message.body}
-                </span>
+                <span className="support-widget__bubble">{message.body}</span>
               </li>
             ))}
+            {sending ? (
+              <li
+                className="support-widget__message support-widget__message--support"
+                aria-label={t("thinking")}
+              >
+                <span className="support-widget__bubble support-widget__bubble--typing">
+                  <span className="support-widget__dot" />
+                  <span className="support-widget__dot" />
+                  <span className="support-widget__dot" />
+                </span>
+              </li>
+            ) : null}
           </ul>
 
-          <form className="support-widget__form" onSubmit={handleSubmit}>
+          {showSuggestions ? (
+            <div
+              className="support-widget__suggestions"
+              aria-label={t("suggestionsLabel")}
+            >
+              {SUGGESTION_KEYS.map((key) => {
+                const label = t(key);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className="support-widget__chip"
+                    onClick={() => void sendMessage(label)}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {showHuman ? (
             <label className="support-widget__field">
               <span>{t("emailLabel")}</span>
               <input
@@ -190,36 +249,55 @@ export function SupportWidget({
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
               />
+              <span className="support-widget__hint">{t("emailHint")}</span>
             </label>
-            <p className="support-widget__hint">{t("emailHint")}</p>
+          ) : null}
 
-            <label className="support-widget__field">
-              <span>{t("composerLabel")}</span>
+          {error ? (
+            <p className="support-widget__error" role="alert">
+              {error}
+            </p>
+          ) : null}
+
+          <form className="support-widget__form" onSubmit={handleSubmit}>
+            <label className="support-widget__composer">
+              <span className="support-widget__sr-only">
+                {t("composerLabel")}
+              </span>
               <textarea
                 name="message"
-                rows={2}
+                rows={1}
                 maxLength={MAX_BODY_LENGTH}
                 placeholder={t("composerPlaceholder")}
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    void sendMessage(input);
+                  }
+                }}
               />
+              <button
+                type="submit"
+                className="support-widget__submit"
+                aria-label={t("send")}
+                disabled={sending || input.trim().length === 0}
+              >
+                <Send aria-hidden="true" size={16} />
+              </button>
             </label>
-
-            {error ? (
-              <p className="support-widget__error" role="alert">
-                {error}
-              </p>
-            ) : null}
-
-            <button
-              type="submit"
-              className="support-widget__submit"
-              disabled={sending || input.trim().length === 0}
-            >
-              <Send aria-hidden="true" size={16} />
-              <span>{sending ? t("sending") : t("send")}</span>
-            </button>
           </form>
+
+          <footer className="support-widget__footer">
+            <button
+              type="button"
+              className="support-widget__human"
+              onClick={() => setShowHuman((value) => !value)}
+            >
+              {t("humanCta")}
+            </button>
+          </footer>
         </section>
       ) : null}
     </div>
