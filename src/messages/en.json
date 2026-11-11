@@ -1463,5 +1463,22 @@
     "ctaBody": "Did not find the answer you were looking for? Browse the listings or get in touch.",
     "ctaJobs": "Browse jobs",
     "ctaContact": "Contact us"
+  },
+  "support": {
+    "launcherLabel": "Live support",
+    "close": "Close",
+    "panelTitle": "Live support",
+    "panelSubtitle": "How can we help you?",
+    "greeting": "Hello! I can answer your questions about İşBul KKTC — districts, pricing, applying, or how to get in touch.",
+    "youLabel": "You",
+    "botLabel": "Support",
+    "emailLabel": "Email (optional)",
+    "emailPlaceholder": "you@example.com",
+    "emailHint": "Leave your address if you would like a reply by email.",
+    "composerLabel": "Your message",
+    "composerPlaceholder": "Type your question…",
+    "send": "Send",
+    "sending": "Sending…",
+    "sendFailed": "The message could not be sent. Please try again."
   }
 }

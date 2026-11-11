@@ -651,6 +651,30 @@ export type Database = {
         };
         Returns: string;
       };
+      // ---- Live support (migration 20261111120000) ----
+      submit_support_message: {
+        Args: {
+          _name: string | null;
+          _email: string | null;
+          _subject: string | null;
+          _body: string;
+          _locale: string;
+        };
+        Returns: string;
+      };
+      get_support_thread: {
+        Args: { _public_ref: string };
+        Returns: {
+          id: string;
+          public_ref: string;
+          subject: string | null;
+          status: string;
+          locale: string;
+          last_message_at: string;
+          created_at: string;
+          messages: Json;
+        }[];
+      };
       opt_out_engagement: {
         Args: { _email: string; _reason: string | null };
         Returns: undefined;

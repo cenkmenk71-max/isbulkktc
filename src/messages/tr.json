@@ -1463,5 +1463,22 @@
     "ctaBody": "Aradığınız yanıtı bulamadınız mı? İlanlara göz atın veya bize ulaşın.",
     "ctaJobs": "İş ilanlarını gör",
     "ctaContact": "İletişime geç"
+  },
+  "support": {
+    "launcherLabel": "Canlı destek",
+    "close": "Kapat",
+    "panelTitle": "Canlı destek",
+    "panelSubtitle": "Size nasıl yardımcı olabiliriz?",
+    "greeting": "Merhaba! İşBul KKTC hakkındaki sorularınızı yanıtlayabilirim. Bölgeler, ücretler, başvuru veya iletişim hakkında sorabilirsiniz.",
+    "youLabel": "Siz",
+    "botLabel": "Destek",
+    "emailLabel": "E-posta (isteğe bağlı)",
+    "emailPlaceholder": "ornek@eposta.com",
+    "emailHint": "Yanıtı e-posta ile almak isterseniz adresinizi bırakın.",
+    "composerLabel": "Mesajınız",
+    "composerPlaceholder": "Sorunuzu yazın…",
+    "send": "Gönder",
+    "sending": "Gönderiliyor…",
+    "sendFailed": "Mesaj gönderilemedi. Lütfen tekrar deneyin."
   }
 }

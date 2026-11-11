@@ -13,6 +13,7 @@ import { CookieConsent } from "@/components/analytics/cookie-consent";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { MotionController } from "@/components/motion/motion-controller";
 import { PwaRuntime } from "@/components/pwa/pwa-runtime";
+import { SupportWidget } from "@/features/support/support-widget";
 import { buildOrganizationGraph } from "@/content/ai-visibility/structured-data";
 import { JsonLd } from "@/content/ai-visibility/json-ld";
 import { isRightToLeftLocale, routing } from "@/i18n/routing";
@@ -183,6 +184,7 @@ export default async function LocaleLayout({
             <PwaRuntime />
           </ConsentProvider>
           <MotionController />
+          <SupportWidget />
         </NextIntlClientProvider>
       </body>
     </html>

@@ -13663,3 +13663,172 @@ html[lang="fa"] .pwa-install-steps > li::before {
   color: var(--color-vanadium-700);
   line-height: 1.65;
 }
+
+/* Live-support widget. Mounted once per locale layout, so it rides every
+   public route. Fixed to the inline-end corner (logical properties, so it
+   mirrors under RTL) and built from the same tokens as the FAQ and forms. */
+.support-widget {
+  position: fixed;
+  inset-block-end: calc(1rem + env(safe-area-inset-bottom, 0px));
+  inset-inline-end: calc(1rem + env(safe-area-inset-right, 0px));
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+  font-family: var(--font-sans);
+}
+
+.support-widget__launcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.1rem;
+  border: 1px solid var(--border-green);
+  border-radius: 999px;
+  background: var(--green);
+  color: var(--color-crayon-highlight);
+  font-size: var(--type-supporting);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-green);
+  transition: background var(--motion-fast) var(--ease-premium);
+}
+
+.support-widget__launcher:hover {
+  background: var(--green-hover);
+}
+
+.support-widget__launcher:focus-visible {
+  outline: 2px solid var(--color-vanadium-700);
+  outline-offset: 2px;
+}
+
+.support-widget__panel {
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: min(32rem, calc(100vh - 8rem));
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.support-widget__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: var(--tracking-display);
+  color: var(--ink);
+}
+
+.support-widget__subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--ink-4);
+  font-size: var(--type-caption);
+  line-height: 1.5;
+}
+
+.support-widget__messages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.support-widget__message {
+  max-width: 85%;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: var(--type-supporting);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.support-widget__message--support {
+  align-self: flex-start;
+  background: var(--green-soft);
+  color: var(--green-deep);
+}
+
+.support-widget__message--visitor {
+  align-self: flex-end;
+  background: var(--color-vanadium-100);
+  color: var(--ink-2);
+}
+
+.support-widget__form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.support-widget__field {
+  display: grid;
+  gap: 0.25rem;
+  font-size: var(--type-caption);
+  color: var(--ink-3);
+}
+
+.support-widget__field input,
+.support-widget__field textarea {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--type-body);
+  resize: vertical;
+}
+
+.support-widget__field input:focus-visible,
+.support-widget__field textarea:focus-visible {
+  outline: 2px solid var(--green-mid);
+  outline-offset: 1px;
+}
+
+.support-widget__error {
+  margin: 0;
+  color: var(--color-status-error);
+  font-size: var(--type-caption);
+}
+
+.support-widget__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid var(--border-green);
+  border-radius: var(--radius-sm);
+  background: var(--green);
+  color: var(--color-crayon-highlight);
+  font-size: var(--type-supporting);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-premium);
+}
+
+.support-widget__submit:hover:not(:disabled) {
+  background: var(--green-hover);
+}
+
+.support-widget__submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.support-widget__submit:focus-visible {
+  outline: 2px solid var(--color-vanadium-700);
+  outline-offset: 2px;
+}

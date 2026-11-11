@@ -1463,5 +1463,22 @@
     "ctaBody": "Keine passende Antwort gefunden? Sehen Sie sich die Anzeigen an oder kontaktieren Sie uns.",
     "ctaJobs": "Jobs ansehen",
     "ctaContact": "Kontakt"
+  },
+  "support": {
+    "launcherLabel": "Live-Support",
+    "close": "Schließen",
+    "panelTitle": "Live-Support",
+    "panelSubtitle": "Wie können wir helfen?",
+    "greeting": "Hallo! Ich beantworte Ihre Fragen zu İşBul KKTC — Bezirke, Preise, Bewerbungen oder Kontakt.",
+    "youLabel": "Sie",
+    "botLabel": "Support",
+    "emailLabel": "E-Mail (optional)",
+    "emailPlaceholder": "you@example.com",
+    "emailHint": "Hinterlassen Sie Ihre Adresse, wenn Sie eine Antwort per E-Mail wünschen.",
+    "composerLabel": "Ihre Nachricht",
+    "composerPlaceholder": "Schreiben Sie Ihre Frage…",
+    "send": "Senden",
+    "sending": "Wird gesendet…",
+    "sendFailed": "Die Nachricht konnte nicht gesendet werden. Bitte erneut versuchen."
   }
 }

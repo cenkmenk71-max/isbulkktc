@@ -14,3 +14,17 @@ const limit = 5;
 
 export const feedbackRateLimiter = createRateLimiter({ limit, windowMs });
 export const salesLeadRateLimiter = createRateLimiter({ limit, windowMs });
+
+/**
+ * Budget for the live-support chat turn.
+ *
+ * A conversation is many short turns rather than one submission, so the mail
+ * budget would cut a genuine visitor off mid-thread; the window stays the same
+ * and the ceiling is raised to a level that still bounds a scripted caller
+ * driving the optional AI fallback. Keyed on the client address alone — a chat
+ * turn carries no address to throttle against.
+ */
+export const supportChatRateLimiter = createRateLimiter({
+  limit: 30,
+  windowMs,
+});
