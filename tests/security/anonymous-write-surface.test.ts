@@ -38,6 +38,7 @@ test("the anonymous write RPCs are granted to anon (by design)", () => {
   for (const signature of [
     "submit_feedback(text, text, text, integer, text, text)",
     "submit_sales_lead(text, text, text, text, text, integer, text, text)",
+    "submit_support_message(text, text, text, text, text)",
   ]) {
     const escaped = signature.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const pattern = new RegExp(
@@ -91,10 +92,11 @@ function anonymousWriteTables(): string[] {
   return [...tables].sort();
 }
 
-/** The two reviewed anon write RPCs — the discovery must always find these. */
+/** The reviewed anon write RPCs — the discovery must always find these. */
 const reviewedAnonymousWriteRpcs = [
   "submit_feedback",
   "submit_sales_lead",
+  "submit_support_message",
 ];
 
 test("the anonymous write RPCs are not readable by clients", () => {
@@ -102,8 +104,8 @@ test("the anonymous write RPCs are not readable by clients", () => {
   const tables = anonymousWriteTables();
   assert.deepEqual(
     tables,
-    ["feedback_submissions", "sales_leads"],
-    "the discovered anon-write table set drifted from the reviewed two",
+    ["feedback_submissions", "sales_leads", "support_messages", "support_threads"],
+    "the discovered anon-write table set drifted from the reviewed set",
   );
   for (const table of tables) {
     const pattern = new RegExp(
@@ -114,12 +116,12 @@ test("the anonymous write RPCs are not readable by clients", () => {
   }
 });
 
-test("the anon-write table discovery sees the two reviewed RPCs (self-test)", () => {
+test("the anon-write table discovery sees the reviewed RPCs (self-test)", () => {
   // Guards the guard: a scan that silently stops finding the reviewed writers
-  // would make the gate above pass vacuously. Both must be discovered, and a
+  // would make the gate above pass vacuously. All must be discovered, and a
   // read-only public RPC must not drag its table in.
   const discovered = anonymousWriteTables();
-  for (const table of ["feedback_submissions", "sales_leads"]) {
+  for (const table of ["feedback_submissions", "sales_leads", "support_messages", "support_threads"]) {
     assert.ok(discovered.includes(table), `${table} was not discovered: ${discovered.join(", ")}`);
   }
   for (const name of reviewedAnonymousWriteRpcs) {
