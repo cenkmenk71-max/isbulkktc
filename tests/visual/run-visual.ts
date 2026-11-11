@@ -106,8 +106,11 @@ async function capture(browser: Browser, shot: VisualShot): Promise<Buffer> {
     await target.waitFor({ state: "visible", timeout: 30_000 });
     await target.scrollIntoViewIfNeeded();
 
+    // Fixed bottom-corner widgets are present on every page, so they are masked
+    // like the consent trigger rather than baked into the region baselines.
     const maskSelectors = [
       ".consent-settings-trigger",
+      ".support-widget__launcher",
       ...(shot.maskSelectors ?? []),
     ];
     return await target.screenshot({
