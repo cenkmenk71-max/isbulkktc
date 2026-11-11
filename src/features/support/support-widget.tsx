@@ -168,7 +168,7 @@ export function SupportWidget({
           role="dialog"
           aria-label={t("panelTitle")}
         >
-          <header className="support-widget__header">
+          <div className="support-widget__header">
             <div className="support-widget__identity">
               <span className="support-widget__avatar" aria-hidden="true">
                 <MessageCircle size={18} />
@@ -188,7 +188,7 @@ export function SupportWidget({
             >
               <X aria-hidden="true" size={18} />
             </button>
-          </header>
+          </div>
 
           <ul
             ref={listRef}
@@ -289,7 +289,7 @@ export function SupportWidget({
             </label>
           </form>
 
-          <footer className="support-widget__footer">
+          <div className="support-widget__footer">
             <button
               type="button"
               className="support-widget__human"
@@ -297,7 +297,7 @@ export function SupportWidget({
             >
               {t("humanCta")}
             </button>
-          </footer>
+          </div>
         </section>
       ) : null}
     </div>
