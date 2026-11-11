@@ -124,7 +124,8 @@ select ok(
 
 -- Intentionally reachable with `anon` and/or `authenticated`:
 --   * the public `get_public_*` / `search_public_*` read RPCs,
---   * the anonymous write RPCs (`submit_feedback`, `submit_sales_lead`),
+--   * the anonymous write RPCs (`submit_feedback`, `submit_sales_lead`,
+--     `submit_support_message`),
 --   * the `is_active_company_member` / `has_platform_role` helpers and the two
 --     IMMUTABLE CHECK validators (a CHECK expression runs as the caller, so
 --     revoking these would break every INSERT),
@@ -157,7 +158,9 @@ select is(
     'admin_list_job_packages()',
     'admin_list_listing_plans()',
     'admin_list_site_content()',
+    'admin_list_support_threads()',
     'admin_list_verified_companies()',
+    'admin_reply_support_thread(_thread_id uuid, _body text)',
     'admin_save_job_package(_package_id uuid, _code text, _display_name text, _description text, _max_active_jobs integer, _job_duration_days integer, _is_active boolean)',
     'admin_upsert_directory_company(_directory_entry_id text, _name text, _categories text[], _logo_file text, _logo_domain text, _logo_width integer, _logo_height integer, _locations jsonb)',
     'admin_upsert_faq_entry(_id uuid, _locale text, _question text, _answer text, _sort_order integer, _is_published boolean)',
@@ -175,6 +178,7 @@ select is(
     'get_public_job_details(_slug text)',
     'get_public_listing_plans()',
     'get_public_site_content(_locale text, _keys text[])',
+    'get_support_thread(_public_ref text)',
     'has_platform_role(_role platform_role)',
     'is_active_company_member(_company_id uuid, _allowed_roles company_role[])',
     'is_valid_candidate_profile_section(_entries jsonb, _allowed_fields text[], _maximum_entries integer, _maximum_field_length integer)',
@@ -196,6 +200,7 @@ select is(
     'submit_feedback(_name text, _email text, _category text, _rating integer, _message text, _locale text)',
     'submit_job_for_review(_job_id uuid)',
     'submit_sales_lead(_company_name text, _contact_name text, _email text, _phone text, _plan text, _duration_days integer, _note text, _locale text)',
+    'submit_support_message(_name text, _email text, _subject text, _body text, _locale text)',
     'sync_oauth_profile()',
     'transition_application(_application_id uuid, _next_status text)'
   ]::text[],

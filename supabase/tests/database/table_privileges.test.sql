@@ -18,7 +18,7 @@ begin;
 -- grant fails CI until it is added here deliberately — the same contract the
 -- function ratchet already enforces.
 
-select plan(8);
+select plan(9);
 
 select is(
   (
@@ -55,6 +55,8 @@ select is(
     'jobs',
     'notifications',
     'profiles',
+    'support_messages',
+    'support_threads',
     'user_roles'
   ]::text[],
   'only reviewed tables are reachable by anon/authenticated'
@@ -147,6 +149,20 @@ select ok(
   and has_table_privilege('authenticated', 'public.applications', 'SELECT')
   and has_table_privilege('authenticated', 'public.jobs', 'SELECT'),
   'signed-in sessions keep their own-row reads'
+);
+
+-- The live-support read is a member-only table grant, scoped by RLS to the
+-- member's own thread; `anon` never reads it and no client role may write it
+-- (every write goes through `submit_support_message` / `admin_reply_support_thread`).
+select ok(
+  not has_table_privilege('anon', 'public.support_threads', 'SELECT')
+  and not has_table_privilege('anon', 'public.support_messages', 'SELECT')
+  and not has_table_privilege('anon', 'public.support_threads', 'INSERT')
+  and not has_table_privilege('authenticated', 'public.support_threads', 'INSERT')
+  and not has_table_privilege('authenticated', 'public.support_messages', 'INSERT')
+  and has_table_privilege('authenticated', 'public.support_threads', 'SELECT')
+  and has_table_privilege('authenticated', 'public.support_messages', 'SELECT'),
+  'live-support tables are read-only to members and closed to anonymous writers'
 );
 
 select * from finish();
