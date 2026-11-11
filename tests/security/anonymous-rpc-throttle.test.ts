@@ -205,7 +205,10 @@ test("the server action applies a throttle before it calls the RPC", () => {
     const check = source.indexOf("RateLimiter.check(");
     assert.ok(check > -1, `${relative} no longer throttles before the RPC`);
 
-    const rpc = source.indexOf('supabase.rpc("submit_');
+    // The call is written as `supabase\n  .rpc("submit_…", {…})\n  .setHeader(…)`,
+    // so the chain breaks the line between `supabase` and `.rpc`. Search for the
+    // `.rpc("submit_` fragment rather than the single-line literal.
+    const rpc = source.search(/\.rpc\(\s*["']submit_/);
     assert.ok(rpc > -1, `${relative}: the submit RPC call was not found`);
     assert.ok(
       check < rpc,
@@ -284,41 +287,47 @@ function latestFunctionBody(name: string): string | null {
   return matches.length > 0 ? matches[matches.length - 1][1] : null;
 }
 
-test(
-  "the app action forwards the visitor address the DB throttle keys on",
-  {
-    todo:
-      "the DB throttle reads `request.headers` but the server action sends no visitor IP, " +
-      "so the app-path IP dimension is one shared bucket (see docs/threat-model.md)",
-  },
-  () => {
-    // The migration keys its IP bucket on `current_setting('request.headers')`
-    // (`cf-connecting-ip` / `x-real-ip` / `x-forwarded-for`). Those are headers of
-    // the *PostgREST* request. A direct attacker's request carries them; a request
-    // the Next.js action makes through supabase-js does not — the client sends
-    // only `apikey`, `authorization`, `content-type` and `x-client-info`
-    // (verified against the installed `@supabase/supabase-js`). So every
-    // server-action submission collapses onto one bucket, and the migration's
-    // own note ("an absent header degrades to a single shared bucket") is the
-    // *normal* case for the app, not an edge case: the sixth legitimate form
-    // submission site-wide inside the window is rejected with the generic
-    // "failed" copy. The app must pass the visitor address explicitly (an
-    // argument or a `global.headers` override) for the IP dimension to mean
-    // anything on this path. Owner: the product layer (`src/features/**`) with
-    // the database layer (`supabase/**`).
-    for (const relative of [
-      "src/features/feedback/actions.ts",
-      "src/features/sales/actions.ts",
-    ]) {
-      const source = read(relative);
-      const rpcCall = source.match(/supabase\.rpc\(\s*["']submit_[a-z_]+["']\s*,\s*\{([\s\S]*?)\}\s*\)/);
-      assert.ok(rpcCall, `${relative} no longer calls the submit RPC directly`);
-      assert.match(
-        rpcCall![1],
-        /_client_ip|_ip|clientIp/,
-        `${relative} calls the RPC without forwarding the visitor address, so the ` +
-          `DB throttle cannot tell two app-path callers apart (see docs/threat-model.md)`,
-      );
-    }
-  },
-);
+test("the app action forwards the visitor address the DB throttle keys on", () => {
+  // The migration keys its IP bucket on `current_setting('request.headers')`
+  // (`x-client-ip`, then `cf-connecting-ip` / `x-real-ip` / `x-forwarded-for`).
+  // Those are headers of the *PostgREST* request. A direct attacker's request
+  // carries the edge-written ones; a request the Next.js action makes through
+  // supabase-js does not — the client sends only `apikey`, `authorization`,
+  // `content-type` and `x-client-info` (verified against the installed
+  // `@supabase/supabase-js`). On the app path the edge-written
+  // `cf-connecting-ip` is the *platform's* egress address, identical for every
+  // visitor, so without an explicit header every server-action submission
+  // collapses onto one `scope='ip'` bucket and the sixth legitimate form
+  // submission site-wide inside the window is rejected with the generic
+  // "failed" copy (issue #206).
+  //
+  // The fix has two halves: the action forwards the address on the builder
+  // (`setHeader("x-client-ip", …)`), and the migration reads that header first
+  // while keeping the edge-written address as a coarse per-peer cap. This gate
+  // pins the action half — the RPC call must be immediately followed by a
+  // `setHeader` for the forwarded address. Owner: the product layer
+  // (`src/features/**`) with the database layer (`supabase/**`).
+  for (const relative of [
+    "src/features/feedback/actions.ts",
+    "src/features/sales/actions.ts",
+  ]) {
+    const source = read(relative);
+    // The call is written as `supabase\n  .rpc("submit_…", {…})\n  .setHeader(…)`.
+    const rpcCall = source.match(
+      /\.rpc\(\s*["']submit_[a-z_]+["']\s*,\s*\{[\s\S]*?\}\s*\)\s*\.setHeader\(\s*["']x-client-ip["']\s*,\s*([A-Za-z_$][\w$]*)\s*\)/,
+    );
+    assert.ok(
+      rpcCall,
+      `${relative} calls the RPC without forwarding the visitor address on the ` +
+        `builder, so the DB throttle cannot tell two app-path callers apart ` +
+        `(see docs/threat-model.md, issue #206)`,
+    );
+    // And the forwarded value must be the address the action resolved — not a
+    // constant, and not a header read that disagrees with the in-process limiter.
+    assert.match(
+      source,
+      new RegExp(`const\\s+${rpcCall![1]}\\s*=\\s*await\\s+clientIp\\(\\)`),
+      `${relative} forwards a value that is not the resolved clientIp()`,
+    );
+  }
+});

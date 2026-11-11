@@ -50,15 +50,17 @@ Saldırgan denetimin veri yaşam döngüsüne bakan bulguları (ayrıntı ve kan
 [`threat-model.md`](./threat-model.md), "LANE-GÜVENLİK" bölümü):
 
 - **`feedback_submissions` ve `sales_leads` için yaş/temizleme yok; yazma sınırı
-  artık DB'de ama IP boyutu app yolunda kollapsıyor.** İki tablo da kimlik
+  artık DB'de ve app-yolu IP boyutu da düzeldi (#206).** İki tablo da kimlik
   doğrulaması olmayan çağıranlardan (`anon`) serbest metin kabul ediyor. LANE-SUPABASE
   `20261106000000_v4_anon_write_throttle.sql` ile throttle'ı RPC gövdesine taşıdı,
   yani doğrudan PostgREST çağıran da artık sınırlı (ledger yalnız sha256 taşır,
-  ham adres saklanmaz). Kalan açık: migration IP'yi `request.headers`'tan okuyor
-  ama Next.js action supabase-js ile çağırdığından ziyaretçi IP'sini göndermiyor,
-  bu yüzden app üzerinden gelen tüm gönderimler tek kovaya düşer (site geneli
-  pencerede 5 gönderim). Saklama/silme süresi ve gönderen-IP kaydı politikası hâlâ
-  ürün kararı bekliyor; ayrıntı ve kanıt: `threat-model.md`, "Açık bulgular" 1.
+  ham adres saklanmaz). App yolunda IP boyutu artık işliyor: action ziyaretçi
+  adresini `clientIp()` ile `.setHeader("x-client-ip", ip)` üzerinden gönderiyor
+  ve `20261110160000_v4_anon_write_throttle_app_client_ip.sql` birincil kovayı
+  `x-client-ip`'e taşıyor (kenarın yazdığı paylaşılan egress adresi kaba bir
+  per-peer tavan olarak kalıyor). Saklama/silme süresi ve gönderen-IP kaydı
+  politikası hâlâ ürün kararı bekliyor; ayrıntı ve kanıt: `threat-model.md`,
+  "Kapatılan bulgular".
 - **Başarısız/gönderilmiş e-posta kuyruğu satırları.** `notification_email_outbox`
   satırlarında alıcı adresi **saklanmıyor** (gönderim anında `auth.users`'tan
   çözülüyor) — bu retention açısından doğru; ancak satırların yaşı ve temizliği

@@ -110,6 +110,56 @@ test("a victim address is throttled independently of the origin", async () => {
   assert.equal(rpcCount("submit_feedback"), 0, "the victim mailbox must not receive a sixth mail");
 });
 
+test("the action forwards the visitor address so the DB throttle keys on it (#206)", async () => {
+  await clearFeedbackLimiter();
+  resetBoundary({
+    user: undefined,
+    rpcs: { submit_feedback: { data: "00000000-0000-4000-8000-0000000000f1", error: null } },
+  });
+  setRequestHeaders({ "cf-connecting-ip": "203.0.113.7" });
+
+  await submit();
+
+  const call = recorded.supabase.find(
+    (entry) => entry.kind === "rpc" && entry.name === "submit_feedback",
+  );
+  assert.ok(call, "the submission should reach the RPC");
+  // Without this header the RPC's edge-written `cf-connecting-ip` is the
+  // platform's shared egress address on the app path, so every visitor would
+  // collapse onto one IP bucket. The forwarded value must be the same address
+  // the in-process limiter keyed on.
+  assert.deepEqual(
+    (call as Extract<typeof call, { kind: "rpc" }>).headers,
+    { "x-client-ip": "203.0.113.7" },
+  );
+});
+
+test("the sales action forwards the visitor address too (#206)", async () => {
+  const { salesLeadRateLimiter } = await import("../../src/features/abuse/limits");
+  salesLeadRateLimiter.clear();
+  resetBoundary({
+    user: undefined,
+    rpcs: { submit_sales_lead: { data: "00000000-0000-4000-8000-0000000000f2", error: null } },
+  });
+  setRequestHeaders({ "cf-connecting-ip": "198.51.100.9" });
+
+  const { submitSalesLead } = await import("../../src/features/sales/actions");
+  const salesForm = new FormData();
+  salesForm.set("companyName", "Acme");
+  salesForm.set("email", "lead@example.invalid");
+  salesForm.set("locale", "tr");
+  await submitSalesLead({ status: "idle", message: "idle" } as never, salesForm);
+
+  const call = recorded.supabase.find(
+    (entry) => entry.kind === "rpc" && entry.name === "submit_sales_lead",
+  );
+  assert.ok(call, "the lead submission should reach the RPC");
+  assert.deepEqual(
+    (call as Extract<typeof call, { kind: "rpc" }>).headers,
+    { "x-client-ip": "198.51.100.9" },
+  );
+});
+
 test("the sales limiter is independent of the feedback limiter", async () => {
   await clearFeedbackLimiter();
   const { salesLeadRateLimiter } = await import("../../src/features/abuse/limits");
