@@ -15,17 +15,134 @@ raporlar: **SPF, DKIM, DMARC, MX, MTA-STS/TLS-RPT, blocklist**. Son satır bir
 özet verir: `N failure(s), M warning(s), K skipped`. Bir kayıt okunamazsa o satır
 `skip` olur — asla sahte `FAIL` üretmez.
 
-## Şu anki durum (2026-11-12)
+## Şu anki durum (2026-11-12, canlı ölçüm)
+
+Resend API (`GET /domains`): `isbulkktc.com` **verified**, bölge **eu-west-1**,
+`sending: enabled`, `receiving: enabled`. DNS (Google DoH):
 
 ```
-WARN SPF         v=spf1 include:_spf.mx.cloudflare.net ~all — kök göndereni yetkilendirmiyor,
-                 ama DMARC-uyumlu Return-Path alt alanı (send.isbulkktc.com) yetkilendiriyor
 PASS SPF         send.isbulkktc.com (Return-Path) göndereni yetkilendiriyor
+WARN SPF         kök kayıt v=spf1 include:_spf.mx.cloudflare.net ~all — kök göndereni
+                 yetkilendirmiyor ama DMARC-uyumlu Return-Path alt alanı yetkilendiriyor
 INFO DKIM        resend._domainkey mevcut, 1024-bit — Resend 2048 desteklemez (bilgi)
-PASS DMARC       v=DMARC1; p=quarantine; rua=mailto:dmarc@isbulkktc.com; fo=1
-PASS MX          Cloudflare MX kayıtları
+WARN DMARC       v=DMARC1; p=quarantine; rua=mailto:dmarc@isbulkktc.com; fo=1
+PASS MX          10 receive-euw1.forge.rmta.net.  (gelen posta artık Resend'e düşer)
 WARN MTA-STS     _mta-sts kaydı yok (yalnız gelen posta duruşu; giden yerleşimi etkilemez)
 WARN TLS-RPT     _smtp._tls kaydı yok (yalnız gelen posta duruşu; giden yerleşimi etkilemez)
+WARN Blocklists  SURBL/SpamCop temiz; Spamhaus genel çözümleyiciden sorgulanamaz
+FAIL Resend      sandbox $RESEND_API_KEY sahte (re_ ile başlamıyor) — bu satırı yok say:
+                 gerçek anahtarı komut içinde ver (aşağıya bak)
+```
+
+**Yorum:** Gönderim yolu (SPF alt alanı + DKIM + DMARC hizalı) **sağlam**. Kalan
+`WARN`'ların çoğu giden yerleşimi etkilemez (MTA-STS/TLS-RPT yalnız gelen duruş).
+Tek gerçek kırmızı, sandbox ortam değişkeninin sahte olmasıdır; üretim sunucusu
+kendi `RESEND_API_KEY`'ini taşır.
+
+## Kalan altyapı maddeleri — sahip için tam adımlar
+
+Aşağıdaki sırayla ilerle. Her madde **kimin yaptığını** ve **nasıl doğrulanacağını**
+yazar. `[x]` = bu turda tamamlandı, `[ ]` = senin yapman gerekiyor.
+
+### 1. Resend alanı + gönderim + gelen  — TAMAM `[x]`
+Domain doğrulandı, `sending` ve `receiving` açık. Yeni bir şey yapma. Doğrulama:
+`GET https://api.resend.com/domains` (anahtar aşağıda) → `status: verified`.
+
+### 2. `info@isbulkktc.com` gelen posta kabul etsin — TAMAM `[x]`
+Apex `MX` artık `10 receive-euw1.forge.rmta.net` → gelen posta Resend'e düşer.
+**Doğrula:** Resend panosunda `isbulkktc.com` → **Receiving** sekmesi → iletilen
+adresler. İstersen geleni gerçek bir kutuya yönlendir (Resend → Receiving →
+Forward to).
+
+### 3. Üretim `RESEND_API_KEY` — DOĞRULA `[ ]`
+Vercel'de bu değerin **aynı Resend ekibinin** `re_…` anahtarı olduğundan emin ol
+(yanlış ekip → 401). Resend panosu → **Settings → API Keys → Create API Key**
+(permission: *Sending access*). Sonra:
+
+1. Vercel → proje **isbulkktc** → **Settings → Environment Variables**.
+2. `RESEND_API_KEY` satırını bul → **Edit** → değeri yapıştır → **Save**.
+3. **Deployments** → en üstteki üretim dağıtımı → **⋯ → Redeploy** (env değişikliği
+   yeni bir dağıtım ister).
+4. Doğrula: üretimde webhook rotası artık **503** yerine işlenebilir yanıt verir
+   (aşağıdaki 6. madde onu kesinleştirir).
+
+### 4. Cron sırları — `MARKETING_CRON_SECRET` / `ENGAGEMENT_CRON_SECRET` `[ ]`
+Bu iki sır olmadan edinim ve etkileşim işleri **hiç çalışmaz** (rota herkese 401).
+
+1. Sır değerlerini üret (her biri 32 byte, rastgele):
+   ```
+   openssl rand -hex 32      # çıktıyı MARKETING_CRON_SECRET yap
+   openssl rand -hex 32      # çıktıyı ENGAGEMENT_CRON_SECRET yap
+   ```
+2. GitHub → repo → **Settings → Secrets and variables → Actions**.
+3. **Secrets** sekmesi → **New repository secret** → ad `MARKETING_CRON_SECRET`,
+   değer 1. adımdaki çıktı → **Add secret**. Aynısını `ENGAGEMENT_CRON_SECRET` için
+   tekrarla.
+4. **Variables** sekmesi → **New repository variable** → ad `APP_URL`, değer
+   `https://isbulkktc.com` → **Add variable**. (Bu değişken zaten varsa atla.)
+5. Aynı iki değeri **üretim ortamına** da koy — yoksa rota bearer'ı tanımaz ve 401
+   döner: Vercel → **Settings → Environment Variables** → `MARKETING_CRON_SECRET`
+   ve `ENGAGEMENT_CRON_SECRET` ekle → **Redeploy**.
+6. Doğrula: Actions → **Send acquisition campaign** → **Run workflow**
+   (workflow_dispatch). Log `HTTP 200` ve `{"message":"Acquisition campaign
+   complete","sent":N,...}` göstermeli. `503` = sunucuda hâlâ eksik env.
+
+> Not: GitHub sırları **yazılınca bir daha okunamaz** (write-only). Üretilen değeri
+> güvenli bir yerde sakla; hem GitHub'a hem Vercel'e **aynı** değeri koy.
+
+### 5. Resend webhook — `RESEND_WEBHOOK_SECRET` `[ ]`
+Bu olmadan bounce ve spam-şikâyetleri **otomatik bastırılmaz**; yani sert bounce
+eden adreslere göndermeye devam edilir ve itibar düşer.
+
+1. Resend panosu → **Webhooks → Add Webhook**.
+2. Endpoint URL: `https://isbulkktc.com/api/email/resend-webhook`.
+3. Olaylar: **`email.bounced`, `email.complained`, `email.suppressed`** seç.
+4. **Add** → oluşan webhook'un **Signing Secret**'ını (`whsec_…`) kopyala.
+5. Vercel → **Settings → Environment Variables** → `RESEND_WEBHOOK_SECRET` =
+   `whsec_…` → **Redeploy**.
+6. Doğrula: `curl -X POST https://isbulkktc.com/api/email/resend-webhook -d '{}'`
+   → `503` yerine **401** (imza doğrulaması devrede demektir).
+
+### 6. DMARC `p=quarantine` → `reject` `[ ]` (raporları izledikten sonra)
+Şimdilik bırak. `rua=mailto:dmarc@isbulkktc.com` raporlarını birkaç hafta izle;
+meşru posta hep SPF+DKIM'den geçiyorsa Cloudflare DNS'te `_dmarc` TXT'sini
+`v=DMARC1; p=reject; rua=…; fo=1` yap. **Erken yapma:** hizasız bir kaynak varsa
+`reject` onu tamamen düşürür.
+
+### 7. MTA-STS + TLS-RPT `[ ]` (isteğe bağlı — yalnız gelen duruş)
+Bunlar **giden yerleşimi etkilemez**, yalnız bu alanın *aldığı* postanın TLS
+duruşunu yayınlar. İstersen:
+- `_smtp._tls.isbulkktc.com` TXT: `v=TLSRPTv1; rua=mailto:tlsrpt@isbulkktc.com`
+- `_mta-sts.isbulkktc.com` TXT: `v=STSv1; id=20261112000000`
+- `https://mta-sts.isbulkktc.com/.well-known/mta-sts.txt` (statik dosya) yayınla.
+
+### 8. Gerçek gelen kutusu / spam doğrulaması `[ ]`
+Araç bunu yapamaz; gerçek bir kutu gerekir. Bu turda üç adrese test postası
+gönderildi (aşağıya bak). **Yapılacak:** o üç kutuda **Gelen Kutusu**'nu kontrol
+et; spam'deyse **"Spam değil"** işaretle (ısınma için kritik).
+
+### Isınma (DNS ile çözülmez)
+Yeni alan + sıfır itibar: düşük hacimle başla, yalnız onaylı/ilgili alıcıya gönder,
+alıcıların "spam değil" işaretlemesini sağla. Hacmi haftalar içinde kademeli artır.
+
+## Bu turda gönderilen test postaları (2026-11-12)
+
+`RESEND_API_KEY='re_…' node scripts/email-preview.mjs --only marketing --send <adres>`
+ile üç adrese gönderildi. Hepsi `from İşBul KKTC <info@isbulkktc.com>`,
+`reply_to info@isbulkktc.com`, konu TR:
+
+| Alıcı | Resend e-posta id | son olay |
+|---|---|---|
+| muhammedali.kahraman@outlook.com | `01a1d203-3eac-7435-b840-80cc21926541` | sent |
+| muhammed.ali.kahraman@outlook.com | `01a1d203-3fb1-73aa-98f7-e8b865102bd9` | sent |
+| letgodeneme97@outlook.com | `01a1d203-40b6-7e84-ada2-c7e97cda60b6` | sent |
+
+`last_event` başta `sent` olur; `delivered` = alıcı sunucu kabul etti (yine de
+gelen kutusu garantisi değildir), `delivery_delayed` = alıcı sunucu 4xx ile
+erteledi (Outlook'ta yaygın, alıcı-tarafı itibar sinyali — kimlik doğrulama
+sorunu değil), `bounced` = kalıcı ret. Olayları izle:
+```
+curl -H "Authorization: Bearer re_…" https://api.resend.com/emails/<id>
 ```
 
 ## DKIM bit uzunluğu — düzeltilecek bir şey DEĞİL (2026-11-12 düzeltmesi)
@@ -133,15 +250,17 @@ kayıt, sorgu hatası. Regresyon testi:
 > DKIM anahtar uzunluğu **seçilmez**: Resend her domain için 1024-bit üretir ve
 > değiştirilemez (yukarıdaki düzeltme bölümü). Ne Cloudflare ne Zoho bu ayarı sunar.
 
-## Açık kalan (kod dışı — token/insan gerekir)
+## Açık kalan maddeler — durum (2026-11-12)
 
-- [ ] `isbulkktc.com`'un kayıtlı olduğu Resend **ekibini** bul (Yol A/B)
-- [ ] Üretimde geçerli `RESEND_API_KEY` (`re_…`) — doğru ekipten üret
-- [ ] `MARKETING_CRON_SECRET` / `ENGAGEMENT_CRON_SECRET` + `APP_URL` secret'larını ekle
-- [ ] `info@isbulkktc.com` gelen posta kabul etsin (CF Email Routing yönlendirmesi
-      **veya** gelen kabul eden `RESEND_FROM_EMAIL`)
+Tam adımlar için yukarıdaki **"Kalan altyapı maddeleri"** bölümüne bak.
+
+- [x] Resend alanı doğrulandı (sending + receiving açık)
+- [x] `info@isbulkktc.com` gelen posta kabul ediyor (apex MX → Resend)
+- [ ] Üretim `RESEND_API_KEY`'in doğru ekibin `re_…` anahtarı olduğunu doğrula
+- [ ] `MARKETING_CRON_SECRET` / `ENGAGEMENT_CRON_SECRET` (GitHub **ve** Vercel)
+- [ ] `RESEND_WEBHOOK_SECRET` + Resend webhook endpoint (`email.bounced/complained/suppressed`)
 - [ ] DMARC `p=quarantine` → `reject` (raporları izledikten sonra)
-- [ ] MTA-STS + TLS-RPT kayıtları (yalnız gelen posta duruşu)
+- [ ] MTA-STS + TLS-RPT kayıtları (isteğe bağlı — yalnız gelen posta duruşu)
 - [ ] Gerçek gelen kutusu/spam yerleşim doğrulaması (araç bunu yapamaz — gerçek
-      posta kutusu gerekir)
+      posta kutusu gerekir; bu turda 3 adrese gönderildi)
 - [~] ~~DKIM `1024` → `2048`~~ **iptal: Resend 2048 desteklemiyor**
