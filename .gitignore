@@ -6,6 +6,7 @@ node_modules/
 .artifacts/
 .playwright/
 .playwright-cli/
+.playwright-mcp/
 test-results/
 *.tsbuildinfo
 .env.local

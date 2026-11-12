@@ -7,8 +7,10 @@
  * server. This script checks the parts that are verifiable without a mailbox:
  *
  *   1. SPF, DKIM, DMARC — present, valid, and aligned with the From domain.
- *   2. Blocklists — is the sending domain or its sending IPs listed?
- *   3. Resend — is the API key valid and the domain verified?
+ *   2. MTA-STS and TLS-RPT — the inbound-transport posture (a note, not a
+ *      placement cause; both describe mail this domain receives).
+ *   3. Blocklists — is the sending domain or its sending IPs listed?
+ *   4. Resend — is the API key valid and the domain verified?
  *
  * It reports what it measured and refuses to claim more. A record that could not
  * be queried is reported as `skip`, never as absent or clean: a network failure
@@ -233,7 +235,7 @@ function record(area, status, detail) {
   results.push({ area, status, detail });
 }
 
-const ICON = { pass: "PASS", warn: "WARN", fail: "FAIL", skip: "SKIP" };
+const ICON = { pass: "PASS", info: "INFO", warn: "WARN", fail: "FAIL", skip: "SKIP" };
 
 async function checkSpf() {
   const root = await resolve(DOMAIN, "TXT");
@@ -329,6 +331,86 @@ async function returnPathAlignment() {
   return { checked: false, aligned: false, queryFailed, domain: null, notes };
 }
 
+/**
+ * Reads the RSA modulus size, in bits, from a DKIM `p=` value, or `null` when
+ * the value cannot be parsed.
+ *
+ * The old check judged the key only by its character count, which cannot tell a
+ * 1024-bit key (~216 chars) from a 2048-bit one — so a weak key read as PASS.
+ * The length is the only honest signal of strength, and it is not the same as
+ * the strength: RFC 8301 sets 1024 as the floor and recommends 2048.
+ *
+ * The `p=` value is base64 of a DER `SubjectPublicKeyInfo`:
+ *
+ *   SEQUENCE { SEQUENCE { OID, NULL }, BIT STRING { SEQUENCE { INTEGER n, INTEGER e } } }
+ *
+ * The shape is fixed enough to walk by hand, and a malformed value returns
+ * `null` (an honest "could not read it") rather than a guess.
+ */
+export function dkimKeyBits(p) {
+  const der = Buffer.from(String(p ?? ""), "base64");
+  // One DER TLV: tag, a short or long-form length, then that many content bytes.
+  const read = (offset) => {
+    if (offset + 2 > der.length) return null;
+    const tag = der[offset];
+    let length = der[offset + 1];
+    let header = 2;
+    if (length & 0x80) {
+      const count = length & 0x7f;
+      // 0x80 is indefinite length (not valid DER) and >4 length bytes is absurd.
+      if (count === 0 || count > 4 || offset + 2 + count > der.length) return null;
+      length = 0;
+      for (let i = 0; i < count; i += 1) length = length * 256 + der[offset + 2 + i];
+      header = 2 + count;
+    }
+    const start = offset + header;
+    if (start + length > der.length) return null;
+    return { tag, start, length, end: start + length };
+  };
+
+  const outer = read(0);
+  if (!outer || outer.tag !== 0x30) return null;
+  const algorithm = read(outer.start);
+  if (!algorithm || algorithm.tag !== 0x30) return null;
+  const bitString = read(algorithm.end);
+  if (!bitString || bitString.tag !== 0x03) return null;
+  // The BIT STRING content opens with a one-byte "unused bits" count (0 for a
+  // DER key); the RSA public key SEQUENCE starts after it.
+  const rsa = read(bitString.start + 1);
+  if (!rsa || rsa.tag !== 0x30) return null;
+  const modulus = read(rsa.start);
+  if (!modulus || modulus.tag !== 0x02) return null;
+
+  let bytes = modulus.length;
+  let first = der[modulus.start];
+  // A leading 0x00 keeps the INTEGER positive; it is not part of the value.
+  if (first === 0) {
+    bytes -= 1;
+    first = der[modulus.start + 1];
+  }
+  if (bytes <= 0 || first === undefined) return null;
+  let bits = bytes * 8;
+  // Drop the leading zero bits of the top byte (e.g. 0x0F is four bits short).
+  for (let mask = 0x80; mask > 0 && (first & mask) === 0; mask >>= 1) bits -= 1;
+  return bits;
+}
+
+/**
+ * RFC 8301 verdict for a DKIM key size. Below the 1024-bit floor is a real
+ * `fail`. A 1024-bit key is `info`, not `warn`: Resend fixes every sending
+ * domain at 1024-bit and "does not support 2048-bit DKIM keys" (Resend docs,
+ * "Do You Need 2048-bit DKIM?"), so there is no owner action — flagging it as a
+ * defect would send someone to rotate a key that cannot be rotated. 2048 and
+ * above is `pass`. An unparseable size is `unknown`, never `fail`: the record
+ * exists and may be fine, so a parser limitation must not read as a broken key.
+ */
+export function dkimKeyVerdict(bits) {
+  if (typeof bits !== "number" || !Number.isFinite(bits) || bits <= 0) return "unknown";
+  if (bits < 1024) return "fail";
+  if (bits < 2048) return "info";
+  return "pass";
+}
+
 async function checkDkim() {
   const { answers, error } = await resolve(`resend._domainkey.${DOMAIN}`, "TXT");
   const state = classifyDnsResult({ answers, error });
@@ -346,7 +428,34 @@ async function checkDkim() {
     record("DKIM", "fail", `public key looks truncated (${key.length} chars)`);
     return;
   }
-  record("DKIM", "pass", `resend._domainkey present, key ${key.length} chars`);
+  const bits = dkimKeyBits(key);
+  const verdict = dkimKeyVerdict(bits);
+  if (verdict === "fail") {
+    record(
+      "DKIM",
+      "fail",
+      `resend._domainkey key is ${bits} bits — below the RFC 8301 floor of 1024`,
+    );
+    return;
+  }
+  if (verdict === "info") {
+    record(
+      "DKIM",
+      "info",
+      `resend._domainkey present, ${bits}-bit key — Resend fixes sending keys at 1024-bit ` +
+        `and does not support 2048-bit DKIM, so no action; this is compliant (RFC 8301)`,
+    );
+    return;
+  }
+  if (verdict === "pass") {
+    record("DKIM", "pass", `resend._domainkey present, ${bits}-bit key`);
+    return;
+  }
+  record(
+    "DKIM",
+    "warn",
+    `resend._domainkey present, key ${key.length} chars — could not read the modulus size`,
+  );
 }
 
 async function checkDmarc() {
@@ -386,6 +495,73 @@ async function checkMx() {
     return;
   }
   record("MX", "pass", answers.join(", "));
+}
+
+/**
+ * Turns the two inbound-transport records into verdicts. Both are about mail
+ * this domain *receives* (MTA-STS pins the TLS a sender may use; TLS-RPT asks
+ * senders to report delivery failures), so neither changes where *outbound*
+ * mail lands — they are posture, and the detail says so, so an owner does not
+ * read a warning here as the fix for a spam-folder complaint.
+ *
+ * A query that failed is `skip`; an absent record is `warn` (a gap to close,
+ * not breakage). A present `_mta-sts` name without a `v=STSv1` TXT is `warn`:
+ * the policy file alone does nothing.
+ */
+export function classifyTransportSecurity({ mtaSts, tlsRpt }) {
+  const records = [];
+
+  const mtaState = classifyDnsResult(mtaSts);
+  if (mtaState === "error") {
+    records.push({ area: "MTA-STS", status: "skip", detail: `could not query _mta-sts: ${mtaSts.error}` });
+  } else if (mtaState === "present") {
+    const sts = (mtaSts.answers ?? []).find((t) => /^v=STSv1/i.test(t));
+    records.push(
+      sts
+        ? { area: "MTA-STS", status: "pass", detail: sts }
+        : { area: "MTA-STS", status: "warn", detail: "_mta-sts TXT present but is not a v=STSv1 record" },
+    );
+  } else {
+    records.push({
+      area: "MTA-STS",
+      status: "warn",
+      detail:
+        "no _mta-sts record — inbound transport encryption is not advertised " +
+        "(a posture gap for received mail; it does not affect outbound placement)",
+    });
+  }
+
+  const tlsState = classifyDnsResult(tlsRpt);
+  if (tlsState === "error") {
+    records.push({ area: "TLS-RPT", status: "skip", detail: `could not query _smtp._tls: ${tlsRpt.error}` });
+  } else if (tlsState === "present") {
+    const rpt = (tlsRpt.answers ?? []).find((t) => /^v=TLSRPTv1/i.test(t));
+    records.push(
+      rpt
+        ? { area: "TLS-RPT", status: "pass", detail: rpt }
+        : { area: "TLS-RPT", status: "warn", detail: "_smtp._tls TXT present but is not a v=TLSRPTv1 record" },
+    );
+  } else {
+    records.push({
+      area: "TLS-RPT",
+      status: "warn",
+      detail:
+        "no _smtp._tls record — senders cannot report TLS failures " +
+        "(a posture gap for received mail; it does not affect outbound placement)",
+    });
+  }
+
+  return records;
+}
+
+async function checkTransportSecurity() {
+  const [mtaSts, tlsRpt] = await Promise.all([
+    resolve(`_mta-sts.${DOMAIN}`, "TXT"),
+    resolve(`_smtp._tls.${DOMAIN}`, "TXT"),
+  ]);
+  for (const r of classifyTransportSecurity({ mtaSts, tlsRpt })) {
+    record(r.area, r.status, r.detail);
+  }
 }
 
 /**
@@ -645,6 +821,7 @@ async function main() {
   await checkDkim();
   await checkDmarc();
   await checkMx();
+  await checkTransportSecurity();
   await checkBlocklists();
   await checkResend();
   for (const to of SEND_TO) await sendTestEmail(to);

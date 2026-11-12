@@ -5,7 +5,10 @@ import {
   classifyDnsblAnswer,
   classifyDnsResult,
   classifyResendStatus,
+  classifyTransportSecurity,
   countSpfDnsLookups,
+  dkimKeyBits,
+  dkimKeyVerdict,
   evaluateBlocklistZone,
   interpretDnsResponse,
   isDirectRun,
@@ -15,6 +18,20 @@ import {
   spfAuthorisesSender,
   spfIpEntries,
 } from "./verify-deliverability.mjs";
+
+/**
+ * Real RSA public keys (SPKI DER, base64 — the exact form Resend publishes in
+ * the DKIM `p=` tag), generated once with `node:crypto`. A synthetic byte string
+ * would not prove the DER walk; these do.
+ */
+const RSA_512 =
+  "MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAMFSS4LAvZRSIN90i6z+eiI40nRMGbmcR7gHMiPWVOmJ7QrQYyChL2sAsf3rMCRASDH6PY/TQ8InZtG/dvRRVFUCAwEAAQ==";
+const RSA_1024 =
+  "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC8bZphd+KmTFBJHj81h0USojMEEF+YXYgEpLjQuAJEIgH6vxdS8cXwA2Vdc2HZwA0fDW6XrsHPWW0fcwdHXozSJp07yGz105lmFC9hYs9yekg/Jdnvkh13hzZanZafhp8Y7L6t+Vk1B5D+1QiwhAQNCCqkbfOsfYhvo6PWmfQn3wIDAQAB";
+const RSA_2048 =
+  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsWT/rdY2oMq38gUOvilvsmrHK7lbIIKefpVWwIq0X0+AZOzyLyAMWgqznp/fPRJpW1Ev1RrODW14aFXDJekmsv1G+xuuasUiEERSXCuiLOGe7cj7LbHl/j33VS8gozkuLevXlVaa9SIyoeIAMLU87kSqsZL07URyhHtWQ6bFO28h8clhbetd/z6mPcaR74yxHvRx+xy7aeXf1AnPuQs48/0ay7X1nLWjryuPZ3i7/afL8NFfGW3Za+KG5pfnkcPCijHWrhwzLoHG+3Ez0v0qs1+3Xd1oVdlcD8hjkYZfdN2tDBabBSMfY4deqVSatFoCHc4JJYGEwTOPjKCNKuQ4vwIDAQAB";
+
+
 
 test("SPF lookup counting counts terms, not substrings", () => {
   // The regression: `_spf.mx.cloudflare.net` contains the word `mx`, which the
@@ -234,3 +251,87 @@ test("a Resend rate limit or outage is a warn, not a FAIL that blames the key", 
   assert.equal(classifyResendStatus(400), "fail");
   assert.equal(classifyResendStatus(422), "fail");
 });
+
+test("dkimKeyBits reads the true RSA modulus size, not the string length", () => {
+  // The core deliverability bug: the old check failed only below 100 characters,
+  // so the live 1024-bit key (~216 chars) — half the recommended strength — read
+  // as PASS. Length cannot tell a 1024-bit key from a 2048-bit one; the DER walk
+  // can. These three are real keys of the stated size.
+  assert.equal(dkimKeyBits(RSA_512), 512);
+  assert.equal(dkimKeyBits(RSA_1024), 1024);
+  assert.equal(dkimKeyBits(RSA_2048), 2048);
+  // A 2048-bit key is longer than a 1024-bit one, so a length rule would pass
+  // both; only the parsed modulus separates them.
+  assert.ok(RSA_2048.length > RSA_1024.length);
+});
+
+test("dkimKeyBits returns null for a value it cannot parse, never a guess", () => {
+  assert.equal(dkimKeyBits(""), null);
+  assert.equal(dkimKeyBits(undefined), null);
+  assert.equal(dkimKeyBits(null), null);
+  // Valid base64 that is not a DER SubjectPublicKeyInfo.
+  assert.equal(dkimKeyBits("aGVsbG8gd29ybGQ="), null);
+  // A truncated key: base64 decodes but the outer SEQUENCE is incomplete.
+  assert.equal(dkimKeyBits(RSA_2048.slice(0, 60)), null);
+});
+
+test("dkimKeyVerdict applies the RFC 8301 floor and treats Resend's fixed 1024 as info", () => {
+  // Below the floor is a real fail.
+  assert.equal(dkimKeyVerdict(512), "fail");
+  // The floor is `info`, not `warn`: Resend does not support 2048-bit DKIM, so a
+  // 1024-bit key has no owner action and must not be reported as a defect.
+  assert.equal(dkimKeyVerdict(1024), "info");
+  assert.equal(dkimKeyVerdict(2048), "pass");
+  assert.equal(dkimKeyVerdict(4096), "pass");
+  // An unreadable size must not read as a broken key: `unknown`, never `fail`.
+  assert.equal(dkimKeyVerdict(null), "unknown");
+  assert.equal(dkimKeyVerdict(undefined), "unknown");
+  assert.equal(dkimKeyVerdict(0), "unknown");
+  assert.equal(dkimKeyVerdict(Number.NaN), "unknown");
+});
+
+test("transport-security verdicts treat a missing record as a warn, a failed query as a skip", () => {
+  // Both records present and well-formed.
+  const healthy = classifyTransportSecurity({
+    mtaSts: { answers: ["v=STSv1; id=20250101"], error: null },
+    tlsRpt: { answers: ["v=TLSRPTv1; rua=mailto:tls@isbulkktc.com"], error: null },
+  });
+  assert.deepEqual(healthy.map((r) => [r.area, r.status]), [
+    ["MTA-STS", "pass"],
+    ["TLS-RPT", "pass"],
+  ]);
+
+  // Absent records are a posture gap to close — warn, and the detail says it does
+  // not affect outbound placement, so a spam-folder complaint is not misread as
+  // being fixed here.
+  const missing = classifyTransportSecurity({
+    mtaSts: { answers: [], error: null },
+    tlsRpt: { answers: [], error: null },
+  });
+  assert.deepEqual(missing.map((r) => [r.area, r.status]), [
+    ["MTA-STS", "warn"],
+    ["TLS-RPT", "warn"],
+  ]);
+  for (const r of missing) assert.match(r.detail, /does not affect outbound placement/);
+
+  // A name that exists but carries the wrong TXT does nothing — warn, not pass.
+  const wrongType = classifyTransportSecurity({
+    mtaSts: { answers: ["something else"], error: null },
+    tlsRpt: { answers: ["something else"], error: null },
+  });
+  assert.deepEqual(wrongType.map((r) => [r.area, r.status]), [
+    ["MTA-STS", "warn"],
+    ["TLS-RPT", "warn"],
+  ]);
+
+  // A failed query is a fact about us, not the zone: skip, never warn/fail.
+  const errored = classifyTransportSecurity({
+    mtaSts: { answers: [], error: "DNS Status 2" },
+    tlsRpt: { answers: [], error: "HTTP 500" },
+  });
+  assert.deepEqual(errored.map((r) => [r.area, r.status]), [
+    ["MTA-STS", "skip"],
+    ["TLS-RPT", "skip"],
+  ]);
+});
+

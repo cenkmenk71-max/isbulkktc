@@ -1,0 +1,71 @@
+name: Send acquisition campaign
+
+# Drives the acquisition sender, which a cron — and only a cron — is meant to
+# call. The route existed, was deployed, and answered 401 to everyone, because
+# nothing ever presented the bearer secret: the acquisition family had no
+# traffic at all, which is the whole point of this workflow.
+#
+# The route is idempotent (it claims a batch, sends, and marks each lead
+# `contacted`), so a missed or repeated run is safe.
+#
+# Requires two repository secrets: the production origin and the bearer secret
+# the route checks. Until both exist the job stays green and warns, so the
+# Actions tab only shows red for genuine breakage (same contract as
+# push-dispatch.yml).
+on:
+  schedule:
+    # Daily at 06:00 UTC (09:00 KKTC). A lead is mailed once and then marked
+    # `contacted`, so the cadence advances a consented queue rather than
+    # re-mailing it.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acquisition-campaign
+  cancel-in-progress: false
+
+jobs:
+  send:
+    name: Send acquisition campaign
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check configuration
+        id: config
+        env:
+          APP_URL: ${{ secrets.APP_URL || vars.APP_URL || secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.MARKETING_CRON_SECRET }}
+        run: |
+          if [ -n "${APP_URL:-}" ] && [ -n "${CRON_SECRET:-}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Acquisition campaign not configured::Add the MARKETING_CRON_SECRET secret and the APP_URL variable to enable the acquisition sender. Skipping this run."
+          fi
+
+      - name: Send the acquisition campaign
+        if: steps.config.outputs.configured == 'true'
+        env:
+          APP_URL: ${{ secrets.APP_URL || vars.APP_URL || secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.MARKETING_CRON_SECRET }}
+          # Call the Vercel deployment alias, not the canonical host: the latter
+          # sits behind Cloudflare, whose bot protection challenges GitHub's
+          # datacenter egress before the request reaches the app. The alias
+          # serves the identical build. Override with a repository variable if
+          # the alias ever changes (same trick push-dispatch.yml uses).
+          DISPATCH_ORIGIN: ${{ vars.MARKETING_DISPATCH_ORIGIN || 'https://isbulkktc-amber.vercel.app' }}
+        run: |
+          set -o pipefail
+          status=$(curl -sS -o /tmp/acquisition-response.txt -w '%{http_code}' \
+            -X POST -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${DISPATCH_ORIGIN%/}/api/email/acquisition-campaign")
+          echo "HTTP ${status}"
+          cat /tmp/acquisition-response.txt
+          # 503 means the sender is not configured on the server (no service-role
+          # key or no unsubscribe signing), which is a valid deployment state
+          # rather than a failure.
+          if [ "$status" != "200" ] && [ "$status" != "503" ]; then
+            exit 1
+          fi
