@@ -549,7 +549,12 @@ test("marketing email renders in every locale with both CTAs and contacts", () =
     assert.ok(email.html.includes(`mailto:${MARKETING_CONTACTS.email}`), `${locale}: email link`);
     assert.ok(email.html.includes(`tel:${MARKETING_CONTACTS.phoneTel}`), `${locale}: tel link`);
     assert.ok(email.html.includes(MARKETING_CONTACTS.whatsapp), `${locale}: whatsapp link`);
-    assert.ok(email.html.includes(copy.contactHeading), `${locale}: contact heading`);
+    // The heading is uppercased in the sender with the message locale (see the
+    // casing test below), so expect the locale-cased form.
+    assert.ok(
+      email.html.includes(copy.contactHeading.toLocaleUpperCase(locale)),
+      `${locale}: contact heading`,
+    );
 
     // Promotional: the opt-out is present in the body (HTML-escaped) and the
     // text alternative (raw).
@@ -562,6 +567,38 @@ test("marketing email renders in every locale with both CTAs and contacts", () =
       `${locale}: text unsubscribe`,
     );
     assert.ok(email.text.includes(copy.greeting), `${locale}: text greeting`);
+  }
+});
+
+test("headings uppercase with the recipient's language rules, not the client's", () => {
+  // The owner reported "başlıklarda i yerine ı kullanılmış": the section and
+  // contact headings were uppercased by CSS `text-transform`, which resolves
+  // with the *client's* locale and turned Turkish dotted `i` into dotless `I`.
+  // Casing now happens in the sender, so the Turkish dotted `i` survives.
+  const tr = renderMarketing("tr");
+  assert.ok(
+    tr.html.includes("İŞBUL KKTC İLE İŞLETMENİZ:"),
+    "the Turkish features heading keeps its dotted capital İ",
+  );
+  assert.ok(tr.html.includes("BİZE ULAŞIN"), "the Turkish contact heading keeps its dotted İ");
+  // The dotless form is exactly the regression; it must not appear anywhere.
+  assert.ok(!tr.html.includes("IŞLETMENIZ"), "no dotless capital I in the Turkish heading");
+  assert.ok(!tr.html.includes("BIZE ULAŞIN"), "no dotless capital I in the Turkish contact heading");
+
+  // Casing no longer depends on a CSS property the client may drop (Outlook),
+  // and it never lowercases a heading that the sender already cased.
+  assert.ok(!tr.html.includes("text-transform"), "casing is pre-applied, not delegated to CSS");
+  for (const locale of EMAIL_LOCALES) {
+    const copy = MARKETING_COPY[locale];
+    const email = renderMarketing(locale);
+    assert.ok(
+      email.html.includes(copy.featuresHeading.toLocaleUpperCase(locale)),
+      `${locale}: features heading cased with the message locale`,
+    );
+    assert.ok(
+      email.html.includes(copy.contactHeading.toLocaleUpperCase(locale)),
+      `${locale}: contact heading cased with the message locale`,
+    );
   }
 });
 

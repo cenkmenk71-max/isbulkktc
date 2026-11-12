@@ -162,6 +162,27 @@ function isRtlLocale(locale: string): boolean {
   return rtlLocales.has(locale.split("-")[0] ?? "");
 }
 
+/**
+ * Uppercases a heading with the *recipient's* language rules.
+ *
+ * This replaced `text-transform:uppercase`, which resolves with the client's
+ * locale rather than the message's: for a Turkish body it mapped dotted `i` to
+ * dotless `I`, so "işletmeniz" rendered as "IŞLETMENIZ" instead of "İŞLETMENİZ"
+ * — the "i yerine ı" the owner reported. Outlook drops `text-transform`
+ * entirely, so the same heading was left lowercase there. Pre-casing in the
+ * sender fixes both and keeps the six locales consistent; a caseless locale
+ * (`fa`) is unaffected.
+ */
+function uppercaseHeading(text: string, locale: string): string {
+  try {
+    return text.toLocaleUpperCase(locale);
+  } catch {
+    // An unknown-but-well-formed tag: fall back to the root locale rather than
+    // throwing and losing the whole message.
+    return text.toUpperCase();
+  }
+}
+
 export type EmailSection = {
   heading: string;
   /** Pre-escaped HTML for the section body. */
@@ -284,10 +305,10 @@ function outroBlock(html: string | undefined): string {
   return `<div style="margin:${SPACE.lg}px 0 0;font-size:${TYPE.body}px;line-height:${LEADING.normal};color:${BRAND.ink};">${html}</div>`;
 }
 
-function sectionBlock(section: EmailSection): string {
+function sectionBlock(section: EmailSection, locale: string): string {
   return `<div style="margin:${SPACE.lg}px 0 0;">
-<p style="margin:0 0 8px;font-size:${TYPE.small}px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:${BRAND.green};">${escapeHtml(
-    section.heading,
+<p style="margin:0 0 8px;font-size:${TYPE.small}px;font-weight:700;letter-spacing:0.04em;color:${BRAND.green};">${escapeHtml(
+    uppercaseHeading(section.heading, locale),
   )}</p>
 <div style="font-size:${TYPE.body}px;line-height:${LEADING.normal};color:${BRAND.ink};">${section.html}</div>
 </div>`;
@@ -362,6 +383,7 @@ function noteBlock(note: string | undefined): string {
 function contactBlock(
   contacts: EmailContact[] | undefined,
   heading: string | undefined,
+  locale: string,
 ): string {
   const usable = (contacts ?? []).filter((contact) => isSafeContactUrl(contact.url));
   if (usable.length === 0) return "";
@@ -376,8 +398,8 @@ function contactBlock(
     )
     .join("");
   const title = heading
-    ? `<p style="margin:0 0 4px;font-size:${TYPE.small}px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:${BRAND.green};">${escapeHtml(
-        heading,
+    ? `<p style="margin:0 0 4px;font-size:${TYPE.small}px;font-weight:700;letter-spacing:0.04em;color:${BRAND.green};">${escapeHtml(
+        uppercaseHeading(heading, locale),
       )}</p>`
     : "";
   return `<div style="margin:${SPACE.lg}px 0 0;background:${BRAND.muted};border:1px solid ${BRAND.line};border-radius:${RADIUS.control}px;padding:${SPACE.md}px ${SPACE.lg}px;">
@@ -400,7 +422,8 @@ function footerBlock(options: EmailLayoutOptions): string {
 }
 
 export function renderEmailLayout(options: EmailLayoutOptions): string {
-  const sections = (options.sections ?? []).map(sectionBlock).join("");
+  const lang = htmlLang(options.locale);
+  const sections = (options.sections ?? []).map((section) => sectionBlock(section, lang)).join("");
   const body = [
     headingBlock(options.heading),
     introBlock(options.introHtml),
@@ -412,10 +435,9 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
     linkFallbackBlock(options.linkFallback, options.button?.url),
     noteBlock(options.note),
     outroBlock(options.signatureHtml),
-    contactBlock(options.contacts, options.contactsHeading),
+    contactBlock(options.contacts, options.contactsHeading, lang),
   ].join("");
 
-  const lang = htmlLang(options.locale);
   const dir = isRtlLocale(lang) ? "rtl" : "ltr";
 
   return `<!DOCTYPE html>
