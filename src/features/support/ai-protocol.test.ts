@@ -84,6 +84,49 @@ test("groq uses chat/completions with a bearer token", () => {
   assert.equal(body.model, groq.model);
 });
 
+// A reasoning model that burns its whole budget thinking returns an empty
+// completion, which the visitor sees as a failed turn. The ceiling therefore
+// leaves headroom for the hidden reasoning, and gpt-oss models are asked for low
+// effort so that reasoning stays small in the first place.
+test("the output ceiling leaves room for a reasoning model's hidden tokens", () => {
+  const { init } = buildSupportAiRequest(groq, { message: "Hi", locale: "en" });
+  const body = JSON.parse(init.body);
+  assert.ok(
+    body.max_tokens >= 1024,
+    `expected headroom for reasoning tokens, got ${body.max_tokens}`,
+  );
+});
+
+test("low reasoning effort is requested only for the models that honour it", () => {
+  const oss = resolveSupportAiConfig({
+    SUPPORT_AI_API_KEY: "k",
+    SUPPORT_AI_PROVIDER: "groq",
+    SUPPORT_AI_MODEL: "openai/gpt-oss-20b",
+  })!;
+  const ossBody = JSON.parse(
+    buildSupportAiRequest(oss, { message: "Hi", locale: "en" }).init.body,
+  );
+  assert.equal(ossBody.reasoning_effort, "low");
+
+  // A model that does not reason this way must not receive the parameter: a
+  // provider that rejected it would turn every turn into a fallback.
+  const plain = resolveSupportAiConfig({
+    SUPPORT_AI_API_KEY: "k",
+    SUPPORT_AI_PROVIDER: "groq",
+    SUPPORT_AI_MODEL: "llama-3.3-70b-versatile",
+  })!;
+  const plainBody = JSON.parse(
+    buildSupportAiRequest(plain, { message: "Hi", locale: "en" }).init.body,
+  );
+  assert.equal(plainBody.reasoning_effort, undefined);
+
+  // Gemini speaks its own wire shape; the OpenAI-only field never appears there.
+  const geminiBody = JSON.parse(
+    buildSupportAiRequest(gemini, { message: "Hi", locale: "en" }).init.body,
+  );
+  assert.equal(geminiBody.reasoning_effort, undefined);
+});
+
 // ---------------------------------------------------------------------------
 // The response parse.
 // ---------------------------------------------------------------------------

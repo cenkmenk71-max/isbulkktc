@@ -36,7 +36,6 @@ const SUPPORT_KEYS = [
   "panelTitle",
   "send",
   "sendFailed",
-  "sending",
   "suggestion1",
   "suggestion2",
   "suggestion3",
@@ -76,4 +75,29 @@ test("every support string is a non-empty value in every locale", () => {
       );
     }
   }
+});
+
+// The key list above is a hand-maintained mirror of the widget. If it drifts —
+// a key the widget reads is renamed, or one it stopped reading is left behind —
+// the exact-set test still passes while the widget renders a raw key path to a
+// visitor. Reading the widget's own `t("…")` calls and its `SUGGESTION_KEYS`
+// array closes that gap: the pinned set must equal what the component uses.
+test("the pinned key set matches the keys the widget actually reads", () => {
+  const widget = readFileSync(
+    new URL("./support-widget.tsx", import.meta.url),
+    "utf8",
+  );
+  const used = new Set<string>();
+  for (const match of widget.matchAll(/\bt\(\s*"([a-zA-Z0-9]+)"\s*\)/g)) {
+    used.add(match[1]);
+  }
+  const suggestions = /SUGGESTION_KEYS\s*=\s*\[([^\]]*)\]/.exec(widget)?.[1] ?? "";
+  for (const match of suggestions.matchAll(/"([a-zA-Z0-9]+)"/g)) {
+    used.add(match[1]);
+  }
+  assert.deepEqual(
+    [...used].sort(),
+    [...SUPPORT_KEYS],
+    "the widget's translated keys drifted from the pinned support key set",
+  );
 });
