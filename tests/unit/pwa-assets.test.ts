@@ -71,6 +71,60 @@ test("the Apple touch icon is fully opaque", () => {
   assert.equal(raw.includes(Buffer.from("tRNS")), false, "touch icon has a transparency chunk");
 });
 
+/** The ICO directory entries: `{ size, length, offset }` per frame. */
+function icoFrames(path: string): { size: number; length: number; offset: number }[] {
+  const bytes = readFileSync(new URL(`../../${path}`, import.meta.url));
+  assert.equal(bytes.readUInt16LE(0), 0, "ICO reserved field must be 0");
+  assert.equal(bytes.readUInt16LE(2), 1, "ICO type field must be 1 (icon)");
+  const count = bytes.readUInt16LE(4);
+  assert.ok(count > 0, "ICO declares no images");
+
+  return Array.from({ length: count }, (_, index) => {
+    const entry = 6 + index * 16;
+    return {
+      // Width/height are a single byte where 0 means 256.
+      size: bytes.readUInt8(entry) || 256,
+      length: bytes.readUInt32LE(entry + 8),
+      offset: bytes.readUInt32LE(entry + 12),
+    };
+  });
+}
+
+test("the root apple touch icon is a byte-identical copy of the /icons one", () => {
+  // Safari probes `/apple-touch-icon.png` when a page declares no touch icon.
+  // Keeping the two files identical means the generator cannot let them drift.
+  const root = readFileSync(new URL("../../public/apple-touch-icon.png", import.meta.url));
+  const icons = readFileSync(
+    new URL("../../public/icons/apple-touch-icon.png", import.meta.url),
+  );
+  assert.deepEqual(root, icons);
+});
+
+test("the root favicon.ico is a valid multi-resolution ICO of PNG frames", () => {
+  const frames = icoFrames("public/favicon.ico");
+  assert.deepEqual(
+    frames.map((frame) => frame.size),
+    [16, 32, 48],
+    "the favicon should carry the 16/32/48 frames browsers pick from",
+  );
+
+  const bytes = readFileSync(new URL("../../public/favicon.ico", import.meta.url));
+  for (const frame of frames) {
+    // Every offset must land inside the file and start a PNG payload — an ICO
+    // whose directory points past the buffer, or at a non-PNG frame, is exactly
+    // the malformed file a browser silently ignores.
+    assert.ok(
+      frame.offset + frame.length <= bytes.length,
+      `frame ${frame.size} overruns the file`,
+    );
+    assert.equal(
+      bytes.subarray(frame.offset, frame.offset + 8).toString("hex"),
+      "89504e470d0a1a0a",
+      `frame ${frame.size} is not a PNG payload`,
+    );
+  }
+});
+
 test("the offline document makes no network request of its own", () => {
   const html = read("public/offline.html");
   // No stylesheet, script, font or image reference: the document is served
