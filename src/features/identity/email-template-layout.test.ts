@@ -53,14 +53,14 @@ test("the brand header, button and body carry inline styles", () => {
   for (const { name, source } of templates()) {
     assert.match(
       source,
-      /background-color:#0D5C3A/,
+      /background-color:#194435/,
       `${name} header/button green is not inline`,
     );
     // The body copy colour must be inline on the paragraph, not only in the
     // stylesheet, or it renders with the client default.
     assert.match(
       source,
-      /<p style="margin:0 0 16px;font-size:15px;line-height:1\.65;color:#1A1A1A;"/,
+      /<p style="margin:0 0 16px;font-size:15px;line-height:1\.65;color:#171B1A;"/,
       `${name} body paragraphs are not inline-styled`,
     );
   }

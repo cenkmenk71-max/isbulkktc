@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   BRAND,
@@ -91,6 +92,65 @@ test("renderEmailLayout builds a branded, responsive shell", () => {
   assert.ok(html.includes("prefers-color-scheme:dark"));
   assert.ok(html.includes("Başvurunuz işverene iletildi"));
   assert.ok(html.includes("https://isbulkktc.com/profile/dashboard"));
+});
+
+/**
+ * The shell's palette is copied, not imported, from `src/styles/global.css`
+ * because the email renders in a Deno worker and a Node action, neither of
+ * which can read the app stylesheet. #191 is the drift that copy invites: the
+ * shell carried a "matches the app's --green token" comment over a value the
+ * token never held, so the brand repainted with no test failing. Pin each
+ * `BRAND` colour to the token it claims, resolving one alias level.
+ */
+test("the email shell palette matches the app design tokens", () => {
+  const css = readFileSync(
+    new URL("../../src/styles/global.css", import.meta.url),
+    "utf8",
+  );
+
+  const token = (name: string): string => {
+    const match = new RegExp(`--${name}:\\s*([^;]+);`).exec(css);
+    assert.ok(match, `--${name} is not declared in global.css`);
+    const value = match[1].trim();
+    const alias = /^var\(--([\w-]+)\)$/.exec(value);
+    return alias ? token(alias[1]) : value;
+  };
+
+  const pairs: [keyof typeof BRAND, string][] = [
+    ["green", "green"],
+    ["greenDark", "green-hover"],
+    ["greenSoft", "green-soft"],
+    ["ink", "ink"],
+    ["inkSoft", "ink-3"],
+    ["line", "line"],
+    ["muted", "muted"],
+    ["footer", "surface"],
+  ];
+
+  for (const [brandKey, tokenName] of pairs) {
+    assert.equal(
+      BRAND[brandKey].toLowerCase(),
+      token(tokenName).toLowerCase(),
+      `BRAND.${brandKey} (${BRAND[brandKey]}) drifted from --${tokenName} (${token(tokenName)})`,
+    );
+  }
+});
+
+test("the email page background is pure white, never a tinted canvas", () => {
+  // A tinted canvas reads as bulk mail to filters and to the eye, and a gray
+  // one is what put these sends in spam; the page must sit on white.
+  assert.equal(BRAND.surface, "#FFFFFF");
+  const html = renderEmailLayout({
+    preheader: "x",
+    heading: "y",
+    footerNote: "f",
+    siteUrl: SITE,
+  });
+  assert.match(
+    html,
+    /<body style="margin:0;padding:0;background:#FFFFFF;/,
+    "the email body is not painted white",
+  );
 });
 
 test("renderEmailLayout drops a javascript: call-to-action", () => {

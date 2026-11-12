@@ -9,6 +9,7 @@
  */
 
 import {
+  BRAND,
   escapeHtml,
   renderEmailLayout,
   renderEmailText,
@@ -30,9 +31,9 @@ function listHtml(items: string[]): string {
   const rows = items
     .map(
       (item, index) =>
-        `<tr><td style="vertical-align:top;padding:0 10px 10px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#e2ece5;color:#0D5C3A;font-size:12px;font-weight:700;">${
+        `<tr><td style="vertical-align:top;padding:0 10px 10px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:${BRAND.greenSoft};color:${BRAND.green};font-size:12px;font-weight:700;">${
           index + 1
-        }</span></td><td style="vertical-align:top;padding:0 0 10px;font-size:15px;line-height:1.55;color:#1A1A1A;">${escapeHtml(
+        }</span></td><td style="vertical-align:top;padding:0 0 10px;font-size:15px;line-height:1.55;color:${BRAND.ink};">${escapeHtml(
           item,
         )}</td></tr>`,
     )
@@ -63,7 +64,7 @@ export function renderCompanyProfileAcknowledgement(
     locale,
     preheader: copy.ackLead,
     heading: copy.ackHeading,
-    introHtml: `${paragraph(copy.ackLead)}<p style="margin:0;font-size:15px;font-weight:600;color:#1A1A1A;">${escapeHtml(
+    introHtml: `${paragraph(copy.ackLead)}<p style="margin:0;font-size:15px;font-weight:600;color:${BRAND.ink};">${escapeHtml(
       input.companyName,
     )}</p>`,
     sections: [
@@ -92,9 +93,9 @@ export function renderCompanyProfileTeamEmail(
   const push = (label: string, value: string | null | undefined) => {
     if (!value) return;
     rows.push(
-      `<tr><td style="padding:6px 12px 6px 0;font-size:13px;font-weight:600;color:#5B6572;vertical-align:top;white-space:nowrap;">${escapeHtml(
+      `<tr><td style="padding:6px 12px 6px 0;font-size:13px;font-weight:600;color:${BRAND.inkSoft};vertical-align:top;white-space:nowrap;">${escapeHtml(
         label,
-      )}</td><td style="padding:6px 0;font-size:14px;color:#1A1A1A;vertical-align:top;">${escapeHtml(
+      )}</td><td style="padding:6px 0;font-size:14px;color:${BRAND.ink};vertical-align:top;">${escapeHtml(
         value,
       ).replace(/\n/g, "<br>")}</td></tr>`,
     );
