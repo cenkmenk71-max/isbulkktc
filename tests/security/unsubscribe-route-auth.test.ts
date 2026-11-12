@@ -70,6 +70,19 @@ test("the success body does not branch on prior opt-out state (no subscription o
   );
 });
 
+test("both GET and POST share one verification path (RFC 8058 one-click)", () => {
+  // The `List-Unsubscribe-Post: List-Unsubscribe=One-Click` header tells Gmail
+  // and Yahoo to POST the URL. A GET-only route makes that one-click 405, which
+  // is what drives a recipient to "report spam" instead (#196). Both methods
+  // must therefore exist and route through the same signature-checked helper.
+  assert.match(source, /export async function GET\(/, "GET must be exported");
+  assert.match(source, /export async function POST\(/, "POST must be exported");
+  const getBody = source.slice(source.indexOf("export async function GET"));
+  const postBody = source.slice(source.indexOf("export async function POST"));
+  assert.match(getBody, /optOut\(/, "GET must delegate to the shared opt-out helper");
+  assert.match(postBody, /optOut\(/, "POST must delegate to the shared opt-out helper");
+});
+
 test("the token core compares in constant time and guards the length", () => {
   const core = readFileSync(
     new URL("../../src/server/email/unsubscribe-token-core.ts", import.meta.url),

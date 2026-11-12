@@ -152,4 +152,39 @@ test("the unsubscribe route", async (t) => {
     assert.equal(await again.text(), freshBody);
     assert.ok(!freshBody.includes("ada@example.com"), "the response must not echo the address");
   });
+
+  await t.test("RFC 8058 one-click: a POST opts the address out exactly like GET", async () => {
+    // Gmail and Yahoo POST the `List-Unsubscribe` URL when the message carries
+    // `List-Unsubscribe-Post: List-Unsubscribe=One-Click`, and read only the
+    // status. A POST-only-405 route makes that one-click fail, which is what
+    // pushes a recipient to "report spam" instead (#196).
+    resetBoundary({}, { rpcs: { opt_out_engagement: { data: null, error: null } } });
+    const { POST } = await unsubscribeRoute();
+
+    const res = await POST(
+      new Request(signedLink("Ada@Example.com"), {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "List-Unsubscribe=One-Click",
+      }),
+    );
+
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("cache-control"), "no-store");
+    const calls = optOutCalls();
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0].args, { _email: "ada@example.com", _reason: "email_link" });
+  });
+
+  await t.test("a POST with a tampered signature is refused before the database is touched", async () => {
+    resetBoundary({}, { rpcs: { opt_out_engagement: { data: null, error: null } } });
+    const { POST } = await unsubscribeRoute();
+
+    const res = await POST(
+      new Request(signedLink("ada@example.com", "not-a-valid-signature"), { method: "POST" }),
+    );
+
+    assert.equal(res.status, 400);
+    assert.deepEqual(optOutCalls(), []);
+  });
 });
