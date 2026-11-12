@@ -519,7 +519,7 @@ test("the Turkish marketing copy keeps the owner's verbatim wording", () => {
   const tr = MARKETING_COPY.tr;
   assert.equal(tr.greeting, "Sayın Yetkili,");
   assert.ok(tr.paragraphs[0].includes("yalnızca iş ilanı yayınlamakla bitmez"));
-  assert.ok(tr.paragraphs[1].includes("İşbul KKTC"));
+  assert.ok(tr.paragraphs[1].includes("İşBul KKTC"));
   assert.ok(tr.features.some((feature) => feature.title.includes("İlan yayınlayabilir")));
   assert.equal(tr.primaryCta, "İlan Paketlerini İnceleyin");
   assert.equal(tr.secondaryCta, "İşveren Hesabı Oluştur");
