@@ -5,7 +5,7 @@ import { getArticles } from "@/content/editorial";
 import { getGuides } from "@/content/guides";
 import { routing, type AppLocale } from "@/i18n/routing";
 
-import { resolveLanguageHref, slugSiblings } from "./language-links";
+import { resolveLanguageHref, languageOptionHref, slugSiblings } from "./language-links";
 
 /**
  * The language menu carries a slug-only copy of the translated guide and
@@ -107,3 +107,56 @@ test("every locale is covered by the manifest", () => {
     assert.ok(slugSiblings("blog", locale).length > 0);
   }
 });
+
+/**
+ * The language menu used to hand its href to next-intl's `Link` with
+ * `locale={code}`, which forces a prefix even for the default locale. Under
+ * `localePrefix: "as-needed"` that made `tr` link to `/tr/...` on every page,
+ * and `src/proxy.ts` answers a prefixed default-locale path with a 308 — one
+ * redirecting link per page, which is the "Yönlendirmeli sayfa" bucket in Search
+ * Console. `languageOptionHref` owns the prefix instead, so `tr` is bare.
+ */
+test("the default locale links to its bare, canonical pathname", () => {
+  for (const pathname of ["/", "/jobs", "/companies", "/rehber/kktc-is-bulma-rehberi"]) {
+    assert.equal(
+      languageOptionHref(pathname, "tr"),
+      pathname === "/" ? "/" : pathname,
+      `tr must not be prefixed for ${pathname}`,
+    );
+    assert.ok(
+      !languageOptionHref(pathname, "tr").startsWith("/tr"),
+      `a /tr prefix would 308 on ${pathname}`,
+    );
+  }
+});
+
+test("non-default locales keep their prefix", () => {
+  assert.equal(languageOptionHref("/jobs", "en"), "/en/jobs");
+  assert.equal(languageOptionHref("/jobs", "fa"), "/fa/jobs");
+  assert.equal(languageOptionHref("/companies", "de"), "/de/companies");
+});
+
+test("the root pathname is the prefix itself, never a trailing slash", () => {
+  // `/en/` answers 308 to `/en`; the menu must emit the canonical form directly.
+  assert.equal(languageOptionHref("/", "tr"), "/");
+  assert.equal(languageOptionHref("/", "en"), "/en");
+  for (const locale of routing.locales) {
+    const href = languageOptionHref("/", locale);
+    const expected = locale === "tr" ? "/" : `/${locale}`;
+    assert.equal(href, expected);
+    assert.ok(!href.endsWith("//"), `${locale} must not double the slash`);
+    assert.ok(href.length === 1 || !href.endsWith("/"), `${locale} must not trail a slash`);
+  }
+});
+
+test("a translated guide keeps its sibling slug under the target prefix", () => {
+  assert.equal(
+    languageOptionHref("/rehber/arbeit-finden-in-nordzypern", "en"),
+    "/en/rehber/finding-a-job-in-northern-cyprus",
+  );
+  assert.equal(
+    languageOptionHref("/rehber/finding-a-job-in-northern-cyprus", "tr"),
+    "/rehber/kktc-is-bulma-rehberi",
+  );
+});
+

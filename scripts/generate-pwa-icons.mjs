@@ -16,6 +16,15 @@
  *  - the Apple touch icon must be fully opaque (iOS paints transparent pixels
  *    black) and is deliberately not rounded, because iOS applies its own mask.
  *
+ * Two root-level files are also derived here, because the browser and search
+ * engines request those exact paths by convention even when the `<link>` tags
+ * point elsewhere:
+ *  - `public/favicon.ico` — a multi-resolution ICO (16/32/48) wrapping PNGs.
+ *    `sharp` cannot write ICO, so the container is assembled by hand below.
+ *  - `public/apple-touch-icon.png` — the same 180px mark as
+ *    `public/icons/apple-touch-icon.png`, served at the path Safari probes when
+ *    a page has no explicit `<link rel="apple-touch-icon">`.
+ *
  * Run with `node scripts/generate-pwa-icons.mjs`; `tests/unit/pwa-assets.test.ts`
  * asserts the committed files keep the sizes and opacity this script promises.
  */
@@ -69,6 +78,42 @@ async function buildIcon({ size, markWidthRatio }) {
     .toBuffer();
 }
 
+/**
+ * Assembles a multi-resolution ICO from PNG-encoded frames.
+ *
+ * The ICO container is a 6-byte header (`reserved=0`, `type=1`, image count),
+ * then one 16-byte directory entry per frame, then the frame payloads. Each
+ * entry stores width/height as a single byte where `0` means 256, a `planes`/
+ * `bpp` pair, the payload length and the payload's byte offset. Encoding the
+ * frames as PNG (rather than a DIB) is allowed since Vista and is what every
+ * modern browser reads; it keeps the container tiny and reuses the same
+ * `buildIcon` output as the PNG favicons.
+ */
+function buildIco(frames) {
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(0, 0);
+  header.writeUInt16LE(1, 2);
+  header.writeUInt16LE(frames.length, 4);
+
+  const directory = Buffer.alloc(frames.length * 16);
+  let offset = header.length + directory.length;
+
+  frames.forEach(({ size, data }, index) => {
+    const entry = index * 16;
+    directory.writeUInt8(size >= 256 ? 0 : size, entry + 0);
+    directory.writeUInt8(size >= 256 ? 0 : size, entry + 1);
+    directory.writeUInt8(0, entry + 2);
+    directory.writeUInt8(0, entry + 3);
+    directory.writeUInt16LE(1, entry + 4);
+    directory.writeUInt16LE(32, entry + 6);
+    directory.writeUInt32LE(data.length, entry + 8);
+    directory.writeUInt32LE(offset, entry + 12);
+    offset += data.length;
+  });
+
+  return Buffer.concat([header, directory, ...frames.map((frame) => frame.data)]);
+}
+
 await mkdir(outputDir, { recursive: true });
 
 for (const target of targets) {
@@ -80,3 +125,21 @@ for (const target of targets) {
     `${destination}: ${width}x${height} alpha=${Boolean(hasAlpha)} ${buffer.length} bytes`,
   );
 }
+
+// Safari probes `/apple-touch-icon.png` at the site root when a page declares no
+// explicit touch icon. Keep the root copy byte-identical to the one under
+// `/icons` so the two can never drift.
+const appleTouchIcon = await buildIcon({ size: 180, markWidthRatio: 0.72 });
+await writeFile("public/apple-touch-icon.png", appleTouchIcon);
+console.log(`public/apple-touch-icon.png: 180x180 ${appleTouchIcon.length} bytes`);
+
+const faviconSizes = [16, 32, 48];
+const faviconFrames = [];
+for (const size of faviconSizes) {
+  faviconFrames.push({ size, data: await buildIcon({ size, markWidthRatio: 0.72 }) });
+}
+const favicon = buildIco(faviconFrames);
+await writeFile("public/favicon.ico", favicon);
+console.log(
+  `public/favicon.ico: ${faviconSizes.join("/")} ${favicon.length} bytes`,
+);

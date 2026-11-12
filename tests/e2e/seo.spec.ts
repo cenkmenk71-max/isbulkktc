@@ -315,6 +315,17 @@ test("account pages are excluded from indexing without blocking crawlers", async
   }
   expect(robots).toContain("Disallow: /api/");
   expect(robots).toContain("Disallow: /auth/");
+  // Cloudflare's email-obfuscation links resolve under `/cdn-cgi/`, which the
+  // origin answers with 404; the prefix must be disallowed so crawls do not
+  // spend budget on dead infrastructure URLs.
+  expect(robots).toContain("Disallow: /cdn-cgi/");
+
+  // The browser and search engines request these exact root paths by
+  // convention; a 404 here is a crawl error and a blank tab icon.
+  for (const assetPath of ["/favicon.ico", "/apple-touch-icon.png"]) {
+    const asset = await page.request.get(assetPath);
+    expect(asset.status(), `${assetPath} must be served`).toBe(200);
+  }
 
   // RFC 9116 security.txt must be reachable at the well-known location, carry a
   // machine-readable contact, and not have an `Expires` in the past.

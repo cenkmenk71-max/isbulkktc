@@ -23,6 +23,13 @@ export default function robots(): MetadataRoute.Robots {
       // middle of a path, so each prefix is listed explicitly.
       disallow: [
         "/api/",
+        // Cloudflare serves its email-obfuscation and challenge infrastructure
+        // under `/cdn-cgi/`. The footer's obfuscated `mailto:` links point at
+        // `/cdn-cgi/l/email-protection#<hash>`, which the origin answers with
+        // 404 — so every crawl of a page with a contact link spends budget on
+        // dead infrastructure URLs. Cloudflare's own guidance is to disallow
+        // the prefix; nothing under it is real content.
+        "/cdn-cgi/",
         "/auth/",
         ...routing.locales
           .filter((locale) => locale !== routing.defaultLocale)
