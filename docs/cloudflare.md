@@ -79,7 +79,7 @@ atıfları belirsizleştirir; bu dokümanda iki kez yaşandı: tur 18'de `V-01`
 | F-03 | `www` | A → aynı CF IP'leri; `http://www` → **301** `https://www` (CF); **`https://www` → apex YÖNLENDİRMESİ YOK** — tam gövdeyi **200** servis ediyor | Apex'e **301** olmalı (tek sıçrama) | `HTTP` — **H-03 (tur 36)** |
 | F-04 | `http` → `https` | `http://isbulkktc.com` → **301** `https://isbulkktc.com/` | Always Use HTTPS açık | `HTTP` |
 | F-05 | Mail (CF Email Routing) | MX `route{1,2,3}.mx.cloudflare.net`; SPF `v=spf1 include:_spf.mx.cloudflare.net ~all`; DKIM `cf2024-1._domainkey` (2048-bit) | OK | DoH MX/TXT |
-| F-06 | DMARC | `v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; fo=1` | `p=none` izleme modunda — **zorlamaya geçiş planı yok** | DoH TXT |
+| F-06 | DMARC | `v=DMARC1; p=quarantine; rua=mailto:dmarc@isbulkktc.com; fo=1` | `p=quarantine` **canlı** (2026-11-12 DoH); önce `p=none` idi — geçiş yapıldı | DoH TXT |
 | F-07 | CAA | `0 issue` comodoca/digicert/letsencrypt/pki.goog/ssl.com + `issuewild` aynıları | Geniş ama geçerli | DoH CAA |
 | F-08 | **Origin doğrudan erişim** | `https://isbulkktc-amber.vercel.app` CF'yi **tamamen atlıyor**: `server: Vercel`, `cf-ray` yok, rate-limit yok (`POST /login` 12/12 200, apex'te aynı seri 429). **tur 24 nüansı:** alias'ın **kendi** koruması var — `x-vercel-mitigated: challenge` (Vercel Security Checkpoint) **saldırı-yolu taraması** ile tetiklenir, hacimle değil; challenge **IP'ye özel** (temiz egress → 200) ve tetikleyen IP'de **en az 6 dk** kalıcı (D-14) | Vercel Deployment Protection (Vercel Authentication / Protection Bypass) veya alias'ı public bırakma | `HTTP` alias |
 | F-09 | TLS min sürüm | **SSL Labs (tur 17): 4/4 endpoint grade `A+`, yalnız TLS 1.2 + 1.3 sunuluyor** (1.0/1.1 yok). Sandbox `openssl`'de 1.0/1.1 istemci tarafı da yok, o yüzden "`no protocols available`" **sunucu reddi kanıtı DEĞİL** (bkz. tur 17 düzeltmesi) | Min TLS 1.2 — doğru | SSL Labs API + Python `ssl` |
@@ -113,7 +113,7 @@ atıfları belirsizleştirir; bu dokümanda iki kez yaşandı: tur 18'de `V-01`
 
 1. ~~Rate limit kuralını yeniden tahsis et (F-26).~~ **tur 23'te geçersiz — premise yanlıştı.** CF auth POST'larını zaten limitliyor (~10 istek/~10 sn, `error code: 1015`); kural "leak-check'e harcanmış, brute-force korumasız" değil. Geriye kalan **doğrulama** işi (acil değil): (a) eşik yeterli mi (10/~10 sn makul ama gevşek; sıkılaştırma istenirse `Zone → WAF → Rate limiting` panelinden), (b) limit **yalnız POST** olduğundan GET tabanlı hesap-numaralandırma açık kalır (brute-force değil, keşif). **Yıkıcı değişiklik yok; mevcut koruma yeterli.**
 2. **Origin doğrudan erişimi kapat (F-08).** Vercel Deployment Protection / alias kısıtı. CF dışı → Vercel/INFRA onayı.
-3. **DMARC'ı güçlendir (F-06).** `p=none` → önce `p=quarantine`, raporları izledikten sonra `p=reject`. Mail akışı CF Email Routing + Resend üzerinden; geçiş planı gerekir.
+3. **DMARC'ı güçlendir (F-06).** ✅ `p=none` → `p=quarantine` yapıldı (2026-11-12 canlı). Sıradaki adım: raporları izledikten sonra `p=reject`. Mail akışı CF Email Routing + Resend üzerinden.
 4. **HSTS preload (F-12).** Durum `pending`; preload listesine girene kadar bekle, DNS/TLS'i değiştirme.
 
 ## Denetlenen dosyalar
@@ -224,7 +224,7 @@ issue'nun işaret ettiği yer değil. Aşağıda ölçüm, düzeltme ve kanıt v
 | E-03 | **Resend SPF (return-path)** | `send.isbulkktc.com TXT "v=spf1 include:amazonses.com ~all"` | ✅ **mevcut ve doğru** |
 | E-04 | Resend return-path MX | `send.isbulkktc.com MX 10 feedback-smtp.eu-west-1.amazonses.com` | ✅ Resend `send.` kuralı |
 | E-05 | DKIM | `resend._domainkey.isbulkktc.com TXT "p=MIGf…"` | ✅ mevcut — ama bkz. E-10 |
-| E-06 | DMARC | `_dmarc.isbulkktc.com TXT "v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; fo=1"` | 🟠 izleme; `ruf` yok, alignment tag yok |
+| E-06 | DMARC | `_dmarc.isbulkktc.com TXT "v=DMARC1; p=quarantine; rua=mailto:dmarc@isbulkktc.com; fo=1"` | 🟡 `p=quarantine` canlı (2026-11-12 DoH); `ruf`/alignment tag hâlâ yok |
 | E-07 | Kök MX | Cloudflare Email Routing (inbound) | ✅ |
 | E-08 | MTA-STS | `_mta-sts` TXT **yok** | 🟡 eksik (opsiyonel) |
 | E-09 | TLS-RPT | `_smtp._tls` TXT **yok** | 🟡 eksik (opsiyonel) |
@@ -263,8 +263,8 @@ Bu çıktı, "kök SPF'e include ekle" adımının gereksiz olduğunu kanıtlar.
    1024-bit günümüzde zayıf kabul edilir ve bazı sağlayıcılar skoru düşürür.
    Resend paneli → domain → DKIM anahtarını yenile (2048), yeni
    `resend._domainkey` TXT'i yayınla. **DNS değişikliği → sahibin onayı gerekli.**
-2. **DMARC'i güçlendir (E-06).** Önerilen:
-   `v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; ruf=mailto:dmarc@isbulkktc.com; fo=1; adkim=s; aspf=s`
+2. **DMARC'i güçlendir (E-06).** Şu an canlı: `p=quarantine`. Sıradaki adım:
+   `v=DMARC1; p=reject; rua=mailto:dmarc@isbulkktc.com; ruf=mailto:dmarc@isbulkktc.com; fo=1; adkim=s; aspf=s`
    Raporları izledikten sonra `p=quarantine` → `p=reject`. `ruf` (forensic) ve
    sıkı alignment eklemek, hem görünürlük hem spoofing direnci sağlar.
 3. **Kök SPF'e `include:amazonses.com` EKLEMEYİN** (gerekçe yukarıda). Yalnızca
@@ -441,8 +441,9 @@ Set-Cookie bayrakları → yalnız `NEXT_LOCALE=…; Path=/; SameSite=lax` (terc
 Sahip #170'te teşhisi düzeltti ve bu lane'e **açık görev** verdi:
 > "DMARC'i `p=quarantine`'a yükselt (LANE-CLOUDFLARE)"
 
-Aşağıda **uygulamadan önce** yapılan doğrulama ve önerilen kayıt var. DNS yazma
-sahibin onayında (brief kuralı) → bu turda **değişiklik yapılmadı**.
+Aşağıda uygulama öncesi doğrulama ve kayıt var. **2026-11-12 itibarıyla Faz 1
+(`p=quarantine`) canlı** (DoH ile doğrulandı); Faz 2 (`p=reject`) rapor izlemeden
+sonra planlı.
 
 ### Neden şimdi güvenli — hizalama ön-kontrolü (canlı DoH)
 
@@ -461,11 +462,11 @@ gönderim yapmaz → etkilenmez. **Sonuç: `p=quarantine` güvenli.**
 
 ### Önerilen kayıt (sahibin onayıyla, Cloudflare DNS)
 
-Mevcut:
+Mevcut (2026-11-12 itibarıyla **uygulandı** — Faz 1 yayında):
 ```
-_dmarc.isbulkktc.com  TXT  "v=DMARC1; p=none; rua=mailto:dmarc@isbulkktc.com; fo=1"
+_dmarc.isbulkktc.com  TXT  "v=DMARC1; p=quarantine; rua=mailto:dmarc@isbulkktc.com; fo=1"
 ```
-**Faz 1 (önerilen, hemen):**
+**Faz 1 (yayında):**
 ```
 "v=DMARC1; p=quarantine; rua=mailto:dmarc@isbulkktc.com; ruf=mailto:dmarc@isbulkktc.com; fo=1; adkim=r; aspf=r; pct=100"
 ```
@@ -3844,3 +3845,68 @@ diyordu; canlı **404** (5/5 GET+HEAD, `x-vercel-id` dolu). Düzeltildi. Bu, sat
 **Etki:** yalnız doküman doğruluğu (D-33/D-34) + SEO kanonik riski (R-01r3).
 CF paneli değişikliği **yok** (bu lane salt-okur); `www→apex` yönlendirmesi
 gerekiyorsa sahibi `lane:infra`dır (`next.config.ts`) → handoff.
+
+---
+
+## Gelen (inbound) yönlendirme + teslim-edilebilirlik — 2026-11-12 (tur 37)
+
+### E-13 — Cloudflare Email Routing açık ama **boş**: `info@` ve `dmarc@` ölü
+
+**Bulgu (canlı).** Bölgede Email Routing durumu `ready`, ama **hedef (destination)
+0 ve kural (rule) 0**. Kök MX `route{1,2,3}.mx.cloudflare.net`'e bakıyor; gelen
+posta Cloudflare'e giriyor, orada **hiçbir kurala uymadığı için düşüyor/geri
+dönüyor**. İki adres bu yüzden ölü:
+
+| Adres | Neden önemli | Ölçüm |
+|---|---|---|
+| `info@isbulkktc.com` | Pazarlama/erişim ailesinin **Reply-To**'su (`MARKETING_FROM`, `mailer.ts`) | `info@`'ya test gönderimi → `last_event: bounced` |
+| `dmarc@isbulkktc.com` | DMARC `rua=` rapor kutusu (kök + güncel politika) | kural yok → raporlar kaybolur |
+
+**Etki.** `List-Unsubscribe` başlığı `info@`'ya `mailto:` geri-dönüşü de veriyor
+(`listUnsubscribeHeaders`, `email-headers.ts`); o adres ölü olduğundan **bir
+tıkla çıkma posta yolu da sessizce çalışmıyor**. Ayrıca DMARC raporları
+toplanmadığı için politika değişiklikleri **körlemesine** izleniyor.
+
+**Düzeltme (sahip / manuel — bu oturumda `CF_API_TOKEN` yok, API 403).**
+Cloudflare paneli → **Email** → **Email Routing** → `isbulkktc.com`:
+1. **Destination addresses**: `info@` için gerçek bir gelen kutusu (ör. mevcut
+   kişisel/rol adresi) **doğrula** (Cloudflare doğrulama e-postası gönderir).
+2. **Routes / Custom addresses**: `info@isbulkktc.com` → o hedefe **forward**;
+   `dmarc@isbulkktc.com` → raporları toplayacağın kutuya **forward**.
+3. Test: `info@`'ya bir e-posta gönder, ulaştığını doğrula; DMARC raporunun
+   (24-48 saat içinde) geldiğini gör.
+
+> `dmarc@` kutusu **şart**: `p=quarantine`'e geçtik (aşağıda E-14); rapor
+> okunmadan `p=reject`'e geçmek riskli. Kutu yoksa DMARC'ı geri `p=none`'a
+> çekmek değil, **kutuyu açmak** doğru adımdır.
+
+### E-14 — DMARC `p=none` → `p=quarantine` (uygulandı, canlı)
+
+`_dmarc.isbulkktc.com` artık:
+
+```
+v=DMARC1; p=quarantine; rua=mailto:dmarc@isbulkktc.com; fo=1
+```
+
+Kayıt id `06a727ced0e739460a19d5e1d5bef91d`. SPF hizalaması (E-03: return-path
+`send.isbulkktc.com` → `amazonses`) ve DKIM (`d=isbulkktc.com`, E-05) **zaten
+geçiyor**; bu yüzden `quarantine` meşru postayı etkilemez. `rua` kutusu E-13'te
+düzeltilene kadar **raporlar birikmez** — politika ile kutu birlikte anlamlı.
+
+**Sonraki adım (sahip):** raporlar 1-2 hafta temiz akarsa `p=reject`'e geç;
+`adkim`/`aspf` şimdilik varsayılan (relaxed) — hizalama ölçülüp sıkılaştırılabilir.
+
+### Yeni: Resend teslim olayı alıcısı (kod)
+
+`POST /api/email/resend-webhook` — `email.bounced` / `email.complained` /
+`email.suppressed` olaylarını Svix imzasıyla doğrular (`RESEND_WEBHOOK_SECRET`,
+`whsec_…`) ve adresi `opt_out_engagement` RPC'siyle `email_engagement_optouts`'a
+yazar; böylece sert bounce ve spam şikâyeti **sonraki gönderimlerden otomatik
+düşer**. Geçici `email.delivery_delayed` **bastırılmaz** (canlı aboneyi kesmez).
+Kurulum: Resend paneli → Webhooks → endpoint ekle
+(`https://isbulkktc.com/api/email/resend-webhook`), olaylar
+`email.bounced`, `email.complained`, `email.suppressed`; çıkan `whsec_…` değerini
+`RESEND_WEBHOOK_SECRET` olarak Vercel'e ekle. Kural/çekirdek
+`src/server/email/resend-webhook-core.ts` (saf, 12 test); rota
+`src/app/api/email/resend-webhook/route.ts`.
+

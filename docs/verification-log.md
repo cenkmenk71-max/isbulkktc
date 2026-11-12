@@ -19,7 +19,7 @@ domain: isbulkktc.com | Resend status: verified | region: eu-west-1
 |---|---|---|
 | DKIM | PASS | `resend._domainkey`, 216 karakter anahtar |
 | SPF | PASS | `send` alt alan adında; zarf göndericisi üzerinden geçer |
-| DMARC | WARN | `p=none` — izleme modu, zorlayıcı değil |
+| DMARC | PASS | `p=quarantine` — canlı (2026-11-12'de DoH ile doğrulandı; önce `p=none`) |
 | MX | PASS | Cloudflare Email Routing |
 | Blocklists | ~~PASS~~ ⚠️ | **geçersiz** — araç alan adını yalnız-IP bölgelerine soruyordu; bkz. tur 2 |
 | Resend domain | PASS | `verified` |
@@ -647,3 +647,43 @@ olanı raporlar.
 
 Kapılar: `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`,
 `bun run test:unit` (1022/1022) — yeşil.
+
+## 2026-11-12 — RFC 8058 tek-tıkla çıkış düzeltmesi (deliverability)
+
+### Kök neden
+
+`List-Unsubscribe-Post: List-Unsubscribe=One-Click` başlığı (RFC 8058) Gmail ve
+Yahoo'ya "`List-Unsubscribe` HTTPS adresine **POST** at, gövdeyi okuma, yalnız
+durum koduna bak" der. Ama `/api/email/unsubscribe` yalnız `GET` sunuyordu →
+Gmail'in POST'u **405** dönüyordu → tek-tıkla sessizce başarısız → kullanıcı
+"spam bildir"e basıyor. Başlığın var olma amacı tam da bunu önlemekti.
+
+### Düzeltme
+
+`route.ts`: `GET` ve `POST` aynı `optOut(email, signature)` yolunu paylaşır —
+HMAC doğrulaması servis istemcisinden **önce**, tek başarı gövdesi, aynı
+`no-store`. Yetki sınırı değişmedi (imza hâlâ tek yetki kaynağı).
+
+### Ölçüm (2026-11-12, DoH — token gerekmez)
+
+```
+_dmarc.isbulkktc.com   v=DMARC1; p=quarantine; rua=mailto:dmarc@isbulkktc.com; fo=1
+isbulkktc.com          v=spf1 include:_spf.mx.cloudflare.net ~all
+send.isbulkktc.com     v=spf1 include:amazonses.com ~all
+resend._domainkey      p=MIGf… (1024-bit)
+```
+
+`node scripts/verify-deliverability.mjs`: **1 failure / 3 warning** —
+FAIL yalnız yerel `RESEND_API_KEY` geçersizliği (`re_` ile başlamıyor, len 36);
+SPF kök ve blocklist uyarıları bilinen/zararsız.
+
+### Açık kalan (kod dışı, token/insan gerekir)
+
+- [ ] DKIM `1024` → `2048` bit (Resend paneli; anahtar gücü)
+- [ ] Üretimde geçerli `RESEND_API_KEY` (`re_…`)
+- [ ] DMARC `p=quarantine` → `reject` (raporları izledikten sonra)
+- [ ] 3 adreste gelen kutusu/spam doğrulaması (#187)
+
+**Regresyon testi.** `tests/integration/unsubscribe-route.test.ts` +2 (POST
+tek-tıkla, POST'ta bozuk imza); `tests/security/unsubscribe-route-auth.test.ts`
++1 (GET/POST tek doğrulama yolu).
