@@ -9,10 +9,14 @@ import { answerFromKnowledge, fallbackReply } from "./knowledge";
  * properties are pinned here: a question that really is in the FAQ is answered
  * without a model, and a question that only *shares a word* with one is not.
  *
- * The second is the one that regressed: FAQ questions in a language end in the
- * same word ("nedir", "is", "ist"), so a pure token overlap let "Tek ilan fiyatı
- * nedir?" match "İşBul KKTC nedir?" on "nedir" alone and answer a price question
- * with an unrelated fact. The coverage rule fixes that, and these cases lock it.
+ * The second is the one that regressed, twice. FAQ questions in a language end in
+ * the same word ("nedir", "is", "ist"), so a pure token overlap let "Tek ilan
+ * fiyatı nedir?" match "İşBul KKTC nedir?" on "nedir" alone. The coverage rule
+ * fixes that. And the score originally counted an entry's *answer* too, whose
+ * prose is dense with the platform's general vocabulary ("işverenler", "ilan",
+ * "paket", "platform"), so an off-topic question could ride those words into an
+ * unrelated entry; scoring the question text alone fixes that. These cases lock
+ * both.
  */
 
 const locales = ["tr", "en", "ru", "el", "fa", "de"] as const;
@@ -80,6 +84,31 @@ test("a question that only shares a generic word does not match", () => {
       answerFromKnowledge(message, locale),
       null,
       `${JSON.stringify(message)} must not match on a shared generic word`,
+    );
+  }
+});
+
+// The other half of the same defect: an entry's *answer* is prose, and its
+// vocabulary ("işverenler", "ilan", "paket", "platform", "Kuzey", "Kıbrıs") is the
+// platform's general vocabulary, so scoring it let an off-topic question ride
+// those words into an unrelated entry. Each message below shares words with an
+// FAQ *answer* but none with its *question*, so a correct matcher falls through.
+// The last three are the employer-package questions that surfaced the bug in
+// production ("İşverenler için ilan paketleri var mı?" answered with "İşBul KKTC
+// nedir?"); the first three are synthetic answer-only probes.
+test("a question that only shares words with an answer does not match", () => {
+  for (const message of [
+    "Kuzey Kıbrıs Cumhuriyeti platformu",
+    "ödeme IBAN talimatı",
+    "geliştirilen kariyer platformudur",
+    "İşverenler için ilan paketleri var mı?",
+    "İşverenler için ilan paketlerini nereden görebilirim?",
+    "İşverenler ilan yayınlayabilir mi?",
+  ]) {
+    assert.equal(
+      answerFromKnowledge(message, "tr"),
+      null,
+      `${JSON.stringify(message)} must not match on answer-only vocabulary`,
     );
   }
 });

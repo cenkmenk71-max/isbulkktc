@@ -42,13 +42,14 @@ function tokenize(text: string, locale: AppLocale): string[] {
  * Best FAQ answer for `message`, or `null` when nothing matches confidently.
  *
  * Scoring is the overlap of significant tokens (length >= 3, so a locale's
- * articles and short particles drop out) between the query and each FAQ entry,
- * and a match is only accepted when it covers `MIN_COVERAGE` of the query's
- * distinct words *and* shares `MIN_SHARED_TOKENS` of them. The two guards matter
- * because FAQ questions in a language share a closing word ("nedir", "is",
- * "ist"): coverage alone would let a one-word query through, and a raw count
- * alone would let a long question ride on that shared word. Ties keep the first
- * entry, so the result is stable across calls.
+ * articles and short particles drop out) between the query and each FAQ entry's
+ * *question* — never its answer. The answer text is dense with the platform's
+ * general vocabulary ("işverenler", "ilan", "için"), so scoring it let a plain
+ * question like "İşverenler için ilan paketleri var mı?" ride those words into
+ * the unrelated "İşBul KKTC nedir?" entry. A match is accepted only when it
+ * covers `MIN_COVERAGE` of the query's distinct words *and* shares
+ * `MIN_SHARED_TOKENS` of them, so a question the copy does not answer falls
+ * through to the model. Ties keep the first entry, so the result is stable.
  */
 export function answerFromKnowledge(
   message: string,
@@ -59,9 +60,7 @@ export function answerFromKnowledge(
 
   let best: { score: number; answer: string } | null = null;
   for (const entry of faqByLocale[locale]) {
-    const entryTokens = new Set(
-      tokenize(`${entry.question} ${entry.answer}`, locale),
-    );
+    const entryTokens = new Set(tokenize(entry.question, locale));
     let score = 0;
     for (const token of queryTokens) {
       if (entryTokens.has(token)) score += 1;
