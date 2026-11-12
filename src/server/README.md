@@ -2,7 +2,8 @@
 
 `auth/` oturum ve dar rol doğrulamaları; `dal/` kullanıcı/şirket kapsamlı
 erişim ile explicit DTO; `db/` kullanıcı scope'lu SSR Supabase client;
-`policies/` domain izinleri; `audit/` redakte edilmiş append-only kayıtlar
+`policies/` domain izinleri; `audit/` redakte edilmiş append-only kayıtlar;
+`support/` canlı-destek sohbetinin isteğe bağlı, env-gated model çağrısı
 içindir. Ayrıcalıklı server kodu başında `import "server-only"` bulunur.
 
 Next.js Server Component, Server Action ve Route Handler'da her isteğe ait

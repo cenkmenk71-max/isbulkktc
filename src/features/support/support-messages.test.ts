@@ -30,12 +30,18 @@ const SUPPORT_KEYS = [
   "emailLabel",
   "emailPlaceholder",
   "greeting",
+  "humanCta",
   "launcherLabel",
   "panelSubtitle",
   "panelTitle",
   "send",
   "sendFailed",
   "sending",
+  "suggestion1",
+  "suggestion2",
+  "suggestion3",
+  "suggestionsLabel",
+  "thinking",
   "youLabel",
 ] as const;
 

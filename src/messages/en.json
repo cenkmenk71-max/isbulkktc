@@ -1479,6 +1479,12 @@
     "composerPlaceholder": "Type your question…",
     "send": "Send",
     "sending": "Sending…",
-    "sendFailed": "The message could not be sent. Please try again."
+    "sendFailed": "The message could not be sent. Please try again.",
+    "thinking": "Typing…",
+    "humanCta": "Get a human reply",
+    "suggestionsLabel": "Suggested questions",
+    "suggestion1": "What is İşBul KKTC?",
+    "suggestion2": "Which areas does it cover?",
+    "suggestion3": "Does it cost anything to post or apply?"
   }
 }
