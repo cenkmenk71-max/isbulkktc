@@ -276,6 +276,52 @@ test("the direct PostgREST path is throttled inside the RPC, not just the form",
   );
 });
 
+test("each anon write RPC carries its own per-form coarse peer cap", () => {
+  // #621: the coarse cap on the edge-written peer used one subject for every
+  // form (`hash(peer)` under `scope='ip'`). On the app path the peer is the
+  // platform's *shared egress* address, so that one subject became a single
+  // site-wide 25/10min ceiling shared by feedback and sales — the 26th real
+  // anonymous write anywhere was rejected. #616: `submit_support_message` never
+  // got the cap at all, so a direct caller rotating `x-client-ip` wrote without
+  // bound.
+  //
+  // The fix scopes the cap per form (`peer:<form>|…`) and raises the burst. This
+  // gate pins both halves for every anon write RPC: a form-prefixed peer bucket
+  // must be consumed, the burst must exceed the old shared ceiling of 25, and no
+  // two forms may share a prefix.
+  const prefixes = new Map<string, string>();
+  for (const signature of discoverAnonymousWriteRpcs()) {
+    const name = signature.slice(0, signature.indexOf("("));
+    const body = latestFunctionBody(name);
+    assert.ok(body, `${name} has no definition in the migrations`);
+    const match = body.match(
+      /consume_anon_write_quota\s*\(\s*'ip'\s*,\s*'peer:([a-z_]+)\|'[^)]*?,\s*(\d+)\s*,\s*600\s*\)/,
+    );
+    assert.ok(
+      match,
+      `${name} consumes no per-form coarse peer cap, so a direct caller who ` +
+        `rotates x-client-ip is unbounded (issues #616/#621)`,
+    );
+    const burst = Number(match![2]);
+    assert.ok(
+      burst > 25,
+      `${name} keeps the old shared site-wide ceiling of 25 (found ${burst}); ` +
+        `it must be raised now that the cap is per form (#621)`,
+    );
+    prefixes.set(name, match![1]);
+  }
+  const seen = new Map<string, string>();
+  for (const [name, prefix] of prefixes) {
+    const owner = seen.get(prefix);
+    assert.ok(
+      !owner,
+      `${name} shares the peer-cap subject prefix "${prefix}" with ${owner}, ` +
+        `so the two forms lock each other out (#621)`,
+    );
+    seen.set(prefix, name);
+  }
+});
+
 /**
  * The body of the last `create [or replace] function public.<name>(…)` in the
  * migration set — the definition that actually wins, since every migration is

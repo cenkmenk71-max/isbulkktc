@@ -330,12 +330,14 @@ select is(
     where scope = 'ip'
       and subject_hash =
         pg_catalog.encode(
-          pg_catalog.sha256(pg_catalog.convert_to('198.51.100.9', 'UTF8')),
+          pg_catalog.sha256(
+            pg_catalog.convert_to('peer:feedback|198.51.100.9', 'UTF8')
+          ),
           'hex'
         )
   ),
   1,
-  'the edge-written address is still consumed as a coarse per-peer cap'
+  'the edge-written address is consumed as a per-form coarse peer cap'
 );
 
 -- A direct caller can forge `x-client-ip` to mint fresh buckets, so the
@@ -373,12 +375,14 @@ select is(
     where scope = 'ip'
       and subject_hash =
         pg_catalog.encode(
-          pg_catalog.sha256(pg_catalog.convert_to('192.0.2.50', 'UTF8')),
+          pg_catalog.sha256(
+            pg_catalog.convert_to('peer:feedback|192.0.2.50', 'UTF8')
+          ),
           'hex'
         )
   ),
   2,
-  'rotating the forged app address still increments one shared per-peer bucket'
+  'rotating the forged app address still increments one shared per-form peer bucket'
 );
 
 -- ---------------------------------------------------------------------------
