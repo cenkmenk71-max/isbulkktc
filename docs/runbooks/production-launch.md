@@ -80,31 +80,67 @@ SUPABASE_ACCESS_TOKEN=... node scripts/set-turnstile-secret.mjs --disable
 
 ## 2. Apply database migrations safely
 
-Use the project-pinned Supabase CLI from a developer terminal where credentials
-remain local. Authenticate through the CLI's own interactive flow; do not send
-personal access tokens or database passwords to chat.
+This repository does **not** use the CLI's migration history. The hosted project
+has no `supabase_migrations` schema; the deploy tooling records applied
+migrations in its own ledger, `public._applied_migrations (id text primary key,
+applied_at timestamptz)`, where `id` is the migration filename, for example
+`20261112120000_v4_anon_write_throttle_peer_scopes.sql`.
 
-```powershell
-npm exec -- supabase login
-npm exec -- supabase projects list
-npm exec -- supabase link --project-ref <production-project-ref>
-npm exec -- supabase migration list
-npm exec -- supabase db push --dry-run
-```
+Because the CLI history is empty, `supabase db push` treats **every** file in
+`supabase/migrations/` as pending and re-runs it. The migrations are not
+idempotent — several run an unguarded `create trigger`, `create policy`, or
+`add constraint` — so a full re-run aborts partway and leaves the database
+half-applied. **Do not run `supabase db push` against Production.** It is safe
+only against an empty, throwaway database (a development branch), where it is
+the intended way to build the schema from scratch.
 
-Stop if the linked project ref is not the intended Production project, if
-migration history diverges unexpectedly, or if the dry run includes an
-unreviewed migration. After reviewing the exact output and taking the planned
-backup, apply only pending migrations:
+Apply migrations one at a time from a developer terminal where the connection
+string and credentials stay local. Do not send personal access tokens or
+database passwords to chat. `$DB_URL` below is the project's Postgres connection
+string.
 
-```powershell
-npm exec -- supabase db push
-npm exec -- supabase migration list
-```
+1. Confirm the target project. Compare the project ref you are about to use with
+   the Production ref recorded out-of-band; stop if they differ.
+2. Take the planned backup before applying anything.
+3. Read the ledger and compute the pending set yourself:
 
-Never use `db reset` against a hosted project. Do not run production migrations
-from this agent session until the owner explicitly identifies and authorizes
-the target project.
+   ```bash
+   psql "$DB_URL" -Atc 'select id from public._applied_migrations order by id'
+   ```
+
+   The pending set is every file in `supabase/migrations/` whose name is not in
+   that list. Review each pending file before applying it.
+4. Apply each pending file in filename (timestamp) order, in a transaction, so a
+   failure rolls back cleanly and a dropped statement is visible as an error:
+
+   ```bash
+   psql "$DB_URL" --single-transaction -v ON_ERROR_STOP=1 \
+     -f supabase/migrations/<timestamp>_<name>.sql
+   ```
+
+   Do not edit an already-applied file to make it re-runnable; add a new
+   migration instead.
+5. Record the applied migration in the ledger with its exact filename. This
+   insert is what makes the next deploy treat the file as applied:
+
+   ```bash
+   psql "$DB_URL" -v ON_ERROR_STOP=1 \
+     -c "insert into public._applied_migrations (id) values ('<timestamp>_<name>.sql')"
+   ```
+6. Verify the deployed schema matches the file you applied — query
+   `information_schema`/`pg_proc` for the tables, functions, and policies it
+   declares — then confirm the ledger and the directory agree:
+
+   ```bash
+   ls supabase/migrations | sort > /tmp/files.txt
+   psql "$DB_URL" -Atc 'select id from public._applied_migrations order by id' > /tmp/ledger.txt
+   diff /tmp/files.txt /tmp/ledger.txt   # expect no output
+   ```
+
+Never use `db reset` against a hosted project. Never write a ledger row before
+its SQL has run: a forged row hides an unapplied migration and the next deploy
+skips it. Do not run production migrations from this agent session until the
+owner explicitly identifies and authorizes the target project.
 
 ## 3. Bootstrap the first administrator and enforce MFA
 
