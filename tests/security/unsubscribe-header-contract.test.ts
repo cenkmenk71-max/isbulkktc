@@ -27,6 +27,7 @@ const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta
 const headers = read("src/server/email/email-headers.ts");
 const mailer = read("src/server/email/mailer.ts");
 const digestRoute = read("src/app/api/email/engagement-digest/route.ts");
+const signatureCore = read("src/server/email/unsubscribe-signature.ts");
 const unsubscribeRoute = read("src/app/api/email/unsubscribe/route.ts");
 
 test("the header emitter advertises one-click POST", () => {
@@ -55,8 +56,16 @@ test("the mailer hands the promotional family a URL to advertise", () => {
 test("the advertised URL is the path the route actually serves", () => {
   // The digest is the caller that builds the URL the header points at; if it
   // ever points somewhere the route does not live, one-click breaks silently.
+  // The digest delegates URL construction to `unsubscribeUrlFor` (which the
+  // preview sender shares), so the route must reach that shared builder and the
+  // builder — not the route — must name the route's own path.
   assert.match(
     digestRoute,
+    /unsubscribeUrlFor\(/,
+    "the digest must build the unsubscribe URL through the shared builder",
+  );
+  assert.match(
+    signatureCore,
     /new URL\(\s*"\/api\/email\/unsubscribe"/,
     "the unsubscribe URL must be built against the route's own path",
   );
