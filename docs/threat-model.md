@@ -263,10 +263,37 @@ issue açar.
 
 ### Açık bulgular (sahibine bildirildi, düzeltme bekliyor)
 
-- Şu an açık bulgu yok. (Son açık madde — DB throttle'ın app-yolu IP boyutu, #206 —
-  aşağıda kapatıldı.)
+- Şu an açık bulgu yok. (Son iki açık madde — DB throttle'ın app-yolu IP boyutu,
+  #206 ve kaba peer cap'in site-geneli tek sayaca dönüşmesi + support'un
+  capsizliği, #621/#616 — aşağıda kapatıldı.)
 
 ### Kapatılan bulgular (sahibi düzeltti, kapıya terfi etti)
+
+- **Kaba peer cap app yolunda site-geneli tek sayaca dönüşüyordu ve support
+  capsizdi** (sahibi: `supabase/**` -> LANE-SUPABASE; **#621 + #616 ile
+  düzeltildi**). #608'in `20261110160000_v4_anon_write_throttle_app_client_ip.sql`
+  dosyası doğrudan çağıranın sahte `x-client-ip` ile kova döndürmesini engellemek
+  için kenarın yazdığı `cf-connecting-ip`'i kaba peer cap olarak tüketiyordu:
+  `('ip', hash(peer))`, burst 25/600. Ama app yolunda `cf-connecting-ip`
+  **platformun paylaşılan egress adresidir** ve feedback ile sales **aynı**
+  `(scope, subject_hash)` satırını paylaşıyordu — yani cap pratikte site geneli
+  tek bir 25/10dk tavanıydı; pencerede 26. meşru anonim yazım (herhangi bir form)
+  jenerik "failed" ile reddediliyordu (#621). Bir commit sonra gelen
+  `submit_support_message` yalnız birincil kovayı kopyalamış, kaba cap'i hiç
+  almamıştı; doğrudan çağıran `x-client-ip`'i her istekte değiştirip **sınırsız**
+  thread açıyordu (#616). **Düzeltme:** yeni migration
+  `20261112120000_v4_anon_write_throttle_peer_scopes.sql` kaba cap'i **form başına**
+  ayırır (`('ip', hash('peer:<form>|<peer>'))`, burst 60) ve support'a da ekler;
+  birincil kova (burst 5) değişmez. Üç form artık birbirini kilitleyemez ve her
+  anon yazım yolu bir üst sınıra sahiptir. Support'un kaba cap'i gerçek anlamda
+  per-adres'tir, çünkü widget Supabase'e **tarayıcıdan** gider ve orada
+  `cf-connecting-ip` ziyaretçinin gerçek adresidir. Kanıt: `supabase/tests/database/anon_write_throttle_peer_scopes.test.sql`,
+  `anon_write_throttle.test.sql` (24 plan), `tests/security/anonymous-rpc-throttle.test.ts`
+  (per-form prefix + yükseltilmiş burst kapısı). **Dürüst sınır:** app yolunda kaba
+  cap hâlâ paylaşılan egress'e bağlıdır; gerçek per-ziyaretçi sınırı için
+  uygulama-imzalı bir başlık veya edge (Cloudflare / Supabase API gateway) IP
+  rate-limit gerekir — bu, veritabanı katmanının dışında deployment/ops işidir
+  (#621 kabul kriteri 4). Devir kapandı: **#621**, **#616**.
 
 - **DB throttle'ın IP boyutu app yolunda tek kovaya düşüyordu** (sahibi:
   `src/features/**` -> LANE-URUN, `supabase/**` -> LANE-SUPABASE; **#206 ile

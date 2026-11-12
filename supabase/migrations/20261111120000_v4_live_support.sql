@@ -26,9 +26,15 @@
 -- Writes:
 --   * a visitor/member writes through `submit_support_message` (SECURITY
 --     DEFINER, granted to `anon` and `authenticated`), which validates the input
---     and consumes an abuse quota before it inserts — the same boundary control
---     `submit_feedback` carries, so a scripted caller cannot use the form as an
---     email-bomb amplifier.
+--     and consumes an abuse quota before it inserts, so a scripted caller cannot
+--     use the form as an email-bomb amplifier.
+--     Correction (issue #616): this RPC first shipped with only the *primary*
+--     per-address bucket, not the coarse per-peer cap `submit_feedback` /
+--     `submit_sales_lead` also carried, so a direct caller rotating a forged
+--     `x-client-ip` opened one thread per request. The earlier wording claimed
+--     it carried "the same boundary control" as `submit_feedback`; that was not
+--     true. `20261112120000_v4_anon_write_throttle_peer_scopes.sql` adds the
+--     coarse cap (per form) so the three anon write RPCs now match.
 --   * staff write through `admin_reply_support_thread`.
 --
 -- The two tables are revoked from every client role; the RPCs are the only
