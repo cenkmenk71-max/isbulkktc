@@ -18,6 +18,8 @@ import {
   isDeploymentDisabled,
   isRedCheck,
   isUnresolvedMergeState,
+  migrationLedgerDrift,
+  migrationLedgerFinding,
   newestRunPerWorkflow,
   queueGlobalGates,
   redPullRequests,
@@ -977,4 +979,113 @@ test("any other unmeasurable case stays a warning, never a silent drop", () => {
   );
   // The origin answered (200) but carried no commit: also unexpected.
   assert.equal(deployEvidenceFinding({ httpCommit: null }).level, "warn");
+});
+
+// The drift this guards (#636): `origin/main` had 56 migration files but the live
+// `public._applied_migrations` ledger held 55 rows. The runbook's step 5 (record
+// the applied filename) was skipped for one file, so the *next* deploy computed
+// its pending set from the ledger and would re-run that migration. Nothing looked
+// at both sides at once, so the gap was invisible until a human counted by hand.
+
+test("migration drift names files present in the repo but missing from the ledger", () => {
+  const { repoOnly, ledgerOnly, checked } = migrationLedgerDrift({
+    files: ["20260101000000_a.sql", "20260102000000_b.sql"],
+    ledgerIds: ["20260101000000_a.sql"],
+  });
+  assert.deepEqual(repoOnly, ["20260102000000_b.sql"]);
+  assert.deepEqual(ledgerOnly, []);
+  assert.equal(checked, 2);
+});
+
+test("migration drift names files present in the ledger but missing from the repo", () => {
+  const { repoOnly, ledgerOnly } = migrationLedgerDrift({
+    files: ["20260101000000_a.sql"],
+    ledgerIds: ["20260101000000_a.sql", "20260102000000_b.sql"],
+  });
+  assert.deepEqual(repoOnly, []);
+  assert.deepEqual(ledgerOnly, ["20260102000000_b.sql"]);
+});
+
+test("migration drift ignores duplicates and non-string entries", () => {
+  const { repoOnly, ledgerOnly, checked } = migrationLedgerDrift({
+    files: ["a.sql", "a.sql", null, 7],
+    ledgerIds: ["a.sql", undefined],
+  });
+  assert.deepEqual(repoOnly, []);
+  assert.deepEqual(ledgerOnly, []);
+  assert.equal(checked, 1);
+});
+
+test("migration drift sorts each side so the message is deterministic", () => {
+  const { repoOnly } = migrationLedgerDrift({
+    files: ["c.sql", "a.sql", "b.sql"],
+    ledgerIds: [],
+  });
+  assert.deepEqual(repoOnly, ["a.sql", "b.sql", "c.sql"]);
+});
+
+test("an in-sync ledger is an ok row that proves the check looked", () => {
+  const finding = migrationLedgerFinding({
+    files: ["20260101000000_a.sql"],
+    ledgerIds: ["20260101000000_a.sql"],
+  });
+  assert.equal(finding.level, "ok");
+  assert.equal(finding.area, "migrations");
+  assert.match(finding.detail, /matches the repo \(1 migration\)/);
+});
+
+test("drift is a warning, never a failure, and says what the next deploy will do", () => {
+  const finding = migrationLedgerFinding({
+    files: ["20260101000000_a.sql", "20260102000000_b.sql"],
+    ledgerIds: ["20260101000000_a.sql"],
+  });
+  assert.equal(finding.level, "warn");
+  assert.equal(finding.area, "migrations");
+  assert.match(finding.detail, /1 in the repo but not the ledger/);
+  assert.match(finding.detail, /20260102000000_b\.sql/);
+  assert.match(finding.detail, /next deploy treats them as pending/);
+});
+
+test("a ledger-only entry is reported too, since the repo no longer has the file", () => {
+  const finding = migrationLedgerFinding({
+    files: ["20260101000000_a.sql"],
+    ledgerIds: ["20260101000000_a.sql", "20260102000000_b.sql"],
+  });
+  assert.equal(finding.level, "warn");
+  assert.match(finding.detail, /1 in the ledger but not the repo/);
+  assert.match(finding.detail, /20260102000000_b\.sql/);
+});
+
+test("no repo file list is caller misuse and stays silent", () => {
+  assert.equal(migrationLedgerFinding({ ledgerIds: ["a.sql"] }), null);
+});
+
+test("an empty repo file list is a broken read, not an empty repository", () => {
+  const finding = migrationLedgerFinding({ files: [], ledgerIds: [] });
+  assert.equal(finding.level, "warn");
+  assert.match(finding.detail, /found no migration files/);
+});
+
+test("no usable token means no ledger read: silence, not a fabricated ok", () => {
+  // The scheduled run has no SUPABASE_ACCESS_TOKEN, so `ledgerIds` is absent.
+  // Reporting `ok` here would be a green light from a look that never happened.
+  assert.equal(
+    migrationLedgerFinding({ files: ["20260101000000_a.sql"] }),
+    null,
+  );
+});
+
+test("a failed repo read is a warning that says it could not confirm agreement", () => {
+  const finding = migrationLedgerFinding({ files: ["a.sql"], repoError: "ENOENT" });
+  assert.equal(finding.level, "warn");
+  assert.match(finding.detail, /could not list the repo's migrations \(ENOENT\)/);
+});
+
+test("a failed ledger read is a warning, not a silent pass", () => {
+  const finding = migrationLedgerFinding({
+    files: ["a.sql"],
+    ledgerError: "401 Unauthorized",
+  });
+  assert.equal(finding.level, "warn");
+  assert.match(finding.detail, /could not read the migration ledger \(401 Unauthorized\)/);
 });

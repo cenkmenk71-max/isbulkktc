@@ -15,8 +15,9 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
 
-import { classifyCronFreshness, classifyProductionProbe, classifyRedRuns, classifyTokenProbe, deployEvidenceFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests, supabaseTokenProblem } from './system-health-core.mjs';
+import { classifyCronFreshness, classifyProductionProbe, classifyRedRuns, classifyTokenProbe, deployEvidenceFinding, migrationLedgerFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests, supabaseTokenProblem } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
 const SUPABASE_PROJECT_REF = process.env.SUPABASE_PROJECT_REF ?? 'uwmhquvzbilbfzdrlxmb';
@@ -203,6 +204,55 @@ function mainCommitSha() {
     return gh(['api', `repos/${REPO}/commits/main`, '--jq', '.sha']);
   } catch {
     return null;
+  }
+}
+
+/** The repo's migration filenames, or an `error` string when the directory cannot be read. */
+function readMigrationFiles() {
+  try {
+    const files = readdirSync(new URL('../supabase/migrations', import.meta.url)).filter((name) =>
+      name.endsWith('.sql'),
+    );
+    return { files };
+  } catch (error) {
+    return { error: String(error?.message ?? error) };
+  }
+}
+
+/**
+ * Read the applied-migration ledger from the hosted project, or report why not.
+ *
+ * The ledger lives only in Production — `public._applied_migrations`, created by
+ * the deploy tooling out of band (see `docs/runbooks/production-launch.md` §2) —
+ * so the Management API is the only way to read it from here. The read-only
+ * endpoint runs the query as `supabase_read_only_user`, exactly the access this
+ * needs: a `select` on one table and never a write. A failed read returns an
+ * `error` string the caller surfaces as a warning rather than silently dropping
+ * the check.
+ */
+async function readMigrationLedger(token, projectRef) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const response = await fetch(
+      `https://api.supabase.com/v1/projects/${projectRef}/database/query/read-only`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ query: 'select id from public._applied_migrations order by id' }),
+        signal: controller.signal,
+      },
+    );
+    if (!response.ok) {
+      return { error: `Management API answered HTTP ${response.status}` };
+    }
+    const rows = await response.json();
+    if (!Array.isArray(rows)) return { error: 'Management API returned no rows array' };
+    return { ledgerIds: rows.map((row) => row?.id).filter((id) => typeof id === 'string') };
+  } catch (error) {
+    return { error: String(error?.message ?? error) };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -402,6 +452,9 @@ const tokenProblem = supabaseTokenProblem({
   token: process.env.SUPABASE_ACCESS_TOKEN,
   resendKey: process.env.RESEND_API_KEY,
 });
+// Set only when the Management API accepts the token; the ledger check (step 6)
+// needs a read it can actually make.
+let tokenAuthenticated = false;
 if (tokenProblem) {
   note(tokenProblem.status === 'present' ? 'ok' : 'fail', 'secrets', tokenProblem.reason);
   // A well-shaped token can still be revoked or expired (#209 one level down):
@@ -414,7 +467,28 @@ if (tokenProblem) {
       SUPABASE_PROJECT_REF,
     );
     if (verdict) note(verdict.level, 'supabase', verdict.reason);
+    tokenAuthenticated = verdict?.level === 'ok';
   }
+}
+
+// 6. Migration ledger integrity: every migration file in the repo must have a
+//    ledger row in Production. The runbook's own step 5 requires each applied
+//    file to be recorded, but nothing enforced it, so a deployer that skipped the
+//    ledger insert (#636) left a migration applied with no row — invisible until
+//    the next deploy's pending set re-runs it. Gated on a token the API already
+//    accepted, so a rejected token does not also produce a second, misleading
+//    warning about the ledger. WARN, never FAIL — a missing row does not break
+//    production by itself; it makes the *next* deploy unsafe.
+if (tokenAuthenticated) {
+  const repo = readMigrationFiles();
+  const ledger = await readMigrationLedger(process.env.SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF);
+  const finding = migrationLedgerFinding({
+    files: repo.files,
+    repoError: repo.error,
+    ledgerIds: ledger.ledgerIds,
+    ledgerError: ledger.error,
+  });
+  if (finding) note(finding.level, finding.area, finding.detail);
 }
 
 // `info` is a level below `warn`: a row that prints for the operator's eyes but
