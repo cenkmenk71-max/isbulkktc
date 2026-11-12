@@ -1,0 +1,64 @@
+name: Send engagement digest
+
+# Drives the weekly "jobs picked for you" digest, which a cron — and only a cron
+# — is meant to call. Like the acquisition sender, the route existed, was
+# deployed, and answered 401 to everyone because nothing ever presented the
+# bearer secret.
+#
+# The route is idempotent (it claims a batch and sends), so a missed or repeated
+# run is safe. It is a separate workflow from the acquisition campaign on
+# purpose: two `schedule` entries in one workflow fire *both* jobs on *every*
+# cron, which would send the weekly digest daily.
+#
+# Requires two repository secrets: the production origin and the bearer secret
+# the route checks. Until both exist the job stays green and warns (same
+# contract as push-dispatch.yml).
+on:
+  schedule:
+    # Mondays at 07:00 UTC (10:00 KKTC), a low-traffic window for a weekly digest.
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: engagement-digest
+  cancel-in-progress: false
+
+jobs:
+  send:
+    name: Send engagement digest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check configuration
+        id: config
+        env:
+          APP_URL: ${{ secrets.APP_URL || vars.APP_URL || secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.ENGAGEMENT_CRON_SECRET }}
+        run: |
+          if [ -n "${APP_URL:-}" ] && [ -n "${CRON_SECRET:-}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Engagement digest not configured::Add the ENGAGEMENT_CRON_SECRET secret and the APP_URL variable to enable the engagement digest. Skipping this run."
+          fi
+
+      - name: Send the engagement digest
+        if: steps.config.outputs.configured == 'true'
+        env:
+          APP_URL: ${{ secrets.APP_URL || vars.APP_URL || secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.ENGAGEMENT_CRON_SECRET }}
+          # Vercel alias rather than the Cloudflare-fronted canonical host, for
+          # the same reason as the acquisition workflow.
+          DISPATCH_ORIGIN: ${{ vars.ENGAGEMENT_DISPATCH_ORIGIN || 'https://isbulkktc-amber.vercel.app' }}
+        run: |
+          set -o pipefail
+          status=$(curl -sS -o /tmp/engagement-response.txt -w '%{http_code}' \
+            -X POST -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${DISPATCH_ORIGIN%/}/api/email/engagement-digest")
+          echo "HTTP ${status}"
+          cat /tmp/engagement-response.txt
+          if [ "$status" != "200" ] && [ "$status" != "503" ]; then
+            exit 1
+          fi

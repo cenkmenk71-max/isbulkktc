@@ -373,6 +373,8 @@ politikaları ürün sahibinin kararı olmadan sabitlenmez.
 - Operasyon runbook'ları: [`runbooks/`](./runbooks/).
 - Hosted Supabase/Vercel/domain canlıya geçiş adımları:
   [`runbooks/production-launch.md`](./runbooks/production-launch.md).
+- E-posta teslim edilebilirliği (Resend + DNS, DKIM gücü, cron):
+  [`runbooks/email-deliverability.md`](./runbooks/email-deliverability.md).
 - Ölçüm/sahne kabul hedefi: [performance-budget.md](./performance-budget.md)
   ve [`scenes/`](./scenes/).
 - Geri döndürülemeyen kararlar: [`decisions/`](./decisions/) altında ADR.
