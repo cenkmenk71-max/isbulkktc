@@ -200,7 +200,6 @@ export function SupportWidget({
               <li
                 key={message.id}
                 className={`support-widget__message support-widget__message--${message.role}`}
-                role="group"
                 aria-label={
                   message.role === "visitor" ? t("youLabel") : t("botLabel")
                 }
