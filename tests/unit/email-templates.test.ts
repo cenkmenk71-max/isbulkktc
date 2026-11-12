@@ -494,7 +494,6 @@ test("every marketing locale has a complete, non-empty catalog", () => {
     assert.ok(copy.primaryCta.length > 0, `${locale}: primary CTA`);
     assert.ok(copy.secondaryCta.length > 0, `${locale}: secondary CTA`);
     assert.ok(copy.signOff.length > 0, `${locale}: sign-off`);
-    assert.ok(copy.unsubscribeNote.length > 0, `${locale}: unsubscribe note`);
     assert.ok(copy.unsubscribeLabel.length > 0, `${locale}: unsubscribe label`);
     assert.ok(copy.footerNote.length > 0, `${locale}: footer reason`);
   }
@@ -564,6 +563,30 @@ test("marketing email renders in every locale with both CTAs and contacts", () =
     );
     assert.ok(email.text.includes(copy.greeting), `${locale}: text greeting`);
   }
+});
+
+test("the promotional families carry no redundant unsubscribe sentence", () => {
+  // The gray callout repeated the footer's opt-out in prose. The footer link and
+  // the List-Unsubscribe header are the working opt-out; the note was noise, so
+  // it must not creep back into either promotional family.
+  const marketing = renderMarketing("tr");
+  const engagement = renderEngagementEmail({
+    locale: "tr",
+    siteUrl: SITE,
+    jobs: [{ title: "Ürün Yöneticisi", company: "Acme" }],
+    jobsUrl: `${SITE}jobs`,
+    unsubscribeUrl: `${SITE}unsubscribe?token=abc`,
+  });
+  for (const email of [marketing, engagement]) {
+    assert.ok(
+      !email.html.includes("abonelikten çıkabilirsiniz"),
+      "no redundant unsubscribe sentence",
+    );
+    assert.ok(!email.text.includes("abonelikten çıkabilirsiniz"));
+  }
+  // The real opt-out stays: footer link in the body, one-click header for the client.
+  assert.ok(marketing.html.includes(`${SITE}api/email/unsubscribe?e=x&amp;s=y`));
+  assert.ok(engagement.html.includes(`${SITE}unsubscribe?token=abc`));
 });
 
 test("the marketing contact rows only admit mailto:, tel: and https:", () => {

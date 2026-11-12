@@ -38,7 +38,6 @@ export type MarketingCopy = {
   signOff: string;
   contactHeading: string;
   contactLabels: { email: string; phone: string; whatsapp: string };
-  unsubscribeNote: string;
   unsubscribeLabel: string;
   /**
    * Footer line stating why this message was received. The transactional
@@ -102,8 +101,6 @@ const tr: MarketingCopy = {
     "Saygılarımızla, İşbul KKTC — Kuzey Kıbrıs'ta iş ve istihdam için dijital buluşma noktası",
   contactHeading: "Bize ulaşın",
   contactLabels: { email: "E-posta", phone: "Telefon", whatsapp: "WhatsApp" },
-  unsubscribeNote:
-    "Bu tür tanıtım e-postalarını almak istemiyorsanız abonelikten çıkabilirsiniz.",
   unsubscribeLabel: "Abonelikten çık",
   footerNote:
     "Bu e-postayı, İşbul KKTC'nin işletmeniz için yararlı olabileceğini düşündüğümüz için aldınız.",
@@ -147,8 +144,6 @@ const en: MarketingCopy = {
     "Best regards, İşbul KKTC — the digital meeting point for jobs and employment in Northern Cyprus",
   contactHeading: "Get in touch",
   contactLabels: { email: "Email", phone: "Phone", whatsapp: "WhatsApp" },
-  unsubscribeNote:
-    "If you no longer want these promotional emails, you can unsubscribe.",
   unsubscribeLabel: "Unsubscribe",
   footerNote:
     "You received this email because we believe İşbul KKTC could be useful for your business.",
@@ -192,8 +187,6 @@ const ru: MarketingCopy = {
     "С уважением, İşbul KKTC — цифровая точка встречи для работы и занятости в Северном Кипре",
   contactHeading: "Свяжитесь с нами",
   contactLabels: { email: "Эл. почта", phone: "Телефон", whatsapp: "WhatsApp" },
-  unsubscribeNote:
-    "Если вы больше не хотите получать такие рекламные письма, вы можете отписаться.",
   unsubscribeLabel: "Отписаться",
   footerNote:
     "Вы получили это письмо, потому что мы считаем, что İşbul KKTC может быть полезен вашей компании.",
@@ -237,8 +230,6 @@ const el: MarketingCopy = {
     "Με εκτίμηση, İşbul KKTC — το ψηφιακό σημείο συνάντησης για εργασία και απασχόληση στη Βόρεια Κύπρο",
   contactHeading: "Επικοινωνήστε μαζί μας",
   contactLabels: { email: "Email", phone: "Τηλέφωνο", whatsapp: "WhatsApp" },
-  unsubscribeNote:
-    "Αν δεν θέλετε πια αυτά τα διαφημιστικά email, μπορείτε να διαγραφείτε.",
   unsubscribeLabel: "Διαγραφή",
   footerNote:
     "Λάβατε αυτό το email επειδή πιστεύουμε ότι το İşbul KKTC μπορεί να είναι χρήσιμο για την επιχείρησή σας.",
@@ -282,8 +273,6 @@ const fa: MarketingCopy = {
     "با احترام، İşbul KKTC — نقطه دیدار دیجیتال برای کار و اشتغال در قبرس شمالی",
   contactHeading: "با ما در تماس باشید",
   contactLabels: { email: "ایمیل", phone: "تلفن", whatsapp: "واتس‌اپ" },
-  unsubscribeNote:
-    "اگر دیگر این ایمیل‌های تبلیغاتی را نمی‌خواهید، می‌توانید لغو اشتراک کنید.",
   unsubscribeLabel: "لغو اشتراک",
   footerNote:
     "این ایمیل را دریافت کردید چون فکر می‌کنیم İşbul KKTC می‌تواند برای کسب‌وکار شما مفید باشد.",
@@ -328,8 +317,6 @@ const de: MarketingCopy = {
     "Mit freundlichen Grüßen, İşbul KKTC — der digitale Treffpunkt für Arbeit und Beschäftigung in Nordzypern",
   contactHeading: "Kontakt aufnehmen",
   contactLabels: { email: "E-Mail", phone: "Telefon", whatsapp: "WhatsApp" },
-  unsubscribeNote:
-    "Wenn Sie diese Werbe-E-Mails nicht mehr erhalten möchten, können Sie sich abmelden.",
   unsubscribeLabel: "Abmelden",
   footerNote:
     "Sie erhalten diese E-Mail, weil wir glauben, dass İşbul KKTC für Ihr Unternehmen nützlich sein könnte.",

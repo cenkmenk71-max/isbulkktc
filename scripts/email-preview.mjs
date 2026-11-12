@@ -133,6 +133,9 @@ const TEMPLATES = {
           url: 'https://isbulkktc.com/tr/jobs/2',
         },
       ],
+      jobsUrl: 'https://isbulkktc.com/tr/jobs',
+      unsubscribeUrl:
+        'https://isbulkktc.com/api/email/unsubscribe?e=aday%40example.com&s=SAMPLE',
     }),
   marketing: () =>
     render.renderMarketingEmail({
