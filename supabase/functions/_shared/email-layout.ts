@@ -43,6 +43,20 @@ export const BRAND = {
   muted: "#F0F1ED",
   /** Footer band — the app's `--surface` token (crayon-surface). */
   footer: "#FAF8F3",
+  /**
+   * The operator's published location, mirrored verbatim from the site's own
+   * organization graph (`src/content/ai-visibility/site.ts`: `LOCATION_LOCALITY`,
+   * `LOCATION_DISTRICT` and `regionNames.tr`). A commercial message must carry a
+   * valid physical postal address; the operator publishes its location at
+   * locality/district granularity only — no street and no postal code — so the
+   * footer states exactly that rather than inventing a more precise one.
+   * `tests/unit/email-templates.test.ts` pins these values against the site.
+   */
+  postalAddress: {
+    locality: "Alsancak",
+    district: "Girne",
+    country: "Kuzey Kıbrıs Türk Cumhuriyeti",
+  },
 } as const;
 
 /**
@@ -407,6 +421,15 @@ ${title}<table role="presentation" cellpadding="0" cellspacing="0" style="width:
 </div>`;
 }
 
+/**
+ * Renders the operator's published postal address as one line. Locality and
+ * district first, country last, matching the site's own ordering.
+ */
+function formatPostalAddress(): string {
+  const { locality, district, country } = BRAND.postalAddress;
+  return `${locality}, ${district} · ${country}`;
+}
+
 function footerBlock(options: EmailLayoutOptions): string {
   const unsubscribe = options.unsubscribeUrl && isSafeUrl(options.unsubscribeUrl)
     ? ` · <a href="${escapeHtml(options.unsubscribeUrl)}" style="color:${BRAND.inkSoft};text-decoration:underline;">${escapeHtml(
@@ -415,7 +438,8 @@ function footerBlock(options: EmailLayoutOptions): string {
     : "";
   return `<tr><td class="ibk-foot" style="padding:${SPACE.lg}px ${SPACE.xl}px;background:${BRAND.footer};border-top:1px solid ${BRAND.line};text-align:center;font-size:${TYPE.micro}px;line-height:${LEADING.loose};color:${BRAND.inkSoft};">
 <p style="margin:0 0 6px;">${escapeHtml(options.footerNote)}</p>
-<p style="margin:0;">© ${new Date().getUTCFullYear()} ${BRAND.name} · Kuzey Kıbrıs Türk Cumhuriyeti · <a href="${escapeHtml(
+<p style="margin:0 0 6px;">${escapeHtml(formatPostalAddress())}</p>
+<p style="margin:0;">© ${new Date().getUTCFullYear()} ${BRAND.name} · <a href="${escapeHtml(
     options.siteUrl,
   )}" style="color:${BRAND.green};text-decoration:none;">${BRAND.domain}</a>${unsubscribe}</p>
 </td></tr>`;
@@ -527,7 +551,7 @@ export function renderEmailText(options: EmailLayoutOptions): string {
     }
   }
   if ((options.contacts ?? []).length > 0) lines.push("");
-  lines.push(options.footerNote, BRAND.domain);
+  lines.push(options.footerNote, formatPostalAddress(), BRAND.domain);
   if (options.unsubscribeUrl && isSafeUrl(options.unsubscribeUrl)) {
     lines.push(
       `${options.unsubscribeLabel ?? "Abonelikten çık"}: ${options.unsubscribeUrl}`,

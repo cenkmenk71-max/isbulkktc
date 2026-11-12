@@ -35,6 +35,11 @@ import {
   MARKETING_CONTACTS,
   MARKETING_COPY,
 } from "../../supabase/functions/_shared/email-copy-marketing";
+import {
+  LOCATION_DISTRICT,
+  LOCATION_LOCALITY,
+  regionNames,
+} from "../../src/content/ai-visibility/site";
 
 const SITE = "https://isbulkktc.com/";
 
@@ -116,7 +121,13 @@ test("the email shell palette matches the app design tokens", () => {
     return alias ? token(alias[1]) : value;
   };
 
-  const pairs: [keyof typeof BRAND, string][] = [
+  // Only the colour keys map to a CSS token; `postalAddress` is a record, not a
+  // colour, so it is excluded from the pairing.
+  type BrandColorKey = {
+    [K in keyof typeof BRAND]: (typeof BRAND)[K] extends string ? K : never;
+  }[keyof typeof BRAND];
+
+  const pairs: [BrandColorKey, string][] = [
     ["green", "green"],
     ["greenDark", "green-hover"],
     ["greenSoft", "green-soft"],
@@ -134,6 +145,40 @@ test("the email shell palette matches the app design tokens", () => {
       `BRAND.${brandKey} (${BRAND[brandKey]}) drifted from --${tokenName} (${token(tokenName)})`,
     );
   }
+});
+
+/**
+ * A commercial message must carry a valid physical postal address (CAN-SPAM
+ * 7704(a)(5)). The operator publishes its location only at locality/district
+ * granularity, so the footer mirrors the site's own organization graph rather
+ * than a more precise address nobody published. This pins the footer copy to
+ * `site.ts`, so a move updates the emails or fails here.
+ */
+test("the footer postal address mirrors the site's published location", () => {
+  assert.equal(BRAND.postalAddress.locality, LOCATION_LOCALITY);
+  assert.equal(BRAND.postalAddress.district, LOCATION_DISTRICT);
+  assert.equal(BRAND.postalAddress.country, regionNames.tr);
+
+  const html = renderEmailLayout({
+    preheader: "x",
+    heading: "y",
+    footerNote: "z",
+    siteUrl: SITE,
+  });
+  assert.ok(html.includes("Alsancak"), "the footer names the locality");
+  assert.ok(html.includes("Girne"), "the footer names the district");
+  assert.ok(
+    html.includes(escapeHtml(regionNames.tr)),
+    "the footer names the country",
+  );
+
+  const text = renderEmailText({
+    preheader: "x",
+    heading: "y",
+    footerNote: "z",
+    siteUrl: SITE,
+  });
+  assert.ok(text.includes("Alsancak, Girne"), "the text footer carries it too");
 });
 
 test("the email page background is pure white, never a tinted canvas", () => {
