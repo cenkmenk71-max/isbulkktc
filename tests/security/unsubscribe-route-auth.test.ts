@@ -83,9 +83,13 @@ test("both GET and POST share one verification path (RFC 8058 one-click)", () =>
   assert.match(postBody, /optOut\(/, "POST must delegate to the shared opt-out helper");
 });
 
-test("the token core compares in constant time and guards the length", () => {
+test("the signature core compares in constant time and guards the length", () => {
+  // The crypto lives in the pure `unsubscribe-signature.ts` core (no
+  // `server-only`, no env): `unsubscribe-token-core.ts` only reads the secret
+  // and delegates, so the constant-time comparison must be asserted where it is
+  // actually written.
   const core = readFileSync(
-    new URL("../../src/server/email/unsubscribe-token-core.ts", import.meta.url),
+    new URL("../../src/server/email/unsubscribe-signature.ts", import.meta.url),
     "utf8",
   );
   assert.match(core, /timingSafeEqual/, "the comparison must be constant-time");

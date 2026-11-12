@@ -3,7 +3,7 @@ import { createSupabaseServiceClient } from "@/server/db/supabase-server";
 import { sendMarketingEmail } from "@/server/email/mailer";
 import {
   isUnsubscribeSigningConfigured,
-  signUnsubscribeEmail,
+  unsubscribeUrlFor,
 } from "@/server/email/unsubscribe-token-core";
 
 export const dynamic = "force-dynamic";
@@ -90,20 +90,17 @@ export async function POST(request: Request) {
 
     for (const recipient of recipients) {
       cursor = recipient.lead_id;
-      const signature = signUnsubscribeEmail(recipient.email);
-      if (!signature) {
+      const unsubscribeUrl = unsubscribeUrlFor(recipient.email, siteUrl);
+      if (!unsubscribeUrl) {
         failed += 1;
         continue;
       }
-      const unsubscribeUrl = new URL("/api/email/unsubscribe", siteUrl);
-      unsubscribeUrl.searchParams.set("e", recipient.email);
-      unsubscribeUrl.searchParams.set("s", signature);
 
       try {
         const accepted = await sendMarketingEmail({
           to: recipient.email,
           locale: recipient.locale,
-          unsubscribeUrl: unsubscribeUrl.toString(),
+          unsubscribeUrl,
           campaignId: `${day}/${recipient.lead_id}`,
         });
         if (!accepted) {

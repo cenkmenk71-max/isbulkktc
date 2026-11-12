@@ -3,7 +3,7 @@ import { createSupabaseServiceClient } from "@/server/db/supabase-server";
 import { sendEngagementEmail } from "@/server/email/mailer";
 import {
   isUnsubscribeSigningConfigured,
-  signUnsubscribeEmail,
+  unsubscribeUrlFor,
 } from "@/server/email/unsubscribe-token-core";
 import type { EngagementJob } from "../../../../../supabase/functions/_shared/email-render.ts";
 
@@ -80,14 +80,11 @@ export async function POST(request: Request) {
 
     for (const recipient of recipients) {
       cursor = recipient.user_id;
-      const signature = signUnsubscribeEmail(recipient.email);
-      if (!signature) {
+      const unsubscribeUrl = unsubscribeUrlFor(recipient.email, siteUrl);
+      if (!unsubscribeUrl) {
         failed += 1;
         continue;
       }
-      const unsubscribeUrl = new URL("/api/email/unsubscribe", siteUrl);
-      unsubscribeUrl.searchParams.set("e", recipient.email);
-      unsubscribeUrl.searchParams.set("s", signature);
 
       try {
         const accepted = await sendEngagementEmail({
@@ -95,7 +92,7 @@ export async function POST(request: Request) {
           locale: recipient.locale,
           name: recipient.display_name,
           jobs,
-          unsubscribeUrl: unsubscribeUrl.toString(),
+          unsubscribeUrl,
           campaignId: `${new Date().toISOString().slice(0, 10)}/${recipient.user_id}`,
         });
         // A Resend rejection comes back as `false`, not a throw, so the return
