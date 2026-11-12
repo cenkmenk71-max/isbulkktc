@@ -50,7 +50,6 @@ export type EmailCopyExtras = {
     cta: string;
     /** Plain-text line for a job row in the digest. */
     jobRow: string;
-    unsubscribeNote: string;
     unsubscribeLabel: string;
   };
   labels: {
@@ -105,7 +104,6 @@ const tr: EmailCopyExtras = {
     jobsHeading: "Öne çıkan ilanlar",
     cta: "Tüm ilanları görün",
     jobRow: "{title} · {company}",
-    unsubscribeNote: "Bu tür tanıtım e-postalarını almak istemiyorsanız abonelikten çıkabilirsiniz.",
     unsubscribeLabel: "Abonelikten çık",
   },
   labels: {
@@ -160,7 +158,6 @@ const en: EmailCopyExtras = {
     jobsHeading: "Highlighted jobs",
     cta: "See all jobs",
     jobRow: "{title} · {company}",
-    unsubscribeNote: "You can unsubscribe if you no longer want these promotional emails.",
     unsubscribeLabel: "Unsubscribe",
   },
   labels: {
@@ -215,7 +212,6 @@ const ru: EmailCopyExtras = {
     jobsHeading: "Избранные вакансии",
     cta: "Все вакансии",
     jobRow: "{title} · {company}",
-    unsubscribeNote: "Вы можете отписаться, если не хотите получать такие письма.",
     unsubscribeLabel: "Отписаться",
   },
   labels: {
@@ -270,7 +266,6 @@ const el: EmailCopyExtras = {
     jobsHeading: "Επιλεγμένες θέσεις",
     cta: "Όλες οι θέσεις",
     jobRow: "{title} · {company}",
-    unsubscribeNote: "Μπορείτε να διαγραφείτε αν δεν θέλετε αυτά τα ενημερωτικά email.",
     unsubscribeLabel: "Διαγραφή",
   },
   labels: {
@@ -325,7 +320,6 @@ const fa: EmailCopyExtras = {
     jobsHeading: "موقعیت‌های منتخب",
     cta: "همه موقعیت‌ها",
     jobRow: "{title} · {company}",
-    unsubscribeNote: "اگر این ایمیل‌های تبلیغاتی را نمی‌خواهید، می‌توانید لغو اشتراک کنید.",
     unsubscribeLabel: "لغو اشتراک",
   },
   labels: {
@@ -380,7 +374,6 @@ const de: EmailCopyExtras = {
     jobsHeading: "Ausgewählte Stellen",
     cta: "Alle Stellen",
     jobRow: "{title} · {company}",
-    unsubscribeNote: "Sie können sich abmelden, wenn Sie diese Werbe-E-Mails nicht mehr möchten.",
     unsubscribeLabel: "Abmelden",
   },
   labels: {

@@ -19,7 +19,7 @@ domain: isbulkktc.com | Resend status: verified | region: eu-west-1
 |---|---|---|
 | DKIM | PASS | `resend._domainkey`, 216 karakter anahtar |
 | SPF | PASS | `send` alt alan adında; zarf göndericisi üzerinden geçer |
-| DMARC | WARN | `p=none` — izleme modu, zorlayıcı değil |
+| DMARC | PASS | `p=quarantine` — canlı (2026-11-12'de DoH ile doğrulandı; önce `p=none`) |
 | MX | PASS | Cloudflare Email Routing |
 | Blocklists | ~~PASS~~ ⚠️ | **geçersiz** — araç alan adını yalnız-IP bölgelerine soruyordu; bkz. tur 2 |
 | Resend domain | PASS | `verified` |
@@ -647,3 +647,83 @@ olanı raporlar.
 
 Kapılar: `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`,
 `bun run test:unit` (1022/1022) — yeşil.
+
+## 2026-11-12 — RFC 8058 tek-tıkla çıkış düzeltmesi (deliverability)
+
+### Kök neden
+
+`List-Unsubscribe-Post: List-Unsubscribe=One-Click` başlığı (RFC 8058) Gmail ve
+Yahoo'ya "`List-Unsubscribe` HTTPS adresine **POST** at, gövdeyi okuma, yalnız
+durum koduna bak" der. Ama `/api/email/unsubscribe` yalnız `GET` sunuyordu →
+Gmail'in POST'u **405** dönüyordu → tek-tıkla sessizce başarısız → kullanıcı
+"spam bildir"e basıyor. Başlığın var olma amacı tam da bunu önlemekti.
+
+### Düzeltme
+
+`route.ts`: `GET` ve `POST` aynı `optOut(email, signature)` yolunu paylaşır —
+HMAC doğrulaması servis istemcisinden **önce**, tek başarı gövdesi, aynı
+`no-store`. Yetki sınırı değişmedi (imza hâlâ tek yetki kaynağı).
+
+### Ölçüm (2026-11-12, DoH — token gerekmez)
+
+```
+_dmarc.isbulkktc.com   v=DMARC1; p=quarantine; rua=mailto:dmarc@isbulkktc.com; fo=1
+isbulkktc.com          v=spf1 include:_spf.mx.cloudflare.net ~all
+send.isbulkktc.com     v=spf1 include:amazonses.com ~all
+resend._domainkey      p=MIGf… (1024-bit)
+```
+
+`node scripts/verify-deliverability.mjs`: **1 failure / 3 warning** —
+FAIL yalnız yerel `RESEND_API_KEY` geçersizliği (`re_` ile başlamıyor, len 36);
+SPF kök ve blocklist uyarıları bilinen/zararsız.
+
+### Açık kalan (kod dışı, token/insan gerekir)
+
+- [ ] DKIM `1024` → `2048` bit (Resend paneli; anahtar gücü)
+- [ ] Üretimde geçerli `RESEND_API_KEY` (`re_…`)
+- [ ] DMARC `p=quarantine` → `reject` (raporları izledikten sonra)
+- [ ] 3 adreste gelen kutusu/spam doğrulaması (#187)
+
+**Regresyon testi.** `tests/integration/unsubscribe-route.test.ts` +2 (POST
+tek-tıkla, POST'ta bozuk imza); `tests/security/unsubscribe-route-auth.test.ts`
++1 (GET/POST tek doğrulama yolu).
+
+## 2026-11-12 — Canlı doğrulama: tek-tıkla başlığı canlıda hâlâ 405 (tur 33)
+
+### Bulgu (canlı, ağ üzerinden)
+
+Başlık ↔ rota çifti canlıda **hâlâ uyumsuz**:
+
+```
+GET  https://isbulkktc.com/api/email/unsubscribe?e=…&s=…  → 400 (rota var)
+POST https://isbulkktc.com/api/email/unsubscribe?e=…&s=…  → 405 (metot yok)
+GET  https://isbulkktc.com/api/build-info → commit 3cb09e7 (= origin/main)
+```
+
+Yani canlı build (`3cb09e7`) mesaja `List-Unsubscribe-Post:
+List-Unsubscribe=One-Click` başlığını ekliyor (o düzeltme #625'te zaten
+canlıydı), ama rotada `POST` **yok**. Gmail/Yahoo POST'u **405** alıyor →
+tek-tıkla sessizce başarısız → alıcı "spam bildir"e basıyor. `#196`'nın
+düzelttiği varsayılan mekanizma, canlıda **tersine** çalışıyor.
+
+Kök neden: `POST` düzeltmesi (`0e5ac77`) yerel `main`'de ama **origin/main'e
+push edilmedi** (`origin/main..HEAD` = 6 commit). Vercel yalnız `main`'i
+yayınladığından canlı hâlâ `POST`'suz build'i sunuyor.
+
+### Kalıcı önlem — çapraz-modül sözleşme kapısı
+
+`tests/security/unsubscribe-header-contract.test.ts` (yeni, 4 test): başlığı
+üreten modülü (`email-headers.ts`), mailer'ı, URL'i kuran çağıranı
+(`engagement-digest`) ve rotayı (`unsubscribe`) **birlikte** okur; başlığın
+ilan ettiği `POST`'un rota tarafından sunulmasını zorunlu kılar. Her modül
+tek başına test ediliyordu (başlık metni bir dosyada, rota `POST` export'u
+başka dosyada), ama **ikisini birden** bağlayan bir test yoktu — canlıdaki
+uyumsuzluk bu yüzden sessizce çıktı.
+
+Negatif doğrulama: test, canlıdaki (GET-only) rota kaynağına karşı koşturulunca
+**kırmızı**, düzeltilmiş rotada **yeşil**. `readme-coverage` ratchet'i için
+`tests/security/README.md` kapsam tablosuna satır eklendi.
+
+Kapılar: `test:security` 211 pass / 0 fail / 4 todo (todo'lar önceden mevcut,
+#400/#418/#424/#435); `test:unit` 941/941; `test:integration` 228/228; lint
+exit=0; typecheck temiz.

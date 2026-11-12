@@ -133,6 +133,9 @@ const TEMPLATES = {
           url: 'https://isbulkktc.com/tr/jobs/2',
         },
       ],
+      jobsUrl: 'https://isbulkktc.com/tr/jobs',
+      unsubscribeUrl:
+        'https://isbulkktc.com/api/email/unsubscribe?e=aday%40example.com&s=SAMPLE',
     }),
   marketing: () =>
     render.renderMarketingEmail({
@@ -224,7 +227,10 @@ if (sendTo) {
       body: JSON.stringify({
         from,
         to: [sendTo],
-        subject: `[TEST] ${r.subject}`,
+        // Send the real subject. A `[TEST]` prefix is a recognised spam
+        // trigger, so a preview that adds one does not reproduce what the
+        // inbox will see and biases the placement check against us.
+        subject: r.subject,
         html: r.html,
         text: r.text,
         // The REST API wants `reply_to`, not the SDK's `replyTo`; sending the
