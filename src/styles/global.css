@@ -13666,10 +13666,22 @@ html[lang="fa"] .pwa-install-steps > li::before {
 
 /* Live-support widget. Mounted once per locale layout, so it rides every
    public route. Fixed to the inline-end corner (logical properties, so it
-   mirrors under RTL) and built from the same tokens as the FAQ and forms. */
+   mirrors under RTL) and built from the same tokens as the FAQ and forms.
+
+   The launcher shares its corner with several other fixed overlays — the
+   consent pill, the offline strip and the update toast — all of which sit
+   higher in the stack. Each overlay that is present lifts the widget clear of
+   itself by raising its own `--lift-*`; `--lift-block` takes the tallest, so
+   two overlays at once still clear both instead of the last rule winning. */
 .support-widget {
+  --lift-consent: 0px;
+  --lift-offline: 0px;
+  --lift-toast: 0px;
+  --lift-block: max(var(--lift-consent), var(--lift-offline), var(--lift-toast));
   position: fixed;
-  inset-block-end: calc(1rem + env(safe-area-inset-bottom, 0px));
+  inset-block-end: calc(
+    1rem + env(safe-area-inset-bottom, 0px) + var(--lift-block)
+  );
   inset-inline-end: calc(1rem + env(safe-area-inset-right, 0px));
   z-index: 60;
   display: flex;
@@ -13677,6 +13689,32 @@ html[lang="fa"] .pwa-install-steps > li::before {
   align-items: flex-end;
   gap: 0.75rem;
   font-family: var(--font-sans);
+}
+
+/* The undecided consent notice owns the bottom corner and is taller than the
+   launcher, so it both hides the launcher and covers the open panel's
+   composer. It is the one surface a visitor must answer, so the widget yields
+   to it and reappears — state intact — once the notice closes. */
+body:has(.consent-card) .support-widget {
+  display: none;
+}
+
+/* The decided-consent pill keeps the same corner: lift the launcher above it
+   rather than stacking the two tappable controls on top of each other. */
+body:has(.consent-settings-trigger) .support-widget {
+  --lift-consent: 3.5rem;
+}
+
+/* The offline strip spans the viewport's bottom edge. */
+body:has(.pwa-offline-banner) .support-widget {
+  --lift-offline: 3.5rem;
+}
+
+/* The update toast is centred but wide; on phones it spans nearly the full
+   width, so clear its tallest (wrapped, two-line) height rather than the
+   single-line desktop one. */
+body:has(.pwa-update-toast) .support-widget {
+  --lift-toast: 7.5rem;
 }
 
 .support-widget__launcher {
