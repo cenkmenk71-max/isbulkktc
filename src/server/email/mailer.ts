@@ -9,6 +9,7 @@ import {
   renderFeedbackAcknowledgement,
   renderFeedbackTeamEmail,
   renderJobPublishedEmail,
+  renderMarketingEmail,
   renderResumeReceivedEmail,
   renderSalesAcknowledgement,
   renderSalesTeamEmail,
@@ -40,6 +41,14 @@ import { EMAIL_HEALTH_EVENT, reportDeliveryFailure } from "./delivery-health";
  */
 
 const DEFAULT_FROM = "İşBul KKTC <no-reply@isbulkktc.com>";
+
+/**
+ * The acquisition family sends from a monitored, reply-able mailbox rather than
+ * `no-reply@…`: a prospect who replies to an outreach message must reach a human,
+ * and `info@` is the address the site already publishes as the contact point.
+ * Kept separate from `DEFAULT_FROM` so a transactional send is unaffected.
+ */
+const MARKETING_FROM = "İşBul KKTC <info@isbulkktc.com>";
 
 function getResend(): Resend | null {
   const status = classifyResendApiKey(process.env.RESEND_API_KEY);
@@ -106,7 +115,7 @@ async function deliver(
   email: RenderedEmail,
   to: string,
   idempotencyKey: string,
-  options: { unsubscribeUrl?: string } = {},
+  options: { unsubscribeUrl?: string; from?: string } = {},
 ): Promise<void> {
   const resend = getResend();
   if (!resend) {
@@ -122,7 +131,7 @@ async function deliver(
   try {
     const result = await resend.emails.send(
       {
-        from: fromAddress(),
+        from: options.from ?? fromAddress(),
         to: [to],
         subject: email.subject,
         html: email.html,
@@ -380,4 +389,34 @@ export async function sendCompanyProfileEmails(
   } else {
     console.warn("Company profile review email skipped: no inbox configured.");
   }
+}
+
+/**
+ * Acquisition / marketing outreach to a prospect the platform has not met.
+ *
+ * Two things set it apart from every other send here: it goes out from
+ * `info@isbulkktc.com` (a monitored, reply-able mailbox — see `MARKETING_FROM`)
+ * and it always carries the one-click unsubscribe header, because it is
+ * promotional. The caller supplies `unsubscribeUrl` (the same signed link the
+ * engagement digest uses) and the campaign id used to key the idempotency, so a
+ * retried batch never double-sends.
+ */
+export async function sendMarketingEmail(input: {
+  to: string;
+  locale: string | null | undefined;
+  unsubscribeUrl: string;
+  campaignId: string;
+}): Promise<void> {
+  const locale = resolveEmailLocale(input.locale);
+  const email = renderMarketingEmail({
+    locale,
+    siteUrl: localeUrl(locale, "/"),
+    packagesUrl: localeUrl(locale, "/packages"),
+    registerUrl: localeUrl(locale, "/register?audience=employer"),
+    unsubscribeUrl: input.unsubscribeUrl,
+  });
+  await deliver(email, input.to, `marketing/${input.campaignId}`, {
+    unsubscribeUrl: input.unsubscribeUrl,
+    from: MARKETING_FROM,
+  });
 }

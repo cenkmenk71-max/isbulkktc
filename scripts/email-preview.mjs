@@ -134,6 +134,14 @@ const TEMPLATES = {
         },
       ],
     }),
+  marketing: () =>
+    render.renderMarketingEmail({
+      ...site,
+      packagesUrl: 'https://isbulkktc.com/tr/packages',
+      registerUrl: 'https://isbulkktc.com/tr/register?audience=employer',
+      unsubscribeUrl:
+        'https://isbulkktc.com/api/email/unsubscribe?e=isletme%40example.com&s=SAMPLE',
+    }),
 };
 
 const names = only ? [only] : Object.keys(TEMPLATES);
@@ -184,11 +192,17 @@ if (sendTo) {
   }
   console.log(`\nSending ${rendered.length} template(s) to ${sendTo}...`);
   for (const r of rendered) {
+    // The acquisition family sends from the monitored `info@` mailbox (mirrors
+    // the mailer); every other template keeps the transactional `no-reply@`.
+    const from =
+      r.name === 'marketing'
+        ? 'İşBul KKTC <info@isbulkktc.com>'
+        : 'İşBul KKTC <no-reply@isbulkktc.com>';
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'İşBul KKTC <no-reply@isbulkktc.com>',
+        from,
         to: [sendTo],
         subject: `[TEST] ${r.subject}`,
         html: r.html,

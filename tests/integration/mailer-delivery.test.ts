@@ -370,6 +370,40 @@ test("a promotional digest carries the RFC 8058 one-click pair and a Reply-To", 
     restore();
   }
 });
+test("the acquisition email sends from info@ with the one-click unsubscribe pair", async () => {
+  reset();
+  const restore = deliverableEnv();
+  const restoreInbox = withEnv({ SALES_INBOX_EMAIL: TEAM_INBOX });
+  try {
+    const { sendMarketingEmail } = await mailer();
+    const unsubscribeUrl = "https://isbulkktc.com/api/email/unsubscribe?e=x&s=y";
+    await sendMarketingEmail({
+      to: "isletme@example.com",
+      locale: "tr",
+      unsubscribeUrl,
+      campaignId: "2026-11-12/acme",
+    });
+
+    assert.equal(sent.length, 1);
+    const { payload, options } = sent[0];
+    // The acquisition family is the only one that sends from the monitored
+    // `info@` mailbox, regardless of RESEND_FROM_EMAIL.
+    assert.equal(payload.from, "İşBul KKTC <info@isbulkktc.com>");
+    assert.equal(options?.idempotencyKey, "marketing/2026-11-12/acme");
+    assert.equal(payload.replyTo, TEAM_INBOX);
+    assert.equal(
+      payload.headers?.["List-Unsubscribe-Post"],
+      "List-Unsubscribe=One-Click",
+    );
+    // The owner's verbatim Turkish copy and both actions reach the body.
+    assert.ok(payload.html?.includes("Sayın Yetkili,"));
+    assert.ok(payload.html?.includes("İlan Paketlerini İnceleyin"));
+    assert.ok(payload.html?.includes("İşveren Hesabı Oluştur"));
+  } finally {
+    restoreInbox();
+    restore();
+  }
+});
 
 test("a transactional welcome keeps Reply-To but never an unsubscribe header", async () => {
   reset();

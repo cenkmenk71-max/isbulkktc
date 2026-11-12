@@ -21,6 +21,7 @@ import {
   renderFeedbackAcknowledgement,
   renderFeedbackTeamEmail,
   renderJobPublishedEmail,
+  renderMarketingEmail,
   renderNotificationEmail,
   renderResumeReceivedEmail,
   renderSalesAcknowledgement,
@@ -29,6 +30,10 @@ import {
   type RenderedEmail,
 } from "../../supabase/functions/_shared/email-render";
 import { EMAIL_COPY_EXTRAS } from "../../supabase/functions/_shared/email-copy-extras";
+import {
+  MARKETING_CONTACTS,
+  MARKETING_COPY,
+} from "../../supabase/functions/_shared/email-copy-marketing";
 
 const SITE = "https://isbulkktc.com/";
 
@@ -398,4 +403,135 @@ test("new email families escape hostile titles and notes", () => {
   });
   assert.ok(!engagement.html.includes("<b>Bold</b>"));
   assert.ok(engagement.html.includes("&lt;b&gt;Bold&lt;/b&gt; · X &amp; Y"));
+});
+
+// ---------------------------------------------------------------------------
+// Acquisition / marketing family
+// ---------------------------------------------------------------------------
+
+function renderMarketing(locale: string) {
+  return renderMarketingEmail({
+    locale,
+    siteUrl: SITE,
+    packagesUrl: `${SITE}packages`,
+    registerUrl: `${SITE}register?audience=employer`,
+    unsubscribeUrl: `${SITE}api/email/unsubscribe?e=x&s=y`,
+  });
+}
+
+test("every marketing locale has a complete, non-empty catalog", () => {
+  for (const locale of EMAIL_LOCALES) {
+    const copy = MARKETING_COPY[locale];
+    assert.ok(copy.subject.length > 0, `${locale}: subject`);
+    assert.ok(copy.heading.length > 0, `${locale}: heading`);
+    assert.ok(copy.greeting.length > 0, `${locale}: greeting`);
+    assert.ok(copy.paragraphs.length >= 2, `${locale}: opening paragraphs`);
+    assert.ok(copy.features.length >= 3, `${locale}: feature list`);
+    for (const feature of copy.features) {
+      assert.ok(feature.title.length > 0, `${locale}: feature title`);
+      assert.ok(feature.body.length > 0, `${locale}: feature body`);
+    }
+    assert.ok(copy.primaryCta.length > 0, `${locale}: primary CTA`);
+    assert.ok(copy.secondaryCta.length > 0, `${locale}: secondary CTA`);
+    assert.ok(copy.signOff.length > 0, `${locale}: sign-off`);
+    assert.ok(copy.unsubscribeNote.length > 0, `${locale}: unsubscribe note`);
+    assert.ok(copy.unsubscribeLabel.length > 0, `${locale}: unsubscribe label`);
+    assert.ok(copy.footerNote.length > 0, `${locale}: footer reason`);
+  }
+});
+
+test("the acquisition footer does not claim the recipient has an account", () => {
+  // The transactional families say "because of activity on your account"; a
+  // prospect has none, so that line would be false on this family.
+  for (const locale of EMAIL_LOCALES) {
+    const email = renderMarketing(locale);
+    assert.ok(
+      email.html.includes(escapeHtml(MARKETING_COPY[locale].footerNote)),
+      `${locale}: marketing footer reason`,
+    );
+    assert.ok(
+      !email.html.includes(getEmailCopy(locale).footer.reason),
+      `${locale}: no account-activity claim`,
+    );
+  }
+});
+
+test("the Turkish marketing copy keeps the owner's verbatim wording", () => {
+  const tr = MARKETING_COPY.tr;
+  assert.equal(tr.greeting, "Sayın Yetkili,");
+  assert.ok(tr.paragraphs[0].includes("yalnızca iş ilanı yayınlamakla bitmez"));
+  assert.ok(tr.paragraphs[1].includes("İşbul KKTC"));
+  assert.ok(tr.features.some((feature) => feature.title.includes("İlan yayınlayabilir")));
+  assert.equal(tr.primaryCta, "İlan Paketlerini İnceleyin");
+  assert.equal(tr.secondaryCta, "İşveren Hesabı Oluştur");
+});
+
+test("marketing email renders in every locale with both CTAs and contacts", () => {
+  for (const locale of EMAIL_LOCALES) {
+    const email = renderMarketing(locale);
+    assertWellFormed(email, `marketing/${locale}`);
+    const copy = MARKETING_COPY[locale];
+    assert.equal(email.subject, copy.subject);
+
+    // Both actions, in the owner's order, each with its lead-in line.
+    const primary = email.html.indexOf(copy.primaryCta);
+    const secondary = email.html.indexOf(copy.secondaryCta);
+    assert.ok(primary !== -1 && secondary !== -1, `${locale}: both CTAs present`);
+    assert.ok(primary < secondary, `${locale}: primary CTA precedes secondary`);
+    assert.ok(email.html.includes(copy.packagesLead), `${locale}: primary lead-in`);
+    assert.ok(email.html.includes(copy.registerLead), `${locale}: secondary lead-in`);
+    assert.ok(email.html.includes(`${SITE}packages`), `${locale}: packages link`);
+    assert.ok(
+      email.html.includes(`${SITE}register?audience=employer`),
+      `${locale}: employer register link`,
+    );
+
+    // The three reachable contact channels, each as a real link.
+    assert.ok(email.html.includes(`mailto:${MARKETING_CONTACTS.email}`), `${locale}: email link`);
+    assert.ok(email.html.includes(`tel:${MARKETING_CONTACTS.phoneTel}`), `${locale}: tel link`);
+    assert.ok(email.html.includes(MARKETING_CONTACTS.whatsapp), `${locale}: whatsapp link`);
+    assert.ok(email.html.includes(copy.contactHeading), `${locale}: contact heading`);
+
+    // Promotional: the opt-out is present in the body (HTML-escaped) and the
+    // text alternative (raw).
+    assert.ok(
+      email.html.includes(`${SITE}api/email/unsubscribe?e=x&amp;s=y`),
+      `${locale}: unsubscribe link`,
+    );
+    assert.ok(
+      email.text.includes(`${SITE}api/email/unsubscribe?e=x&s=y`),
+      `${locale}: text unsubscribe`,
+    );
+    assert.ok(email.text.includes(copy.greeting), `${locale}: text greeting`);
+  }
+});
+
+test("the marketing contact rows only admit mailto:, tel: and https:", () => {
+  // A hostile URL smuggled into a contact row is dropped, not rendered as a link.
+  const html = renderEmailLayout({
+    preheader: "x",
+    heading: "x",
+    footerNote: "x",
+    siteUrl: SITE,
+    contacts: [
+      { label: "Bad", value: "click", url: "javascript:alert(1)" },
+      { label: "Good", value: "info@isbulkktc.com", url: "mailto:info@isbulkktc.com" },
+    ],
+  });
+  assert.ok(!html.includes("javascript:"), "a hostile contact scheme is dropped");
+  assert.ok(html.includes("mailto:info@isbulkktc.com"));
+});
+
+test("the text alternative carries no tags and lists every contact", () => {
+  const email = renderMarketing("tr");
+  assert.ok(!email.text.includes("<"), "no markup in the text alternative");
+  // The escaped HTML entities must be decoded back for the text part, or a
+  // recipient of the text alternative reads `Kuzey Kıbrıs&#39;ta`.
+  assert.ok(!email.text.includes("&#39;"), "no escaped apostrophe in the text part");
+  assert.ok(email.text.includes("Kuzey Kıbrıs'ta"), "the apostrophe is decoded");
+  assert.ok(email.text.includes(MARKETING_CONTACTS.email));
+  assert.ok(email.text.includes(MARKETING_CONTACTS.phoneDisplay));
+  assert.ok(email.text.includes(MARKETING_CONTACTS.whatsapp));
+  assert.ok(email.text.includes(MARKETING_COPY.tr.primaryCta));
+  assert.ok(email.text.includes(MARKETING_COPY.tr.secondaryCta));
 });

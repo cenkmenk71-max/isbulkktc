@@ -9,6 +9,7 @@
 import { escapeHtml, renderEmailLayout, renderEmailText } from "./email-layout.ts";
 import { getEmailCopy, resolveEmailLocale, type EmailLocale } from "./email-copy.ts";
 import { getEmailCopyExtras } from "./email-copy-extras.ts";
+import { getMarketingCopy, MARKETING_CONTACTS } from "./email-copy-marketing.ts";
 
 export type RenderedEmail = { subject: string; html: string; text: string };
 
@@ -471,6 +472,75 @@ export function renderEngagementEmail(input: SiteContext & {
   };
   return {
     subject: extras.engagement.subject,
+    html: renderEmailLayout(opts),
+    text: renderEmailText(opts),
+  };
+}
+
+export type MarketingInput = SiteContext & {
+  /** Listing packages page. */
+  packagesUrl: string;
+  /** Employer account registration page. */
+  registerUrl: string;
+  /** Opt-out URL; the family is promotional, so it always carries one. */
+  unsubscribeUrl: string;
+};
+
+/**
+ * The acquisition message: the one email that has to work on someone who has
+ * never heard of İşBul KKTC. It is the only family built from
+ * `email-copy-marketing.ts` (its own copy module, like `email-copy-extras.ts`)
+ * and the only one that pairs a primary and a secondary action with a lead-in
+ * line above each, then lists the reachable contact channels.
+ *
+ * `unsubscribeUrl` is required: unlike the transactional families, this message
+ * is marketing, so every send must offer a one-click opt-out (RFC 8058).
+ */
+export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
+  const locale = resolveEmailLocale(input.locale);
+  const copy = getMarketingCopy(locale);
+
+  const paragraphs = copy.paragraphs.map((text) => paragraph(text)).join("");
+  const featureRows = copy.features
+    .map(
+      (feature) =>
+        `<tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#e2ece5;color:#0D5C3A;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#1A1A1A;"><strong>${escapeHtml(
+          feature.title,
+        )}</strong> — ${escapeHtml(feature.body)}</td></tr>`,
+    )
+    .join("");
+
+  const opts = {
+    locale,
+    preheader: copy.preheader,
+    heading: copy.heading,
+    introHtml: `${paragraph(copy.greeting)}${paragraphs}`,
+    sections: [
+      {
+        heading: copy.featuresHeading,
+        html: `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0;width:100%;">${featureRows}</table>`,
+      },
+    ],
+    outroHtml: paragraph(copy.closing),
+    buttons: [
+      { label: copy.primaryCta, url: input.packagesUrl, lead: copy.packagesLead },
+      { label: copy.secondaryCta, url: input.registerUrl, lead: copy.registerLead },
+    ],
+    signatureHtml: paragraph(copy.signOff),
+    contacts: [
+      { label: copy.contactLabels.email, value: MARKETING_CONTACTS.email, url: `mailto:${MARKETING_CONTACTS.email}` },
+      { label: copy.contactLabels.phone, value: MARKETING_CONTACTS.phoneDisplay, url: `tel:${MARKETING_CONTACTS.phoneTel}` },
+      { label: copy.contactLabels.whatsapp, value: MARKETING_CONTACTS.phoneDisplay, url: MARKETING_CONTACTS.whatsapp },
+    ],
+    contactsHeading: copy.contactHeading,
+    note: copy.unsubscribeNote,
+    footerNote: copy.footerNote,
+    siteUrl: input.siteUrl,
+    unsubscribeUrl: input.unsubscribeUrl,
+    unsubscribeLabel: copy.unsubscribeLabel,
+  };
+  return {
+    subject: copy.subject,
     html: renderEmailLayout(opts),
     text: renderEmailText(opts),
   };
