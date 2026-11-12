@@ -190,6 +190,22 @@ if (sendTo) {
     console.error('RESEND_API_KEY is not set; cannot send.');
     process.exit(1);
   }
+  const { buildEmailHeaders } = await import(
+    '../src/server/email/email-headers.ts'
+  );
+  // Mirrors `deliver()` in the mailer: every message carries `Reply-To`, and the
+  // promotional families carry the RFC 8058 one-click `List-Unsubscribe` pair. A
+  // preview that omits them does not reproduce what the inbox actually sees
+  // (#196) — a plain `from/to/subject` send is what a spam filter penalises.
+  const replyToInbox =
+    process.env.SALES_INBOX_EMAIL ||
+    process.env.SALES_CONTACT_EMAIL ||
+    'info@isbulkktc.com';
+  const promotional = new Set(['marketing', 'engagement']);
+  const unsubscribeUrl = (name) =>
+    promotional.has(name)
+      ? 'https://isbulkktc.com/api/email/unsubscribe?e=isletme%40example.com&s=SAMPLE'
+      : null;
   console.log(`\nSending ${rendered.length} template(s) to ${sendTo}...`);
   for (const r of rendered) {
     // The acquisition family sends from the monitored `info@` mailbox (mirrors
@@ -198,6 +214,10 @@ if (sendTo) {
       r.name === 'marketing'
         ? 'İşBul KKTC <info@isbulkktc.com>'
         : 'İşBul KKTC <no-reply@isbulkktc.com>';
+    const extra = buildEmailHeaders({
+      replyToInbox,
+      unsubscribeUrl: unsubscribeUrl(r.name),
+    });
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
@@ -207,6 +227,10 @@ if (sendTo) {
         subject: `[TEST] ${r.subject}`,
         html: r.html,
         text: r.text,
+        // The REST API wants `reply_to`, not the SDK's `replyTo`; sending the
+        // SDK shape would silently drop the header.
+        ...(extra.replyTo ? { reply_to: extra.replyTo } : {}),
+        ...(extra.headers ? { headers: extra.headers } : {}),
       }),
     });
     const body = await response.json();
