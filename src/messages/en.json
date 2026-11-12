@@ -1478,7 +1478,6 @@
     "composerLabel": "Your message",
     "composerPlaceholder": "Type your question…",
     "send": "Send",
-    "sending": "Sending…",
     "sendFailed": "The message could not be sent. Please try again.",
     "thinking": "Typing…",
     "humanCta": "Send the team a message",

@@ -26,11 +26,31 @@ import type { SupportAiConfig } from "./ai-config";
 /** Upper bound on a model reply, matched to the widget's message length. */
 export const MAX_AI_REPLY_LENGTH = 1200;
 
-/** Token ceiling per turn — a support answer is short; this bounds the cost. */
-const MAX_OUTPUT_TOKENS = 512;
+/**
+ * Token ceiling per turn — a support answer is short, but the ceiling counts the
+ * model's *reasoning* tokens too, not just the visible reply. `openai/gpt-oss-*`
+ * and the Gemini 2.5 models spend a few hundred tokens thinking before they
+ * answer, so a tight cap can be exhausted mid-thought and return an empty
+ * completion (`finish_reason: "length"`). This leaves generous headroom for the
+ * hidden reasoning plus a short answer while still bounding the cost.
+ */
+const MAX_OUTPUT_TOKENS = 1024;
 
 /** Low temperature: a support answer should be steady, not creative. */
 const TEMPERATURE = 0.2;
+
+/**
+ * `gpt-oss` models are reasoning models: at their default effort they spend a
+ * few hundred hidden tokens deliberating before a one-line support answer, which
+ * adds latency and cost for no visible gain. Asking for low effort keeps the
+ * answer — verified live against the configured `openai/gpt-oss-20b` — while
+ * cutting the hidden reasoning roughly tenfold and keeping the reply far inside
+ * the token ceiling. The parameter is sent only for these models; anything else
+ * would ignore it, and a provider that rejected it would turn every turn into a
+ * fallback.
+ */
+const REASONING_EFFORT_MODEL = /gpt-oss/i;
+const REASONING_EFFORT = "low";
 
 /**
  * The system prompt: identity, the visitor's language, the grounded facts and
@@ -115,6 +135,9 @@ export function buildSupportAiRequest(
         ],
         temperature: TEMPERATURE,
         max_tokens: MAX_OUTPUT_TOKENS,
+        ...(REASONING_EFFORT_MODEL.test(config.model)
+          ? { reasoning_effort: REASONING_EFFORT }
+          : {}),
       }),
     },
   };

@@ -17,6 +17,20 @@ import type { AppLocale } from "@/i18n/routing";
 
 const MIN_TOKEN_LENGTH = 3;
 
+/**
+ * A question must share at least this share of its significant words with an
+ * entry before that entry may answer it. Pure overlap is too eager here: every
+ * FAQ question ends in the same word for the language ("nedir", "is", "ist"),
+ * so "Tek ilan fiyatı nedir?" would otherwise match "İşBul KKTC nedir?" on the
+ * shared "nedir" alone and answer with an unrelated fact. Requiring the match to
+ * also cover most of the query keeps a near-verbatim lookup working while an
+ * off-topic question falls through to the model (or the grounded fallback).
+ */
+const MIN_COVERAGE = 0.6;
+
+/** At least this many significant words must overlap, regardless of coverage. */
+const MIN_SHARED_TOKENS = 2;
+
 function tokenize(text: string, locale: AppLocale): string[] {
   return text
     .toLocaleLowerCase(locale)
@@ -27,12 +41,14 @@ function tokenize(text: string, locale: AppLocale): string[] {
 /**
  * Best FAQ answer for `message`, or `null` when nothing matches confidently.
  *
- * Scoring is a plain overlap of significant tokens (length >= 3, so a locale's
- * articles and short particles drop out) between the question and each FAQ
- * entry. The threshold rises with the query length so a single incidental word
- * ("iş", "work") cannot answer an unrelated question, while a two-word lookup
- * like "nedir İşBul" still resolves. Ties keep the first entry, so the result is
- * stable across calls.
+ * Scoring is the overlap of significant tokens (length >= 3, so a locale's
+ * articles and short particles drop out) between the query and each FAQ entry,
+ * and a match is only accepted when it covers `MIN_COVERAGE` of the query's
+ * distinct words *and* shares `MIN_SHARED_TOKENS` of them. The two guards matter
+ * because FAQ questions in a language share a closing word ("nedir", "is",
+ * "ist"): coverage alone would let a one-word query through, and a raw count
+ * alone would let a long question ride on that shared word. Ties keep the first
+ * entry, so the result is stable across calls.
  */
 export function answerFromKnowledge(
   message: string,
@@ -55,8 +71,10 @@ export function answerFromKnowledge(
   }
 
   if (!best) return null;
-  const threshold = queryTokens.size <= 2 ? 1 : 2;
-  return best.score >= threshold ? best.answer : null;
+  const covers =
+    best.score >= MIN_SHARED_TOKENS &&
+    best.score / queryTokens.size >= MIN_COVERAGE;
+  return covers ? best.answer : null;
 }
 
 /**
