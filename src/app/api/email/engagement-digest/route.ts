@@ -90,7 +90,7 @@ export async function POST(request: Request) {
       unsubscribeUrl.searchParams.set("s", signature);
 
       try {
-        await sendEngagementEmail({
+        const accepted = await sendEngagementEmail({
           to: recipient.email,
           locale: recipient.locale,
           name: recipient.display_name,
@@ -98,7 +98,10 @@ export async function POST(request: Request) {
           unsubscribeUrl: unsubscribeUrl.toString(),
           campaignId: `${new Date().toISOString().slice(0, 10)}/${recipient.user_id}`,
         });
-        sent += 1;
+        // A Resend rejection comes back as `false`, not a throw, so the return
+        // value is the only place a rejected send is visible.
+        if (accepted) sent += 1;
+        else failed += 1;
       } catch (error) {
         failed += 1;
         console.error("Engagement email could not be sent.", {

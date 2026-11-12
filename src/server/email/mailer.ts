@@ -111,16 +111,25 @@ function localeUrl(locale: AppLocale, path: string): string {
   return new URL(`${getLocalePrefix(locale)}${path}`, getAppBaseUrl()).toString();
 }
 
+/**
+ * Returns whether Resend *accepted* the message (queued it), not whether the
+ * recipient's server later delivered it — only the webhook sees that. The
+ * distinction matters to a caller that advances state on a send: a rejection
+ * and a missing key both return `false` instead of throwing, because the SDK
+ * reports a rejection as a value. A caller that must not lose a recipient reads
+ * the return value rather than relying on an exception that never comes.
+ */
 async function deliver(
   email: RenderedEmail,
   to: string,
   idempotencyKey: string,
   options: { unsubscribeUrl?: string; from?: string } = {},
-): Promise<void> {
+): Promise<boolean> {
   const resend = getResend();
   if (!resend) {
-    // The reason (missing vs malformed) was reported by `getResend`.
-    return;
+    // The reason (missing vs malformed) was reported by `getResend`. Nothing
+    // was sent, so this is not a success.
+    return false;
   }
   // `Reply-To` on every message, `List-Unsubscribe` only on the promotional
   // family (the caller passes `unsubscribeUrl` there) — RFC 8058 one-click.
@@ -146,7 +155,9 @@ async function deliver(
       // `application_error`) takes. Reported under `email_health` so the same
       // alert covers a rejected send and the malformed-key case above (#186).
       reportDeliveryFailure(result.error);
+      return false;
     }
+    return true;
   } catch (error) {
     // Defence in depth. `resend`'s `fetchRequest` catches its own failures and
     // *returns* them (`{error}` above), so a thrown error here is unexpected —
@@ -155,6 +166,7 @@ async function deliver(
     // `email_health` signal rather than a bare sentence a rule cannot match
     // (#186).
     reportDeliveryFailure(error);
+    return false;
   }
 }
 
@@ -315,7 +327,9 @@ export async function sendSalesLeadEmails(input: {
 
 /**
  * Engagement digest. Promotional, so it is the one family that carries an
- * unsubscribe link; callers must honour the recipient's opt-out.
+ * unsubscribe link; callers must honour the recipient's opt-out. Returns
+ * whether Resend accepted the message, so a campaign worker can count a
+ * rejection as a failure instead of assuming success.
  */
 export async function sendEngagementEmail(input: {
   to: string;
@@ -324,7 +338,7 @@ export async function sendEngagementEmail(input: {
   jobs: EngagementJob[];
   unsubscribeUrl: string;
   campaignId: string;
-}): Promise<void> {
+}): Promise<boolean> {
   const locale = resolveEmailLocale(input.locale);
   const email = renderEngagementEmail({
     locale,
@@ -335,7 +349,7 @@ export async function sendEngagementEmail(input: {
     unsubscribeUrl: input.unsubscribeUrl,
   });
   // The promotional family carries the one-click unsubscribe header (#196).
-  await deliver(email, input.to, `engagement/${input.campaignId}`, {
+  return deliver(email, input.to, `engagement/${input.campaignId}`, {
     unsubscribeUrl: input.unsubscribeUrl,
   });
 }
@@ -399,14 +413,16 @@ export async function sendCompanyProfileEmails(
  * and it always carries the one-click unsubscribe header, because it is
  * promotional. The caller supplies `unsubscribeUrl` (the same signed link the
  * engagement digest uses) and the campaign id used to key the idempotency, so a
- * retried batch never double-sends.
+ * retried batch never double-sends. Returns whether Resend accepted the
+ * message, so the campaign worker marks a lead `contacted` only on a send that
+ * actually happened.
  */
 export async function sendMarketingEmail(input: {
   to: string;
   locale: string | null | undefined;
   unsubscribeUrl: string;
   campaignId: string;
-}): Promise<void> {
+}): Promise<boolean> {
   const locale = resolveEmailLocale(input.locale);
   const email = renderMarketingEmail({
     locale,
@@ -415,7 +431,7 @@ export async function sendMarketingEmail(input: {
     registerUrl: localeUrl(locale, "/register?audience=employer"),
     unsubscribeUrl: input.unsubscribeUrl,
   });
-  await deliver(email, input.to, `marketing/${input.campaignId}`, {
+  return deliver(email, input.to, `marketing/${input.campaignId}`, {
     unsubscribeUrl: input.unsubscribeUrl,
     from: MARKETING_FROM,
   });
