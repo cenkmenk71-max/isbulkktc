@@ -687,3 +687,43 @@ SPF kök ve blocklist uyarıları bilinen/zararsız.
 **Regresyon testi.** `tests/integration/unsubscribe-route.test.ts` +2 (POST
 tek-tıkla, POST'ta bozuk imza); `tests/security/unsubscribe-route-auth.test.ts`
 +1 (GET/POST tek doğrulama yolu).
+
+## 2026-11-12 — Canlı doğrulama: tek-tıkla başlığı canlıda hâlâ 405 (tur 33)
+
+### Bulgu (canlı, ağ üzerinden)
+
+Başlık ↔ rota çifti canlıda **hâlâ uyumsuz**:
+
+```
+GET  https://isbulkktc.com/api/email/unsubscribe?e=…&s=…  → 400 (rota var)
+POST https://isbulkktc.com/api/email/unsubscribe?e=…&s=…  → 405 (metot yok)
+GET  https://isbulkktc.com/api/build-info → commit 3cb09e7 (= origin/main)
+```
+
+Yani canlı build (`3cb09e7`) mesaja `List-Unsubscribe-Post:
+List-Unsubscribe=One-Click` başlığını ekliyor (o düzeltme #625'te zaten
+canlıydı), ama rotada `POST` **yok**. Gmail/Yahoo POST'u **405** alıyor →
+tek-tıkla sessizce başarısız → alıcı "spam bildir"e basıyor. `#196`'nın
+düzelttiği varsayılan mekanizma, canlıda **tersine** çalışıyor.
+
+Kök neden: `POST` düzeltmesi (`0e5ac77`) yerel `main`'de ama **origin/main'e
+push edilmedi** (`origin/main..HEAD` = 6 commit). Vercel yalnız `main`'i
+yayınladığından canlı hâlâ `POST`'suz build'i sunuyor.
+
+### Kalıcı önlem — çapraz-modül sözleşme kapısı
+
+`tests/security/unsubscribe-header-contract.test.ts` (yeni, 4 test): başlığı
+üreten modülü (`email-headers.ts`), mailer'ı, URL'i kuran çağıranı
+(`engagement-digest`) ve rotayı (`unsubscribe`) **birlikte** okur; başlığın
+ilan ettiği `POST`'un rota tarafından sunulmasını zorunlu kılar. Her modül
+tek başına test ediliyordu (başlık metni bir dosyada, rota `POST` export'u
+başka dosyada), ama **ikisini birden** bağlayan bir test yoktu — canlıdaki
+uyumsuzluk bu yüzden sessizce çıktı.
+
+Negatif doğrulama: test, canlıdaki (GET-only) rota kaynağına karşı koşturulunca
+**kırmızı**, düzeltilmiş rotada **yeşil**. `readme-coverage` ratchet'i için
+`tests/security/README.md` kapsam tablosuna satır eklendi.
+
+Kapılar: `test:security` 211 pass / 0 fail / 4 todo (todo'lar önceden mevcut,
+#400/#418/#424/#435); `test:unit` 941/941; `test:integration` 228/228; lint
+exit=0; typecheck temiz.
