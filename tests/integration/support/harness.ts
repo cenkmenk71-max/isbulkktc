@@ -64,10 +64,23 @@ export type EngagementMailCall = {
   campaignId: string;
 };
 
+/**
+ * One acquisition-campaign send, as the campaign route issued it. Kept separate
+ * from `EngagementMailCall` because the contract is narrower: no featured jobs,
+ * but the same signed opt-out link and per-recipient idempotency id.
+ */
+export type MarketingMailCall = {
+  to: string;
+  locale: string | null | undefined;
+  unsubscribeUrl: string;
+  campaignId: string;
+};
+
 export type Recorded = {
   supabase: SupabaseCall[];
   mail: MailCall[];
   engagementMail: EngagementMailCall[];
+  marketingMail: MarketingMailCall[];
   revalidated: string[];
   revalidatedTags: string[];
   redirects: string[];
@@ -278,6 +291,7 @@ export const recorded: Recorded = {
   supabase: [],
   mail: [],
   engagementMail: [],
+  marketingMail: [],
   revalidated: [],
   revalidatedTags: [],
   redirects: [],
@@ -314,6 +328,7 @@ export function resetBoundary(
   recorded.supabase.length = 0;
   recorded.mail.length = 0;
   recorded.engagementMail.length = 0;
+  recorded.marketingMail.length = 0;
   recorded.revalidated.length = 0;
   recorded.revalidatedTags.length = 0;
   recorded.redirects.length = 0;
@@ -343,13 +358,22 @@ export function authMethods(): string[] {
 }
 
 /**
- * Templates whose send must throw, so a test can prove the caller treats mail as
+ * Templates whose send must fail, so a test can prove the caller treats mail as
  * best-effort. `"*"` makes every template fail.
+ *
+ * The transactional templates *throw* on failure (their callers wrap them in a
+ * `try`); the promotional families instead *return `false`*, because that is how
+ * the real mailer reports a Resend rejection — the SDK returns the error rather
+ * than throwing, so a caller that advances state reads the return value.
  */
 export const mailFailures = new Set<string>();
 
+function simulatedFailure(template: string): boolean {
+  return mailFailures.has("*") || mailFailures.has(template);
+}
+
 function recordMail(template: string, payload: Record<string, unknown>): void {
-  if (mailFailures.has("*") || mailFailures.has(template)) {
+  if (simulatedFailure(template)) {
     throw new Error(`Simulated ${template} mail failure`);
   }
   recorded.mail.push({ template, payload });
@@ -418,8 +442,14 @@ export function installBoundaryMocks(): void {
       sendWelcomeEmail: async (payload: Record<string, unknown>) => recordMail("welcome", payload),
       sendJobPublishedEmail: async (payload: Record<string, unknown>) => recordMail("jobPublished", payload),
       sendEngagementEmail: async (input: EngagementMailCall) => {
-        recordMail("engagement", input as unknown as Record<string, unknown>);
+        if (simulatedFailure("engagement")) return false;
         recorded.engagementMail.push(input);
+        return true;
+      },
+      sendMarketingEmail: async (input: MarketingMailCall) => {
+        if (simulatedFailure("marketing")) return false;
+        recorded.marketingMail.push(input);
+        return true;
       },
       getFeedbackInbox: () => null,
     },

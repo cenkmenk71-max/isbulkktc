@@ -688,6 +688,18 @@ export type Database = {
           locale: string | null;
         }[];
       };
+      list_marketing_recipients: {
+        Args: { _after: string | null; _batch_size: number };
+        Returns: {
+          lead_id: string;
+          email: string;
+          locale: string | null;
+        }[];
+      };
+      mark_marketing_lead_contacted: {
+        Args: { _lead_id: string };
+        Returns: undefined;
+      };
       // ---- Web Push (client RPCs, bound to auth.uid() server-side) ----
       register_push_subscription: {
         Args: {

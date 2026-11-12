@@ -405,6 +405,107 @@ test("the acquisition email sends from info@ with the one-click unsubscribe pair
   }
 });
 
+// ---------------------------------------------------------------------------
+// The promotional senders report acceptance as a value, not a throw
+// ---------------------------------------------------------------------------
+
+// A Resend rejection arrives as `{ error }`, and the SDK never throws for it.
+// The campaign workers advance a recipient out of the queue only on an accepted
+// send, so "accepted" must be observable through the return value — a `void`
+// sender would force them to assume success and silently drop every rejected
+// recipient. These tests pin that contract on the real mailer.
+
+test("sendMarketingEmail reports a Resend rejection as `false` rather than throwing", async () => {
+  reset();
+  outcome = {
+    error: { name: "validation_error", message: "recipient rejected", statusCode: 422 },
+  };
+  const restore = deliverableEnv();
+  const error = captureConsole("error");
+  try {
+    const { sendMarketingEmail } = await mailer();
+    const accepted = await sendMarketingEmail({
+      to: "isletme@example.com",
+      locale: "tr",
+      unsubscribeUrl: "https://isbulkktc.com/api/email/unsubscribe?e=x&s=y",
+      campaignId: "2026-11-12/acme",
+    });
+
+    assert.equal(sent.length, 1, "the send was attempted");
+    assert.equal(accepted, false, "a rejection is not a success");
+    assert.equal(error.calls.length, 1, "the rejection still reaches email_health");
+  } finally {
+    error.restore();
+    restore();
+  }
+});
+
+test("sendMarketingEmail reports a missing key as `false`, so a lead is not dropped", async () => {
+  reset();
+  const restore = withEnv({ RESEND_API_KEY: undefined });
+  const warn = captureConsole("warn");
+  try {
+    const { sendMarketingEmail } = await mailer();
+    const accepted = await sendMarketingEmail({
+      to: "isletme@example.com",
+      locale: "tr",
+      unsubscribeUrl: "https://isbulkktc.com/api/email/unsubscribe?e=x&s=y",
+      campaignId: "2026-11-12/acme",
+    });
+
+    assert.equal(sent.length, 0, "nothing is sent without a key");
+    assert.equal(accepted, false, "an unconfigured mailer is not a success");
+  } finally {
+    warn.restore();
+    restore();
+  }
+});
+
+test("sendMarketingEmail reports an accepted send as `true`", async () => {
+  reset();
+  const restore = deliverableEnv();
+  const restoreInbox = withEnv({ SALES_INBOX_EMAIL: TEAM_INBOX });
+  try {
+    const { sendMarketingEmail } = await mailer();
+    const accepted = await sendMarketingEmail({
+      to: "isletme@example.com",
+      locale: "tr",
+      unsubscribeUrl: "https://isbulkktc.com/api/email/unsubscribe?e=x&s=y",
+      campaignId: "2026-11-12/acme",
+    });
+
+    assert.equal(sent.length, 1);
+    assert.equal(accepted, true);
+  } finally {
+    restoreInbox();
+    restore();
+  }
+});
+
+test("sendEngagementEmail reports a rejection as `false` too", async () => {
+  reset();
+  outcome = { error: { name: "rate_limit_exceeded", message: "slow down", statusCode: 429 } };
+  const restore = deliverableEnv();
+  const error = captureConsole("error");
+  try {
+    const { sendEngagementEmail } = await mailer();
+    const accepted = await sendEngagementEmail({
+      to: "ada@example.com",
+      locale: "tr",
+      name: "Ada",
+      jobs: [{ title: "Depo Görevlisi", company: "Acme" }],
+      unsubscribeUrl: "https://isbulkktc.com/api/email/unsubscribe?e=x&s=y",
+      campaignId: "c-1",
+    });
+
+    assert.equal(accepted, false);
+    assert.equal(error.calls.length, 1);
+  } finally {
+    error.restore();
+    restore();
+  }
+});
+
 test("a transactional welcome keeps Reply-To but never an unsubscribe header", async () => {
   reset();
   const restore = deliverableEnv();
