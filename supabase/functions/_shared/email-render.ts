@@ -6,7 +6,7 @@
  * Function worker (Deno) and in Node server actions, and is unit testable.
  */
 
-import { escapeHtml, renderEmailLayout, renderEmailText } from "./email-layout.ts";
+import { BRAND, escapeHtml, renderEmailLayout, renderEmailText } from "./email-layout.ts";
 import { getEmailCopy, resolveEmailLocale, type EmailLocale } from "./email-copy.ts";
 import { getEmailCopyExtras } from "./email-copy-extras.ts";
 import { getMarketingCopy, MARKETING_CONTACTS } from "./email-copy-marketing.ts";
@@ -20,16 +20,16 @@ function paragraph(text: string): string {
 }
 
 function strongLine(text: string): string {
-  return `<p style="margin:0;font-size:15px;font-weight:600;color:#1A1A1A;">${escapeHtml(text)}</p>`;
+  return `<p style="margin:0;font-size:15px;font-weight:600;color:${BRAND.ink};">${escapeHtml(text)}</p>`;
 }
 
 function listHtml(items: string[]): string {
   const rows = items
     .map(
       (item, index) =>
-        `<tr><td style="vertical-align:top;padding:0 10px 10px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#e2ece5;color:#0D5C3A;font-size:13px;font-weight:700;">${
+        `<tr><td style="vertical-align:top;padding:0 10px 10px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:${BRAND.greenSoft};color:${BRAND.green};font-size:13px;font-weight:700;">${
           index + 1
-        }</span></td><td style="vertical-align:top;padding:0 0 10px;font-size:15px;line-height:1.55;color:#1A1A1A;">${escapeHtml(
+        }</span></td><td style="vertical-align:top;padding:0 0 10px;font-size:15px;line-height:1.55;color:${BRAND.ink};">${escapeHtml(
           item,
         )}</td></tr>`,
     )
@@ -258,9 +258,9 @@ export function renderFeedbackTeamEmail(input: FeedbackInput): RenderedEmail {
     const rows: string[] = [];
     const push = (label: string, value: string) => {
       rows.push(
-        `<tr><td style="padding:6px 12px 6px 0;font-size:13px;font-weight:600;color:#5B6572;vertical-align:top;white-space:nowrap;">${escapeHtml(
+        `<tr><td style="padding:6px 12px 6px 0;font-size:13px;font-weight:600;color:${BRAND.inkSoft};vertical-align:top;white-space:nowrap;">${escapeHtml(
           label,
-        )}</td><td style="padding:6px 0;font-size:14px;color:#1A1A1A;vertical-align:top;">${value}</td></tr>`,
+        )}</td><td style="padding:6px 0;font-size:14px;color:${BRAND.ink};vertical-align:top;">${value}</td></tr>`,
       );
     };
     if (input.name) push("Ad", escapeHtml(input.name));
@@ -389,9 +389,9 @@ export function renderSalesTeamEmail(input: SalesLeadInput): RenderedEmail {
   const rows: string[] = [];
   const push = (label: string, value: string) => {
     rows.push(
-      `<tr><td style="padding:6px 12px 6px 0;font-size:13px;font-weight:600;color:#5B6572;vertical-align:top;white-space:nowrap;">${escapeHtml(
+      `<tr><td style="padding:6px 12px 6px 0;font-size:13px;font-weight:600;color:${BRAND.inkSoft};vertical-align:top;white-space:nowrap;">${escapeHtml(
         label,
-      )}</td><td style="padding:6px 0;font-size:14px;color:#1A1A1A;vertical-align:top;">${value}</td></tr>`,
+      )}</td><td style="padding:6px 0;font-size:14px;color:${BRAND.ink};vertical-align:top;">${value}</td></tr>`,
     );
   };
   if (input.companyName) push(extras.sales.leadLabel, escapeHtml(input.companyName));
@@ -446,7 +446,7 @@ export function renderEngagementEmail(input: SiteContext & {
         .replace("{title}", job.title)
         .replace("{company}", job.company);
       return job.url
-        ? `<li style="margin:0 0 8px;"><a href="${escapeHtml(job.url)}" style="color:#0D5C3A;text-decoration:none;font-weight:600;">${escapeHtml(
+        ? `<li style="margin:0 0 8px;"><a href="${escapeHtml(job.url)}" style="color:${BRAND.green};text-decoration:none;font-weight:600;">${escapeHtml(
             label,
           )}</a></li>`
         : `<li style="margin:0 0 8px;font-weight:600;">${escapeHtml(label)}</li>`;
@@ -504,7 +504,7 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
   const featureRows = copy.features
     .map(
       (feature) =>
-        `<tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#e2ece5;color:#0D5C3A;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#1A1A1A;"><strong>${escapeHtml(
+        `<tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:${BRAND.greenSoft};color:${BRAND.green};font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:${BRAND.ink};"><strong>${escapeHtml(
           feature.title,
         )}</strong> — ${escapeHtml(feature.body)}</td></tr>`,
     )

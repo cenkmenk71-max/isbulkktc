@@ -12,21 +12,37 @@
  * testable with plain `node --test`.
  */
 
+/**
+ * Brand colours, lifted from the app's design tokens in
+ * `src/styles/global.css` so an email and the site never drift apart.
+ * `tests/unit/design-tokens.test.ts` pins the same hex values on the CSS side.
+ */
 export const BRAND = {
   name: "İşBul KKTC",
   tagline: "Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı",
   domain: "isbulkktc.com",
-  /** Canonical brand green — matches the app's `--green` token. */
-  green: "#0D5C3A",
-  greenDark: "#194435",
+  /** Primary green — the app's `--green` token (shade-green-800). */
+  green: "#194435",
+  /** Hover/pressed green — the app's `--green-hover` token (shade-green-900). */
+  greenDark: "#123128",
+  /** Soft green wash — the app's `--green-soft` token (shade-green-100). */
   greenSoft: "#E2ECE5",
-  ink: "#1A1A1A",
-  inkSoft: "#5B6572",
-  line: "#E6E4DE",
-  surface: "#F5F2EB",
+  /** Primary ink — the app's `--ink` token (vanadium-950). */
+  ink: "#171B1A",
+  /** Secondary ink — the app's `--ink-3` token (vanadium-700). */
+  inkSoft: "#414846",
+  /** Hairline borders — the app's `--line` token (vanadium-200). */
+  line: "#D1D5D0",
+  /**
+   * Page background. Pure white by design: a tinted canvas reads as a bulk
+   * mailer to spam filters and to the eye, so the shell sits on `#FFFFFF`.
+   */
+  surface: "#FFFFFF",
   white: "#FFFFFF",
-  /** Warm neutral for the footer, one step below surface. */
-  footer: "#FBFAF8",
+  /** Inset callout background — the app's `--muted` token (vanadium-50). */
+  muted: "#F0F1ED",
+  /** Footer band — the app's `--surface` token (crayon-surface). */
+  footer: "#FAF8F3",
 } as const;
 
 /**
@@ -320,7 +336,7 @@ function buttonsBlock(buttons: EmailButton[] | undefined): string {
 
 function codeBlock(code: string | undefined): string {
   if (!code) return "";
-  return `<div style="margin:${SPACE.lg}px 0 0;background:${BRAND.surface};border:1px solid ${BRAND.line};border-radius:${RADIUS.control}px;padding:${SPACE.lg}px;text-align:center;">
+  return `<div style="margin:${SPACE.lg}px 0 0;background:${BRAND.muted};border:1px solid ${BRAND.line};border-radius:${RADIUS.control}px;padding:${SPACE.lg}px;text-align:center;">
 <span class="ibk-code" style="font-size:${TYPE.display}px;font-weight:700;letter-spacing:6px;color:${BRAND.ink};">${escapeHtml(
     code,
   )}</span>
@@ -338,7 +354,7 @@ function linkFallbackBlock(text: string | undefined, url: string | undefined): s
 
 function noteBlock(note: string | undefined): string {
   if (!note) return "";
-  return `<div style="margin:${SPACE.lg}px 0 0;background:${BRAND.surface};border:1px solid ${BRAND.line};border-radius:${RADIUS.control}px;padding:${SPACE.md}px;font-size:${TYPE.small}px;line-height:${LEADING.normal};color:${BRAND.inkSoft};">${escapeHtml(
+  return `<div style="margin:${SPACE.lg}px 0 0;background:${BRAND.muted};border:1px solid ${BRAND.line};border-radius:${RADIUS.control}px;padding:${SPACE.md}px;font-size:${TYPE.small}px;line-height:${LEADING.normal};color:${BRAND.inkSoft};">${escapeHtml(
     note,
   )}</div>`;
 }
@@ -364,7 +380,7 @@ function contactBlock(
         heading,
       )}</p>`
     : "";
-  return `<div style="margin:${SPACE.lg}px 0 0;background:${BRAND.surface};border:1px solid ${BRAND.line};border-radius:${RADIUS.control}px;padding:${SPACE.md}px ${SPACE.lg}px;">
+  return `<div style="margin:${SPACE.lg}px 0 0;background:${BRAND.muted};border:1px solid ${BRAND.line};border-radius:${RADIUS.control}px;padding:${SPACE.md}px ${SPACE.lg}px;">
 ${title}<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">${rows}</table>
 </div>`;
 }
@@ -375,7 +391,7 @@ function footerBlock(options: EmailLayoutOptions): string {
         options.unsubscribeLabel ?? "Abonelikten çık",
       )}</a>`
     : "";
-  return `<tr><td style="padding:${SPACE.lg}px ${SPACE.xl}px;background:#fbfbfa;border-top:1px solid ${BRAND.line};text-align:center;font-size:${TYPE.micro}px;line-height:${LEADING.loose};color:${BRAND.inkSoft};">
+  return `<tr><td class="ibk-foot" style="padding:${SPACE.lg}px ${SPACE.xl}px;background:${BRAND.footer};border-top:1px solid ${BRAND.line};text-align:center;font-size:${TYPE.micro}px;line-height:${LEADING.loose};color:${BRAND.inkSoft};">
 <p style="margin:0 0 6px;">${escapeHtml(options.footerNote)}</p>
 <p style="margin:0;">© ${new Date().getUTCFullYear()} ${BRAND.name} · Kuzey Kıbrıs Türk Cumhuriyeti · <a href="${escapeHtml(
     options.siteUrl,
@@ -420,12 +436,12 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
     .ibk-h1 { font-size:${TYPE.h2}px !important; }
   }
   @media (prefers-color-scheme:dark) {
-    .ibk-bg { background:#111413 !important; }
-    .ibk-card { background:#1b1f1e !important; }
-    .ibk-h1, .ibk-code { color:#f3f1ec !important; }
-    .ibk-foot { background:#171b1a !important; }
+    .ibk-bg { background:#171B1A !important; }
+    .ibk-card { background:#222827 !important; }
+    .ibk-h1, .ibk-code { color:#F3F1EC !important; }
+    .ibk-foot { background:#171B1A !important; }
   }
-  [data-ogsc] .ibk-card { background:#1b1f1e !important; }
+  [data-ogsc] .ibk-card { background:#222827 !important; }
 </style>
 </head>
 <body style="margin:0;padding:0;background:${BRAND.surface};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND.ink};">

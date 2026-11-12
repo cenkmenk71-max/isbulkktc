@@ -171,7 +171,7 @@ for (const name of names) {
 // An index so every template is one click away in a browser.
 const index = `<!doctype html><meta charset="utf-8"><title>E-posta şablonları</title>
 <style>body{font:15px/1.5 system-ui;margin:24px;max-width:900px}h1{font-size:20px}
-li{margin:6px 0}a{color:#0D5C3A}small{color:#666}</style>
+li{margin:6px 0}a{color:#194435}small{color:#414846}</style>
 <h1>E-posta şablonları (${rendered.length})</h1>
 <ul>${rendered
   .map(
