@@ -43,6 +43,15 @@ test("the prompt asks for the visitor's language", () => {
   assert.match(buildSupportSystemPrompt("de"), /Deutsch/);
 });
 
+test("an uncovered question is routed to real contact channels, not a promised hand-off", () => {
+  const prompt = buildSupportSystemPrompt("tr");
+  assert.match(prompt, /do not guess/i);
+  assert.match(prompt, /info@isbulkktc\.com/);
+  // There is no per-message routing to staff, so the model must not be told to
+  // claim one; that promise would be false for every visitor who reads it.
+  assert.doesNotMatch(prompt, /pass (it|this) to the team|notify the team/i);
+});
+
 // ---------------------------------------------------------------------------
 // The request per provider.
 // ---------------------------------------------------------------------------

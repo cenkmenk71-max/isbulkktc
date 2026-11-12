@@ -67,53 +67,81 @@ async function withSupportEnv<T>(
   }
 }
 
+/**
+ * Run `fn` with the AI fallback explicitly unconfigured.
+ *
+ * The "no key configured" cases must not depend on the ambient shell: a
+ * developer (or CI step) that exports `SUPPORT_AI_API_KEY` to exercise the live
+ * provider would otherwise turn these into false failures. Clearing the four
+ * variables here makes "no AI" a property of the test, not of the environment.
+ */
+function withNoSupportAiEnv<T>(fn: () => Promise<T>): Promise<T> {
+  return withSupportEnv(
+    {
+      SUPPORT_AI_API_KEY: undefined,
+      SUPPORT_AI_PROVIDER: undefined,
+      SUPPORT_AI_MODEL: undefined,
+      SUPPORT_AI_BASE_URL: undefined,
+    },
+    fn,
+  );
+}
+
 test("an on-topic question is answered from the published FAQ, never the network", async () => {
-  for (const locale of locales) {
-    const answers = new Set(faqByLocale[locale].map((entry) => entry.answer));
-    const response = await post({
-      message: faqByLocale[locale][0].question,
-      locale,
-    });
-    assert.equal(response.status, 200, `${locale} should answer 200`);
-    const payload = (await response.json()) as { reply: string; source: string };
-    assert.equal(payload.source, "knowledge", `${locale} should answer from knowledge`);
-    assert.ok(
-      answers.has(payload.reply),
-      `${locale} reply must be verbatim FAQ copy, got: ${payload.reply}`,
-    );
-  }
+  await withNoSupportAiEnv(async () => {
+    for (const locale of locales) {
+      const answers = new Set(faqByLocale[locale].map((entry) => entry.answer));
+      const response = await post({
+        message: faqByLocale[locale][0].question,
+        locale,
+      });
+      assert.equal(response.status, 200, `${locale} should answer 200`);
+      const payload = (await response.json()) as { reply: string; source: string };
+      assert.equal(payload.source, "knowledge", `${locale} should answer from knowledge`);
+      assert.ok(
+        answers.has(payload.reply),
+        `${locale} reply must be verbatim FAQ copy, got: ${payload.reply}`,
+      );
+    }
+  });
 });
 
 test("an unplaceable question still gets grounded copy, never a shrug", async () => {
-  for (const locale of locales) {
-    const response = await post({
-      message: "zzzz qqqq wwww xxxx", // no token matches any FAQ entry
-      locale,
-    });
-    assert.equal(response.status, 200);
-    const payload = (await response.json()) as { reply: string; source: string };
-    assert.equal(payload.source, "fallback");
-    assert.equal(payload.reply, fallbackReply(locale));
-    assert.ok(payload.reply.length > 0);
-  }
+  await withNoSupportAiEnv(async () => {
+    for (const locale of locales) {
+      const response = await post({
+        message: "zzzz qqqq wwww xxxx", // no token matches any FAQ entry
+        locale,
+      });
+      assert.equal(response.status, 200);
+      const payload = (await response.json()) as { reply: string; source: string };
+      assert.equal(payload.source, "fallback");
+      assert.equal(payload.reply, fallbackReply(locale));
+      assert.ok(payload.reply.length > 0);
+    }
+  });
 });
 
 test("the same question always yields the same reply", async () => {
-  const message = faqByLocale.tr[0].question;
-  const first = (await (await post({ message, locale: "tr" })).json()) as {
-    reply: string;
-  };
-  const second = (await (await post({ message, locale: "tr" })).json()) as {
-    reply: string;
-  };
-  assert.deepEqual(first, second);
+  await withNoSupportAiEnv(async () => {
+    const message = faqByLocale.tr[0].question;
+    const first = (await (await post({ message, locale: "tr" })).json()) as {
+      reply: string;
+    };
+    const second = (await (await post({ message, locale: "tr" })).json()) as {
+      reply: string;
+    };
+    assert.deepEqual(first, second);
+  });
 });
 
 test("an unknown locale falls back to tr rather than erroring", async () => {
-  const response = await post({ message: faqByLocale.tr[0].question, locale: "xx" });
-  assert.equal(response.status, 200);
-  const payload = (await response.json()) as { reply: string };
-  assert.ok(new Set(faqByLocale.tr.map((entry) => entry.answer)).has(payload.reply));
+  await withNoSupportAiEnv(async () => {
+    const response = await post({ message: faqByLocale.tr[0].question, locale: "xx" });
+    assert.equal(response.status, 200);
+    const payload = (await response.json()) as { reply: string };
+    assert.ok(new Set(faqByLocale.tr.map((entry) => entry.answer)).has(payload.reply));
+  });
 });
 
 test("the route rejects a malformed turn without answering", async () => {
@@ -142,10 +170,10 @@ test("no provider SDK is imported into the answer path; the fallback is hand-rol
 });
 
 test("the knowledge path answers without any configured AI and without the network", async () => {
-  // No `SUPPORT_AI_API_KEY` is set in the test environment, so the adapter
-  // resolves to `null` and returns before any `fetch`. A working FAQ match must
-  // therefore answer from knowledge with no network access at all — the global
-  // `fetch` is replaced with a tripwire to prove it.
+  // The adapter is explicitly unconfigured here, so it resolves to `null` and
+  // returns before any `fetch`. A working FAQ match must therefore answer from
+  // knowledge with no network access at all — the global `fetch` is replaced
+  // with a tripwire to prove it.
   const originalFetch = globalThis.fetch;
   let called = false;
   globalThis.fetch = (() => {
@@ -153,10 +181,9 @@ test("the knowledge path answers without any configured AI and without the netwo
     throw new Error("the knowledge path must not reach the network");
   }) as typeof fetch;
   try {
-    const response = await post({
-      message: faqByLocale.tr[0].question,
-      locale: "tr",
-    });
+    const response = await withNoSupportAiEnv(() =>
+      post({ message: faqByLocale.tr[0].question, locale: "tr" }),
+    );
     assert.equal(response.status, 200);
     const payload = (await response.json()) as { source: string };
     assert.equal(payload.source, "knowledge");
@@ -174,10 +201,9 @@ test("an unplaceable question with no AI configured falls back without the netwo
     throw new Error("no AI is configured, so nothing may be fetched");
   }) as typeof fetch;
   try {
-    const response = await post({
-      message: "zzzz qqqq wwww xxxx",
-      locale: "tr",
-    });
+    const response = await withNoSupportAiEnv(() =>
+      post({ message: "zzzz qqqq wwww xxxx", locale: "tr" }),
+    );
     assert.equal(response.status, 200);
     const payload = (await response.json()) as { reply: string; source: string };
     assert.equal(payload.source, "fallback");

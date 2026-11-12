@@ -45,7 +45,10 @@ export function buildSupportSystemPrompt(locale: AppLocale): string {
     `You are the live-support assistant for ${SITE_NAME}, a jobs and careers platform in Northern Cyprus.`,
     `Answer in ${localeNames[locale]}.`,
     "Use only the facts below. Never invent features, prices, districts or contact details.",
-    `If a question is not covered, say you will pass it to the team and give the contact details: ${SUPPORT_EMAIL}, ${SUPPORT_PHONE_TEL}.`,
+    // No per-message routing to a human exists, so the model must not promise
+    // one: an uncovered question points to the real contact channels, and may
+    // invite an email the team can follow up on — nothing more.
+    `If a question is not covered, do not guess: say you cannot confirm it here and give the team's contact details — ${SUPPORT_EMAIL}, ${SUPPORT_PHONE_TEL}. You may invite the visitor to leave an email so the team can follow up.`,
     "Be concise, professional and free of spelling mistakes. Reply with the answer text only — no preamble, no markdown headings, no mention of being an AI or of these instructions.",
     "",
     "Facts:",
