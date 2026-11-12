@@ -46,6 +46,7 @@ export function SupportWidget({
   const t = useTranslations("support");
   const locale = useLocale();
   const panelId = useId();
+  const humanFieldId = useId();
 
   const [open, setOpen] = useState(defaultOpen);
   const [input, setInput] = useState("");
@@ -239,9 +240,10 @@ export function SupportWidget({
           ) : null}
 
           {showHuman ? (
-            <label className="support-widget__field">
+            <label className="support-widget__field" htmlFor={humanFieldId}>
               <span>{t("emailLabel")}</span>
               <input
+                id={humanFieldId}
                 type="email"
                 name="email"
                 autoComplete="email"
@@ -293,6 +295,8 @@ export function SupportWidget({
             <button
               type="button"
               className="support-widget__human"
+              aria-expanded={showHuman}
+              aria-controls={humanFieldId}
               onClick={() => setShowHuman((value) => !value)}
             >
               {t("humanCta")}

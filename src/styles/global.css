@@ -14060,23 +14060,33 @@ body:has(.pwa-update-toast) .support-widget {
 }
 
 .support-widget__human {
-  border: 0;
-  background: transparent;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--border-green);
+  border-radius: 999px;
+  background: var(--surface);
   color: var(--green-deep);
   font-family: inherit;
   font-size: var(--type-caption);
   font-weight: 600;
   cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  transition:
+    background var(--motion-fast) var(--ease-premium),
+    border-color var(--motion-fast) var(--ease-premium);
 }
 
 .support-widget__human:hover {
-  color: var(--green);
+  background: var(--green-soft);
+  border-color: var(--green-mid);
+  color: var(--green-deep);
+}
+
+.support-widget__human[aria-expanded="true"] {
+  background: var(--green-soft);
+  border-color: var(--green-mid);
 }
 
 .support-widget__human:focus-visible {
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   outline: 2px solid var(--green-mid);
   outline-offset: 2px;
 }
