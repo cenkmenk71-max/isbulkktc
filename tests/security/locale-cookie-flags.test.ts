@@ -20,16 +20,16 @@ import createMiddleware from "next-intl/middleware";
  * `localeCookie: { secure: process.env.NODE_ENV === "production" }` to
  * `defineRouting` (#469/#498); the gate below now enforces it.
  *
- * Why not `HttpOnly`: the language switcher writes this cookie from JavaScript.
- * `src/components/layout/site-header.tsx` renders `<Link … locale={code}>`, and
- * `next-intl`'s `BaseLink` calls `syncLocaleCookie` on click, which does
- * `document.cookie = "NEXT_LOCALE=…"`. The client does not *read* the cookie,
- * but it *writes* it, and `document.cookie` cannot set `HttpOnly` — so the flag
- * is not a server-side one-liner; the client write path would have to change
- * first. `Secure` has no such conflict.
- *
- * `src/i18n/routing.ts` is owned by the content layer; this suite reads it and proves
- * the behaviour.
+ * Why not `HttpOnly`: the language switcher used to write this cookie from
+ * JavaScript — `src/components/layout/site-header.tsx` rendered
+ * `<Link … locale={code}>`, and `next-intl`'s `BaseLink` calls
+ * `syncLocaleCookie` on click, which does `document.cookie = "NEXT_LOCALE=…"`.
+ * That switcher now emits plain `next/link` hrefs (see `languageOptionHref`), so
+ * the write happens through the middleware's `Set-Cookie` on the next document
+ * navigation instead. The flag stays absent because the cookie is still a
+ * client-managed preference with no server-side read, and `Secure` is the flag
+ * that matters for the wire. `src/i18n/routing.ts` is owned by the content layer;
+ * this suite reads it and proves the behaviour.
  */
 
 type Routing = Parameters<typeof createMiddleware>[0];

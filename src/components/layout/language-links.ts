@@ -1,4 +1,4 @@
-import type { AppLocale } from "@/i18n/routing";
+import { getLocalePrefix, type AppLocale } from "@/i18n/routing";
 import { resolveLocalizedSlugPathname } from "@/lib/localized-slug-pathnames";
 
 /**
@@ -127,4 +127,32 @@ export function resolveLanguageHref(
       siblings: (locale) => slugSiblings(family, locale),
     }) ?? pathname
   );
+}
+
+/**
+ * The full `href` the language menu emits for `targetLocale`.
+ *
+ * `resolveLanguageHref` returns an *unprefixed* pathname, so it has to be paired
+ * with a prefix before it can be rendered. The menu used to leave that to
+ * `next-intl`'s `Link`, passing `locale={code}`; that sets `forcePrefix`, which
+ * prefixes even the default locale, so `tr` always linked to `/tr/...` and
+ * `src/proxy.ts` answered every one with a **308** to the bare form. Under
+ * `localePrefix: "as-needed"` the default locale owns one canonical URL, so the
+ * link must be the bare pathname — `getLocalePrefix` returns `""` for `tr`.
+ *
+ * The menu renders this with plain `next/link`, not the locale-aware `Link`:
+ * `Link` re-prefixes whatever `href` it receives with the *current* locale, which
+ * would put `/en` back in front of the bare default-locale path on an English
+ * page. Building the absolute pathname here keeps the prefix decision in one
+ * place, mirroring `getPathname({ href, locale })` — including the root, where
+ * the pathname *is* the prefix (`/` for `tr`, `/en` for `en`, never `/en/`).
+ */
+export function languageOptionHref(
+  pathname: string,
+  targetLocale: AppLocale,
+): string {
+  const prefix = getLocalePrefix(targetLocale);
+  const suffix = resolveLanguageHref(pathname, targetLocale);
+  if (suffix === "/") return prefix || "/";
+  return `${prefix}${suffix.startsWith("/") ? suffix : `/${suffix}`}`;
 }

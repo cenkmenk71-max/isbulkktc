@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { ArrowRight, BookOpenText, BriefcaseBusiness, Building2, ChevronDown, Compass, Globe, LogOut, Mail, Menu, Package, UserRound, X } from 'lucide-react'
 import { Logo } from '@/components/brand/logo'
+import NextLink from 'next/link'
 import { Link, usePathname } from '@/i18n/navigation'
 import { localeNames, routing } from '@/i18n/routing'
-import { resolveLanguageHref } from '@/components/layout/language-links'
+import { languageOptionHref } from '@/components/layout/language-links'
 import { signOut } from '@/features/identity/actions'
 import { getHeaderSession } from '@/features/identity/header-session-actions'
 import type { HeaderSessionState } from '@/features/identity/header-session'
@@ -91,7 +92,7 @@ export function SiteHeader() {
               <div className="language-menu" aria-label={languageCopy('title')}>
                 <div className="language-menu-heading"><strong>{languageCopy('title')}</strong></div>
                 {routing.locales.map((code) => (
-                  <Link key={code} href={resolveLanguageHref(pathname, code)} locale={code} lang={code} className={`language-option ${locale === code ? 'is-current' : ''}`} aria-current={locale === code ? 'page' : undefined}><span className="language-code">{code.toUpperCase()}</span><span className="language-name">{localeNames[code]}</span>{locale === code && <span className="language-current-mark" aria-label={navCopy('currentLanguage')}>✓</span>}</Link>
+                  <NextLink key={code} href={languageOptionHref(pathname, code)} hrefLang={code} lang={code} className={`language-option ${locale === code ? 'is-current' : ''}`} aria-current={locale === code ? 'page' : undefined}><span className="language-code">{code.toUpperCase()}</span><span className="language-name">{localeNames[code]}</span>{locale === code && <span className="language-current-mark" aria-label={navCopy('currentLanguage')}>✓</span>}</NextLink>
                 ))}
                 <p className="language-menu-note">{languageCopy('notice')}</p>
               </div>
