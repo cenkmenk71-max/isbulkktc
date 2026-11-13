@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   classifyDnsblAnswer,
   classifyDnsResult,
+  classifyMtaStsPolicy,
   classifyResendStatus,
   classifyTransportSecurity,
   countSpfDnsLookups,
@@ -335,3 +336,36 @@ test("transport-security verdicts treat a missing record as a warn, a failed que
   ]);
 });
 
+
+test("MTA-STS policy classifier flags redirects and accepts a served policy", () => {
+  // A redirect is the classic misconfiguration: RFC 8461 §3.3 forbids following
+  // one, so a policy behind a 301/308 is one senders never read. It must read as
+  // a warning, never as a pass.
+  const redirect = classifyMtaStsPolicy({ status: 308, body: "", error: null });
+  assert.equal(redirect.status, "warn");
+  assert.match(redirect.detail, /redirects \(HTTP 308\)/);
+
+  const notFound = classifyMtaStsPolicy({ status: 404, body: "", error: null });
+  assert.equal(notFound.status, "warn");
+  assert.match(notFound.detail, /HTTP 404/);
+
+  // A served policy is a pass, and `testing` is a deliberate first-rollout mode,
+  // not a fault — only `none` reads as a warning.
+  const testing = classifyMtaStsPolicy({
+    status: 200,
+    body: "version: STSv1\nmode: testing\nmx: receive-euw1.forge.rmta.net\nmax_age: 604800",
+    error: null,
+  });
+  assert.deepEqual(testing, { status: "pass", detail: "policy served, version STSv1, mode testing" });
+
+  const enforce = classifyMtaStsPolicy({ status: 200, body: "version: STSv1\nmode: enforce\n", error: null });
+  assert.equal(enforce.status, "pass");
+
+  const none = classifyMtaStsPolicy({ status: 200, body: "version: STSv1\nmode: none\n", error: null });
+  assert.equal(none.status, "warn");
+
+  // Wrong version and a missing mode are warnings; a fetch failure is a skip.
+  assert.equal(classifyMtaStsPolicy({ status: 200, body: "version: STSv2\n", error: null }).status, "warn");
+  assert.equal(classifyMtaStsPolicy({ status: 200, body: "version: STSv1\n", error: null }).status, "warn");
+  assert.equal(classifyMtaStsPolicy({ status: 0, body: "", error: "ENOTFOUND" }).status, "skip");
+});

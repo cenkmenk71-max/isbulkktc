@@ -226,7 +226,7 @@ issue'nun işaret ettiği yer değil. Aşağıda ölçüm, düzeltme ve kanıt v
 | E-05 | DKIM | `resend._domainkey.isbulkktc.com TXT "p=MIGf…"` | ✅ mevcut — ama bkz. E-10 |
 | E-06 | DMARC | `_dmarc.isbulkktc.com TXT "v=DMARC1; p=quarantine; rua=mailto:dmarc@isbulkktc.com; fo=1"` | 🟡 `p=quarantine` canlı (2026-11-12 DoH); `ruf`/alignment tag hâlâ yok |
 | E-07 | Kök MX | Cloudflare Email Routing (inbound) | ✅ |
-| E-08 | MTA-STS | `_mta-sts` TXT **yok** | 🟡 eksik (opsiyonel) |
+| E-08 | MTA-STS | `_mta-sts` TXT **yok** (politika dosyası **kodda sunuluyor**: `/.well-known/mta-sts.txt`, `mode: testing`) | 🟡 yalnız TXT kaydı kaldı (opsiyonel) |
 | E-09 | TLS-RPT | `_smtp._tls` TXT **yok** | 🟡 eksik (opsiyonel) |
 | **E-10** | **DKIM anahtar uzunluğu** | `openssl pkey -pubin` → **`Public-Key: (1024 bit)`** | 🔴 **zayıf** (Resend bugün 2048 önerir) |
 | E-11 | DKIM selector adı | `resend._domainkey` (Resend standardı) | ✅ |
@@ -270,8 +270,11 @@ Bu çıktı, "kök SPF'e include ekle" adımının gereksiz olduğunu kanıtlar.
 3. **Kök SPF'e `include:amazonses.com` EKLEMEYİN** (gerekçe yukarıda). Yalnızca
    kök domainden (`@isbulkktc.com`) envelope ile mail gönderen bir kaynak
    (ör. CF Email Routing forward'ları) varsa gerekir; önce o senaryo ölçülmeli.
-4. **MTA-STS + TLS-RPT (E-08/E-09) — opsiyonel.** `_smtp._tls` TXT
-   (`v=TLSRPTv1; rua=mailto:tlsrpt@isbulkktc.com`) ve MTA-STS politikası eklemek
+4. **MTA-STS + TLS-RPT (E-08/E-09) — opsiyonel.** Politika dosyası artık **kodda
+   sunuluyor** (`/.well-known/mta-sts.txt`, `mode: testing`; bkz. e-posta
+   runbook'u adım 7) — kalan iş yalnız `_mta-sts`/`_smtp._tls` TXT kayıtları ve
+   `mta-sts.isbulkktc.com` alan adı. `_smtp._tls` TXT
+   (`v=TLSRPTv1; rua=mailto:tlsrpt@isbulkktc.com`) ve MTA-STS TXT'i eklemek
    aktarım güvenilirliğini artırır. Düşük öncelik.
 
 ### Bakılmadı / doğrulanamadı (dürüst işaret)

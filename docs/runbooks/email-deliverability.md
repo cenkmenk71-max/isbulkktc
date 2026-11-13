@@ -124,10 +124,41 @@ meşru posta hep SPF+DKIM'den geçiyorsa Cloudflare DNS'te `_dmarc` TXT'sini
 
 ### 7. MTA-STS + TLS-RPT `[ ]` (isteğe bağlı — yalnız gelen duruş)
 Bunlar **giden yerleşimi etkilemez**, yalnız bu alanın *aldığı* postanın TLS
-duruşunu yayınlar. İstersen:
-- `_smtp._tls.isbulkktc.com` TXT: `v=TLSRPTv1; rua=mailto:tlsrpt@isbulkktc.com`
-- `_mta-sts.isbulkktc.com` TXT: `v=STSv1; id=20261112000000`
-- `https://mta-sts.isbulkktc.com/.well-known/mta-sts.txt` (statik dosya) yayınla.
+duruşunu yayınlar. **Kod tarafı bitti** (aşağıya bak); senin işin iki DNS kaydı
++ bir Vercel alan adı:
+
+**Kod tarafı (bu repoda, tamam):** politika dosyası uygulamadan sunuluyor —
+`src/app/.well-known/mta-sts.txt/route.ts` → `GET /.well-known/mta-sts.txt` 200
+döner, gövde:
+
+```
+version: STSv1
+mode: testing
+mx: receive-euw1.forge.rmta.net
+max_age: 604800
+```
+
+`mode: testing` bilinçli ilk-adımdır: TLS kurulamazsa gönderen postayı yine teslim
+eder, yalnız TLS-RPT ile raporlar. Raporlar temizlenince `mode: enforce`'a çek
+(aynı DMARC `none` → `reject` mantığı). MX host'unu `MTA_STS_MX_HOST` env'i ile
+geçersiz kılabilirsin; varsayılan canlı gelen MX'tir.
+
+**Sende kalan adımlar (DNS + Vercel):**
+
+1. **Vercel'e `mta-sts.isbulkktc.com` alan adını ekle** — projeye bağla
+   (Settings → Domains → Add). Bu host'ta sayfa yok; yalnız politika dosyası
+   sunulur. **Kritik:** bu host **redirect etmemeli** — RFC 8461 §3.3 bir
+   yönlendirmeyi takip etmeyi yasaklar, politika arkasındaki 301/308 gönderen
+   tarafından okunmaz. Vercel'de "Redirect to" kapalı olsun; `www` → apex
+   yönlendirmesi **bu host için geçerli değil** (ayrı host).
+2. **Cloudflare DNS** — `mta-sts` host'u için Vercel CNAME'i (gri bulut / proxy
+   kapalı) ekle, sonra iki TXT:
+   - `_mta-sts.isbulkktc.com` TXT: `v=STSv1; id=20261112000000`
+   - `_smtp._tls.isbulkktc.com` TXT: `v=TLSRPTv1; rua=mailto:tlsrpt@isbulkktc.com`
+3. **Doğrula:** `node scripts/verify-deliverability.mjs` → `PASS MTA-STS policy`
+   (politika dosyasını redirect'siz 200 olarak okur) ve `PASS MTA-STS` / `PASS
+   TLS-RPT` (TXT kayıtları). Politika dosyası 200 dönmezse ya da yönlendirirse
+   araç `WARN` yazar.
 
 ### 8. Gerçek gelen kutusu / spam doğrulaması `[ ]`
 Araç bunu yapamaz; gerçek bir kutu gerekir. Bu turda üç adrese test postası
@@ -338,7 +369,9 @@ Tam adımlar için yukarıdaki **"Kalan altyapı maddeleri"** bölümüne bak.
       `COMPANY_REVIEW_INBOX_EMAIL`) → `info@isbulkktc.com`, Vercel `production`+`preview`
 - [x] Webhook bounce → bastırma hattı doğrulandı (`email.bounced` → `email_engagement_optouts`)
 - [ ] DMARC `p=quarantine` → `reject` (raporları izledikten sonra)
-- [ ] MTA-STS + TLS-RPT kayıtları (isteğe bağlı — yalnız gelen posta duruşu)
+- [~] MTA-STS politika dosyası **kodda sunuluyor** (`/.well-known/mta-sts.txt`,
+      `mode: testing`) — sahibin işi 2 DNS kaydı + 1 Vercel alan adına indi
+- [ ] MTA-STS + TLS-RPT **DNS kayıtları** (sahip — isteğe bağlı, yalnız gelen posta duruşu)
 - [ ] Gerçek gelen kutusu/spam yerleşim doğrulaması (araç bunu yapamaz — gerçek
       posta kutusu gerekir; bu turda 3 adrese gönderildi)
 - [~] ~~DKIM `1024` → `2048`~~ **iptal: Resend 2048 desteklemiyor**
