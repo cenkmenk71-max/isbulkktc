@@ -752,3 +752,55 @@ export function migrationLedgerFinding({ files, ledgerIds, repoError, ledgerErro
 function newestFirst(names) {
   return names.slice(-3).reverse().join(', ');
 }
+
+/**
+ * Turn a duplicate-constraint observation into a finding, or `null` when the
+ * caller gave no observation to report.
+ *
+ * `public.push_subscriptions` carried two check constraints with the identical
+ * definition — `push_subscriptions_endpoint_host_allowed` and an auto-named twin
+ * `push_subscriptions_endpoint_host_check`. The twin was created by an *earlier
+ * revision* of a migration that added the check inline; the revision was
+ * rewritten to name the constraint explicitly and to re-add it behind
+ * `drop constraint if exists push_subscriptions_endpoint_host_allowed`, so on a
+ * database that already held the auto-named version the drop matched nothing and
+ * the twin survived. A fresh rebuild never runs the earlier revision, so the
+ * repository's own pgTAP suite — which builds from migrations — cannot see it.
+ * That is exactly why this check reads Production rather than the repo: the
+ * pgTAP ratchet guards a rebuilt schema, and only a live read catches drift that
+ * exists solely in Production.
+ *
+ * The cost is small but real — the predicate is evaluated twice per write, and
+ * the schema silently diverges from a rebuild — so it is a warning, not a
+ * failure. `null` is reserved for the states that carry no evidence: no `rows`
+ * array (caller misuse) and a `readError` (the Management API could not be read,
+ * so the check proves nothing and must stay silent rather than green).
+ *
+ * @param {{rows?: Array<{table?: string, definition?: string, copies?: number}>, readError?: string}} [observation]
+ * @returns {{level: 'ok'|'warn', area: 'schema', detail: string}|null}
+ */
+export function duplicateConstraintFinding({ rows, readError } = {}) {
+  if (readError) return null;
+  if (!Array.isArray(rows)) return null;
+  if (rows.length === 0) {
+    return {
+      level: 'ok',
+      area: 'schema',
+      detail: 'no table in public carries two constraints with the same definition',
+    };
+  }
+  const named = rows
+    .map((row) => {
+      const table = typeof row?.table === 'string' ? row.table : '?';
+      const copies = Number.isFinite(row?.copies) ? row.copies : '?';
+      return `${table} (x${copies})`;
+    })
+    .slice(0, 3)
+    .join(', ');
+  const more = rows.length > 3 ? ` and ${rows.length - 3} more` : '';
+  return {
+    level: 'warn',
+    area: 'schema',
+    detail: `duplicate constraint definitions in public: ${named}${more} — a rewrite that renamed a constraint left the auto-named twin behind`,
+  };
+}

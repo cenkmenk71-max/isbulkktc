@@ -1,0 +1,36 @@
+-- Drop the orphaned twin of the push endpoint host check.
+--
+-- Production carries *two* check constraints on `public.push_subscriptions` with
+-- the identical definition `check (public.is_allowed_push_endpoint(endpoint))`:
+--
+--   * `push_subscriptions_endpoint_host_allowed` — the one every migration and
+--     test in this repository names; and
+--   * `push_subscriptions_endpoint_host_check`    — a live-only orphan that
+--     appears in **no** git blob (any branch, any revision).
+--
+-- The orphan is the Postgres auto-generated name (`<table>_<column>_check`) for
+-- an inline `check (…)` that an earlier revision of
+-- `20261110140000_v4_push_endpoint_table_check.sql` added. That revision was
+-- applied to Production out of band; it was then rewritten to name the
+-- constraint explicitly and to guard the re-add with
+-- `drop constraint if exists push_subscriptions_endpoint_host_allowed`. The
+-- rename is the bug: on a database that already held the auto-named constraint
+-- the `drop … if exists` matched nothing, so the old twin survived and the new
+-- one was added alongside it. On a *fresh* database the earlier revision never
+-- ran, so only `…_host_allowed` exists — which is why the repository's own
+-- pgTAP suite, which rebuilds from migrations, never sees the orphan and why it
+-- survived four follow-up push migrations unnoticed.
+--
+-- The cost is small but real: every insert and update to `push_subscriptions`
+-- evaluates the allowlist predicate twice, and a schema diff between Production
+-- and a rebuild-from-migrations branch shows a permanent, unexplained delta. It
+-- is the only duplicated constraint definition in the database.
+--
+-- `if exists` keeps the file idempotent under the custom `_applied_migrations`
+-- ledger, where a fresh `supabase db push` re-runs every file: on a rebuild the
+-- name is already absent and the statement is a no-op. The surviving
+-- `…_host_allowed` constraint is untouched, so the host rule and its validated
+-- state are unchanged.
+
+alter table public.push_subscriptions
+  drop constraint if exists push_subscriptions_endpoint_host_check;

@@ -14,6 +14,7 @@ import {
   classifyTokenProbe,
   deployEvidenceFinding,
   deployFreshnessFinding,
+  duplicateConstraintFinding,
   failingWorkflows,
   isDeploymentDisabled,
   isRedCheck,
@@ -1088,4 +1089,44 @@ test("a failed ledger read is a warning, not a silent pass", () => {
   });
   assert.equal(finding.level, "warn");
   assert.match(finding.detail, /could not read the migration ledger \(401 Unauthorized\)/);
+});
+
+// ---------------------------------------------------------------------------
+// 7. Duplicate constraints. Production held two check constraints on
+// `push_subscriptions` with the identical definition, because a migration was
+// rewritten after it first ran: the committed version drops a *differently
+// named* constraint before re-adding it, so the auto-named twin from the earlier
+// version survived. A rebuilt schema never reproduces it, so only a live read
+// can see it — hence this is a system-health check, not just a pgTAP ratchet.
+// ---------------------------------------------------------------------------
+
+test("an un-duplicated schema is an ok row that proves the check looked", () => {
+  const finding = duplicateConstraintFinding({ rows: [] });
+  assert.equal(finding.level, "ok");
+  assert.equal(finding.area, "schema");
+  assert.match(finding.detail, /no table in public carries two constraints/);
+});
+
+test("a duplicated constraint is a warning that names the table", () => {
+  const finding = duplicateConstraintFinding({
+    rows: [{ table: "push_subscriptions", definition: "CHECK (…)", copies: 2 }],
+  });
+  assert.equal(finding.level, "warn");
+  assert.equal(finding.area, "schema");
+  assert.match(finding.detail, /push_subscriptions \(x2\)/);
+  assert.match(finding.detail, /renamed a constraint left the auto-named twin/);
+});
+
+test("many duplicates are summarised, not dumped", () => {
+  const rows = ["a", "b", "c", "d", "e"].map((table) => ({ table, copies: 2 }));
+  const finding = duplicateConstraintFinding({ rows });
+  assert.match(finding.detail, /a \(x2\), b \(x2\), c \(x2\) and 2 more/);
+});
+
+test("no rows array is caller misuse and stays silent", () => {
+  assert.equal(duplicateConstraintFinding({}), null);
+});
+
+test("a failed live read proves nothing, so it stays silent rather than green", () => {
+  assert.equal(duplicateConstraintFinding({ readError: "503" }), null);
 });
