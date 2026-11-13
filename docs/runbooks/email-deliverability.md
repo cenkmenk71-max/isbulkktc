@@ -289,16 +289,29 @@ migration eksiği yok.
 DMARC `reject`'e çekildikten sonra aynı yolla üç adrese yeniden gönderildi
 (`from İşBul KKTC <info@isbulkktc.com>`, `reply_to info@isbulkktc.com`):
 
-| Alıcı | Resend e-posta id | son olay |
-|---|---|---|
-| muhammedali.kahraman@outlook.com | `01a1d461-cc1d-7f0f-9214-7a9ddb2df7c3` | sent |
-| letgodeneme97@outlook.com | `01a1d461-cd23-792c-837d-f3a7918db659` | sent |
-| m.ali.kahraman@outlook.com | `01a1d462-ea3a-7852-8a3f-2e5f650214b8` | sent |
+| Alıcı | Resend e-posta id | gönderim anı | sonraki ölçüm |
+|---|---|---|---|
+| muhammedali.kahraman@outlook.com | `01a1d461-cc1d-7f0f-9214-7a9ddb2df7c3` | sent | delivery_delayed |
+| letgodeneme97@outlook.com | `01a1d461-cd23-792c-837d-f3a7918db659` | sent | delivery_delayed |
+| m.ali.kahraman@outlook.com | `01a1d462-ea3a-7852-8a3f-2e5f650214b8` | sent | delivery_delayed |
 
 **Düzeltme:** doğru adres `m.ali.kahraman@outlook.com`'dur. Yanlış yazım
 `muhammed.ali.kahraman@outlook.com` bu turda `suppressed` döndü — Resend
 bastırma listesindeki (önceki hard bounce) adresi **göndermeden engelledi**, yani
 bounce → bastırma hattı yeniden doğrulandı.
+
+**`delivery_delayed` bir sorun değildir.** Üç adres de sonradan `delivery_delayed`
+gösterir; bu alıcı sunucunun (Outlook) 4xx ile geçici ertelediği anlamına gelir —
+kalıcı ret değil, kimlik doğrulama hatası değil. Yeni alan + sıfır itibarda
+Outlook'un ilk günlerde greylisting/geciktirme yapması beklenir ve alıcı-tarafı
+bir itibar sinyalidir. Kritik ayrım: `bounced` (kalıcı, bastırır) ≠ `delivery_delayed`
+(geçici, yeniden denenir). Son durumu şu komutla izle:
+```
+RESEND_API_KEY=re_… node scripts/verify-deliverability.mjs   # DNS + Resend
+curl -s -H "Authorization: Bearer re_…" https://api.resend.com/emails/<id>   # tek ileti
+```
+Zaman içinde `delivered`'a dönmesi beklenir; dönmezse (birkaç gün) MX/MTA-STS
+politikasını ve Outlook postmaster panelini incele.
 
 ## DKIM bit uzunluğu — düzeltilecek bir şey DEĞİL (2026-11-12 düzeltmesi)
 
