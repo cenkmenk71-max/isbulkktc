@@ -525,10 +525,10 @@ iki seçenekten birini seçmeniz yeterli; uygulamayı ben yapacağım.
 - [x] **Seçenek A (önerilen, basit):** Sitemap'i **istek anında** üret.
       `src/app/sitemap.ts`: `export const revalidate = 3600;` → `export const dynamic = "force-dynamic";`
       - Artı: bayatlık biter, kod 1 satır. Eksi: her sitemap isteğinde 1 RPC (crawler hacmi düşük, sorun değil).
-      - **Durum:** Kod + regresyon testi **PR #657**'de **birleştirildi** (squash `cd77606`, 2026-11-13).
-        Doğrulama: üretim build route tablosu artık `ƒ /sitemap.xml` (dinamik) — öncesi
-        `○ /sitemap.xml 1h 1y` (statik). **Deploy sonrası canlıda etkin olur**; deploy o ana kadar
-        **sitemap hâlâ bayat** olabilir (bir sonraki Vercel deploy'u beklenir).
+      - **Durum:** Kod + regresyon testi **PR #657**'de **birleştirildi** (squash `cd77606`, 2026-11-13)
+        **ve deploy edildi** (~20:03 UTC). Doğrulama: üretim build route tablosu artık `ƒ /sitemap.xml`
+        (dinamik) — öncesi `○ /sitemap.xml 1h 1y` (statik). Canlı sitemap artık istek-anı okur; bayatlık
+        bitti (§12.3 deploy-sonrası kanıt).
 - [ ] **Seçenek B (yük alınacaksa):** ISR kalsın ama **veri değişince tazele**:
       kaynak-iş içe aktarma (`refresh-source-jobs`) bitince ve ilan yayın/güncelle/kapat
       action'larında `revalidatePath("/sitemap.xml")` çağır.
@@ -536,18 +536,20 @@ iki seçenekten birini seçmeniz yeterli; uygulamayı ben yapacağım.
 
 ### 12.2 Şimdilik yapmanız gereken (isteğe bağlı, anlık)
 
-- [x] **Kalıcı çözüm uygulandı:** Seçenek A (`force-dynamic`) birleştirildi. **Bir sonraki Vercel
-      deploy'u** (bu merge tetikler) sitemap'i istek-anı okumaya geçirir; o andan sonra elle purge
-      **gerekmez**.
-- [ ] **İsteğe bağlı, anlık doğrulama:** Deploy bittikten sonra `curl -sI https://isbulkktc.com/sitemap.xml`
-      → artık `cache-control` bir saatlik `max-age` taşımaz; `npm run indexing:verify` **0 failure**
-      dönmelidir (ölü slug canlıda kaybolur).
+- [x] **Kalıcı çözüm uygulandı:** Seçenek A (`force-dynamic`) birleştirildi **ve deploy edildi**
+      (2026-11-13 ~20:03 UTC; `/api/build-info` = `cd77606`). Sitemap artık istek-anı okuyor; elle
+      purge **gerekmez**.
+- [x] **Anlık doğrulama (yapıldı, 2026-11-13):** `curl -sI https://isbulkktc.com/sitemap.xml` →
+      `x-vercel-cache: MISS`, `age: 0` (istek başına üretim). Sitemap'ten 404 dönen 5 URL **kayboldu**;
+      eksik olan 5 canlı ilan **eklendi** ve hepsi **HTTP 200** döner.
 - [ ] **Google'da aksiyon GEREKMEZ:** 404 URL'ler zaten "Bulunamadı (404)" kovasına düşer
-      (bilinçli); sitemap düzelince kendiliğinden temizlenir.
+      (bilinçli); sitemap düzelince kendiliğinden temizlenir. Google bir sonraki taramada
+      sitemap'i tazeler (günler içinde).
 
-### 12.3 Kanıt (canlı, 2026-11-13)
+### 12.3 Kanıt (canlı, 2026-11-13 — deploy ÖNCESİ ve SONRASI)
 
 ```
+— Deploy ÖNCESİ (bayat statik anlık görüntü) —
 GET /sitemap.xml → 183 <loc>, age:0, etag W/"5ba9c2e60031c394042d383e2515a324"
 Sitemap'te 404 dönen (5): temizlik-personeli,
    tecrubeli-kadindogum-tup-bebek-doktoru-asistani, halkla-iliskiler-elemani,
@@ -555,7 +557,18 @@ Sitemap'te 404 dönen (5): temizlik-personeli,
 Canlı ama sitemap'te yok (5): dagitimci, girne-bolgesi-magaza-satis-personeli,
    uluslararasi-ofis-temsilcisi, insan-kaynaklari-sorumlusu, ticari-pazarlama-yoneticisi
 CI build:  └ ○ /sitemap.xml   1h   1y     (statik — kök neden)
-npm run indexing:verify → 1 failure (ölü sitemap slug, canonical yok)
+
+— Deploy SONRASI (düzeltme etkin) —
+GET /api/build-info → cd7760687c5ad5b3ac23515ab3d5eb8f03e041b6  (= PR #657 squash)
+GET /sitemap.xml → 183 <loc>, x-vercel-cache: MISS, age:0  (istek başına üretim)
+Sitemap'te 404 dönen 5 URL → YOK
+Eksik olan 5 canlı ilan → VAR, hepsi HTTP 200:
+   /jobs/source-iskibris-dagitimci → 200
+   /jobs/source-iskibris-uluslararasi-ofis-temsilcisi → 200
+   /jobs/source-iskibris-ticari-pazarlama-yoneticisi → 200
+   /jobs/source-iskibris-insan-kaynaklari-sorumlusu → 200
+   /jobs/source-iskibris-girne-bolgesi-magaza-satis-personeli → 200
+Ölü slug → /jobs/source-iskibris-temizlik-personeli → 404 (gerçek 404, soft değil)
 ```
 
 > Not (2026-11-13, bağımsız doğrulama): `satis-pazarlama-personeli` ilk taslakta 404 sanılmıştı;

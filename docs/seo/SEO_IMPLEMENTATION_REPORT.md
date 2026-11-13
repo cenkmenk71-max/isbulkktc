@@ -577,6 +577,18 @@ CI build çıktısı (`Route (app)` tablosu):
 > KIRMIZI). Üretim build route tablosu `○ /sitemap.xml 1h 1y` → **`ƒ /sitemap.xml`**. Birleştirildi:
 > **PR #657**, squash **`cd77606`**. Deploy sonrası canlı sitemap her istekte katalogu okur → T7-1/T7-3
 > kapanır. Ayrıntı: `MANUAL_TASKS.md §12.1`.
+>
+> **✅ DEPLOY SONRASI CANLI DOĞRULAMA (2026-11-13, ~20:03 UTC).** Deploy tamamlandı
+> (`/api/build-info` = `cd77606`). Canlı `curl` sonucu — düzeltme **üretimde etkin**:
+> - Sitemap'te 404 dönen **5 URL artık YOK** (temizlik-personeli, tecrubeli-kadindogum-tup-bebek-doktoru-asistani,
+>   halkla-iliskiler-elemani, satis-personeli-finans-sirketi-call-center, magaza-satis-temsilcisi-mehmet-dogru-ticaret-ltd).
+> - Sitemap'te eksik olan **5 canlı ilan artık VAR** ve hepsi **HTTP 200** döner
+>   (`source-iskibris-dagitimci`, `-uluslararasi-ofis-temsilcisi`, `-ticari-pazarlama-yoneticisi`,
+>   `-insan-kaynaklari-sorumlusu`, `-girne-bolgesi-magaza-satis-personeli`).
+> - `x-vercel-cache: MISS` + `age: 0` → sitemap **istek başına** üretiliyor (dinamik).
+> - Ölü URL'ler `/jobs/<ölü-slug>` → **gerçek 404** (soft 404 değil); sitemap artık onları duyurmaz.
+>
+> T7-1 ve T7-3 **canlıda kapandı**.
 
 1. **Kısa vadeli (istek-zamanı render):** `src/app/sitemap.ts` → `export const revalidate = 3600;`
    yerine `export const dynamic = "force-dynamic";` (veya `revalidate = 0`). Sitemap `ƒ` olur,
