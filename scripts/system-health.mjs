@@ -17,7 +17,7 @@
 import { execFileSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 
-import { classifyCronFreshness, classifyProductionProbe, classifyRedRuns, classifyTokenProbe, deployEvidenceFinding, migrationLedgerFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests, supabaseTokenProblem } from './system-health-core.mjs';
+import { classifyCronFreshness, classifyProductionProbe, classifyRedRuns, classifyTokenProbe, deployEvidenceFinding, duplicateConstraintFinding, migrationLedgerFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests, supabaseTokenProblem } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
 const SUPABASE_PROJECT_REF = process.env.SUPABASE_PROJECT_REF ?? 'uwmhquvzbilbfzdrlxmb';
@@ -256,6 +256,47 @@ async function readMigrationLedger(token, projectRef) {
   }
 }
 
+/**
+ * Read the duplicate-constraint groups from the hosted project, or report why
+ * not.
+ *
+ * A constraint can be duplicated only in Production when a migration was
+ * *rewritten*: the version that first ran created an auto-named constraint, and
+ * the committed version drops a differently-named one before re-adding it, so a
+ * database that ran the first version keeps both. The repository's pgTAP suite
+ * rebuilds from the committed files and therefore never sees the twin, so this
+ * must be read live. The read-only endpoint runs as `supabase_read_only_user` —
+ * a `select` on `pg_constraint` and nothing more.
+ */
+async function readDuplicateConstraints(token, projectRef) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const response = await fetch(
+      `https://api.supabase.com/v1/projects/${projectRef}/database/query/read-only`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          query:
+            "select conrelid::regclass::text as table, pg_catalog.pg_get_constraintdef(oid) as definition, pg_catalog.count(*)::int as copies from pg_catalog.pg_constraint where connamespace = 'public'::regnamespace group by conrelid, pg_catalog.pg_get_constraintdef(oid) having pg_catalog.count(*) > 1 order by 1, 2",
+        }),
+        signal: controller.signal,
+      },
+    );
+    if (!response.ok) {
+      return { error: `Management API answered HTTP ${response.status}` };
+    }
+    const rows = await response.json();
+    if (!Array.isArray(rows)) return { error: 'Management API returned no rows array' };
+    return { rows };
+  } catch (error) {
+    return { error: String(error?.message ?? error) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const findings = [];
 function note(level, area, detail) {
   findings.push({ level, area, detail });
@@ -487,6 +528,27 @@ if (tokenAuthenticated) {
     repoError: repo.error,
     ledgerIds: ledger.ledgerIds,
     ledgerError: ledger.error,
+  });
+  if (finding) note(finding.level, finding.area, finding.detail);
+}
+
+// 7. Duplicate-constraint integrity: no table in `public` may carry two
+//    constraints with the same definition. The pgTAP ratchet
+//    (`supabase/tests/database/constraint_hygiene.test.sql`) guards a schema
+//    rebuilt from the committed migrations, but a migration that was *rewritten*
+//    after it first ran can leave an auto-named twin in Production that no
+//    committed file creates — the drift this check exists to catch. Gated on a
+//    token the API already accepted, so a rejected token does not also produce a
+//    second, misleading warning. WARN, never FAIL — the duplicate costs a second
+//    predicate evaluation per write and a schema delta, not a broken system.
+if (tokenAuthenticated) {
+  const duplicates = await readDuplicateConstraints(
+    process.env.SUPABASE_ACCESS_TOKEN,
+    SUPABASE_PROJECT_REF,
+  );
+  const finding = duplicateConstraintFinding({
+    rows: duplicates.rows,
+    readError: duplicates.error,
   });
   if (finding) note(finding.level, finding.area, finding.detail);
 }
