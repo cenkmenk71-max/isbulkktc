@@ -448,7 +448,7 @@ Kalan tek adım **panelden** yapılır (bu ortamda OAuth yok → BLOCKED):
 | T6-6 | Site haritası durumu "Bilinmeyen tüm sayfalar" | **NOT APPLICABLE** | P3 | Google'ın toplu etiketi; gerçek ölçüm URL Inspection (`sc-domain` + sitemap doğrulandı, §2) |
 | T6-7 | "Kritik olmayan sorunlar" boş | **NOT FOUND** (sorun yok) | P3 | CSV başlık satırı boş |
 | T6-8 | GSC **yazma** (Validate fix / Request indexing) | **BLOCKED** | P2 | OAuth yok (`Credential: unconfigured`); panelden yapılır (§10.1) |
-| T6-9 | Kullanıcı "hepsini doğruladım" dedi; CSV aksini gösterir | **CONFIRMED** | P2 | `Önemli sorunlar.csv` `Doğrulama` sütunu **tüm satırlarda "Başlatılmadı"**; gezmek ≠ doğrulama (MANUAL_TASKS §11.8) |
+| T6-9 | Kullanıcı "doğrulama düzeltmelerini tıkladım" dedi; CSV snapshot aksini gösterir | **CONFIRMED** (kullanıcı beyanı) | P3 | CSV `Doğrulama` sütunu = "Başlatılmadı", ama **snapshot 2026-11-12**; kullanıcı tıklamayı **sonrasında** yaptı → çelişki değil, sıralama farkı. Elle adım TAMAM (MANUAL_TASKS §11.8) |
 
 **P0 yok. Tek gerçek P1 (T6-1) zaten kod tarafında kapalı; kalan tek adım panelde "Validate fix".**
 
@@ -486,7 +486,9 @@ npm run search-console:verify        → Credential: unconfigured (okuma BLOCKED
   (T6-4, LIKELY); URL iletilirse canonical/hreflang karşılığı doğrulanır.
 - "Tarandı/Keşfedildi, eklenmedi" kovaları **içerik/otorite** işidir, hata değil; gerçek veri +
   özgün içerik şartı geçerli (§8).
-- **Tur 7 eki:** Kullanıcı "GSC'de hepsini doğruladım" dedi; CSV `Doğrulama` sütunu **"Başlatılmadı"**
-  → doğrulama **başlatılmamış** (T6-9). Uzlaştırma ve "yalnız Soft 404'ü doğrula" yönlendirmesi
-  `MANUAL_TASKS.md §11.8`. Canlı ek ölçüm: `/is-ilanlari/iskele` **artık dolu** (2 ilan) → `index`
-  + sitemap'e döndü; `/is-ilanlari/lefke` hâlâ boş → `noindex, follow` + sitemap'te yok.
+- **Tur 7 eki:** Kullanıcı, sayfalardaki hatalar için **"Düzeltmeyi doğrula"**'yı tıkladığını bildirdi
+  (T6-9). CSV snapshot (2026-11-12) `Doğrulama` sütunu "Başlatılmadı" idi → çelişki değil, sıralama
+  farkı (tıklama snapshot'tan sonra). **Elle adım tamam**; kalan yalnız Google'ın ~2 haftalık
+  yeniden taraması. Uzlaştırma: `MANUAL_TASKS.md §11.8`. Canlı ek ölçüm: `/is-ilanlari/iskele`
+  **artık dolu** (2 ilan) → `index` + sitemap'e döndü; `/is-ilanlari/lefke` hâlâ boş → `noindex,
+  follow` + sitemap'te yok.
