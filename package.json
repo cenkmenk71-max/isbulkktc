@@ -51,7 +51,9 @@
     "db:verify": "node scripts/db-verify.mjs",
     "indexing:verify": "node scripts/verify-indexing.mjs",
     "indexing:submit": "node scripts/submit-indexing.mjs",
-    "search-console:verify": "node scripts/verify-search-console.mjs"
+    "search-console:verify": "node scripts/verify-search-console.mjs",
+    "analytics:set-id": "node scripts/set-ga4-measurement-id.mjs",
+    "dmarc:reports": "node scripts/read-dmarc-reports.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

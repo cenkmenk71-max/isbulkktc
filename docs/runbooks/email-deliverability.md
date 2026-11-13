@@ -121,7 +121,7 @@ doğru göründü ve eksik env fark edilmedi — üretim yolu varsayılansızdı
 **Doğrula:** bir edinim/etkileşim e-postasının başlığında `Reply-To: info@isbulkktc.com`
 görünmeli. `getReplyToInbox()` artık `SALES_INBOX_EMAIL` ile dolu.
 
-### 6. DMARC `p=quarantine` → `reject` `[x]` — TAMAMLANDI (2026-11-12)
+### 6. DMARC `p=none` → `quarantine` → `reject` `[x]` — TAMAMLANDI (2026-11-12)
 Cloudflare DNS `_dmarc.isbulkktc.com` TXT güncellendi:
 `v=DMARC1; p=reject; rua=mailto:dmarc@isbulkktc.com; fo=1`.
 Geçiş güvenliydi çünkü gönderim **hizalı**: DKIM (`resend._domainkey`) hizalı,
@@ -129,8 +129,25 @@ Return-Path `send.isbulkktc.com` SPF'i hizalı, Resend alanı `verified`.
 İki bağımsız çözümleyici (Cloudflare DoH + Google DoH) `p=reject` döndü;
 `verify-deliverability.mjs` → `PASS DMARC`.
 
-> Geri alma: `p=quarantine`'a döndürmek yeter (tek TXT kaydı). Raporlar
+> Geri alma: `p=quarantine`'a (ya da gerekiyorsa `p=none`'a) döndürmek yeter (tek TXT kaydı). Raporlar
 > `dmarc@isbulkktc.com`'a akmaya devam eder.
+
+### 6b. DMARC raporlarını okuma — `npm run dmarc:reports` `[x]`
+`p=reject` sonrası soru "DMARC yapılandırıldı mı?" değil, **"DMARC ne görüyor?"**dur;
+o yanıt yalnız `dmarc@isbulkktc.com`'a gelen RUA raporlarındadır. Betik raporları
+Resend receiving API'den çeker, `.xml` / `.xml.gz` / `.zip` sarmalını açar ve özetler
+(bağımlılık yok — yalnız `node:zlib`):
+
+```
+RESEND_API_KEY=re_… npm run dmarc:reports -- --days 30
+RESEND_API_KEY=re_… npm run dmarc:reports -- --days 30 --json
+node scripts/read-dmarc-reports.mjs --file ./google.com!isbulkktc.com!….xml.gz  # çevrimdışı
+```
+
+Üç sonuç: **`OK`** (tüm mesajlar hizalı geçti) · **`WARN`** (quarantine/reject'e
+düşen mesaj var — üstteki kaynak IP'leri kontrol et) · **`EMPTY`** (henüz rapor yok;
+yeni kutu için normaldir, 1-2 gün sonra yeniden çalıştır). Rapor yokluğu **hata
+değildir** (exit 0).
 
 ### 7. MTA-STS + TLS-RPT `[x]` — TAMAMLANDI (2026-11-12)
 Bunlar **giden yerleşimi etkilemez**, yalnız bu alanın *aldığı* postanın TLS
@@ -183,6 +200,13 @@ Yeni alan + sıfır itibar: düşük hacimle başla, yalnız onaylı/ilgili alı
 alıcıların "spam değil" işaretlemesini sağla. Hacmi haftalar içinde kademeli artır.
 
 ## Bu turda gönderilen test postaları (2026-11-12)
+
+> **Adres düzeltmesi (sahip, 2026-11-12):** doğru üç adres
+> `muhammedali.kahraman@outlook.com`, `m.ali.kahraman@outlook.com` ve
+> `letgodeneme97@outlook.com`'dur. Aşağıdaki tablolarda geçen
+> `muhammed.ali.kahraman@outlook.com` **yanlış** adrestir (yazım hatası, hard
+> bounce etti); yeni gönderimlerde **kullanılmaz**. Satırlar geçmiş kayıt olarak
+> bırakıldı.
 
 `RESEND_API_KEY='re_…' node scripts/email-preview.mjs --only marketing --send <adres>`
 ile üç adrese gönderildi. Hepsi `from İşBul KKTC <info@isbulkktc.com>`,
@@ -397,7 +421,7 @@ Tam adımlar için yukarıdaki **"Kalan altyapı maddeleri"** bölümüne bak.
 - [x] Takım gelen kutusu env'leri (`SALES_INBOX_EMAIL` / `FEEDBACK_INBOX_EMAIL` /
       `COMPANY_REVIEW_INBOX_EMAIL`) → `info@isbulkktc.com`, Vercel `production`+`preview`
 - [x] Webhook bounce → bastırma hattı doğrulandı (`email.bounced` → `email_engagement_optouts`)
-- [x] DMARC `p=quarantine` → **`reject`** (Cloudflare DNS; hizalı gönderim teyit edildi, 2 resolver)
+- [x] DMARC `p=none` → `quarantine` → **`reject`** (Cloudflare DNS; hizalı gönderim teyit edildi, 2 resolver)
 - [x] MTA-STS politika dosyası **kodda sunuluyor** (`/.well-known/mta-sts.txt`, `mode: testing`)
 - [x] MTA-STS + TLS-RPT **DNS kayıtları** (Vercel host + CF CNAME/TXT; canlı 200, `verify-deliverability` PASS)
 - [~] Gerçek gelen kutusu/spam yerleşim doğrulaması (araç yapamaz — gerçek posta kutusu
