@@ -22,6 +22,24 @@ asla görünmez**, çünkü istemci tarafında onaydan sonra enjekte edilir.
 `NEXT_PUBLIC_*` değişkenleri **derleme anında** koda gömülür; bu yüzden sadece
 değişkeni eklemek yetmez, yeniden dağıtım şarttır.
 
+### Otomatik yol (önerilen)
+
+Tek komut hem değişkeni yazar hem yeniden dağıtır, sonra kimliğin **istemci
+paketine gerçekten gömüldüğünü** doğrular — panoda "tanımlı" görünüp sitede
+etiket olmaması bu betiğin önlediği hatadır:
+
+```
+VERCEL_TOKEN=vcp_… GA_MEASUREMENT_ID=G-XXXXXXXXXX \
+  node scripts/set-ga4-measurement-id.mjs
+```
+
+`npm run analytics:set-id -- --id G-XXXXXXXXXX` de çalışır (token `VERCEL_TOKEN`
+env'inden okunur). Betik **idempotenttir**: aynı kimlik/hedefle ikinci kez
+çalıştırınca hiçbir şey yazmaz. `--dry-run` yalnız ne yapacağını yazar. Çıktı
+`PASS bundle` derse kimlik canlı istemci paketindedir.
+
+### Elle yol (yedek)
+
 1. Vercel → proje → **Settings → Environment Variables**.
 2. Ekle: `NEXT_PUBLIC_GA_MEASUREMENT_ID` = `G-XXXXXXXXXX`
    (GA4 → Yönetici → Veri akışları → web akışı → Ölçüm Kimliği).

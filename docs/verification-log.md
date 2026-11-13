@@ -19,7 +19,7 @@ domain: isbulkktc.com | Resend status: verified | region: eu-west-1
 |---|---|---|
 | DKIM | PASS | `resend._domainkey`, 216 karakter anahtar |
 | SPF | PASS | `send` alt alan adında; zarf göndericisi üzerinden geçer |
-| DMARC | PASS | `p=quarantine` — canlı (2026-11-12'de DoH ile doğrulandı; önce `p=none`) |
+| DMARC | PASS | `p=reject` — canlı (2026-11-12 DoH, iki çözümleyici; önce `p=none` → `quarantine`) |
 | MX | PASS | Cloudflare Email Routing |
 | Blocklists | ~~PASS~~ ⚠️ | **geçersiz** — araç alan adını yalnız-IP bölgelerine soruyordu; bkz. tur 2 |
 | Resend domain | PASS | `verified` |
@@ -46,7 +46,7 @@ Düzeltme: #171.
 
 ### Açık kalan
 
-- [ ] DMARC `p=quarantine` (LANE-CLOUDFLARE)
+- [x] DMARC `p=quarantine` → `reject` (LANE-CLOUDFLARE; 2026-11-12 canlı)
 - [ ] mail-tester.com 10/10 skoru (LANE-VERIFY, #187)
 - [ ] 3 adreste gelen kutusu doğrulaması (insan onayı, #187)
 - [ ] Auth şablonlarında marka kimliği (#171)
@@ -667,7 +667,7 @@ HMAC doğrulaması servis istemcisinden **önce**, tek başarı gövdesi, aynı
 ### Ölçüm (2026-11-12, DoH — token gerekmez)
 
 ```
-_dmarc.isbulkktc.com   v=DMARC1; p=quarantine; rua=mailto:dmarc@isbulkktc.com; fo=1
+_dmarc.isbulkktc.com   v=DMARC1; p=reject; rua=mailto:dmarc@isbulkktc.com; fo=1
 isbulkktc.com          v=spf1 include:_spf.mx.cloudflare.net ~all
 send.isbulkktc.com     v=spf1 include:amazonses.com ~all
 resend._domainkey      p=MIGf… (1024-bit)
@@ -681,7 +681,7 @@ SPF kök ve blocklist uyarıları bilinen/zararsız.
 
 - [ ] DKIM `1024` → `2048` bit (Resend paneli; anahtar gücü)
 - [ ] Üretimde geçerli `RESEND_API_KEY` (`re_…`)
-- [ ] DMARC `p=quarantine` → `reject` (raporları izledikten sonra)
+- [x] DMARC `p=quarantine` → `reject` (2026-11-12; iki bağımsız DoH çözümleyicisi)
 - [ ] 3 adreste gelen kutusu/spam doğrulaması (#187)
 
 **Regresyon testi.** `tests/integration/unsubscribe-route.test.ts` +2 (POST

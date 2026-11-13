@@ -50,9 +50,9 @@ const DOMAIN = argValue("--domain") ?? "isbulkktc.com";
  * `--send` alone uses these; `--send a@b` overrides.
  */
 const DEFAULT_SEND_TO = [
-  "muhammed.ali.kahraman@outlook.com",
+  "muhammedali.kahraman@outlook.com",
+  "m.ali.kahraman@outlook.com",
   "letgodeneme97@outlook.com",
-  "orijinus.1997@gmail.com",
 ];
 
 const sendIndex = args.indexOf("--send");
