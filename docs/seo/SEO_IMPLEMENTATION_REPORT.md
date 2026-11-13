@@ -420,8 +420,9 @@ Kalan tek adım **panelden** yapılır (bu ortamda OAuth yok → BLOCKED):
 | Tarandı – şu anda dizine eklenmiş değil | Google sistemleri | Başlatılmadı | 43 |
 | Keşfedildi – şu anda dizine eklenmiş değil | Google sistemleri | Başlatılmadı | 12 |
 
-- `Kritik olmayan sorunlar.csv` → **boş başlık satırı** (işaretli iyileştirme sorunu yok).
-- `Meta Veri.csv` → **Site haritası = "Bilinmeyen tüm sayfalar"** (tek satır).
+- `Kritik olmayan sorunlar.csv` → **yalnız başlık satırı var, veri satırı yok** (işaretli kritik
+  olmayan sorun yok).
+- `Meta Veri.csv` → **Site haritası = "Bilinen tüm sayfalar"** (tek satır).
 - `Grafik.csv` → 2026-10-29…11-09; **"Dizine eklenen" 201–195 arası sabit**, "Dizine eklenmedi"
   238→301, gösterim 0→142 (yükseliyor). Yani **kazanç dizine eklemede değil, görünürlükte**.
 
@@ -451,8 +452,8 @@ Kalan tek adım **panelden** yapılır (bu ortamda OAuth yok → BLOCKED):
 | T6-3 | 58×404 + 48×308 + 23×403 + 31×hreflang = bilinçli/istenen | **CONFIRMED** | P3 | canlı `curl`: 404/308/403 davranışları doğru (§36) |
 | T6-4 | "Kullanıcı seçili canonical olmadan kopya" (1) | **LIKELY** | P2 | canonical/hreflang yayında; URL panelden alınmadan kod karşılığı doğrulanamaz |
 | T6-5 | "Tarandı/Keşfedildi, eklenmedi" (43+12) normal gecikme | **CONFIRMED** | P3 | yeni ilan/şehir URL'leri; Indexing API günlük bildiriyor |
-| T6-6 | Site haritası durumu "Bilinmeyen tüm sayfalar" | **NOT APPLICABLE** | P3 | Google'ın toplu etiketi; gerçek ölçüm URL Inspection (`sc-domain` + sitemap doğrulandı, §2) |
-| T6-7 | "Kritik olmayan sorunlar" boş | **NOT FOUND** (sorun yok) | P3 | CSV başlık satırı boş |
+| T6-6 | Site haritası durumu "Bilinen tüm sayfalar" | **NOT APPLICABLE** | P3 | Google'ın toplu etiketi; gerçek ölçüm URL Inspection (`sc-domain` + sitemap doğrulandı, §2) |
+| T6-7 | "Kritik olmayan sorunlar" veri satırı yok | **NOT FOUND** (sorun yok) | P3 | CSV yalnız başlık satırı içerir |
 | T6-8 | GSC **yazma** (Validate fix / Request indexing) | **BLOCKED** | P2 | OAuth yok (`Credential: unconfigured`); panelden yapılır (§10.1) |
 | T6-9 | Kullanıcı "doğrulama düzeltmelerini tıkladım" dedi; CSV snapshot aksini gösterir | **CONFIRMED** (kullanıcı beyanı) | P3 | CSV `Doğrulama` sütunu = "Başlatılmadı", ama **snapshot 2026-11-12**; kullanıcı tıklamayı **sonrasında** yaptı → çelişki değil, sıralama farkı. Elle adım TAMAM (MANUAL_TASKS §11.8) |
 
