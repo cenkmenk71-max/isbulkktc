@@ -576,3 +576,59 @@ Eksik olan 5 canlı ilan → VAR, hepsi HTTP 200:
 > 404 olan `magaza-satis-temsilcisi-mehmet-dogru-ticaret-ltd` eklendi. Toplam yine **5+5**.
 > Ayrıntı ve tekrarlanabilir yöntem: rapor §45.
 
+
+## 13. 🟡 P2 — "Site arama sonuçlarında çıkmıyor" — yeni alan adı + otorite (2026-11-12)
+
+> **Kök neden (CONFIRMED):** Alan adı **19 Eylül 2026** kayıtlı (~54 gün), site **27 Ekim 2026**
+> canlı (~16 gün). Kod tarafında **teknik engel YOK** (robots, Googlebot erişimi, canonical,
+> hreflang, sitemap, cloaking — hepsi temiz; §47). Yani bu **arıza değil**, **yeni alan adı +
+> otorite** etkisidir. Aşağıdaki adımlar **panel işi** (kod değil).
+
+### 13.1 ⚪ Bilgi — Neden oluyor? (aksiyon gerekmez, anlamak için)
+
+Google, yeni alan adlarına bir **"deneme/sandbox" dönemi** uygular: sayfalar indekslenir ama
+jenerik rekabetçi sorgularda ("kktc iş ilanları") **ilk sayfalara çıkmaz**. Bu süre tipik olarak
+**3–6 ay** sürer ve **içerik + dış bağlantı (otorite)** ile hızlanır.
+
+- **GSC "gösterim" eğriniz 0 → 142'ye çıkıyor** → Google sayfaları **sunuyor**, sıralama henüz
+  düşük. Yani "hiç listelenmiyor" değil, **"düşük sırada listeleniyor"**.
+- **GitHub sayfası görünür, site görünmez:** GitHub kök alan adı (github.com) **çok yüksek
+  otoriteli**; yeni alan adınız henüz o otoriteye sahip değil. Bu beklenen bir farktır.
+
+### 13.2 🔴 Şimdi yapılacaklar (panel, 5 dakika)
+
+| # | Adım | Nerede | Ne kontrol edilir |
+|---|---|---|---|
+| 1 | **Manuel işlem var mı?** | GSC → **Güvenlik ve Manuel İşlemler** | "Manuel işlem yok" yazmalı. Varsa **hemen** bana bildir. |
+| 2 | **Ana sayfa indeksli mi?** | GSC üst **arama çubuğu** → URL Inspection → `https://isbulkktc.com/` | "URL Google'da" + **"Sayfayı dizine ekleme isteği"** |
+| 3 | **Sitemap gönder** | GSC → **Site Haritaları** → `sitemap.xml` ekle | Durum **"Başarılı"** olmalı |
+| 4 | **Bağlantılar (otorite)** | GSC → **Bağlantılar** | Kaç dış site bağlantı veriyor? (0 ise asıl iş buradadır) |
+| 5 | **Performans** | GSC → **Performans** | Hangi sorgular gösterim alıyor? (jenerik mi, marka mı?) |
+
+### 13.3 🟡 Otorite artırma (asıl iyileştirme — elle, sürekli)
+
+Yeni alan adını hızlandıran **tek gerçek kaldıraç** budur; kod tarafında yapılacak bir şey yok:
+
+1. **İşletme profilleri:** Google Business Profile, LinkedIn, Instagram, Facebook — hepsinden
+   siteye **bağlantı** verin (marka adı ile).
+2. **KKTC iş/kariyer dizinleri:** yerel iş ilanı siteleri, üniversite kariyer merkezleri, forumlar
+   — siteye bağlantı bırakın.
+3. **İçerik derinliği:** her ilan + her şehir/iş türü sayfası **özgün metin** taşımalı; şu an iş
+   ilanları **kaynak siteden (iskibris) içe aktarılıyor** → kopya riski. İçeriği **yeniden yazın**
+   (bkz. §2 "içerik derinliği").
+4. **Basın/duyuru:** yerel haber sitelerine kısa duyuru → marka + bağlantı.
+5. **Sabır:** ilk anlamlı sıralama tipik olarak **3–6 ay**. Bu bir hata değil, takvimdir.
+
+### 13.4 ⚪ Bilgi — Teknik durum zaten temiz (kanıt, §47)
+
+```
+robots.txt           → Allow: /  (yalnız /api /cdn-cgi /auth engelli), Sitemap + Host bildirili
+Googlebot (UA)       → 200, normal ziyaretçiyle BİREBİR AYNI HTML (cloaking yok)
+X-Robots-Tag         → yok
+Ana sayfa            → canonical + 6 hreflang + WebSite/Organization/SearchAction JSON-LD
+İş sayfası (/en/...) → 200, canonical = TR kanonik (bilinçli tasarım)
+sitemap.xml          → 183 <loc>, istek başına tazeleniyor (x-vercel-cache: MISS)
+```
+
+**Sonuç:** Teknik SEO tarafında **yapılacak yeni kod işi yok**. Kalan iş **zaman + otorite +
+özgün içerik**tir.
