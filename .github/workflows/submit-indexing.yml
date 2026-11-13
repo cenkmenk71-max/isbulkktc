@@ -1,0 +1,70 @@
+name: Submit job URLs to Google Indexing API
+
+# Notifies Google's Indexing API about the site's JobPosting URLs so new
+# vacancies are discovered sooner than the next crawl. The sitemap remains the
+# source of truth; this only shortens discovery time. It is additive to
+# submit-indexnow.yml (Bing/Yandex) and needs Google credentials that IndexNow
+# does not.
+#
+# Google documents the Indexing API for JobPosting (and BroadcastEvent) pages
+# only; the script filters the sitemap to `/jobs/<slug>` detail pages and never
+# spends quota on anything else. With no credential set the job stays green and
+# warns, so the Actions tab only shows red for genuine breakage (same contract
+# as push-dispatch.yml and submit-indexnow.yml).
+#
+# Credential shape for a scheduler: a refresh token, not a static token. A
+# `GOOGLE_ACCESS_TOKEN` expires in about an hour, so a scheduled run needs the
+# `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN` triple.
+on:
+  schedule:
+    # Once a day, after the source-job refresh windows (04:17 / 16:17 UTC) so a
+    # fresh batch is in the sitemap by the time this runs.
+    - cron: "47 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: submit-indexing
+  cancel-in-progress: false
+
+jobs:
+  submit:
+    name: Submit job URLs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Check configuration
+        id: config
+        env:
+          REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+        run: |
+          if [ -n "${REFRESH_TOKEN:-}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Indexing API not configured::Add the GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_REFRESH_TOKEN repository secrets to enable scheduled Indexing API submissions. Skipping this run."
+          fi
+
+      - name: Set up Node
+        if: steps.config.outputs.configured == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      - name: Submit the live sitemap's job URLs
+        if: steps.config.outputs.configured == 'true'
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+          # Read the sitemap from the Vercel deployment alias: the canonical host
+          # is behind Cloudflare, whose bot protection challenges datacenter
+          # egress (including GitHub runners). The submitted URLs remain on
+          # isbulkktc.com because the sitemap advertises the canonical origin.
+          INDEXING_SITEMAP_ORIGIN: ${{ vars.INDEXING_SITEMAP_ORIGIN || 'https://isbulkktc-amber.vercel.app' }}
+        run: node scripts/submit-indexing.mjs --origin https://isbulkktc.com

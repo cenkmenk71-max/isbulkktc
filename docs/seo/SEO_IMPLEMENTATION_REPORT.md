@@ -50,7 +50,7 @@ Başlangıç durumu (değişmeden önce kaydedildi):
 | 9 | NOT FOUND | — | PII/secret sızıntısı (CV, aday verisi, service-role) | public HTML taraması temiz; auth sayfaları 307 | Yok | Değişiklik yok |
 | 10 | NOT APPLICABLE | — | Şehir/kategori landing sayfası indeks politikası | Böyle bir route yok (yalnızca `/jobs?district=` filtresi) | Yok | Değişiklik yok |
 | 11 | NOT APPLICABLE | — | Blog Article schema | `/blog` derleme sayfası, özgün makale yayımlamıyor | Yok | Değişiklik yok |
-| 12 | BLOCKED | — | Search Console / GA4 / CrUX / Cloudflare dashboard denetimi | Bu ortamda GSC/CF hesabı yok | Ölçümleme yapılamadı | Kullanıcı adımı (§6) |
+| 12 | RESOLVED | P1 | Search Console / GA4 / CrUX / Cloudflare dashboard denetimi | `npm run search-console:verify` (canlı API, 2026-11-12): siteOwner, 1 sitemap/207 URL, `/` "Submitted and indexed", 0 failure | Ölçümleme artık Google'ın kendi API'sinden okunuyor | `scripts/verify-search-console.mjs` + runbook |
 
 ---
 
@@ -107,16 +107,17 @@ Canlı doğrulamalar (curl): apex/http/www → tek hop kanonik; `/robots.txt` 20
 
 ## 6. Canlı ortamda bekleyen işler (kullanıcı adımı)
 
-- **Search Console** (BLOCKED): property doğrulaması, Pages/Indexing raporu, URL Inspection,
-  sitemap gönderimi, mevcut varsa Generative AI performans raporu. API yetkisi verilmeden
-  veri sunulmadı. Gerekli: GSC'de doğrulanmış property + (otomatikse) bir servis hesabı.
+- **Search Console** (ÇÖZÜLDÜ): property `sc-domain:isbulkktc.com` siteOwner olarak doğrulandı;
+  sitemap gönderilmiş (207 URL, Google indirdi); örnek URL'ler "Submitted and indexed".
+  Artık `scripts/verify-search-console.mjs` API'den okuyor; dashboard'da yalnız Manual
+  actions / Security issues gözle kontrolü kaldı. Runbook: `docs/runbooks/search-console-indexing.md`.
 - **Vercel/Cloudflare** (BLOCKED): sitemap cache purge **yapılmadı**; istenirse
   `revalidate` beklemeden purge edilebilir. Cloudflare/CF dashboard denetimi ayrı iş.
-- **Indexing API** (NOT APPLICABLE / kapalı): repoda yok; Google'ın yalnız JobPosting için
-  önerdiği bir hızlandırıcı. Eklenirse service-account anahtarı yalnız secret manager'da
-  olmalı; credential yokken kapalı-by-default kalmalı. Bu görevde eklenmedi (gereksiz bağımlılık
-  ve gizli anahtar yönetimi gerektirir; kullanıcı onayı ister).
-- **GA4** (BLOCKED): organik landing/consent event'leri GSC/GA4 erişimi gerektirir.
+- **Indexing API** (ENTEGRE): `scripts/submit-indexing.mjs` + `.github/workflows/submit-indexing.yml`
+  sitemap'teki `/jobs/<slug>` sayfalarını günlük bildirir. Canlı: 207 girdiden 21 JobPosting
+  URL'i → `Notified 21/21`. Kimlik: OAuth refresh token (service-account kabul edilmez);
+  credential yokken kapalı-by-default ve yeşil.
+- **GA4** (BLOCKED): organik landing/consent event'leri GA4 erişimi gerektirir.
 
 ---
 
@@ -128,15 +129,16 @@ Canlı doğrulamalar (curl): apex/http/www → tek hop kanonik; `/robots.txt` 20
 - **Risk (düşük):** `sanitizeDirectoryAddress` telefon regex'i, 10+ haneli bitişik sayı
   içeren bir adres bileşenini (ör. uzun bir kapı/kod) "telefon" sanıp silerse adres kısalır.
   Test bunu postal/plot kodları için koruyor; ileride örnek görülürse regex daraltılır.
-- **Production'a uygulanmayanlar:** sitemap cache purge, Cloudflare/DNS, GSC, Indexing API,
-  GA4. Hiçbiri kullanıcı onayı olmadan yapılmadı.
+- **Production'a uygulanmayanlar:** sitemap cache purge, Cloudflare/DNS, GA4. (GSC okuma ve
+  Indexing API bildirimi artık canlıda çalışıyor.) Hiçbiri kullanıcı onayı olmadan yapılmadı.
 
 ---
 
 ## 8. Sonraki en yüksek öncelikli işler
 
 1. **P1:** PR'ı merge et → yeni E2E sitemap testi CI'da yeşil kalsın (bayat girdi bir daha sızmaz).
-2. **P1:** Search Console'u doğrula, sitemap'i gönder, Indexing raporundaki hariç tutmaları incele.
+2. **P1:** Search Console doğrulandı ve Indexing API entegre; kalan: Manual actions /
+   Security issues gözle kontrolü + GA4 ölçümü.
 3. **P2:** `/jobs` için gerçek şehir landing sayfaları (yalnızca gerçek ilan verisi + özgün içerik
    varsa) — şu an şehir bazlı indekslenebilir sayfa yok; talep doğrulanmadan üretilmemeli.
 4. **P2:** Şirket profili detay sayfası yok; kartlar `/jobs?query=<ad>`'a gidiyor. Gerçek,

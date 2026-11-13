@@ -49,7 +49,9 @@
     "auth:enable-provider": "node scripts/enable-oauth-provider.mjs",
     "seed:managed-content": "tsx scripts/generate-managed-content-seed.ts",
     "db:verify": "node scripts/db-verify.mjs",
-    "indexing:verify": "node scripts/verify-indexing.mjs"
+    "indexing:verify": "node scripts/verify-indexing.mjs",
+    "indexing:submit": "node scripts/submit-indexing.mjs",
+    "search-console:verify": "node scripts/verify-search-console.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

@@ -34,29 +34,39 @@ isbulkktc.com. 3600 IN DS 2371 13 2 36E054F2B3F7EC415B0BE85C8CB301DBB439CF7FA010
 
 ---
 
-## 2. 🔴 Search Console (Google) — doğrulama + sitemap + denetim
+## 2. ✅ Search Console (Google) — doğrulama + sitemap + denetim
 
-**Durum:** BLOCKED (bu ortamda GSC hesabı/API yetkisi yok).
+**Durum:** DOĞRULANDI (2026-11-12, canlı API koşusu). Property `sc-domain:isbulkktc.com`
+**siteOwner** erişiminde; sitemap gönderilmiş ve Google indirmiş; örnek URL'ler
+"Submitted and indexed"; canonical uyuşuyor. Artık okuma **elle dashboard'a bağlı değil**:
+`scripts/verify-search-console.mjs` Google'ın kendi API'sinden okuyor.
+
+```bash
+npm run search-console:verify
+```
 
 Site sahipliği **iki yolla** zaten kanıtlanmış durumda (kod hazır):
 - Meta etiketi yayında: `<meta name="google-site-verification" content="1zuidCsJ2y0GCfp_g-AmsYuagg_fIDDCo36POZr0wSM">`
 - DNS TXT kaydı mevcut: `google-site-verification=7YbjG-3INgSrdkIKFG0inLGNgD0BX4P8mf1oIDtJehU`
-  (CF DNS'te; bu, **ikinci bir property** olabilir — ikisini de kontrol et.)
+  (CF DNS'te.)
 
-**Yapılacak:**
-1. `https://search.google.com/search-console` → property seçili mi kontrol et
-   (domain property: `isbulkktc.com`; URL-prefix property: `https://isbulkktc.com/`).
-2. **Sitemaps** → `https://isbulkktc.com/sitemap.xml` gönderildi mi? Değilse gönder.
-   (Sitemap canlıda 200, 87 `<loc>`, hepsi 200 dönüyor — doğrulandı.)
-3. **Pages / Indexing** raporunu incele: her hariç tutma/hata nedenini URL örneğiyle aç.
-4. **URL Inspection** ile şunları test et: `/`, `/jobs`, bir ilan detayı (`/jobs/<slug>`),
-   `/companies`, `/en`, `/de`. "Seçilen canonical" Google'ın `/jobs/<slug>`'ı seçtiğini
-   göstermeli (bizim canonical'ımızla aynı).
-5. **Manual actions** ve **Security issues** → boş olmalı.
-6. **Generative AI performance** raporu bu property için açıksa ölçüme ekle.
+**Canlı ölçüm (2026-11-12):**
+```
+PASS properties  sc-domain:isbulkktc.com (siteOwner); 1 propert(y/ies) readable
+PASS sitemaps    1 sitemap(s), 207 submitted URL(s), last downloaded 2026-11-12T12:56:40Z
+PASS inspect     / — Submitted and indexed; canonical https://isbulkktc.com/
+INFO analytics   100 quer(y/ies) in the last 28 day(s): 23 click(s), 266 impression(s), CTR 8.6%
+0 failure(s)
+```
+
+**Kalan (dashboard'da gözle, API dışı):**
+1. **Manual actions** ve **Security issues** → boş olmalı (API bunları okumaz).
+2. **Generative AI performance** raporu bu property için açıksa ölçüme ekle.
+3. `/is-ilanlari/lefke` gibi yeni şehir sayfaları henüz "Discovered - currently not
+   indexed" olabilir — bu normaldir; aracı Indexing API (§6), kırmızı build değil.
 
 > Not: `site:` sorgusu yalnızca kaba bir sinyaldir; gerçek indeks durumu URL Inspection ve
-> Pages raporundan doğrulanır.
+> Pages raporundan doğrulanır. Ayrıntı: `docs/runbooks/search-console-indexing.md`.
 
 ---
 
@@ -135,17 +145,31 @@ Doğrulananlar:
 
 ---
 
-## 6. ⚪ Google Cloud — Indexing API (opsiyonel, eklenmedi)
+## 6. ✅ Google Cloud — Indexing API (entegre edildi)
 
-**Durum:** Repoda Indexing API entegrasyonu **yok**. Google bunu yalnızca JobPosting URL'leri
-için öneriyor ve **indeksleme garantisi vermiyor**; sitemap'in yerine geçmez.
+**Durum:** **ENTEGRE** (2026-11-12). `scripts/submit-indexing.mjs` sitemap'teki
+`/jobs/<slug>` sayfalarını günlük olarak Indexing API'ye bildirir; zamanlanmış iş
+`.github/workflows/submit-indexing.yml`. Google bu API'yi yalnız **JobPosting**
+(ve BroadcastEvent) için belgeliyor — araç başka hiçbir URL'e kota harcamaz.
 
-**Eklenirse gereken:** Google Cloud'da bir servis hesabı + Indexing API etkin + service-account
-JSON anahtarı **yalnız secret manager'da** (asla repo/client/log içinde). Credential yokken
-entegrasyon kapalı-by-default kalmalı.
+```bash
+npm run indexing:submit -- --dry-run   # ne bildirileceğini göster
+npm run indexing:submit                # bildir (Actions ile aynı iş)
+```
 
-**Karar:** Gereksiz bağımlılık ve gizli anahtar yönetimi gerektirdiği için **eklenmedi**.
-İstersen ekleyebiliriz — onayını beklerim.
+**Canlı ölçüm (2026-11-12):** sitemap'teki 207 girdiden 21 JobPosting URL'i seçildi →
+`Notified 21/21 job URL(s).` → `EXIT 0`. Bir ilan detayı (`/jobs/<slug>`) sonrasında
+Google'da "Submitted and indexed" oldu (önce bilinmiyordu).
+
+**Kimlik bilgisi:** servis-account JSON yerine **OAuth refresh token** kullanılıyor
+(`GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` + `GOOGLE_REFRESH_TOKEN`), çünkü Indexing API
+service-account'u kabul etmez. Anahtarlar yalnız GitHub Actions secret'larında; credential
+yokken iş **yeşil kalır ve `::warning` basar** (kapalı-by-default).
+
+**Sahibin yapması gereken (bir kez):** Google Cloud'da Indexing + Search Console API'yi
+etkinleştir, OAuth consent scope'larını ekle, Desktop client oluştur, refresh token üret,
+üç secret'ı Actions'a ekle. Adım adım:
+`docs/runbooks/search-console-indexing.md` (§ "Sahibin yapması gereken").
 
 ---
 
@@ -168,9 +192,9 @@ istersen gerçek veri + özgün içerik şartıyla değerlendirilebilir:
 | # | Platform | İş | Öncelik |
 |---|---|---|---|
 | 1 | Registrar | DNSSEC — **zaten aktif**, elle iş yok (§1) | ✅ Tamam |
-| 2 | Search Console | Doğrula, sitemap gönder, Pages/Inspection denetle | 🔴 Zorunlu |
+| 2 | Search Console | Doğrula, sitemap gönder, Pages/Inspection denetle | ✅ Doğrulandı (§2) |
 | 3 | GA4 | Organic + consent ölçümü gözden geçir | 🟡 Önerilir |
 | 4 | Vercel | Bing/Yandex doğrulama env (opsiyonel) | 🟡 Opsiyonel |
 | 5 | Cloudflare | Denetlendi — **iş yok** | 🟢 Tamam |
-| 6 | Google Cloud | Indexing API (opsiyonel, eklenmedi) | ⚪ İsteğe bağlı |
+| 6 | Google Cloud | Indexing API — **entegre edildi** (§6) | ✅ Tamam |
 | 7 | İçerik | Şehir/şirket sayfaları (onay ister) | ⚪ İsteğe bağlı |
