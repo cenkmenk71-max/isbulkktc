@@ -126,13 +126,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // District landing pages ("Lefkoşa iş ilanları", ...). Each is localized and
   // carries its own canonical, so it is listed per locale like the static
-  // routes. No `<lastmod>` is advertised: a district page changes only when a
-  // vacancy *in that district* is published or edited, and the job projection
-  // this route reads (`listPublicJobSitemapEntries`) carries no district, so the
-  // newest date overall cannot be verified against the page. Attaching it to
-  // every district would date a district with no listings to a vacancy
-  // elsewhere — the exact "consistently and verifiably accurate" rule Google
-  // drops a `<lastmod>` for, which is why the static routes above omit it too.
+  // routes. Only districts with at least one live vacancy are listed: the rest
+  // answer `noindex`, and a sitemap entry that answers `noindex` is a
+  // contradiction. No `<lastmod>` is advertised: the projection carries the
+  // district, but a per-district newest date is not tracked, and dating a
+  // district page with the newest vacancy *anywhere* is the exact
+  // "consistently and verifiably accurate" rule Google drops a `<lastmod>` for
+  // — which is why the static routes above omit it too.
   const districtEntries: MetadataRoute.Sitemap = availableDistricts(
     availability,
   ).flatMap((district) =>
