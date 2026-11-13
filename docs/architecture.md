@@ -375,6 +375,8 @@ politikaları ürün sahibinin kararı olmadan sabitlenmez.
   [`runbooks/production-launch.md`](./runbooks/production-launch.md).
 - E-posta teslim edilebilirliği (Resend + DNS, DKIM gücü, cron):
   [`runbooks/email-deliverability.md`](./runbooks/email-deliverability.md).
+- Google Search Console okuma + Indexing API bildirimi:
+  [`runbooks/search-console-indexing.md`](./runbooks/search-console-indexing.md).
 - Ölçüm/sahne kabul hedefi: [performance-budget.md](./performance-budget.md)
   ve [`scenes/`](./scenes/).
 - Geri döndürülemeyen kararlar: [`decisions/`](./decisions/) altında ADR.

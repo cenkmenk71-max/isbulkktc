@@ -727,3 +727,71 @@ Negatif doğrulama: test, canlıdaki (GET-only) rota kaynağına karşı koştur
 Kapılar: `test:security` 211 pass / 0 fail / 4 todo (todo'lar önceden mevcut,
 #400/#418/#424/#435); `test:unit` 941/941; `test:integration` 228/228; lint
 exit=0; typecheck temiz.
+
+## 2026-11-12 — Google Search Console + Indexing API (canlı API koşusu)
+
+### Bağlam
+
+Bugüne kadar "Google'da çıkıyor mu?" sorusu yalnız `site:` tahmini ve canlı HTTP
+yüzeyiyle (`scripts/verify-indexing.mjs`) yanıtlanabiliyordu; Search Console'a
+**hiç** bakılmamıştı (SEO raporunda bulgu 12: BLOCKED). Bu tur iki araç eklendi
+ve **Google'ın kendi API'sinden** canlı koşuldu.
+
+- `scripts/verify-search-console.mjs` — okuma (property / sitemap / URL denetimi / analitik)
+- `scripts/submit-indexing.mjs` — JobPosting URL'lerini Indexing API'ye bildirme
+- `scripts/google-auth.mjs` — ortak kimlik çözümü (statik token → refresh token)
+- `.github/workflows/submit-indexing.yml` — günlük bildirim, credential yokken yeşil
+
+### Bulgu 1 — Search Console durumu artık okunuyor (BLOCKED → RESOLVED)
+
+`npm run search-console:verify` (`sc-domain:isbulkktc.com`, canlı, 2026-11-12):
+
+```
+PASS properties  sc-domain:isbulkktc.com (siteOwner); 1 propert(y/ies) readable
+PASS sitemaps    1 sitemap(s), 207 submitted URL(s), last downloaded 2026-11-12T12:56:40.057Z
+PASS inspect     / — Submitted and indexed; canonical https://isbulkktc.com/
+PASS inspect     /fa/about — Submitted and indexed; canonical https://isbulkktc.com/fa/about
+PASS inspect     /ru/terms — Submitted and indexed; canonical https://isbulkktc.com/ru/terms
+WARN inspect     /is-ilanlari/lefke — Discovered - currently not indexed (not indexed yet — expected for a new URL)
+PASS inspect     /fa/is-turleri/staj — Submitted and indexed; canonical https://isbulkktc.com/fa/is-turleri/staj
+PASS inspect     /ru/blog/rynok-truda-severnogo-kipra-obzor — Submitted and indexed
+INFO analytics   100 quer(y/ies) in the last 28 day(s): 23 click(s), 266 impression(s), CTR 8.6%, avg position 31.8
+0 failure(s)     (EXIT 0)
+```
+
+**Yorum:** Property `siteOwner` erişiminde; sitemap gönderilmiş (207 URL, Google
+indirmiş); örnek sayfalar indekste ve canonical'lar bizimkiyle **aynı**. Tek `WARN`
+(`/is-ilanlari/lefke`) "henüz yeni URL" — Google'ın kendi belgesine göre normal;
+`NEUTRAL` durumu araç bilinçli olarak `warn` sayıyor, `fail` değil.
+
+### Bulgu 2 — Indexing API JobPosting URL'lerini kabul etti
+
+`npm run indexing:submit` (`https://isbulkktc.com`, canlı, 2026-11-12):
+
+```
+21 job URL(s) selected from 207 sitemap entries.
+Notified 21/21 job URL(s).     (EXIT 0)
+```
+
+Sitemap'teki 207 girdiden yalnız `/jobs/<slug>` olanlar seçildi (Google Indexing
+API'yi yalnız JobPosting/BroadcastEvent için belgeliyor). Kısa süre sonra bir ilan
+detayı (`/jobs/source-iskibris-magaza-satis-temsilcisi`) URL Inspection'da
+"Submitted and indexed" döndü — **önce Google onu hiç bilmiyordu** (NEUTRAL).
+
+### Kapılar
+
+- `node --test scripts/google-auth.test.mjs scripts/submit-indexing.test.mjs scripts/verify-search-console.test.mjs` → **51/51**
+- `tests/security/ci-workflow-permissions.test.ts` → 6/6 (yeni workflow least-privilege pinli)
+- `submit-indexnow.yml` ile aynı sözleşme: credential yokken **exit 0 + `::warning`** (sahte kırmızı yok)
+
+### Açık kalan (kullanıcı adımı)
+
+- [ ] Actions'a `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN`
+      secret'larını ekle → günlük bildirim kendi kendine koşsun (runbook §"Sahibin yapması gereken")
+- [ ] Dashboard'da **Manual actions** ve **Security issues** boş mu (API okumaz)
+- [ ] GA4 organik/consent ölçümü (ayrı erişim)
+
+**Regresyon testi.** Üç yeni test dosyası saf fonksiyonları (`classifySitemaps`,
+`classifyInspection`, `summariseAnalytics`, `selectJobUrls`, `resolveGoogleAuth`)
+kilitler; `submit-indexing.test.mjs` ayrıca workflow YAML'ini pinler (schedule,
+least-privilege permissions, canonical origin, alias'tan sitemap).
