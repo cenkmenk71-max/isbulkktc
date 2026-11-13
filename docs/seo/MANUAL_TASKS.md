@@ -520,14 +520,15 @@ ikisi ayrışıyor ve sitemap **yeni ilanı deploy olmadan hiç görmüyor** (ay
 **Bu, kullanıcının panelde çözebileceği bir şey DEĞİL** — düzeltme **kod** tarafında. Aşağıdaki
 iki seçenekten birini seçmeniz yeterli; uygulamayı ben yapacağım.
 
-### 12.1 Seçim — ✅ **Seçenek A seçildi ve uygulandı** (PR #657)
+### 12.1 Seçim — ✅ **Seçenek A seçildi, uygulandı ve BİRLEŞTİRİLDİ** (PR #657)
 
 - [x] **Seçenek A (önerilen, basit):** Sitemap'i **istek anında** üret.
       `src/app/sitemap.ts`: `export const revalidate = 3600;` → `export const dynamic = "force-dynamic";`
       - Artı: bayatlık biter, kod 1 satır. Eksi: her sitemap isteğinde 1 RPC (crawler hacmi düşük, sorun değil).
-      - **Durum:** Kod + regresyon testi **PR #657**'de. Doğrulama: üretim build route tablosu artık
-        `ƒ /sitemap.xml` (dinamik) — öncesi `○ /sitemap.xml 1h 1y` (statik). Birleştirme + deploy
-        sonrası canlıda etkin olur; o ana kadar **sitemap hâlâ bayat** olabilir.
+      - **Durum:** Kod + regresyon testi **PR #657**'de **birleştirildi** (squash `cd77606`, 2026-11-13).
+        Doğrulama: üretim build route tablosu artık `ƒ /sitemap.xml` (dinamik) — öncesi
+        `○ /sitemap.xml 1h 1y` (statik). **Deploy sonrası canlıda etkin olur**; deploy o ana kadar
+        **sitemap hâlâ bayat** olabilir (bir sonraki Vercel deploy'u beklenir).
 - [ ] **Seçenek B (yük alınacaksa):** ISR kalsın ama **veri değişince tazele**:
       kaynak-iş içe aktarma (`refresh-source-jobs`) bitince ve ilan yayın/güncelle/kapat
       action'larında `revalidatePath("/sitemap.xml")` çağır.
@@ -535,9 +536,12 @@ iki seçenekten birini seçmeniz yeterli; uygulamayı ben yapacağım.
 
 ### 12.2 Şimdilik yapmanız gereken (isteğe bağlı, anlık)
 
-- [ ] **Zorla tazeleme (anlık, kalıcı çözüm DEĞİL):** Vercel panelinden sitemap cache'ini
-      purge edebilirsiniz; ancak sitemap statik kaldığı sürece **bir sonraki veri değişiminde
-      yine bayatlar**. Kalıcı çözüm 12.1'dir.
+- [x] **Kalıcı çözüm uygulandı:** Seçenek A (`force-dynamic`) birleştirildi. **Bir sonraki Vercel
+      deploy'u** (bu merge tetikler) sitemap'i istek-anı okumaya geçirir; o andan sonra elle purge
+      **gerekmez**.
+- [ ] **İsteğe bağlı, anlık doğrulama:** Deploy bittikten sonra `curl -sI https://isbulkktc.com/sitemap.xml`
+      → artık `cache-control` bir saatlik `max-age` taşımaz; `npm run indexing:verify` **0 failure**
+      dönmelidir (ölü slug canlıda kaybolur).
 - [ ] **Google'da aksiyon GEREKMEZ:** 404 URL'ler zaten "Bulunamadı (404)" kovasına düşer
       (bilinçli); sitemap düzelince kendiliğinden temizlenir.
 

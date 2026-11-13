@@ -32,7 +32,8 @@ Başlangıç durumu (değişmeden önce kaydedildi):
    > ⚠️ **GÜNCELLEME (Tur 7, §38–§44):** Bu düzeltme **yetersiz çıktı.** Canlı ölçüm (2026-11-13)
    > sitemap'in hâlâ **5×404 URL** duyurduğunu ve **5 canlı ilanı atladığını** gösterdi. Kök neden:
    > sitemap **statik** (`○ /sitemap.xml`, ISR) — "≤1 saatte kendini düzeltir" varsayımı **geçersiz**.
-   > Bkz. **P1 (T7-1/T7-3)** ve `MANUAL_TASKS.md §12`.
+   > **ÇÖZÜM (2026-11-13):** `export const dynamic = "force-dynamic"` — **PR #657** birleştirildi
+   > (squash `cd77606`); route artık `ƒ /sitemap.xml`. Bkz. **P1 (T7-1/T7-3)** ve `MANUAL_TASKS.md §12`.
 3. **P1 — Sessiz DB hataları.** `search_public_jobs` / `get_public_job_details` hata verdiğinde
    boş sonuç dönüyor ve bu "ilan yok"tan ayırt edilemiyordu (detay sayfası canlı ilanı 404
    gösterirdi). Artık loglanıyor; davranış değişmedi.
@@ -55,7 +56,7 @@ Başlangıç durumu (değişmeden önce kaydedildi):
 | 10 | NOT APPLICABLE | — | Şehir/kategori landing sayfası indeks politikası | Böyle bir route yok (yalnızca `/jobs?district=` filtresi) | Yok | Değişiklik yok |
 | 11 | NOT APPLICABLE | — | Blog Article schema | `/blog` derleme sayfası, özgün makale yayımlamıyor | Yok | Değişiklik yok |
 | 12 | RESOLVED | P1 | Search Console / GA4 / CrUX / Cloudflare dashboard denetimi | `npm run search-console:verify` (canlı API, 2026-11-12): siteOwner, 1 sitemap/207 URL, `/` "Submitted and indexed", 0 failure | Ölçümleme artık Google'ın kendi API'sinden okunuyor | `scripts/verify-search-console.mjs` + runbook |
-| 13 | **CONFIRMED** | **P1** | **Canlı sitemap bayat: 5 URL 404 dönerken duyuruluyor, 5 canlı ilan atlanıyor** | `curl /sitemap.xml` (183 `<loc>`, `age:0`) ↔ canlı `search_public_jobs`; CI build `└ ○ /sitemap.xml 1h 1y` (statik) | Sitemap "çözülmeyen URL" sinyali verir; yeni ilanlar deploy olmadan hiç listelenmez | **Tur 7, §38–§44**; `MANUAL_TASKS.md §12` (force-dynamic veya on-demand `revalidatePath`) |
+| 13 | **CONFIRMED → DÜZELTİLDİ** | **P1** | **Canlı sitemap bayat: 5 URL 404 dönerken duyuruluyor, 5 canlı ilan atlanıyor** | `curl /sitemap.xml` (183 `<loc>`, `age:0`) ↔ canlı `search_public_jobs`; CI build `└ ○ /sitemap.xml 1h 1y` (statik) | Sitemap "çözülmeyen URL" sinyali verir; yeni ilanlar deploy olmadan hiç listelenmez | **Tur 7, §38–§44**; **DÜZELTİLDİ:** `dynamic="force-dynamic"` — **PR #657** (squash `cd77606`), route artık `ƒ /sitemap.xml`; `MANUAL_TASKS.md §12` |
 
 ---
 
@@ -569,6 +570,13 @@ CI build çıktısı (`Route (app)` tablosu):
 
 ### §42. Önerilen düzeltme (kod — kullanıcı onayı sonrası)
 
+> **✅ UYGULANDI — Seçenek A (2026-11-13).** Kullanıcı onayı ("A'yı uygula") üzerine 1. madde
+> uygulandı: `src/app/sitemap.ts` artık `export const dynamic = "force-dynamic";`. Regresyon
+> testi `tests/unit/sitemap-dynamic.test.ts` eklendi (mutasyonla doğrulandı: `revalidate`'a dönüş
+> KIRMIZI). Üretim build route tablosu `○ /sitemap.xml 1h 1y` → **`ƒ /sitemap.xml`**. Birleştirildi:
+> **PR #657**, squash **`cd77606`**. Deploy sonrası canlı sitemap her istekte katalogu okur → T7-1/T7-3
+> kapanır. Ayrıntı: `MANUAL_TASKS.md §12.1`.
+
 1. **Kısa vadeli (istek-zamanı render):** `src/app/sitemap.ts` → `export const revalidate = 3600;`
    yerine `export const dynamic = "force-dynamic";` (veya `revalidate = 0`). Sitemap `ƒ` olur,
    her istek RPC'yi canlı çağırır; bayatlık biter. Maliyet: her istekte RPC (crawler hacmi düşük).
@@ -593,10 +601,12 @@ npm run indexing:verify → 1 failure, 0 warning
 
 ### §44. Kapsam sınırı
 
-- Bu tur **kod değişikliği YAPMADI** (onay beklenir, §42); yalnız kanıt toplandı.
-- Canlı sitemap cache **purge edilmedi** (T7-5, BLOCKED — `VERCEL_TOKEN` yok).
+- Tur 7'nin **ilk yarısı** kod değişikliği yapmadı (onay beklenir, §42); yalnız kanıt toplandı.
+  **Onay sonrası** Seçenek A uygulandı ve **PR #657** ile birleştirildi (bkz. §42 güncellemesi).
+- Canlı sitemap cache **purge edilmedi** (T7-5, BLOCKED — `VERCEL_TOKEN` yok); `force-dynamic`
+  deploy sonrası bunu gereksiz kılar.
 - Düzeltme seçimi (force-dynamic vs on-demand revalidate) `MANUAL_TASKS.md §12`'de kullanıcıya
-  sunuldu.
+  sunuldu; **Seçenek A** seçildi.
 
 ### §45. Yöntem ve sayı doğrulaması (2026-11-13, bağımsız yeniden ölçüm)
 
