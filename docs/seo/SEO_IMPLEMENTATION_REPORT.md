@@ -640,3 +640,66 @@ düzeltildi:
   (cache girdisi tazelendi) ama **etag ve içerik sabit kaldı** — yani "yanıt taze" ≠ "içerik
   güncel". Bu, 9. ailenin ("serving" ≠ "güncel") sitemap tezahürüdür.
 
+
+## EK — Tur 8: "Site arama sonuçlarında neden çıkmıyor?" — yeni alan adı + otorite, teknik engel DEĞİL (2026-11-12)
+
+> Bu ek §1–§45'e **eklenir**. Tetik: kullanıcı geri bildirimi — *"isbulkktc.com yazmadıkça asla
+> listelenmiyor; GitHub proje dosyası bile sergileniyor ama website sayfaları asla."*
+> Sınıflar: CONFIRMED · LIKELY · NOT FOUND · NOT APPLICABLE · BLOCKED. Önem: P0–P3. **P0 yok.**
+
+### §46. Kullanıcının gözlemi ve ilk hipotezler
+
+Kullanıcı, siteyi **marka/alan adı ile aratmadıkça** Google'da bulamıyor; buna karşılık **GitHub
+repo sayfası** (ör. `github.com/cenkmenk71-max/isbulkktc`) görünüyor. Bu, tipik olarak iki kök
+nedenden biridir ve **ikisi teknik değildir**:
+
+1. **Yeni alan adı ("sandbox") + otorite yokluğu** — Google yeni alan adına bir "deneme süresi"
+   uygular; düşük otoriteli/az içerikli yeni site jenerik sorgularda **sıralanmaz** (indekslense
+   bile alt sıralarda kalır).
+2. **Teknik indeksleme engeli** (robots, noindex, canonical hatası, bot engelleme, cloaking).
+
+Tur 8 bu iki hipotezi **canlı `curl` + RDAP** ile ayırdı. Sonuç: **hipotez 2 ELENDİ**, kök neden
+**hipotez 1**.
+
+### §47. Canlı kanıt (2026-11-12, `curl` / RDAP)
+
+| Kontrol | Komut | Sonuç | Yorum |
+|---|---|---|---|
+| Alan adı kaydı | `rdap.verisign.com` | **2026-09-19** | ≈**54 gün** — çok yeni |
+| Site ilk commit | `git log --reverse` | **2026-10-27** | ≈**16 gün** canlı geçmiş |
+| robots.txt | `GET /robots.txt` | `Allow: /`; yalnız `/api/ /cdn-cgi/ /auth/*` disallow; Sitemap + Host bildirili | **Engel yok** |
+| Googlebot erişimi | `curl -A "Googlebot"` | **200**, normal UA ile **birebir aynı HTML** (280.040 bayt) | **Cloaking/bot engeli YOK** |
+| `X-Robots-Tag` | `curl -D -` | **Yok** | Gizli noindex yok |
+| Ana sayfa | `GET /` | canonical + **6 hreflang** + WebSite/Organization/SearchAction JSON-LD | Sağlıklı |
+| İş sayfası | `GET /en/jobs/source-iskibris-dagitimci` | 200, canonical = TR kanonik | Sağlıklı (tasarım) |
+| Sitemap | `GET /sitemap.xml` | 183 `<loc>`, istek başına, `x-vercel-cache: MISS` | Sağlıklı |
+| GSC Grafik | `Grafik.csv` | gösterim **0 → 142** (yükseliyor); dizine eklenen ~195–201 | **Görünürlük artıyor** |
+
+**Yorum:** Site Google'da **görünüyor** — GSC "gösterim" eğrisi 0'dan 142'ye çıkmış; yani Google
+sayfaları **sunuyor**, ancak **düşük sırada**. "Hiç listelenmiyor" algısı, jenerik sorgularda
+("kktc iş ilanları") ilk sayfada çıkmamaktan kaynaklanır; bu **normaldir** ve **yaşla** düzelir.
+
+### §48. Bulgular ve sınıflandırma (Tur 8)
+
+| ID | Bulgu | Sınıf | Önem | Kanıt |
+|---|---|---|---|---|
+| T8-1 | Alan adı **çok yeni** (~54 gün), site ~16 gün → yeni-alan-adı "sandbox"ı ve düşük otorite | **CONFIRMED** | **P2** | RDAP 2026-09-19; `git log` 2026-10-27 |
+| T8-2 | Dış bağlantı / otorite profili zayıf (yeni alan adı) | **LIKELY** | P2 | Yeni alan adı; backlink profili bu turda ölçülmedi |
+| T8-3 | **Teknik indeksleme engeli YOK** (robots/Googlebot/cloaking/noindex/canonical/hreflang/sitemap temiz) | **CONFIRMED** (negatif bulgu) | P3 | §47 canlı `curl` tablosu |
+| T8-4 | "GitHub sayfası listeleniyor, site listelenmiyor" algısı | **NOT APPLICABLE** | P3 | GitHub **yüksek otoriteli** kök alan adı; site yeni → domain-otoritesi farkı, hata değil |
+| T8-5 | GSC "Önemli sorunlar" 301 kovasının **299'u beklenen** (Tur 6) | **CONFIRMED** | P3 | §34 kova triyajı; gerçek hata yok |
+| T8-6 | Manuel işlem (manual action) var mı? | **BLOCKED** (okuma) | P2 | OAuth yok; **panelde** Güvenlik ve Manuel İşlemler kontrol edilmeli |
+
+**Özet:** Görünürlüğün düşük olması **teknik arıza değil**; **yeni alan adı + otorite** etkisidir.
+Kod tarafında düzeltilecek bir şey **yok** (T8-3 negatif bulgu). İyileştirme **zaman + içerik +
+otorite** işidir.
+
+### §49. Yanlış-pozitif riski ve kapsam sınırı
+
+- **"Site hiç indekslenmemiş" değil:** GSC "Dizine eklenen" ≈195–201 ve **gösterim artıyor**.
+  Sorun **sıralama/görünürlük**, indeksleme değil.
+- **Backlink/otorite ölçülmedi** (T8-2, LIKELY): Ahrefs/Semrush/Majestic erişimi yok. Doğrulama
+  için GSC "Bağlantılar" raporu kullanılmalı (panel işi).
+- **Manuel işlem** panelde kontrol edilmedi (T8-6, BLOCKED). Kod tarafından doğrulanamaz.
+- Arama motoru sorguları bu turda **tarayıcıyla** teyit edilemedi (DuckDuckGo bot kontrolü, Bing
+  önbellekli/alakasız yanıt); bu **kanıt boşluğu** olarak kayda geçer, bulgu değildir.
