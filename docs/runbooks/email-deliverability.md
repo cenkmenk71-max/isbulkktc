@@ -439,8 +439,10 @@ Tam adımlar için yukarıdaki **"Kalan altyapı maddeleri"** bölümüne bak.
 - [x] MTA-STS + TLS-RPT **DNS kayıtları** (Vercel host + CF CNAME/TXT; canlı 200, `verify-deliverability` PASS)
 - [~] Gerçek gelen kutusu/spam yerleşim doğrulaması (araç yapamaz — gerçek posta kutusu
       gerekir; bu turda 3 adrese gönderildi, `sent`)
-- [ ] **GA4 canlı ölçüm** — `NEXT_PUBLIC_GA_MEASUREMENT_ID` Vercel üretim env'inde **yok**;
-      kod consent-gated hazır, ölçüm ID'si girilince başlar (2026-11-12 bulgusu)
+- [x] **GA4 canlı ölçüm** — `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-HNM3KEX9VD` Vercel
+      `production`+`preview`'a yazıldı ve yeniden dağıtıldı; tarayıcıda onay sonrası
+      `gtag.js` + `page_view` + `google-analytics.com/g/collect` isteği doğrulandı,
+      onay yokken sıfır istek (2026-11-12)
 - [~] ~~DKIM `1024` → `2048`~~ **iptal: Resend 2048 desteklemiyor**
 
 ### Cloudflare 1010 bot-koruması notu (2026-11-12)
