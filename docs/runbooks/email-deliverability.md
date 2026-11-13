@@ -87,6 +87,24 @@ Cloudflare'i tamamen atlar.
 Doğrulama: doğru Svix imzasıyla POST → **200** `{"message":"Ignored",...}`;
 bozuk imza → **401** `{"message":"Invalid signature"}`.
 
+### 5b. Takım gelen kutusu env'leri — TAMAM `[x]` (2026-11-12 ikinci tur)
+Üretimde `SALES_INBOX_EMAIL` / `FEEDBACK_INBOX_EMAIL` / `COMPANY_REVIEW_INBOX_EMAIL`
+**hiçbiri yoktu**. `mailer.ts` bunları şöyle çözüyor:
+
+| Env | Tüketici | Yoksa ne olur |
+|---|---|---|
+| `SALES_INBOX_EMAIL` | `getReplyToInbox()` — her mesaja `Reply-To` | Giden posta `no-reply@`'dan çıkar, **`Reply-To` yok** → yanıt kaybolur, `List-Unsubscribe` mailto yedeği düşer |
+| `FEEDBACK_INBOX_EMAIL` | `getFeedbackInbox()` — geri bildirim takım uyarısı | Uyarı **sessizce atlanır** (`console.warn`, hata yok) |
+| `COMPANY_REVIEW_INBOX_EMAIL` | `getCompanyReviewInbox()` — şirket profili inceleme uyarısı | Uyarı **sessizce atlanır** |
+
+Üçü de Vercel'e (`production`+`preview`) `info@isbulkktc.com` olarak yazıldı ve
+üretim yeniden dağıtıldı. **Not:** `email-preview.mjs` yerel önizleme yolu
+`reply_to`'yu `info@`'a sabit varsayılanla dolduruyordu; bu yüzden test postaları
+doğru göründü ve eksik env fark edilmedi — üretim yolu varsayılansızdır.
+
+**Doğrula:** bir edinim/etkileşim e-postasının başlığında `Reply-To: info@isbulkktc.com`
+görünmeli. `getReplyToInbox()` artık `SALES_INBOX_EMAIL` ile dolu.
+
 ### 6. DMARC `p=quarantine` → `reject` `[ ]` (raporları izledikten sonra)
 Şimdilik bırak. `rua=mailto:dmarc@isbulkktc.com` raporlarını birkaç hafta izle;
 meşru posta hep SPF+DKIM'den geçiyorsa Cloudflare DNS'te `_dmarc` TXT'sini
@@ -256,6 +274,8 @@ Tam adımlar için yukarıdaki **"Kalan altyapı maddeleri"** bölümüne bak.
       değişkenleri eklendi; `workflow_dispatch` uçtan uca HTTP 200
 - [x] `RESEND_WEBHOOK_SECRET` + Resend webhook endpoint (`sent/delivered/delivery_delayed/bounced/complained/suppressed`)
       — endpoint Cloudflare'siz Vercel alias'ına yönlendirildi (aşağıdaki 1010 notu)
+- [x] Takım gelen kutusu env'leri (`SALES_INBOX_EMAIL` / `FEEDBACK_INBOX_EMAIL` /
+      `COMPANY_REVIEW_INBOX_EMAIL`) → `info@isbulkktc.com`, Vercel `production`+`preview`
 - [ ] DMARC `p=quarantine` → `reject` (raporları izledikten sonra)
 - [ ] MTA-STS + TLS-RPT kayıtları (isteğe bağlı — yalnız gelen posta duruşu)
 - [ ] Gerçek gelen kutusu/spam yerleşim doğrulaması (araç bunu yapamaz — gerçek
