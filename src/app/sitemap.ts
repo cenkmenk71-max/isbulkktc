@@ -1,12 +1,14 @@
 import type { MetadataRoute } from "next";
 import { newestJobModifiedAt } from "@/features/jobs/sitemap-lastmod";
-import {
-  districtSlug,
-  northernCyprusDistrictValues,
-} from "@/features/locations/northern-cyprus-districts";
-import { jobTypeKeys, jobTypeSlugs } from "@/features/jobs/job-type-slugs";
+import { districtSlug } from "@/features/locations/northern-cyprus-districts";
+import { jobTypeSlugs } from "@/features/jobs/job-type-slugs";
 import { GUIDE_UPDATED, getGuideSlugs, getGuides } from "@/content/guides";
 import { ARTICLE_UPDATED, getArticleSlugs, getArticles } from "@/content/editorial";
+import {
+  availableDistricts,
+  availableJobTypes,
+  computeLandingAvailability,
+} from "@/features/jobs/landing-availability";
 import { routing, type AppLocale } from "@/i18n/routing";
 import { getLocalizedPageUrl, getLocalizedSlugPathnames } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
@@ -42,6 +44,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getAppBaseUrl();
 
   const jobs = await listPublicJobSitemapEntries();
+
+  // A landing page whose filter matches nothing is `noindex` (see
+  // `noIndexFollowMetadata`), so it must not appear here: a sitemap entry that
+  // answers `noindex` is a contradiction Google and our own verifier both reject.
+  const availability = computeLandingAvailability(jobs);
 
   // The listing routes advertise the newest vacancy `<lastmod>`, so it must be
   // the same instant the vacancy entries below carry (`modifiedAt`). See
@@ -126,20 +133,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // every district would date a district with no listings to a vacancy
   // elsewhere — the exact "consistently and verifiably accurate" rule Google
   // drops a `<lastmod>` for, which is why the static routes above omit it too.
-  const districtEntries: MetadataRoute.Sitemap =
-    northernCyprusDistrictValues.flatMap((district) =>
-      buildLocalizedEntries({
-        pathname: `/is-ilanlari/${districtSlug(district)}`,
-        changeFrequency: "daily",
-        priority: 0.7,
-      }),
-    );
+  const districtEntries: MetadataRoute.Sitemap = availableDistricts(
+    availability,
+  ).flatMap((district) =>
+    buildLocalizedEntries({
+      pathname: `/is-ilanlari/${districtSlug(district)}`,
+      changeFrequency: "daily",
+      priority: 0.7,
+    }),
+  );
 
   // Employment-type landing pages ("Tam zamanlı iş ilanları", "Staj", ...).
   // Same shape and same reasoning as the district pages: a type page changes
-  // only when a vacancy of *that type* is published, which this projection
-  // cannot see, so no unverifiable `<lastmod>` is claimed.
-  const jobTypeEntries: MetadataRoute.Sitemap = jobTypeKeys.flatMap((jobType) =>
+  // only when a vacancy of *that type* is published, so no unverifiable
+  // `<lastmod>` is claimed. Only types with a live vacancy are listed.
+  const jobTypeEntries: MetadataRoute.Sitemap = availableJobTypes(
+    availability,
+  ).flatMap((jobType) =>
     buildLocalizedEntries({
       pathname: `/is-turleri/${jobTypeSlugs[jobType]}`,
       changeFrequency: "daily",

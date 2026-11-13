@@ -617,7 +617,7 @@ test("every vacancy URL in the sitemap actually resolves", async ({
 });
 
 
-test("district landing pages are indexable, self-canonical and interlinked", async ({
+test("district landing pages are self-canonical, interlinked, and agree with the sitemap", async ({
   page,
   request,
 }) => {
@@ -632,8 +632,12 @@ test("district landing pages are indexable, self-canonical and interlinked", asy
     { slug: "lefke", tr: "Lefke", en: "Lefka" },
   ];
 
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+
   for (const district of districts) {
-    // The Turkish page names the district and carries its own canonical.
+    // The Turkish page names the district and carries its own canonical. It
+    // answers 200 whether or not it has vacancies: an empty landing renders the
+    // empty state rather than 404, so a shared link keeps working.
     const response = await request.get(`/is-ilanlari/${district.slug}`);
     expect(response.status(), `${district.slug} must resolve`).toBe(200);
 
@@ -651,11 +655,30 @@ test("district landing pages are indexable, self-canonical and interlinked", asy
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       district.tr,
     );
-    // The page must not be a soft 404: it is indexable.
-    await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+
+    // A landing with no vacancy is a soft 404 when it claims `index, follow`,
+    // so it must be `noindex` — and then the sitemap must not advertise it: a
+    // sitemap entry that answers `noindex` is the contradiction our own
+    // `scripts/verify-indexing.mjs` fails on. The two signals must always
+    // agree, whichever way the seed happens to fall.
+    const robotsMeta = page.locator('meta[name="robots"]');
+    const robotsContent =
+      (await robotsMeta.count()) > 0
+        ? await robotsMeta.first().getAttribute("content")
+        : null;
+    const isNoIndex = robotsContent !== null && /noindex/.test(robotsContent);
+    const listedInSitemap = sitemap.includes(
+      `<loc>${siteOrigin}/is-ilanlari/${district.slug}</loc>`,
+    );
+    expect(
+      isNoIndex,
+      `${district.slug}: sitemap and noindex disagree (robots="${robotsContent}", listed=${listedInSitemap})`,
+    ).toBe(!listedInSitemap);
 
     // Cross-links to the other districts are real anchors, so crawlers reach
-    // every district page from any one of them.
+    // every district page from any one of them — including the `noindex` ones,
+    // which stay `follow` and so must remain reachable to be rediscovered once
+    // a vacancy arrives.
     for (const other of districts) {
       if (other.slug === district.slug) continue;
       await expect(
@@ -671,12 +694,6 @@ test("district landing pages are indexable, self-canonical and interlinked", asy
     "href",
     `${new URL(page.url()).origin}/en/is-ilanlari/girne`,
   );
-
-  // Every district page is advertised in the sitemap, per locale.
-  const sitemap = await (await request.get("/sitemap.xml")).text();
-  for (const district of districts) {
-    expect(sitemap).toContain(`<loc>${new URL(page.url()).origin}/is-ilanlari/${district.slug}</loc>`);
-  }
 });
 
 test("an unknown district slug is a hard 404", async ({ request }) => {
@@ -685,7 +702,7 @@ test("an unknown district slug is a hard 404", async ({ request }) => {
 });
 
 
-test("employment-type landing pages are indexable, self-canonical and interlinked", async ({
+test("employment-type landing pages are self-canonical, interlinked, and agree with the sitemap", async ({
   page,
   request,
 }) => {
@@ -699,6 +716,8 @@ test("employment-type landing pages are indexable, self-canonical and interlinke
     { slug: "staj", tr: "Staj" },
     { slug: "serbest-calisma", tr: "Serbest çalışma" },
   ];
+
+  const sitemap = await (await request.get("/sitemap.xml")).text();
 
   for (const type of types) {
     const response = await request.get(`/is-turleri/${type.slug}`);
@@ -718,7 +737,23 @@ test("employment-type landing pages are indexable, self-canonical and interlinke
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       type.tr,
     );
-    await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+
+    // Same contract as the district pages: `noindex` if and only if the sitemap
+    // omits the URL, so a type with no live vacancy is neither indexed as a
+    // Soft 404 nor advertised as a contradiction.
+    const robotsMeta = page.locator('meta[name="robots"]');
+    const robotsContent =
+      (await robotsMeta.count()) > 0
+        ? await robotsMeta.first().getAttribute("content")
+        : null;
+    const isNoIndex = robotsContent !== null && /noindex/.test(robotsContent);
+    const listedInSitemap = sitemap.includes(
+      `<loc>${siteOrigin}/is-turleri/${type.slug}</loc>`,
+    );
+    expect(
+      isNoIndex,
+      `${type.slug}: sitemap and noindex disagree (robots="${robotsContent}", listed=${listedInSitemap})`,
+    ).toBe(!listedInSitemap);
 
     // Cross-links to the other types are real anchors.
     for (const other of types) {
@@ -727,13 +762,6 @@ test("employment-type landing pages are indexable, self-canonical and interlinke
         page.locator(`a[href="/is-turleri/${other.slug}"]`),
       ).toHaveCount(1);
     }
-  }
-
-  // Every type page is advertised in the sitemap.
-  const sitemap = await (await request.get("/sitemap.xml")).text();
-  const origin = new URL(page.url()).origin;
-  for (const type of types) {
-    expect(sitemap).toContain(`<loc>${origin}/is-turleri/${type.slug}</loc>`);
   }
 });
 
