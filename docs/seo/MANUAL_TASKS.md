@@ -372,7 +372,7 @@ Google panelini İngilizce kullanıyorsan menü adları farklıdır. İkisini bi
    - Listedeki **iki** kaydı görürsen (biri `https://…`, biri `isbulkktc.com`), **Domain** olanı seç
      (bu, hem `http/https` hem `www` varyantlarını kapsar).
 
-### Adım 2 — Sayfalar raporunu aç
+### Adım 2 — Sayfalar raporunu aç (bu adım SADECE gezinmedir)
 
 1. Sol menüden **Dizin oluşturma**'yı bul → altındaki **Sayfalar**'a tıkla.
 2. Rapor açılınca üstte **iki grafik** görürsün:
@@ -380,6 +380,10 @@ Google panelini İngilizce kullanıyorsan menü adları farklıdır. İkisini bi
    - **Dizine eklenen** (yeşil)
 3. Grafiğin **altında bir tablo** var. Başlığı **"Sayfaların dizine eklenmeme nedenleri"**
    (İngilizce: *Why pages aren't indexed*). **Senin aradığın satır bu tabloda.**
+
+> **Bu adım hiçbir şeyi DEĞİŞTİRMEZ — bu yüzden "bir şey olmadı" hissi normaldir.** Adım 2 yalnızca
+> **sayfayı açar** (gezinme). Google'a hiçbir mesaj **göndermez**. Gerçek "doğrulama" talebi bir
+> sonraki adımda (Adım 3–4), **"Soft 404" satırının içindeki "Düzeltmeyi doğrula"** butonuyla gider.
 
 > **Menüde "Sayfalar" görmüyorsan:** Sol menüde **Dizin oluşturma** başlığının yanındaki oka bas;
 > altında **Sayfalar** ve **Site haritaları** açılır.
@@ -393,9 +397,12 @@ Google panelini İngilizce kullanıyorsan menü adları farklıdır. İkisini bi
 2. **"Soft 404" satırına tıkla.**
 3. Açılan **detay sayfasında**:
    - Üstte **"Düzeltmeyi doğrula"** (Validate fix) butonu.
-   - Altında **örnek URL listesi** — burada `/en/is-ilanlari/lefke`, `/en/is-ilanlari/iskele`
-     gibi **boş ilçe/tür sayfaları** görünür. **Bunlar artık `noindex, follow` dönüyor** (fix
-     yayında) — yani sorun kaynağında kapandı.
+   - Altında **örnek URL listesi** — burada `/is-ilanlari/lefke`, `/is-turleri/yari-zamanli` gibi
+     **boş ilçe/tür sayfaları** görünür. **Bunlar artık `noindex, follow` dönüyor** (fix yayında)
+     — yani sorun kaynağında kapandı.
+     - Not: GSC'nin örnek listesi **eski tarama** anını gösterir. Örn. `/is-ilanlari/iskele`
+       o listede olsa bile, sayfa **artık dolu** (2 canlı ilan) → bugün `index` dönüyor ve
+       sitemap'e geri girdi. Yani o örnek "bayat" olabilir; panik yok.
 
 > **Not (önemli):** GSC'deki bu örnek liste **eski tarama anını** gösterir; fix'ten **önce**
 > taranan hali. Panik yok — Google tekrar tarayınca bu URL'ler bu kovadan düşecek.
@@ -465,3 +472,37 @@ Adım adım: **§6** ve `docs/runbooks/search-console-indexing.md`.
 - [ ] Satır açıldı → **"Düzeltmeyi doğrula"**'ya basıldı → **"Başlatıldı"** göründü. ✅
 - [ ] (İkincil) **"Kullanıcı seçili canonical olmadan kopya"** URL'i kopyalandı → bana iletildi.
 - [ ] Gerisi otomatik: ~2 hafta içinde Google "başarılı" der; ekstra iş yok.
+
+---
+
+### 11.8 ⚠️ "Ben zaten hepsini doğruladım" dedim — ne oldu? (uzlaştırma)
+
+**Kısa yanıt:** Yaptığın şey büyük olasılıkla **"İyileştirmeleri doğrula" değil, panelde sorunları
+gezmekti.** İkisi farklıdır ve GSC bunu net ayırır.
+
+**Kanıt (senin kendi CSV'in, 2026-11-12):** `Önemli sorunlar.csv` → **`Doğrulama` sütunu tüm
+satırlarda "Başlatılmadı"**. Yani bu dosya dışa aktarıldığı anda Google'a **hiçbir** doğrulama
+talebi gitmemişti. (Doğrulama başlatılmış olsa o sütunda **"Başlatıldı"** yazar.)
+
+**İki farklı iş:**
+
+| Ne yaptın (muhtemelen) | Ne demek | Google'a mesaj? |
+|---|---|---|
+| Sorunların listesini açtın / gezdin / okudun | Sadece **bakmak** | ❌ Hayır |
+| Her sorun için **"Düzeltmeyi doğrula"** butonuna bastın | **Doğrulama talebi** | ✅ Evet |
+
+**Önemli:** Doğrulama **satır bazındadır** (kova kova). Genel bir "hepsini doğrula" düğmesi
+**yoktur**. Yani 9 sorunun her biri için **kendi** "Düzeltmeyi doğrula" butonuna basmak gerekir.
+Bazı kovalarda (ör. "Tarandı – eklenmedi", "Keşfedildi – eklenmedi") buton **çıkmaz** — bunlar
+**hata değil**, normal gecikmedir; Google bunlar için doğrulama istemez.
+
+**Peki şu an ne gerekli?** Tek gerçek iş **Soft 404** kovasıdır (diğer 8 kova bilinçli/istenen ya
+da normal gecikme — §9.5, §10.3, report §34). O yüzden **yalnızca Adım 3–4'ü** yap:
+
+1. **Dizin oluşturma → Sayfalar → "Soft 404"** satırına tıkla.
+2. Sağ üstteki **"Düzeltmeyi doğrula"** butonuna bas → **"Doğrulama başlatıldı"** görünene kadar.
+3. Bitti. Diğer kovalara **dokunma.**
+
+**Emin olmak için kontrol:** Soft 404 satırındaki **`Doğrulama`** sütununda
+**"Başlatılmadı"** yazıyorsa → henüz basılmamış, bas. **"Başlatıldı"** yazıyorsa → zaten yapılmış,
+**tekrar basma** (GSC yeni talep açmaz, sadece bekler).

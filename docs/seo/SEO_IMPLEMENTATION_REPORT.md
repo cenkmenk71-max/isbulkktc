@@ -448,6 +448,7 @@ Kalan tek adım **panelden** yapılır (bu ortamda OAuth yok → BLOCKED):
 | T6-6 | Site haritası durumu "Bilinmeyen tüm sayfalar" | **NOT APPLICABLE** | P3 | Google'ın toplu etiketi; gerçek ölçüm URL Inspection (`sc-domain` + sitemap doğrulandı, §2) |
 | T6-7 | "Kritik olmayan sorunlar" boş | **NOT FOUND** (sorun yok) | P3 | CSV başlık satırı boş |
 | T6-8 | GSC **yazma** (Validate fix / Request indexing) | **BLOCKED** | P2 | OAuth yok (`Credential: unconfigured`); panelden yapılır (§10.1) |
+| T6-9 | Kullanıcı "hepsini doğruladım" dedi; CSV aksini gösterir | **CONFIRMED** | P2 | `Önemli sorunlar.csv` `Doğrulama` sütunu **tüm satırlarda "Başlatılmadı"**; gezmek ≠ doğrulama (MANUAL_TASKS §11.8) |
 
 **P0 yok. Tek gerçek P1 (T6-1) zaten kod tarafında kapalı; kalan tek adım panelde "Validate fix".**
 
@@ -485,3 +486,7 @@ npm run search-console:verify        → Credential: unconfigured (okuma BLOCKED
   (T6-4, LIKELY); URL iletilirse canonical/hreflang karşılığı doğrulanır.
 - "Tarandı/Keşfedildi, eklenmedi" kovaları **içerik/otorite** işidir, hata değil; gerçek veri +
   özgün içerik şartı geçerli (§8).
+- **Tur 7 eki:** Kullanıcı "GSC'de hepsini doğruladım" dedi; CSV `Doğrulama` sütunu **"Başlatılmadı"**
+  → doğrulama **başlatılmamış** (T6-9). Uzlaştırma ve "yalnız Soft 404'ü doğrula" yönlendirmesi
+  `MANUAL_TASKS.md §11.8`. Canlı ek ölçüm: `/is-ilanlari/iskele` **artık dolu** (2 ilan) → `index`
+  + sitemap'e döndü; `/is-ilanlari/lefke` hâlâ boş → `noindex, follow` + sitemap'te yok.
