@@ -219,8 +219,10 @@ istersen gerçek veri + özgün içerik şartıyla değerlendirilebilir:
 | 6 | Google Cloud | Indexing API — **entegre edildi** (§6) | ✅ Tamam |
 | 7 | E-posta | DMARC `p=reject` + MTA-STS/TLS-RPT | ✅ Tamam (2026-11-12) |
 | 8 | İçerik | Şehir/şirket sayfaları (onay ister) | ⚪ İsteğe bağlı |
-| 9 | Search Console | Boş landing "Soft 404" → **Validate fix** (deploy sonrası, §9.6) | 🔴 P1 — deploy bekliyor |
+| 9 | Search Console | Boş landing "Soft 404" → **Validate fix** (fix yayında; ekran-ekran §11) | 🔴 P1 — panelde, hazır |
 | 10 | IndexNow | Sitemap küçülünce **yeniden ping** (otomatik, elle iş yok, §9.7) | 🟢 Otomatik |
+| 11 | Search Console | "Kullanıcı seçili canonical olmadan kopya" (1 URL) → URL'yi ilet (§11.5) | 🟡 P2 — bilgi gerekli |
+| 12 | Google Cloud | GSC/Indexing API OAuth secret'ları (§6) — okumayı otomatiğe bağlar | 🟡 P2 — opsiyonel |
 
 ---
 
@@ -287,28 +289,28 @@ döner ama sitemap'ten düşer. İki sinyal tek kaynaktan türediği için bir d
 robots meta'sız (soft 404 adayı). Dolu yüzeyler (`/is-ilanlari/guzelyurt` 1 ilan,
 `/is-turleri/tam-zamanli` 19 ilan) sitemap'te **kalmalı**.
 
-### 10.1 🔴 P1 — Merge sonrası doğrula (elle, panelden)
+### 10.1 🔴 P1 — Fix YAYINDA; panelde doğrula (elle, ekran-ekran rehber: §11)
 
-PR #651 merge edilince Vercel `main`'i yayına alır. Yayın sonrası sırayla:
+PR #651 `84c8012` merge edildi ve Vercel `main`'i yayına aldı (**canlı doğrulandı, 2026-11-12**):
 
 ```bash
 # 1) Boş landing artık noindex mi?
 curl -s https://isbulkktc.com/is-ilanlari/lefke | grep -o '<meta name="robots"[^>]*>'
-#    beklenen: <meta name="robots" content="noindex, follow">
+#    CANLI: <meta name="robots" content="noindex, follow"> ✅
 curl -s https://isbulkktc.com/is-turleri/yari-zamanli | grep -o '<meta name="robots"[^>]*>'
-#    beklenen: <meta name="robots" content="noindex, follow">
+#    CANLI: <meta name="robots" content="noindex, follow"> ✅
 
-# 2) Sitemap küçüldü mü? (207 → ~183)
-curl -s https://isbulkktc.com/sitemap.xml | grep -c '<loc>'
-curl -s https://isbulkktc.com/sitemap.xml | grep -c 'is-ilanlari/lefke'   # beklenen: 0
+# 2) Sitemap küçüldü mü? (207 → 183)
+curl -s https://isbulkktc.com/sitemap.xml | grep -c '<loc>'                    # CANLI: 183 ✅
+curl -s https://isbulkktc.com/sitemap.xml | grep -c 'is-ilanlari/lefke'        # CANLI: 0 ✅
 
 # 3) Tek komutluk sağlık kontrolü (çelişki = failure)
 npm run indexing:verify
+#    CANLI: 0 failure, 0 warning ✅
 ```
 
-Sonra **GSC → Pages → "Soft 404" → Validate fix** (örnek: `/en/is-ilanlari/iskele`,
-`/en/is-ilanlari/lefke`). Fix yayında olduğundan bu landing'ler **"noindex ile hariç tutuldu"**
-kovasına geçer — **normal**; soft 404 kovası boşalır.
+**Kalan tek adım panelde:** **GSC → Sayfalar → "Soft 404" → Düzeltmeyi doğrula.** Ayrıntılı,
+ekran-ekran anlatım **§11**'de.
 
 > Neden elle: GSC **yazma** (Validate fix, Request indexing) API'den yapılamaz; bu ortamda GSC
 > OAuth kimliği de yok (`npm run search-console:verify` → `Credential: unconfigured`). Okuma ve
@@ -333,3 +335,244 @@ npm run indexing:submit -- --dry-run                       # ne bildirileceğini
 | Soft 404 | **↓ ~24 → 0** | Boş landing'ler artık `noindex, follow` |
 | "noindex" ile hariç tutuldu | **↑ ~24** | Aynı sayfalar bu kovaya geçer — **istenen** |
 | Doğru standart etiketli alternatif / Yönlendirmeli / 4xx | **değişmez** | Bu turda dokunulmadı (§21 ile aynı) |
+
+---
+
+## 11. 🖱️ EKRAN-EKRAN REHBER — "Soft 404 → Düzeltmeyi doğrula" (senin yapacağın adım)
+
+Bu, **senin tek elle adımın**. Kod tarafı bitti ve yayında; burada Google'a "sorunu düzelttim,
+tekrar kontrol et" diyorsun. Toplam **~3 dakika**; Google'ın kontrolü arka planda **2 haftaya kadar**
+sürebilir (beklemen gereken bir şey değil, sadece bilgi).
+
+> **Başlamadan (10 saniye):** Gizli/incognito pencerede değil, **normal** pencerede ol;
+> `info@isbulkktc.com` (ya da GSC'ye erişimi olan hesabın) ile giriş yap.
+
+---
+
+### Adım 0 — Panelin dili (Türkçe mi İngilizce mi?)
+
+Google panelini İngilizce kullanıyorsan menü adları farklıdır. İkisini birlikte veriyorum:
+
+| Türkçe panel | İngilizce panel |
+|---|---|
+| **Dizin oluşturma** (sol menü, bölüm başlığı) | **Indexing** |
+| **Sayfalar** | **Pages** |
+| **Düzeltmeyi doğrula** (buton) | **Validate fix** |
+| **Ayrıntıları göster** | **Show details** (bazı sürümlerde **View details**) |
+
+> Not: GSC bazen "Dizin oluşturma"yı sol menüde **katlanmış** tutar. Görünmüyorsa sol menünün
+> **en altındaki** `⌄` / "Daha fazla" okuna bas.
+
+---
+
+### Adım 1 — Panelin doğru property'de olduğunu doğrula
+
+1. Sol üstteki **mülk seçici** (domain yazan açılır liste) → tıkla.
+2. **`isbulkktc.com`** (başında `sc-domain:` olan, yani **Domain** mülkü) seçili olmalı.
+   - Listedeki **iki** kaydı görürsen (biri `https://…`, biri `isbulkktc.com`), **Domain** olanı seç
+     (bu, hem `http/https` hem `www` varyantlarını kapsar).
+
+### Adım 2 — Sayfalar raporunu aç (bu adım SADECE gezinmedir)
+
+1. Sol menüden **Dizin oluşturma**'yı bul → altındaki **Sayfalar**'a tıkla.
+2. Rapor açılınca üstte **iki grafik** görürsün:
+   - **Dizine eklenmedi** (gri)
+   - **Dizine eklenen** (yeşil)
+3. Grafiğin **altında bir tablo** var. Başlığı **"Sayfaların dizine eklenmeme nedenleri"**
+   (İngilizce: *Why pages aren't indexed*). **Senin aradığın satır bu tabloda.**
+
+> **Bu adım hiçbir şeyi DEĞİŞTİRMEZ — bu yüzden "bir şey olmadı" hissi normaldir.** Adım 2 yalnızca
+> **sayfayı açar** (gezinme). Google'a hiçbir mesaj **göndermez**. Gerçek "doğrulama" talebi bir
+> sonraki adımda (Adım 3–4), **"Soft 404" satırının içindeki "Düzeltmeyi doğrula"** butonuyla gider.
+
+> **Menüde "Sayfalar" görmüyorsan:** Sol menüde **Dizin oluşturma** başlığının yanındaki oka bas;
+> altında **Sayfalar** ve **Site haritaları** açılır.
+
+### Adım 3 — "Soft 404" satırını bul ve aç
+
+1. Tabloda satırları tara; **"Soft 404"** yazan satırı bul.
+   - Satırın sağındaki **sütunlar:** `Sebep` (neden) · `Kaynak` (Web sitesi / Google) ·
+     `Doğrulama` · `Sayfa sayısı`.
+   - Senin CSV'nde bu satır **2 sayfa** gösteriyor.
+2. **"Soft 404" satırına tıkla.**
+3. Açılan **detay sayfasında**:
+   - Üstte **"Düzeltmeyi doğrula"** (Validate fix) butonu.
+   - Altında **örnek URL listesi** — burada `/is-ilanlari/lefke`, `/is-turleri/yari-zamanli` gibi
+     **boş ilçe/tür sayfaları** görünür. **Bunlar artık `noindex, follow` dönüyor** (fix yayında)
+     — yani sorun kaynağında kapandı.
+     - Not: GSC'nin örnek listesi **eski tarama** anını gösterir. Örn. `/is-ilanlari/iskele`
+       o listede olsa bile, sayfa **artık dolu** (2 canlı ilan) → bugün `index` dönüyor ve
+       sitemap'e geri girdi. Yani o örnek "bayat" olabilir; panik yok.
+
+> **Not (önemli):** GSC'deki bu örnek liste **eski tarama anını** gösterir; fix'ten **önce**
+> taranan hali. Panik yok — Google tekrar tarayınca bu URL'ler bu kovadan düşecek.
+
+### Adım 4 — "Düzeltmeyi doğrula" butonuna bas
+
+1. Detay sayfasının üstündeki **"Düzeltmeyi doğrula"** butonuna bas. (İngilizce: **Validate fix**.)
+2. Açılan onay kutusunda **"Doğrula"** / **"Onayla"**'yı seç. Buton artık **"Doğrulama başlatıldı"**
+   durumuna geçer ve **sarı/amber** görünür.
+3. **Tekrar basma.** Google, doğrulama **başarılı ya da başarısız olana kadar** butonu tekrar
+   kullanmanı istemez (basarsan yeni talep açmaz, sadece bekler).
+4. Ekran görüntüsü / not (isteğe bağlı): butonun **"Başlatıldı"** yazdığını gör — bu "tamam" demektir.
+
+### Adım 5 — Doğrulamanın gidişatını izle (beklemeli, günlük bakma)
+
+1. Aynı **Soft 404** detay sayfasında **"Geçmiş"** / **"Doğrulama geçmişi"** bölümü var.
+2. Orada **iki aşamalı** durum görürsün:
+   - Önce **"Doğrulama başlatıldı"** (Google sıraya aldı).
+   - Sonra **"Doğrulama başarılı"** (kova boşaldı) **veya** **"Doğrulama başarısız"** (kalan bir
+     örnek buldu).
+3. Süre: **genelde 2 hafta kadar.** Bu sürede **hiçbir şey yapmana gerek yok**; Google bitince
+   **e-posta** gönderir.
+4. **Başarılı olursa:** "Soft 404" satırı **sıfır** olur ve tablonun **en altına** taşınır. Aynı
+   sayfalar **"noindex etiketi tarafından hariç tutuldu"** satırına geçer — **bu istenen
+   davranıştır** (sayfa canlı kalır, sitemap'te yoktur, arama sonuçlarına girmez).
+
+### Adım 6 — Başarısız olursa (nadir)
+
+1. Detay sayfasında **"Ayrıntıları göster"** → hangi URL doğrulamayı bozdu görünür.
+2. O URL'i bana ilet (aşağıdaki tabloya ekle). Muhtemel neden: sayfa **o an** hâlâ 200 + boş
+   dönüyordur ya da yeni bir URL eklenmiştir.
+3. Ben kod tarafında canonical/noindex karşılığını doğrular, gerekirse en küçük düzeltmeyi yaparım;
+   sonra **tekrar "Düzeltmeyi doğrula"** dersin.
+
+---
+
+### 11.5 🟡 P2 — İkinci küçük iş: "Kullanıcı seçili canonical olmadan kopya" (1 URL)
+
+Aynı **Sayfalar** tablosunda **"Kullanıcı tarafından seçilen standart sayfa olmadan kopya"**
+(İngilizce: *Duplicate without user-selected canonical*) satırı **1 sayfa** gösteriyor.
+
+1. O satıra tıkla → detay sayfasında **örnek URL**'i kopyala.
+2. URL'yi bana yaz. Ben canonical/hreflang karşılığını canlı `curl` ile doğrular, gerçek bir
+   kopyaysa en küçük düzeltmeyi yaparım. (Tur 3'ün 225-URL taramasında bu URL **yoktu**;
+   yeni bir sayfa olabilir.)
+
+---
+
+### 11.6 🟡 P2 — (Opsiyonel, kalıcı çözüm) GSC okumasını otomatiğe bağla
+
+Şu an **okuma** da panelden yapılıyor çünkü bu ortamda Google kimliği yok
+(`npm run search-console:verify` → `Credential: unconfigured`). Bir kez secret eklersen
+`npm run search-console:verify` ve günlük JobPosting bildirimi **tam otomatik** çalışır.
+Adım adım: **§6** ve `docs/runbooks/search-console-indexing.md`.
+
+> **Not:** GSC **yazma** (Düzeltmeyi doğrula / Dizinlemeyi iste) **API'den yapılamaz** — bu adım
+> her zaman panelden, elle kalır. Yani §11.6 sadece *okumayı* kolaylaştırır.
+
+---
+
+### 11.7 Özet kontrol listesi (bu adım için)
+
+- [x] Normal pencerede `info@isbulkktc.com` ile GSC'ye girdim.
+- [x] Mülk = **`isbulkktc.com`** (Domain mülkü).
+- [x] **Dizin oluşturma → Sayfalar** açıldı.
+- [x] Sayfalardaki **hata kovaları** için **"Düzeltmeyi doğrula"**'ya basıldı. ✅ (kullanıcı beyanı, §11.8)
+- [ ] (İkincil) **"Kullanıcı seçili canonical olmadan kopya"** URL'i kopyalandı → bana iletildi.
+- [ ] Gerisi otomatik: ~2 hafta içinde Google "başarılı" der; ekstra iş yok.
+
+---
+
+### 11.8 ✅ "Doğrulama düzeltmelerini tıkladım" dediniz — durum nedir? (düzeltme)
+
+**Kısa yanıt:** Sayfalardaki hatalar için **"Düzeltmeyi doğrula"**'ya bastıysanız, **elle adım
+TAMAM.** Yapılacak başka tık **yok**; kalan tek şey Google'ın arka planda yeniden taramasını
+beklemek (~2 hafta).
+
+**Neden doküman önce "başlatılmadı" dedi?** Çünkü dayanak **12 Kasım tarihli CSV anlık
+görüntüsüydü** ve o dosyada `Doğrulama` sütunu "Başlatılmadı" yazıyordu. **Bu, dosyanın alındığı
+andaki** durumdur — siz tıklamayı **ondan sonra** yaptıysanız CSV bunu gösteremez. Yani çelişki
+yok; sıralama farkı var.
+
+**Şimdi ne oldu (beklenen akış):**
+
+1. Bastığınız anda Google doğrulamayı **sıraya aldı** → satırdaki `Doğrulama` sütunu
+   **"Başlatıldı"** (amber) olur.
+2. Google ilgili URL'leri **yeniden tarar** (~2 hafta).
+3. Sonuç: **"Başarılı"** (kova boşalır → sayfalar "noindex ile hariç tutuldu" kovasına geçer,
+   **istenen**) ya da **"Başarısız"** (nadir; kalan örnek vardır → bana iletin).
+
+**Tek yapılacak kontrol (10 saniye):** `Dizin oluşturma → Sayfalar` → ilgili satır → `Doğrulama`
+sütununda **"Başlatıldı"** yazıyor mu? Yazıyorsa **her şey yolunda**. Yazmıyorsa ("Başlatılmadı")
+o satır için bir kez basın.
+
+> **Tekrar basmayın:** Google, doğrulama **başarılı/başarısız olana kadar** aynı satırda yeni talep
+> açmaz; basmak sadece bekler.
+
+**Hangi kovalarda buton var, hangisinde yok?** Doğrulama butonu **yalnız hata kovalarında**
+çıkar. Şu kovalarda **buton çıkmaz** çünkü onlar **hata değil, bilinçli tasarım/istenen**:
+"Noindex ile hariç tutuldu", "Yönlendirmeli sayfa", "Doğru standart etiketli alternatif".
+"Tarandı/Keşfedildi – eklenmedi" ise **normal gecikmedir**. Yani "hepsini doğruladım" dediğinizde
+zaten yalnızca **doğrulanabilir** olanları tıklamış olursunuz — bu doğru davranıştır.
+
+---
+
+## 12. 🔴 P1 — Canlı sitemap bayat: 5 ölü URL + 5 eksik ilan (2026-11-13)
+
+**Ne oldu (canlı ölçüm):** `https://isbulkktc.com/sitemap.xml` şu an **5 URL'i 404 dönerken
+duyuruyor** ve **5 canlı ilanı atlıyor**. Yanıt "taze" görünüyor (`age: 0`) ama **içerik bayat**.
+
+**Kök neden (tek cümle):** Sitemap **statik üretiliyor** (`○ /sitemap.xml`, ISR 1 saat) ve
+veritabanını **build anında** okuyor; `/jobs` listesi ise **her istekte canlı** okuyor. Bu yüzden
+ikisi ayrışıyor ve sitemap **yeni ilanı deploy olmadan hiç görmüyor** (ayrıntı: rapor §38–§44).
+
+**Bu, kullanıcının panelde çözebileceği bir şey DEĞİL** — düzeltme **kod** tarafında. Aşağıdaki
+iki seçenekten birini seçmeniz yeterli; uygulamayı ben yapacağım.
+
+### 12.1 Seçim — ✅ **Seçenek A seçildi, uygulandı ve BİRLEŞTİRİLDİ** (PR #657)
+
+- [x] **Seçenek A (önerilen, basit):** Sitemap'i **istek anında** üret.
+      `src/app/sitemap.ts`: `export const revalidate = 3600;` → `export const dynamic = "force-dynamic";`
+      - Artı: bayatlık biter, kod 1 satır. Eksi: her sitemap isteğinde 1 RPC (crawler hacmi düşük, sorun değil).
+      - **Durum:** Kod + regresyon testi **PR #657**'de **birleştirildi** (squash `cd77606`, 2026-11-13)
+        **ve deploy edildi** (~20:03 UTC). Doğrulama: üretim build route tablosu artık `ƒ /sitemap.xml`
+        (dinamik) — öncesi `○ /sitemap.xml 1h 1y` (statik). Canlı sitemap artık istek-anı okur; bayatlık
+        bitti (§12.3 deploy-sonrası kanıt).
+- [ ] **Seçenek B (yük alınacaksa):** ISR kalsın ama **veri değişince tazele**:
+      kaynak-iş içe aktarma (`refresh-source-jobs`) bitince ve ilan yayın/güncelle/kapat
+      action'larında `revalidatePath("/sitemap.xml")` çağır.
+      - Artı: RPC yükü düşük. Eksi: daha çok kod; kaçırılan bir tazeleme yine bayatlık yaratır.
+
+### 12.2 Şimdilik yapmanız gereken (isteğe bağlı, anlık)
+
+- [x] **Kalıcı çözüm uygulandı:** Seçenek A (`force-dynamic`) birleştirildi **ve deploy edildi**
+      (2026-11-13 ~20:03 UTC; `/api/build-info` = `cd77606`). Sitemap artık istek-anı okuyor; elle
+      purge **gerekmez**.
+- [x] **Anlık doğrulama (yapıldı, 2026-11-13):** `curl -sI https://isbulkktc.com/sitemap.xml` →
+      `x-vercel-cache: MISS`, `age: 0` (istek başına üretim). Sitemap'ten 404 dönen 5 URL **kayboldu**;
+      eksik olan 5 canlı ilan **eklendi** ve hepsi **HTTP 200** döner.
+- [ ] **Google'da aksiyon GEREKMEZ:** 404 URL'ler zaten "Bulunamadı (404)" kovasına düşer
+      (bilinçli); sitemap düzelince kendiliğinden temizlenir. Google bir sonraki taramada
+      sitemap'i tazeler (günler içinde).
+
+### 12.3 Kanıt (canlı, 2026-11-13 — deploy ÖNCESİ ve SONRASI)
+
+```
+— Deploy ÖNCESİ (bayat statik anlık görüntü) —
+GET /sitemap.xml → 183 <loc>, age:0, etag W/"5ba9c2e60031c394042d383e2515a324"
+Sitemap'te 404 dönen (5): temizlik-personeli,
+   tecrubeli-kadindogum-tup-bebek-doktoru-asistani, halkla-iliskiler-elemani,
+   satis-personeli-finans-sirketi-call-center, magaza-satis-temsilcisi-mehmet-dogru-ticaret-ltd
+Canlı ama sitemap'te yok (5): dagitimci, girne-bolgesi-magaza-satis-personeli,
+   uluslararasi-ofis-temsilcisi, insan-kaynaklari-sorumlusu, ticari-pazarlama-yoneticisi
+CI build:  └ ○ /sitemap.xml   1h   1y     (statik — kök neden)
+
+— Deploy SONRASI (düzeltme etkin) —
+GET /api/build-info → cd7760687c5ad5b3ac23515ab3d5eb8f03e041b6  (= PR #657 squash)
+GET /sitemap.xml → 183 <loc>, x-vercel-cache: MISS, age:0  (istek başına üretim)
+Sitemap'te 404 dönen 5 URL → YOK
+Eksik olan 5 canlı ilan → VAR, hepsi HTTP 200:
+   /jobs/source-iskibris-dagitimci → 200
+   /jobs/source-iskibris-uluslararasi-ofis-temsilcisi → 200
+   /jobs/source-iskibris-ticari-pazarlama-yoneticisi → 200
+   /jobs/source-iskibris-insan-kaynaklari-sorumlusu → 200
+   /jobs/source-iskibris-girne-bolgesi-magaza-satis-personeli → 200
+Ölü slug → /jobs/source-iskibris-temizlik-personeli → 404 (gerçek 404, soft değil)
+```
+
+> Not (2026-11-13, bağımsız doğrulama): `satis-pazarlama-personeli` ilk taslakta 404 sanılmıştı;
+> gerçekte **200** döner ve `/jobs` Sayfa 2'de listelenir → 404 listesinden çıkarıldı, yerine
+> 404 olan `magaza-satis-temsilcisi-mehmet-dogru-ticaret-ltd` eklendi. Toplam yine **5+5**.
+> Ayrıntı ve tekrarlanabilir yöntem: rapor §45.
+
