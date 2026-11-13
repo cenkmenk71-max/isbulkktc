@@ -140,13 +140,25 @@ ile üç adrese gönderildi. Hepsi `from İşBul KKTC <info@isbulkktc.com>`,
 | letgodeneme97@outlook.com | `01a1d203-40b6-7e84-ada2-c7e97cda60b6` | sent |
 
 **Yeni anahtarla ikinci gönderim (aynı gün):** doğru ekibin anahtarı Vercel'e
-yazıldıktan sonra üç adrese yeniden gönderildi — hepsi `sent`:
+yazıldıktan sonra üç adrese yeniden gönderildi. Gönderim anında `sent`; sonradan
+üçü de **`delivery_delayed`** oldu (Outlook greylisting — kalıcı ret değil):
 
 | Alıcı | Resend e-posta id | son olay |
 |---|---|---|
-| muhammedali.kahraman@outlook.com | `01a1d23c-2df0-7cbd-a4a5-d6e701aa74e4` | sent |
-| muhammed.ali.kahraman@outlook.com | `01a1d23c-2efa-734e-bdba-7a6b89083958` | sent |
-| letgodeneme97@outlook.com | `01a1d23c-3027-7d63-8df8-92dc46c132cb` | sent |
+| muhammedali.kahraman@outlook.com | `01a1d23c-2df0-7cbd-a4a5-d6e701aa74e4` | delivery_delayed |
+| muhammed.ali.kahraman@outlook.com | `01a1d23c-2efa-734e-bdba-7a6b89083958` | delivery_delayed |
+| letgodeneme97@outlook.com | `01a1d23c-3027-7d63-8df8-92dc46c132cb` | delivery_delayed |
+
+**Üçüncü gönderim — `Reply-To` düzeltmesinden sonra (2026-11-12, aynı gün):**
+`SALES_INBOX_EMAIL` Vercel'e yazıldıktan sonra üç adrese yeniden gönderildi.
+Her üçünde de `from İşBul KKTC <info@isbulkktc.com>`, **`reply_to info@isbulkktc.com`**
+doğrulandı (`GET /emails/<id>`):
+
+| Alıcı | Resend e-posta id | reply_to | son olay |
+|---|---|---|---|
+| muhammedali.kahraman@outlook.com | `01a1d24c-3c7e-7e46-844b-145126219007` | info@isbulkktc.com | sent |
+| muhammed.ali.kahraman@outlook.com | `01a1d24c-3d88-704d-a357-f69e88fb6ee5` | info@isbulkktc.com | sent |
+| letgodeneme97@outlook.com | `01a1d24c-3e92-7b54-8ff3-05a38424900d` | info@isbulkktc.com | sent |
 
 `last_event` başta `sent` olur; `delivered` = alıcı sunucu kabul etti (yine de
 gelen kutusu garantisi değildir), `delivery_delayed` = alıcı sunucu 4xx ile
