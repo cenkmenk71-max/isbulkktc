@@ -251,3 +251,18 @@ export const noIndexMetadata: Metadata = {
     },
   },
 };
+
+// Keeps a page out of the index without sealing its links: a landing page that
+// renders zero results is a soft 404 when it answers `index, follow`, but its
+// sibling links (other districts, other types, the full board) must stay
+// crawlable so the crawler can still reach real pages from it.
+export function noIndexFollowMetadata(metadata: Metadata): Metadata {
+  return {
+    ...metadata,
+    robots: {
+      index: false,
+      follow: true,
+      googleBot: { index: false, follow: true },
+    },
+  };
+}

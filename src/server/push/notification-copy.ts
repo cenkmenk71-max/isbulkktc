@@ -189,9 +189,10 @@ export function buildApplicationPushPayload(input: {
   return {
     title: entry.title,
     body: entry.body(input.jobTitle, statusLabel),
-    // The applications dashboard is guarded; an expired session bounces to
-    // sign-in with the destination preserved, so the link stays useful.
-    url: `${getLocalePrefix(locale)}/applications`,
+    // The candidate dashboard is guarded; an expired session bounces to
+    // sign-in with the destination preserved, so the link stays useful. The
+    // anchor targets the applications section and matches the email CTA.
+    url: `${getLocalePrefix(locale)}/profile/dashboard#my-applications`,
     // Tagging by application collapses successive updates to one row on the
     // lock screen instead of stacking a notification per status change.
     tag: `application-${input.applicationId}`,

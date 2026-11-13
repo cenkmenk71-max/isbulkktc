@@ -14,7 +14,10 @@ import {
 import { getJobTypeMessageKey } from "@/features/jobs/presentation";
 import { resolveJobTypeFromSlug } from "@/features/jobs/job-type-slugs";
 import { routing, type AppLocale } from "@/i18n/routing";
-import { createLocalizedPageMetadata } from "@/lib/seo";
+import {
+  createLocalizedPageMetadata,
+  noIndexFollowMetadata,
+} from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import { searchPublicJobs } from "@/server/dal/jobs";
 
@@ -44,12 +47,21 @@ export async function generateMetadata({
   ]);
   const typeName = searchCopy(getJobTypeMessageKey(jobType));
 
-  return createLocalizedPageMetadata({
+  const metadata = createLocalizedPageMetadata({
     locale,
     pathname: `/is-turleri/${requestedType}`,
     title: t("metaTitle", { type: typeName }),
     description: t("metaDescription", { type: typeName }),
   });
+
+  // A type with no live vacancy renders the empty state (200 + "0 ilan") while
+  // claiming `index, follow` and a self-canonical, which Google reports as a
+  // Soft 404. Keep such a page out of the index until it has content; it stays
+  // `follow` so the sibling type/district links remain crawlable.
+  const { total } = await searchPublicJobs({ jobType });
+  if (total === 0) return noIndexFollowMetadata(metadata);
+
+  return metadata;
 }
 
 export default async function JobTypePage({ params }: JobTypePageProps) {
