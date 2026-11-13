@@ -605,6 +605,12 @@ jenerik rekabetçi sorgularda ("kktc iş ilanları") **ilk sayfalara çıkmaz**.
 | 4 | **Bağlantılar (otorite)** | GSC → **Bağlantılar** | Kaç dış site bağlantı veriyor? (0 ise asıl iş buradadır) |
 | 5 | **Performans** | GSC → **Performans** | Hangi sorgular gösterim alıyor? (jenerik mi, marka mı?) |
 
+> **Hangi URL'leri tek tek gireceğim?** → **`docs/seo/INDEXING_URL_LIST.md`**
+> (183 URL, öncelik sırasına göre kopyala-yapıştır blokları + 3 günlük plan).
+> Takip için: **`docs/seo/indexing-urls.csv`** (`gsc_durum`, `indexlendi`, `notlar`
+> kolonlarını doldurun). Not: URL Inspection'a **toplu yapıştırma yoktur** — sitemap
+> toplu işi yapar (183 URL), URL Inspection yalnız **en önemli ~25 sayfa** içindir.
+
 ### 13.3 🟡 Otorite artırma (asıl iyileştirme — elle, sürekli)
 
 Yeni alan adını hızlandıran **tek gerçek kaldıraç** budur; kod tarafında yapılacak bir şey yok:
