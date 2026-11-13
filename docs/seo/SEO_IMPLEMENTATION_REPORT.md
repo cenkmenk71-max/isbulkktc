@@ -29,6 +29,10 @@ Başlangıç durumu (değişmeden önce kaydedildi):
    düşmüş bir ilanı bir süre daha duyuruyor ve o URL 404 veriyordu. Sitemap'e "duyurduğu
    her ilan URL'i 200 dönmeli" kuralını pinleyen E2E testi eklendi; DB hatası artık sessizce
    boş liste üretmek yerine loglanıyor.
+   > ⚠️ **GÜNCELLEME (Tur 7, §38–§44):** Bu düzeltme **yetersiz çıktı.** Canlı ölçüm (2026-11-13)
+   > sitemap'in hâlâ **5×404 URL** duyurduğunu ve **5 canlı ilanı atladığını** gösterdi. Kök neden:
+   > sitemap **statik** (`○ /sitemap.xml`, ISR) — "≤1 saatte kendini düzeltir" varsayımı **geçersiz**.
+   > Bkz. **P1 (T7-1/T7-3)** ve `MANUAL_TASKS.md §12`.
 3. **P1 — Sessiz DB hataları.** `search_public_jobs` / `get_public_job_details` hata verdiğinde
    boş sonuç dönüyor ve bu "ilan yok"tan ayırt edilemiyordu (detay sayfası canlı ilanı 404
    gösterirdi). Artık loglanıyor; davranış değişmedi.
@@ -51,6 +55,7 @@ Başlangıç durumu (değişmeden önce kaydedildi):
 | 10 | NOT APPLICABLE | — | Şehir/kategori landing sayfası indeks politikası | Böyle bir route yok (yalnızca `/jobs?district=` filtresi) | Yok | Değişiklik yok |
 | 11 | NOT APPLICABLE | — | Blog Article schema | `/blog` derleme sayfası, özgün makale yayımlamıyor | Yok | Değişiklik yok |
 | 12 | RESOLVED | P1 | Search Console / GA4 / CrUX / Cloudflare dashboard denetimi | `npm run search-console:verify` (canlı API, 2026-11-12): siteOwner, 1 sitemap/207 URL, `/` "Submitted and indexed", 0 failure | Ölçümleme artık Google'ın kendi API'sinden okunuyor | `scripts/verify-search-console.mjs` + runbook |
+| 13 | **CONFIRMED** | **P1** | **Canlı sitemap bayat: 5 URL 404 dönerken duyuruluyor, 5 canlı ilan atlanıyor** | `curl /sitemap.xml` (183 `<loc>`, `age:0`) ↔ canlı `search_public_jobs`; CI build `└ ○ /sitemap.xml 1h 1y` (statik) | Sitemap "çözülmeyen URL" sinyali verir; yeni ilanlar deploy olmadan hiç listelenmez | **Tur 7, §38–§44**; `MANUAL_TASKS.md §12` (force-dynamic veya on-demand `revalidatePath`) |
 
 ---
 
@@ -492,3 +497,123 @@ npm run search-console:verify        → Credential: unconfigured (okuma BLOCKED
   yeniden taraması. Uzlaştırma: `MANUAL_TASKS.md §11.8`. Canlı ek ölçüm: `/is-ilanlari/iskele`
   **artık dolu** (2 ilan) → `index` + sitemap'e döndü; `/is-ilanlari/lefke` hâlâ boş → `noindex,
   follow` + sitemap'te yok.
+
+## EK — Tur 7: Sitemap "bayat anlık görüntü" — 5 ölü URL + 5 eksik ilan (2026-11-13, CANLI)
+
+> Bu ek §1–§37'ye **eklenir**. Önceki turlar sitemap'i "saatlik ISR ile ≤1 saatte kendini
+> düzeltir" varsayıyordu (§4, §35). Bu tur **bu varsayımı canlı ölçümle çürüttü**: canlı
+> sitemap veritabanıyla **tutarsız** ve tutarsızlık yalnız "zamanlama" ile açıklanamaz.
+
+### §38. Bulgu (canlı, 2026-11-13T19:0x UTC)
+
+`GET https://isbulkktc.com/sitemap.xml` → **183 `<loc>`**, yanıt **taze** (`age: 0`,
+`x-vercel-cache: MISS`, `cf-cache-status: REVALIDATED`), ama içerik bayat:
+
+| Yön | Sayı | Slug'lar (canlı `curl` durumu) |
+|---|---:|---|
+| Sitemap'te olup **404** dönen ilan | **5** | `source-iskibris-temizlik-personeli`, `source-iskibris-tecrubeli-kadindogum-tup-bebek-doktoru-asistani`, `source-isbulkibris-halkla-iliskiler-elemani`, `source-iskibris-satis-personeli-finans-sirketi-call-center`, `source-iskibris-magaza-satis-temsilcisi-mehmet-dogru-ticaret-ltd` |
+| Canlı olup sitemap'te **olmayan** ilan | **5** | `source-iskibris-dagitimci`, `source-iskibris-girne-bolgesi-magaza-satis-personeli`, `source-iskibris-uluslararasi-ofis-temsilcisi`, `source-iskibris-insan-kaynaklari-sorumlusu`, `source-iskibris-ticari-pazarlama-yoneticisi` |
+
+**Yanlış-pozitif değil (kanıt):**
+- 404'ler "yeni yayınlanan ilan" **değil**: `get_public_job_details(slug)` → `null` **ve**
+  `GET /jobs/<slug>` → **404**. Yani Google, 404'e düşen bir sitemap URL'i alıyor.
+- Eksikler yeni: `modified_at` = 2026-11-13; sayfaları **200**; `/jobs` listesi onları gösteriyor.
+- Arama-RPC ile detay-RPC **çelişmiyor** (ikisi de aynı DB'yi okur). Çelişen **sitemap ↔ DB**.
+
+### §39. Kök neden (CONFIRMED — CI build route tablosu)
+
+CI build çıktısı (`Route (app)` tablosu):
+
+```
+└ ○ /sitemap.xml         1h    1y     ← statik prerender + ISR (revalidate 1h, expire 1y)
+ƒ /[locale]/jobs/[slug]               ← dinamik
+ƒ /[locale]/jobs                      ← dinamik (liste)
+```
+
+- `src/app/sitemap.ts` içinde `export const revalidate = 3600` → sitemap **`○` (statik)**.
+  Veriyi `createSupabasePublicClient()` (cookie'siz) ile alır → build/ISR anında gömülür.
+- `/jobs` ve ilan detayı `createSupabaseServerClient()` (cookie'li) kullanır → **her istekte
+  canlı** (yanıt başlığı: `cache-control: private, no-cache, no-store`).
+- **Sonuç:** aynı RPC, iki farklı önbellekleme yolu. Liste canlı; sitemap **build zamanı
+  anlık görüntüsü**. Sitemap'teki en yeni ilan `lastmod` = **2026-11-12T21:29** → snapshot
+  11-13 işlerinden **önce** donmuş. (Canlı build = `e63fc9dc82`, `git log -1` commit tarihi
+  **2026-11-13T14:34:53Z**; yani sitemap, deploy edilen build'den **~17 saat önceki** bir
+  veriyi taşıyor — snapshot gerçekten build anına ait.)
+- **"≤1 saatte düzelir" neden tutmuyor:** `revalidate = 3600` dolunca Vercel sitemap'i
+  **yeniden çalıştırmaz**; bir sonraki istekte `x-vercel-cache: MISS` ile **deploy edilmiş
+  build çıktısını** yeniden servis eder (Next.js 15+ ISR: revalidate, prerender'ı *yeniden
+  üretmez*, yalnız cache girdisini tazeler). Canlı kanıt: `last-modified: Fri, 13 Nov 2026
+  19:01:25 GMT` bu turda **güncellendi** (cache girdisi tazelendi), ama **içerik değişmedi** —
+  etag önceki oturumla **birebir aynı**: `W/"5ba9c2e60031c394042d383e2515a324"`.
+
+### §40. Önceki sınıflandırmayla uzlaştırma
+
+| Önceki iddia | Yer | Şimdi |
+|---|---|---|
+| "Sitemap bayat girdi ≤1 saatte revalidate ile kendini düzeltir" | §4, §35 | **ÇÜRÜTÜLDÜ.** Sitemap canlı DB'ye bağlı değil (statik ISR); bayatlık **kalıcı** |
+| "Sitemap yalnız 200 URL yayar" | §34, §36 | **YANLIŞ (canlı).** 5 URL **404** döner |
+| Bulgu #2 (P1) E2E testi + log ile kapandı | §2 | **KISMEN.** E2E sitemap'i **build anında** doğrular (o an tutarlı); **canlı** sitemap↔DB kayması test edilmiyor |
+
+### §41. Bulgular ve sınıflandırma (Tur 7)
+
+| ID | Bulgu | Sınıf | Önem | Kanıt |
+|---|---|---|---|---|
+| T7-1 | Canlı sitemap **5×404** URL duyuruyor | **CONFIRMED** | **P1** | `curl` 5×404; `indexing:verify` **FAIL** |
+| T7-2 | Canlı 5 ilan sitemap'te **yok** | **CONFIRMED** | P2 | `curl` 5×200; `/jobs` listesinde var |
+| T7-3 | Kök neden: sitemap **statik ISR** (`○ 1h/1y`), DB'yi canlı okumuyor | **CONFIRMED** | **P1** | CI route tablosu; `cache-control public,max-age=3600`; sabit etag |
+| T7-4 | "≤1 saatte kendini düzeltir" varsayımı | **NOT FOUND (çürütüldü)** | P1 | 11-13'te hâlâ 11-12 snapshot |
+| T7-5 | Sitemap cache purge (Vercel/CF) | **BLOCKED** | P2 | `VERCEL_TOKEN` yok; hosting kullanıcı kontrolünde |
+| T7-6 | Deploy olmadan sitemap yeni ilanı hiç görmez | **LIKELY** | **P1** | Sitemap yalnız deploy/ISR üretiminde tazeleniyor |
+
+**P0 yok. İki P1 (T7-1, T7-3) aynı kökten: sitemap statik.**
+
+### §42. Önerilen düzeltme (kod — kullanıcı onayı sonrası)
+
+1. **Kısa vadeli (istek-zamanı render):** `src/app/sitemap.ts` → `export const revalidate = 3600;`
+   yerine `export const dynamic = "force-dynamic";` (veya `revalidate = 0`). Sitemap `ƒ` olur,
+   her istek RPC'yi canlı çağırır; bayatlık biter. Maliyet: her istekte RPC (crawler hacmi düşük).
+2. **Alternatif (yük alınacaksa):** `revalidate` kalsın ama **`revalidatePath("/sitemap.xml")`**
+   çağrılsın — kaynak-iş içe aktarma bitince (`refresh-source-jobs.yml` sonrası) ve ilan
+   yayın/güncelle/kapat action'larında. ISR önbelleği **veri değişince** tazelenir.
+3. **İleri (doğru ölçüm):** mevcut E2E "her sitemap ilanı 200" testinin yanına, **canlı sitemap
+   ile canlı DB'yi karşılaştıran** kontrol ekle (build-anı testi canlı kaymayı yakalamıyor).
+
+### §43. Yerel doğrulama (bu tur)
+
+```
+npm run indexing:verify → 1 failure, 0 warning
+  FAIL single-loc .../en/jobs/source-iskibris-tecrubeli-kadindogum-tup-bebek-doktoru-asistani
+       canonicalises to (none)
+  PASS sitemap 183 URLs, all on-origin canonical
+```
+
+- Yeni FAIL, doğrudan T7-1'in sonucudur: sitemap'te duran ölü slug doğrulanınca canonical yok.
+- `tests/e2e/seo.spec.ts` sitemap'i **build anında** okur → yeşil kalır ama **canlı** kaymayı
+  yakalamaz (T7-3).
+
+### §44. Kapsam sınırı
+
+- Bu tur **kod değişikliği YAPMADI** (onay beklenir, §42); yalnız kanıt toplandı.
+- Canlı sitemap cache **purge edilmedi** (T7-5, BLOCKED — `VERCEL_TOKEN` yok).
+- Düzeltme seçimi (force-dynamic vs on-demand revalidate) `MANUAL_TASKS.md §12`'de kullanıcıya
+  sunuldu.
+
+### §45. Yöntem ve sayı doğrulaması (2026-11-13, bağımsız yeniden ölçüm)
+
+Bu ekteki sayılar, `curl` ile **bağımsız olarak yeniden** doğrulandı; üç noktada önceki taslak
+düzeltildi:
+
+- **Sitemap = 21 iş URL'i** (`grep -oE '<loc>[^<]*/jobs/[^<]*'`), canlı `/jobs` = **21 ilan**
+  (Sayfa 1/2, 20 + 1). İki taraf **aynı toplamda**; fark bir *yer değiştirme*: **5 URL 404**
+  (`.../jobs/<slug>` → 404, gövdede `<meta name="robots" content="noindex"/>`) ve **5 ilan
+  eksik** (her biri **200** + kendi kanonik'ini verir).
+- **Düzeltme:** önceki taslakta 404 listesinde `satis-pazarlama-personeli` yazıyordu; **bu slug
+  aslında 200** döner ve `/jobs` Sayfa 2'de listelenir → 404 listesinden **çıkarıldı**, yerine
+  gerçekten 404 olan `magaza-satis-temsilcisi-mehmet-dogru-ticaret-ltd` **eklendi**. (Satır
+  sayısı yine 5'tir; etkilenen ilan sayısı değişmez.)
+- **Yöntem (tekrarlanabilir):** `comm -23 sitemap_slugs live_jobs` = 404 kümesi;
+  `comm -13` = eksik küme. Canlı liste iki sayfadan toplanır (`/jobs`, `/jobs?page=2`).
+- **`last-modified` tuzağı:** sitemap başlığındaki `last-modified` bu turda **güncellendi**
+  (cache girdisi tazelendi) ama **etag ve içerik sabit kaldı** — yani "yanıt taze" ≠ "içerik
+  güncel". Bu, 9. ailenin ("serving" ≠ "güncel") sitemap tezahürüdür.
+

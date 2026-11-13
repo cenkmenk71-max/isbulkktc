@@ -505,3 +505,54 @@ o satır için bir kez basın.
 "Noindex ile hariç tutuldu", "Yönlendirmeli sayfa", "Doğru standart etiketli alternatif".
 "Tarandı/Keşfedildi – eklenmedi" ise **normal gecikmedir**. Yani "hepsini doğruladım" dediğinizde
 zaten yalnızca **doğrulanabilir** olanları tıklamış olursunuz — bu doğru davranıştır.
+
+---
+
+## 12. 🔴 P1 — Canlı sitemap bayat: 5 ölü URL + 5 eksik ilan (2026-11-13)
+
+**Ne oldu (canlı ölçüm):** `https://isbulkktc.com/sitemap.xml` şu an **5 URL'i 404 dönerken
+duyuruyor** ve **5 canlı ilanı atlıyor**. Yanıt "taze" görünüyor (`age: 0`) ama **içerik bayat**.
+
+**Kök neden (tek cümle):** Sitemap **statik üretiliyor** (`○ /sitemap.xml`, ISR 1 saat) ve
+veritabanını **build anında** okuyor; `/jobs` listesi ise **her istekte canlı** okuyor. Bu yüzden
+ikisi ayrışıyor ve sitemap **yeni ilanı deploy olmadan hiç görmüyor** (ayrıntı: rapor §38–§44).
+
+**Bu, kullanıcının panelde çözebileceği bir şey DEĞİL** — düzeltme **kod** tarafında. Aşağıdaki
+iki seçenekten birini seçmeniz yeterli; uygulamayı ben yapacağım.
+
+### 12.1 Seçim (birini işaretleyin)
+
+- [ ] **Seçenek A (önerilen, basit):** Sitemap'i **istek anında** üret.
+      `src/app/sitemap.ts`: `export const revalidate = 3600;` → `export const dynamic = "force-dynamic";`
+      - Artı: bayatlık biter, kod 1 satır. Eksi: her sitemap isteğinde 1 RPC (crawler hacmi düşük, sorun değil).
+- [ ] **Seçenek B (yük alınacaksa):** ISR kalsın ama **veri değişince tazele**:
+      kaynak-iş içe aktarma (`refresh-source-jobs`) bitince ve ilan yayın/güncelle/kapat
+      action'larında `revalidatePath("/sitemap.xml")` çağır.
+      - Artı: RPC yükü düşük. Eksi: daha çok kod; kaçırılan bir tazeleme yine bayatlık yaratır.
+
+### 12.2 Şimdilik yapmanız gereken (isteğe bağlı, anlık)
+
+- [ ] **Zorla tazeleme (anlık, kalıcı çözüm DEĞİL):** Vercel panelinden sitemap cache'ini
+      purge edebilirsiniz; ancak sitemap statik kaldığı sürece **bir sonraki veri değişiminde
+      yine bayatlar**. Kalıcı çözüm 12.1'dir.
+- [ ] **Google'da aksiyon GEREKMEZ:** 404 URL'ler zaten "Bulunamadı (404)" kovasına düşer
+      (bilinçli); sitemap düzelince kendiliğinden temizlenir.
+
+### 12.3 Kanıt (canlı, 2026-11-13)
+
+```
+GET /sitemap.xml → 183 <loc>, age:0, etag W/"5ba9c2e60031c394042d383e2515a324"
+Sitemap'te 404 dönen (5): temizlik-personeli,
+   tecrubeli-kadindogum-tup-bebek-doktoru-asistani, halkla-iliskiler-elemani,
+   satis-personeli-finans-sirketi-call-center, magaza-satis-temsilcisi-mehmet-dogru-ticaret-ltd
+Canlı ama sitemap'te yok (5): dagitimci, girne-bolgesi-magaza-satis-personeli,
+   uluslararasi-ofis-temsilcisi, insan-kaynaklari-sorumlusu, ticari-pazarlama-yoneticisi
+CI build:  └ ○ /sitemap.xml   1h   1y     (statik — kök neden)
+npm run indexing:verify → 1 failure (ölü sitemap slug, canonical yok)
+```
+
+> Not (2026-11-13, bağımsız doğrulama): `satis-pazarlama-personeli` ilk taslakta 404 sanılmıştı;
+> gerçekte **200** döner ve `/jobs` Sayfa 2'de listelenir → 404 listesinden çıkarıldı, yerine
+> 404 olan `magaza-satis-temsilcisi-mehmet-dogru-ticaret-ltd` eklendi. Toplam yine **5+5**.
+> Ayrıntı ve tekrarlanabilir yöntem: rapor §45.
+
