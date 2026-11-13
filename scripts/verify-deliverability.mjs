@@ -565,6 +565,60 @@ async function checkTransportSecurity() {
 }
 
 /**
+ * Fetches the MTA-STS policy file with redirects disabled. A redirect is the
+ * classic misconfiguration: the `_mta-sts` TXT record points senders at
+ * `https://mta-sts.<domain>/.well-known/mta-sts.txt`, and RFC 8461 §3.3 forbids
+ * following a redirect to reach it, so a policy served behind a 301/308 is one
+ * senders never read. `redirect: "manual"` surfaces that as a non-200 instead of
+ * silently following it.
+ */
+async function fetchMtaStsPolicy() {
+  const url = `https://mta-sts.${DOMAIN}/.well-known/mta-sts.txt`;
+  try {
+    const response = await fetch(url, { redirect: "manual" });
+    return { status: response.status, body: await response.text(), error: null };
+  } catch (error) {
+    return { status: 0, body: "", error: error.message };
+  }
+}
+
+/**
+ * Classifies the fetched policy file. The failures that actually stop senders
+ * from honouring a policy — a redirect, a non-200, a missing `version: STSv1` —
+ * are separated from the mode note, because `mode: testing` is a deliberate
+ * first-rollout state and must not read as a fault.
+ */
+export function classifyMtaStsPolicy({ status, body, error }) {
+  if (error) return { status: "skip", detail: `could not fetch the policy file: ${error}` };
+  if (status >= 300 && status < 400) {
+    return {
+      status: "warn",
+      detail: `policy file redirects (HTTP ${status}) — RFC 8461 forbids a redirect; serve 200 from mta-sts.${DOMAIN}`,
+    };
+  }
+  if (status !== 200) {
+    return { status: "warn", detail: `policy file returned HTTP ${status} (expected 200)` };
+  }
+  const version = /^version:\s*(\S+)/im.exec(body)?.[1];
+  if (!/^STSv1$/i.test(version ?? "")) {
+    return { status: "warn", detail: "policy file is not version STSv1" };
+  }
+  const mode = /^mode:\s*(\S+)/im.exec(body)?.[1]?.toLowerCase();
+  if (mode === "none") {
+    return { status: "warn", detail: "policy mode is none — the policy asks senders not to enforce" };
+  }
+  if (mode !== "testing" && mode !== "enforce") {
+    return { status: "warn", detail: "policy file has no mode (testing|enforce)" };
+  }
+  return { status: "pass", detail: `policy served, version STSv1, mode ${mode}` };
+}
+
+async function checkMtaStsPolicy() {
+  const result = classifyMtaStsPolicy(await fetchMtaStsPolicy());
+  record("MTA-STS policy", result.status, result.detail);
+}
+
+/**
  * Blocklists, each with a *known-listed* sentinel used to prove the zone is
  * actually answering before any "clean" verdict is trusted.
  *
@@ -822,12 +876,13 @@ async function main() {
   await checkDmarc();
   await checkMx();
   await checkTransportSecurity();
+  await checkMtaStsPolicy();
   await checkBlocklists();
   await checkResend();
   for (const to of SEND_TO) await sendTestEmail(to);
 
   for (const r of results) {
-    console.log(`  ${ICON[r.status].padEnd(4)} ${r.area.padEnd(11)} ${r.detail}`);
+    console.log(`  ${ICON[r.status].padEnd(4)} ${r.area.padEnd(15)} ${r.detail}`);
   }
 
   const failed = results.filter((r) => r.status === "fail").length;
