@@ -601,10 +601,10 @@ test("every vacancy URL in the sitemap actually resolves", async ({
     .map((loc) => new URL(loc).pathname);
 
   // The imported catalogue changes on every refresh, so this is the one place a
-  // stale entry could ship: a vacancy that was dropped from the catalogue is
-  // still advertised by the hourly-cached sitemap until it revalidates. Google
-  // drops a sitemap that advertises URLs which do not resolve, so the sitemap
-  // must never carry a vacancy URL that 404s.
+  // stale entry could ship: the sitemap is generated per request (see
+  // `src/app/sitemap.ts`), so a vacancy it advertises must resolve right now.
+  // Google drops a sitemap that advertises URLs which do not resolve, so the
+  // sitemap must never carry a vacancy URL that 404s.
   expect(vacancyPaths.length).toBeGreaterThan(0);
 
   for (const path of vacancyPaths) {

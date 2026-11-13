@@ -14,9 +14,13 @@ import { getLocalizedPageUrl, getLocalizedSlugPathnames } from "@/lib/seo";
 import { getAppBaseUrl } from "@/server/config/app-url";
 import { listPublicJobSitemapEntries } from "@/server/dal/jobs";
 
-// Regenerate at most once an hour; the search RPC fans out over every published
-// listing and the sitemap is not latency-sensitive.
-export const revalidate = 3600;
+// Generated per request, not cached. The sitemap is a live view of the
+// catalogue: it must advertise exactly the vacancies that resolve right now. A
+// cached copy drifts against the dynamic `/jobs` routes — it keeps advertising
+// vacancies that were withdrawn (404s, which Google penalises) and hides ones
+// published since the last build. The search RPC fans out over every published
+// listing, but crawler traffic is low, so the per-request cost is acceptable.
+export const dynamic = "force-dynamic";
 
 const publicPages = [
   { pathname: "/", changeFrequency: "weekly", priority: 1 },
