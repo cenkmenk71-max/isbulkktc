@@ -190,15 +190,16 @@ geçersiz kılabilirsin; varsayılan canlı gelen MX'tir.
    TLS-RPT` (TXT kayıtları). Politika dosyası 200 dönmezse ya da yönlendirirse
    araç `WARN` yazar.
 
-### 8. Gerçek gelen kutusu / spam doğrulaması `[~]` — gönderildi, kutu kontrolü sahipte
-Araç bunu yapamaz; gerçek bir kutu gerekir. Bu turda üç adrese test postası
-gönderildi (aşağıya bak). **Yapılacak:** o üç kutuda **Gelen Kutusu**'nu kontrol
-et; spam'deyse **"Spam değil"** işaretle (ısınma için kritik).
+### 8. Gerçek gelen kutusu / spam doğrulaması `[x]` — Gmail Gelen Kutusu teyit edildi
+Araç bunu yapamaz; gerçek bir kutu gerekir. Outlook'a yapılan gönderimler hâlâ
+sahibin o kutuları kontrol etmesini bekler (`delivery_delayed`'da kaldılar).
 
 Ayrıca sahip talebiyle **Gmail**'e (`jakanamamomoko@gmail.com`) bir test postası
-gönderildi ve Gmail sunucusu **`delivered`** ile kabul etti (aşağıdaki beşinci
-gönderim). Gmail bu testte greylisting yapmadı; Outlook'un `delivery_delayed`
-davranışından farklı olarak kutu düzeyinde bir yerleşim sinyali verir.
+gönderildi; Gmail sunucusu **`delivered`** ile kabul etti ve **sahip iletinin Gelen
+Kutusu'na düştüğünü teyit etti** (spam değil). Gmail bu testte greylisting yapmadı;
+Outlook'un `delivery_delayed` davranışından farklı olarak **teyitli gelen kutusu
+yerleşimi** verdi — bu, gönderim yolunun (SPF alt alanı + DKIM + DMARC `p=reject`
+hizalı) giden yerleşimde çalıştığının ilk gerçek-kutu kanıtıdır.
 
 ### Isınma (DNS ile çözülmez)
 Yeni alan + sıfır itibar: düşük hacimle başla, yalnız onaylı/ilgili alıcıya gönder,
@@ -333,9 +334,8 @@ sunucudur ve bu testte **greylisting yapmadı**.
 | jakanamamomoko@gmail.com | `01a1d4ff-8cf1-7715-abba-cc3d9945d8e1` | sent | **delivered** |
 
 `from İşBul KKTC <info@isbulkktc.com>`, konu `isbulkktc deliverability test`.
-`delivered`, Gmail sunucusunun iletiyi kabul ettiği anlamına gelir; **spam'e mi
-gelen kutusuna mı düştüğü** hâlâ yalnızca gerçek kutuda görülür. Sahip o kutuyu
-kontrol edip sonucu bildirmelidir.
+`delivered`, Gmail sunucusunun iletiyi kabul ettiği anlamına gelir. **Sahip
+iletiyi Gmail Gelen Kutusu'nda buldu (spam değil)** — giden yerleşim teyit edildi.
 
 > **Anahtar kurtarma notu (bu turda öğrenildi):** üretim `RESEND_API_KEY`'i
 > Vercel'in proje düzeyi liste ucundan şifreli bir zarf (`eyJ2…`) olarak döner ve
@@ -467,11 +467,11 @@ Tam adımlar için yukarıdaki **"Kalan altyapı maddeleri"** bölümüne bak.
 - [x] DMARC `p=none` → `quarantine` → **`reject`** (Cloudflare DNS; hizalı gönderim teyit edildi, 2 resolver)
 - [x] MTA-STS politika dosyası **kodda sunuluyor** (`/.well-known/mta-sts.txt`, `mode: testing`)
 - [x] MTA-STS + TLS-RPT **DNS kayıtları** (Vercel host + CF CNAME/TXT; canlı 200, `verify-deliverability` PASS)
-- [~] Gerçek gelen kutusu/spam yerleşim doğrulaması (araç yapamaz — gerçek posta kutusu
-      gerekir). Outlook'a 4 gönderim `delivery_delayed`'da kaldı; sahip talebiyle
-      **Gmail**'e (`jakanamamomoko@gmail.com`) 5. gönderim yapıldı ve Gmail
-      **`delivered`** ile kabul etti. Spam/gelen kutusu ayrımı için sahip kutuyu
-      kontrol etmeli
+- [x] Gerçek gelen kutusu/spam yerleşim doğrulaması — **Gmail teyitli Gelen Kutusu**
+      (2026-11-12, sahip): `jakanamamomoko@gmail.com` adresine gönderilen test
+      `delivered` oldu ve **spam'e değil Gelen Kutusu'na düştü**. Outlook'a yapılan
+      4 gönderim `delivery_delayed`'da kaldı (alıcı-tarafı greylisting; kimlik
+      doğrulama sorunu değil)
 - [x] **GA4 canlı ölçüm** — `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-HNM3KEX9VD` Vercel
       `production`+`preview`'a yazıldı ve yeniden dağıtıldı; tarayıcıda onay sonrası
       `gtag.js` + `page_view` + `google-analytics.com/g/collect` isteği doğrulandı,
