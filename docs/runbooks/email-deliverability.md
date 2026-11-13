@@ -30,14 +30,25 @@ PASS MX          10 receive-euw1.forge.rmta.net.  (gelen posta artık Resend'e d
 WARN MTA-STS     _mta-sts kaydı yok (yalnız gelen posta duruşu; giden yerleşimi etkilemez)
 WARN TLS-RPT     _smtp._tls kaydı yok (yalnız gelen posta duruşu; giden yerleşimi etkilemez)
 WARN Blocklists  SURBL/SpamCop temiz; Spamhaus genel çözümleyiciden sorgulanamaz
-FAIL Resend      sandbox $RESEND_API_KEY sahte (re_ ile başlamıyor) — bu satırı yok say:
-                 gerçek anahtarı komut içinde ver (aşağıya bak)
+PASS Resend      isbulkktc.com status=verified
+
+0 failure(s), 5 warning(s), 0 skipped
 ```
 
-**Yorum:** Gönderim yolu (SPF alt alanı + DKIM + DMARC hizalı) **sağlam**. Kalan
-`WARN`'ların çoğu giden yerleşimi etkilemez (MTA-STS/TLS-RPT yalnız gelen duruş).
-Tek gerçek kırmızı, sandbox ortam değişkeninin sahte olmasıdır; üretim sunucusu
-kendi `RESEND_API_KEY`'ini taşır.
+> Yukarıdaki çıktı **gerçek `RESEND_API_KEY`** ile alındı:
+> `RESEND_API_KEY=re_… node scripts/verify-deliverability.mjs` → **0 hata**.
+> (Sandbox `.env`'indeki anahtar sahtedir; o anahtarla çalıştırırsan Resend satırı
+> `FAIL` görünür — yok say, gerçek anahtarı komut içinde ver.)
+
+**Yorum:** Gönderim yolu (SPF alt alanı + DKIM + DMARC hizalı) **sağlam** ve gerçek
+anahtarla **0 hata**. Kalan `WARN`'lar giden yerleşimi etkilemez (SPF kök kaydı
+DMARC-uyumlu alt alanla telafi edilir; MTA-STS/TLS-RPT yalnız gelen duruş;
+DMARC `p=quarantine` zaten yeterli).
+
+**Dağıtım tazeliği:** Vercel artık `main`'den **otomatik Git dağıtımı** yapıyor
+(önceki "200 dönen ama commit geride" boşluğu kapandı). Canlı
+`GET https://isbulkktc.com/api/build-info` → `main` ucuyla aynı (`3bcef23`). Yani
+bu runbook'taki env değişiklikleri gerçekten canlı derlemede.
 
 ## Kalan altyapı maddeleri — sahip için tam adımlar
 
@@ -168,6 +179,43 @@ sorunu değil), `bounced` = kalıcı ret. Olayları izle:
 curl -H "Authorization: Bearer re_…" https://api.resend.com/emails/<id>
 ```
 
+### Bounce → bastırma hattı doğrulandı (2026-11-12)
+
+Üç adrese gönderilen testte `muhammed.ali.kahraman@outlook.com` **hard bounce**
+verdi (Resend `email.bounced`, "mailbox unavailable" — geçersiz adres, teslim
+edilebilirlik kusuru değil). Webhook bunu işledi ve **otomatik bastırma** devreye
+girdi:
+
+| Adım | Kanıt |
+|---|---|
+| Resend olayı | `email.bounced`, 2026-11-13 00:30:09 UTC |
+| Webhook işledi | `POST /api/resend-webhook` 200 (Svix imzası geçti) |
+| Bastırma kaydı | `public.email_engagement_optouts` → `(muhammed.ali.kahraman@outlook.com, reason=bounce, 00:30:11)` |
+
+Yani bounce → opt-out hattı **uçtan uca çalışıyor**; geçersiz adres artık pazarlama
+gönderimlerinden otomatik düşecek. Hem edinim hem etkileşim yolu bu tabloyu
+filtreler: `list_marketing_recipients` (edinim) ve `list_engagement_recipients`
+(etkileşim) `not exists (select 1 from email_engagement_optouts where email = lower(...))`
+koşulunu taşır. Aynı gün üç adres için ölçülen **gönderim uygunluğu**:
+
+| Adres | `eligible_for_send` | Neden |
+|---|---|---|
+| muhammed.ali.kahraman@outlook.com | **false** | hard bounce → `email_engagement_optouts` |
+| muhammedali.kahraman@outlook.com | true | teslim edildi |
+| letgodeneme97@outlook.com | true | teslim edildi |
+
+Doğrulama sorgusu:
+
+```sql
+select email, reason, opted_out_at
+from public.email_engagement_optouts
+order by opted_out_at desc;
+```
+
+Not: tablo adı `email_engagement_optouts`'tur (`engagement_optouts` değil). Bu
+adı sorgularken `42P01 relation does not exist` alırsanız **yanlış ad** kullanıyorsunuz;
+migration eksiği yok.
+
 ## DKIM bit uzunluğu — düzeltilecek bir şey DEĞİL (2026-11-12 düzeltmesi)
 
 Önceki sürüm "DKIM'i 2048-bit'e rotate et" diyordu. **Bu yanlıştı.** Resend resmî
@@ -288,6 +336,7 @@ Tam adımlar için yukarıdaki **"Kalan altyapı maddeleri"** bölümüne bak.
       — endpoint Cloudflare'siz Vercel alias'ına yönlendirildi (aşağıdaki 1010 notu)
 - [x] Takım gelen kutusu env'leri (`SALES_INBOX_EMAIL` / `FEEDBACK_INBOX_EMAIL` /
       `COMPANY_REVIEW_INBOX_EMAIL`) → `info@isbulkktc.com`, Vercel `production`+`preview`
+- [x] Webhook bounce → bastırma hattı doğrulandı (`email.bounced` → `email_engagement_optouts`)
 - [ ] DMARC `p=quarantine` → `reject` (raporları izledikten sonra)
 - [ ] MTA-STS + TLS-RPT kayıtları (isteğe bağlı — yalnız gelen posta duruşu)
 - [ ] Gerçek gelen kutusu/spam yerleşim doğrulaması (araç bunu yapamaz — gerçek
