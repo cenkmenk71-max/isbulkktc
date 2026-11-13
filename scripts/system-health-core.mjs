@@ -643,3 +643,112 @@ export function classifyCronFreshness(minutes, cadence = CRON_CADENCE_MINUTES) {
   if (minutes > cadence * 1.5) return { level: 'warn', detail };
   return { level: 'ok', detail };
 }
+
+/**
+ * Compare the migration files in the repository to the rows recorded in the
+ * production ledger.
+ *
+ * The hosted project does not use the Supabase CLI's migration history; the
+ * deploy tooling records every applied migration by exact filename in
+ * `public._applied_migrations` (see `docs/runbooks/production-launch.md` §2).
+ * The runbook's own step 6 requires the two sets to match — `diff` between the
+ * directory and the ledger must be empty — but nothing enforced it, so a
+ * deployer that skipped step 5 left a migration applied with no ledger row.
+ * That is harmless only while the file is idempotent: the next deploy computes
+ * the pending set from the ledger, so an *unrecorded* non-idempotent migration
+ * (an unguarded `create trigger`/`create policy`/`add constraint`) is re-run and
+ * aborts the deploy partway, leaving the schema half-applied.
+ *
+ * `repoOnly` is the drift that matters — files present in the repo but missing
+ * from the ledger, i.e. migrations the next deploy will treat as pending. The
+ * reverse (`ledgerOnly`) is unusual but reported too, since it means the ledger
+ * names a file the repository no longer has. Both are sorted so the message is
+ * deterministic; duplicates and non-string entries are ignored.
+ *
+ * @param {{files?: string[], ledgerIds?: string[]}} [input]
+ * @returns {{repoOnly: string[], ledgerOnly: string[], checked: number}}
+ */
+export function migrationLedgerDrift({ files, ledgerIds } = {}) {
+  const fileSet = new Set((files ?? []).filter((name) => typeof name === 'string'));
+  const ledgerSet = new Set((ledgerIds ?? []).filter((name) => typeof name === 'string'));
+  const repoOnly = [...fileSet].filter((name) => !ledgerSet.has(name)).sort();
+  const ledgerOnly = [...ledgerSet].filter((name) => !fileSet.has(name)).sort();
+  return { repoOnly, ledgerOnly, checked: fileSet.size };
+}
+
+/**
+ * Turn a migration-ledger observation into a finding, or `null` when the caller
+ * gave no observation to report.
+ *
+ * A warning, never a failure: a missing ledger row does not by itself break
+ * production — the migration's objects are usually already live (idempotent
+ * `create or replace`) — but it is exactly the state that makes the *next*
+ * deploy unsafe, so it must be visible. An in-sync ledger returns an `ok` row so
+ * the check proves it actually looked.
+ *
+ * `null` is reserved for the two states that carry no evidence: no `files` array
+ * (caller misuse) and no `ledgerIds` array (no usable token here — the same
+ * reason the scheduled run cannot read the ledger). Returning `ok` for a missing
+ * ledger read would be a green light from a look that never happened, the very
+ * "the indicator reads its own silence as health" family this check exists to
+ * close. A read that *failed* (`repoError`/`ledgerError`) or a repo read that
+ * came back empty is a `warn`, because each means the check could not confirm
+ * agreement and silence would hide that.
+ *
+ * @param {{files?: string[], ledgerIds?: string[], repoError?: string, ledgerError?: string}} [observation]
+ * @returns {{level: 'ok'|'warn', area: 'migrations', detail: string}|null}
+ */
+export function migrationLedgerFinding({ files, ledgerIds, repoError, ledgerError } = {}) {
+  if (repoError) {
+    return {
+      level: 'warn',
+      area: 'migrations',
+      detail: `could not list the repo's migrations (${repoError})`,
+    };
+  }
+  if (ledgerError) {
+    return {
+      level: 'warn',
+      area: 'migrations',
+      detail: `could not read the migration ledger (${ledgerError})`,
+    };
+  }
+  // No file list is caller misuse, not an observation — say nothing.
+  if (!Array.isArray(files)) return null;
+  // An empty list is a broken read, not an empty repository: never go green on
+  // it, because "the repo has no migrations" would be a fabricated pass.
+  if (files.length === 0) {
+    return {
+      level: 'warn',
+      area: 'migrations',
+      detail: 'found no migration files to compare against the ledger',
+    };
+  }
+  // No ledger read at all (no usable token here): not evidence of agreement.
+  if (!Array.isArray(ledgerIds)) return null;
+  const { repoOnly, ledgerOnly, checked } = migrationLedgerDrift({ files, ledgerIds });
+  if (repoOnly.length === 0 && ledgerOnly.length === 0) {
+    return {
+      level: 'ok',
+      area: 'migrations',
+      detail: `ledger matches the repo (${checked} migration${checked === 1 ? '' : 's'})`,
+    };
+  }
+  const parts = [];
+  if (repoOnly.length > 0) {
+    parts.push(
+      `${repoOnly.length} in the repo but not the ledger (${newestFirst(repoOnly)}) — the next deploy treats them as pending`,
+    );
+  }
+  if (ledgerOnly.length > 0) {
+    parts.push(
+      `${ledgerOnly.length} in the ledger but not the repo (${newestFirst(ledgerOnly)})`,
+    );
+  }
+  return { level: 'warn', area: 'migrations', detail: `drift: ${parts.join('; ')}` };
+}
+
+/** Up to three names, newest (highest timestamp) first, for a one-line detail. */
+function newestFirst(names) {
+  return names.slice(-3).reverse().join(', ');
+}
