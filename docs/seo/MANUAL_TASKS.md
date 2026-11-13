@@ -140,8 +140,11 @@ Doğrulananlar:
 
 **CF ile ilgili açık iş yok.** DNSSEC de tamam (§1).
 
-> Opsiyonel (SEO dışı, riskli): DMARC `p=none` → `quarantine`/`reject` sıkılaştırması.
-> Posta teslimini bozma riski taşır; ayrı bir karar. Şimdilik dokunulmadı.
+> **Güncelleme (2026-11-12):** DMARC zaten `p=reject`'e çekildi (Cloudflare DNS,
+> hizalı gönderim teyit edildi) ve MTA-STS/TLS-RPT kayıtları CF API ile eklendi.
+> Bu turda CF API yeniden yazma için kullanıldı: `_dmarc` TXT `p=reject`, yeni
+> `mta-sts` CNAME (proxy kapalı) + `_mta-sts`/`_smtp._tls` TXT. Ayrıntı:
+> `docs/runbooks/email-deliverability.md` §6–§7.
 
 ---
 
@@ -173,7 +176,24 @@ etkinleştir, OAuth consent scope'larını ekle, Desktop client oluştur, refres
 
 ---
 
-## 7. ⚪ İçerik/URL iyileştirmeleri (gelecekte, onay ister)
+## 7. 🟡 GA4 — kod hazır, ölçüm ID'si üretimde EKSİK (2026-11-12 bulgusu)
+
+Site tarafı **consent-gated** GA4 içeriyor ve GDPR uyumlu:
+`src/components/analytics/google-analytics.tsx` — consent-mode varsayılanı **her
+kategori için `denied`**, tag yalnız ziyaretçi analitik izni verince yüklenir
+(`analytics_storage`, `ad_storage`, `ad_user_data`, `ad_personalization`).
+Çerez paneli + geri çekme butonu (`ManageConsentButton`) mevcut.
+
+**Eksik olan tek şey ölçüm kimliği:** `NEXT_PUBLIC_GA_MEASUREMENT_ID` Vercel
+`production` env'inde **tanımlı değil** (20 env anahtarı denetlendi; GA/GTM yok).
+Bu yüzden üretimde GA4 tag'i hiç yüklenmiyor. Yapılacak: GA4'te bir Web data
+stream oluştur, `G-XXXXXXXXXX` ölçüm ID'sini Vercel'e `NEXT_PUBLIC_GA_MEASUREMENT_ID`
+olarak ekle (`production`+`preview`), yeniden dağıt. Consent akışı zaten doğru;
+ek kod gerekmez.
+
+---
+
+## 8. ⚪ İçerik/URL iyileştirmeleri (gelecekte, onay ister)
 
 Bunlar bu denetimde "eksik" değil; mevcut mimari bilinçli olarak bunları içermiyor. Eklemek
 istersen gerçek veri + özgün içerik şartıyla değerlendirilebilir:
@@ -193,8 +213,9 @@ istersen gerçek veri + özgün içerik şartıyla değerlendirilebilir:
 |---|---|---|---|
 | 1 | Registrar | DNSSEC — **zaten aktif**, elle iş yok (§1) | ✅ Tamam |
 | 2 | Search Console | Doğrula, sitemap gönder, Pages/Inspection denetle | ✅ Doğrulandı (§2) |
-| 3 | GA4 | Organic + consent ölçümü gözden geçir | 🟡 Önerilir |
+| 3 | GA4 | Organic + consent ölçümü gözden geçir | 🟡 Önerilir — **ölçüm ID'si üretim env'inde yok** (§7) |
 | 4 | Vercel | Bing/Yandex doğrulama env (opsiyonel) | 🟡 Opsiyonel |
 | 5 | Cloudflare | Denetlendi — **iş yok** | 🟢 Tamam |
 | 6 | Google Cloud | Indexing API — **entegre edildi** (§6) | ✅ Tamam |
-| 7 | İçerik | Şehir/şirket sayfaları (onay ister) | ⚪ İsteğe bağlı |
+| 7 | E-posta | DMARC `p=reject` + MTA-STS/TLS-RPT | ✅ Tamam (2026-11-12) |
+| 8 | İçerik | Şehir/şirket sayfaları (onay ister) | ⚪ İsteğe bağlı |
