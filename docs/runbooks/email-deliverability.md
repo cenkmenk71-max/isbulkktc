@@ -54,54 +54,56 @@ Apex `MX` artık `10 receive-euw1.forge.rmta.net` → gelen posta Resend'e düş
 adresler. İstersen geleni gerçek bir kutuya yönlendir (Resend → Receiving →
 Forward to).
 
-### 3. Üretim `RESEND_API_KEY` — DOĞRULA `[ ]`
-Vercel'de bu değerin **aynı Resend ekibinin** `re_…` anahtarı olduğundan emin ol
-(yanlış ekip → 401). Resend panosu → **Settings → API Keys → Create API Key**
-(permission: *Sending access*). Sonra:
+### 3. Üretim `RESEND_API_KEY` — TAMAM `[x]`
+Vercel `RESEND_API_KEY` **doğru ekibin** yeni `re_…` anahtarıyla değiştirildi
+(hedef: `production` + `preview`) ve üretim yeniden dağıtıldı. Doğrulama:
+`GET /api/email/resend-webhook` **503 → 401**, `POST /api/email/acquisition-campaign`
+`Bearer` ile **200** `{"message":"Acquisition campaign complete","sent":0,...}`.
 
-1. Vercel → proje **isbulkktc** → **Settings → Environment Variables**.
-2. `RESEND_API_KEY` satırını bul → **Edit** → değeri yapıştır → **Save**.
-3. **Deployments** → en üstteki üretim dağıtımı → **⋯ → Redeploy** (env değişikliği
-   yeni bir dağıtım ister).
-4. Doğrula: üretimde webhook rotası artık **503** yerine işlenebilir yanıt verir
-   (aşağıdaki 6. madde onu kesinleştirir).
+### 4. Cron sırları — `MARKETING_CRON_SECRET` / `ENGAGEMENT_CRON_SECRET` — TAMAM `[x]`
+İki sır da `openssl rand -hex 32` ile üretildi ve **hem Vercel'e** (`production`,
+`preview`) **hem GitHub Actions'a** (repository secret) **aynı değerle** yazıldı.
+Dispatch origin değişkenleri de eklendi:
+`MARKETING_DISPATCH_ORIGIN` / `ENGAGEMENT_DISPATCH_ORIGIN` = `https://isbulkktc-prod.vercel.app`.
 
-### 4. Cron sırları — `MARKETING_CRON_SECRET` / `ENGAGEMENT_CRON_SECRET` `[ ]`
-Bu iki sır olmadan edinim ve etkileşim işleri **hiç çalışmaz** (rota herkese 401).
-
-1. Sır değerlerini üret (her biri 32 byte, rastgele):
-   ```
-   openssl rand -hex 32      # çıktıyı MARKETING_CRON_SECRET yap
-   openssl rand -hex 32      # çıktıyı ENGAGEMENT_CRON_SECRET yap
-   ```
-2. GitHub → repo → **Settings → Secrets and variables → Actions**.
-3. **Secrets** sekmesi → **New repository secret** → ad `MARKETING_CRON_SECRET`,
-   değer 1. adımdaki çıktı → **Add secret**. Aynısını `ENGAGEMENT_CRON_SECRET` için
-   tekrarla.
-4. **Variables** sekmesi → **New repository variable** → ad `APP_URL`, değer
-   `https://isbulkktc.com` → **Add variable**. (Bu değişken zaten varsa atla.)
-5. Aynı iki değeri **üretim ortamına** da koy — yoksa rota bearer'ı tanımaz ve 401
-   döner: Vercel → **Settings → Environment Variables** → `MARKETING_CRON_SECRET`
-   ve `ENGAGEMENT_CRON_SECRET` ekle → **Redeploy**.
-6. Doğrula: Actions → **Send acquisition campaign** → **Run workflow**
-   (workflow_dispatch). Log `HTTP 200` ve `{"message":"Acquisition campaign
-   complete","sent":N,...}` göstermeli. `503` = sunucuda hâlâ eksik env.
+Doğrulama (uçtan uca): Actions → **Send acquisition campaign** → **Run workflow** →
+log `HTTP 200` + `{"message":"Acquisition campaign complete","sent":0,"failed":0}`.
+Her iki rota da bearer'sız **401** döner.
 
 > Not: GitHub sırları **yazılınca bir daha okunamaz** (write-only). Üretilen değeri
 > güvenli bir yerde sakla; hem GitHub'a hem Vercel'e **aynı** değeri koy.
 
-### 5. Resend webhook — `RESEND_WEBHOOK_SECRET` `[ ]`
-Bu olmadan bounce ve spam-şikâyetleri **otomatik bastırılmaz**; yani sert bounce
-eden adreslere göndermeye devam edilir ve itibar düşer.
+### 5. Resend webhook — `RESEND_WEBHOOK_SECRET` — TAMAM `[x]`
+Webhook oluşturuldu (6 olay: `email.sent/delivered/delivery_delayed/bounced/complained/suppressed`),
+`whsec_…` imza sırrı Vercel'e yazıldı (`production`+`preview`) ve yeniden dağıtıldı.
 
-1. Resend panosu → **Webhooks → Add Webhook**.
-2. Endpoint URL: `https://isbulkktc.com/api/email/resend-webhook`.
-3. Olaylar: **`email.bounced`, `email.complained`, `email.suppressed`** seç.
-4. **Add** → oluşan webhook'un **Signing Secret**'ını (`whsec_…`) kopyala.
-5. Vercel → **Settings → Environment Variables** → `RESEND_WEBHOOK_SECRET` =
-   `whsec_…` → **Redeploy**.
-6. Doğrula: `curl -X POST https://isbulkktc.com/api/email/resend-webhook -d '{}'`
-   → `503` yerine **401** (imza doğrulaması devrede demektir).
+**Cloudflare bulgusu (önemli):** `https://isbulkktc.com` Cloudflare arkasında ve
+bot koruması bazı istemci UA'larını **403 error 1010** ile bloklar (ör. Python
+`urllib`). Webhook bu yüzden **Cloudflare'siz Vercel alias**'ına taşındı:
+`https://isbulkktc-prod.vercel.app/api/email/resend-webhook` (cron'ların da
+kullandığı alias; aynı derlemeyi sunar). Kanonik host da çalışır ama alias
+Cloudflare'i tamamen atlar.
+
+Doğrulama: doğru Svix imzasıyla POST → **200** `{"message":"Ignored",...}`;
+bozuk imza → **401** `{"message":"Invalid signature"}`.
+
+### 5b. Takım gelen kutusu env'leri — TAMAM `[x]` (2026-11-12 ikinci tur)
+Üretimde `SALES_INBOX_EMAIL` / `FEEDBACK_INBOX_EMAIL` / `COMPANY_REVIEW_INBOX_EMAIL`
+**hiçbiri yoktu**. `mailer.ts` bunları şöyle çözüyor:
+
+| Env | Tüketici | Yoksa ne olur |
+|---|---|---|
+| `SALES_INBOX_EMAIL` | `getReplyToInbox()` — her mesaja `Reply-To` | Giden posta `no-reply@`'dan çıkar, **`Reply-To` yok** → yanıt kaybolur, `List-Unsubscribe` mailto yedeği düşer |
+| `FEEDBACK_INBOX_EMAIL` | `getFeedbackInbox()` — geri bildirim takım uyarısı | Uyarı **sessizce atlanır** (`console.warn`, hata yok) |
+| `COMPANY_REVIEW_INBOX_EMAIL` | `getCompanyReviewInbox()` — şirket profili inceleme uyarısı | Uyarı **sessizce atlanır** |
+
+Üçü de Vercel'e (`production`+`preview`) `info@isbulkktc.com` olarak yazıldı ve
+üretim yeniden dağıtıldı. **Not:** `email-preview.mjs` yerel önizleme yolu
+`reply_to`'yu `info@`'a sabit varsayılanla dolduruyordu; bu yüzden test postaları
+doğru göründü ve eksik env fark edilmedi — üretim yolu varsayılansızdır.
+
+**Doğrula:** bir edinim/etkileşim e-postasının başlığında `Reply-To: info@isbulkktc.com`
+görünmeli. `getReplyToInbox()` artık `SALES_INBOX_EMAIL` ile dolu.
 
 ### 6. DMARC `p=quarantine` → `reject` `[ ]` (raporları izledikten sonra)
 Şimdilik bırak. `rua=mailto:dmarc@isbulkktc.com` raporlarını birkaç hafta izle;
@@ -136,6 +138,27 @@ ile üç adrese gönderildi. Hepsi `from İşBul KKTC <info@isbulkktc.com>`,
 | muhammedali.kahraman@outlook.com | `01a1d203-3eac-7435-b840-80cc21926541` | sent |
 | muhammed.ali.kahraman@outlook.com | `01a1d203-3fb1-73aa-98f7-e8b865102bd9` | sent |
 | letgodeneme97@outlook.com | `01a1d203-40b6-7e84-ada2-c7e97cda60b6` | sent |
+
+**Yeni anahtarla ikinci gönderim (aynı gün):** doğru ekibin anahtarı Vercel'e
+yazıldıktan sonra üç adrese yeniden gönderildi. Gönderim anında `sent`; sonradan
+üçü de **`delivery_delayed`** oldu (Outlook greylisting — kalıcı ret değil):
+
+| Alıcı | Resend e-posta id | son olay |
+|---|---|---|
+| muhammedali.kahraman@outlook.com | `01a1d23c-2df0-7cbd-a4a5-d6e701aa74e4` | delivery_delayed |
+| muhammed.ali.kahraman@outlook.com | `01a1d23c-2efa-734e-bdba-7a6b89083958` | delivery_delayed |
+| letgodeneme97@outlook.com | `01a1d23c-3027-7d63-8df8-92dc46c132cb` | delivery_delayed |
+
+**Üçüncü gönderim — `Reply-To` düzeltmesinden sonra (2026-11-12, aynı gün):**
+`SALES_INBOX_EMAIL` Vercel'e yazıldıktan sonra üç adrese yeniden gönderildi.
+Her üçünde de `from İşBul KKTC <info@isbulkktc.com>`, **`reply_to info@isbulkktc.com`**
+doğrulandı (`GET /emails/<id>`):
+
+| Alıcı | Resend e-posta id | reply_to | son olay |
+|---|---|---|---|
+| muhammedali.kahraman@outlook.com | `01a1d24c-3c7e-7e46-844b-145126219007` | info@isbulkktc.com | sent |
+| muhammed.ali.kahraman@outlook.com | `01a1d24c-3d88-704d-a357-f69e88fb6ee5` | info@isbulkktc.com | sent |
+| letgodeneme97@outlook.com | `01a1d24c-3e92-7b54-8ff3-05a38424900d` | info@isbulkktc.com | sent |
 
 `last_event` başta `sent` olur; `delivered` = alıcı sunucu kabul etti (yine de
 gelen kutusu garantisi değildir), `delivery_delayed` = alıcı sunucu 4xx ile
@@ -256,11 +279,25 @@ Tam adımlar için yukarıdaki **"Kalan altyapı maddeleri"** bölümüne bak.
 
 - [x] Resend alanı doğrulandı (sending + receiving açık)
 - [x] `info@isbulkktc.com` gelen posta kabul ediyor (apex MX → Resend)
-- [ ] Üretim `RESEND_API_KEY`'in doğru ekibin `re_…` anahtarı olduğunu doğrula
-- [ ] `MARKETING_CRON_SECRET` / `ENGAGEMENT_CRON_SECRET` (GitHub **ve** Vercel)
-- [ ] `RESEND_WEBHOOK_SECRET` + Resend webhook endpoint (`email.bounced/complained/suppressed`)
+- [x] Üretim `RESEND_API_KEY` doğru ekibin `re_…` anahtarıyla güncellendi (Vercel
+      `production`+`preview`) ve üretim yeniden dağıtıldı; rota 200 döndü
+- [x] `MARKETING_CRON_SECRET` / `ENGAGEMENT_CRON_SECRET` — Vercel **ve** GitHub
+      Actions'a aynı değerle yazıldı; `MARKETING/ENGAGEMENT_DISPATCH_ORIGIN`
+      değişkenleri eklendi; `workflow_dispatch` uçtan uca HTTP 200
+- [x] `RESEND_WEBHOOK_SECRET` + Resend webhook endpoint (`sent/delivered/delivery_delayed/bounced/complained/suppressed`)
+      — endpoint Cloudflare'siz Vercel alias'ına yönlendirildi (aşağıdaki 1010 notu)
+- [x] Takım gelen kutusu env'leri (`SALES_INBOX_EMAIL` / `FEEDBACK_INBOX_EMAIL` /
+      `COMPANY_REVIEW_INBOX_EMAIL`) → `info@isbulkktc.com`, Vercel `production`+`preview`
 - [ ] DMARC `p=quarantine` → `reject` (raporları izledikten sonra)
 - [ ] MTA-STS + TLS-RPT kayıtları (isteğe bağlı — yalnız gelen posta duruşu)
 - [ ] Gerçek gelen kutusu/spam yerleşim doğrulaması (araç bunu yapamaz — gerçek
       posta kutusu gerekir; bu turda 3 adrese gönderildi)
 - [~] ~~DKIM `1024` → `2048`~~ **iptal: Resend 2048 desteklemiyor**
+
+### Cloudflare 1010 bot-koruması notu (2026-11-12)
+
+`https://isbulkktc.com` Cloudflare arkasında ve bot koruması bazı istemci UA'larını
+**403 error 1010** ile bloklar (ör. Python `urllib`). `curl` ve `Svix-Webhooks` UA
+geçer. Bu yüzden webhook ve cron çağrıları **Cloudflare'siz Vercel alias**'ını
+(`https://isbulkktc-prod.vercel.app`) kullanır; aynı derlemeyi sunar. Kanonik host da
+çalışır ama Cloudflare'i atlamak teslim garantisi için daha güvenli.
