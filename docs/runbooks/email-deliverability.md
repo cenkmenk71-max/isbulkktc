@@ -195,6 +195,11 @@ Araç bunu yapamaz; gerçek bir kutu gerekir. Bu turda üç adrese test postası
 gönderildi (aşağıya bak). **Yapılacak:** o üç kutuda **Gelen Kutusu**'nu kontrol
 et; spam'deyse **"Spam değil"** işaretle (ısınma için kritik).
 
+Ayrıca sahip talebiyle **Gmail**'e (`jakanamamomoko@gmail.com`) bir test postası
+gönderildi ve Gmail sunucusu **`delivered`** ile kabul etti (aşağıdaki beşinci
+gönderim). Gmail bu testte greylisting yapmadı; Outlook'un `delivery_delayed`
+davranışından farklı olarak kutu düzeyinde bir yerleşim sinyali verir.
+
 ### Isınma (DNS ile çözülmez)
 Yeni alan + sıfır itibar: düşük hacimle başla, yalnız onaylı/ilgili alıcıya gönder,
 alıcıların "spam değil" işaretlemesini sağla. Hacmi haftalar içinde kademeli artır.
@@ -312,6 +317,31 @@ curl -s -H "Authorization: Bearer re_…" https://api.resend.com/emails/<id>   #
 ```
 Zaman içinde `delivered`'a dönmesi beklenir; dönmezse (birkaç gün) MX/MTA-STS
 politikasını ve Outlook postmaster panelini incele.
+
+### Beşinci gönderim — Gmail'e spam/yerleşim kontrolü (2026-11-12, sahip talebi)
+
+Sahip, önceki testin spam'e mi gelen kutusuna mı düştüğünü hatırlamadığını
+belirtti ve **yeni bir alıcı** verdi: `jakanamamomoko@gmail.com`. Önceki
+gönderimlerin hepsi Outlook'a gitti ve yalnızca `delivery_delayed` gösterdi —
+yani hiçbiri teyitli `delivered` durumuna ulaşmadı. Gmail farklı bir alıcı
+sunucudur ve bu testte **greylisting yapmadı**.
+
+`RESEND_API_KEY='re_…' RESEND_FROM_EMAIL='İşBul KKTC <info@isbulkktc.com>' node scripts/verify-deliverability.mjs --send jakanamamomoko@gmail.com`
+
+| Alıcı | Resend e-posta id | gönderim anı | sonraki ölçüm |
+|---|---|---|---|
+| jakanamamomoko@gmail.com | `01a1d4ff-8cf1-7715-abba-cc3d9945d8e1` | sent | **delivered** |
+
+`from İşBul KKTC <info@isbulkktc.com>`, konu `isbulkktc deliverability test`.
+`delivered`, Gmail sunucusunun iletiyi kabul ettiği anlamına gelir; **spam'e mi
+gelen kutusuna mı düştüğü** hâlâ yalnızca gerçek kutuda görülür. Sahip o kutuyu
+kontrol edip sonucu bildirmelidir.
+
+> **Anahtar kurtarma notu (bu turda öğrenildi):** üretim `RESEND_API_KEY`'i
+> Vercel'in proje düzeyi liste ucundan şifreli bir zarf (`eyJ2…`) olarak döner ve
+> çözülemez. **Tek bir env değişkeni** için
+> `GET https://api.vercel.com/v9/projects/<projId>/env/<envId>?teamId=<teamId>&decrypt=true`
+> ucu düz metin değeri döndürür. Anahtar sandbox'ta bu yolla kurtarıldı.
 
 ## DKIM bit uzunluğu — düzeltilecek bir şey DEĞİL (2026-11-12 düzeltmesi)
 
@@ -438,7 +468,10 @@ Tam adımlar için yukarıdaki **"Kalan altyapı maddeleri"** bölümüne bak.
 - [x] MTA-STS politika dosyası **kodda sunuluyor** (`/.well-known/mta-sts.txt`, `mode: testing`)
 - [x] MTA-STS + TLS-RPT **DNS kayıtları** (Vercel host + CF CNAME/TXT; canlı 200, `verify-deliverability` PASS)
 - [~] Gerçek gelen kutusu/spam yerleşim doğrulaması (araç yapamaz — gerçek posta kutusu
-      gerekir; bu turda 3 adrese gönderildi, `sent`)
+      gerekir). Outlook'a 4 gönderim `delivery_delayed`'da kaldı; sahip talebiyle
+      **Gmail**'e (`jakanamamomoko@gmail.com`) 5. gönderim yapıldı ve Gmail
+      **`delivered`** ile kabul etti. Spam/gelen kutusu ayrımı için sahip kutuyu
+      kontrol etmeli
 - [x] **GA4 canlı ölçüm** — `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-HNM3KEX9VD` Vercel
       `production`+`preview`'a yazıldı ve yeniden dağıtıldı; tarayıcıda onay sonrası
       `gtag.js` + `page_view` + `google-analytics.com/g/collect` isteği doğrulandı,
