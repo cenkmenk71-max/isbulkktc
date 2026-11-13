@@ -6,8 +6,8 @@ değişkeninden okunur.
 
 ## Mimari (kod tarafı hazır)
 
-- Bileşen: `src/components/analytics/google-analytics-consent.tsx`
-- Mount: `src/app/[locale]/layout.tsx` (`<GoogleAnalyticsConsent />`)
+- Bileşen: `src/components/analytics/google-analytics.tsx`
+- Mount: `src/app/[locale]/layout.tsx` (`<GoogleAnalytics />`)
 - CSP izinleri: `next.config.ts` → `script-src`/`connect-src` içinde
   `www.googletagmanager.com` ve `www.google-analytics.com` zaten var.
 - Ortam değişkeni: `NEXT_PUBLIC_GA_MEASUREMENT_ID` (`.env.example`'da belgeli).
