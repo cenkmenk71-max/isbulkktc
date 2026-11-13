@@ -3,7 +3,7 @@
 Bu dosya, **repo dışında** yapılması gereken ve bu ortamdan erişilemeyen/uygun olmayan
 işleri listeler. Kod tarafı tamamlandı; aşağıdakileri son olarak elle yapacaksın.
 
-Son güncelleme: 2026-11-03. Hedef: `https://isbulkktc.com`.
+Son güncelleme: 2026-11-12. Hedef: `https://isbulkktc.com`.
 
 ---
 
@@ -219,3 +219,117 @@ istersen gerçek veri + özgün içerik şartıyla değerlendirilebilir:
 | 6 | Google Cloud | Indexing API — **entegre edildi** (§6) | ✅ Tamam |
 | 7 | E-posta | DMARC `p=reject` + MTA-STS/TLS-RPT | ✅ Tamam (2026-11-12) |
 | 8 | İçerik | Şehir/şirket sayfaları (onay ister) | ⚪ İsteğe bağlı |
+| 9 | Search Console | Boş landing "Soft 404" → **Validate fix** (deploy sonrası, §9.6) | 🔴 P1 — deploy bekliyor |
+| 10 | IndexNow | Sitemap küçülünce **yeniden ping** (otomatik, elle iş yok, §9.7) | 🟢 Otomatik |
+
+---
+
+## 9. 🔁 Tur 4 güncellemesi — 2026-11-03 (Coverage anlık görüntüsü)
+
+Kullanıcı GSC **Coverage** CSV'lerini paylaştı; her kova kod + canlı `curl` kanıtıyla eşleştirildi.
+Tam analiz: `SEO_IMPLEMENTATION_REPORT.md` §20–§26. **Özet:** 301 "dizine eklenmedi" kovasının
+**243'ü (%81) beklenen/istenen**; yalnız **58'i** iyileştirme alanı. **Yeni kod hatası yok**; iki
+gerçek düzeltme **bu turda hazır ve deploy bekliyor** (soft 404 + push hedefi).
+
+### 9.1 🔴 P1 — Merge sonrası GSC'de "Soft 404" doğrula (elle iş)
+Bu PR **merge edilince** Vercel `main`'i otomatik yayına alır. Yayın sonrası:
+1. Canlı doğrula:
+   ```bash
+   curl -s https://isbulkktc.com/is-ilanlari/lefke | grep -o '<meta name="robots"[^>]*>'
+   # beklenen: <meta name="robots" content="noindex, follow">
+   curl -s https://isbulkktc.com/is-turleri/yari-zamanli | grep -o '<meta name="robots"[^>]*>'
+   ```
+2. GSC → **Pages → "Soft 404"** → **Validate fix** (örnek: `/en/is-ilanlari/iskele`, `/en/is-ilanlari/lefke`).
+   > Fix deploy edilince bu landing'ler "noindex ile hariç tutuldu" kovasına geçer — **normal**;
+   > soft 404 kovası boşalır.
+
+### 9.2 🟡 P2 — "Kullanıcı seçili canonical olmadan kopya" (1 URL) — panelden al
+Bu tek URL, Tur 3'ün 225-URL taramasında **yok**.
+1. GSC → **Pages → "Duplicate without user-selected canonical"** → satırı aç, örnek **URL'yi kopyala**.
+2. URL'yi iletince kod karşılığını (canonical/hreflang) doğrulayıp gerekirse en küçük düzeltmeyi yaparım.
+
+### 9.3 🟡 P2 — "Keşfedildi / Tarandı, eklenmedi" için hızlandırma
+- Sitemap'teki yeni ilan `/jobs/<slug>` URL'leri için **Request indexing** (elle) veya
+  **#646** ile gelen günlük iş zaten bildiriyor: `npm run indexing:submit` /
+  Actions → *Submit job URLs to Google Indexing API* (21/21 JobPosting).
+- Boş landing'ler fix sonrası `noindex` olup bu kovalardan düşer.
+
+### 9.4 ✅ #646 ile ÇÖZÜLDÜ — GSC okuma + Indexing API
+Bu turdan önce "GSC erişimi yok" diye **BLOCKED** olan madde, #646 ile çözüldü:
+`scripts/verify-search-console.mjs` Google'ın kendi API'sinden okuyor (`npm run search-console:verify`),
+`scripts/submit-indexing.mjs` günlük JobPosting bildiriyor. Kimlik: GitHub Actions secret'ları
+(`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REFRESH_TOKEN`). Runbook:
+`docs/runbooks/search-console-indexing.md`.
+
+### 9.5 ⚪ Bilgi — kova triyajı (aksiyon GEREKMEZ)
+| GSC kova | Adet | Neden aksiyon yok |
+|---|---:|---|
+| "noindex" ile hariç tutuldu | 83 | Bilinçli tasarım (auth/dashboard). Fix deploy edilince **artacak — normal.** |
+| Bulunamadı (404) | 58 | Kapanan ilan / eski URL; sitemap yalnız 200 URL yayıyor |
+| Yönlendirmeli sayfa | 48 | `www`→apex, `/tr/*`→prefixsiz, trailing-slash **308** — doğru |
+| Doğru standart etiketli alternatif | 31 | hreflang/canonical doğru birleşmiş (186 tam set) — sağlıklı |
+| Başka 4xx ile engellendi | 23 | Güvenlik URL'leri (`/.env`, `/wp-login.php` …) → **403 + noindex** |
+
+> **Kritik olmayan sorunlar:** CSV **boş** → işaretli sorun yok. **Site haritası:** canlıda 200,
+> **207 `<loc>`**.
+
+---
+
+## 10. 🔁 Tur 5 güncellemesi — 2026-11-12 (sitemap ↔ noindex çelişkisi)
+
+Bu turda **sitemap'in `noindex` dönen boş landing sayfalarını ilan etmesi** çelişkisi kapatıldı
+(kod: PR #651). Tam analiz: `SEO_IMPLEMENTATION_REPORT.md` §27–§32. Özet: sitemap artık bir
+ilçe/tür sayfasını yalnız **en az bir canlı ilan** varsa yayınlar; boş sayfa `200 + noindex, follow`
+döner ama sitemap'ten düşer. İki sinyal tek kaynaktan türediği için bir daha çelişmez.
+
+**Canlı kanıt (deploy öncesi, 2026-11-12):** sitemap 207 `<loc>`; boş yüzeyler
+`/is-ilanlari/lefke` + `/is-turleri/{yari-zamanli,sozlesmeli,gecici}` sitemap'te duruyor ve
+robots meta'sız (soft 404 adayı). Dolu yüzeyler (`/is-ilanlari/guzelyurt` 1 ilan,
+`/is-turleri/tam-zamanli` 19 ilan) sitemap'te **kalmalı**.
+
+### 10.1 🔴 P1 — Merge sonrası doğrula (elle, panelden)
+
+PR #651 merge edilince Vercel `main`'i yayına alır. Yayın sonrası sırayla:
+
+```bash
+# 1) Boş landing artık noindex mi?
+curl -s https://isbulkktc.com/is-ilanlari/lefke | grep -o '<meta name="robots"[^>]*>'
+#    beklenen: <meta name="robots" content="noindex, follow">
+curl -s https://isbulkktc.com/is-turleri/yari-zamanli | grep -o '<meta name="robots"[^>]*>'
+#    beklenen: <meta name="robots" content="noindex, follow">
+
+# 2) Sitemap küçüldü mü? (207 → ~183)
+curl -s https://isbulkktc.com/sitemap.xml | grep -c '<loc>'
+curl -s https://isbulkktc.com/sitemap.xml | grep -c 'is-ilanlari/lefke'   # beklenen: 0
+
+# 3) Tek komutluk sağlık kontrolü (çelişki = failure)
+npm run indexing:verify
+```
+
+Sonra **GSC → Pages → "Soft 404" → Validate fix** (örnek: `/en/is-ilanlari/iskele`,
+`/en/is-ilanlari/lefke`). Fix yayında olduğundan bu landing'ler **"noindex ile hariç tutuldu"**
+kovasına geçer — **normal**; soft 404 kovası boşalır.
+
+> Neden elle: GSC **yazma** (Validate fix, Request indexing) API'den yapılamaz; bu ortamda GSC
+> OAuth kimliği de yok (`npm run search-console:verify` → `Credential: unconfigured`). Okuma ve
+> JobPosting bildirimi kod tarafında otomatik (§2, §6).
+
+### 10.2 🟢 IndexNow / sitemap ping — elle iş YOK
+
+Boş landing'ler sitemap'ten düşünce **yeni** sitemap'ı bildirmek gerekir; bu **zaten otomatik**:
+`submit-indexnow.yml` günde bir (`37 5 * * *`) canlı sitemap'i Bing/Yandex'e (IndexNow) gönderir,
+`submit-indexing.yml` `/jobs/<slug>` JobPosting'lerini Google Indexing API'ye bildirir. Deploy
+sonrası ek bir ping gerekmez; elle hızlandırmak istersen:
+
+```bash
+node scripts/submit-indexnow.mjs https://isbulkktc.com     # Bing/Yandex
+npm run indexing:submit -- --dry-run                       # ne bildirileceğini göster
+```
+
+### 10.3 ⚪ Bilgi — bu turda değişen kovalar (aksiyon GEREKMEZ)
+
+| GSC kova | Değişim | Neden |
+|---|---|---|
+| Soft 404 | **↓ ~24 → 0** | Boş landing'ler artık `noindex, follow` |
+| "noindex" ile hariç tutuldu | **↑ ~24** | Aynı sayfalar bu kovaya geçer — **istenen** |
+| Doğru standart etiketli alternatif / Yönlendirmeli / 4xx | **değişmez** | Bu turda dokunulmadı (§21 ile aynı) |

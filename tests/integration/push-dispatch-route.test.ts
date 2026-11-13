@@ -367,7 +367,11 @@ test("the payload carries the target locale and the application link", async () 
 
     assert.equal(sentPayloads.length, 1);
     const payload = JSON.parse(sentPayloads[0].payload);
-    assert.equal(payload.url, "/de/applications", "the link must stay inside the app, prefixed");
+    assert.equal(
+      payload.url,
+      "/de/profile/dashboard#my-applications",
+      "the link must target the candidate dashboard, prefixed",
+    );
     assert.equal(payload.tag, `application-${row.application_id}`);
     assert.ok(payload.title && payload.body, "the payload must carry copy");
     assert.ok(

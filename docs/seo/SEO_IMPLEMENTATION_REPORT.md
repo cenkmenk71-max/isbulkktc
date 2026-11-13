@@ -155,3 +155,214 @@ bir denetim + düzeltme turudur ve "main'e merge yok" kuralına tabi değildir
 (kullanıcı açık talimat verdi). Yine de kapsam, mevcut mimariyi ve çalışan özellikleri
 koruyacak biçimde en küçük değişiklikle sınırlandırıldı; aynı bulgu tekrar tekrar
 raporlanmadı.
+
+---
+
+## EK — Tur 4: Google Search Console Coverage denetimi (2026-11-03)
+
+> Bu ek §1–§9'a **eklenir**, onları geçersiz kılmaz. Girdi: kullanıcının paylaştığı GSC
+> **Coverage** CSV'leri (anlık görüntü penceresi **2026-10-29 → 2026-11-09**). Her kova kod
+> okuması + canlı `curl` kanıtıyla eşleştirildi. Sınıflar: CONFIRMED · LIKELY · NOT FOUND ·
+> NOT APPLICABLE · BLOCKED. Önem: P0–P3.
+
+### §20. Anlık görüntü (kaynak CSV)
+
+`Grafik.csv` (günlük):
+
+| Tarih | Dizine eklenmedi | Dizine eklenen | Gösterimler |
+|---|---:|---:|---:|
+| 2026-11-06 | 238 | 201 | 113 |
+| 2026-11-07 | 301 | 195 | 99 |
+| 2026-11-08 | 301 | 195 | 122 |
+| 2026-11-09 | 301 | 195 | 142 |
+
+`Önemli sorunlar.csv` (9 satır):
+
+| Sebep | Kaynak | Sayfa sayısı |
+|---|---|---:|
+| "noindex" etiketi tarafından hariç tutuldu | Web sitesi | 83 |
+| Bulunamadı (404) | Web sitesi | 58 |
+| Yönlendirmeli sayfa | Web sitesi | 48 |
+| Doğru standart etikete sahip alternatif sayfa | Web sitesi | 31 |
+| Başka bir 4xx sorunu nedeniyle engellendi | Web sitesi | 23 |
+| Soft 404 | Web sitesi | 2 |
+| Kullanıcı tarafından seçilen standart sayfa olmadan kopya | Web sitesi | 1 |
+| Tarandı — şu anda dizine eklenmiş değil | Google sistemleri | 43 |
+| Keşfedildi — şu anda dizine eklenmiş değil | Google sistemleri | 12 |
+| **Toplam** | | **301** |
+
+- **Tutarlılık kanıtı:** kova toplamı **83+58+48+31+23+2+1+43+12 = 301**, `Grafik.csv`'nin
+  2026-11-07…09 satırlarındaki "Dizine eklenmedi" değeriyle **birebir** aynı. Triyaj doğru zeminde.
+- `Kritik olmayan sorunlar.csv` **boş** (başlık dışında satır yok) → GSC'de işaretli kritik olmayan
+  sorun yok. `Meta Veri.csv`: site haritası = "Bilinen tüm sayfalar".
+
+### §21. Kova triyajı
+
+| GSC kova | Adet | Sınıf | Önem | Kanıt |
+|---|---:|---|---|---|
+| noindex ile hariç tutuldu | 83 | CONFIRMED (tasarım) | P3 | `/login` vb. → `200 + noindex, nofollow`; bilinçli auth/dashboard politikası |
+| Bulunamadı (404) | 58 | LIKELY (yaşam döngüsü) | P3 | sitemap yalnız **200** URL yayıyor; kapanan ilan slug'ları |
+| Yönlendirmeli sayfa | 48 | CONFIRMED (doğru) | P3 | `/tr/*`→prefixsiz **308**, `www`→apex **308**, trailing-slash **308** |
+| Doğru standart etiketli alternatif | 31 | CONFIRMED (sağlıklı) | P3 | 186 tam hreflang seti; alternate → canonical doğru birleşiyor |
+| Başka 4xx ile engellendi | 23 | CONFIRMED (güvenlik) | P3 | `/.env`, `/wp-login.php`, `/phpmyadmin` → **403 + noindex, nofollow** |
+| **Soft 404** | **2** | **CONFIRMED** | **P1** | boş `/en/is-ilanlari/{iskele,lefke}` → `200 + index,follow` + self-canonical |
+| Kullanıcı seçili canonical olmadan kopya | 1 | LIKELY | P2 | örnek URL yalnız GSC panelinde; 225-URL taramasında çıkmadı |
+| Tarandı — eklenmedi | 43 | LIKELY | P2 | ince landing + yeni ilan |
+| Keşfedildi — eklenmedi | 12 | LIKELY | P2 | yeni URL; aracı günlük Indexing API işi |
+
+**243/301 (%81) beklenen/istenen; yalnız 58'i iyileştirme adayı. P0 yok.**
+
+### §22. Sınıflandırma özeti
+
+- **CONFIRMED:** 83 (noindex tasarımı) · 48 (redirect) · 31 (alternate) · 23 (4xx güvenlik) ·
+  **2 (soft 404 → bu turda düzeltildi)**.
+- **LIKELY:** 58 (404 yaşam döngüsü) · 1 (kopya) · 43 (tarandı) · 12 (keşfedildi).
+- **NOT FOUND:** canonical uyuşmazlığı / robots-Disallow hatası — bu anlık görüntüde yok.
+- **NOT APPLICABLE:** — (bu turda kapsam dışı kalan kova yok).
+- **BLOCKED:** per-URL URL Inspection — bu ortamda Google OAuth kimliği yok (önceki token süresi
+  doldu, `HTTP 401`). Kopya URL'nin örneği de yalnız GSC panelinde.
+
+### §23. Doğrulanan gerçek bulgular
+
+- **T4-1 (P1, CONFIRMED) — Soft 404.** Sıfır ilanlı district/type landing'i `200 + index,follow`
+  + self-canonical döndürüyordu; Google bunu "Soft 404" sayıyor. **Düzeltme:**
+  `noIndexFollowMetadata` → `index:false, follow:true` (+ `googleBot`). Sayfa indeksten çıkar ama
+  `follow` kaldığı için kardeş ilçe/tür bağlantıları taranabilir kalır. Kanıt: canlı
+  `/is-ilanlari/lefke` hâlâ robots meta'sız (fix **deploy bekliyor**); deploy sonrası
+  `noindex, follow` dönecek.
+- **T4-2 (P1, CONFIRMED) — kırık push hedefi.** Aday başvuru push bildirimi `/applications`'a
+  gidiyordu; canlı `GET /applications` → **404**. **Düzeltme:** `/profile/dashboard#my-applications`
+  (canlı `307 → /login`; oturum yoksa girişe, girişte bölüme iner).
+- **T4-3 (P3, CONFIRMED) — redirect'ler sağlıklı.** `/tr/jobs` → `308` → `/jobs`; `www` → apex `308`.
+  Aksiyon yok.
+- **T4-4 (P3, CONFIRMED) — noindex kovası artacak.** Fix deploy edilince sıfır ilanlı landing'ler
+  bu kovaya geçer; **normal** ve istenen (soft 404 kovası boşalır).
+
+### §24. Kanıt (canlı `curl`, 2026-11-03)
+
+```
+GET /is-ilanlari/lefke        → 200, canonical=https://isbulkktc.com/is-ilanlari/lefke, robots meta YOK
+GET /is-turleri/yari-zamanli  → 200, canonical=self, robots meta YOK
+GET /                         → 200, canonical=https://isbulkktc.com
+GET /sitemap.xml              → 200 (207 <loc>)
+GET /robots.txt               → 200
+GET /tr/jobs                  → 308 → /jobs
+GET /.env                     → 403 + noindex, nofollow
+GET /wp-login.php             → 403 + noindex, nofollow
+GET /applications             → 404
+GET /profile/dashboard        → 307 → /login
+```
+
+### §25. Değişen dosyalar ve testler (bu tur)
+
+| Dosya | Değişiklik |
+|---|---|
+| `src/lib/seo.ts` | `noIndexFollowMetadata(metadata)` eklendi |
+| `.../is-ilanlari/[district]/page.tsx` | 0 sonuçta `noIndexFollowMetadata` |
+| `.../is-turleri/[type]/page.tsx` | 0 sonuçta `noIndexFollowMetadata` |
+| `src/server/push/notification-copy.ts` | push hedefi `/profile/dashboard#my-applications` |
+| `tests/integration/push-dispatch-route.test.ts` | yeni hedef pinlendi |
+| `src/lib/seo.test.ts` (yeni) | `noIndexFollowMetadata` sözleşmesi pinlendi |
+
+Test: `lint` ✅ · `typecheck` ✅ · `check:frontend-source` ✅ · `test:unit` **1060/1060** ✅ ·
+`indexing:verify` **0 failure** (207 URL) ✅ · push integration **13/13** ✅.
+
+### §26. Kapsam sınırı ve #646 ile ilişki
+
+#646 bu arada GSC'yi **okuma** (finding 12 → RESOLVED) ve **Indexing API** bildirimini (21 JobPosting
+URL) devreye aldı. Bu ek onu **pekiştirir**: kalan tek kod boşluğu (soft 404) kapatıldı; Google'ın
+kendi API'sinden okunan durum artık `npm run search-console:verify` ile izlenebilir.
+
+---
+
+## EK — Tur 5: sitemap ↔ noindex çelişkisi (boş landing sayfaları) (2026-11-12)
+
+> Bu ek §1–§26'ya **eklenir**, onları geçersiz kılmaz. Girdi: Tur 4'te hazırlanan `noIndexFollowMetadata`
+> düzeltmesinin **ikinci yarısı** — sayfa `noindex` olurken sitemap hâlâ onu ilan ediyordu. Sınıflar:
+> CONFIRMED · LIKELY · NOT FOUND · NOT APPLICABLE · BLOCKED. Önem: P0–P3.
+
+### §27. Kök neden — iki sinyal birbiriyle çelişiyordu
+
+Tur 4'te sıfır ilanlı district/type landing'i `noIndexFollowMetadata` ile `noindex, follow`
+dönecek şekilde düzeltildi. Ama **sitemap aynı URL'i ilan etmeye devam ediyordu.** Sitemap'te
+`<loc>` olarak duran bir sayfa `noindex` dönünce Google iki çelişkili sinyal alır; kendi
+doğrulayıcımız `scripts/verify-indexing.mjs` bunu **sert hata** sayar (L452:
+`page is noindex but listed in the sitemap`). Yani düzeltmenin yalnız `noindex` yarısı, tek başına
+yeni bir tutarsızlık üretiyordu.
+
+Kanıt (canlı, 2026-11-12, düzeltme **deploy öncesi**):
+
+```
+GET /sitemap.xml                      → 207 <loc>; 36 district + 36 type landing URL'i
+                                        (6 ilçe × 6 dil, 6 tür × 6 dil)
+GET /is-ilanlari/lefke                → 200, robots meta YOK, sitemap'te VAR  → soft 404 adayı
+GET /is-turleri/yari-zamanli          → 0 ilan, 200, robots meta YOK, sitemap'te VAR
+GET /is-turleri/sozlesmeli            → 0 ilan, 200, robots meta YOK, sitemap'te VAR
+GET /is-turleri/gecici                → 0 ilan, 200, robots meta YOK, sitemap'te VAR
+GET /is-ilanlari/guzelyurt            → 1 ilan (dolu; sitemap'te kalmalı)
+GET /is-turleri/tam-zamanli           → 19 ilan (dolu; sitemap'te kalmalı)
+```
+
+Canlı build `main` ile aynı (`06fe81e`); düzeltme PR #651'de **merge/deploy bekliyor**.
+
+### §28. Bulgular ve sınıflandırma
+
+| ID | Bulgu | Sınıf | Önem | Kanıt |
+|---|---|---|---|---|
+| T5-1 | Sitemap, `noindex` dönen boş landing'leri ilan ediyor (çelişki) | **CONFIRMED** | **P1** | canlı `curl`: `lefke` + 3 boş tür sitemap'te, robots meta yok; verifier L452 |
+| T5-2 | Etkilenen URL sayısı tohuma göre değişir (canlıda **24**: 6 + 18) | **CONFIRMED** | P2 | 4 boş yüzey × 6 dil |
+| T5-3 | Sitemap facet'leri DAL'den göremiyordu (district/type yoktu) | **CONFIRMED** | P2 | `PublicJobSitemapEntry` yalnız `slug/publishedAt/modifiedAt` taşıyordu |
+| T5-4 | Boş landing `200` döner (404 değil), `follow` korunur | **CONFIRMED** | P3 | tasarım: paylaşılan bağlantı kırılmaz, kardeş sayfalar taranabilir kalır |
+| T5-5 | Dolu yüzeyler etkilenmez; sitemap'te kalır | **CONFIRMED** | P3 | `guzelyurt` (1), `tam-zamanli` (19) sitemap'te kalmalı |
+| T5-6 | `www`/`/tr` yönlendirmeleri ve 404 kovaları sağlıklı | **NOT FOUND** (hata yok) | P3 | §21 triyajıyla aynı |
+| T5-7 | Deploy sonrası GSC'de doğrulama | **BLOCKED** | P2 | GSC yazma/Validate-fix panelden; bu ortamda OAuth kimliği yok (§2, §9.4) |
+
+**P0 yok.** Tek gerçek P1: sitemap ile `noindex` arasındaki çelişki (T5-1).
+
+### §29. Düzeltme (en küçük güvenli değişiklik)
+
+İki sinyali **tek kaynaktan** besleyerek çelişkiyi yapısal olarak imkânsız kıldık: sitemap artık
+bir landing'i yalnız **en az bir canlı ilan** o facet'i taşıyorsa yayınlar — yani `generateMetadata`
+ile aynı gerçekliği görür.
+
+| Dosya | Değişiklik |
+|---|---|
+| `src/server/dal/jobs.ts` | `PublicJobSitemapEntry` → `district` + `jobType` eklendi; `job.district` / `job.job_type` ile dolduruldu |
+| `src/features/jobs/landing-availability.ts` (yeni) | `computeLandingAvailability`, `availableDistricts`, `availableJobTypes` — saf fonksiyonlar |
+| `src/app/sitemap.ts` | district/type girdileri `availableDistricts/availableJobTypes` ile filtrelendi |
+| `tests/unit/landing-availability.test.ts` (yeni) | 6 test: facet toplama, ilçesiz ilan, boş katalog, kanonik sıra |
+| `tests/e2e/seo.spec.ts` | 2 sözleşme testi "sitemap ile **uyum**"u doğrulayacak şekilde yeniden yazıldı (tohumdan bağımsız) |
+
+**Tasarım kuralı:** `noindex` ⟺ sitemap'te yok. Boş landing `200 + noindex, follow` döner (bağlantı
+kırılmaz, kardeşler taranabilir kalır) ama sitemap'ten düşer; dolu landing `200 + index, follow`
+döner ve sitemap'te kalır. İki taraf aynı ilan satırlarından türediği için bir daha **kayamaz**.
+
+### §30. Doğrulama (bu tur, yerel)
+
+```
+tsc --noEmit                 → 0 hata
+eslint .                     → 0 hata
+check-frontend-source.mjs    → geçti
+test:unit                    → 1066/1066  (yeni 6 test dahil)
+indexing:verify (canlı)      → 0 failure: robots OK, sitemap 207 URL hepsi
+                               origin-içi kanonik, 186 tam hreflang / 21 tek-dil,
+                               8 örnek sayfa 200+indexable+kanonik, IndexNow anahtarı eşleşti
+```
+
+### §31. Deploy sonrası beklenen (öngörü, doğrulanacak)
+
+- Boş yüzeyler sitemap'ten düşer: canlıda **207 → ~183** `<loc>` (4 boş yüzey × 6 dil = 24 URL çıkar).
+- `/is-ilanlari/lefke` ve `/is-turleri/{yari-zamanli,sozlesmeli,gecici}` artık
+  `<meta name="robots" content="noindex, follow">` döner.
+- GSC'de bu landing'ler **"Soft 404"** kovasından **"noindex ile hariç tutuldu"** kovasına geçer —
+  **normal ve istenen.** Kalan adım panelde **Validate fix** (bkz. `MANUAL_TASKS.md` §9.6).
+- Bir ilçe/tür ilk ilanını aldığında sayfa otomatik `index` + sitemap'e döner; elle iş gerekmez.
+
+### §32. Kapsam sınırı
+
+- Bu tur **yalnız** sitemap ↔ `noindex` tutarlılığını kapatır; yeni landing sayfası üretmez (§8'deki
+  "gerçek veri + özgün içerik" kuralı geçerli).
+- `/jobs/<slug>` ilan detayları, blog/rehber ve statik rotalar etkilenmedi.
+- GSC **yazma** (Validate fix, Request indexing) panelden yapılır → §T5-7 BLOCKED; kod tarafı
+  bunu `npm run search-console:verify` (okuma) ve `npm run indexing:submit` (JobPosting bildirimi)
+  ile telafi eder.

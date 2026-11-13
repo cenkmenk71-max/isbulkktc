@@ -248,6 +248,12 @@ export type PublicJobSitemapEntry = {
   slug: string;
   publishedAt: string;
   modifiedAt: string;
+  // The two facets the district/type landing pages filter on. Carried here so
+  // the sitemap can drop a landing whose filter matches nothing, keeping it out
+  // of the index exactly as its `noindex` metadata claims (see
+  // `computeLandingAvailability`).
+  district: PublicJobListing["district"];
+  jobType: PublicJobListing["job_type"];
 };
 
 const SITEMAP_JOBS_PAGE_SIZE = 20;
@@ -291,6 +297,8 @@ export async function listPublicJobSitemapEntries(): Promise<
           slug: job.slug,
           publishedAt: job.published_at,
           modifiedAt: job.modified_at,
+          district: job.district,
+          jobType: job.job_type,
         });
       }
 
