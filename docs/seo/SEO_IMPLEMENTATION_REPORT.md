@@ -315,7 +315,7 @@ Canlı build `main` ile aynı (`06fe81e`); düzeltme PR #651'de **merge/deploy b
 | T5-4 | Boş landing `200` döner (404 değil), `follow` korunur | **CONFIRMED** | P3 | tasarım: paylaşılan bağlantı kırılmaz, kardeş sayfalar taranabilir kalır |
 | T5-5 | Dolu yüzeyler etkilenmez; sitemap'te kalır | **CONFIRMED** | P3 | `guzelyurt` (1), `tam-zamanli` (19) sitemap'te kalmalı |
 | T5-6 | `www`/`/tr` yönlendirmeleri ve 404 kovaları sağlıklı | **NOT FOUND** (hata yok) | P3 | §21 triyajıyla aynı |
-| T5-7 | Deploy sonrası GSC'de doğrulama | **BLOCKED** | P2 | GSC yazma/Validate-fix panelden; bu ortamda OAuth kimliği yok (§2, §9.4) |
+| T5-7 | Deploy sonrası doğrulama | **CONFIRMED** (kod+canlı) / **BLOCKED** (GSC panel) | P2 | Canlı: 207→183 `<loc>`, boş yüzeyler `noindex`, `indexing:verify` 0 failure (§31). GSC "Validate fix" panelden → BLOCKED (§2, §9.4) |
 
 **P0 yok.** Tek gerçek P1: sitemap ile `noindex` arasındaki çelişki (T5-1).
 
@@ -349,14 +349,36 @@ indexing:verify (canlı)      → 0 failure: robots OK, sitemap 207 URL hepsi
                                8 örnek sayfa 200+indexable+kanonik, IndexNow anahtarı eşleşti
 ```
 
-### §31. Deploy sonrası beklenen (öngörü, doğrulanacak)
+### §31. Deploy sonrası doğrulama (2026-11-12, canlı — DOĞRULANDI)
 
-- Boş yüzeyler sitemap'ten düşer: canlıda **207 → ~183** `<loc>` (4 boş yüzey × 6 dil = 24 URL çıkar).
-- `/is-ilanlari/lefke` ve `/is-turleri/{yari-zamanli,sozlesmeli,gecici}` artık
-  `<meta name="robots" content="noindex, follow">` döner.
-- GSC'de bu landing'ler **"Soft 404"** kovasından **"noindex ile hariç tutuldu"** kovasına geçer —
-  **normal ve istenen.** Kalan adım panelde **Validate fix** (bkz. `MANUAL_TASKS.md` §9.6).
-- Bir ilçe/tür ilk ilanını aldığında sayfa otomatik `index` + sitemap'e döner; elle iş gerekmez.
+PR #651 `84c8012` olarak `main`'e girdi; Vercel `main`'i yayına aldı (`/api/build-info` →
+`commit: 84c8012`). Canlı ölçüm **öngörüyle birebir**:
+
+| Ölçüm | Önce | Sonra (canlı) | Beklenen |
+|---|---|---|---|
+| sitemap `<loc>` | 207 | **183** | 207 − 24 = 183 ✅ |
+| boş yüzey sitemap'te | 4 × 6 dil | **0** | 0 ✅ |
+| `/is-ilanlari/lefke` robots | (yok) | `noindex, follow` | `noindex, follow` ✅ |
+| `/is-turleri/yari-zamanli` robots | (yok) | `noindex, follow` | `noindex, follow` ✅ |
+| `/is-ilanlari/girne` robots | (yok) | (yok = `index`) | `index` ✅ |
+| `/is-turleri/tam-zamanli` robots | (yok) | (yok = `index`) | `index` ✅ |
+| `npm run indexing:verify` | — | **0 failure, 0 warning** | 0 failure ✅ |
+
+```
+PASS robots    allows crawling; sitemap https://isbulkktc.com/sitemap.xml
+PASS sitemap   183 URLs, all on-origin canonical; 162 with the full hreflang set, 21 single-locale
+PASS single-loc 3 single-locale entries: the localized duplicate canonicalises back
+PASS pages     8 sampled pages are 200, indexable, with a matching canonical
+PASS indexnow  key file matches isbulkktc…
+```
+
+Kalan tek adım **panelden** yapılır (bu ortamda OAuth yok → BLOCKED):
+
+- GSC → Pages → **"Soft 404"** → **Validate fix** (örnek: `/en/is-ilanlari/lefke`,
+  `/en/is-ilanlari/iskele`). Fix yayında olduğundan bu landing'ler **"noindex ile hariç tutuldu"**
+  kovasına geçer — **normal ve istenen**; soft 404 kovası boşalır. Ayrıntı: `MANUAL_TASKS.md` §10.1.
+- Bir ilçe/tür ilk ilanını aldığında sayfa **otomatik** `index` + sitemap'e döner; elle iş gerekmez
+  (iki sinyal de aynı ilan satırlarından türediği için).
 
 ### §32. Kapsam sınırı
 
