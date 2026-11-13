@@ -520,11 +520,14 @@ ikisi ayrışıyor ve sitemap **yeni ilanı deploy olmadan hiç görmüyor** (ay
 **Bu, kullanıcının panelde çözebileceği bir şey DEĞİL** — düzeltme **kod** tarafında. Aşağıdaki
 iki seçenekten birini seçmeniz yeterli; uygulamayı ben yapacağım.
 
-### 12.1 Seçim (birini işaretleyin)
+### 12.1 Seçim — ✅ **Seçenek A seçildi ve uygulandı** (PR #657)
 
-- [ ] **Seçenek A (önerilen, basit):** Sitemap'i **istek anında** üret.
+- [x] **Seçenek A (önerilen, basit):** Sitemap'i **istek anında** üret.
       `src/app/sitemap.ts`: `export const revalidate = 3600;` → `export const dynamic = "force-dynamic";`
       - Artı: bayatlık biter, kod 1 satır. Eksi: her sitemap isteğinde 1 RPC (crawler hacmi düşük, sorun değil).
+      - **Durum:** Kod + regresyon testi **PR #657**'de. Doğrulama: üretim build route tablosu artık
+        `ƒ /sitemap.xml` (dinamik) — öncesi `○ /sitemap.xml 1h 1y` (statik). Birleştirme + deploy
+        sonrası canlıda etkin olur; o ana kadar **sitemap hâlâ bayat** olabilir.
 - [ ] **Seçenek B (yük alınacaksa):** ISR kalsın ama **veri değişince tazele**:
       kaynak-iş içe aktarma (`refresh-source-jobs`) bitince ve ilan yayın/güncelle/kapat
       action'larında `revalidatePath("/sitemap.xml")` çağır.
