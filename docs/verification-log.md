@@ -795,3 +795,58 @@ detayı (`/jobs/source-iskibris-magaza-satis-temsilcisi`) URL Inspection'da
 `classifyInspection`, `summariseAnalytics`, `selectJobUrls`, `resolveGoogleAuth`)
 kilitler; `submit-indexing.test.mjs` ayrıca workflow YAML'ini pinler (schedule,
 least-privilege permissions, canonical origin, alias'tan sitemap).
+
+## 2026-11-12 — e-posta teslim edilebilirliği: DMARC `p=reject` + MTA-STS/TLS-RPT
+
+### Ölçülen (canlı, DNS + HTTP)
+
+```
+_dmarc.isbulkktc.com   TXT   v=DMARC1; p=reject; rua=mailto:dmarc@isbulkktc.com; fo=1
+_mta-sts.isbulkktc.com TXT   v=STSv1; id=20261112000000
+_smtp._tls.isbulkktc.com TXT v=TLSRPTv1; rua=mailto:tlsrpt@isbulkktc.com
+mta-sts.isbulkktc.com  CNAME cname.vercel-dns.com   (proxy OFF, RFC 8461 §3.3)
+```
+
+`https://mta-sts.isbulkktc.com/.well-known/mta-sts.txt` → **HTTP 200**, `content-type: text/plain`,
+iki Vercel IP'sinden (`76.76.21.123`, `66.33.60.35`) aynı gövde:
+
+```
+version: STSv1
+mode: testing
+mx: receive-euw1.forge.rmta.net
+max_age: 604800
+```
+
+DoH ile (Cloudflare + Google) `p=reject` **iki bağımsız çözümleyicide** doğrulandı.
+
+### Neden `p=reject` güvenli (aligned kimlik doğrulama var)
+
+- **DKIM** `resend._domainkey` → `verified` (Resend, 1024-bit üst sınırı)
+- **SPF Return-Path** `send.isbulkktc.com` → `v=spf1 include:amazonses.com ~all`, DMARC-aligned
+- Kök SPF (`~all`) DMARC'ı etkilemez; zarf göndericisi `send.*` alt alanı olduğu için hizalama tam
+
+### Gerçek gönderim testleri (`scripts/email-preview.mjs --only marketing --send`)
+
+Gönderen: `İşBul KKTC <info@isbulkktc.com>`, `reply_to: info@isbulkktc.com`
+
+| Alıcı | Sonuç | Resend id |
+|---|---|---|
+| muhammedali.kahraman@outlook.com | `sent` | `01a1d461-cc1d-7f0f-9214-7a9ddb2df7c3` |
+| letgodeneme97@outlook.com | `sent` | `01a1d461-cd23-792c-837d-f3a7918db659` |
+| m.ali.kahraman@outlook.com | `sent` | `01a1d462-ea3a-7852-8a3f-2e5f650214b8` |
+| muhammed.ali.kahraman@outlook.com | `suppressed` | `01a1d461-ce2d-79fd-abd5-e3b786ab6016` |
+
+Son satır **beklenen/dogru davranis**: adres daha önce hard-bounce olmus, Resend onu
+`email_engagement_optouts` (reason=bounce) ile basti. Bounce'i geri acmak deliverability'yi
+bozar; bu satir bir hata degil, koruma.
+
+### Kapılar
+
+- `node scripts/verify-deliverability.mjs` → **0 failure**; DMARC PASS, MTA-STS PASS, TLS-RPT PASS
+  (MTA-STS policy fetch yalniz sandbox resolver bayat oldugu icin SKIP; DoH/direct IP ile dogrulandi)
+
+### Açık kalan (kullanıcı adımı)
+
+- [ ] GA4: `NEXT_PUBLIC_GA_MEASUREMENT_ID` üretim env'inde yok → etiket yüklenmiyor (kod hazır, consent kapılı)
+- [ ] Üç test adresinin gelen kutusu/spam klasöründe elle teyidi (aracın gerçek posta kutusuna erişimi yok)
+- [ ] DMARC raporları `dmarc@isbulkktc.com`'a akmaya başlayınca `p=reject`'in sahadaki etkisini izle

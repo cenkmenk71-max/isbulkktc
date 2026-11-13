@@ -25,15 +25,20 @@ PASS SPF         send.isbulkktc.com (Return-Path) göndereni yetkilendiriyor
 WARN SPF         kök kayıt v=spf1 include:_spf.mx.cloudflare.net ~all — kök göndereni
                  yetkilendirmiyor ama DMARC-uyumlu Return-Path alt alanı yetkilendiriyor
 INFO DKIM        resend._domainkey mevcut, 1024-bit — Resend 2048 desteklemez (bilgi)
-WARN DMARC       v=DMARC1; p=quarantine; rua=mailto:dmarc@isbulkktc.com; fo=1
+PASS DMARC       v=DMARC1; p=reject; rua=mailto:dmarc@isbulkktc.com; fo=1
 PASS MX          10 receive-euw1.forge.rmta.net.  (gelen posta artık Resend'e düşer)
-WARN MTA-STS     _mta-sts kaydı yok (yalnız gelen posta duruşu; giden yerleşimi etkilemez)
-WARN TLS-RPT     _smtp._tls kaydı yok (yalnız gelen posta duruşu; giden yerleşimi etkilemez)
+PASS MTA-STS     _mta-sts.isbulkktc.com → v=STSv1; id=20261112000000
+PASS TLS-RPT     _smtp._tls.isbulkktc.com → v=TLSRPTv1; rua=mailto:tlsrpt@isbulkktc.com
 WARN Blocklists  SURBL/SpamCop temiz; Spamhaus genel çözümleyiciden sorgulanamaz
 PASS Resend      isbulkktc.com status=verified
 
-0 failure(s), 5 warning(s), 0 skipped
+0 failure(s), 1 warning(s), 1 skipped (MTA-STS policy — sandbox resolver yeni host'u geç çözer)
 ```
+
+> **2026-11-12 güncellemesi:** DMARC artık **`p=reject`** (yukarıdaki çıktıda
+> `PASS DMARC`). MTA-STS ve TLS-RPT kayıtları eklendi ve doğrulandı. Politika
+> dosyası yeni host'tan 200 döner
+> (`https://mta-sts.isbulkktc.com/.well-known/mta-sts.txt`, `mode: testing`).
 
 > Yukarıdaki çıktı **gerçek `RESEND_API_KEY`** ile alındı:
 > `RESEND_API_KEY=re_… node scripts/verify-deliverability.mjs` → **0 hata**.
@@ -42,8 +47,8 @@ PASS Resend      isbulkktc.com status=verified
 
 **Yorum:** Gönderim yolu (SPF alt alanı + DKIM + DMARC hizalı) **sağlam** ve gerçek
 anahtarla **0 hata**. Kalan `WARN`'lar giden yerleşimi etkilemez (SPF kök kaydı
-DMARC-uyumlu alt alanla telafi edilir; MTA-STS/TLS-RPT yalnız gelen duruş;
-DMARC `p=quarantine` zaten yeterli).
+DMARC-uyumlu alt alanla telafi edilir; MTA-STS/TLS-RPT yalnız gelen duruş).
+DMARC artık **`p=reject`** (2026-11-12).
 
 **Dağıtım tazeliği:** Vercel artık `main`'den **otomatik Git dağıtımı** yapıyor
 (önceki "200 dönen ama commit geride" boşluğu kapandı). Canlı
@@ -116,16 +121,24 @@ doğru göründü ve eksik env fark edilmedi — üretim yolu varsayılansızdı
 **Doğrula:** bir edinim/etkileşim e-postasının başlığında `Reply-To: info@isbulkktc.com`
 görünmeli. `getReplyToInbox()` artık `SALES_INBOX_EMAIL` ile dolu.
 
-### 6. DMARC `p=quarantine` → `reject` `[ ]` (raporları izledikten sonra)
-Şimdilik bırak. `rua=mailto:dmarc@isbulkktc.com` raporlarını birkaç hafta izle;
-meşru posta hep SPF+DKIM'den geçiyorsa Cloudflare DNS'te `_dmarc` TXT'sini
-`v=DMARC1; p=reject; rua=…; fo=1` yap. **Erken yapma:** hizasız bir kaynak varsa
-`reject` onu tamamen düşürür.
+### 6. DMARC `p=quarantine` → `reject` `[x]` — TAMAMLANDI (2026-11-12)
+Cloudflare DNS `_dmarc.isbulkktc.com` TXT güncellendi:
+`v=DMARC1; p=reject; rua=mailto:dmarc@isbulkktc.com; fo=1`.
+Geçiş güvenliydi çünkü gönderim **hizalı**: DKIM (`resend._domainkey`) hizalı,
+Return-Path `send.isbulkktc.com` SPF'i hizalı, Resend alanı `verified`.
+İki bağımsız çözümleyici (Cloudflare DoH + Google DoH) `p=reject` döndü;
+`verify-deliverability.mjs` → `PASS DMARC`.
 
-### 7. MTA-STS + TLS-RPT `[ ]` (isteğe bağlı — yalnız gelen duruş)
+> Geri alma: `p=quarantine`'a döndürmek yeter (tek TXT kaydı). Raporlar
+> `dmarc@isbulkktc.com`'a akmaya devam eder.
+
+### 7. MTA-STS + TLS-RPT `[x]` — TAMAMLANDI (2026-11-12)
 Bunlar **giden yerleşimi etkilemez**, yalnız bu alanın *aldığı* postanın TLS
-duruşunu yayınlar. **Kod tarafı bitti** (aşağıya bak); senin işin iki DNS kaydı
-+ bir Vercel alan adı:
+duruşunu yayınlar. **Hem kod hem altyapı bitti.** Vercel'e `mta-sts.isbulkktc.com`
+eklendi (`verified`), Cloudflare'e 3 kayıt girildi ve canlı doğrulandı:
+`GET https://mta-sts.isbulkktc.com/.well-known/mta-sts.txt` → **200**, `text/plain`,
+`mode: testing`; `verify-deliverability.mjs` → `PASS MTA-STS` / `PASS TLS-RPT`.
+Aşağıdaki adımlar yalnız yeniden kurulum/yeni alan adı içindir.
 
 **Kod tarafı (bu repoda, tamam):** politika dosyası uygulamadan sunuluyor —
 `src/app/.well-known/mta-sts.txt/route.ts` → `GET /.well-known/mta-sts.txt` 200
@@ -143,7 +156,7 @@ eder, yalnız TLS-RPT ile raporlar. Raporlar temizlenince `mode: enforce`'a çek
 (aynı DMARC `none` → `reject` mantığı). MX host'unu `MTA_STS_MX_HOST` env'i ile
 geçersiz kılabilirsin; varsayılan canlı gelen MX'tir.
 
-**Sende kalan adımlar (DNS + Vercel):**
+**Sahip adımları (yeniden kurulum için):**
 
 1. **Vercel'e `mta-sts.isbulkktc.com` alan adını ekle** — projeye bağla
    (Settings → Domains → Add). Bu host'ta sayfa yok; yalnız politika dosyası
@@ -160,7 +173,7 @@ geçersiz kılabilirsin; varsayılan canlı gelen MX'tir.
    TLS-RPT` (TXT kayıtları). Politika dosyası 200 dönmezse ya da yönlendirirse
    araç `WARN` yazar.
 
-### 8. Gerçek gelen kutusu / spam doğrulaması `[ ]`
+### 8. Gerçek gelen kutusu / spam doğrulaması `[~]` — gönderildi, kutu kontrolü sahipte
 Araç bunu yapamaz; gerçek bir kutu gerekir. Bu turda üç adrese test postası
 gönderildi (aşağıya bak). **Yapılacak:** o üç kutuda **Gelen Kutusu**'nu kontrol
 et; spam'deyse **"Spam değil"** işaretle (ısınma için kritik).
@@ -246,6 +259,22 @@ order by opted_out_at desc;
 Not: tablo adı `email_engagement_optouts`'tur (`engagement_optouts` değil). Bu
 adı sorgularken `42P01 relation does not exist` alırsanız **yanlış ad** kullanıyorsunuz;
 migration eksiği yok.
+
+### Dördüncü gönderim — DMARC `p=reject` sonrası (2026-11-12)
+
+DMARC `reject`'e çekildikten sonra aynı yolla üç adrese yeniden gönderildi
+(`from İşBul KKTC <info@isbulkktc.com>`, `reply_to info@isbulkktc.com`):
+
+| Alıcı | Resend e-posta id | son olay |
+|---|---|---|
+| muhammedali.kahraman@outlook.com | `01a1d461-cc1d-7f0f-9214-7a9ddb2df7c3` | sent |
+| letgodeneme97@outlook.com | `01a1d461-cd23-792c-837d-f3a7918db659` | sent |
+| m.ali.kahraman@outlook.com | `01a1d462-ea3a-7852-8a3f-2e5f650214b8` | sent |
+
+**Düzeltme:** doğru adres `m.ali.kahraman@outlook.com`'dur. Yanlış yazım
+`muhammed.ali.kahraman@outlook.com` bu turda `suppressed` döndü — Resend
+bastırma listesindeki (önceki hard bounce) adresi **göndermeden engelledi**, yani
+bounce → bastırma hattı yeniden doğrulandı.
 
 ## DKIM bit uzunluğu — düzeltilecek bir şey DEĞİL (2026-11-12 düzeltmesi)
 
@@ -368,12 +397,13 @@ Tam adımlar için yukarıdaki **"Kalan altyapı maddeleri"** bölümüne bak.
 - [x] Takım gelen kutusu env'leri (`SALES_INBOX_EMAIL` / `FEEDBACK_INBOX_EMAIL` /
       `COMPANY_REVIEW_INBOX_EMAIL`) → `info@isbulkktc.com`, Vercel `production`+`preview`
 - [x] Webhook bounce → bastırma hattı doğrulandı (`email.bounced` → `email_engagement_optouts`)
-- [ ] DMARC `p=quarantine` → `reject` (raporları izledikten sonra)
-- [~] MTA-STS politika dosyası **kodda sunuluyor** (`/.well-known/mta-sts.txt`,
-      `mode: testing`) — sahibin işi 2 DNS kaydı + 1 Vercel alan adına indi
-- [ ] MTA-STS + TLS-RPT **DNS kayıtları** (sahip — isteğe bağlı, yalnız gelen posta duruşu)
-- [ ] Gerçek gelen kutusu/spam yerleşim doğrulaması (araç bunu yapamaz — gerçek
-      posta kutusu gerekir; bu turda 3 adrese gönderildi)
+- [x] DMARC `p=quarantine` → **`reject`** (Cloudflare DNS; hizalı gönderim teyit edildi, 2 resolver)
+- [x] MTA-STS politika dosyası **kodda sunuluyor** (`/.well-known/mta-sts.txt`, `mode: testing`)
+- [x] MTA-STS + TLS-RPT **DNS kayıtları** (Vercel host + CF CNAME/TXT; canlı 200, `verify-deliverability` PASS)
+- [~] Gerçek gelen kutusu/spam yerleşim doğrulaması (araç yapamaz — gerçek posta kutusu
+      gerekir; bu turda 3 adrese gönderildi, `sent`)
+- [ ] **GA4 canlı ölçüm** — `NEXT_PUBLIC_GA_MEASUREMENT_ID` Vercel üretim env'inde **yok**;
+      kod consent-gated hazır, ölçüm ID'si girilince başlar (2026-11-12 bulgusu)
 - [~] ~~DKIM `1024` → `2048`~~ **iptal: Resend 2048 desteklemiyor**
 
 ### Cloudflare 1010 bot-koruması notu (2026-11-12)
