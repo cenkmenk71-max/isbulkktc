@@ -53,6 +53,23 @@ test("an uncovered question is routed to real contact channels, not a promised h
   assert.doesNotMatch(prompt, /pass (it|this) to the team|notify the team/i);
 });
 
+// Regression: the prompt once declared the interface wholly unknown ("You do not
+// know the interface"), which made the model deflect on every how-to question —
+// the questions a support visitor actually asks. The flows are the product's own
+// steps, so the prompt must carry them and licence describing them, while still
+// forbidding invention beyond them.
+test("the prompt grounds the model in the procedural flows, not a blanket refusal", () => {
+  const prompt = buildSupportSystemPrompt("tr");
+  assert.doesNotMatch(prompt, /You do not know the interface/i);
+  assert.match(prompt, /only interface steps you know/i);
+  // The steps themselves travel in the facts block.
+  assert.match(prompt, /Şifrenizi mi unuttunuz/);
+  assert.match(prompt, /Aday olarak/);
+  assert.match(prompt, /başvurunuz siteye kaydedilir/i);
+  // The anti-invention rule survives: it is scoped, not removed.
+  assert.match(prompt, /Do not invent any other page/i);
+});
+
 // ---------------------------------------------------------------------------
 // The request per provider.
 // ---------------------------------------------------------------------------

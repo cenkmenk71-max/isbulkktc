@@ -1,4 +1,5 @@
 import { faqByLocale, siteSummaryByLocale } from "@/content/ai-visibility/faq";
+import { supportFlowsByLocale } from "@/content/ai-visibility/support-flows";
 import {
   SITE_NAME,
   SUPPORT_EMAIL,
@@ -18,9 +19,14 @@ import type { SupportAiConfig } from "./ai-config";
  * call and the timeout live in `@/server/support/ai`.
  *
  * The prompt pins the model to the platform's own published copy (the FAQ
- * bundle and the site summary the deterministic answer already uses), so the
- * fallback cannot introduce a feature, a price or a channel the product does
- * not ship.
+ * bundle, the procedural flows and the site summary the deterministic answer
+ * already uses), so the fallback cannot introduce a feature, a price or a
+ * channel the product does not ship.
+ *
+ * The flows matter as much as the FAQ here. Declaring the interface wholly
+ * unknown — the earlier shape of this prompt — made the model deflect on every
+ * "how do I…" question, which is exactly what a support visitor asks. The flows
+ * are the product's own steps, so the model may describe those and only those.
  */
 
 /** Upper bound on a model reply, matched to the widget's message length. */
@@ -57,7 +63,7 @@ const REASONING_EFFORT = "low";
  * the rules that keep the reply truthful and on-topic.
  */
 export function buildSupportSystemPrompt(locale: AppLocale): string {
-  const facts = faqByLocale[locale]
+  const facts = [...faqByLocale[locale], ...supportFlowsByLocale[locale]]
     .map((entry) => `- Q: ${entry.question}\n  A: ${entry.answer}`)
     .join("\n");
 
@@ -67,10 +73,13 @@ export function buildSupportSystemPrompt(locale: AppLocale): string {
     "Use only the facts below. Never invent features, prices, districts or contact details.",
     // The model has never seen the product, so left to itself it invents a
     // plausible interface ("open the app", "click Apply", "upload your CV") and
-    // states it as fact — the exact hallucination this fallback must not ship.
-    // The interface is therefore declared unknown, and a "how do I use it"
-    // question the facts do not answer verbatim is treated as uncovered.
-    "You do not know the interface. Do not describe pages, screens, buttons, menus, search bars, forms or step-by-step click paths, and never state that a price, package content or a document (such as a CV) is shown or entered somewhere in the product. If a question asks how to use the site and the facts below do not state the exact steps, treat it as not covered.",
+    // states it as fact. The interface is therefore not open to it in general —
+    // but the flows below *are* the product's own steps, so a how-to question
+    // those steps answer must be answered from them rather than deflected.
+    // Declaring the interface wholly unknown (the earlier shape of this rule)
+    // made the model refuse the very questions support exists for; scoping the
+    // licence to the listed flows keeps the grounding without the deflection.
+    "The steps below are the only interface steps you know. You may describe those flows — and only those — when asked how to use the site. Do not invent any other page, screen, button, menu, search bar, form or click path, and never state that a price, package content or a document (such as a CV) is shown or entered somewhere in the product. If a question asks how to use the site and the steps below do not state the exact steps, treat it as not covered.",
     // No per-message routing to a human exists, so the model must not promise
     // one: an uncovered question points to the real contact channels, and may
     // invite an email the team can follow up on — nothing more. The refusal is
