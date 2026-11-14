@@ -11,6 +11,7 @@ import {
   evaluateCaptchaProbe,
   isDirectRun,
   notificationFlagKey,
+  parseDurationSeconds,
   readRepoAuthTemplate,
   readRepoConfigToml,
   readRepoNotificationEnabled,
@@ -273,13 +274,17 @@ test("readRepoNotificationEnabled reads the block and skips templates without on
 
 /**
  * A live `GET /config/auth` body in which every mapped API key holds the value
- * `config.toml` declares, so `evaluateAuthPolicyDrift` reports nothing.
+ * `config.toml` declares, so `evaluateAuthPolicyDrift` reports nothing. Inverted
+ * rows (`negate: true`) store the negation of the config value, exactly as GoTrue
+ * does for `disable_signup` / `mailer_autoconfirm`.
  */
 function liveFromRepo(overrides = {}) {
   const toml = readRepoConfigToml();
   const live = {};
-  for (const { toml: [section, key], api } of AUTH_POLICY_FIELDS) {
-    live[api] = readTomlValue(toml, section, key);
+  for (const { toml: [section, key], api, negate, duration } of AUTH_POLICY_FIELDS) {
+    let repoValue = readTomlValue(toml, section, key);
+    if (duration) repoValue = parseDurationSeconds(repoValue);
+    live[api] = negate ? !repoValue : repoValue;
   }
   return { ...live, ...overrides };
 }
@@ -348,4 +353,83 @@ test("a value on a later line of the section is still read", () => {
   const drift = evaluateAuthPolicyDrift({ rate_limit_anonymous_users: 30 }, toml);
   assert.equal(drift.length, 1);
   assert.match(drift[0], /anonymous_users = 20/);
+});
+
+test("an inverted field compares the negation, not the raw value", () => {
+  // `enable_signup = true` in config.toml is `disable_signup = false` live; a raw
+  // compare would report a permanent false drift on every run.
+  const row = AUTH_POLICY_FIELDS.find((f) => f.toml[1] === "enable_signup");
+  assert.equal(row.negate, true);
+  assert.equal(row.api, "disable_signup");
+  const toml = "[auth]\nenable_signup = true\n";
+  assert.deepEqual(evaluateAuthPolicyDrift({ disable_signup: false }, toml), []);
+  const drift = evaluateAuthPolicyDrift({ disable_signup: true }, toml);
+  assert.equal(drift.length, 1);
+  assert.match(drift[0], /enable_signup = true/);
+});
+
+test("the confirmation switch is inverted too", () => {
+  // The CLI maps `enable_confirmations` to `mailer_autoconfirm` (inverted).
+  const row = AUTH_POLICY_FIELDS.find((f) => f.toml[1] === "enable_confirmations");
+  assert.equal(row.negate, true);
+  assert.equal(row.api, "mailer_autoconfirm");
+});
+
+test("the newly guarded identity and MFA fields are mapped and compared", () => {
+  const api = (key) => AUTH_POLICY_FIELDS.find((f) => f.toml[1] === key)?.api;
+  assert.equal(api("jwt_expiry"), "jwt_exp");
+  assert.equal(api("minimum_password_length"), "password_min_length");
+  assert.equal(api("enable_manual_linking"), "security_manual_linking_enabled");
+  assert.equal(api("enable_anonymous_sign_ins"), "external_anonymous_users_enabled");
+  assert.equal(api("max_enrolled_factors"), "mfa_max_enrolled_factors");
+  assert.equal(api("double_confirm_changes"), "mailer_secure_email_change_enabled");
+  assert.equal(api("enable_signup"), "disable_signup");
+  // A change to any of them is caught, e.g. manual linking enabled live.
+  const live = liveFromRepo({ security_manual_linking_enabled: true });
+  const drift = evaluateAuthPolicyDrift(live);
+  assert.equal(drift.length, 1);
+  assert.match(drift[0], /enable_manual_linking = false/);
+});
+
+test("parseDurationSeconds matches the CLI's Go-duration reading", () => {
+  // Values the CLI's own `parseDuration` produces for the hosted integers.
+  assert.equal(parseDurationSeconds("60s"), 60);
+  assert.equal(parseDurationSeconds("1m0s"), 60);
+  assert.equal(parseDurationSeconds("5s"), 5);
+  assert.equal(parseDurationSeconds("24h0m0s"), 86400);
+  assert.equal(parseDurationSeconds("300ms"), 0); // floored to whole seconds
+  assert.equal(parseDurationSeconds("0s"), 0);
+  assert.equal(parseDurationSeconds("1.5s"), 1); // floored, like the CLI
+  // Unparsable values return null so the comparator skips instead of guessing.
+  assert.equal(parseDurationSeconds("60"), null);
+  assert.equal(parseDurationSeconds("s"), null);
+  assert.equal(parseDurationSeconds(60), null);
+});
+
+test("max_frequency is compared as whole seconds, not verbatim", () => {
+  // `max_frequency = "60s"` in config.toml is `smtp_max_frequency = 60` live; a
+  // raw string compare would report a permanent false drift on every run.
+  const row = AUTH_POLICY_FIELDS.find(
+    (f) => f.toml[1] === "max_frequency" && f.api === "smtp_max_frequency",
+  );
+  assert.equal(row.duration, true);
+  const toml = '[auth.email]\nmax_frequency = "60s"\n';
+  assert.deepEqual(evaluateAuthPolicyDrift({ smtp_max_frequency: 60 }, toml), []);
+  const drift = evaluateAuthPolicyDrift({ smtp_max_frequency: 10 }, toml);
+  assert.equal(drift.length, 1);
+  assert.match(drift[0], /max_frequency = 60/);
+  assert.match(drift[0], /smtp_max_frequency = 10/);
+});
+
+test("an unparsable max_frequency is skipped, not reported", () => {
+  const toml = "[auth.email]\nmax_frequency = 60\n"; // missing unit
+  assert.deepEqual(evaluateAuthPolicyDrift({ smtp_max_frequency: 60 }, toml), []);
+});
+
+test("the MFA phone max_frequency maps to the same duration shape", () => {
+  const row = AUTH_POLICY_FIELDS.find((f) => f.api === "mfa_phone_max_frequency");
+  assert.equal(row.duration, true);
+  assert.deepEqual(row.toml, ["auth.mfa.phone", "max_frequency"]);
+  const toml = "[auth.mfa.phone]\nmax_frequency = \"5s\"\n";
+  assert.deepEqual(evaluateAuthPolicyDrift({ mfa_phone_max_frequency: 5 }, toml), []);
 });
