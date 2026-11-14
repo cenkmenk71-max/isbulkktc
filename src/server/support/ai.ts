@@ -5,6 +5,7 @@ import type { AppLocale } from "@/i18n/routing";
 import { resolveSupportAiConfig } from "@/features/support/ai-config";
 import {
   buildSupportAiRequest,
+  guardSupportReply,
   parseSupportAiResponse,
   sanitizeModelReply,
 } from "@/features/support/ai-protocol";
@@ -57,7 +58,11 @@ export async function aiSupportReply(
       return null;
     }
     const payload: unknown = await response.json();
-    return sanitizeModelReply(parseSupportAiResponse(config, payload));
+    // Two layers: the sanitiser reduces the text, then the guard drops a reply
+    // that reproduces the system prompt, so a successful extraction attempt
+    // degrades to the grounded fallback instead of reaching the visitor.
+    const reply = sanitizeModelReply(parseSupportAiResponse(config, payload));
+    return guardSupportReply(reply);
   } catch (error) {
     // A timeout, a DNS failure or a malformed body all mean the same thing to
     // the visitor: answer from the grounded copy.
