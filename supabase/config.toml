@@ -32,7 +32,9 @@ jwt_expiry = 3600
 # require 10) and the on-screen password hint.
 # No composition rules are enforced on purpose: current guidance (NIST SP
 # 800-63B) prefers length plus breached-password screening over character-class
-# rules, which the hosted project enables in the Auth dashboard.
+# rules. Breached-password screening (HaveIBeenPwned) is a Pro-plan feature and
+# the hosted project is on the free plan, where the API refuses to enable it
+# (`402 entitlement_required`), so length is the only control in force.
 minimum_password_length = 10
 password_requirements = ""
 

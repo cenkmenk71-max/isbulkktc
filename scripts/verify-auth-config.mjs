@@ -15,6 +15,10 @@
 //      it cannot prove one).
 //   3. Redirect allowlist — the production callback must be allowed, or OAuth
 //      and email confirmation links land on a `redirect_to` error.
+//   4. Auth email templates — the body and subject the Auth dashboard serves
+//      must match `supabase/templates/` and `config.toml`. The dashboard writes
+//      them in place and nothing re-syncs them, so a hand-pasted template drifts
+//      silently (the recovery email shipped unbranded and un-localized this way).
 //
 // Usage:
 //   node scripts/verify-auth-config.mjs
@@ -30,7 +34,9 @@
 // Exits non-zero only on a real inconsistency. Missing credentials skip the
 // dependent checks with a warning, so the guard never blocks on absent secrets.
 
-import { pathToFileURL } from "node:url";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 /**
  * True when the module was launched directly (`node script.mjs`) rather than
@@ -280,6 +286,164 @@ export function callbackIsAllowed(origin, allowList) {
     .split(",")
     .map((entry) => entry.trim().replace(/\/$/, ""))
     .some((entry) => entry === expected || entry === `${base}/**`);
+}
+
+/**
+ * GoTrue's own email-template names, keyed by the repository file that holds the
+ * branded version. The Management API exposes each one as
+ * `mailer_templates_<name>_content` (and its subject as `mailer_subjects_<name>`),
+ * which is the pair the Auth dashboard writes — so a template pasted by hand into
+ * the dashboard, and never re-synced, is invisible to git and drifts silently.
+ *
+ * `password_changed_notification` is GoTrue's own name for the password-change
+ * notice. Leaving it out let production serve an older, un-localized revision of
+ * the notice while every other template matched, so it is listed here.
+ */
+export const AUTH_TEMPLATE_FILES = {
+  confirmation: "confirmation.html",
+  recovery: "recovery.html",
+  invite: "invite.html",
+  magic_link: "magic_link.html",
+  email_change: "email_change.html",
+  reauthentication: "reauthentication.html",
+  password_changed_notification: "password-changed.html",
+};
+
+/**
+ * `config.toml` names the password-change notice block
+ * `[auth.email.notification.password_changed]`, but GoTrue's config field (and so
+ * the Management API key) is `password_changed_notification`. Map the field name
+ * to the block name so the subject lookup does not silently miss.
+ */
+const TEMPLATE_TOML_NAMES = { password_changed_notification: "password_changed" };
+
+const AUTH_TEMPLATES_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "supabase",
+  "templates",
+);
+
+/** Reads a repository auth template, or null when it is absent. */
+export function readRepoAuthTemplate(name) {
+  const file = AUTH_TEMPLATE_FILES[name];
+  if (!file) return null;
+  try {
+    return readFileSync(resolve(AUTH_TEMPLATES_DIR, file), "utf8");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The localized subject `config.toml` pins for a template. A dashboard edit can
+ * replace it with GoTrue's English default, so the live subject — not only the
+ * body — is compared against the repository. Returns null when the block is
+ * absent, so a template the repository does not pin is skipped rather than
+ * reported as drift.
+ */
+export function readRepoTemplateSubject(name) {
+  let toml;
+  try {
+    toml = readFileSync(resolve(AUTH_TEMPLATES_DIR, "..", "config.toml"), "utf8");
+  } catch {
+    return null;
+  }
+  const tomlName = TEMPLATE_TOML_NAMES[name] ?? name;
+  const blocks = toml.split(/^\[/m);
+  for (const block of blocks) {
+    const header = block.slice(0, block.indexOf("]"));
+    if (
+      header === `auth.email.template.${tomlName}` ||
+      header === `auth.email.notification.${tomlName}`
+    ) {
+      const match = block.match(/^subject\s*=\s*"((?:[^"\\]|\\.)*)"/m);
+      if (match) return JSON.parse(`"${match[1]}"`);
+    }
+  }
+  return null;
+}
+
+/**
+ * GoTrue's flag name for a notification template. GoTrue drops the `_notification`
+ * suffix from the template name and appends `_enabled`, so
+ * `password_changed_notification` is served only when
+ * `mailer_notifications_password_changed_enabled` is true. The Management API
+ * exposes the flag, which is what the Auth dashboard's on/off switch writes.
+ */
+export function notificationFlagKey(name) {
+  return `mailer_notifications_${name.replace(/_notification$/, "")}_enabled`;
+}
+
+/**
+ * The `enabled` flag `config.toml` sets for a notification template, or null when
+ * the repository declares no notification block for it. GoTrue sends a
+ * notification only when its flag is on, and the flag lives in the hosted config,
+ * not in git — so a repository that enables the password-change notice while
+ * production has it off sends no notice at all, and only a live read sees it.
+ */
+export function readRepoNotificationEnabled(name) {
+  let toml;
+  try {
+    toml = readFileSync(resolve(AUTH_TEMPLATES_DIR, "..", "config.toml"), "utf8");
+  } catch {
+    return null;
+  }
+  const tomlName = TEMPLATE_TOML_NAMES[name] ?? name;
+  const blocks = toml.split(/^\[/m);
+  for (const block of blocks) {
+    const header = block.slice(0, block.indexOf("]"));
+    if (header !== `auth.email.notification.${tomlName}`) continue;
+    const match = block.match(/^enabled\s*=\s*(true|false)/m);
+    if (match) return match[1] === "true";
+  }
+  return null;
+}
+
+/**
+ * Compares the templates, subjects and notification switches the hosted project
+ * actually serves against the repository. The Auth dashboard writes all of them
+ * in place and nothing re-syncs them, so a hand-pasted template — the recovery
+ * email, historically — can sit in production unbranded and un-localized while
+ * `supabase/templates/` holds the real one, and a notification the repository
+ * enables can be switched off live so it never sends. A drift here is invisible
+ * to git, lint and every test, so it is only caught by reading the live config.
+ */
+export function evaluateAuthTemplateDrift(authConfig, repo = {}) {
+  const problems = [];
+  for (const name of Object.keys(AUTH_TEMPLATE_FILES)) {
+    const liveContent = authConfig?.[`mailer_templates_${name}_content`];
+    const repoContent = name in repo ? repo[name] : readRepoAuthTemplate(name);
+    if (typeof repoContent !== "string") continue;
+    if (typeof liveContent !== "string") {
+      problems.push(`the ${name} template is empty on the hosted project`);
+      continue;
+    }
+    if (liveContent.trim() !== repoContent.trim()) {
+      problems.push(
+        `the live ${name} template differs from supabase/templates/${AUTH_TEMPLATE_FILES[name]}`,
+      );
+    }
+    const liveSubject = authConfig?.[`mailer_subjects_${name}`];
+    const repoSubject = readRepoTemplateSubject(name);
+    if (typeof repoSubject === "string" && liveSubject !== repoSubject) {
+      problems.push(
+        `the live ${name} subject is not the localized one config.toml pins` +
+          ` (live "${liveSubject ?? ""}")`,
+      );
+    }
+    const repoEnabled = readRepoNotificationEnabled(name);
+    if (typeof repoEnabled === "boolean") {
+      const liveEnabled = authConfig?.[notificationFlagKey(name)];
+      if (liveEnabled !== repoEnabled) {
+        problems.push(
+          `the ${name} notification is ${liveEnabled ? "enabled" : "disabled"} on the` +
+            ` hosted project but config.toml sets enabled = ${repoEnabled}`,
+        );
+      }
+    }
+  }
+  return problems;
 }
 
 /**
@@ -591,6 +755,10 @@ async function main() {
       if (!callbackIsAllowed(origin, body.uri_allow_list)) {
         failures.push(`${origin}/auth/callback is not in the redirect allowlist.`);
       }
+
+      // The email templates and subjects the Auth dashboard holds are not in git
+      // and nothing re-syncs them, so a hand-pasted template drifts silently.
+      failures.push(...evaluateAuthTemplateDrift(body));
     }
   }
 

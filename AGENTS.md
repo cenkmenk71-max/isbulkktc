@@ -109,6 +109,16 @@ with merge queue, turn it on — that is the correct fix for the cascade.
   (`confirmation`, `recovery`, `invite`, `magic_link`, `email_change`,
   `reauthentication`) when adding one.
 
+- **The Auth dashboard, not git, holds the templates production serves.** The
+  dashboard writes each body and subject into the project config, and nothing
+  re-syncs them, so a template pasted in by hand drifts from
+  `supabase/templates/` with no test, lint or build able to see it. This is how
+  the `recovery` email shipped as a 1.4 kB unbranded one-off while the repository
+  held the 10.7 kB branded, six-locale version. `scripts/verify-auth-config.mjs`
+  reports the drift (body *and* subject) against the live project;
+  `scripts/sync-auth-templates.mjs` removes it. Run the sync after any template
+  or `config.toml` subject change, then re-run the verify.
+
 - **`auth.email.enable_confirmations = true` gates sign-in on a verified mailbox.**
   Any E2E or manual flow that signs in must first consume the confirmation link
   from the local mail catcher (port `54324`), or Supabase answers
