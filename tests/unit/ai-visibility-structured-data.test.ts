@@ -22,6 +22,9 @@ import {
   SUPPORT_EMAIL,
   SUPPORT_PHONE_TEL,
 } from "@/content/ai-visibility/site";
+import { jobTypeKeys } from "@/features/jobs/job-type-slugs";
+import type { LandingAvailability } from "@/features/jobs/landing-availability";
+import { northernCyprusDistrictValues } from "@/features/locations/northern-cyprus-districts";
 import { routing } from "@/i18n/routing";
 
 /**
@@ -38,6 +41,16 @@ import { routing } from "@/i18n/routing";
 const BASE_URL = new URL("https://isbulkktc.com");
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../..");
+
+/**
+ * Every facet available, so the brief's shape tests (labels, locales) see the
+ * full page list. The availability filter itself is asserted by the geo-audit
+ * suite's "advertises only routes the app serves" test.
+ */
+const ALL_FACETS: LandingAvailability = {
+  districts: new Set(northernCyprusDistrictValues),
+  jobTypes: new Set(jobTypeKeys),
+};
 
 function appPageExists(pathname: string): boolean {
   const candidates = [
@@ -307,7 +320,7 @@ test("every locale has FAQ and summary copy, and none of it is Turkish", () => {
 });
 
 test("the brief advertises only routes the app actually serves", () => {
-  const brief = buildLlmsBrief(BASE_URL);
+  const brief = buildLlmsBrief(BASE_URL, ALL_FACETS);
 
   // The "Öne çıkan sayfalar" list is the canonical (default-locale) page set;
   // the prefix rule is explained separately with `/en/jobs` as an example.
@@ -348,7 +361,7 @@ test("the brief advertises only routes the app actually serves", () => {
 });
 
 test("the brief states the same facts the graph does", () => {
-  const brief = buildLlmsBrief(BASE_URL);
+  const brief = buildLlmsBrief(BASE_URL, ALL_FACETS);
 
   assert.ok(brief.startsWith(`# ${SITE_NAME}`));
   assert.ok(brief.includes(AI_VISIBILITY_UPDATED));
@@ -385,7 +398,7 @@ test("the brief states the same facts the graph does", () => {
 });
 
 test("the full brief covers all six locales with their own copy", () => {
-  const full = buildLlmsFullBrief(BASE_URL);
+  const full = buildLlmsFullBrief(BASE_URL, ALL_FACETS);
 
   for (const locale of routing.locales) {
     assert.ok(

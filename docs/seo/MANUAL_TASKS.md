@@ -223,6 +223,7 @@ istersen gerçek veri + özgün içerik şartıyla değerlendirilebilir:
 | 10 | IndexNow | Sitemap küçülünce **yeniden ping** (otomatik, elle iş yok, §9.7) | 🟢 Otomatik |
 | 11 | Search Console | "Kullanıcı seçili canonical olmadan kopya" (1 URL) → URL'yi ilet (§11.5) | 🟡 P2 — bilgi gerekli |
 | 12 | Google Cloud | GSC/Indexing API OAuth secret'ları (§6) — okumayı otomatiğe bağlar | 🟡 P2 — opsiyonel |
+| 13 | İçerik/Ürün | **Katalog %100 kaynak sitesinden kopya** → özgün özet + native ilan teşviki (§14, Tur 9) | 🔴 P1 — ürün/içerik kararı |
 
 ---
 
@@ -605,6 +606,12 @@ jenerik rekabetçi sorgularda ("kktc iş ilanları") **ilk sayfalara çıkmaz**.
 | 4 | **Bağlantılar (otorite)** | GSC → **Bağlantılar** | Kaç dış site bağlantı veriyor? (0 ise asıl iş buradadır) |
 | 5 | **Performans** | GSC → **Performans** | Hangi sorgular gösterim alıyor? (jenerik mi, marka mı?) |
 
+> **Hangi URL'leri tek tek gireceğim?** → **`docs/seo/INDEXING_URL_LIST.md`**
+> (183 URL, öncelik sırasına göre kopyala-yapıştır blokları + 3 günlük plan).
+> Takip için: **`docs/seo/indexing-urls.csv`** (`gsc_durum`, `indexlendi`, `notlar`
+> kolonlarını doldurun). Not: URL Inspection'a **toplu yapıştırma yoktur** — sitemap
+> toplu işi yapar (183 URL), URL Inspection yalnız **en önemli ~25 sayfa** içindir.
+
 ### 13.3 🟡 Otorite artırma (asıl iyileştirme — elle, sürekli)
 
 Yeni alan adını hızlandıran **tek gerçek kaldıraç** budur; kod tarafında yapılacak bir şey yok:
@@ -632,3 +639,51 @@ sitemap.xml          → 183 <loc>, istek başına tazeleniyor (x-vercel-cache: 
 
 **Sonuç:** Teknik SEO tarafında **yapılacak yeni kod işi yok**. Kalan iş **zaman + otorite +
 özgün içerik**tir.
+
+## 14. 🔴 P1 — Katalog %100 kaynak sitesinden kopya; özgün içerik yok (Tur 9, 2026-11-12)
+
+> **Kök neden (CONFIRMED):** Yayındaki **21 ilanın 21'i** `iskibris.com` / `isbulkibris.com`'dan
+> içe aktarılmıştır (`publication_source="source_site"`); **ölçülebilen 16 eşleşmenin 16'sı
+> kaynak gövdenin %99,6–100'ünü kelimesi kelimesine taşır**; sitede **tek bir özgün (platform)
+> ilan yoktur.** Google aynı metni daha eski + daha otoriter kaynak sitede görürse **kaynağı**
+> tercih eder; bizim sayfa indekslenir ("Dizine eklenen" ≈195) ama **jenerik sorgularda
+> sıralanmaz.** Bu, §13'ün (yeni alan adı/otorite) yanındaki **ikinci ve kod-düzeyi** kök nedendir.
+> Ayrıntı ve kanıt tablosu: `SEO_IMPLEMENTATION_REPORT.md` **EK — Tur 9 (§50–§55)**.
+
+### 14.1 ⚪ Bilgi — Neden "site çıkmıyor" ile bu aynı şeydir
+
+| Sinyal | Durum | Google'ın okuduğu |
+|---|---|---|
+| Teknik engel (robots, canonical, hreflang, Googlebot) | ✅ Temiz | İndekslemeyi engelleyen bir şey yok |
+| Kaynak atıf bağlantısı (`sameAs`/görünür link) | ❌ Yok | Sayfa "sahibi olmadığı" metni yayınlıyor |
+| İçerik özgünlüğü | ❌ %0 (21/21 kopya) | **Kopya/ayna** → düşük sıralama |
+
+Yani sorun **"indekslenmiyor"** değil, **"özgün değer sunmadığı için sıralanmıyor"**dur.
+
+### 14.2 🔴 Şimdi yapılacaklar (ürün/içerik kararı — kod onayı ister)
+
+| # | İş | Kim | Önem | Not |
+|---|---|---|---|---|
+| 1 | **Özgün özet/analiz üret:** her içe aktarılan ilana kaynak gövdeyi **birebir kopyalamak yerine** kendi cümlelerimizle özet + bağlam ekle (ör. "Bu pozisyon için KKTC ortalaması", bölge/ücret bağlamı, benzer ilanlar) | İçerik/ürün | **P1** | En yüksek kaldıraç; kopya filtresini kırar |
+| 2 | **Native (platform) ilan teşviki:** işverenlerin **doğrudan** ilan vermesini sağlayacak akış/teşvik | Ürün | **P1** | Uzun vadede kopya oranını düşürür |
+| 3 | **Kaynak atıfı:** her ilanın altına "Kaynak: `<site>`" **bağlantısı** + `JobPosting`'e `isBasedOn`/`sameAs` | Kod (onay) | P2 | Şeffaflık + E-E-A-T |
+| 4 | **Bayat ilanları gizle:** kaynakta artık olmayan 5 ilanı importer **pasife** alsın; sitemap'ten düşsün | Kod (onay) | P2 | Ölü ilan/kalite sinyali temizlenir |
+| 5 | **`datePosted` düzeltmesi:** kaynak `created_at`'i "yeni ilan" olarak taşımak yerine `dateModified`'i kendi doğrulama tarihimiz yapmayı değerlendir | Kod (onay) | P3 | Jobs zengin sonuç tutarlılığı |
+
+> **Not:** 1 ve 2 **ürün kararıdır**, tek başına kod değişikliği değildir. 3–5 kod ile yapılabilir
+> ve onaya sunulmuştur. **Tur 9'da hiçbir kod değiştirilmedi** (yalnız ölçüm + rapor).
+
+### 14.3 Kanıt (canlı, 2026-11-12 — yeniden üretilebilir)
+
+```bash
+# Sitemap: 183 <loc>, 21 ilan
+curl -s https://isbulkktc.com/sitemap.xml | grep -o '<loc>[^<]*</loc>' | wc -l
+# /jobs listesi: 20/20 bağlantı "source-*", 0 yerli ilan
+curl -s https://isbulkktc.com/jobs | grep -o 'href="/jobs/source-[^"]*"' | sort -u | wc -l
+# Kopya ölçümü (bir ilan): kaynak gövde ↔ bizim sayfa → %100 kelime-ikili kapsaması
+curl -s https://api.iskibris.com/api/jobs/26356   # kaynak gövde
+curl -s https://isbulkktc.com/jobs/source-iskibris-insaat-muhendisi   # bizim sayfa
+```
+
+**Bu turda ölçülen:** kopya kapsaması **%100** (örnek ilan), `iskibris` dış bağlantısı **0**,
+`sameAs`/`isBasedOn` **0**, JSON-LD tarihleri kaynakla **birebir eşit**.

@@ -3,9 +3,11 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  compareFacetParity,
   evaluateIndexNowKey,
   evaluateIndexability,
   extractPageSignals,
+  facetPaths,
   findCanonical,
   findMetaContents,
   hasLocalePrefix,
@@ -513,4 +515,79 @@ test("the IndexNow key is read by name==body, never by filename order (#309)", (
     /entries\.find\(/,
     "verify-indexing.mjs must not select the key by filename order",
   );
+});
+
+test("facetPaths reads the two landing families and collapses locale duplicates", () => {
+  const paths = facetPaths([
+    "https://isbulkktc.com/is-ilanlari/girne",
+    "https://isbulkktc.com/en/is-ilanlari/girne", // same facet, other locale
+    "https://isbulkktc.com/is-turleri/tam-zamanli",
+    "https://isbulkktc.com/de/is-turleri/gecici",
+    "https://isbulkktc.com/jobs", // not a facet
+    "https://isbulkktc.com/is-ilanlari/", // no slug
+    "not a url",
+  ]);
+  assert.deepEqual(paths, ["/is-ilanlari/girne", "/is-turleri/gecici", "/is-turleri/tam-zamanli"]);
+});
+
+test("facetPaths strips the default-locale prefix too, so /tr is one facet not two", () => {
+  const paths = facetPaths([
+    "https://isbulkktc.com/tr/is-ilanlari/girne",
+    "https://isbulkktc.com/is-ilanlari/girne",
+  ]);
+  assert.deepEqual(paths, ["/is-ilanlari/girne"]);
+});
+
+test("compareFacetParity passes when llms.txt and the sitemap advertise the same facets", () => {
+  const llms = [
+    "# isbulkktc",
+    "- [Girne](https://isbulkktc.com/is-ilanlari/girne)",
+    "- [Vollzeit](https://isbulkktc.com/de/is-turleri/tam-zamanli)",
+    "- [Jobs](https://isbulkktc.com/jobs)",
+  ].join("\n");
+  const sitemapLocs = [
+    "https://isbulkktc.com/is-ilanlari/girne",
+    "https://isbulkktc.com/en/is-ilanlari/girne",
+    "https://isbulkktc.com/is-turleri/tam-zamanli",
+  ];
+  const parity = compareFacetParity(llms, sitemapLocs);
+  assert.equal(parity.ok, true);
+  assert.deepEqual(parity.onlyInLlms, []);
+  assert.deepEqual(parity.onlyInSitemap, []);
+});
+
+test("compareFacetParity flags a facet the brief advertises but the sitemap dropped (#drift)", () => {
+  // The live regression: `llms.txt` linked four empty facets the sitemap had
+  // correctly excluded because they answer `noindex`.
+  const llms = [
+    "- [Girne](https://isbulkktc.com/is-ilanlari/girne)",
+    "- [Lefke](https://isbulkktc.com/is-ilanlari/lefke)",
+    "- [Geçici](https://isbulkktc.com/is-turleri/gecici)",
+  ].join("\n");
+  const sitemapLocs = ["https://isbulkktc.com/is-ilanlari/girne"];
+  const parity = compareFacetParity(llms, sitemapLocs);
+  assert.equal(parity.ok, false);
+  assert.deepEqual(parity.onlyInLlms, ["/is-ilanlari/lefke", "/is-turleri/gecici"]);
+  assert.deepEqual(parity.onlyInSitemap, []);
+});
+
+test("compareFacetParity flags a facet the sitemap lists but the brief omits", () => {
+  const llms = "- [Girne](https://isbulkktc.com/is-ilanlari/girne)";
+  const sitemapLocs = [
+    "https://isbulkktc.com/is-ilanlari/girne",
+    "https://isbulkktc.com/is-turleri/staj",
+  ];
+  const parity = compareFacetParity(llms, sitemapLocs);
+  assert.equal(parity.ok, false);
+  assert.deepEqual(parity.onlyInLlms, []);
+  assert.deepEqual(parity.onlyInSitemap, ["/is-turleri/staj"]);
+});
+
+test("compareFacetParity is symmetric when neither document advertises a facet", () => {
+  const parity = compareFacetParity("- [Jobs](https://isbulkktc.com/jobs)", [
+    "https://isbulkktc.com/jobs",
+  ]);
+  assert.equal(parity.ok, true);
+  assert.deepEqual(parity.llmsFacets, []);
+  assert.deepEqual(parity.sitemapFacets, []);
 });
