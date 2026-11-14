@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+import { supportFlowsByLocale } from "@/content/ai-visibility/support-flows";
+
+import { buildSupportSystemPrompt } from "./ai-protocol";
 import { answerFromKnowledge, fallbackReply } from "./knowledge";
 
 /**
@@ -86,6 +89,93 @@ test("a how-to question is answered from the procedural flows, not the model", (
     const answer = answerFromKnowledge(message, locale as "tr" | "en");
     assert.ok(answer, `[${locale}] ${JSON.stringify(message)} should match a flow`);
     assert.match(answer, expected);
+  }
+});
+
+// The recall half of the paraphrase work: a visitor rarely types the canonical
+// question. These are the phrasings the widget actually receives — a bare noun
+// ("şifre sıfırlama"), a first-person statement ("şifremi unuttum"), a filler-
+// padded question ("ich habe mein passwort vergessen") — and each must resolve
+// in-process from the entry's curated `paraphrases`, not fall through to the
+// model. The `want` is a distinctive phrase from the flow's own answer, so a
+// match to the *wrong* flow is caught too, not just a fall-through.
+test("a paraphrase of a flow question is answered in-process", () => {
+  const cases: [string, string, RegExp][] = [
+    // tr
+    ["tr", "şifre sıfırlama", /Şifrenizi mi unuttunuz/],
+    ["tr", "şifremi unuttum", /Şifrenizi mi unuttunuz/],
+    ["tr", "parolamı nasıl yenilerim", /Şifrenizi mi unuttunuz/],
+    ["tr", "hesap açmak istiyorum", /Aday olarak/],
+    ["tr", "üye olmak istiyorum", /Aday olarak/],
+    ["tr", "kayıt olmak istiyorum", /Aday olarak/],
+    ["tr", "mail doğrulama nasıl yapılır", /doğrulama bağlantısı/],
+    ["tr", "doğrulama maili gelmedi", /doğrulama/],
+    ["tr", "başvuru nasıl yapılır", /başvurunuz siteye kaydedilir/i],
+    ["tr", "ilana başvurmak istiyorum", /başvurunuz siteye kaydedilir/i],
+    ["tr", "ilan vermek istiyorum", /inceleme sürecine alınır/],
+    ["tr", "şirket kaydı nasıl yapılır", /inceleme sürecine alınır/],
+    ["tr", "cv gizliliği nasıl", /tarayıcınızda/],
+    // en
+    ["en", "i forgot my password", /Forgot your password/],
+    ["en", "how to sign up", /candidate account/],
+    ["en", "i want to register", /candidate account/],
+    ["en", "email verification not working", /verification link/],
+    ["en", "cover letter how to add", /cover letter/i],
+    ["en", "where is my cv stored", /not uploaded to the server/i],
+    // de — the case that was a live false positive before entry-relative coverage
+    ["de", "ich habe mein passwort vergessen", /Passwort vergessen/],
+    ["de", "passwort ändern", /Passwort vergessen/],
+    ["de", "ich möchte mich registrieren", /Bewerberkonto/],
+    ["de", "konto anlegen", /Bewerberkonto/],
+    ["de", "bestätigungsmail nicht erhalten", /Bestätigungslink/],
+    ["de", "wie kann ich mich bewerben", /Bewerbung erfolgt über das Formular/],
+    ["de", "stellenanzeige schalten", /geprüft/],
+    ["de", "lebenslauf datenschutz", /nicht auf den Server/],
+    // ru
+    ["ru", "я забыл пароль", /Забыли пароль/],
+    ["ru", "сменить пароль", /Забыли пароль/],
+    ["ru", "хочу зарегистрироваться", /аккаунт кандидата/],
+    ["ru", "письмо подтверждения не пришло", /ссылку для подтверждения/],
+    ["ru", "как подать заявку", /профиль кандидата/],
+    // el
+    ["el", "ξέχασα τον κωδικό μου", /Ξεχάσατε τον κωδικό/],
+    ["el", "θέλω να εγγραφώ", /λογαριασμό υποψηφίου/],
+    ["el", "πώς να κάνω αίτηση", /προφίλ υποψηφίου/],
+    // fa
+    ["fa", "گذرواژه‌ام را فراموش کرده‌ام", /گذرواژه را فراموش کرده/],
+    ["fa", "می‌خواهم ثبت‌نام کنم", /حساب متقاضی/],
+  ];
+  for (const [locale, message, expected] of cases) {
+    const answer = answerFromKnowledge(message, locale as "tr");
+    assert.ok(
+      answer,
+      `[${locale}] ${JSON.stringify(message)} should match a flow`,
+    );
+    assert.match(answer, expected);
+  }
+});
+
+// The invariant that keeps the paraphrase data honest: every flow carries at
+// least one alias, and no alias is rendered as a fact line of the model's
+// prompt. The prompt renders each entry's `question` and `answer`; a paraphrase
+// that started appearing as a `Q:` line would let the model answer from a
+// phrasing the deterministic layer was supposed to own. (A paraphrase may still
+// occur as a substring of the answer prose — that is the fact being restated.)
+test("every flow carries paraphrases and none are rendered as prompt facts", () => {
+  for (const locale of locales) {
+    const prompt = buildSupportSystemPrompt(locale);
+    for (const flow of supportFlowsByLocale[locale]) {
+      assert.ok(
+        flow.paraphrases.length > 0,
+        `[${locale}] ${JSON.stringify(flow.question)} has no paraphrases`,
+      );
+      for (const paraphrase of flow.paraphrases) {
+        assert.ok(
+          !prompt.includes(`Q: ${paraphrase}`),
+          `[${locale}] paraphrase ${JSON.stringify(paraphrase)} rendered as a prompt fact`,
+        );
+      }
+    }
   }
 });
 
