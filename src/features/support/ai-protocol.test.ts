@@ -67,7 +67,14 @@ test("the prompt grounds the model in the procedural flows, not a blanket refusa
   assert.match(prompt, /Aday olarak/);
   assert.match(prompt, /başvurunuz siteye kaydedilir/i);
   // The anti-invention rule survives: it is scoped, not removed.
-  assert.match(prompt, /Do not invent any other page/i);
+  assert.match(prompt, /do not add any detail it does not contain/i);
+  // Regression: the licence once said "describe those flows", which the model
+  // read as licence to decompose a prose fact into an invented click path and
+  // name buttons the product does not ship (e.g. "Başvuru Yap" for the real
+  // "Başvuruyu gönder"). The licence must bind the answer to the fact's own
+  // wording, not merely to the flow's topic.
+  assert.doesNotMatch(prompt, /You may describe those flows/i);
+  assert.match(prompt, /restating the relevant fact/i);
 });
 
 // ---------------------------------------------------------------------------
