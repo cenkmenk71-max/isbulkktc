@@ -126,6 +126,26 @@ export async function generateMetadata({
     }
   }
 
+  // The unfiltered board is the one route that can be empty while every other
+  // signal says "index me". An empty listing answered `index, follow` is the
+  // same soft 404 a filtered miss is, so it must not be indexed either; the
+  // moment a vacancy is published it becomes indexable again. Only page 1 is
+  // checked: `?page=n` beyond the last page is a hard 404 on the render path,
+  // and page 1 carries the same content as `/jobs`.
+  if (!isFiltered && filters.page === 1) {
+    const results = await searchJobsOnce(filters);
+    if (results.total === 0) {
+      return noIndexSearchMetadata(
+        createLocalizedPageMetadata({
+          locale,
+          pathname: "/jobs",
+          title: t("title"),
+          description: t("description"),
+        }),
+      );
+    }
+  }
+
   // A page of the unfiltered sequence is its own page, not a duplicate of
   // `/jobs`. Google treats `?page=n` URLs as separate pages and is explicit that
   // the first page must not be their canonical, so the pathname carries the
