@@ -1135,9 +1135,12 @@ test("a failed live read proves nothing, so it stays silent rather than green", 
 // ---------------------------------------------------------------------------
 // 8. Cron retention. The notification worker is scheduled once a minute and
 // pg_cron 1.6.4 — the version the hosted project ships — has no retention
-// setting, so `cron.job_run_details` grows without bound unless a scheduled job
-// prunes it. The schedule lives only in Production, so the pgTAP suite cannot
-// assert it; only a live read of `cron.job` can, which is what this check does.
+// setting, so `cron.job_run_details` grows without bound unless some scheduled
+// job prunes it. The worker's own command posts an HTTP request and never names
+// the table, so retention is a *sibling* job that reclaims the history for
+// everyone; the invariant is "the log is bounded", not "every job prunes it".
+// The schedule lives only in Production, so the pgTAP suite cannot assert it;
+// only a live read of `cron.job` can, which is what this check does.
 // ---------------------------------------------------------------------------
 
 const PRUNING_JOB = {
@@ -1155,13 +1158,14 @@ test("a job that prunes its run history is ok", () => {
   const finding = cronRetentionFinding({ jobs: [PRUNING_JOB] });
   assert.equal(finding.level, "ok");
   assert.equal(finding.area, "cron");
-  assert.match(finding.detail, /every scheduled job prunes cron\.job_run_details/);
+  assert.match(finding.detail, /cron\.job_run_details is pruned by cron-run-details-retention/);
 });
 
-test("a job that never prunes is a warning that names it", () => {
+test("the worker alone never prunes, so it is a warning that names it", () => {
   const finding = cronRetentionFinding({ jobs: [WORKER_JOB] });
   assert.equal(finding.level, "warn");
   assert.equal(finding.area, "cron");
+  assert.match(finding.detail, /no scheduled job prunes cron\.job_run_details/);
   assert.match(finding.detail, /send-application-notifications/);
   assert.match(finding.detail, /grows without bound/);
 });
@@ -1180,11 +1184,11 @@ test("a size the read could not give is simply omitted", () => {
   assert.doesNotMatch(finding.detail, /holds 12 row\(s\) \(/);
 });
 
-test("only the un-pruned job is named when several are scheduled", () => {
+test("a sibling retention job keeps the worker's history bounded", () => {
   const finding = cronRetentionFinding({ jobs: [WORKER_JOB, PRUNING_JOB] });
-  assert.equal(finding.level, "warn");
-  assert.match(finding.detail, /send-application-notifications/);
-  assert.doesNotMatch(finding.detail, /cron-run-details-retention/);
+  assert.equal(finding.level, "ok");
+  assert.match(finding.detail, /2 scheduled job\(s\)/);
+  assert.match(finding.detail, /is pruned by cron-run-details-retention/);
 });
 
 test("no scheduled jobs at all is ok", () => {

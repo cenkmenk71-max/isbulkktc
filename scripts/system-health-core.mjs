@@ -820,10 +820,12 @@ export function duplicateConstraintFinding({ rows, readError } = {}) {
  * pgTAP suite cannot assert this: only a live read of `cron.job` can confirm a
  * scheduled job prunes its own history, so that is what this check does.
  *
- * The invariant is "every scheduled job reclaims its own run history", not a row
- * count: a job that prunes is healthy at any size, and a job that does not is a
- * latent outage regardless of how many rows it currently holds. A `warn` names
- * the offending job(s) and reports the current log size so the operator has
+ * The invariant is "the log is bounded", not "every job prunes it": the worker's
+ * command posts an HTTP request and never names the table, so the retention job
+ * is a *sibling* that reclaims the history for all jobs. The check therefore
+ * asks whether *any* scheduled command names `cron.job_run_details`, and warns
+ * only when none does — the state in which the log grows without bound. A `warn`
+ * names every scheduled job and reports the current log size so the operator has
  * something to act on. `null` is reserved for the states that carry no evidence:
  * no `jobs` array (caller misuse) and a `readError` (the Management API could not
  * be read, so the check proves nothing and must stay silent rather than green).
@@ -837,27 +839,29 @@ export function cronRetentionFinding({ jobs, runDetails, readError } = {}) {
   if (jobs.length === 0) {
     return { level: 'ok', area: 'cron', detail: 'no pg_cron job is scheduled' };
   }
-  const unbounded = jobs.filter((job) => !commandPrunesRunDetails(job?.command));
-  if (unbounded.length === 0) {
+  const pruners = jobs.filter((job) => commandPrunesRunDetails(job?.command));
+  if (pruners.length > 0) {
+    const names = pruners.map(jobName).slice(0, 3).join(', ');
+    const more = pruners.length > 3 ? ` and ${pruners.length - 3} more` : '';
     return {
       level: 'ok',
       area: 'cron',
-      detail: `every scheduled job prunes cron.job_run_details (${jobs.length} job${jobs.length === 1 ? '' : 's'})`,
+      detail: `${jobs.length} scheduled job(s); cron.job_run_details is pruned by ${names}${more}`,
     };
   }
-  const named = unbounded
-    .map((job) =>
-      typeof job?.jobname === 'string' && job.jobname ? job.jobname : `job ${job?.jobid ?? '?'}`,
-    )
-    .slice(0, 3)
-    .join(', ');
-  const more = unbounded.length > 3 ? ` and ${unbounded.length - 3} more` : '';
+  const named = jobs.map(jobName).slice(0, 3).join(', ');
+  const more = jobs.length > 3 ? ` and ${jobs.length - 3} more` : '';
   const size = describeRunDetails(runDetails);
   return {
     level: 'warn',
     area: 'cron',
-    detail: `${unbounded.length} scheduled job(s) never prune cron.job_run_details (${named}${more})${size} — the log grows without bound on the free plan`,
+    detail: `no scheduled job prunes cron.job_run_details (${named}${more})${size} — the log grows without bound on the free plan`,
   };
+}
+
+/** A job's name, falling back to its id when the name is missing or empty. */
+function jobName(job) {
+  return typeof job?.jobname === 'string' && job.jobname ? job.jobname : `job ${job?.jobid ?? '?'}`;
 }
 
 /**
