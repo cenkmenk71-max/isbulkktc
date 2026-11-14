@@ -1366,3 +1366,152 @@ değişkeni sağlar. Yerel prod-build doğrulaması **her zaman** `NEXT_PUBLIC_A
   `/[district]` ve `/[type]` alt yollarına gider. İstenirse P3 "facet hub" sayfası eklenebilir
   (onay ister).
 
+
+---
+
+## EK — Tur 13: P0 düzeltmesi **deploy edilmedi** + Tur 12 artıklarının kapanışı (2026-11-12)
+
+> Bu ek §1–§82'ye **eklenir**. Girdi: **yerel git durumu** + **canlı yeniden ölçüm**
+> (Googlebot UA, `curl`) + GitHub API (repo metadata ve kimlik yetkisi). Amaç: Tur 12'de
+> "düzeltildi" denen P0'ın **canlıya çıkıp çıkmadığını** kesinleştirmek ve Tur 12'den
+> devreden üç artığı (kaynak linki önerisi, `vercel.app` aynası, GitHub metadata) kapatmak.
+
+### §83. P0 düzeltmesi **commit'lendi ama DEPLOY EDİLMEDİ** (yeni, P0-OPERASYONEL)
+
+**CONFIRMED · P0-OPERASYONEL · BLOCKED (yetki bekliyor).** Tur 12'de P0 için yazılan kod
+düzeltmesi (`next.config.ts` `htmlLimitedBots` regex'ine `Googlebot`) **yerel `main`'de
+commit'li** (`deec7c5`) ama **hiçbir remote branch'e gönderilmedi**. Bu turda birebir ölçüldü:
+
+| Kontrol | Değer |
+|---|---|
+| Yerel `HEAD` | `deec7c5` (fix) |
+| `origin/main` | `f5367cb` (fix YOK) |
+| `git rev-list --left-right --count origin/main...HEAD` | `0  1` → **1 commit ileride, push edilmemiş** |
+| `git branch -r --contains deec7c5` | **boş** → hiçbir remote'ta değil |
+| Canlı `https://isbulkktc.com/api/build-info` | `{"commit":"f5367cb…"}` → prod **fix'siz** |
+
+**Sonuç:** §77'de tanımlanan P0 yarışı **canlıda hâlâ aktif**. Bu turda Googlebot UA ile
+`/is-ilanlari/girne` 12 kez çekildi (canlı, fix öncesi build):
+
+```
+/is-ilanlari/girne -> head=8 body=4 none=0 (n=12)   ← %33 canonical <body>'de
+/jobs              -> head=8 body=0 none=0 (n=8)
+/                  -> head=6 body=0 none=0 (n=6)
+```
+
+Yani düzeltmenin kabul kriteri (§77: 6/6 `<head>`) **canlıda hâlâ BAŞARISIZ**. Fix'in kendi
+testleri yerelde **yeşil** (38/38: `scripts/next-config-bots.test.mjs` +
+`scripts/verify-indexing.test.mjs`), yani iş **bitti ama yayınlanmadı**.
+
+**Neden deploy edilmedi (BLOCKED):** depo `origin = cenkmenk71-max/isbulkktc` ve **`main`'e her
+push, Vercel Git entegrasyonuyla production'ı otomatik yayınlar**
+(`.github/workflows/verify-production-deployment.yml` bu mekanizmayı doğrular). Bu, "kullanıcı
+açıkça istemedikçe `main`'e push etme" kuralına girer. `git push --dry-run origin main`
+**başarılı** (teknik engel yok, yetki var) ama anlamı **production'a yayın** → **açık onay
+gerekir**. `gh auth` kimliği (`orijinus1997-sudo`) her iki repo'da yalnız `pull:true` verir,
+`gh pr create` **çalışmaz** → "PR aç, sahip merge etsin" alternatifi de kapalı.
+
+**Onaylanırsa yapılacak (tek komut):**
+```bash
+git push origin main        # deec7c5 → origin/main → Vercel main'i yayınlar
+# sonra §77 kabul kriteri: /is-ilanlari/girne 6/6 head olmalı
+```
+
+### §84. T12-1 kaldıraç 2 — `vercel.app` aynası **zaten noindex** (kapandı)
+
+§79'da "onay ister" olarak açık bırakılan 2. kaldıraç bu turda **zaten uygulanmış ve canlı**
+bulundu. `next.config.ts` `headers()` içinde `host = .*\.vercel\.app` için
+`X-Robots-Tag: noindex, nofollow` kuralı var (commit `613dec0`, "noindex the Vercel deployment
+aliases"). Canlı kanıt:
+
+```
+curl -sI https://isbulkktc-amber.vercel.app/ | grep -i x-robots-tag
+→ x-robots-tag: noindex, nofollow
+```
+
+İkinci host Google'a **açıkça noindex** diyor; canonical da apex'e gidiyor → **çift host sorunu
+kapanmış**. §79'daki "onay ister (2)" maddesi **artık geçersiz**.
+
+### §85. T12-1 kaldıraç 1 — GitHub repo metadata **düzeltilemedi (BLOCKED, yetki yok)**
+
+`LBCron/isbulkktc` (public) `homepage` alanı **hâlâ** aynayı gösteriyor
+(`https://isbulkktc-amber.vercel.app`; o ayna artık noindex). İdeal: `https://isbulkktc.com`.
+Ancak bu sandbox'ın GitHub kimliği (`orijinus1997-sudo`) her iki repo'da da yalnız
+`permissions: {pull: true}` — **admin/push yok** → description/homepage **güncellenemedi**:
+
+| Repo | description | homepage | Kimlik yetkisi |
+|---|---|---|---|
+| `LBCron/isbulkktc` | (boş) | `https://isbulkktc-amber.vercel.app` | `pull` → **düzenlenemez** |
+| `cenkmenk71-max/isbulkktc` | (boş) | `https://isbulkktc.com` (**doğru**) | `pull` → **düzenlenemez** |
+
+**Aksiyon (repo sahibi):** `LBCron/isbulkktc` → Settings → homepage = `https://isbulkktc.com`,
+description = "KKTC iş ve kariyer platformu — isbulkktc.com". İkinci repo zaten doğru.
+
+### §86. T12-5 — "kaynak linki + `isBasedOn`" önerisi **NOT APPLICABLE (bilinçli tasarım)**
+
+Tur 12'den devreden "iş ilanına görünür kaynak linki + `isBasedOn` ekle" önerisi **reddedildi**;
+gerekçe iki bağımsız kanıt:
+
+1. **Ürün kararı + test kilidi:** commit `8f0a753` ("stop sending visitors to competitors, and
+   rewrite imported copy") kaynak-site linklerini **bilerek** kaldırdı; `tests/e2e/jobs.spec.ts`
+   bunu **zorunlu kılıyor** (`aside.jobs-source-note` = 0; `a[href="https://www.iskibris.com/jobs"]`
+   ve `a[href="https://isbulkibris.com/jobs"]` = 0). Yeniden eklemek, sahibin bilinçli kararını
+   **test-kırıcı** biçimde geri almak (rakip ilana trafik sızdırmak) olurdu.
+2. **Şema geçersizliği:** `schema:JobPosting` → `rdfs:subClassOf schema:Intangible`
+   (**CreativeWork DEĞİL**); `isBasedOn` → `domainIncludes: schema:CreativeWork`. Yani
+   `isBasedOn` **JobPosting için geçerli/belgelenmiş bir özellik değil**; Google'ın JobPosting
+   belgelerinde de **yok** (mevcut ve doğru olanlar: `sameAs`, `identifier`, `directApply` —
+   üçü de zaten `job-posting-structured-data.ts` içinde kullanımda).
+
+**Sonuç:** Öneri ne gerekli ne geçerli → **NOT APPLICABLE**. Mevcut yapı korunur.
+
+### §87. T12-6 — P3 başlık düzeltmesi **canlıda hâlâ eski** (deploy bekliyor)
+
+`/jobs` canlı başlığı hâlâ **`KKTC Güncel Münhaller · İşBul KKTC`** — çünkü düzeltme `deec7c5`
+içinde ve **deploy edilmedi** (§83). Doğru başlık `KKTC Güncel İş İlanları · İşBul KKTC`,
+`deec7c5` yayınlanınca geçerli olur. §83 ile **aynı tek deploy** ile kapanır.
+
+### §88. T12-7 — apex'te kazara site-geneli `noindex` YOK (NOT A DEFECT)
+
+`vercel.app` noindex kuralının apex'e sızma riski kontrol edildi:
+
+```
+curl -sI https://isbulkktc.com/jobs | grep -i x-robots-tag   → (yok)
+```
+
+Apex'te `X-Robots-Tag` **yok**; `www`→apex **308** canlı; `/tr`→`/` **308** canlı;
+`/en/jobs` canonical = kendisi (200). Yani noindex yalnız aynayı hedefliyor, **doğru**.
+
+### §89. Tur 13 — nihai durum tablosu (tek bakışta)
+
+| ID | Bulgu | Sınıf | Önem | Durum | Kanıt |
+|---|---|---|---|---|---|
+| **T11-1 / T12-2** | Googlebot canonical'ı `<body>`'de; **fix commit'li ama deploy edilmedi** | **CONFIRMED** | **P0** | **BLOCKED — onay bekliyor** | §83: canlı body=4/12; `deec7c5` push edilmemiş |
+| T12-3 | `vercel.app` aynası noindex | **CONFIRMED** | P2 | **Kapandı (zaten canlı)** | §84: `X-Robots-Tag: noindex, nofollow` |
+| T12-4 | GitHub repo `homepage` aynayı gösteriyor | **CONFIRMED** | P2 | **BLOCKED — yetki yok** | §85: `permissions.pull=true` |
+| T12-5 | Kaynak linki + `isBasedOn` önerisi | **NOT APPLICABLE** | — | Bilinçli tasarım + şema dışı | §86: `8f0a753` + E2E kilidi; `isBasedOn`≠JobPosting |
+| T12-6 | `/jobs` başlığı canlıda "Münhaller" | **CONFIRMED** | P3 | **Deploy bekliyor** | §87: canlı `<title>` hâlâ eski |
+| T12-7 | Apex site-geneli noindex riski | **NOT A DEFECT** | — | Kapandı | §88: apex'te `X-Robots-Tag` yok |
+| T9-1 / T9-2 / T8-1 / T8-2 | Kopya katalog, bayat ilan, yeni alan adı, zayıf otorite | **CONFIRMED / LIKELY** | P1–P2 | Açık (içerik + zaman) | §51 / §53 / §47 / §49 |
+
+### §90. Tur 13 — tek cümle ve onay isteyen işler
+
+**Tek cümle:** Teknik olarak kalan **tek P0**, Googlebot'un canonical'ı `<head>`'de
+kaybetmesidir; düzeltme **yazıldı, test edildi ve commit'lendi** (`deec7c5`) ama
+**production'a gönderilmedi**, bu yüzden yarış **canlıda sürüyor** (ölçüm: %33 body) — deploy
+onayı bekliyor.
+
+**Açık onay isteyen işler (öncelik sırası):**
+
+1. **[P0] `git push origin main`** → `deec7c5` yayınlanır (Vercel `main`'i otomatik deploy eder).
+   Sonra §77 kabul kriteri koşulur. Bu, "site çıkmıyor" şikayetinin **en somut teknik engelini**
+   kaldırır.
+2. **[P2] GitHub `LBCron/isbulkktc` homepage** → `https://isbulkktc.com` (repo sahibi; §85).
+3. **[P1] Özgün içerik** (kopya katalog, Tur 9) ve **[P2] otorite** (backlink/NAP, Tur 8) —
+   içerik + zaman işi; P0/P1 teknik düzeltmeler **tek başına sıralamayı açmaz**.
+4. **[P2] GSC paneli**: P0 fix deploy edildikten **sonra** "Validate fix" + öncelikli URL'ler için
+   "Request indexing" (OAuth yok → **panelden**; §75).
+
+**Kapsam sınırı:** `deec7c5`'in prod build'i yerel olarak `NEXT_PUBLIC_APP_URL` ile **başarılı**
+(§81); yine de asıl kanıt **deploy sonrası canlı ölçümdür** (§77). T12-4 yetki nedeniyle
+**dışarıdan doğrulanamaz**; T12-5 **koda dokunulmadan** kapandı.
