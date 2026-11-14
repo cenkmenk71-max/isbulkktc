@@ -1,15 +1,21 @@
 import { faqByLocale, siteSummaryByLocale } from "@/content/ai-visibility/faq";
+import { supportFlowsByLocale } from "@/content/ai-visibility/support-flows";
 import type { AppLocale } from "@/i18n/routing";
 
 /**
  * Deterministic, fact-grounded answers for the live-support widget.
  *
- * The bot answers only from the platform's own published copy — the six-language
+ * The bot answers only from the platform's own published copy: the six-language
  * FAQ bundle in `src/content/ai-visibility/faq.ts`, which restates the exact
- * sentences the about / contact / packages pages already ship. Nothing here
- * invents a feature the site does not have, and nothing reaches the network: an
- * on-topic question is answered in-process, so the common case costs no token
- * and cannot hallucinate.
+ * sentences the about / contact / packages pages already ship, plus the
+ * procedural flows in `support-flows.ts`, which restate the interface's own
+ * steps (password reset, account creation, applying, employer listing, CV
+ * privacy) from the shipped i18n copy. Nothing here invents a feature the site
+ * does not have, and nothing reaches the network: an on-topic question is
+ * answered in-process, so the common case costs no token and cannot hallucinate.
+ *
+ * Both catalogues are searched together, so a "how do I…" question the FAQ alone
+ * cannot place is still answered in-process rather than handed to the model.
  *
  * Off-topic questions fall through to `fallbackReply`, which is still grounded
  * copy rather than a shrug.
@@ -59,7 +65,8 @@ export function answerFromKnowledge(
   if (queryTokens.size === 0) return null;
 
   let best: { score: number; answer: string } | null = null;
-  for (const entry of faqByLocale[locale]) {
+  const entries = [...faqByLocale[locale], ...supportFlowsByLocale[locale]];
+  for (const entry of entries) {
     const entryTokens = new Set(tokenize(entry.question, locale));
     let score = 0;
     for (const token of queryTokens) {

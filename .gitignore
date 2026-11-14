@@ -31,3 +31,7 @@ supabase/.branches/
 # watches the real `bun.lock` (`.github/dependabot.yml`), so keep npm's lockfile
 # out of the tree.
 package-lock.json
+# Ignore every local env file (`.env`, `.env.production`, …) but keep the
+# committed template, which documents the variables the app reads.
+.env*
+!.env.example

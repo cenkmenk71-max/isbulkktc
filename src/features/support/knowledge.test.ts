@@ -65,6 +65,30 @@ test("a near-verbatim FAQ question is answered", () => {
   );
 });
 
+// The other half of the catalogue: procedural flows. A "how do I…" question is
+// what a support visitor most often asks, and the FAQ alone cannot place it, so
+// before the flows existed every one of these fell through to the model — which
+// was itself told the interface was unknown and deflected. Each must now be
+// answered in-process, from the product's own steps.
+test("a how-to question is answered from the procedural flows, not the model", () => {
+  const cases: [string, string, RegExp][] = [
+    ["tr", "Şifremi nasıl sıfırlarım?", /Şifrenizi mi unuttunuz/],
+    ["tr", "Şifremi nasıl değiştiririm?", /yeni şifre/],
+    ["tr", "Nasıl hesap oluştururum?", /Aday olarak/],
+    ["tr", "İlana nasıl başvururum?", /başvurunuz siteye kaydedilir/i],
+    ["tr", "İşveren olarak nasıl ilan veririm?", /inceleme sürecine alınır/],
+    ["tr", "CV dosyam güvenli mi?", /tarayıcınızda/],
+    ["en", "How do I reset my password?", /Forgot your password/],
+    ["en", "How do I apply for a job?", /candidate profile/i],
+    ["en", "Is my CV file safe?", /not uploaded to the server/i],
+  ];
+  for (const [locale, message, expected] of cases) {
+    const answer = answerFromKnowledge(message, locale as "tr" | "en");
+    assert.ok(answer, `[${locale}] ${JSON.stringify(message)} should match a flow`);
+    assert.match(answer, expected);
+  }
+});
+
 // The regression itself: these share a single generic word ("nedir") with an FAQ
 // question but ask something the copy does not answer. A wrong confident answer
 // is worse than no answer, so each must fall through (to the model, or the
