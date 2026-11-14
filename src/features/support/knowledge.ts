@@ -24,13 +24,20 @@ import type { AppLocale } from "@/i18n/routing";
 const MIN_TOKEN_LENGTH = 3;
 
 /**
- * A question must share at least this share of its significant words with an
- * entry before that entry may answer it. Pure overlap is too eager here: every
- * FAQ question ends in the same word for the language ("nedir", "is", "ist"),
- * so "Tek ilan fiyatı nedir?" would otherwise match "İşBul KKTC nedir?" on the
- * shared "nedir" alone and answer with an unrelated fact. Requiring the match to
- * also cover most of the query keeps a near-verbatim lookup working while an
- * off-topic question falls through to the model (or the grounded fallback).
+ * A question must share at least this share of the *matched phrasing's*
+ * significant words before that phrasing may answer it. Pure overlap is too
+ * eager here: every FAQ question ends in the same word for the language
+ * ("nedir", "is", "ist"), so "Tek ilan fiyatı nedir?" would otherwise match
+ * "İşBul KKTC nedir?" on the shared "nedir" alone and answer with an unrelated
+ * fact.
+ *
+ * The share is measured against the entry (the curated, canonical phrasing), not
+ * the query: a visitor's real question is the noisy side — "ich habe mein
+ * passwort vergessen" carries three filler words that a query-relative share
+ * would count against it and push a good match under the bar. Measuring the
+ * entry keeps a short curated alias like "passwort vergessen" reachable, while a
+ * long off-topic question still fails because it shares only one or two of the
+ * entry's words.
  */
 const MIN_COVERAGE = 0.6;
 
@@ -45,17 +52,38 @@ function tokenize(text: string, locale: AppLocale): string[] {
 }
 
 /**
- * Best FAQ answer for `message`, or `null` when nothing matches confidently.
+ * The phrasings an entry may be matched on: its canonical `question`, plus the
+ * curated `paraphrases` a flow carries. Both are matching-only — the answer is
+ * what the visitor receives. FAQ entries have no paraphrases, so the list is
+ * just their question.
+ */
+function matchPhrasings(entry: {
+  question: string;
+  paraphrases?: readonly string[];
+}): readonly string[] {
+  return entry.paraphrases?.length
+    ? [entry.question, ...entry.paraphrases]
+    : [entry.question];
+}
+
+/**
+ * Best FAQ or flow answer for `message`, or `null` when nothing matches
+ * confidently.
  *
  * Scoring is the overlap of significant tokens (length >= 3, so a locale's
- * articles and short particles drop out) between the query and each FAQ entry's
- * *question* — never its answer. The answer text is dense with the platform's
- * general vocabulary ("işverenler", "ilan", "için"), so scoring it let a plain
- * question like "İşverenler için ilan paketleri var mı?" ride those words into
- * the unrelated "İşBul KKTC nedir?" entry. A match is accepted only when it
- * covers `MIN_COVERAGE` of the query's distinct words *and* shares
- * `MIN_SHARED_TOKENS` of them, so a question the copy does not answer falls
- * through to the model. Ties keep the first entry, so the result is stable.
+ * articles and short particles drop out) between the query and each entry's
+ * *question* and *paraphrases* — never its answer. The answer text is dense with
+ * the platform's general vocabulary ("işverenler", "ilan", "için"), so scoring
+ * it let a plain question like "İşverenler için ilan paketleri var mı?" ride
+ * those words into the unrelated "İşBul KKTC nedir?" entry.
+ *
+ * Each phrasing is scored on its own — a curated paraphrase is a deliberately
+ * tight target ("şifremi unuttum"), and pooling it with the canonical question
+ * would dilute exactly the match it exists to make. A phrasing is accepted only
+ * when it covers `MIN_COVERAGE` of its own distinct words *and* shares
+ * `MIN_SHARED_TOKENS` of the query's, so a question the copy does not answer
+ * falls through to the model. Ties keep the earlier entry, so the result is
+ * stable.
  */
 export function answerFromKnowledge(
   message: string,
@@ -67,20 +95,24 @@ export function answerFromKnowledge(
   let best: { score: number; answer: string } | null = null;
   const entries = [...faqByLocale[locale], ...supportFlowsByLocale[locale]];
   for (const entry of entries) {
-    const entryTokens = new Set(tokenize(entry.question, locale));
-    let score = 0;
-    for (const token of queryTokens) {
-      if (entryTokens.has(token)) score += 1;
+    for (const phrasing of matchPhrasings(entry)) {
+      const phrasingTokens = new Set(tokenize(phrasing, locale));
+      if (phrasingTokens.size === 0) continue;
+      let score = 0;
+      for (const token of queryTokens) {
+        if (phrasingTokens.has(token)) score += 1;
+      }
+      if (score === 0) continue;
+      const covers =
+        score >= MIN_SHARED_TOKENS &&
+        score / phrasingTokens.size >= MIN_COVERAGE;
+      if (covers && (!best || score > best.score)) {
+        best = { score, answer: entry.answer };
+      }
     }
-    if (score === 0) continue;
-    if (!best || score > best.score) best = { score, answer: entry.answer };
   }
 
-  if (!best) return null;
-  const covers =
-    best.score >= MIN_SHARED_TOKENS &&
-    best.score / queryTokens.size >= MIN_COVERAGE;
-  return covers ? best.answer : null;
+  return best?.answer ?? null;
 }
 
 /**

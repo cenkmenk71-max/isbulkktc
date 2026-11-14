@@ -79,7 +79,7 @@ export function buildSupportSystemPrompt(locale: AppLocale): string {
     // Declaring the interface wholly unknown (the earlier shape of this rule)
     // made the model refuse the very questions support exists for; scoping the
     // licence to the listed flows keeps the grounding without the deflection.
-    "The steps below are the only interface steps you know. You may describe those flows — and only those — when asked how to use the site. Do not invent any other page, screen, button, menu, search bar, form or click path, and never state that a price, package content or a document (such as a CV) is shown or entered somewhere in the product. If a question asks how to use the site and the steps below do not state the exact steps, treat it as not covered.",
+    "The steps below are the only interface steps you know. You may answer a how-to question from them — and only from them — by restating the relevant fact, but do not add any detail it does not contain: no page, screen, button, menu, search bar, form or field the fact does not name, and no numbered click path beyond the steps the fact itself states. Do not turn a fact into a longer procedure, and never state that a price, package content or a document (such as a CV) is shown or entered somewhere in the product. If a question asks how to use the site and the steps below do not state the exact steps, treat it as not covered.",
     // No per-message routing to a human exists, so the model must not promise
     // one: an uncovered question points to the real contact channels, and may
     // invite an email the team can follow up on — nothing more. The refusal is
