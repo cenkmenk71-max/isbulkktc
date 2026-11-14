@@ -102,8 +102,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }));
   };
 
-  const staticEntries: MetadataRoute.Sitemap = publicPages.flatMap(
-    ({ pathname, changeFrequency, priority }) =>
+  // `/jobs` answers `noindex` while the board is empty (see its
+  // `generateMetadata`), and a sitemap entry that answers `noindex` is a
+  // contradiction, so it is dropped until the first vacancy is published.
+  const hasPublishedJobs = jobs.length > 0;
+
+  const staticEntries: MetadataRoute.Sitemap = publicPages
+    .filter(({ pathname }) => pathname !== "/jobs" || hasPublishedJobs)
+    .flatMap(({ pathname, changeFrequency, priority }) =>
       buildLocalizedEntries({
         pathname,
         changeFrequency,
@@ -112,7 +118,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           ? { lastModified: newestJobDate }
           : {}),
       }),
-  );
+    );
 
   // Vacancies are stored in Turkish and served identically under every locale
   // prefix, so each is advertised once, at its default-locale canonical URL.
