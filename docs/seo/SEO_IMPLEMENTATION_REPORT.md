@@ -843,3 +843,170 @@ bulunmayan `source_site` ilanları **pasife almalı** (silme yerine `unpublished
   kaynağa göre oynar; **nitelik (kopya oranı) kararlıdır**.
 - **`publication_source="platform"` ilanı 0** — bu, canlı `/jobs` listesinin 20/20'sinin ve
   sitemap'in 21/21'inin `source-*` olmasıyla doğrulandı; ileride native ilan eklenirse oran değişir.
+
+---
+
+## EK — Tur 10: `llms.txt` ↔ sitemap **facet çelişkisi** — DÜZELTİLDİ (kod) (2026-11-14)
+
+> Bu tur, Tur 5'in (sitemap ↔ noindex) **kardeş** bulgusudur: aynı çelişki, bu kez
+> `llms.txt` / `llms-full.txt` makine dosyalarında. Tur 5 sitemap'i düzeltmişti; **Tur 10
+> brief'leri düzeltir.**
+
+### §56. Bulgu — `llms.txt` boş facet sayfalarını reklam ediyordu
+
+**Canlı ölçüm (2026-11-14, `curl`):**
+
+| Kontrol | Sonuç |
+|---|---|
+| `/sitemap.xml` | **200**, 183 temiz `<loc>` (çift-slash yok — Tur 5 kanıtı geçerli) |
+| `/llms.txt` | **200**, 4980 bayt |
+| `/llms-full.txt` | **200**, 23522 bayt |
+| `/robots.txt` | **200** |
+| `llms.txt`'teki facet bağlantıları | **12** (`/is-ilanlari/*` + `/is-turleri/*`) |
+| `sitemap.xml`'teki facet `<loc>`'ları | **8** |
+
+**Çelişki (CONFIRMED):** `llms.txt` şu **4 facet'i** reklam ediyor, ama sitemap onları
+**listelemiyor** (Tur 5'te doğru biçimde dışlandı) ve sayfaları canlı olarak `noindex` dönüyor:
+
+| Facet | Canlı durum | Sitemap'te | `llms.txt`'te (önce) |
+|---|---|---|---|
+| `/is-ilanlari/lefke` | 200 + `noindex, follow` | ❌ yok | ✅ **var (çelişki)** |
+| `/is-turleri/yari-zamanli` | 200 + `noindex, follow` | ❌ yok | ✅ **var (çelişki)** |
+| `/is-turleri/sozlesmeli` | 200 + `noindex, follow` | ❌ yok | ✅ **var (çelişki)** |
+| `/is-turleri/gecici` | 200 + `noindex, follow` | ❌ yok | ✅ **var (çelişki)** |
+| `/is-ilanlari/girne` | 200 + robots meta **yok** | ✅ var | ✅ var |
+| `/is-turleri/tam-zamanli` | 200 + robots meta **yok** | ✅ var | ✅ var |
+
+**Neden önemli:** `llms.txt`, AI cevap motorlarına (ChatGPT, Perplexity, Gemini) "şu sayfaları
+alıntıla" der. Bir facet boşken sayfa `noindex` döner (Google onu Soft 404 saymasın diye).
+Brief o URL'i reklam ederse, motoru **site kendi crawler'ına "atla" dediği bir sayfaya** yönlendirir:
+sitemap'in Tur 5'te kaçındığı çelişkinin **birebir aynısı**, farklı dosyada.
+
+### §57. Kök neden
+
+`sitemap.ts` facet listesini **canlı** `computeLandingAvailability(jobs)` projeksiyonundan
+türetiyordu (Tur 5). `llms-brief.ts` ise **statik** `servedDistricts` / `jobTypeKeys` üzerinden
+**tüm** facet'leri yazıyordu — hangi facet'te ilan olduğunu sormuyordu. İki üretici **farklı
+kaynak** okuyunca ayrıştı: sitemap "ilanı olan facet", brief "tüm facet".
+
+### §58. Düzeltme (Fix A — kod, bu turda uygulandı)
+
+1. **`buildLlmsBrief(baseUrl, availability)`** ve **`buildLlmsFullBrief(baseUrl, availability)`**
+   artık `LandingAvailability` alır; facet bağlantıları `availableDistricts` / `availableJobTypes`
+   ile **sitemap'le aynı** projeksiyondan süzülür (`primaryPageLines`).
+2. **Rota işleyicileri** (`/llms.txt`, `/llms-full.txt`) `listPublicJobSitemapEntries()` →
+   `computeLandingAvailability()` çağırıp sonucu builder'a geçirir; `force-static` yerine
+   **`force-dynamic`** oldu (sitemap ile aynı gerekçe: facet canlılığı önbelleğe alınamaz).
+3. **Prose gerçekleri korunur:** ilçe listesi ve posta kodları (marka bilgisi) tüm altı ilçe
+   için kalır — **yalnız bağlantı listesi** süzülür. Yapılandırılmış-veri prose'u rota *şeklini*
+   (`/is-ilanlari/{ilçe}`) anmaya devam eder; bu reklam edilen bir URL değildir.
+
+### §59. Bulgular ve sınıflandırma (Tur 10)
+
+| ID | Bulgu | Sınıf | Önem | Kanıt |
+|---|---|---|---|---|
+| T10-1 | `llms.txt` 4 boş facet'i reklam ediyordu (lefke, yari-zamanli, sozlesmeli, gecici) | **CONFIRMED** | **P2** | `curl` sayımı: llms 12 facet / sitemap 8 facet |
+| T10-2 | Bu facet'ler canlı `noindex, follow` dönüyor; sitemap onları doğru dışlıyor | **CONFIRMED** | **P2** | `curl -s …/lefke` → `<meta name="robots" content="noindex, follow">` |
+| T10-3 | Kök neden: brief statik facet listesi, sitemap canlı projeksiyon okuyordu | **CONFIRMED** | P2 | `llms-brief.ts` (eski) vs `sitemap.ts` |
+| T10-4 | Çelişki **kapatıldı**: brief artık `computeLandingAvailability` okuyor | **CONFIRMED** | P2 | `geo-audit.test.ts` "omits a facet page that has no vacancy" |
+| T10-5 | Fix henüz **canlıda değil** (deploy bekliyor) | **CONFIRMED** | P3 | Canlı `llms.txt` hâlâ 12 facet (fix branch merge + deploy öncesi) |
+
+### §60. Test kanıtı
+
+- `src/content/ai-visibility/geo-audit.test.ts` — **2 yeni regresyon testi**:
+  - *"the brief omits a facet page that has no vacancy, like the sitemap"*: yalnız `Girne` +
+    `full_time` mevcutken brief o ikisini reklam eder, diğer 5 ilçe + 5 tür **hiç geçmez**.
+  - *"an empty catalogue advertises no facet link, only the static pages"*: hiç ilan yokken
+    hiç facet bağlantısı yok; statik sayfalar kalır.
+- `tests/unit/llms-brief-dynamic.test.ts` — **yeni**: iki rota da `force-dynamic` ve `GET`
+  ihraç ediyor (sitemap'in dinamiklik testinin kardeşi).
+- Mevcut testler `ALL_FACETS` fixture'ıyla güncellendi (şekil testleri tüm listeyi görsün).
+- **Sonuç:** `test:unit` **1076/1076**, `test:security` **215/215** (0 fail), `tsc --noEmit` **0**,
+  `eslint` **0**. `scripts/verify-indexing.test.mjs` **41/41**.
+
+### §61. Kapsam sınırı / yanlış-pozitif riski
+
+- Fix, **bağlantı listesini** süzer; brief'in **anlattığı gerçekler** (ilçe adları, posta kodları,
+  yapılandırılmış-veri haritası) kasıtlı olarak tüm ilçeler için kalır — bunlar "hizmet verilen
+  bölge" bilgisidir, "şu URL'i al" değil.
+- `noindex` durumu **canlı** okundu; fix **deploy edilene kadar** canlı çelişki sürer (T10-5).
+  Doğrulama, deploy sonrası `llms.txt` facet sayısının sitemap'le **eşitlenmesiyle** yapılır.
+
+### §62. Canlı yeniden ölçüm — çelişki birebir doğrulandı (2026-11-14)
+
+Fix **henüz deploy edilmedi**; bu turda canlı durum bağımsız olarak yeniden okundu ve Tur 10
+bulgusu birebir teyit edildi:
+
+| Ölçüm (canlı, `curl`) | Değer |
+|---|---|
+| `/llms.txt` HTTP | 200, **4980** bayt |
+| `/llms-full.txt` HTTP | 200, **23522** bayt |
+| `/sitemap.xml` HTTP | 200, **183** `<loc>` |
+| `llms.txt`'teki facet bağlantısı | **12** |
+| `sitemap.xml`'teki facet `<loc>` (localesiz, benzersiz) | **8** |
+| Canlı `build-info` commit | `39dbf41` (= `origin/main`) |
+
+**Fazlalık tam olarak 4 boş facet** ve bu dördü canlı **`noindex, follow`** döner; sitemap'te
+olan 8 facet'in hiçbirinde robots meta yok:
+
+| Facet | Sitemap'te | Canlı `robots` | `llms.txt`'te |
+|---|---|---|---|
+| `/is-ilanlari/lefke` | ❌ | **noindex, follow** | ✅ (çelişki) |
+| `/is-turleri/gecici` | ❌ | **noindex, follow** | ✅ (çelişki) |
+| `/is-turleri/sozlesmeli` | ❌ | **noindex, follow** | ✅ (çelişki) |
+| `/is-turleri/yari-zamanli` | ❌ | **noindex, follow** | ✅ (çelişki) |
+| `/is-ilanlari/girne` · `guzelyurt` · `iskele` · `lefkosa` · `magusa` | ✅ | (yok) | ✅ |
+| `/is-turleri/serbest-calisma` · `staj` · `tam-zamanli` | ✅ | (yok) | ✅ |
+
+**Yorum:** `llms.txt`'in reklam ettiği 12 facet'ten 4'ü, sitenin kendi crawler'ına
+"bu sayfayı dizine ekleme" dediği sayfalardır. Sitemap bunları **doğru biçimde** dışlar;
+brief (fix öncesi) dışlamaz. Fix A, brief'i sitemap'le **aynı** `computeLandingAvailability`
+projeksiyonuna bağlar; deploy sonrası beklenen: `llms.txt` facet sayısı **12 → 8**,
+fazlalık 4 URL tamamen çıkar. Doğrulama komutu:
+
+```bash
+diff <(curl -s https://isbulkktc.com/llms.txt \
+  | grep -oE '/is-(ilanlari|turleri)/[a-z-]+' | sort -u) \
+     <(curl -s https://isbulkktc.com/sitemap.xml \
+  | grep -oE '<loc>[^<]*/is-(ilanlari|turleri)/[a-z-]+</loc>' \
+  | sed -E 's#</?loc>##g; s#https://isbulkktc.com##; s#^/[a-z]{2}/#/#' | sort -u) \
+  && echo "FACET PARITY OK"
+```
+
+Fix öncesi çıktı (canlı, bu turda çalıştırıldı) tam olarak 4 satırlık fazlalığı verir:
+`/is-ilanlari/lefke`, `/is-turleri/gecici`, `/is-turleri/sozlesmeli`, `/is-turleri/yari-zamanli`.
+
+### §63. Nüks koruması — `llms.txt` ↔ sitemap facet paritesi artık canlı doğrulanıyor (Tur 10)
+
+Fix A, çelişkiyi **kapatır** ama tekrarını **engellemez**: biri ileride `llms.txt`'e yeni bir
+facet listesi eklerse (ya da sitemap'in projeksiyonundan saparsa) iki dosya yeniden ayrışır.
+Bu yüzden çelişki **kural hâline** getirildi — `scripts/verify-indexing.mjs` (canlı denetçi)
+artık iki makine dosyasını **karşılaştırıyor**:
+
+- **`facetPaths(urls)`** — bir belgenin bağlantı verdiği facet yollarını (yerel ayar öneki
+  sıyrılmış, tekilleştirilmiş, sıralı) döner: `/is-ilanlari/*` ve `/is-turleri/*`.
+- **`compareFacetParity(llmsText, sitemapLocs)`** — `llms.txt`'in reklam ettiği facet kümesiyle
+  sitemap'in `<loc>` facet kümesini karşılaştırır; **iki yönlü** farkı (`onlyInLlms`,
+  `onlyInSitemap`) ve `ok` bayrağını döner. Saf fonksiyonlar, bu yüzden birim testle sabitlendi.
+- **`checkFacetParity(parsed)`** — canlı `llms.txt`'i çeker, sitemap'i `checkSitemap`'in zaten
+  indirdiği belgeden alır, uyuşmazlıkta **`fail facets`** yazar. Ölçülemezse (challenge / kapalı
+  deployment) `skip`, sahte kırmızı yok.
+
+**Kanıt (bu turda canlı, fix deploy edilmeden çalıştırıldı):**
+
+```
+  PASS sitemap   183 URLs, all on-origin canonical; ...
+  FAIL facets    llms.txt and sitemap disagree on facet pages
+                 (llms.txt-only: /is-ilanlari/lefke, /is-turleri/gecici,
+                  /is-turleri/sozlesmeli, /is-turleri/yari-zamanli)
+1 failure(s), 0 warning(s), 0 skipped
+```
+
+Denetçi, çelişkiyi **tam olarak 4 boş facet** olarak yakaladı — yani §56 bulgusunun birebir
+kendisi. Fix deploy edildikten sonra bu satır **`PASS facets  8 facet pages advertised by both
+llms.txt and sitemap.xml`** olmalı; tekrar sapma olursa `indexing:verify` (CI) kırmızıya döner.
+
+**Test:** `scripts/verify-indexing.test.mjs` **+6 test** (32/32): `facetPaths` iki aileyi okur ve
+yerel-ayar kopyalarını tekilleştirir (default `/tr` dahil); `compareFacetParity` eşleşmede `ok`,
+brief-fazlası'nda `onlyInLlms`, sitemap-fazlası'nda `onlyInSitemap`, facetsiz-belgede simetrik.
+**Toplam:** `test:unit` **1082/1082** (önceki 1076 + 6).

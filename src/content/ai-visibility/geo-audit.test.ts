@@ -33,6 +33,8 @@ import {
   jobLocationPostalAddress,
 } from "@/content/ai-visibility/postal-codes";
 import { jobTypeKeys } from "@/features/jobs/job-type-slugs";
+import type { LandingAvailability } from "@/features/jobs/landing-availability";
+import { northernCyprusDistrictValues } from "@/features/locations/northern-cyprus-districts";
 import { routing, type AppLocale } from "@/i18n/routing";
 
 /**
@@ -45,13 +47,23 @@ import { routing, type AppLocale } from "@/i18n/routing";
 const BASE_URL = new URL("https://isbulkktc.com");
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
 
+/**
+ * Every facet available, so the brief's *shape* tests (labels, locales, postal
+ * codes) see the full page list. The availability filter itself is asserted
+ * separately by the "advertises only routes the app serves" test below.
+ */
+const ALL_FACETS: LandingAvailability = {
+  districts: new Set(northernCyprusDistrictValues),
+  jobTypes: new Set(jobTypeKeys),
+};
+
 function localeOf(pathname: string): AppLocale {
   const first = pathname.split("/").filter(Boolean)[0];
   return routing.locales.find((locale) => locale === first) ?? routing.defaultLocale;
 }
 
 test("every guide link in the full brief resolves in its own locale", () => {
-  const full = buildLlmsFullBrief(BASE_URL);
+  const full = buildLlmsFullBrief(BASE_URL, ALL_FACETS);
   const links = [
     ...full.matchAll(/\]\((https:\/\/isbulkktc\.com[^)]*)\)/g),
   ].map((match) => new URL(match[1]));
@@ -77,7 +89,7 @@ test("every guide link in the full brief resolves in its own locale", () => {
 });
 
 test("the short brief stays the default-locale document", () => {
-  const brief = buildLlmsBrief(BASE_URL);
+  const brief = buildLlmsBrief(BASE_URL, ALL_FACETS);
   for (const guide of getGuides(routing.defaultLocale)) {
     assert.ok(
       brief.includes(`/rehber/${guide.slug})`),
@@ -205,7 +217,7 @@ test("the guide breadcrumb names its section in the caller's language", () => {
 });
 
 test("the short brief scopes its prefix rule to the pages it actually applies to", () => {
-  const brief = buildLlmsBrief(BASE_URL);
+  const brief = buildLlmsBrief(BASE_URL, ALL_FACETS);
   // The rule is written for the primary pages, whose slugs are identical in
   // every language. The guide links sit in the same list but do *not* follow it
   // (their slugs are translated), so the document must say so rather than let a
@@ -507,7 +519,7 @@ test("a JobPosting address names the district and its own code, never a street",
 });
 
 test("the brief describes the structured data the site actually emits", () => {
-  const brief = buildLlmsBrief(BASE_URL);
+  const brief = buildLlmsBrief(BASE_URL, ALL_FACETS);
   const section = brief
     .split("## Yapılandırılmış veri")[1]
     .split("## Kaynaklar")[0];
@@ -546,8 +558,8 @@ test("the brief describes the structured data the site actually emits", () => {
 test("the brief publishes the district postal codes an answer engine may quote", () => {
   // A model asked "posta kodu Girne" should be able to answer from the site's
   // own machine-readable brief instead of guessing or scraping a third party.
-  const brief = buildLlmsBrief(BASE_URL);
-  const full = buildLlmsFullBrief(BASE_URL);
+  const brief = buildLlmsBrief(BASE_URL, ALL_FACETS);
+  const full = buildLlmsFullBrief(BASE_URL, ALL_FACETS);
   const postalLine = (document: string) =>
     document
       .split("\n")
@@ -636,11 +648,11 @@ test("the brief anchors name their target, never a machine slug", () => {
   // nothing a reader or an answer engine can quote, and it is the one place the
   // list stopped being a reading aid.
   for (const locale of routing.locales) {
-    const brief = buildLlmsBrief(BASE_URL);
+    const brief = buildLlmsBrief(BASE_URL, ALL_FACETS);
     const section =
       locale === routing.defaultLocale
         ? brief.split("## Öne çıkan sayfalar")[1].split("Her sayfa altı dilde")[0]
-        : buildLlmsFullBrief(BASE_URL)
+        : buildLlmsFullBrief(BASE_URL, ALL_FACETS)
             .split(`## ${locale} — `)[1]!
             .split("### FAQ")[0];
 
@@ -664,7 +676,7 @@ test("the brief anchors name their target, never a machine slug", () => {
 });
 
 test("the full brief's page labels are localized, not English everywhere", () => {
-  const full = buildLlmsFullBrief(BASE_URL);
+  const full = buildLlmsFullBrief(BASE_URL, ALL_FACETS);
   // The German section must not carry the English label; that is the machine-
   // translation smell the localized sections exist to avoid.
   const en = full.split("## en — ")[1]!.split("### FAQ")[0];
@@ -686,7 +698,7 @@ test("the full brief's page labels are localized, not English everywhere", () =>
 });
 
 test("the district and employment-type anchors use the interface catalog", () => {
-  const full = buildLlmsFullBrief(BASE_URL);
+  const full = buildLlmsFullBrief(BASE_URL, ALL_FACETS);
   const catalogs = Object.fromEntries(
     routing.locales.map((locale) => [
       locale,
@@ -935,8 +947,8 @@ test("the brief describes the product, not the internal pipeline", () => {
   // brief is read by people and answer engines alike, so "how the data is fed"
   // does not belong in it — only what the platform offers. #347 was exactly this
   // leak.
-  const brief = buildLlmsBrief(BASE_URL);
-  const full = buildLlmsFullBrief(BASE_URL);
+  const brief = buildLlmsBrief(BASE_URL, ALL_FACETS);
+  const full = buildLlmsFullBrief(BASE_URL, ALL_FACETS);
 
   const banned = [
     "provenans",
@@ -964,4 +976,81 @@ test("the brief describes the product, not the internal pipeline", () => {
   // listing language and that the default-locale URL is the canonical one.
   assert.ok(brief.includes("ilan metinleri Türkçedir"));
   assert.ok(brief.includes("varsayılan dildeki URL kanoniktir"));
+});
+
+test("the brief omits a facet page that has no vacancy, like the sitemap", () => {
+  // A district/type landing page whose filter matches nothing answers `noindex`
+  // (`noIndexFollowMetadata`), so advertising its URL in the brief would point
+  // an answer engine at a page the site tells crawlers to skip — the exact
+  // contradiction the sitemap avoids by reading `computeLandingAvailability`.
+  // The brief must read the same projection, or the two disagree.
+  const availability: LandingAvailability = {
+    districts: new Set(["Girne"]),
+    jobTypes: new Set(["full_time"]),
+  };
+
+  const brief = buildLlmsBrief(BASE_URL, availability);
+  const full = buildLlmsFullBrief(BASE_URL, availability);
+
+  // The facets that hold a vacancy are advertised...
+  assert.ok(brief.includes("https://isbulkktc.com/is-ilanlari/girne"));
+  assert.ok(brief.includes("https://isbulkktc.com/is-turleri/tam-zamanli"));
+
+  // ...and every facet that does not is absent, in the short and the full brief.
+  for (const slug of ["lefkosa", "magusa", "guzelyurt", "iskele", "lefke"]) {
+    assert.ok(
+      !brief.includes(`/is-ilanlari/${slug}`),
+      `the brief advertises the empty district page /is-ilanlari/${slug}`,
+    );
+    assert.ok(
+      !full.includes(`/is-ilanlari/${slug}`),
+      `the full brief advertises the empty district page /is-ilanlari/${slug}`,
+    );
+  }
+  for (const slug of [
+    "yari-zamanli",
+    "sozlesmeli",
+    "gecici",
+    "staj",
+    "serbest-calisma",
+  ]) {
+    assert.ok(
+      !brief.includes(`/is-turleri/${slug}`),
+      `the brief advertises the empty type page /is-turleri/${slug}`,
+    );
+    assert.ok(
+      !full.includes(`/is-turleri/${slug}`),
+      `the full brief advertises the empty type page /is-turleri/${slug}`,
+    );
+  }
+});
+
+test("an empty catalogue advertises no facet link, only the static pages", () => {
+  // With no vacancies at all, every district and type page is `noindex`, so the
+  // brief must fall back to the static page set. The prose facts (the district
+  // list, the postal codes) still describe the platform and stay.
+  const empty: LandingAvailability = { districts: new Set(), jobTypes: new Set() };
+  const brief = buildLlmsBrief(BASE_URL, empty);
+
+  // Only the *link list* is asserted: the structured-data prose names the route
+  // shape (`/is-ilanlari/{ilçe}`), which is not an advertised URL.
+  const linkPaths = [...brief.matchAll(/\]\((https:\/\/isbulkktc\.com[^)]*)\)/g)].map(
+    (match) => new URL(match[1]).pathname,
+  );
+  assert.ok(
+    !linkPaths.some((pathname) => pathname.startsWith("/is-ilanlari/")),
+    "no district page is live",
+  );
+  assert.ok(
+    !linkPaths.some((pathname) => pathname.startsWith("/is-turleri/")),
+    "no type page is live",
+  );
+
+  // The static primary pages remain, so the brief is still a useful index.
+  for (const pathname of ["/jobs", "/companies", "/freelance", "/packages", "/about"]) {
+    assert.ok(
+      brief.includes(`https://isbulkktc.com${pathname})`),
+      `the brief dropped the static page ${pathname}`,
+    );
+  }
 });

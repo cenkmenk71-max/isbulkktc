@@ -703,6 +703,51 @@ async function checkSingleLocaleConsolidation(parsed) {
   record("single-loc", "pass", `${checked} single-locale entries: the localized duplicate canonicalises back`);
 }
 
+/**
+ * The district and employment-type landing pages ("facets") a document links
+ * to, as default-locale paths (`/is-ilanlari/lefke`, `/is-turleri/gecici`).
+ *
+ * The two facet families are the only landing pages whose *availability*
+ * changes with the catalogue: a facet with no live vacancy answers `noindex`
+ * (`noIndexFollowMetadata`), so a document that advertises it points a crawler
+ * at a page the site tells it to skip. Both `/sitemap.xml` and `/llms.txt` are
+ * generated from the same `computeLandingAvailability` projection, so the sets
+ * must be identical — a disagreement is the contradiction this reads out.
+ *
+ * Locale-prefixed duplicates collapse to one path: the six locales advertise
+ * the same facet set, so `/en/is-ilanlari/lefke` and `/is-ilanlari/lefke` are
+ * one entry, not two.
+ */
+export function facetPaths(urls) {
+  const paths = new Set();
+  for (const raw of urls ?? []) {
+    const path = pathOf(String(raw));
+    if (!path) continue;
+    const stripped = path.replace(/^\/(?:tr|en|ru|el|fa|de)(?=\/)/, "");
+    if (/^\/is-(?:ilanlari|turleri)\/[a-z0-9-]+$/.test(stripped)) paths.add(stripped);
+  }
+  return [...paths].sort();
+}
+
+/**
+ * Compares the facet paths `/llms.txt` advertises with the facet URLs
+ * `/sitemap.xml` lists. They are generated from the same availability
+ * projection, so they must be equal; anything else is a page one document
+ * offers to a crawler and the other withholds — exactly the drift that let
+ * `llms.txt` advertise four `noindex` facets the sitemap had already dropped.
+ */
+export function compareFacetParity(llmsText, sitemapLocs) {
+  const sitemapFacets = facetPaths(sitemapLocs);
+  const llmsFacets = facetPaths(
+    [...String(llmsText).matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)].map((m) => m[1]),
+  );
+  const sitemapSet = new Set(sitemapFacets);
+  const llmsSet = new Set(llmsFacets);
+  const onlyInLlms = llmsFacets.filter((p) => !sitemapSet.has(p));
+  const onlyInSitemap = sitemapFacets.filter((p) => !llmsSet.has(p));
+  return { ok: onlyInLlms.length === 0 && onlyInSitemap.length === 0, llmsFacets, sitemapFacets, onlyInLlms, onlyInSitemap };
+}
+
 /** Samples sitemap URLs (evenly, always including the home page) for liveness. */
 export function sampleUrls(urls, size) {
   if (urls.length <= size) return urls.map((u) => u.loc);
@@ -757,6 +802,48 @@ async function checkPages(parsed) {
   record("pages", "pass", `${checked} sampled pages are 200, indexable, with a matching canonical`);
 }
 
+/**
+ * Reads `/llms.txt` and compares the facet pages it advertises with the facet
+ * URLs the sitemap lists. The two files are generated from the same
+ * availability projection, so a disagreement means one of them advertises a
+ * page the other withholds — the drift that let the brief point answer engines
+ * at four `noindex` facets the sitemap had correctly dropped. The sitemap is
+ * read from `parsed` so this reuses the document the verifier already fetched.
+ */
+async function checkFacetParity(parsed) {
+  if (!parsed || parsed.urls.length === 0) return;
+  const { status, body, vercelError, error } = await fetchText(`${ORIGIN}/llms.txt`);
+  const unmeasurable = unmeasurableReason(status, body, vercelError);
+  if (error || unmeasurable) {
+    record("facets", "skip", `llms.txt is unmeasurable: ${error ?? unmeasurable}`);
+    return;
+  }
+  if (status !== 200) {
+    record("facets", "skip", `llms.txt answered HTTP ${status}; nothing to compare`);
+    return;
+  }
+  const parity = compareFacetParity(body, parsed.urls.map((u) => u.loc));
+  if (parity.llmsFacets.length === 0 && parity.sitemapFacets.length === 0) {
+    record("facets", "skip", "neither document advertises a facet page");
+    return;
+  }
+  if (!parity.ok) {
+    const extra = parity.onlyInLlms.length > 0 ? `llms.txt-only: ${parity.onlyInLlms.join(", ")}` : "";
+    const missing = parity.onlyInSitemap.length > 0 ? `sitemap-only: ${parity.onlyInSitemap.join(", ")}` : "";
+    record(
+      "facets",
+      "fail",
+      `llms.txt and sitemap disagree on facet pages (${[extra, missing].filter(Boolean).join("; ")})`,
+    );
+    return;
+  }
+  record(
+    "facets",
+    "pass",
+    `${parity.sitemapFacets.length} facet pages advertised by both llms.txt and sitemap.xml`,
+  );
+}
+
 async function checkIndexNow() {
   const publicDir = path.join(REPO_ROOT, "public");
   let found;
@@ -788,6 +875,7 @@ async function main() {
   const parsed = await checkSitemap(sitemapUrl);
   await checkSingleLocaleConsolidation(parsed);
   await checkPages(parsed);
+  await checkFacetParity(parsed);
   await checkIndexNow();
 
   for (const r of results) {

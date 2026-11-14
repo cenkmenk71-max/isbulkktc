@@ -8,7 +8,12 @@ import {
 import { regionNames, servedDistricts, SITE_NAME } from "@/content/ai-visibility/site";
 import { districtPostalCode } from "@/content/ai-visibility/postal-codes";
 import { districtSlug } from "@/features/locations/northern-cyprus-districts";
-import { jobTypeKeys, jobTypeSlugs } from "@/features/jobs/job-type-slugs";
+import { jobTypeSlugs } from "@/features/jobs/job-type-slugs";
+import {
+  availableDistricts,
+  availableJobTypes,
+  type LandingAvailability,
+} from "@/features/jobs/landing-availability";
 import { getGuides } from "@/content/guides";
 import { catalogs, fillTemplate } from "@/content/ai-visibility/interface-catalog";
 
@@ -114,7 +119,19 @@ function localeUrl(baseUrl: URL, locale: AppLocale, pathname: string): string {
   return new URL(path, baseUrl).toString();
 }
 
-function primaryPageLines(baseUrl: URL, locale: AppLocale): string {
+function primaryPageLines(
+  baseUrl: URL,
+  locale: AppLocale,
+  availability: LandingAvailability,
+): string {
+  // Only the district/type facets with at least one live vacancy get a link.
+  // A facet with no vacancy answers `noindex` (see `computeLandingAvailability`),
+  // so pointing an answer engine at it would advertise a page the site tells
+  // crawlers to skip — the same contradiction the sitemap already avoids by
+  // reading this projection. The filter and its canonical order come from the
+  // shared helpers, so the brief and the sitemap cannot disagree.
+  const districtsWithJobs = new Set<string>(availableDistricts(availability));
+
   return primaryPages
     .map(
       (page) =>
@@ -125,13 +142,15 @@ function primaryPageLines(baseUrl: URL, locale: AppLocale): string {
       // district-specific page for a "jobs in <district>" question instead of
       // only the national listing. The anchor is the page's own visible title
       // (`DistrictPage.title`), so the brief and the page name it identically.
-      servedDistricts.map((district) => {
-        const label = fillTemplate(
-          catalogs[locale].DistrictPage.title,
-          district.names[locale],
-        );
-        return `- [${label}](${localeUrl(baseUrl, locale, `/is-ilanlari/${districtSlug(district.tr)}`)})`;
-      }),
+      servedDistricts
+        .filter((district) => districtsWithJobs.has(district.tr))
+        .map((district) => {
+          const label = fillTemplate(
+            catalogs[locale].DistrictPage.title,
+            district.names[locale],
+          );
+          return `- [${label}](${localeUrl(baseUrl, locale, `/is-ilanlari/${districtSlug(district.tr)}`)})`;
+        }),
       // Editorial guides — the site's own content, so the brief points at them
       // first among the resources an answer engine may quote. A guide's slug is
       // translated per locale, so the locale's own slug is used in the URL;
@@ -145,8 +164,9 @@ function primaryPageLines(baseUrl: URL, locale: AppLocale): string {
       // Employment-type landing pages, so "uzaktan iş" / "tam zamanlı iş" can be
       // answered with the matching page. The type name and the page title both
       // come from the catalog, so a German reader sees "Vollzeit Jobs", not the
-      // English "Full-time jobs".
-      jobTypeKeys.map((jobType) => {
+      // English "Full-time jobs". Like the districts above, only a type with a
+      // live vacancy is linked.
+      availableJobTypes(availability).map((jobType) => {
         const label = fillTemplate(
           catalogs[locale].JobTypePage.title,
           catalogs[locale].HomeJobSearch.jobTypes[jobType],
@@ -194,7 +214,11 @@ function faqBlock(locale: AppLocale): string {
     .join("\n\n");
 }
 
-function localeSection(baseUrl: URL, locale: AppLocale): string {
+function localeSection(
+  baseUrl: URL,
+  locale: AppLocale,
+  availability: LandingAvailability,
+): string {
   const name = regionNames[locale];
   // The prefix is the catalog's own "all districts" label (`Tüm ilçeler`,
   // `Alle Bezirke`, `همه مناطق`), so a localized section does not open with a
@@ -207,7 +231,7 @@ function localeSection(baseUrl: URL, locale: AppLocale): string {
     "",
     `- ${districtsLabel}: ${districtLine(locale)}`,
     "",
-    primaryPageLines(baseUrl, locale),
+    primaryPageLines(baseUrl, locale, availability),
     "",
     "### FAQ",
     "",
@@ -221,8 +245,15 @@ function localeSection(baseUrl: URL, locale: AppLocale): string {
  * the same words the `/about` FAQ page renders, and states which structured
  * data the site emits, so an answer engine can cite the platform without
  * scraping the app.
+ *
+ * `availability` is the live vacancy projection the sitemap already reads
+ * (`computeLandingAvailability`): it decides which district/type facet links
+ * appear, so the brief never points at a facet page that answers `noindex`.
  */
-export function buildLlmsBrief(baseUrl: URL): string {
+export function buildLlmsBrief(
+  baseUrl: URL,
+  availability: LandingAvailability,
+): string {
   const origin = baseUrl.origin;
   const localeNames = routing.locales.join(", ");
 
@@ -243,7 +274,7 @@ export function buildLlmsBrief(baseUrl: URL): string {
 
 ## Öne çıkan sayfalar (varsayılan dil)
 
-${primaryPageLines(baseUrl, routing.defaultLocale)}
+${primaryPageLines(baseUrl, routing.defaultLocale, availability)}
 
 Her sayfa altı dilde sunulur; yerelleştirilmiş adresler yukarıdaki yolun
 başına dil kodu eklenerek elde edilir (ör. ${origin}/en/jobs). Rehber
@@ -285,10 +316,13 @@ ${faqBlock(routing.defaultLocale)}
  * six locales, so a model answering a Russian or Persian query can quote the
  * platform in the reader's language instead of falling back to Turkish.
  */
-export function buildLlmsFullBrief(baseUrl: URL): string {
+export function buildLlmsFullBrief(
+  baseUrl: URL,
+  availability: LandingAvailability,
+): string {
   const origin = baseUrl.origin;
   const sections = routing.locales
-    .map((locale) => localeSection(baseUrl, locale))
+    .map((locale) => localeSection(baseUrl, locale, availability))
     .join("\n\n---\n\n");
 
   return `# ${SITE_NAME} — llms-full.txt
