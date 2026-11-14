@@ -3,12 +3,14 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  canonicalInHead,
   compareFacetParity,
   evaluateIndexNowKey,
   evaluateIndexability,
   extractPageSignals,
   facetPaths,
   findCanonical,
+  findCanonicalTag,
   findMetaContents,
   hasLocalePrefix,
   isDeploymentDisabled,
@@ -373,6 +375,27 @@ test("the canonical link is read in either attribute order and quote style", () 
   // match accepted it and read an unrelated link as the canonical.
   assert.equal(findCanonical(`<link data-rel="canonical" href="https://evil.example/x">`), null);
   assert.equal(extractPageSignals(`<link href="${ORIGIN}/en" rel="canonical">`).canonical, `${ORIGIN}/en`);
+});
+
+test("canonicalInHead reads the canonical's placement, not just its value", () => {
+  const head = (link) => `<html><head><title>x</title>${link}</head><body></body></html>`;
+  const body = (link) => `<html><head><title>x</title></head><body>${link}</body></html>`;
+  // Next emits `href` before `rel`; the placement check must not care.
+  assert.equal(canonicalInHead(head(`<link href="${ORIGIN}/en" rel="canonical">`)), true);
+  // The race this guards: the canonical streams into the body where Google
+  // ignores it. `findCanonical` still returns the value, so only a placement
+  // check can catch it.
+  assert.equal(canonicalInHead(body(`<link href="${ORIGIN}/en" rel="canonical">`)), false);
+  assert.equal(findCanonical(body(`<link href="${ORIGIN}/en" rel="canonical">`)), `${ORIGIN}/en`);
+  // No head boundary or no canonical is unjudgeable, never a false pass.
+  assert.equal(canonicalInHead(`<link href="${ORIGIN}/en" rel="canonical">`), null);
+  assert.equal(canonicalInHead(head("<title>x</title>")), null);
+});
+
+test("findCanonicalTag returns the whole tag, matching findCanonical's choice", () => {
+  const tag = `<link href="${ORIGIN}/en" rel="canonical">`;
+  assert.equal(findCanonicalTag(`<head>${tag}</head>`), tag);
+  assert.equal(findCanonicalTag('<link rel="stylesheet" href="/x.css">'), null);
 });
 
 test("a preview-only `none` does not block indexing, but a bare `none` does", () => {

@@ -364,10 +364,42 @@ export function findMetaContents(html, name) {
  * and an adjacency that real HTML does not guarantee.
  */
 export function findCanonical(html) {
+  const tag = findCanonicalTag(html);
+  return tag ? tagAttr(tag, "href") : null;
+}
+
+/**
+ * Whether a `<link rel="canonical">` sits inside `<head>`. Google accepts the
+ * element only in the head; the same tag in `<body>` is ignored. Next serves
+ * `force-dynamic` pages by streaming `<head>` metadata and relying on React to
+ * hoist it, and for the crawlers Next does not treat as HTML-limited the tag
+ * intermittently stays a top-level `<body>` child — a race that loses the
+ * canonical on that fetch. `verify-indexing` already reads the canonical's
+ * *value*; this reads its *placement*, which is what the race corrupts.
+ *
+ * Returns `true`, `false`, or `null` when there is no head boundary or no
+ * canonical to place (nothing to judge, so the caller stays silent rather than
+ * reporting a false pass).
+ */
+export function canonicalInHead(html) {
+  const text = String(html);
+  const head = text.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i);
+  if (!head) return null;
+  const link = findCanonicalTag(text);
+  if (!link) return null;
+  return head[1].includes(link);
+}
+
+/**
+ * The canonical `<link>` element a page declares (the whole tag, not its href),
+ * so its placement can be located by substring. The first match wins, matching
+ * `findCanonical`'s own choice.
+ */
+export function findCanonicalTag(html) {
   for (const tag of String(html).matchAll(/<link\b[^>]*>/gi)) {
     const rel = tagAttr(tag[0], "rel");
     if (rel && rel.toLowerCase().split(/\s+/).includes("canonical")) {
-      return tagAttr(tag[0], "href");
+      return tag[0];
     }
   }
   return null;
@@ -782,6 +814,7 @@ async function checkPages(parsed) {
   const locs = sampleUrls(parsed.urls, SAMPLE_SIZE);
   let checked = 0;
   const failures = [];
+  const misplaced = [];
   for (const loc of locs) {
     const { status, body, xRobotsTag, vercelError, error } = await fetchText(loc, {
       userAgent: "Googlebot/2.1 (+http://www.google.com/bot.html)",
@@ -790,6 +823,12 @@ async function checkPages(parsed) {
     const verdict = verdictForPage({ status, body, xRobotsTag, loc, origin: ORIGIN });
     checked += 1;
     if (!verdict.ok) failures.push(`${loc}: ${verdict.reason}`);
+    // The canonical's value can be right while its placement is wrong: Next
+    // streams `<head>` metadata for the crawlers it does not treat as
+    // HTML-limited, and React intermittently leaves the canonical as a
+    // top-level `<body>` child, where Google ignores it. A single fetch per URL
+    // only samples the race, but any hit is a real defect worth reporting.
+    if (canonicalInHead(body) === false) misplaced.push(loc);
   }
   if (checked === 0) {
     record("pages", "skip", "no sampled page was reachable from here (challenge/egress)");
@@ -799,7 +838,15 @@ async function checkPages(parsed) {
     record("pages", "fail", `${failures.length}/${checked} sampled pages not indexable: ${failures[0]}`);
     return;
   }
-  record("pages", "pass", `${checked} sampled pages are 200, indexable, with a matching canonical`);
+  if (misplaced.length > 0) {
+    record(
+      "pages",
+      "fail",
+      `${misplaced.length}/${checked} sampled pages put the canonical outside <head> (Google ignores it there): ${misplaced[0]}`,
+    );
+    return;
+  }
+  record("pages", "pass", `${checked} sampled pages are 200, indexable, with a matching canonical inside <head>`);
 }
 
 /**

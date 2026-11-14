@@ -22,7 +22,7 @@ test("jobs navigation opens an accessible listing page with working filter contr
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/tr/jobs?district=not-a-district");
 
-  await expect(page).toHaveTitle(/KKTC Güncel Münhaller/);
+  await expect(page).toHaveTitle(/KKTC Güncel İş İlanları/);
   await expect(
     page.getByRole("heading", { name: "Sıradaki işinizi bulun." }),
   ).toBeVisible();

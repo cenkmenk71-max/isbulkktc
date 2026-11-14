@@ -281,6 +281,23 @@ test("landing page titles are authored per locale, not copied from English", () 
   }
 });
 
+// The Turkish `/jobs` meta title shipped as "KKTC Güncel Münhaller" — "Münhaller"
+// is not a Turkish word (the intent was "iş ilanları"), so the one locale that
+// matters most showed a typo as the title Google renders for the job hub. Guard
+// the wording so the typo cannot silently return while still allowing a reword.
+test("the Turkish jobs meta title names job listings, not the 'Münhaller' typo", () => {
+  const title = turkish["JobsMeta.title"];
+  assert.ok(title, "tr.JobsMeta.title must exist");
+  assert.ok(
+    !/Münhaller/.test(title),
+    "tr.JobsMeta.title must not contain 'Münhaller' — it is not a Turkish word",
+  );
+  assert.ok(
+    /[İi]lan/.test(title),
+    "tr.JobsMeta.title must name job listings (ilan) so it matches the page",
+  );
+});
+
 // Persian renders digits in the Persian numbering system (۰-۹), but ICU only
 // applies it to typed placeholders: a bare `{count}` interpolates the raw Latin
 // string. `fa` shipped "906 ورودی شرکت" beside "۹۰۶ شرکت پیدا شد" from the plural

@@ -49,6 +49,20 @@ const nextConfig: NextConfig = {
   // Do not advertise the framework through the X-Powered-By response header.
   poweredByHeader: false,
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
+  // Next streams `<head>` metadata after the shell unless the user agent is
+  // listed here. Its default list is built around the "Google-*" service
+  // crawlers (Mediapartners-Google, AdsBot-Google, …) and so does NOT match
+  // plain `Googlebot` — the only Google crawler that renders JavaScript. Every
+  // `force-dynamic` route resolves `generateMetadata` asynchronously, so for
+  // Googlebot the tags stream in and React intermittently appends them *after*
+  // `</head>`, leaving a top-level `<link rel="canonical">` under `<body>`.
+  // Google accepts `rel="canonical"` only inside `<head>`, so a fraction of
+  // Googlebot fetches lose the canonical, robots, OpenGraph and hreflang tags.
+  // This mirrors Next 16's default list verbatim and appends `Googlebot` so its
+  // metadata is blocking-rendered into `<head>`. See
+  // `docs/seo/SEO_IMPLEMENTATION_REPORT.md` §64.
+  htmlLimitedBots:
+    /[\w-]+-Google|Google-[\w-]+|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight|Googlebot/i,
   allowedDevOrigins: (process.env.NEXT_ALLOWED_DEV_ORIGINS ?? "")
     .split(",")
     .map((origin) => origin.trim())

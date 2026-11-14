@@ -1010,3 +1010,508 @@ llms.txt and sitemap.xml`** olmalı; tekrar sapma olursa `indexing:verify` (CI) 
 yerel-ayar kopyalarını tekilleştirir (default `/tr` dahil); `compareFacetParity` eşleşmede `ok`,
 brief-fazlası'nda `onlyInLlms`, sitemap-fazlası'nda `onlyInSitemap`, facetsiz-belgede simetrik.
 **Toplam:** `test:unit` **1082/1082** (önceki 1076 + 6).
+
+## EK — Tur 11: Googlebot `<head>` metadata'sını kaybediyor — canonical `<body>`'ye düşüyor (P0) (2026-11-12)
+
+### §64. Yönetici özeti (bu turun tek cümlesi)
+
+**`force-dynamic` sayfalarda Next.js, Googlebot'a `<head>` metadata'sını "streaming" yolluyor;
+React bu etiketleri `<head>`'e taşımakta **aralıklı olarak başarısız oluyor** ve
+`<link rel="canonical">` sayfanın **en üst düzey `<body>` çocuğu** olarak kalıyor.** Google
+`rel="canonical"`'i **yalnızca `<head>` içinde** kabul eder; yani Googlebot'un bir kısım
+fetch'inde canonical, robots, OpenGraph ve hreflang etiketleri **hiç görünmüyor**. Bu,
+"site tam domain yazmadan çıkmıyor" şikayetini **canlı ölçümle doğrulanan** teknik bir
+kök-nedenle açıklar: yinelenen katalog (Tur 9) + kayıp canonical → Google hangi URL'nin
+kanonik olduğunu tahmin eder, sinyalleri başka bir URL'de (ya da kaynak sitede) birleştirir.
+Bu turda **düzeltildi** (`next.config.ts`, `htmlLimitedBots`).
+
+### §65. Bulgu (canlı, 2026-11-12)
+
+`isbulkktc.com/is-ilanlari/girne` (bir facet sayfası, `export const dynamic = "force-dynamic"`)
+Googlebot UA'sıyla **6 kez** ham `curl` ile çekildi; **2/6** yanıtta `<head>` bölümünde
+`<title>`, `rel="canonical"`, `rel="alternate"` **yoktu** — bu etiketler `</head>`'ten sonra,
+`<body>` içinde geliyordu. `/jobs` (aynı davranışı paylaşan kardeş sayfa) aynı 6 denemede
+**6/6** doğru verdi; yani sorun **kararlı bir eksiklik değil, bir yarış (race)**.
+
+### §66. Kök neden (CONFIRMED — Next.js kaynağı + canlı kanıt)
+
+Next.js, `<head>` metadata'sını yalnızca **"HTML-limited"** user agent'lara **bloklayarak**
+(render'ı bekletip `<head>`'e basarak) verir; geri kalanına **streaming** verir ve React'in
+sonradan `<head>`'e taşımasını (hoist) bekler:
+
+- `node_modules/next/dist/server/lib/streaming-metadata.js` — `shouldServeStreamingMetadata(ua, htmlLimitedBots)`:
+  UA, `htmlLimitedBots` desenine uyuyorsa `false` (bloklayan), uymuyorsa `true` (streaming).
+- `node_modules/next/dist/shared/lib/router/utils/html-bots.js` — Next'in **varsayılan** deseni:
+  `/[\w-]+-Google|Google-[\w-]+|…|Bingbot|…/i`. Bu desen `Mediapartners-Google`,
+  `AdsBot-Google`, `Google-InspectionTool` gibi **Google servis** crawler'larını yakalar;
+  **düz `Googlebot`'u yakalamaz.**
+- `node_modules/next/dist/shared/lib/router/utils/is-bot.js` — Next bunu **bilerek** yapar:
+  `HEADLESS_BROWSER_BOT_UA_RE = /Googlebot(?!-)|Googlebot$/i` yorumu — *"Only the main Googlebot
+  search crawler executes JavaScript"*. Yani ana Googlebot, JS çalıştırabildiği için **streaming**
+  tarafa konur ve React'in hoist etmesi beklenir.
+- `node_modules/next/dist/lib/metadata/metadata.js` (satır ~102–113) — `MetadataWrapper`
+  yorumu: *"Metadata tags are hoisted out, so this hidden wrapper remains empty."* **Niyet
+  budur; canlı davranış bunu çürütüyor.**
+- `node_modules/next/dist/server/config.js` (satır ~1051) — `htmlLimitedBots` config'te
+  verilmezse varsayılan desen zorla atanır. Override **mümkün ve resmî**dir
+  (Next dokümanı: `htmlLimitedBots`, v15.2.0).
+
+**Doğrulama (yerel, Node):** varsayılan desenle `shouldServeStreamingMetadata(GooglebotUA, undefined)`
+→ **`true`** (streaming); `Bingbot` → **`false`** (bloklayan). Canlı ölçümle birebir uyuşuyor.
+
+### §67. Canlı kanıt
+
+**(a) Ham `curl` — Googlebot UA, `<head>` içinde canonical var mı?**
+
+| URL | Deneme | `<head>`'de canonical | `<body>`'de canonical |
+|---|---|---|---|
+| `/is-ilanlari/girne` | 6 | 4 | **2** |
+| `/jobs` | 6 | 6 | 0 |
+
+Yakalanan başarısız örnekte `<head>` **yalnızca** şunları içeriyor:
+`<meta charSet>`, `<meta viewport>`, bir `<link rel="preload" as="image">`, iki stylesheet ve
+script preload'ları — **`<title>`, canonical, robots, og:*, hreflang YOK**. Bu etiketler
+`<body>` içinde (React'in streamed `<div hidden>` şablonu + body düzeyinde) geliyor.
+
+**(b) Gerçek tarayıcı — Chromium, Googlebot UA, JS çalıştırıldıktan sonra (Playwright):**
+
+| Ölçüm | Sonuç |
+|---|---|
+| `/is-ilanlari/girne`, 12 tam sayfa yükleme (hidrasyon + 4 sn bekleme) | **6 `<head>` / 6 `<body>`** |
+| Canonical'ın DOM zinciri (10 yükleme) | 5/10 **doğrudan `<body>` çocuğu** (`link<body<html`), 5/10 `<head>` |
+| Hidrasyon öncesi vs sonrası | **Birebir aynı** — JS düzeltmiyor, taşımıyor |
+| Konsol/sayfa hatası | **Yok** (sessiz başarısızlık) |
+
+**Kritik:** Bu, "JS çalışınca düzelir" varsayımını **çürütür**. Tarayıcı hidrasyonu tamamlar,
+hiçbir hata vermez, ama canonical **kalıcı olarak** `<body>`'de kalır.
+
+**(c) Bot karşılaştırması (aynı anda, aynı URL):**
+
+| UA | `serveStreamingMetadata` | Canlı `<head>` davranışı |
+|---|---|---|
+| `Googlebot` | **true** | kararsız (yarış) → bazen body |
+| `Bingbot` | false | 10/10 kararlı `<head>` |
+| `Google-InspectionTool` | false | kararlı `<head>` |
+| Chrome / curl | true | kararsız |
+
+**Google'ın kendi dokümanı:** *"The `rel="canonical"` link element is only accepted if it
+appears in the `<head>` section of the HTML."*
+(`developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls`). Yani
+`<body>`'ye düşen canonical **Google tarafından yok sayılır** — bir tercih sinyali değil,
+hiç sinyal değildir.
+
+### §68. Bu, "site tam domain yazmadan çıkmıyor" şikayetini neden açıklar
+
+Üç kök neden **üst üste biniyor**:
+
+1. **Yeni alan adı + otorite yok** (Tur 8) — yeni domain güven kazanana kadar geride kalır.
+2. **Katalog %100 kaynak siteden kopya** (Tur 9) — özgün sinyal yok; Google'ın "hangi kopya
+   kanonik?" sorusu tekrarlanır.
+3. **Bu tur: Googlebot'un bir kısım fetch'inde canonical `<head>`'de YOK** — Google, bizim
+   beyan ettiğimiz kanonik URL'yi görmez; yinelenen kopyalar arasında **kendi seçimini** yapar.
+
+(2) ve (3) birleşince Google, sayfalarımızın sinyalini başka bir URL'de (kaynak site dahil)
+birleştirebilir — bu tam olarak "tam domain yazmadan çıkmıyor, hatta GitHub projesi öne
+geçiyor" gözleminin crawler düzeyindeki mekanizmasıdır. **Bu, (1) ve (2)'yi tek başına
+açıklamaz; ama üçüncü ve düzeltilebilir teknik engeldir.**
+
+### §69. Bulgular ve sınıflandırma (Tur 11)
+
+| ID | Bulgu | Sınıf | Önem | Kanıt |
+|---|---|---|---|---|
+| T11-1 | **Googlebot `force-dynamic` sayfalarda `<head>` metadata'sını (canonical, robots, og, hreflang) aralıklı olarak kaybediyor; etiketler üst düzey `<body>` çocuğu oluyor** | **CONFIRMED** | **P0** | §66 kaynak; §67 ham curl 2/6 + tarayıcı 6/12 body; Next varsayılan deseni Googlebot'u yakalamıyor |
+| T11-2 | `scripts/verify-indexing.mjs` Googlebot UA'sıyla başlık/head yerleşimini **ölçmüyor** → denetçi yeşilken bu kusur görünmez | **CONFIRMED** | P2 | §67; `indexing:verify` bu turda **0 failure** verdi (UA `Googlebot/2.1 (+http://www.google.com/bot.html)`, ama yalnız 200/robots/canonical değeri kontrol ediliyor, head-vs-body konumu değil) |
+| T11-3 | `/jobs` sayfa başlığı yazım hatası: **"Münhaller"** (doğrusu "İlanlar" ya da "Münhaller"≠Türkçe) | **CONFIRMED** | P3 | `src/messages/tr.json:224` → `<title>KKTC Güncel Münhaller · İşBul KKTC</title>` |
+| T11-4 | Çıplak `/is-ilanlari` ve `/is-turleri` **404** (facet hub sayfası yok) | **CONFIRMED** | P3 | `curl` → 404; yalnız `/[district]` ve `/[type]` alt yolları var |
+| T11-5 | İçerik boşluğu / %100 yinelenen katalog | **CONFIRMED** (Tur 9) | P1 | §51; bu turda değişmedi |
+| T11-6 | Canlı deployment `f5367cb`, origin `main` ile **aynı** | **NOT A DEFECT** | — | `git ls-remote` + `/api/build-info` = `f5367cb`; "150 geride" yalnızca **farklı** bir repoyla (`LBCron/isbulkktc`) kıyaslamadan çıkan yanılgıydı |
+| T11-7 | İş ilanı sayfalarında "metadata hreflang boşluğu" | **FALSE POSITIVE** | — | §70 not: body'deki 6 `hrefLang` = dil menüsü `<a hrefLang>` bağlantıları; `contentLocale: routing.defaultLocale` gereği iş sayfası bilinçli olarak metadata hreflang üretmez |
+| T11-8 | GA4 (ölçüm) eksik | **NOT A DEFECT** | — | `G-HNM3KEX9VD` prod JS chunk'ında; `google-analytics.tsx` consent sonrası yükler |
+
+### §70. Düzeltme (Fix B — kod, bu turda uygulandı)
+
+`next.config.ts`'e Next 16'nın varsayılan listesi **birebir** kopyalanıp sonuna **`Googlebot`**
+eklendi; böylece ana Googlebot da bloklayan (blocking) metadata alır ve canonical **her
+zaman** `<head>`'de olur:
+
+```ts
+htmlLimitedBots:
+  /[\w-]+-Google|Google-[\w-]+|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight|Googlebot/i,
+```
+
+**Neden bu düzeltme:** (1) Next'in **resmî** mekanizmasıdır (`htmlLimitedBots`, v15.2.0);
+(2) varsayılan listeyi birebir korur (mevcut davranışı daraltmaz, yalnız genişletir);
+(3) yalnız **bir** crawler'ı hedefler — gerçek tarayıcılar ve diğer botlar streaming'e devam
+eder (TTFB etkilenmez); (4) Googlebot için TTFB bir miktar artar (metadata senkron çözülür),
+ama **doğruluk gecikmeden önce gelir** ve canonical'ın kaybolması artık **imkânsızdır**.
+
+**Alternatif/tamamlayıcı (takip işi, bu turda yapılmadı):** facet sayfalarındaki
+`export const dynamic = "force-dynamic"` yerine **ISR** (`revalidate`) kullanmak; hem bu
+yarışı kaynağında kaldırır hem TTFB'yi düşürür. Kullanıcı onayı ister (davranış değişikliği).
+
+### §71. Test kanıtı
+
+Yeni birim testi: **`scripts/next-config-bots.test.mjs` (+4 test)**. Test, `htmlLimitedBots`
+regex'ini **doğrudan `next.config.ts`'ten** okuyup Next'in **gerçek**
+`shouldServeStreamingMetadata` fonksiyonuna verir (kopya değil, canlı fonksiyon):
+
+- `Googlebot` → `false` (bloklayan) — düzeltmenin kendisi;
+- `Googlebot-Image` → `false`;
+- **regresyon koruması:** `htmlLimitedBots` **verilmezse** (`undefined`) `Googlebot` → `true`
+  — yani "Next varsayılanı gerçekten streaming yapıyor" iddiası teste bağlandı; varsayılan
+  düzelirse test bunu **yüksek sesle** söyler;
+- Next'in varsayılan listesindeki botlar (`Mediapartners-Google`, `AdsBot-Google`,
+  `Google-InspectionTool`, `Bingbot`, `Twitterbot`, `Slackbot`, `facebookexternalhit`,
+  `YandexBot`) hâlâ bloklayan;
+- JS çalıştıran UA'lar (Chrome, curl, GPTBot) hâlâ streaming.
+
+**Komutlar:**
+```bash
+npx tsx --test scripts/next-config-bots.test.mjs   # 4/4 pass
+npm run test:unit                                   # 1082/1082 pass
+npm run typecheck                                   # temiz
+npm run indexing:verify                             # 0 failure (canlı, fix deploy öncesi)
+```
+
+### §72. Kapsam sınırı / yanlış-pozitif riski
+
+- **Düzeltme bu turda DEPLOY EDİLMEDİ.** Canlı site hâlâ `f5367cb` (fix öncesi). Doğrulama
+  için deploy sonrası şu komut **6/6 `<head>`** vermeli:
+  ```bash
+  for i in $(seq 1 6); do
+    curl -s -A "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" \
+      https://isbulkktc.com/is-ilanlari/girne \
+      | sed -n 's/.*<head[^>]*>\(.*\)<\/head>.*/\1/p' | grep -c 'rel="canonical"'
+  done
+  ```
+- **Oran kesin değil, aralık:** ölçülen body-oranı ~%33–%50 (ham curl 2/6; tarayıcı 6/12).
+  Bu bir **olasılık**, garanti değil — ama Googlebot sayfayı **tek kez** çeker ve o çekim
+  yanlış olursa kararı o yanlışa göre verir; bu yüzden **herhangi** bir oran P0'dır.
+- **"Tek başına sıralamayı açıklar" DENMEZ:** Tur 8 (otorite) ve Tur 9 (kopya) da etkendir.
+  T11-1, üçüncü ve **düzeltilebilir** teknik engeldir.
+- **T11-2 bir kapsam boşluğu, kod hatası değil:** `verify-indexing` canonical'ın **değerini**
+  doğru ölçer; **konumunu** (head vs body) ölçmez. Takip işi: denetçiye Googlebot-UA'lı bir
+  "head placement" kontrolü eklemek.
+
+### §73. Not — `hrefLang` yanlış-pozitifi (önceki notun düzeltmesi)
+
+Önceki notta "iş ilanı sayfalarında hreflang boşluğu" diye işaretlenen şey **yanlış-pozitifti**:
+iş ilanı sayfalarında `<body>`'de görünen 6 `hrefLang`, **dil menüsündeki** `<a hrefLang>`
+bağlantılarıdır (metadata alternates değil). Sayfa,
+`src/app/[locale]/(public)/jobs/[slug]/page.tsx:38`'deki `contentLocale: routing.defaultLocale`
+gereği **bilinçli olarak** metadata hreflang üretmez ve Türkçe URL'ye canonical verir. Bu,
+"içe aktarılan ilanlar her dilde Türkçe" kararıyla **tutarlıdır** — kusur değil. (Next
+`hrefLang`'i büyük `L` ile yazar; önceki grep küçük `l` aradığı için yanılgı oluştu.)
+
+## EK — Tur 12: GSC Coverage (kapsam) — **birleşik nihai sınıflandırma** + P0 kapanış (2026-11-12)
+
+> Bu ek §1–§73'e **eklenir**. Girdi: kullanıcının Google Search Console'dan attığı dört CSV
+> (`Önemli sorunlar`, `Kritik olmayan sorunlar`, `Meta Veri`, `Grafik`) + **yeniden canlı ölçüm**
+> (2026-11-12). Amaç: tüm bulguları **tek yerde**, tek sınıflandırmayla (CONFIRMED · LIKELY ·
+> NOT FOUND · NOT APPLICABLE · BLOCKED) ve **P0–P3** önceliğiyle kapatmak; ayrıca **P0 kök nedenin
+> kapanışını** ve bir **yeni bulguyu** kayda geçirmek.
+
+### §74. Yönetici özeti (bu turun tek cümlesi)
+
+**GSC "Önemli sorunlar" kovalarının ezici çoğunluğu bilinçli tasarımdır; yalnız iki gerçek
+teknik bulgu vardı — biri (P0, Googlebot canonical'ı `<head>`'de kaybediyor) bu turda
+kaynak+canlı kanıtla doğrulandı ve kodda düzeltildi, diğeri (P1, `%100 kopya katalog)
+zaten biliniyordu.** Kalan tüm kovalar (83 noindex, 58 404, 48 308, 31 hreflang, 23 403,
+43+12 "eklenmedi") **beklenen/istenen** davranıştır. Ayrıca bu turda **yeni bir otorite
+bulgusu** kayda geçti: **genel arama GitHub profilini ve bir `vercel.app` ayna host'unu
+`isbulkktc.com`'un önüne koyuyor.**
+
+### §75. Kapsam kovalarının nihai sınıflandırması (tek tablo)
+
+| GSC kovası (TR) | Sayfa | Sınıf | Önem | Neden / canlı kanıt |
+|---|---:|---|---|---|
+| "noindex" etiketi tarafından hariç tutuldu | 83 | **NOT APPLICABLE** (istenen) | P3 | auth/dashboard + boş landing + **filtreli arama**. Canlı: `/is-ilanlari/lefke`, `/is-turleri/yari-zamanli` → `noindex, follow`; `/jobs?query=zzzz` → `noindex, follow`. Sayı **artacak** — normal. |
+| Bulunamadı (404) | 58 | **NOT APPLICABLE** (istenen) | P3 | Kapanan ilan + **hub sayfası olmayan** `/is-ilanlari`, `/is-turleri` (canlı: ikisi de **404**), `/auth/login` **404** (doğru URL `/login`). Sitemap yalnız 200 URL yayar. |
+| Yönlendirmeli sayfa | 48 | **NOT APPLICABLE** (istenen) | P3 | `www`→apex **308**, `/tr/...`→prefixsiz **308**, trailing-slash **308**. Canlı: `/tr/jobs` → **308** `/jobs`; `/tr` → **308** `/`. |
+| Doğru standart etikete sahip alternatif sayfa | 31 | **CONFIRMED** (sağlıklı) | P3 | hreflang/canonical birleşmesi — Google'ın **doğru** davranışı. Canlı: `/en/jobs` canonical = kendisi (200). |
+| Başka bir 4xx sorunu nedeniyle engellendi | 23 | **NOT APPLICABLE** (güvenlik) | P3 | `/.env`, `/wp-login.php`… → **403**; bot/kötü-niyetli yollar. |
+| Soft 404 | 2 | **CONFIRMED → düzeltildi (P1)** | P1 | Tur 5 fix'i canlıda: boş facet → `noindex, follow` + sitemap'ten çıkarıldı. Google'ın yeniden taraması bekleniyor. |
+| Kullanıcı tarafından seçilen kanonik olmadan kopya | 1 | **LIKELY** (kendi kendine çözülür) | P2 | Tek URL; canonical+hreflang zaten yayında. Panelden URL alınmadan kesinleşmez. |
+| Tarandı – şu anda dizine eklenmiş değil | 43 | **NOT APPLICABLE** (normal gecikme) | P2 | **İçerik/otorite** sinyali; P0+P1 düzeltmeleri + özgün içerik ile iyileşir. |
+| Keşfedildi – şu anda dizine eklenmiş değil | 12 | **NOT APPLICABLE** (normal gecikme) | P3 | Yeni ilan/şehir URL'leri; günlük `indexing:submit` zaten bildiriyor. |
+| "Kritik olmayan sorunlar" | 0 | **NOT FOUND** (sorun yok) | P3 | CSV yalnız başlık satırı içerir. |
+| Site haritası durumu "Bilinen tüm sayfalar" | — | **NOT APPLICABLE** | P3 | Google'ın toplu etiketi; gerçek ölçüm URL Inspection (panel). |
+| GSC **yazma** (Validate fix / Request indexing / Manuel işlem) | — | **BLOCKED** | P2 | OAuth yok (`Credential: unconfigured`); **panelden** yapılır. |
+
+**Sonuç:** 301 "dizine eklenmedi" kovasının **299'u (%99) beklenen/istenen**. Gerçek iş:
+**P0** (§77) + **P1** (kopya katalog, Tur 9) + **P2** (otorite, §79).
+
+### §76. Gerçek bulgu envanteri — kod tarafı (P0–P2)
+
+| ID | Bulgu | Sınıf | Önem | Durum | Kanıt |
+|---|---|---|---|---|---|
+| **T11-1** | Googlebot `force-dynamic` sayfalarda canonical'ı **`<head>` yerine `<body>`**'de alıyor → Google canonical'ı **yok sayar** | **CONFIRMED** | **P0** | **Düzeltildi (kod)** | §77: Next kaynağı + canlı 3/12 body; fix `next.config.ts` |
+| T11-2 | `verify-indexing` canonical'ın **değerini** ölçüyor, **konumunu** (head/body) ölçmüyordu → denetçi yeşilken P0 görünmez | **CONFIRMED** | P2 | **Düzeltildi (kod)** | §78: `canonicalInHead` + `checkPages` kapısı + testler |
+| T9-1 | Katalog **%100 kaynak sitesinden kopya** → özgün sinyal yok | **CONFIRMED** | P1 | Açık (onay ister) | §51: kaynak gövdeyle kelime-ikili kapsaması %100 |
+| T9-2 | Kaynakta **kalkmış (bayat)** ilanlar | **CONFIRMED** | P2 | Açık | §53 |
+| T8-1 | Alan adı **çok yeni** (~54 gün) + otorite yok → yeni-alan-adı "sandbox"ı | **CONFIRMED** | P2 | Zaman+içerik işi | §47 RDAP 2026-09-19 |
+| T8-2 | Backlink/otorite profili zayıf | **LIKELY** | P2 | Ölçülmedi | §49 (Ahrefs/Semrush yok) |
+| T12-1 | **Genel arama, GitHub profilini ve `vercel.app` aynasını site önüne koyuyor** | **CONFIRMED** | P2 | Açık (yeni) | §79 |
+| T11-3 | `/jobs` başlık yazım hatası: **"Münhaller"** (Türkçe kelime değil) | **CONFIRMED** | P3 | **Düzeltildi (kod)** | §80 |
+| T11-4 | Çıplak `/is-ilanlari`, `/is-turleri` **404** (hub sayfası yok) | **CONFIRMED** | P3 | Tasarım (bilinçli) | Canlı: ikisi de 404; yalnız `/[district]`, `/[type]` var |
+| T11-7 | İş ilanı sayfalarında "hreflang boşluğu" | **FALSE POSITIVE** | — | Kapatıldı | §73: body'deki `hrefLang` = dil menüsü `<a>` |
+| T11-6 | Canlı deployment `main`'in gerisinde | **NOT A DEFECT** | — | Kapatıldı | `f5367cb` = origin/main |
+| T11-8 | GA4 ölçüm eksik | **NOT A DEFECT** | — | Kapatıldı | `G-HNM3KEX9VD` prod chunk'ta |
+
+### §77. P0 kapanışı — Googlebot `<head>` metadata'sını kaybediyor (yeniden doğrulandı)
+
+**Kaynak (CONFIRMED):** Next'in `shouldServeStreamingMetadata(ua, htmlLimitedBots)` fonksiyonu,
+UA `htmlLimitedBots` desenine uyuyorsa metadata'yı **bloklayarak** `<head>`'e basar; uymuyorsa
+**streaming** yapar ve React'in hoist etmesini bekler. Next'in **varsayılan** deseni
+`/[\w-]+-Google|Google-[\w-]+|…/i` **`Google-*` servis crawler'larını** yakalar ama **düz
+`Googlebot`'u yakalamaz** (`next/dist/shared/lib/router/utils/is-bot.js` bunu bilerek yapar:
+"Only the main Googlebot search crawler executes JavaScript"). Sonuç: `force-dynamic` sayfalarda
+`generateMetadata` asenkron çözülür ve etiketler **aralıklı olarak `</head>`'ten sonra**,
+üst düzey `<body>` çocuğu olarak kalır. Google `rel="canonical"`'i **yalnızca `<head>` içinde**
+kabul eder.
+
+**Canlı yeniden ölçüm (2026-11-12, `curl`, Googlebot UA):**
+
+| URL | `<head>`'de canonical | `<body>`'de canonical | Oran |
+|---|---:|---:|---|
+| `/is-ilanlari/girne` (12 fetch) | 9 | **3** | **%25 body** |
+| `/is-ilanlari/girne` (6 fetch, tur 12 kapanış teyidi) | 3 | **3** | **%50 body** |
+| `/jobs` (10 fetch) | 10 | 0 | kararlı |
+| `/` (10 fetch) | 10 | 0 | kararlı |
+
+`/is-ilanlari/girne` = `export const dynamic = "force-dynamic"` (facet sayfası) → yarış
+**canlı olarak sürüyor**; `/` ve `/jobs` bu turda kararlı çıktı (yarış olasılıksal, sayfaya ve
+ana bağlı). **Herhangi** bir oran P0'dır: Googlebot sayfayı **tek kez** çeker.
+
+**Düzeltme (uygulandı, `next.config.ts`):** Next 16'nın varsayılan `htmlLimitedBots` listesi
+**birebir** korunup sonuna **`Googlebot`** eklendi → ana Googlebot artık **bloklayan** metadata
+alır, canonical **her zaman** `<head>`'de. Yalnız **bir** crawler hedeflenir; gerçek tarayıcılar
+ve diğer botlar streaming'e devam eder (TTFB etkilenmez).
+
+**Deploy sonrası kabul kriteri** (fix canlıya çıkınca 6/6 `<head>` vermeli):
+```bash
+for i in $(seq 1 6); do
+  curl -s -A "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" \
+    https://isbulkktc.com/is-ilanlari/girne \
+    | sed -n 's/.*<head[^>]*>\(.*\)<\/head>.*/\1/p' | grep -c 'rel="canonical"'
+done
+```
+
+### §78. T11-2 kapanışı — denetçi artık canonical'ın **konumunu** da ölçüyor
+
+`scripts/verify-indexing.mjs`'e **`canonicalInHead(html)`** (saf, test edilebilir) eklendi;
+`checkPages` artık örneklediği her sayfada canonical'ın `<head>` içinde olduğunu da doğrular.
+Canonical'ın **değeri** doğru ama **konumu** yanlışsa (tam olarak P0'ın kendisi) artık
+`fail pages` verir. `findCanonical`, tam etiketi döndüren yeni **`findCanonicalTag`** üzerinden
+yazıldı (davranış aynı). Testler: `canonicalInHead` (head/body/belirsiz), `findCanonicalTag`.
+Böylece fix **deploy edilmeden** bile `npm run indexing:verify` bu kusuru **yakalar**.
+
+### §79. Yeni bulgu T12-1 — genel arama GitHub profilini ve `vercel.app` aynasını öne koyuyor
+
+**CONFIRMED · P2 · yeni.** Kullanıcının şikayeti ("GitHub proje dosyası bile sergileniyor ama
+website sayfaları asla") bu turda **canlı kanıtla** doğrulandı:
+
+| Varlık | Host | Google'ın gördüğü | Neden öne geçiyor |
+|---|---|---|---|
+| **GitHub repo** | `github.com/LBCron/isbulkktc` (public) | repo **public**, `homepage = isbulkktc-amber.vercel.app` | GitHub **kök alan adı** yüksek otorite; repo metadata'sı siteyi temsil ediyor |
+| **Vercel ayna** | `isbulkktc-amber.vercel.app` | **200**, `<link rel="canonical" href="https://isbulkktc.com">` | Aynı içerik, canonical ile **doğru** birleşiyor (hata yok) — ama **ikinci bir host** Google'a sunuluyor |
+| **Asıl site** | `isbulkktc.com` | canonical doğru (fix sonrası `<head>`'de) | Yeni alan adı → düşük otorite |
+
+- **İkinci public repo:** `cenkmenk71-max/isbulkktc` — `homepage = https://isbulkktc.com`.
+- **`vercel.app` aynası kusur DEĞİL:** canonical'ı `isbulkktc.com`'a veriyor, yani doğru
+  birleşiyor. **Ama** iki public GitHub repo + bir ikinci canlı host, marka sorgusunda
+  **isbulkktc.com dışındaki** yüzeyleri besliyor — "site değil, GitHub çıkıyor" algısının
+  mekanizması budur.
+- **Düzeltilebilir kaldıraçlar (onay ister):** (1) public repo'ların **description/homepage**
+  alanını **`https://isbulkktc.com`** yapıp site adını öne çıkarmak; (2) `isbulkktc-amber.vercel.app`
+  için Vercel'de **`X-Robots-Tag: noindex`** veya deployment protection → ayna host indeksten
+  çıkar, tek kanonik host kalır; (3) marka otoritesi için **tutarlı NAP + backlink** (P2, §8).
+- **Sınır:** Google'ın bu turda hangi sonucu gösterdiği **birebir ölçülmedi** (arama tarayıcıyla
+  teyit edilemedi — §49'daki kanıt boşluğu); bu bulgu **varlık envanteri** kanıtına dayanır.
+
+### §80. P3 kapanışı — `/jobs` başlık yazım hatası düzeltildi
+
+`src/messages/tr.json` → `JobsMeta.title`: **"KKTC Güncel Münhaller"** (Münhaller = Türkçe
+kelime değil) → **"KKTC Güncel İş İlanları"**. E2E beklentisi (`tests/e2e/jobs.spec.ts`)
+güncellendi; `src/i18n/message-catalogs.test.ts`'e **nüks koruması** eklendi (başlık
+"Münhaller" içeremez ve iş ilanı adını içermeli). Deploy sonrası canlı başlık:
+`KKTC Güncel İş İlanları · İşBul KKTC`.
+
+### §81. Doğrulama (bu tur, yerel)
+
+```
+npm run test:unit        → 1089/1089 pass (yeni: 4 bot testi + 2 verify-indexing + 1 mesaj koruması)
+npm run typecheck        → temiz
+npm run lint             → temiz
+npm run check:frontend-source → 41 design token, 6-locale routing — pass
+NEXT_PUBLIC_APP_URL=https://isbulkktc.com NEXT_DIST_DIR=.next-seo-verify npx next build → başarılı (BUILD_EXIT=0)
+```
+
+**Not — prod build `NEXT_PUBLIC_APP_URL` ister:** ilk koşu env olmadan `/.well-known/security.txt`
+prerender'ında `getAppBaseUrl()` throw'uyla **başarısız** oldu (`NEXT_PUBLIC_APP_URL (or APP_URL)
+must be configured in production`). Bu bir kusur değil, `src/server/config/app-url.ts`'in bilinçli
+"yüksek sesle başarısız ol" davranışıdır (yoksa `localhost` canonical'ları yayardı); Vercel bu
+değişkeni sağlar. Yerel prod-build doğrulaması **her zaman** `NEXT_PUBLIC_APP_URL` ile koşulmalı.
+
+### §82. Kapsam sınırı / yanlış-pozitif riski
+
+- **P0 fix bu turda DEPLOY EDİLMEDİ.** Canlı hâlâ `f5367cb` (fix öncesi); §77 kabul kriteri
+  deploy sonrası koşulmalı. Fix, gerçek tarayıcı/curl/GPTBot için TTFB'yi **etkilemez**.
+- **Oran kesin değil, aralık:** ölçülen body-oranı ~%25–%50 (tur 11: 2/6 + 6/12; tur 12: 3/12).
+  Olasılıksal bir yarış — ama tek çekim yeter.
+- **"Tek başına sıralamayı açar" DENMEZ:** T8 (otorite) + T9 (kopya) da etkendir; P0 **üçüncü ve
+  düzeltilebilir** teknik engeldir.
+- **T12-1 varlık envanteridir**, Google'ın gösterdiği birebir sonuç değil (§79 sınırı).
+- **`/is-ilanlari`, `/is-turleri` 404'ü kusur değil:** hub sayfası **bilinçli yok**; iç bağlantılar
+  `/[district]` ve `/[type]` alt yollarına gider. İstenirse P3 "facet hub" sayfası eklenebilir
+  (onay ister).
+
+
+---
+
+## EK — Tur 13: P0 düzeltmesi **deploy edilmedi** + Tur 12 artıklarının kapanışı (2026-11-12)
+
+> Bu ek §1–§82'ye **eklenir**. Girdi: **yerel git durumu** + **canlı yeniden ölçüm**
+> (Googlebot UA, `curl`) + GitHub API (repo metadata ve kimlik yetkisi). Amaç: Tur 12'de
+> "düzeltildi" denen P0'ın **canlıya çıkıp çıkmadığını** kesinleştirmek ve Tur 12'den
+> devreden üç artığı (kaynak linki önerisi, `vercel.app` aynası, GitHub metadata) kapatmak.
+
+### §83. P0 düzeltmesi **commit'lendi ama DEPLOY EDİLMEDİ** (yeni, P0-OPERASYONEL)
+
+**CONFIRMED · P0-OPERASYONEL · BLOCKED (yetki bekliyor).** Tur 12'de P0 için yazılan kod
+düzeltmesi (`next.config.ts` `htmlLimitedBots` regex'ine `Googlebot`) **yerel `main`'de
+commit'li** (`deec7c5`) ama **hiçbir remote branch'e gönderilmedi**. Bu turda birebir ölçüldü:
+
+| Kontrol | Değer |
+|---|---|
+| Yerel `HEAD` | `deec7c5` (fix) |
+| `origin/main` | `f5367cb` (fix YOK) |
+| `git rev-list --left-right --count origin/main...HEAD` | `0  1` → **1 commit ileride, push edilmemiş** |
+| `git branch -r --contains deec7c5` | **boş** → hiçbir remote'ta değil |
+| Canlı `https://isbulkktc.com/api/build-info` | `{"commit":"f5367cb…"}` → prod **fix'siz** |
+
+**Sonuç:** §77'de tanımlanan P0 yarışı **canlıda hâlâ aktif**. Bu turda Googlebot UA ile
+`/is-ilanlari/girne` 12 kez çekildi (canlı, fix öncesi build):
+
+```
+/is-ilanlari/girne -> head=8 body=4 none=0 (n=12)   ← %33 canonical <body>'de
+/jobs              -> head=8 body=0 none=0 (n=8)
+/                  -> head=6 body=0 none=0 (n=6)
+```
+
+Yani düzeltmenin kabul kriteri (§77: 6/6 `<head>`) **canlıda hâlâ BAŞARISIZ**. Fix'in kendi
+testleri yerelde **yeşil** (38/38: `scripts/next-config-bots.test.mjs` +
+`scripts/verify-indexing.test.mjs`), yani iş **bitti ama yayınlanmadı**.
+
+**Neden deploy edilmedi (BLOCKED):** depo `origin = cenkmenk71-max/isbulkktc` ve **`main`'e her
+push, Vercel Git entegrasyonuyla production'ı otomatik yayınlar**
+(`.github/workflows/verify-production-deployment.yml` bu mekanizmayı doğrular). Bu, "kullanıcı
+açıkça istemedikçe `main`'e push etme" kuralına girer. `git push --dry-run origin main`
+**başarılı** (teknik engel yok, yetki var) ama anlamı **production'a yayın** → **açık onay
+gerekir**. `gh auth` kimliği (`orijinus1997-sudo`) her iki repo'da yalnız `pull:true` verir,
+`gh pr create` **çalışmaz** → "PR aç, sahip merge etsin" alternatifi de kapalı.
+
+**Onaylanırsa yapılacak (tek komut):**
+```bash
+git push origin main        # deec7c5 → origin/main → Vercel main'i yayınlar
+# sonra §77 kabul kriteri: /is-ilanlari/girne 6/6 head olmalı
+```
+
+### §84. T12-1 kaldıraç 2 — `vercel.app` aynası **zaten noindex** (kapandı)
+
+§79'da "onay ister" olarak açık bırakılan 2. kaldıraç bu turda **zaten uygulanmış ve canlı**
+bulundu. `next.config.ts` `headers()` içinde `host = .*\.vercel\.app` için
+`X-Robots-Tag: noindex, nofollow` kuralı var (commit `613dec0`, "noindex the Vercel deployment
+aliases"). Canlı kanıt:
+
+```
+curl -sI https://isbulkktc-amber.vercel.app/ | grep -i x-robots-tag
+→ x-robots-tag: noindex, nofollow
+```
+
+İkinci host Google'a **açıkça noindex** diyor; canonical da apex'e gidiyor → **çift host sorunu
+kapanmış**. §79'daki "onay ister (2)" maddesi **artık geçersiz**.
+
+### §85. T12-1 kaldıraç 1 — GitHub repo metadata **düzeltilemedi (BLOCKED, yetki yok)**
+
+`LBCron/isbulkktc` (public) `homepage` alanı **hâlâ** aynayı gösteriyor
+(`https://isbulkktc-amber.vercel.app`; o ayna artık noindex). İdeal: `https://isbulkktc.com`.
+Ancak bu sandbox'ın GitHub kimliği (`orijinus1997-sudo`) her iki repo'da da yalnız
+`permissions: {pull: true}` — **admin/push yok** → description/homepage **güncellenemedi**:
+
+| Repo | description | homepage | Kimlik yetkisi |
+|---|---|---|---|
+| `LBCron/isbulkktc` | (boş) | `https://isbulkktc-amber.vercel.app` | `pull` → **düzenlenemez** |
+| `cenkmenk71-max/isbulkktc` | (boş) | `https://isbulkktc.com` (**doğru**) | `pull` → **düzenlenemez** |
+
+**Aksiyon (repo sahibi):** `LBCron/isbulkktc` → Settings → homepage = `https://isbulkktc.com`,
+description = "KKTC iş ve kariyer platformu — isbulkktc.com". İkinci repo zaten doğru.
+
+### §86. T12-5 — "kaynak linki + `isBasedOn`" önerisi **NOT APPLICABLE (bilinçli tasarım)**
+
+Tur 12'den devreden "iş ilanına görünür kaynak linki + `isBasedOn` ekle" önerisi **reddedildi**;
+gerekçe iki bağımsız kanıt:
+
+1. **Ürün kararı + test kilidi:** commit `8f0a753` ("stop sending visitors to competitors, and
+   rewrite imported copy") kaynak-site linklerini **bilerek** kaldırdı; `tests/e2e/jobs.spec.ts`
+   bunu **zorunlu kılıyor** (`aside.jobs-source-note` = 0; `a[href="https://www.iskibris.com/jobs"]`
+   ve `a[href="https://isbulkibris.com/jobs"]` = 0). Yeniden eklemek, sahibin bilinçli kararını
+   **test-kırıcı** biçimde geri almak (rakip ilana trafik sızdırmak) olurdu.
+2. **Şema geçersizliği:** `schema:JobPosting` → `rdfs:subClassOf schema:Intangible`
+   (**CreativeWork DEĞİL**); `isBasedOn` → `domainIncludes: schema:CreativeWork`. Yani
+   `isBasedOn` **JobPosting için geçerli/belgelenmiş bir özellik değil**; Google'ın JobPosting
+   belgelerinde de **yok** (mevcut ve doğru olanlar: `sameAs`, `identifier`, `directApply` —
+   üçü de zaten `job-posting-structured-data.ts` içinde kullanımda).
+
+**Sonuç:** Öneri ne gerekli ne geçerli → **NOT APPLICABLE**. Mevcut yapı korunur.
+
+### §87. T12-6 — P3 başlık düzeltmesi **canlıda hâlâ eski** (deploy bekliyor)
+
+`/jobs` canlı başlığı hâlâ **`KKTC Güncel Münhaller · İşBul KKTC`** — çünkü düzeltme `deec7c5`
+içinde ve **deploy edilmedi** (§83). Doğru başlık `KKTC Güncel İş İlanları · İşBul KKTC`,
+`deec7c5` yayınlanınca geçerli olur. §83 ile **aynı tek deploy** ile kapanır.
+
+### §88. T12-7 — apex'te kazara site-geneli `noindex` YOK (NOT A DEFECT)
+
+`vercel.app` noindex kuralının apex'e sızma riski kontrol edildi:
+
+```
+curl -sI https://isbulkktc.com/jobs | grep -i x-robots-tag   → (yok)
+```
+
+Apex'te `X-Robots-Tag` **yok**; `www`→apex **308** canlı; `/tr`→`/` **308** canlı;
+`/en/jobs` canonical = kendisi (200). Yani noindex yalnız aynayı hedefliyor, **doğru**.
+
+### §89. Tur 13 — nihai durum tablosu (tek bakışta)
+
+| ID | Bulgu | Sınıf | Önem | Durum | Kanıt |
+|---|---|---|---|---|---|
+| **T11-1 / T12-2** | Googlebot canonical'ı `<body>`'de; **fix commit'li ama deploy edilmedi** | **CONFIRMED** | **P0** | **BLOCKED — onay bekliyor** | §83: canlı body=4/12; `deec7c5` push edilmemiş |
+| T12-3 | `vercel.app` aynası noindex | **CONFIRMED** | P2 | **Kapandı (zaten canlı)** | §84: `X-Robots-Tag: noindex, nofollow` |
+| T12-4 | GitHub repo `homepage` aynayı gösteriyor | **CONFIRMED** | P2 | **BLOCKED — yetki yok** | §85: `permissions.pull=true` |
+| T12-5 | Kaynak linki + `isBasedOn` önerisi | **NOT APPLICABLE** | — | Bilinçli tasarım + şema dışı | §86: `8f0a753` + E2E kilidi; `isBasedOn`≠JobPosting |
+| T12-6 | `/jobs` başlığı canlıda "Münhaller" | **CONFIRMED** | P3 | **Deploy bekliyor** | §87: canlı `<title>` hâlâ eski |
+| T12-7 | Apex site-geneli noindex riski | **NOT A DEFECT** | — | Kapandı | §88: apex'te `X-Robots-Tag` yok |
+| T9-1 / T9-2 / T8-1 / T8-2 | Kopya katalog, bayat ilan, yeni alan adı, zayıf otorite | **CONFIRMED / LIKELY** | P1–P2 | Açık (içerik + zaman) | §51 / §53 / §47 / §49 |
+
+### §90. Tur 13 — tek cümle ve onay isteyen işler
+
+**Tek cümle:** Teknik olarak kalan **tek P0**, Googlebot'un canonical'ı `<head>`'de
+kaybetmesidir; düzeltme **yazıldı, test edildi ve commit'lendi** (`deec7c5`) ama
+**production'a gönderilmedi**, bu yüzden yarış **canlıda sürüyor** (ölçüm: %33 body) — deploy
+onayı bekliyor.
+
+**Açık onay isteyen işler (öncelik sırası):**
+
+1. **[P0] `git push origin main`** → `deec7c5` yayınlanır (Vercel `main`'i otomatik deploy eder).
+   Sonra §77 kabul kriteri koşulur. Bu, "site çıkmıyor" şikayetinin **en somut teknik engelini**
+   kaldırır.
+2. **[P2] GitHub `LBCron/isbulkktc` homepage** → `https://isbulkktc.com` (repo sahibi; §85).
+3. **[P1] Özgün içerik** (kopya katalog, Tur 9) ve **[P2] otorite** (backlink/NAP, Tur 8) —
+   içerik + zaman işi; P0/P1 teknik düzeltmeler **tek başına sıralamayı açmaz**.
+4. **[P2] GSC paneli**: P0 fix deploy edildikten **sonra** "Validate fix" + öncelikli URL'ler için
+   "Request indexing" (OAuth yok → **panelden**; §75).
+
+**Kapsam sınırı:** `deec7c5`'in prod build'i yerel olarak `NEXT_PUBLIC_APP_URL` ile **başarılı**
+(§81); yine de asıl kanıt **deploy sonrası canlı ölçümdür** (§77). T12-4 yetki nedeniyle
+**dışarıdan doğrulanamaz**; T12-5 **koda dokunulmadan** kapandı.
