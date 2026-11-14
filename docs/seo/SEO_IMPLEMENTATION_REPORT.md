@@ -57,6 +57,7 @@ Başlangıç durumu (değişmeden önce kaydedildi):
 | 11 | NOT APPLICABLE | — | Blog Article schema | `/blog` derleme sayfası, özgün makale yayımlamıyor | Yok | Değişiklik yok |
 | 12 | RESOLVED | P1 | Search Console / GA4 / CrUX / Cloudflare dashboard denetimi | `npm run search-console:verify` (canlı API, 2026-11-12): siteOwner, 1 sitemap/207 URL, `/` "Submitted and indexed", 0 failure | Ölçümleme artık Google'ın kendi API'sinden okunuyor | `scripts/verify-search-console.mjs` + runbook |
 | 13 | **CONFIRMED → DÜZELTİLDİ** | **P1** | **Canlı sitemap bayat: 5 URL 404 dönerken duyuruluyor, 5 canlı ilan atlanıyor** | `curl /sitemap.xml` (183 `<loc>`, `age:0`) ↔ canlı `search_public_jobs`; CI build `└ ○ /sitemap.xml 1h 1y` (statik) | Sitemap "çözülmeyen URL" sinyali verir; yeni ilanlar deploy olmadan hiç listelenmez | **Tur 7, §38–§44**; **DÜZELTİLDİ:** `dynamic="force-dynamic"` — **PR #657** (squash `cd77606`), route artık `ƒ /sitemap.xml`; `MANUAL_TASKS.md §12` |
+| 14 | **CONFIRMED** | **P1** | **Katalogdaki 21/21 ilan kaynak siteden birebir kopya; özgün (platform) ilan yok** — ölçülen 16/16 eşleşme %99,6–100 kelimesi kelimesine aynı | §51 tablosu; `curl /sitemap.xml` 21 ilan; `/jobs` 20/20 `source-*`, 0 yerli; bağımsız bigram kapsaması örnek ilanda **%100** | Google kopya/aynayı indeksler ama jenerik sorgularda sıralamaz → "site çıkmıyor" şikâyetinin kod-düzeyi kök nedeni | **Tur 9, §50–§55**; düzeltme **ürün/içerik kararı** (özgün içerik), `MANUAL_TASKS.md §14` |
 
 ---
 
@@ -703,3 +704,142 @@ otorite** işidir.
 - **Manuel işlem** panelde kontrol edilmedi (T8-6, BLOCKED). Kod tarafından doğrulanamaz.
 - Arama motoru sorguları bu turda **tarayıcıyla** teyit edilemedi (DuckDuckGo bot kontrolü, Bing
   önbellekli/alakasız yanıt); bu **kanıt boşluğu** olarak kayda geçer, bulgu değildir.
+
+
+## EK — Tur 9: **Katalog %100 kaynak sitesinden kopya** — sıralama değil, **özgün içerik yokluğu** (2026-11-12)
+
+> Bu ek §1–§49'a **eklenir**. Tetik: kullanıcının asıl şikâyeti — *"site, tam alan adı yazmadan
+> Google'da çıkmıyor; GitHub proje sayfası bile öne geçiyor."* Tur 8 ("yeni alan adı + otorite")
+> bu şikâyetin **zamanla** düzeltilecek kısmını açıkladı. Bu tur, **koddan ölçülebilen** ve
+> Google'ın jenerik sorgularda siteyi **sıralamama** kararını doğrudan besleyen ikinci kök nedeni
+> ortaya çıkardı: **katalogdaki her ilan başka bir siteden birebir kopyadır.**
+> Sınıflar: CONFIRMED · LIKELY · NOT FOUND · NOT APPLICABLE · BLOCKED. Önem: P0–P3.
+
+### §50. Yönetici özeti (bu turun tek cümlesi)
+
+**Yayındaki 21 ilanın 21'i de iki rakip siteden (`iskibris.com`, `isbulkibris.com`) içe
+aktarılmıştır; ölçülebilen 16 eşleşmenin tamamı kaynak metnin %99,6–100'ünü kelimesi kelimesine
+taşımaktadır; sitede tek bir özgün (platform) ilan yoktur.** Google, jenerik sorgularda aynı
+metni zaten yayınlayan, daha eski ve daha otoriter kaynak siteyi tercih eder; bu nedenle kopya
+sayfalar **indekslenip gösterim alsa bile** ("Dizine eklenen" ≈195) **asıl sorgularda
+sıralanmaz.** Bu, Tur 8'in "teknik engel yok, sorun otorite/zaman" bulgusunu **çürütmez, tamamlar**:
+indekslenmeyi engelleyen teknik bir arıza yok; **sıralanmayı** engelleyen şey **özgün değer
+yokluğudur.**
+
+### §51. Kanıt (canlı, 2026-11-12, `curl` + kaynak API)
+
+Ölçüm yöntemi: bizim sayfamızın görünür metni ile **kaynak sitenin kendi API'sinden** alınan
+ilan `body`/`description` metni, **kelime ikili-örgü (bigram) kapsaması** ile karşılaştırıldı
+(`% = kaynak metnin bizim sayfada birebir bulunan kısmı`). Sayfa şablonu (menü, altbilgi)
+çıkarıldı; yalnız ilan gövdesi ölçüldü. Eşleşme, aynı **başlık + şirket** ile doğrulandı
+(aynı başlıklı farklı şirket ilanları yanlış eşleşmesin diye).
+
+**Kaynak API'leri (bizim importer'ın da okuduğu uçlar):**
+- `https://api.iskibris.com/api/v2/jobs/paginated?page=N&per_page=100` (liste) + `…/api/jobs/{id}` (detay)
+- `https://api.isbulkibris.com/api/jobs?page=N&pageSize=100` (liste) + `…/api/jobs/{id}` (detay)
+
+**Sonuç tablosu — sitemap'teki her ilan (21/21):**
+
+| # | Bizim URL (`/jobs/…`) | Kaynak | Kaynak canlı mı? | Kaynak kelime | **Birebir kapsama** |
+|---|---|---|---|---|---|
+| 1 | `source-iskibris-front-desk-agent-on-buro-gorevlisi` | iskibris #26355 (Baştaşlar) | ✅ | 754 | **%99,6** |
+| 2 | `source-iskibris-satin-alma-sorumlusu` | iskibris #26359 (İlkay Genç) | ✅ | 726 | **%100** |
+| 3 | `source-iskibris-yonetici-asistani` | iskibris #26358 (SENER TRADE) | ✅ | 346 | **%100** |
+| 4 | `source-iskibris-insaat-muhendisi` | iskibris #26356 (Panah Constructions) | ✅ | 338 | **%100** |
+| 5 | `source-iskibris-on-buro-vardiya-sorumlusu` | iskibris #26346 (Acapulco Resort) | ✅ | 254 | **%100** |
+| 6 | `source-iskibris-yazilim-destek-uzmani` | iskibris #26353 (Fonet Bilgi Tek.) | ✅ | 210 | **%100** |
+| 7 | `source-iskibris-ticari-pazarlama-yoneticisi` | iskibris #26360 (Vodafone Mobile) | ✅ | 183 | **%100** |
+| 8 | `source-iskibris-uluslararasi-ofis-temsilcisi` | iskibris #26369 (Levent Sanayi) | ✅ | 144 | **%100** |
+| 9 | `source-iskibris-dagitimci` | iskibris #26367 (Mehmet Doğru Tic.) | ✅ | 134 | **%100** |
+| 10 | `source-iskibris-girne-bolgesi-magaza-satis-personeli` | iskibris #26365 (Niyazi Ziya Kozmetik) | ✅ | 132 | **%100** |
+| 11 | `source-iskibris-insan-kaynaklari-sorumlusu` | iskibris #26368 (Parvistamare) | ✅ | 129 | **%100** |
+| 12 | `source-iskibris-magaza-personeli` | iskibris #26352 (POPART DORMS) | ✅ | 114 | **%100** |
+| 13 | `source-iskibris-magaza-satis-temsilcisi` | iskibris #26363 (Renoir Home) | ✅ | 114 | **%100** |
+| 14 | `source-iskibris-kimyasal-uretim-personeli` | iskibris #26357 (MEDEF DEFENCE) | ✅ | 85 | **%100** |
+| 15 | `source-iskibris-satis-personeli` | iskibris #26263 (H A B L S) | ✅ | 84 | **%100** |
+| 16 | `source-iskibris-sekreter-diger` | iskibris #26361 (Tetik & Öztoprak) | ✅ | 21 | **%100** |
+| 17 | `source-isbulkibris-ekskavator-operatoru` | isbulkibris (`ekskavator-operatoru`) | ✅ | 139 | **%100** |
+| 18 | `source-isbulkibris-musteri-kabul-on-muhsebe-satis-temsilcisi` | isbulkibris | ❌ **kaynakta yok (bayat)** | — | — |
+| 19 | `source-iskibris-idari-isler-satin-alma-sorumlusu` | iskibris | ❌ **kaynakta yok (bayat)** | — | — |
+| 20 | `source-iskibris-musteri-kabul-on-muhsebe-satis-temsilcisi` | iskibris | ❌ **kaynakta yok (bayat)** | — | — |
+| 21 | `source-iskibris-satis-pazarlama-personeli` | iskibris | ❌ **kaynakta yok (bayat)** | — | — |
+
+- **Ölçülebilen 16 eşleşmenin 16'sı ≥ %99,6** (ortanca **%100**, ortalama **%100**).
+- **21/21 ilan içe aktarılmış** (`publication_source = "source_site"`); **özgün (`platform`) ilan: 0.**
+- Kalan 5 ilan, kaynak sitede artık bulunmayan **bayat** kayıtlar; buna rağmen bizim sitemizde
+  **tam metinle** yayında (§53).
+
+**Doğrulama betiği** (yeniden üretilebilir; `curl` + Python, depo dışı):
+
+```bash
+# 1) Kaynak listesini al (iskibris)
+curl -s "https://api.iskibris.com/api/v2/jobs/paginated?page=1&per_page=100" -o isk.json
+# 2) Bir ilanın kaynak gövdesini al
+curl -s "https://api.iskibris.com/api/jobs/26356" | python3 -c "import sys,json,re,html; \
+  b=json.load(sys.stdin)['body']; print(re.sub(r'\s+',' ',html.unescape(re.sub(r'<[^>]+>',' ',b))).strip())"
+# 3) Bizim sayfamızın görünür metniyle kelime-ikili kapsamasını karşılaştır → %100
+curl -s "https://isbulkktc.com/jobs/source-iskibris-insaat-muhendisi"
+```
+
+### §52. Bulgular ve sınıflandırma (Tur 9)
+
+| ID | Bulgu | Sınıf | Önem | Kanıt |
+|---|---|---|---|---|
+| T9-1 | **Katalogdaki tüm ilanlar (21/21) kaynak siteden birebir kopya; özgün ilan yok** | **CONFIRMED** | **P1** | §51 tablosu; `publication_source="source_site"`; `/jobs` 20/20 bağlantı `source-*` |
+| T9-2 | Ölçülen eşleşmelerin **16/16'sı %99,6–100 kelimesi kelimesine aynı** | **CONFIRMED** | **P1** | Bigram kapsaması; kaynak API `body`/`description` |
+| T9-3 | Sayfada **kaynak atıf bağlantısı yok** (`iskibris.com`/`isbulkibris.com` metinde 0 kez) | **CONFIRMED** | P2 | `grep -i 'iskibris'` → 0; sayfa şablonunda "kaynak ilan" bağlantısı yok |
+| T9-4 | `JobPosting` **datePosted/validThrough = kaynak ilanın tarihleri**, `dateModified` = kaynak `updated_at`; logo kaynağın S3 URL'i | **CONFIRMED** | P3 | JSON-LD ↔ `api.iskibris.com/api/jobs/26356` birebir eşit; `src/features/jobs/job-posting-structured-data.ts:85` |
+| T9-5 | Kaynakta **kalkmış (bayat) 5 ilan** bizim sitede tam metinle yayında (importer temizlemiyor) | **CONFIRMED** | P2 | §51 satır 18–21; kaynak listesinde yok |
+| T9-6 | Kopya, **jenerik sorgularda sıralamama**nın kod-düzeyi kök nedeni (Tur 8'in tamamlayıcısı) | **LIKELY** | **P1** | Google kopya/kalitesiz sayfayı indeksleyip düşük sıralar; kaynak site daha eski+otoriter |
+| T9-7 | Rakip site bizim sayfamızdan **daha iyi sıralanıyor** ("GitHub bile öne geçiyor" algısının içeriği) | **LIKELY** | P1 | T9-1/T9-2; canlı SERP ölçümü bu turda yapılamadı (bot kontrolü) |
+
+**Neden bu, "site çıkmıyor" şikâyetinin merkezindedir:** Google, aynı ilanı hem kaynak sitede
+hem bizde gördüğünde **kaynağı** tercih eder (daha eski, daha çok bağlantı, ilanın gerçek
+sahibi). Bizim sayfa bir "ayna"dır; Google onu **indeksler** (bu yüzden GSC'de ~195 "Dizine
+eklenen" görünür) ama **jenerik sorgularda göstermez** — çünkü sayfa **yeni bilgi** sunmaz.
+Bu davranış hata değil, **kopya içerik filtresinin** normal işleyişidir. Bu yüzden Tur 8'deki
+"teknik engel yok" sonucu doğrudur; eksik olan **özgün içerik**tir.
+
+### §53. Bayat (kaynakta kalkmış) ilanlar — P2 ayrı bulgu
+
+Importer (`scripts/import-source-jobs.ts` → `purgeSourceData`) her çalıştırmada eski kaynak
+ilanları **silip yeniden yazar** (tam yenileme). Ancak bu **yalnız importer'ın çalıştığı anda
+kaynak listede olan** ilanları getirir. İki durum oluşur:
+
+1. Kaynak site bir ilanı **kaldırır** (süresi dolmadan) → bizim kopyamız **kalır** (bayat).
+2. Kaynak API o sayfayı **sayfalamada göstermez** (liste 20 sayfayla sınırlı, `page<=20`) → ilan
+   "yenilenmez" ve eski kopya yayında kalır.
+
+**Sonuç:** 21 ilanın **5'i** kaynakta artık yok ama sitemizde tam metinle duruyor. Bu, hem
+**kullanıcı güveni** (ölü ilan) hem **kalite sinyali** (Google "soft 404"/kopya) açısından
+kötüdür. **Düzeltme önerisi** (kod, kullanıcı onayı sonrası): importer, kaynak listede
+bulunmayan `source_site` ilanları **pasife almalı** (silme yerine `unpublished`) veya
+`expires_at` geçenleri gizlemeli. Ayrıntı: `MANUAL_TASKS.md §14`.
+
+### §54. Önerilen düzeltmeler (öncelik sırası, kod — onay ister)
+
+| # | Öneri | Önem | Etki | Risk |
+|---|---|---|---|---|
+| 1 | **Özgün içerik üretimi:** içe aktarılan ilanlara **özgün özet/analiz** ekle (ör. "Bu pozisyon için KKTC ortalaması", bölge/ücret bağlamı, benzer ilanlar) — kaynak gövdesini **birebir kopyalamak yerine** kendi cümlelerimizle özetle | **P1** | Kopya filtresini kırar; sayfa **yeni değer** sunar | Orta (içerik/ürün kararı) |
+| 2 | **Kaynak atıfı (attribution):** her ilanın altına "Kaynak: `<site>`" **bağlantısı** ekle; `JobPosting`'e `sameAs`/`isBasedOn` ver | P2 | Şeffaflık + E-E-A-T; kopya algısını azaltır | Düşük |
+| 3 | **Bayat ilanları gizle** (T9-5): importer kaynakta olmayan ilanları pasife alsın; sitemap'ten de düşsün | P2 | Ölü ilan/kalite sinyali temizlenir | Düşük |
+| 4 | **`datePosted` düzeltmesi** (T9-4): kaynak tarihini `datePosted` olarak taşımak "yeni ilan" izlenimi verir; `dateModified`'i kendi doğrulama tarihimiz yapmayı değerlendir | P3 | Jobs zengin sonuç tutarlılığı | Düşük |
+| 5 | **Native (platform) ilan teşviki:** işverenlerin **doğrudan** ilan vermesini sağlayacak akış/teşvik → özgün içerik tabanı | P1 (ürün) | Uzun vadede kopya oranını düşürür | Yüksek (ürün) |
+
+> **Not:** Öneri 1 ve 5 **ürün/içerik kararıdır**, tek başına kod değişikliği değildir; kullanıcı
+> onayı ister. Öneri 2–4 kod ile yapılabilir ve onaya sunulmuştur. **Bu turda hiçbir kod
+> değiştirilmedi** (yalnız ölçüm + rapor).
+
+### §55. Yanlış-pozitif riski ve kapsam sınırı
+
+- **"Kopya" ölçümü gövde metniyledir**, sayfa şablonu hariç. Bu, Google'ın gördüğü **ana içerik**
+  ile örtüşür; yine de Google'ın tam algoritması bilinemez → T9-6 **LIKELY**, kanıtlı kesin değil.
+- **Canlı SERP karşılaştırması yapılmadı** (arama motorları bot kontrolü); "rakip öne geçiyor"
+  (T9-7) **LIKELY**'dir, kanıt değil çıkarımdır.
+- **16/16** sonucu, kaynak API'de **eşleşen** ilanlar içindir. Kalan 5 ilan kaynakta yok; onlar
+  için kopya ölçümü yapılamaz (zaten bayat).
+- **Kaynak API erişilebilirliği:** iskibris listesi o an **279** ilan döndürdü (sayfalı); bizim
+  yayında tuttuğumuz 21, importer'ın **son başarılı çalışmasının** anlık görüntüsüdür. Sayılar
+  kaynağa göre oynar; **nitelik (kopya oranı) kararlıdır**.
+- **`publication_source="platform"` ilanı 0** — bu, canlı `/jobs` listesinin 20/20'sinin ve
+  sitemap'in 21/21'inin `source-*` olmasıyla doğrulandı; ileride native ilan eklenirse oran değişir.
