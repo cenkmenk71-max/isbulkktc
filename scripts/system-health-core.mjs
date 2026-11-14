@@ -804,3 +804,86 @@ export function duplicateConstraintFinding({ rows, readError } = {}) {
     detail: `duplicate constraint definitions in public: ${named}${more} — a rewrite that renamed a constraint left the auto-named twin behind`,
   };
 }
+
+/**
+ * Turn a cron-retention observation into a finding, or `null` when the caller
+ * gave no observation to report.
+ *
+ * The notification worker is scheduled once a minute and `pg_cron` records every
+ * execution in `cron.job_run_details`, but the version the hosted project ships
+ * (1.6.4) has no retention setting — `cron.alter_job` has no retention argument
+ * and `cron.job` has no `job_run_details_retention` column — so nothing prunes
+ * the log. It grew to 26 MB, over half of the free-plan database, before
+ * `20261114120000_v4_cron_job_run_details_retention.sql` added a job to reclaim
+ * it. Because the schedule lives only in Production (`production-launch.md` §4,
+ * an operator step) and the local stack has no `pg_cron`, the repository's own
+ * pgTAP suite cannot assert this: only a live read of `cron.job` can confirm a
+ * scheduled job prunes its own history, so that is what this check does.
+ *
+ * The invariant is "every scheduled job reclaims its own run history", not a row
+ * count: a job that prunes is healthy at any size, and a job that does not is a
+ * latent outage regardless of how many rows it currently holds. A `warn` names
+ * the offending job(s) and reports the current log size so the operator has
+ * something to act on. `null` is reserved for the states that carry no evidence:
+ * no `jobs` array (caller misuse) and a `readError` (the Management API could not
+ * be read, so the check proves nothing and must stay silent rather than green).
+ *
+ * @param {{jobs?: Array<{jobid?: number, jobname?: string, command?: string}>, runDetails?: {rows?: number, sizeBytes?: number}, readError?: string}} [observation]
+ * @returns {{level: 'ok'|'warn', area: 'cron', detail: string}|null}
+ */
+export function cronRetentionFinding({ jobs, runDetails, readError } = {}) {
+  if (readError) return null;
+  if (!Array.isArray(jobs)) return null;
+  if (jobs.length === 0) {
+    return { level: 'ok', area: 'cron', detail: 'no pg_cron job is scheduled' };
+  }
+  const unbounded = jobs.filter((job) => !commandPrunesRunDetails(job?.command));
+  if (unbounded.length === 0) {
+    return {
+      level: 'ok',
+      area: 'cron',
+      detail: `every scheduled job prunes cron.job_run_details (${jobs.length} job${jobs.length === 1 ? '' : 's'})`,
+    };
+  }
+  const named = unbounded
+    .map((job) =>
+      typeof job?.jobname === 'string' && job.jobname ? job.jobname : `job ${job?.jobid ?? '?'}`,
+    )
+    .slice(0, 3)
+    .join(', ');
+  const more = unbounded.length > 3 ? ` and ${unbounded.length - 3} more` : '';
+  const size = describeRunDetails(runDetails);
+  return {
+    level: 'warn',
+    area: 'cron',
+    detail: `${unbounded.length} scheduled job(s) never prune cron.job_run_details (${named}${more})${size} — the log grows without bound on the free plan`,
+  };
+}
+
+/**
+ * Whether a `cron.job` command reclaims run history.
+ *
+ * The only way to prune `cron.job_run_details` from a scheduled command is to
+ * name the table, so a command that mentions it does so. Matching the name rather
+ * than parsing SQL keeps this robust to the delete's shape while still catching
+ * the one thing it must: a job that never touches the log.
+ */
+function commandPrunesRunDetails(command) {
+  return typeof command === 'string' && command.includes('job_run_details');
+}
+
+/** A `; cron.job_run_details holds N row(s) (M MB)` suffix, or `''` when unknown. */
+function describeRunDetails(runDetails) {
+  if (!runDetails || !Number.isFinite(runDetails.rows)) return '';
+  const size = Number.isFinite(runDetails.sizeBytes)
+    ? ` (${formatBytes(runDetails.sizeBytes)})`
+    : '';
+  return `; cron.job_run_details holds ${runDetails.rows} row(s)${size}`;
+}
+
+/** Bytes as a compact `MB`/`kB`/`B` string for a one-line detail. */
+function formatBytes(bytes) {
+  if (bytes >= 1024 * 1024) return `${Math.round(bytes / (1024 * 1024))} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} kB`;
+  return `${bytes} B`;
+}
