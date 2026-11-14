@@ -2,16 +2,20 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  AUTH_POLICY_FIELDS,
   AUTH_TEMPLATE_FILES,
   callbackIsAllowed,
   detectDeployedCaptcha,
+  evaluateAuthPolicyDrift,
   evaluateAuthTemplateDrift,
   evaluateCaptchaProbe,
   isDirectRun,
   notificationFlagKey,
   readRepoAuthTemplate,
+  readRepoConfigToml,
   readRepoNotificationEnabled,
   readRepoTemplateSubject,
+  readTomlValue,
   turnstileSiteKeyInBundle,
 } from "./verify-auth-config.mjs";
 
@@ -259,4 +263,89 @@ test("readRepoNotificationEnabled reads the block and skips templates without on
   // The six regular templates declare no notification block, so they are skipped
   // rather than reported as drift.
   assert.equal(readRepoNotificationEnabled("confirmation"), null);
+});
+
+// The auth policy `config.toml` declares (rate limits, reauthentication, OTP) is
+// never applied to the hosted project, so the file drifted from production with
+// no test able to see it: `secure_password_change = false` and `otp_length = 6`
+// sat in git while the hosted project ran `true` and `8`. These tests pin the
+// comparator that turns that silent drift into a failing check.
+
+/**
+ * A live `GET /config/auth` body in which every mapped API key holds the value
+ * `config.toml` declares, so `evaluateAuthPolicyDrift` reports nothing.
+ */
+function liveFromRepo(overrides = {}) {
+  const toml = readRepoConfigToml();
+  const live = {};
+  for (const { toml: [section, key], api } of AUTH_POLICY_FIELDS) {
+    live[api] = readTomlValue(toml, section, key);
+  }
+  return { ...live, ...overrides };
+}
+
+test("the repository policy fields are all declared, so nothing is skipped", () => {
+  // If a field is dropped from config.toml the comparator skips it silently,
+  // which would let a future drift through. Every mapped field must be present.
+  const toml = readRepoConfigToml();
+  for (const { toml: [section, key] } of AUTH_POLICY_FIELDS) {
+    assert.notEqual(readTomlValue(toml, section, key), null, `[${section}] ${key}`);
+  }
+});
+
+test("a policy value that matches the hosted project is not drift", () => {
+  const live = liveFromRepo();
+  assert.deepEqual(evaluateAuthPolicyDrift(live), []);
+});
+
+test("a stale rate limit is reported with both values", () => {
+  const live = liveFromRepo({ rate_limit_otp: 999 });
+  const problems = evaluateAuthPolicyDrift(live);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /sign_in_sign_ups = 10/);
+  assert.match(problems[0], /rate_limit_otp = 999/);
+});
+
+test("a boolean policy field is compared, not coerced away", () => {
+  // `secure_password_change` is a bool; a naive `==` on "true" would miss it.
+  const live = liveFromRepo({ security_update_password_require_reauthentication: false });
+  const problems = evaluateAuthPolicyDrift(live);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /secure_password_change = true/);
+});
+
+test("the CLI name mismatch is what the mapping exists to catch", () => {
+  // `sign_in_sign_ups` has no API field of that name; it maps to `rate_limit_otp`.
+  const row = AUTH_POLICY_FIELDS.find((f) => f.toml[1] === "sign_in_sign_ups");
+  assert.equal(row.api, "rate_limit_otp");
+  const row2 = AUTH_POLICY_FIELDS.find((f) => f.toml[1] === "token_verifications");
+  assert.equal(row2.api, "rate_limit_verify");
+});
+
+test("a field absent from the live config is skipped, not reported", () => {
+  const live = liveFromRepo();
+  delete live.mailer_otp_exp;
+  assert.deepEqual(evaluateAuthPolicyDrift(live), []);
+});
+
+test("a field absent from config.toml is skipped, not reported", () => {
+  const toml = "[auth.email]\nsecure_password_change = true\n";
+  const live = { security_update_password_require_reauthentication: true, mailer_otp_length: 8 };
+  assert.deepEqual(evaluateAuthPolicyDrift(live, toml), []);
+});
+
+test("a missing config.toml yields no findings rather than a crash", () => {
+  assert.deepEqual(evaluateAuthPolicyDrift({ rate_limit_otp: 10 }, null), []);
+});
+
+test("a value on a later line of the section is still read", () => {
+  // The reader must scan the whole block, not only the line after the header.
+  const toml = "[auth.rate_limit]\nemail_sent = 30\nsms_sent = 30\nanonymous_users = 20\n";
+  assert.deepEqual(
+    evaluateAuthPolicyDrift({ rate_limit_anonymous_users: 20 }, toml),
+    [],
+  );
+  const drift = evaluateAuthPolicyDrift({ rate_limit_anonymous_users: 30 }, toml);
+  assert.equal(drift.length, 1);
+  assert.match(drift[0], /anonymous_users = 20/);
 });

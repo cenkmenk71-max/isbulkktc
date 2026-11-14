@@ -446,6 +446,95 @@ export function evaluateAuthTemplateDrift(authConfig, repo = {}) {
   return problems;
 }
 
+/** Reads `supabase/config.toml`, or null when it is absent. */
+export function readRepoConfigToml() {
+  try {
+    return readFileSync(resolve(AUTH_TEMPLATES_DIR, "..", "config.toml"), "utf8");
+  } catch {
+    return null;
+  }
+}
+
+/** The value of `key` inside the `[section]` block of a TOML document, or null. */
+export function readTomlValue(toml, section, key) {
+  const blocks = toml.split(/^\[/m);
+  for (const block of blocks) {
+    const end = block.indexOf("]");
+    if (end === -1 || block.slice(0, end) !== section) continue;
+    const body = block.slice(end + 1);
+    const line = body.match(new RegExp(`^\\s*${key}\\s*=\\s*("[^"]*"|\\S+)`, "m"));
+    if (!line) return null;
+    const raw = line[1];
+    if (raw.startsWith('"')) return JSON.parse(raw);
+    if (raw === "true") return true;
+    if (raw === "false") return false;
+    return Number(raw);
+  }
+  return null;
+}
+
+/**
+ * The `config.toml` auth-policy fields that map to a Management API key, per the
+ * Supabase CLI's `registry-auth.ts`. The `api` name is what `GET /config/auth`
+ * returns; `toml` is where the value lives in `supabase/config.toml`. The names
+ * do not always match — the CLI maps `sign_in_sign_ups` to `rate_limit_otp` and
+ * `token_verifications` to `rate_limit_verify` — so a reviewer who checks "do the
+ * names line up" sees nothing.
+ *
+ * `auth.email.secure_password_change` maps to
+ * `security_update_password_require_reauthentication` (a bool); the rate limits
+ * and OTP fields are unsigned integers. `max_frequency` is intentionally absent:
+ * the CLI writes it as a Go duration ("60s") to `smtp_max_frequency` while the
+ * Management API reports an integer, so the two are not directly comparable and
+ * comparing them would report a permanent false drift.
+ */
+export const AUTH_POLICY_FIELDS = [
+  { toml: ["auth.rate_limit", "email_sent"], api: "rate_limit_email_sent" },
+  { toml: ["auth.rate_limit", "sms_sent"], api: "rate_limit_sms_sent" },
+  { toml: ["auth.rate_limit", "anonymous_users"], api: "rate_limit_anonymous_users" },
+  { toml: ["auth.rate_limit", "token_refresh"], api: "rate_limit_token_refresh" },
+  { toml: ["auth.rate_limit", "sign_in_sign_ups"], api: "rate_limit_otp" },
+  { toml: ["auth.rate_limit", "token_verifications"], api: "rate_limit_verify" },
+  { toml: ["auth.rate_limit", "web3"], api: "rate_limit_web3" },
+  { toml: ["auth.email", "secure_password_change"], api: "security_update_password_require_reauthentication" },
+  { toml: ["auth.email", "otp_length"], api: "mailer_otp_length" },
+  { toml: ["auth.email", "otp_expiry"], api: "mailer_otp_exp" },
+];
+
+/**
+ * Compares the auth-policy fields `config.toml` declares against the hosted
+ * project. `config.toml` is the local/dev source of truth and is never applied to
+ * the hosted project (`supabase config push` runs in no workflow), so the two
+ * drift silently: the file claimed `secure_password_change = false` and
+ * `otp_length = 6` while the hosted project ran the opposite for both, and the
+ * guard reported "no configuration inconsistency found" because it read none of
+ * these keys.
+ *
+ * Only fields present in both the file and the live config are compared, so an
+ * absent key is skipped rather than reported. Returns a list of human-readable
+ * problem strings; an empty list means every declared field agrees.
+ *
+ * @param {Record<string, unknown>} authConfig live `GET /config/auth` body
+ * @param {string} [toml] `config.toml` text; read from disk when omitted
+ */
+export function evaluateAuthPolicyDrift(authConfig, toml = readRepoConfigToml()) {
+  const problems = [];
+  if (typeof toml !== "string") return problems;
+  for (const { toml: [section, key], api } of AUTH_POLICY_FIELDS) {
+    const repoValue = readTomlValue(toml, section, key);
+    if (repoValue === null) continue;
+    const liveValue = authConfig?.[api];
+    if (liveValue === undefined || liveValue === null) continue;
+    if (repoValue !== liveValue) {
+      problems.push(
+        `config.toml [${section}] ${key} = ${repoValue} but the hosted project has` +
+          ` ${api} = ${liveValue}`,
+      );
+    }
+  }
+  return problems;
+}
+
 /**
  * Reads the outcome of a live auth probe carrying a deliberately bogus captcha
  * token. This is the authoritative check, because the Management API can return
@@ -759,6 +848,11 @@ async function main() {
       // The email templates and subjects the Auth dashboard holds are not in git
       // and nothing re-syncs them, so a hand-pasted template drifts silently.
       failures.push(...evaluateAuthTemplateDrift(body));
+
+      // The auth policy `config.toml` declares (rate limits, reauthentication,
+      // OTP) is never applied to the hosted project, so the file and the live
+      // config drift apart with no test able to see it.
+      failures.push(...evaluateAuthPolicyDrift(body));
     }
   }
 
