@@ -1515,3 +1515,140 @@ onayı bekliyor.
 **Kapsam sınırı:** `deec7c5`'in prod build'i yerel olarak `NEXT_PUBLIC_APP_URL` ile **başarılı**
 (§81); yine de asıl kanıt **deploy sonrası canlı ölçümdür** (§77). T12-4 yetki nedeniyle
 **dışarıdan doğrulanamaz**; T12-5 **koda dokunulmadan** kapandı.
+
+---
+
+# Tur 14 — P0 KAPATILDI (canlı doğrulandı) + coverage birleşik triyaj
+
+**Tarih:** 2026-11-14 · **Kapsam:** P0 fix'in production'a alınması, deploy sonrası canlı
+doğrulama ve GSC coverage anlık görüntüsünün (2026-11-09) nihai sınıflandırması.
+
+## §91. P0 — Googlebot canonical'ı `<head>`'de (KAPANDI)
+
+Tur 13'ün tek açık P0'ı, düzeltmenin **commit'li ama deploy edilmemiş** olmasıydı (§83).
+Bu turda PR **#662** birleştirildi ve yayına alındı.
+
+| Adım | Kanıt |
+|---|---|
+| CI kapısı ("Quality, database and E2E") | ✅ Static · Database · E2E (4/4) — hepsi pass |
+| Merge | PR **#662** → `main` `f61c221` (squash) |
+| Deploy (Vercel Git entegrasyonu, `main: true`) | `GET /api/build-info` → `f61c221` (60 sn içinde) |
+| Deploy doğrulama workflow'u | `Verify production deployment` → **success** (1m0s) |
+
+**Kabul kriteri (Tur 13 §77) karşılandı.** Googlebot UA (`Googlebot/2.1`) ile 3 sayfa × 6
+fetch:
+
+| URL | Önce (fix'siz `f5367cb`) | Sonra (fix'li `f61c221`) |
+|---|---|---|
+| `/is-ilanlari/girne` | head=8, **body=4 (%33 yanlış)** | **head=6/6, body=0/6** ✅ |
+| `/jobs` | head=8, body=0 | **head=6/6, body=0/6** ✅ |
+| `/` | head=6, body=0 | **head=6/6, body=0/6** ✅ |
+
+**Repo'nun kendi denetçisi** (`verify-indexing.mjs`, Googlebot UA, canlı):
+
+```
+PASS robots    allows crawling; sitemap https://isbulkktc.com/sitemap.xml
+PASS sitemap   183 URLs, all on-origin canonical; 162 with the full hreflang set, 21 single-locale
+PASS single-loc 3 single-locale entries: the localized duplicate canonicalises back
+PASS pages     8 sampled pages are 200, indexable, with a matching canonical inside <head>
+PASS facets    8 facet pages advertised by both llms.txt and sitemap.xml
+PASS indexnow  key file matches isbulkktc…
+0 failure(s), 0 warning(s), 0 skipped
+```
+
+**Kök neden (tekrar):** Googlebot, Google'ın **JavaScript çalıştıran tek** crawler'ıdır;
+Next'in `htmlLimitedBots` varsayılanı yalnız `Google-*` servis crawler'larını yakalar, düz
+`Googlebot`'u yakalamaz. `force-dynamic` sayfalarda `generateMetadata` asenkron çözülünce
+React, `<link rel="canonical">`'ı aralıklı olarak `</head>` **sonrasına** koyuyordu; Google
+canonical'ı yalnız `<head>` içinde kabul eder → **yok sayar**. Düzeltme (`next.config.ts`)
+Next 16 varsayılan listesini birebir koruyup sonuna `Googlebot` ekler; yalnız o crawler
+streaming'den çıkar, TTFB ve gerçek tarayıcılar etkilenmez.
+
+## §92. Coverage anlık görüntüsü (GSC, 2026-11-09) — nihai sınıflandırma
+
+`Önemli sorunlar.csv` (birleşik kova toplamı **301** = `Grafik.csv` "Dizine eklenmedi" 301):
+
+| GSC kovası | Adet | Sınıf | Önem | Durum | Kanıt |
+|---|---:|---|---|---|---|
+| "noindex" etiketi ile hariç tutuldu | 83 | **NOT APPLICABLE** (istenen) | P3 | Kapandı | auth/dashboard + boş facet + filtreli arama; canlı `noindex, follow` |
+| Bulunamadı (404) | 58 | **LIKELY** (yaşam döngüsü) | P3 | İzlemede | sitemap yalnız 200 URL yayar; kapanan ilan slug'ları |
+| Yönlendirmeli sayfa | 48 | **CONFIRMED** (doğru) | P3 | Kapandı | `/tr/*`→prefixsiz **308**, `www`→apex **308**, trailing-slash **308** |
+| Doğru standart etiketli alternatif | 31 | **CONFIRMED** (sağlıklı) | P3 | Kapandı | hreflang seti canonical'a doğru birleşiyor |
+| Başka 4xx ile engellendi | 23 | **CONFIRMED** (güvenlik) | P3 | Kapandı | `/.env`, `/wp-login.php` → **403 + noindex** |
+| Soft 404 | 2 | **CONFIRMED → düzeltildi** | P1 | **Deploy edildi** | boş facet → `noindex, follow` + sitemap dışı (Tur 5) |
+| Kullanıcı seçili canonical olmadan kopya | 1 | **LIKELY** | P2 | İzlemede | örnek URL yalnız GSC panelinde; 225-URL taramasında yok |
+| Tarandı — eklenmedi | 43 | **LIKELY** | P2 | İzlemede | ince landing + yeni ilan; içerik/otorite işi |
+| Keşfedildi — eklenmedi | 12 | **LIKELY** | P3 | İzlemede | yeni URL; günlük `indexing:submit` bildiriyor |
+
+**Sonuç:** 301 kovanın **243'ü (%81) beklenen/istenen** davranış; yalnız **58'i** (404 yaşam
+döngüsü) iyileştirme adayı ve o da içerik/zaman işi. **P0 yok.** Fix deploy edildiği için
+Google'ın yeniden taraması beklenir; bir sonraki anlık görüntüde "Soft 404" ve noindex
+kovalarının büyümesi **normaldir** (yeni boş facet'ler noindex'e girer).
+
+## §93. Görünürlük trendi (`Grafik.csv`)
+
+| Tarih | Dizine eklenmedi | Dizine eklenen | Gösterimler |
+|---|---:|---:|---:|
+| 2026-11-02 | — | — | 44 |
+| 2026-11-04 | — | — | 43 |
+| 2026-11-05 | — | — | 76 |
+| 2026-11-06 | 238 | 201 | 113 |
+| 2026-11-07 | 301 | 195 | 99 |
+| 2026-11-08 | 301 | 195 | 122 |
+| 2026-11-09 | 301 | 195 | 142 |
+
+**Gösterim 0 → 142** (30 Eki → 9 Kas). Kazanç **dizine eklemede değil görünürlükte**:
+195 sayfa zaten indeksli; sorun **hangi sorguda çıktığı** — bu P1 (özgün içerik) + P2 (otorite)
+işidir. "Dizine eklenmedi" 238→301 sıçraması, indekslenen 201→195 düşüşüyle birlikte
+**yeni boş facet'lerin noindex'e girmesi** olarak okunur (istenen).
+
+## §94. Diğer düzeltmeler — canlı doğrulama (aynı deploy `f61c221`)
+
+| Kontrol | Beklenen | Canlı sonuç |
+|---|---|---|
+| `/jobs` `<title>` | "KKTC Güncel **İş İlanları**" | ✅ `KKTC Güncel İş İlanları · İşBul KKTC` |
+| `vercel.app` aynası | `noindex` | ✅ `x-robots-tag: noindex, nofollow` |
+| `www` → apex | **308** → `https://isbulkktc.com/` | ✅ |
+| `/tr` → bare | **308** → `/` | ✅ |
+| `/sitemap.xml` | 200, yalnız 200 URL | ✅ 183 `<loc>` |
+| Boş facet (`/is-ilanlari/lefke`) | `noindex, follow` | ✅ |
+| `/llms.txt` | 200 | ✅ 200, 4684 bayt |
+| Apex `X-Robots-Tag` | **yok** | ✅ yok |
+
+## §95. Kalan işler ve engeller
+
+| ID | İş | Önem | Durum |
+|---|---|---|---|
+| T12-4 | GitHub `LBCron/isbulkktc` homepage → `https://isbulkktc.com` | P2 | **BLOCKED** — token'da `admin`/repo ayarı yetkisi yok; repo sahibi Settings'ten yapmalı |
+| T9-1 / T9-2 | Özgün içerik (katalog %100 kopya), bayat ilan temizliği | **P1** | Açık — içerik işi |
+| T8-1 / T8-2 | Yeni alan adı otoritesi, backlink/NAP | P2 | Açık — zaman + otorite işi |
+| — | GSC paneli: "Validate fix" + öncelikli URL "Request indexing" | P2 | **BLOCKED** — OAuth yok; **panelden** yapılmalı |
+
+## §96. Tur 14 — nihai durum tablosu (tek bakışta)
+
+| ID | Bulgu | Sınıf | Önem | Durum | Kanıt |
+|---|---|---|---|---|---|
+| **T11-1 / T12-2** | Googlebot canonical'ı `<body>`'de | **CONFIRMED** | **P0** | **KAPANDI — canlı 6/6 `<head>`** | §91 |
+| T12-3 | `vercel.app` aynası noindex | CONFIRMED | P2 | Kapandı | §94 |
+| T12-4 | GitHub repo homepage aynayı gösteriyor | CONFIRMED | P2 | **BLOCKED — yetki yok** | §95 |
+| T12-5 | Kaynak linki + `isBasedOn` | NOT APPLICABLE | — | Kapandı | §86 |
+| T12-6 | `/jobs` başlığı "Münhaller" | CONFIRMED | P3 | **KAPANDI — deploy edildi** | §94 |
+| T12-7 | Apex site-geneli noindex riski | NOT A DEFECT | — | Kapandı | §94 |
+| — | Soft 404 (2) | CONFIRMED | P1 | **KAPANDI — deploy edildi** | §92 |
+| T9-1 / T9-2 / T8-1 / T8-2 | Kopya katalog, bayat ilan, otorite | CONFIRMED / LIKELY | P1–P2 | Açık (içerik + zaman) | §92 |
+
+## §97. Tur 14 — tek cümle
+
+**Tek cümle:** Teknik olarak **düzeltilebilir tüm P0/P1 engeller kapatıldı** (Googlebot
+canonical artık canlıda `6/6` `<head>`'de, `verify-indexing` 0 hata); kalan tek kaldıraç
+**özgün içerik (P1)** ve **otorite (P2)** olup ikisi de kod değil **içerik + zaman** işidir —
+yani "site çıkmıyor" şikayetinin **teknik** kısmı bitti, **içerik/otorite** kısmı sürüyor.
+
+**Onay isteyen işler:**
+
+1. **[P2] GitHub `LBCron/isbulkktc` homepage** → `https://isbulkktc.com` (repo sahibi; §95).
+2. **[P2] GSC paneli**: "Validate fix" (P0 kapanışı için) + öncelikli URL'ler "Request indexing".
+3. **[P1] Özgün içerik** (kopya katalog) ve **[P2] otorite** (backlink/NAP).
+
+**Kapsam sınırı:** Bu tur **teknik** engelleri kapattı. P0/P1 teknik düzeltmeler **tek başına
+sıralamayı açmaz**; asıl kaldıraç özgün içerik + otoritedir (§92, §93).
