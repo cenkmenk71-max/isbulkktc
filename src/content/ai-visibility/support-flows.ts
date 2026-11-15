@@ -51,6 +51,11 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "Şifremi unuttum",
         "Parolamı nasıl yenilerim?",
         "Şifre yenileme nasıl olur?",
+        "Parola yenileme",
+        "Parola sıfırlama",
+        "Şifre yenileme",
+        "Yeni şifre nasıl alırım",
+        "Şifremi yenilemek istiyorum",
       ],
       answer:
         "Şifre sıfırlama: giriş sayfasındaki \"Şifrenizi mi unuttunuz?\" bağlantısını kullanın; e-posta adresinize kısa süre geçerli bir yenileme bağlantısı gönderilir. Bağlantıyı açıp yeni şifrenizi belirleyin; yeni şifre en az 10 karakter olmalıdır.",
@@ -63,6 +68,8 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "Kayıt olmak istiyorum",
         "Nasıl kayıt olurum?",
         "İşveren hesabı nasıl açarım?",
+        "Kayıt olamıyorum",
+        "Üyelik nasıl açılır",
       ],
       answer:
         "Hesap oluşturma aday ve işveren için ayrıdır. Aday olarak e-posta adresiniz ve en az 10 karakterlik bir şifreyle aday hesabı oluşturur, e-postanızı doğruladıktan sonra profilinizi tamamlarsınız. İşveren olarak önce yetkili kişi adına bir işveren hesabı oluşturur, e-postanızı doğruladıktan sonra şirket bilgilerinizi ayrı bir kayıt adımında eklersiniz.",
@@ -73,6 +80,10 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "Mail doğrulama nasıl yapılır?",
         "Doğrulama maili gelmedi",
         "Hesabımı aktifleştiremiyorum",
+        "E-posta doğrulama",
+        "Mail gelmedi",
+        "Hesabımı doğrulayamıyorum",
+        "E-postamı doğrulayamıyorum",
       ],
       answer:
         "E-posta doğrulama: kayıt sonrası e-posta adresinize bir doğrulama bağlantısı gönderilir. Giriş yapmadan önce bu bağlantıyı açmanız gerekir; bağlantıya ulaşamazsanız doğrulama e-postasını yeniden gönderebilirsiniz.",
@@ -86,6 +97,8 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "Bir işe nasıl başvururum?",
         "Ön yazı nasıl eklerim?",
         "Aynı ilana tekrar başvurabilir miyim?",
+        "İş başvurusu",
+        "Başvuru yapamıyorum",
       ],
       answer:
         "Başvuru: bir ilana başvurmak için giriş yapmanız ve aday profilinizin olması gerekir. Başvuru, ilan sayfasındaki formdan gönderilir; başvurunuz siteye kaydedilir ve ilgili işverenin hesabına iletilir. İsteğe bağlı bir ön yazı ekleyebilirsiniz (en fazla 5.000 karakter) ve aynı ilana yalnızca bir kez başvurabilirsiniz.",
@@ -97,6 +110,9 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "İşveren olarak ilan nasıl yayınlarım?",
         "Şirket kaydı nasıl yapılır?",
         "İlanım neden yayınlanmıyor?",
+        "İlan nasıl verilir",
+        "İlanım onaylanmadı",
+        "İlan yayınlayamıyorum",
       ],
       answer:
         "İşveren ilan süreci: önce şirketinizi kaydedersiniz. Gönderdiğiniz şirket bilgileri inceleme sürecine alınır; doğrulama tamamlanıp yayın yetkisi tanımlanana kadar ilan yayımlanamaz.",
@@ -107,6 +123,12 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "CV dosyası nereye yükleniyor?",
         "CV dosyam sunucuya yükleniyor mu?",
         "CV gizliliği nasıl?",
+        "CVim güvenli mi?",
+        "CV güvenli mi?",
+        "CV'im güvenli mi?",
+        "CV nasıl yüklerim",
+        "CVim nereye kaydediliyor",
+        "CV yüklemek zorunda mıyım",
       ],
       answer:
         "CV gizliliği: CV dosyanız sunucuya yüklenmez; ayrıştırma tarayıcınızda yapılır ve dosya tarayıcınızda kalır.",
@@ -173,6 +195,7 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "Where is my CV stored?",
         "Is my CV uploaded?",
         "CV privacy",
+        "Is my CV safe?",
       ],
       answer:
         "CV privacy: your CV file is not uploaded to the server; it is parsed in your browser and stays there.",
@@ -239,6 +262,7 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "Wo wird mein Lebenslauf gespeichert?",
         "Lebenslauf Datenschutz",
         "Wird mein Lebenslauf hochgeladen?",
+        "Ist mein Lebenslauf sicher?",
       ],
       answer:
         "Lebenslauf-Datenschutz: Ihre Lebenslaufdatei wird nicht auf den Server hochgeladen; sie wird in Ihrem Browser verarbeitet und bleibt dort.",
@@ -304,6 +328,7 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "Где хранится резюме?",
         "Конфиденциальность резюме",
         "Загружается ли резюме?",
+        "Безопасно ли мое резюме?",
       ],
       answer:
         "Конфиденциальность резюме: файл резюме не загружается на сервер; он обрабатывается в вашем браузере и остаётся там.",

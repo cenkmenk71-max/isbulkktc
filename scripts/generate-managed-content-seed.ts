@@ -369,8 +369,10 @@ function extractLocaleArray(
 
   const body = source.slice(bodyStart, index);
   const entries: { question: string; answer: string }[] = [];
+  // `paraphrases` is matching-only for the support matcher and is never written
+  // to the DB, so it is skipped between `question` and `answer`.
   const entryPattern =
-    /question:\s*([\s\S]*?),\s*\n\s*answer:\s*([\s\S]*?),\s*\n\s*\}/g;
+    /question:\s*([\s\S]*?),\s*\n(?:\s*paraphrases:\s*[\s\S]*?,\s*\n)?\s*answer:\s*([\s\S]*?),\s*\n\s*\}/g;
   let match: RegExpExecArray | null;
   while ((match = entryPattern.exec(body)) !== null) {
     entries.push({

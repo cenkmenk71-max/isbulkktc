@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+import { faqByLocale } from "@/content/ai-visibility/faq";
 import { supportFlowsByLocale } from "@/content/ai-visibility/support-flows";
 
 import { buildSupportSystemPrompt } from "./ai-protocol";
@@ -155,21 +156,103 @@ test("a paraphrase of a flow question is answered in-process", () => {
   }
 });
 
-// The invariant that keeps the paraphrase data honest: every flow carries at
-// least one alias, and no alias is rendered as a fact line of the model's
-// prompt. The prompt renders each entry's `question` and `answer`; a paraphrase
-// that started appearing as a `Q:` line would let the model answer from a
-// phrasing the deterministic layer was supposed to own. (A paraphrase may still
-// occur as a substring of the answer prose — that is the fact being restated.)
-test("every flow carries paraphrases and none are rendered as prompt facts", () => {
+// The recall half of the *FAQ* paraphrase work. The FAQ answers what the
+// platform is, what it costs, where it operates and how to reach a human — the
+// questions the widget's own chips pose. A visitor rarely types the canonical
+// question, though: they write a bare noun ("paket fiyatları"), a short
+// interrogative ("hangi diller") or a first-person ask ("size nasıl
+// ulaşabilirim"). Each of these fell through to the model (or the generic
+// fallback) before the FAQ entries carried `paraphrases`; each must now resolve
+// in-process. The `want` is a distinctive phrase from the FAQ answer, so a match
+// to the wrong entry is caught, not just a fall-through.
+test("a paraphrase of an FAQ question is answered in-process", () => {
+  const cases: [string, string, RegExp][] = [
+    // tr — the pricing/packaging family that surfaced the gap in production
+    ["tr", "ilan paketleri", /ücretsizdir/],
+    ["tr", "paket fiyatları", /ücretsizdir/],
+    ["tr", "ilan paket fiyatları", /ücretsizdir/],
+    ["tr", "ücretli mi", /ücretsizdir/],
+    ["tr", "ilan ücretli mi", /ücretsizdir/],
+    ["tr", "başvuru ücretli mi", /ücretsizdir/],
+    ["tr", "ücretli", /ücretsizdir/],
+    ["tr", "fiyat", /ücretsizdir/],
+    ["tr", "ne kadar ücret", /ücretsizdir/],
+    ["tr", "paketleri nereden görebilirim", /ücretsizdir/],
+    // tr — the other FAQ topics
+    ["tr", "hangi ilçelerde", /Lefkoşa/],
+    ["tr", "hangi bölgeler", /Lefkoşa/],
+    ["tr", "hangi diller", /altı dilde/],
+    ["tr", "dil desteği", /altı dilde/],
+    ["tr", "şirket rehberi nedir", /doğrulan/],
+    ["tr", "şirketler doğrulanmış mı", /doğrulan/],
+    ["tr", "iletişim bilgileri", /info@isbulkktc\.com/],
+    ["tr", "telefon numarası", /info@isbulkktc\.com/],
+    ["tr", "nasıl ulaşabilirim", /info@isbulkktc\.com/],
+    // en
+    ["en", "how much does it cost", /free for job seekers/i],
+    ["en", "is it free", /free for job seekers/i],
+    ["en", "free", /free for job seekers/i],
+    ["en", "listing prices", /free for job seekers/i],
+    ["en", "job packages", /free for job seekers/i],
+    ["en", "which districts", /Nicosia/],
+    ["en", "which languages", /six languages/],
+    ["en", "phone number", /info@isbulkktc\.com/],
+    ["en", "are companies verified", /verified/],
+    // de
+    ["de", "ist es kostenlos", /kostenlos/],
+    ["de", "was kostet es", /kostenlos/],
+    ["de", "anzeigenpakete", /kostenlos/],
+    ["de", "kostenlos", /kostenlos/],
+    ["de", "welche bezirke", /Nikosia/],
+    ["de", "welche sprachen", /sechs Sprachen/],
+    ["de", "wie erreiche ich euch", /info@isbulkktc\.com/],
+    // ru
+    ["ru", "это бесплатно", /бесплатн/],
+    ["ru", "сколько стоит", /бесплатн/],
+    ["ru", "пакеты вакансий", /бесплатн/],
+    ["ru", "какие районы", /Никосия/],
+    ["ru", "какие языки", /шести языках/],
+    ["ru", "как с вами связаться", /info@isbulkktc\.com/],
+    // el
+    ["el", "είναι δωρεάν", /δωρεάν/],
+    ["el", "πόσο κοστίζει", /δωρεάν/],
+    ["el", "ποιες περιοχές", /Λευκωσία/],
+    ["el", "ποιες γλώσσες", /έξι γλώσσες/],
+    ["el", "πώς να επικοινωνήσω", /info@isbulkktc\.com/],
+    // fa
+    ["fa", "رایگان است", /رایگان/],
+    ["fa", "چقدر هزینه دارد", /رایگان/],
+    ["fa", "کدام مناطق", /نیکوزیا/],
+    ["fa", "چه زبان‌هایی", /شش زبان/],
+    ["fa", "چگونه تماس بگیرم", /info@isbulkktc\.com/],
+  ];
+  for (const [locale, message, expected] of cases) {
+    const answer = answerFromKnowledge(message, locale as "tr");
+    assert.ok(
+      answer,
+      `[${locale}] ${JSON.stringify(message)} should match an FAQ entry`,
+    );
+    assert.match(answer, expected);
+  }
+});
+
+// The invariant that keeps the paraphrase data honest: every flow and every FAQ
+// entry carries at least one alias, and no alias is rendered as a fact line of
+// the model's prompt. The prompt renders each entry's `question` and `answer`; a
+// paraphrase that started appearing as a `Q:` line would let the model answer
+// from a phrasing the deterministic layer was supposed to own. (A paraphrase may
+// still occur as a substring of the answer prose — that is the fact being
+// restated.)
+test("every entry carries paraphrases and none are rendered as prompt facts", () => {
   for (const locale of locales) {
     const prompt = buildSupportSystemPrompt(locale);
-    for (const flow of supportFlowsByLocale[locale]) {
+    const entries = [...faqByLocale[locale], ...supportFlowsByLocale[locale]];
+    for (const entry of entries) {
       assert.ok(
-        flow.paraphrases.length > 0,
-        `[${locale}] ${JSON.stringify(flow.question)} has no paraphrases`,
+        entry.paraphrases && entry.paraphrases.length > 0,
+        `[${locale}] ${JSON.stringify(entry.question)} has no paraphrases`,
       );
-      for (const paraphrase of flow.paraphrases) {
+      for (const paraphrase of entry.paraphrases) {
         assert.ok(
           !prompt.includes(`Q: ${paraphrase}`),
           `[${locale}] paraphrase ${JSON.stringify(paraphrase)} rendered as a prompt fact`,
@@ -183,17 +266,20 @@ test("every flow carries paraphrases and none are rendered as prompt facts", () 
 // question but ask something the copy does not answer. A wrong confident answer
 // is worse than no answer, so each must fall through (to the model, or the
 // grounded fallback) rather than match.
+//
+// "How much does a listing cost?" is the one deliberate exception: it is the
+// canonical English way to ask the pricing question, so it now resolves to the
+// pricing entry in-process instead of the model (see the pricing-recall test
+// below). The remaining probes stay uncovered because the curated aliases do not
+// claim them — the copy states no refund policy and no per-listing figure.
 test("a question that only shares a generic word does not match", () => {
   for (const message of [
     "Tek ilan fiyatı nedir?",
     "Fiyatlarınız nedir?",
     "Kaç para?",
-    "How much does a listing cost?",
     "What is the refund policy?",
   ]) {
-    const locale = message.includes("How") || message.includes("refund")
-      ? "en"
-      : "tr";
+    const locale = message.includes("refund") ? "en" : "tr";
     assert.equal(
       answerFromKnowledge(message, locale),
       null,
@@ -207,16 +293,14 @@ test("a question that only shares a generic word does not match", () => {
 // platform's general vocabulary, so scoring it let an off-topic question ride
 // those words into an unrelated entry. Each message below shares words with an
 // FAQ *answer* but none with its *question*, so a correct matcher falls through.
-// The last three are the employer-package questions that surfaced the bug in
-// production ("İşverenler için ilan paketleri var mı?" answered with "İşBul KKTC
-// nedir?"); the first three are synthetic answer-only probes.
+// The first three are synthetic answer-only probes. The last one — "İşverenler
+// ilan yayınlayabilir mi?" — is a hiring question, not a pricing one, and the
+// pricing entry deliberately does not claim it.
 test("a question that only shares words with an answer does not match", () => {
   for (const message of [
     "Kuzey Kıbrıs Cumhuriyeti platformu",
     "ödeme IBAN talimatı",
     "geliştirilen kariyer platformudur",
-    "İşverenler için ilan paketleri var mı?",
-    "İşverenler için ilan paketlerini nereden görebilirim?",
     "İşverenler ilan yayınlayabilir mi?",
   ]) {
     assert.equal(
@@ -230,6 +314,25 @@ test("a question that only shares words with an answer does not match", () => {
 test("a greeting or an empty question never matches", () => {
   for (const message of ["Merhaba", "Hello", "", "   ", "???"]) {
     assert.equal(answerFromKnowledge(message, "tr"), null);
+  }
+});
+
+// The single-word alias path ("free" → the pricing entry) is measured against
+// the query, so it only fires when the query is essentially that one word. A
+// longer question that merely contains the word must still fall through: "free
+// CV review" shares "free" with the pricing entry but asks something the copy
+// does not answer.
+test("a single-word alias does not swallow a longer question", () => {
+  for (const message of [
+    "free CV review",
+    "how do I get a free CV review",
+    "is the CV builder free",
+  ]) {
+    assert.equal(
+      answerFromKnowledge(message, "en"),
+      null,
+      `${JSON.stringify(message)} must not match on the single-word alias`,
+    );
   }
 });
 

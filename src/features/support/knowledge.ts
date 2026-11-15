@@ -53,9 +53,9 @@ function tokenize(text: string, locale: AppLocale): string[] {
 
 /**
  * The phrasings an entry may be matched on: its canonical `question`, plus the
- * curated `paraphrases` a flow carries. Both are matching-only — the answer is
- * what the visitor receives. FAQ entries have no paraphrases, so the list is
- * just their question.
+ * curated `paraphrases` the entry carries. Both are matching-only — the answer
+ * is what the visitor receives. An entry with no paraphrases is matched on its
+ * question alone.
  */
 function matchPhrasings(entry: {
   question: string;
@@ -84,6 +84,15 @@ function matchPhrasings(entry: {
  * `MIN_SHARED_TOKENS` of the query's, so a question the copy does not answer
  * falls through to the model. Ties keep the earlier entry, so the result is
  * stable.
+ *
+ * A phrasing made of a single significant word is a deliberately narrow alias
+ * ("ücretli mi" → "ücretli", "is it free" → "free"), and a query that is
+ * essentially that one word is answered on it: the `MIN_SHARED_TOKENS` floor
+ * would otherwise reject every such alias, and each is a real ask — a one-word
+ * question the copy does answer. The match is measured against the *query*
+ * here, so the alias only fires when the query holds little else ("free" alone,
+ * not "free CV review"); a longer query that merely contains the word still has
+ * to clear the overlap rule below.
  */
 export function answerFromKnowledge(
   message: string,
@@ -104,8 +113,8 @@ export function answerFromKnowledge(
       }
       if (score === 0) continue;
       const covers =
-        score >= MIN_SHARED_TOKENS &&
-        score / phrasingTokens.size >= MIN_COVERAGE;
+        (score >= MIN_SHARED_TOKENS && score / phrasingTokens.size >= MIN_COVERAGE) ||
+        (phrasingTokens.size === 1 && score / queryTokens.size >= MIN_COVERAGE);
       if (covers && (!best || score > best.score)) {
         best = { score, answer: entry.answer };
       }

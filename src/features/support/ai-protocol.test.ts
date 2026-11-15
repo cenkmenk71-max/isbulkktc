@@ -6,6 +6,7 @@ import {
   buildSupportAiRequest,
   buildSupportSystemPrompt,
   guardSupportReply,
+  parseRetryAfterMs,
   parseSupportAiResponse,
   sanitizeModelReply,
 } from "./ai-protocol";
@@ -222,6 +223,69 @@ test("an overlong reply is truncated to the cap with an ellipsis", () => {
   assert.ok(result);
   assert.ok(result.length <= MAX_AI_REPLY_LENGTH + 1, "must not exceed the cap");
   assert.ok(result.endsWith("…"), "truncation must be visible");
+});
+
+// ---------------------------------------------------------------------------
+// The provider backoff hint.
+// ---------------------------------------------------------------------------
+
+test("a Retry-After in seconds becomes a delay in milliseconds", () => {
+  assert.equal(parseRetryAfterMs(new Headers({ "retry-after": "2" })), 2000);
+  assert.equal(parseRetryAfterMs(new Headers({ "retry-after": "6" })), 6000);
+  // A fractional value is rounded, not truncated to zero.
+  assert.equal(parseRetryAfterMs(new Headers({ "retry-after": "0.5" })), 500);
+});
+
+test("a Retry-After of zero or in the past means retry now, not give up", () => {
+  // A provider that names no wait still wants a retry; `0` is "immediately",
+  // distinct from `null` ("no hint, use the caller's own backoff").
+  assert.equal(parseRetryAfterMs(new Headers({ "retry-after": "0" })), 0);
+  assert.equal(
+    parseRetryAfterMs(new Headers({ "retry-after": "Wed, 21 Oct 2015 07:28:00 GMT" })),
+    0,
+  );
+});
+
+test("a Retry-After HTTP-date in the future becomes the remaining time", () => {
+  const future = new Date(Date.now() + 4000).toUTCString();
+  const parsed = parseRetryAfterMs(new Headers({ "retry-after": future }));
+  assert.ok(parsed !== null && parsed > 2500 && parsed <= 4000, String(parsed));
+});
+
+// Groq names exactly when the token bucket refills via a duration header; it is
+// the signal a 429 on the free tier carries, so it must be read when the
+// standard header is absent.
+test("Groq's token-reset duration is read when Retry-After is absent", () => {
+  assert.equal(
+    parseRetryAfterMs(new Headers({ "x-ratelimit-reset-tokens": "9.412s" })),
+    9412,
+  );
+  assert.equal(
+    parseRetryAfterMs(new Headers({ "x-ratelimit-reset-tokens": "55.14s" })),
+    55140,
+  );
+  // Retry-After wins when both are present.
+  assert.equal(
+    parseRetryAfterMs(
+      new Headers({ "retry-after": "1", "x-ratelimit-reset-tokens": "9s" }),
+    ),
+    1000,
+  );
+});
+
+test("no parseable hint yields null so the caller keeps its own backoff", () => {
+  assert.equal(parseRetryAfterMs(new Headers()), null);
+  assert.equal(parseRetryAfterMs(new Headers({ "retry-after": "soon" })), null);
+  assert.equal(
+    parseRetryAfterMs(new Headers({ "x-ratelimit-reset-tokens": "later" })),
+    null,
+  );
+  // A reset header in a shape we do not recognise falls through rather than
+  // producing a bogus delay.
+  assert.equal(
+    parseRetryAfterMs(new Headers({ "x-ratelimit-reset-tokens": "2m" })),
+    null,
+  );
 });
 
 // ---------------------------------------------------------------------------
