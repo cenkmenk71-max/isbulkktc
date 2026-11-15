@@ -446,6 +446,186 @@ export function evaluateAuthTemplateDrift(authConfig, repo = {}) {
   return problems;
 }
 
+/** Reads `supabase/config.toml`, or null when it is absent. */
+export function readRepoConfigToml() {
+  try {
+    return readFileSync(resolve(AUTH_TEMPLATES_DIR, "..", "config.toml"), "utf8");
+  } catch {
+    return null;
+  }
+}
+
+const NS_PER_SECOND = 1_000_000_000;
+const NS_PER_MINUTE = 60 * NS_PER_SECOND;
+const NS_PER_HOUR = 60 * NS_PER_MINUTE;
+const NS_PER_MS = 1_000_000;
+const NS_PER_US = 1_000;
+
+/**
+ * Parses a Go-style duration string (`"60s"`, `"1m0s"`, `"24h0m0s"`, `"300ms"`)
+ * into whole seconds, matching the Supabase CLI's own `parseDuration`
+ * (`apps/cli/src/commands/config/push/push.duration.ts`) so the guard predicts
+ * exactly the integer `supabase config push` writes to the `*_max_frequency`
+ * Management API fields. Returns null on an unparsable value.
+ */
+export function parseDurationSeconds(value) {
+  if (typeof value !== "string") return null;
+  if (value === "0") return 0;
+  let s = value;
+  let neg = false;
+  if (s.startsWith("-") || s.startsWith("+")) {
+    neg = s.startsWith("-");
+    s = s.slice(1);
+  }
+  if (s.length === 0) return null;
+  let total = 0;
+  while (s.length > 0) {
+    let n = 0;
+    let frac = 0;
+    let post = 1;
+    let i = 0;
+    while (i < s.length && s[i] >= "0" && s[i] <= "9") n = n * 10 + Number(s[i++]);
+    const intDigits = i;
+    let fracDigits = 0;
+    if (i < s.length && s[i] === ".") {
+      i++;
+      const fracStart = i;
+      while (i < s.length && s[i] >= "0" && s[i] <= "9") {
+        frac = frac * 10 + Number(s[i++]);
+        post *= 10;
+      }
+      fracDigits = i - fracStart;
+    }
+    // A component with no digits ("s", "ms", a lone ".") is invalid, exactly as
+    // the CLI treats it — a typo must not silently parse as a zero duration.
+    if (intDigits === 0 && fracDigits === 0) return null;
+    s = s.slice(i);
+    let unitNs;
+    if (s.startsWith("ns")) [unitNs, s] = [1, s.slice(2)];
+    else if (s.startsWith("us") || s.startsWith("\u00b5s")) [unitNs, s] = [NS_PER_US, s.slice(2)];
+    else if (s.startsWith("ms")) [unitNs, s] = [NS_PER_MS, s.slice(2)];
+    else if (s.startsWith("s")) [unitNs, s] = [NS_PER_SECOND, s.slice(1)];
+    else if (s.startsWith("m")) [unitNs, s] = [NS_PER_MINUTE, s.slice(1)];
+    else if (s.startsWith("h")) [unitNs, s] = [NS_PER_HOUR, s.slice(1)];
+    else return null;
+    total += n * unitNs + Math.round((frac / post) * unitNs);
+  }
+  return Math.floor((neg ? -total : total) / NS_PER_SECOND);
+}
+
+/** The value of `key` inside the `[section]` block of a TOML document, or null. */
+export function readTomlValue(toml, section, key) {
+  const blocks = toml.split(/^\[/m);
+  for (const block of blocks) {
+    const end = block.indexOf("]");
+    if (end === -1 || block.slice(0, end) !== section) continue;
+    const body = block.slice(end + 1);
+    const line = body.match(new RegExp(`^\\s*${key}\\s*=\\s*("[^"]*"|\\S+)`, "m"));
+    if (!line) return null;
+    const raw = line[1];
+    if (raw.startsWith('"')) return JSON.parse(raw);
+    if (raw === "true") return true;
+    if (raw === "false") return false;
+    return Number(raw);
+  }
+  return null;
+}
+
+/**
+ * The `config.toml` auth-policy fields that map to a Management API key, per the
+ * Supabase CLI's `registry-auth.ts` (`packages/config/src/project-config/`). The
+ * `api` name is what `GET /config/auth` returns; `toml` is where the value lives
+ * in `supabase/config.toml`. The names do not always match — the CLI maps
+ * `sign_in_sign_ups` to `rate_limit_otp`, `token_verifications` to
+ * `rate_limit_verify` and `enable_confirmations` to `mailer_autoconfirm` — so a
+ * reviewer who checks "do the names line up" sees nothing.
+ *
+ * `negate: true` marks a field whose API name is the negation of the config one
+ * (the CLI's `invertedBoolRow`): `enable_signup` → `disable_signup` and
+ * `enable_confirmations` → `mailer_autoconfirm`. Comparing them directly reports
+ * a permanent false drift; the comparator inverts the live value first.
+ *
+ * `duration: true` marks a `*_max_frequency` row: the config value is a Go
+ * duration string ("60s") that the CLI's `secondsDurationRow` floors to whole
+ * seconds before writing the integer API field, so the comparator runs the same
+ * parse before comparing. This is not a "not comparable" special case — the CLI
+ * makes it a deterministic integer→duration mapping.
+ *
+ * One mapped field is deliberately absent because it is not invertible:
+ *
+ *   * `password_requirements` — a non-empty value maps through the CLI's
+ *     character-class table to a `password_required_characters` spelling that is
+ *     not invertible; only the empty ("no requirement") case is a plain string,
+ *     so guarding it here would either miss drift or invent it.
+ */
+export const AUTH_POLICY_FIELDS = [
+  { toml: ["auth", "jwt_expiry"], api: "jwt_exp" },
+  { toml: ["auth", "minimum_password_length"], api: "password_min_length" },
+  { toml: ["auth", "enable_signup"], api: "disable_signup", negate: true },
+  { toml: ["auth", "enable_manual_linking"], api: "security_manual_linking_enabled" },
+  { toml: ["auth", "enable_anonymous_sign_ins"], api: "external_anonymous_users_enabled" },
+  { toml: ["auth.mfa", "max_enrolled_factors"], api: "mfa_max_enrolled_factors" },
+  { toml: ["auth.rate_limit", "email_sent"], api: "rate_limit_email_sent" },
+  { toml: ["auth.rate_limit", "sms_sent"], api: "rate_limit_sms_sent" },
+  { toml: ["auth.rate_limit", "anonymous_users"], api: "rate_limit_anonymous_users" },
+  { toml: ["auth.rate_limit", "token_refresh"], api: "rate_limit_token_refresh" },
+  { toml: ["auth.rate_limit", "sign_in_sign_ups"], api: "rate_limit_otp" },
+  { toml: ["auth.rate_limit", "token_verifications"], api: "rate_limit_verify" },
+  { toml: ["auth.rate_limit", "web3"], api: "rate_limit_web3" },
+  { toml: ["auth.email", "enable_signup"], api: "external_email_enabled" },
+  { toml: ["auth.email", "double_confirm_changes"], api: "mailer_secure_email_change_enabled" },
+  { toml: ["auth.email", "enable_confirmations"], api: "mailer_autoconfirm", negate: true },
+  { toml: ["auth.email", "secure_password_change"], api: "security_update_password_require_reauthentication" },
+  { toml: ["auth.email", "otp_length"], api: "mailer_otp_length" },
+  { toml: ["auth.email", "otp_expiry"], api: "mailer_otp_exp" },
+  { toml: ["auth.email", "max_frequency"], api: "smtp_max_frequency", duration: true },
+  { toml: ["auth.mfa.phone", "max_frequency"], api: "mfa_phone_max_frequency", duration: true },
+];
+
+/**
+ * Compares the auth-policy fields `config.toml` declares against the hosted
+ * project. `config.toml` is the local/dev source of truth and is never applied to
+ * the hosted project (`supabase config push` runs in no workflow), so the two
+ * drift silently: the file claimed `secure_password_change = false` and
+ * `otp_length = 6` while the hosted project ran the opposite for both, and the
+ * guard reported "no configuration inconsistency found" because it read none of
+ * these keys.
+ *
+ * Only fields present in both the file and the live config are compared, so an
+ * absent key is skipped rather than reported. Returns a list of human-readable
+ * problem strings; an empty list means every declared field agrees.
+ *
+ * @param {Record<string, unknown>} authConfig live `GET /config/auth` body
+ * @param {string} [toml] `config.toml` text; read from disk when omitted
+ */
+export function evaluateAuthPolicyDrift(authConfig, toml = readRepoConfigToml()) {
+  const problems = [];
+  if (typeof toml !== "string") return problems;
+  for (const { toml: [section, key], api, negate, duration } of AUTH_POLICY_FIELDS) {
+    let repoValue = readTomlValue(toml, section, key);
+    if (repoValue === null) continue;
+    const liveValue = authConfig?.[api];
+    if (liveValue === undefined || liveValue === null) continue;
+    // A `*_max_frequency` row is a Go duration in the file and whole seconds
+    // live; parse it the way the CLI does before comparing. An unparsable value
+    // is skipped (never reported) rather than compared verbatim.
+    if (duration) {
+      repoValue = parseDurationSeconds(repoValue);
+      if (repoValue === null) continue;
+    }
+    // An inverted row (the CLI's `invertedBoolRow`) stores the negation of the
+    // config value, so `enable_signup = true` is `disable_signup = false` live.
+    const comparable = negate ? !liveValue : liveValue;
+    if (repoValue !== comparable) {
+      problems.push(
+        `config.toml [${section}] ${key} = ${repoValue} but the hosted project has` +
+          ` ${api} = ${liveValue}`,
+      );
+    }
+  }
+  return problems;
+}
+
 /**
  * Reads the outcome of a live auth probe carrying a deliberately bogus captcha
  * token. This is the authoritative check, because the Management API can return
@@ -759,6 +939,11 @@ async function main() {
       // The email templates and subjects the Auth dashboard holds are not in git
       // and nothing re-syncs them, so a hand-pasted template drifts silently.
       failures.push(...evaluateAuthTemplateDrift(body));
+
+      // The auth policy `config.toml` declares (rate limits, reauthentication,
+      // OTP) is never applied to the hosted project, so the file and the live
+      // config drift apart with no test able to see it.
+      failures.push(...evaluateAuthPolicyDrift(body));
     }
   }
 

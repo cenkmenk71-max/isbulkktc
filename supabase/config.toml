@@ -27,6 +27,10 @@ additional_redirect_urls = [
   "http://localhost:3000/**",
   "http://127.0.0.1:3000/**"
 ]
+# Master sign-up switch (hosted `disable_signup = false`). The per-channel switch
+# under `[auth.email]` is a separate key (`external_email_enabled`); this one gates
+# account creation overall. `verify-auth-config` guards it against drift.
+enable_signup = true
 jwt_expiry = 3600
 # Aligns with the application's zod schema (signUpSchema/updatePasswordSchema
 # require 10) and the on-screen password hint.
@@ -86,18 +90,28 @@ verify_enabled = true
 [auth.mfa.phone]
 enroll_enabled = false
 verify_enabled = false
+# Mirrors the hosted `mfa_phone_max_frequency = 5`. Inert while the phone provider
+# is disabled, but declared so `verify-auth-config` guards it against drift.
+max_frequency = "5s"
 [auth.mfa.web_authn]
 enroll_enabled = false
 verify_enabled = false
 
 [auth.rate_limit]
-# Bounds password-reset and signup-confirmation mail so the local stack mirrors
-# the abuse limits the hosted project is expected to enforce.
+# Abuse limits. `scripts/verify-auth-config.mjs` compares every field below that
+# maps to a Management API key against the hosted project, so a change here
+# without the matching dashboard change (or vice versa) fails `npm run auth:verify`.
+# The CLI maps `sign_in_sign_ups` to `rate_limit_otp` and `token_verifications` to
+# `rate_limit_verify`; there is no API field literally named `sign_in_sign_ups`.
 email_sent = 30
 sms_sent = 30
-anonymous_users = 30
+# Hosted `rate_limit_anonymous_users`. Anonymous sign-ins are disabled
+# (`enable_anonymous_sign_ins = false`), so this only bounds a misconfigured path.
+anonymous_users = 20
 token_refresh = 150
-sign_in_sign_ups = 30
+# Hosted `rate_limit_otp`: the per-window cap on password-reset / signup-confirmation
+# mail. The E2E auth suite makes a handful of signups per shard, well under this.
+sign_in_sign_ups = 10
 token_verifications = 30
 web3 = 30
 
@@ -107,15 +121,25 @@ double_confirm_changes = true
 # Requires a verified mailbox before a new account can sign in. The sign-up
 # action already handles both the confirmed and pending branches.
 enable_confirmations = true
-# secure_password_change is deliberately left off. It gates updateUser({password})
-# on a recent sign-in, and this repository's reset flow performs that update on a
-# recovery session. Enable it only after verifying the recovery path on a
-# non-production project (see docs/runbooks/production-launch.md).
-secure_password_change = false
-# Throttles repeated confirmation/recovery mail to the same address.
-max_frequency = "60s"
-otp_length = 6
-otp_expiry = 3600
+# secure_password_change gates updateUser({password}) on a recent sign-in. It is
+# ON here to match the hosted project (`security_update_password_require_reauthentication
+# = true`), which is the safer setting. GoTrue only demands reauthentication when
+# the session is older than 24 hours, so the reset flow — which calls
+# updateUser({password}) on a *fresh* recovery session (src/features/identity/
+# actions.ts updatePassword) — is unaffected. The one gap is a reset completed in
+# a tab open for over 24 hours: GoTrue answers `reauthentication_needed`, which
+# `src/features/identity/auth-errors.ts` does not yet map to a message.
+secure_password_change = true
+# Throttles repeated confirmation/recovery mail to the same address. Mirrors the
+# hosted `smtp_max_frequency = 10` (whole seconds; the CLI floors a duration to
+# seconds). `verify-auth-config` compares this after parsing the duration, so a
+# change here without the matching hosted change fails `npm run auth:verify`.
+max_frequency = "10s"
+# Hosted `mailer_otp_length`. The e-mail flows are link-based (no code-entry UI),
+# so this only affects the reauthentication code, which the app does not surface.
+otp_length = 8
+# Hosted `mailer_otp_exp` (seconds).
+otp_expiry = 600
 
 # Production SMTP for the auth mail (#195/#227).
 #

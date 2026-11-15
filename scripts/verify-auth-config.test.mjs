@@ -2,16 +2,21 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  AUTH_POLICY_FIELDS,
   AUTH_TEMPLATE_FILES,
   callbackIsAllowed,
   detectDeployedCaptcha,
+  evaluateAuthPolicyDrift,
   evaluateAuthTemplateDrift,
   evaluateCaptchaProbe,
   isDirectRun,
   notificationFlagKey,
+  parseDurationSeconds,
   readRepoAuthTemplate,
+  readRepoConfigToml,
   readRepoNotificationEnabled,
   readRepoTemplateSubject,
+  readTomlValue,
   turnstileSiteKeyInBundle,
 } from "./verify-auth-config.mjs";
 
@@ -259,4 +264,172 @@ test("readRepoNotificationEnabled reads the block and skips templates without on
   // The six regular templates declare no notification block, so they are skipped
   // rather than reported as drift.
   assert.equal(readRepoNotificationEnabled("confirmation"), null);
+});
+
+// The auth policy `config.toml` declares (rate limits, reauthentication, OTP) is
+// never applied to the hosted project, so the file drifted from production with
+// no test able to see it: `secure_password_change = false` and `otp_length = 6`
+// sat in git while the hosted project ran `true` and `8`. These tests pin the
+// comparator that turns that silent drift into a failing check.
+
+/**
+ * A live `GET /config/auth` body in which every mapped API key holds the value
+ * `config.toml` declares, so `evaluateAuthPolicyDrift` reports nothing. Inverted
+ * rows (`negate: true`) store the negation of the config value, exactly as GoTrue
+ * does for `disable_signup` / `mailer_autoconfirm`.
+ */
+function liveFromRepo(overrides = {}) {
+  const toml = readRepoConfigToml();
+  const live = {};
+  for (const { toml: [section, key], api, negate, duration } of AUTH_POLICY_FIELDS) {
+    let repoValue = readTomlValue(toml, section, key);
+    if (duration) repoValue = parseDurationSeconds(repoValue);
+    live[api] = negate ? !repoValue : repoValue;
+  }
+  return { ...live, ...overrides };
+}
+
+test("the repository policy fields are all declared, so nothing is skipped", () => {
+  // If a field is dropped from config.toml the comparator skips it silently,
+  // which would let a future drift through. Every mapped field must be present.
+  const toml = readRepoConfigToml();
+  for (const { toml: [section, key] } of AUTH_POLICY_FIELDS) {
+    assert.notEqual(readTomlValue(toml, section, key), null, `[${section}] ${key}`);
+  }
+});
+
+test("a policy value that matches the hosted project is not drift", () => {
+  const live = liveFromRepo();
+  assert.deepEqual(evaluateAuthPolicyDrift(live), []);
+});
+
+test("a stale rate limit is reported with both values", () => {
+  const live = liveFromRepo({ rate_limit_otp: 999 });
+  const problems = evaluateAuthPolicyDrift(live);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /sign_in_sign_ups = 10/);
+  assert.match(problems[0], /rate_limit_otp = 999/);
+});
+
+test("a boolean policy field is compared, not coerced away", () => {
+  // `secure_password_change` is a bool; a naive `==` on "true" would miss it.
+  const live = liveFromRepo({ security_update_password_require_reauthentication: false });
+  const problems = evaluateAuthPolicyDrift(live);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /secure_password_change = true/);
+});
+
+test("the CLI name mismatch is what the mapping exists to catch", () => {
+  // `sign_in_sign_ups` has no API field of that name; it maps to `rate_limit_otp`.
+  const row = AUTH_POLICY_FIELDS.find((f) => f.toml[1] === "sign_in_sign_ups");
+  assert.equal(row.api, "rate_limit_otp");
+  const row2 = AUTH_POLICY_FIELDS.find((f) => f.toml[1] === "token_verifications");
+  assert.equal(row2.api, "rate_limit_verify");
+});
+
+test("a field absent from the live config is skipped, not reported", () => {
+  const live = liveFromRepo();
+  delete live.mailer_otp_exp;
+  assert.deepEqual(evaluateAuthPolicyDrift(live), []);
+});
+
+test("a field absent from config.toml is skipped, not reported", () => {
+  const toml = "[auth.email]\nsecure_password_change = true\n";
+  const live = { security_update_password_require_reauthentication: true, mailer_otp_length: 8 };
+  assert.deepEqual(evaluateAuthPolicyDrift(live, toml), []);
+});
+
+test("a missing config.toml yields no findings rather than a crash", () => {
+  assert.deepEqual(evaluateAuthPolicyDrift({ rate_limit_otp: 10 }, null), []);
+});
+
+test("a value on a later line of the section is still read", () => {
+  // The reader must scan the whole block, not only the line after the header.
+  const toml = "[auth.rate_limit]\nemail_sent = 30\nsms_sent = 30\nanonymous_users = 20\n";
+  assert.deepEqual(
+    evaluateAuthPolicyDrift({ rate_limit_anonymous_users: 20 }, toml),
+    [],
+  );
+  const drift = evaluateAuthPolicyDrift({ rate_limit_anonymous_users: 30 }, toml);
+  assert.equal(drift.length, 1);
+  assert.match(drift[0], /anonymous_users = 20/);
+});
+
+test("an inverted field compares the negation, not the raw value", () => {
+  // `enable_signup = true` in config.toml is `disable_signup = false` live; a raw
+  // compare would report a permanent false drift on every run.
+  const row = AUTH_POLICY_FIELDS.find((f) => f.toml[1] === "enable_signup");
+  assert.equal(row.negate, true);
+  assert.equal(row.api, "disable_signup");
+  const toml = "[auth]\nenable_signup = true\n";
+  assert.deepEqual(evaluateAuthPolicyDrift({ disable_signup: false }, toml), []);
+  const drift = evaluateAuthPolicyDrift({ disable_signup: true }, toml);
+  assert.equal(drift.length, 1);
+  assert.match(drift[0], /enable_signup = true/);
+});
+
+test("the confirmation switch is inverted too", () => {
+  // The CLI maps `enable_confirmations` to `mailer_autoconfirm` (inverted).
+  const row = AUTH_POLICY_FIELDS.find((f) => f.toml[1] === "enable_confirmations");
+  assert.equal(row.negate, true);
+  assert.equal(row.api, "mailer_autoconfirm");
+});
+
+test("the newly guarded identity and MFA fields are mapped and compared", () => {
+  const api = (key) => AUTH_POLICY_FIELDS.find((f) => f.toml[1] === key)?.api;
+  assert.equal(api("jwt_expiry"), "jwt_exp");
+  assert.equal(api("minimum_password_length"), "password_min_length");
+  assert.equal(api("enable_manual_linking"), "security_manual_linking_enabled");
+  assert.equal(api("enable_anonymous_sign_ins"), "external_anonymous_users_enabled");
+  assert.equal(api("max_enrolled_factors"), "mfa_max_enrolled_factors");
+  assert.equal(api("double_confirm_changes"), "mailer_secure_email_change_enabled");
+  assert.equal(api("enable_signup"), "disable_signup");
+  // A change to any of them is caught, e.g. manual linking enabled live.
+  const live = liveFromRepo({ security_manual_linking_enabled: true });
+  const drift = evaluateAuthPolicyDrift(live);
+  assert.equal(drift.length, 1);
+  assert.match(drift[0], /enable_manual_linking = false/);
+});
+
+test("parseDurationSeconds matches the CLI's Go-duration reading", () => {
+  // Values the CLI's own `parseDuration` produces for the hosted integers.
+  assert.equal(parseDurationSeconds("60s"), 60);
+  assert.equal(parseDurationSeconds("1m0s"), 60);
+  assert.equal(parseDurationSeconds("5s"), 5);
+  assert.equal(parseDurationSeconds("24h0m0s"), 86400);
+  assert.equal(parseDurationSeconds("300ms"), 0); // floored to whole seconds
+  assert.equal(parseDurationSeconds("0s"), 0);
+  assert.equal(parseDurationSeconds("1.5s"), 1); // floored, like the CLI
+  // Unparsable values return null so the comparator skips instead of guessing.
+  assert.equal(parseDurationSeconds("60"), null);
+  assert.equal(parseDurationSeconds("s"), null);
+  assert.equal(parseDurationSeconds(60), null);
+});
+
+test("max_frequency is compared as whole seconds, not verbatim", () => {
+  // `max_frequency = "60s"` in config.toml is `smtp_max_frequency = 60` live; a
+  // raw string compare would report a permanent false drift on every run.
+  const row = AUTH_POLICY_FIELDS.find(
+    (f) => f.toml[1] === "max_frequency" && f.api === "smtp_max_frequency",
+  );
+  assert.equal(row.duration, true);
+  const toml = '[auth.email]\nmax_frequency = "60s"\n';
+  assert.deepEqual(evaluateAuthPolicyDrift({ smtp_max_frequency: 60 }, toml), []);
+  const drift = evaluateAuthPolicyDrift({ smtp_max_frequency: 10 }, toml);
+  assert.equal(drift.length, 1);
+  assert.match(drift[0], /max_frequency = 60/);
+  assert.match(drift[0], /smtp_max_frequency = 10/);
+});
+
+test("an unparsable max_frequency is skipped, not reported", () => {
+  const toml = "[auth.email]\nmax_frequency = 60\n"; // missing unit
+  assert.deepEqual(evaluateAuthPolicyDrift({ smtp_max_frequency: 60 }, toml), []);
+});
+
+test("the MFA phone max_frequency maps to the same duration shape", () => {
+  const row = AUTH_POLICY_FIELDS.find((f) => f.api === "mfa_phone_max_frequency");
+  assert.equal(row.duration, true);
+  assert.deepEqual(row.toml, ["auth.mfa.phone", "max_frequency"]);
+  const toml = "[auth.mfa.phone]\nmax_frequency = \"5s\"\n";
+  assert.deepEqual(evaluateAuthPolicyDrift({ mfa_phone_max_frequency: 5 }, toml), []);
 });

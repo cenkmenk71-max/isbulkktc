@@ -264,10 +264,12 @@ reach production.
 1. In Auth > Providers, keep Email enabled and turn on **Confirm email**. The
    local stack already requires a verified mailbox before sign-in, and the
    sign-in action expects the resulting `email_not_confirmed` code.
-2. Set **Minimum password length** to 8 to match `updatePasswordSchema` and
-   `signUpSchema`. Leave character-class rules off; prefer Supabase's
-   **leaked password protection** (HaveIBeenPwned) instead, which the local
-   config intentionally does not attempt to emulate.
+2. Set **Minimum password length** to 10 to match `updatePasswordSchema` and
+   `signUpSchema` (`src/features/identity/schemas.ts`). Leave character-class
+   rules off; prefer Supabase's **leaked password protection** (HaveIBeenPwned)
+   instead. Note the local config does not emulate it, and the hosted project
+   currently runs it off (`password_hibp_enabled = false`), so this is a
+   dashboard-only toggle today.
 3. Under Auth > Rate Limits, set the email send limit to a production-appropriate
    value. The local stack uses 30/hour as a development default; the hosted
    free plan's own limits apply on top and may be lower.
