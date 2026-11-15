@@ -110,12 +110,22 @@ test("a paraphrase of a flow question is answered in-process", () => {
     ["tr", "üye olmak istiyorum", /Aday olarak/],
     ["tr", "kayıt olmak istiyorum", /Aday olarak/],
     ["tr", "mail doğrulama nasıl yapılır", /doğrulama bağlantısı/],
+    ["tr", "mail doğrulama", /doğrulama bağlantısı/],
     ["tr", "doğrulama maili gelmedi", /doğrulama/],
     ["tr", "başvuru nasıl yapılır", /başvurunuz siteye kaydedilir/i],
     ["tr", "ilana başvurmak istiyorum", /başvurunuz siteye kaydedilir/i],
     ["tr", "ilan vermek istiyorum", /inceleme sürecine alınır/],
     ["tr", "şirket kaydı nasıl yapılır", /inceleme sürecine alınır/],
     ["tr", "cv gizliliği nasıl", /tarayıcınızda/],
+    // The short-token case: "cv" is two characters, below the matcher's
+    // significant-token floor, so "cv nasıl yüklenir" used to lose "cv" and
+    // ride the generic "nasıl"/"yüklenir" into the *apply* flow — a confident
+    // answer to a different question. With "cv" kept, these land on CV privacy.
+    ["tr", "cv nasıl yüklenir", /tarayıcınızda/],
+    ["tr", "cv nasıl eklenir", /tarayıcınızda/],
+    ["tr", "cv yükleme nasıl yapılır", /tarayıcınızda/],
+    ["tr", "cv nereye yüklenir", /tarayıcınızda/],
+    ["tr", "cv dosyası nasıl yüklenir", /tarayıcınızda/],
     // en
     ["en", "i forgot my password", /Forgot your password/],
     ["en", "how to sign up", /candidate account/],
@@ -123,6 +133,8 @@ test("a paraphrase of a flow question is answered in-process", () => {
     ["en", "email verification not working", /verification link/],
     ["en", "cover letter how to add", /cover letter/i],
     ["en", "where is my cv stored", /not uploaded to the server/i],
+    ["en", "how do i upload my cv", /not uploaded to the server/i],
+    ["en", "cv upload", /not uploaded to the server/i],
     // de — the case that was a live false positive before entry-relative coverage
     ["de", "ich habe mein passwort vergessen", /Passwort vergessen/],
     ["de", "passwort ändern", /Passwort vergessen/],
@@ -178,20 +190,44 @@ test("a paraphrase of an FAQ question is answered in-process", () => {
     ["tr", "fiyat", /ücretsizdir/],
     ["tr", "ne kadar ücret", /ücretsizdir/],
     ["tr", "paketleri nereden görebilirim", /ücretsizdir/],
+    // The plural/agglutinated forms that dropped the exact-token matcher to the
+    // model in production: "fiyatlar" is not the token "fiyat", and the earlier
+    // alias set only carried the singular, so the pricing question — the one the
+    // widget is asked most — was deflected. These must answer in-process.
+    ["tr", "fiyatlar nedir", /ücretsizdir/],
+    ["tr", "fiyatlar ne kadar", /ücretsizdir/],
+    ["tr", "ücretler nedir", /ücretsizdir/],
+    ["tr", "ücret nedir", /ücretsizdir/],
+    ["tr", "fiyatlarınız nedir", /ücretsizdir/],
+    ["tr", "kaç para", /ücretsizdir/],
+    // The agglutinated/suffixed verbs of the same ask: a Turkish speaker writes
+    // "ne kadar ödeyeceğim" or "ücret alıyor musunuz", not the bare noun. The
+    // suffix hides the stem from the exact-token matcher, so each of these hit
+    // the model (a live deflection) until the alias carried the whole phrasing.
+    ["tr", "ne kadar ödeyeceğim", /ücretsizdir/],
+    ["tr", "ücret alıyor musunuz", /ücretsizdir/],
+    ["tr", "para ödemem gerekiyor mu", /ücretsizdir/],
+    ["tr", "başvuru ücretsiz mi", /ücretsizdir/],
     // tr — the other FAQ topics
     ["tr", "hangi ilçelerde", /Lefkoşa/],
     ["tr", "hangi bölgeler", /Lefkoşa/],
+    ["tr", "nerede hizmet veriyorsunuz", /Lefkoşa/],
     ["tr", "hangi diller", /altı dilde/],
     ["tr", "dil desteği", /altı dilde/],
     ["tr", "şirket rehberi nedir", /doğrulan/],
     ["tr", "şirketler doğrulanmış mı", /doğrulan/],
     ["tr", "iletişim bilgileri", /info@isbulkktc\.com/],
+    ["tr", "iletişim bilgileriniz", /info@isbulkktc\.com/],
     ["tr", "telefon numarası", /info@isbulkktc\.com/],
+    ["tr", "telefon numaranız", /info@isbulkktc\.com/],
+    ["tr", "e-posta adresiniz", /info@isbulkktc\.com/],
     ["tr", "nasıl ulaşabilirim", /info@isbulkktc\.com/],
     // en
     ["en", "how much does it cost", /free for job seekers/i],
     ["en", "is it free", /free for job seekers/i],
     ["en", "free", /free for job seekers/i],
+    ["en", "do you charge", /free for job seekers/i],
+    ["en", "cost of posting a job", /free for job seekers/i],
     ["en", "listing prices", /free for job seekers/i],
     ["en", "job packages", /free for job seekers/i],
     ["en", "which districts", /Nicosia/],
@@ -267,18 +303,13 @@ test("every entry carries paraphrases and none are rendered as prompt facts", ()
 // is worse than no answer, so each must fall through (to the model, or the
 // grounded fallback) rather than match.
 //
-// "How much does a listing cost?" is the one deliberate exception: it is the
-// canonical English way to ask the pricing question, so it now resolves to the
-// pricing entry in-process instead of the model (see the pricing-recall test
-// below). The remaining probes stay uncovered because the curated aliases do not
-// claim them — the copy states no refund policy and no per-listing figure.
+// The pricing probes that used to live here ("Fiyatlarınız nedir?", "Kaç para?")
+// moved to the recall test: they are the canonical ways to ask the pricing
+// question, not off-topic look-alikes, so the pricing entry now claims them. What
+// stays uncovered is a question the copy genuinely does not answer — the copy
+// states no refund policy and no per-listing figure.
 test("a question that only shares a generic word does not match", () => {
-  for (const message of [
-    "Tek ilan fiyatı nedir?",
-    "Fiyatlarınız nedir?",
-    "Kaç para?",
-    "What is the refund policy?",
-  ]) {
+  for (const message of ["Tek ilan fiyatı nedir?", "What is the refund policy?"]) {
     const locale = message.includes("refund") ? "en" : "tr";
     assert.equal(
       answerFromKnowledge(message, locale),
