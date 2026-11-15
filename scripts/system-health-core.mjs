@@ -804,3 +804,90 @@ export function duplicateConstraintFinding({ rows, readError } = {}) {
     detail: `duplicate constraint definitions in public: ${named}${more} — a rewrite that renamed a constraint left the auto-named twin behind`,
   };
 }
+
+/**
+ * Turn a cron-retention observation into a finding, or `null` when the caller
+ * gave no observation to report.
+ *
+ * The notification worker is scheduled once a minute and `pg_cron` records every
+ * execution in `cron.job_run_details`, but the version the hosted project ships
+ * (1.6.4) has no retention setting — `cron.alter_job` has no retention argument
+ * and `cron.job` has no `job_run_details_retention` column — so nothing prunes
+ * the log. It grew to 26 MB, over half of the free-plan database, before
+ * `20261114120000_v4_cron_job_run_details_retention.sql` added a job to reclaim
+ * it. Because the schedule lives only in Production (`production-launch.md` §4,
+ * an operator step) and the local stack has no `pg_cron`, the repository's own
+ * pgTAP suite cannot assert this: only a live read of `cron.job` can confirm a
+ * scheduled job prunes its own history, so that is what this check does.
+ *
+ * The invariant is "the log is bounded", not "every job prunes it": the worker's
+ * command posts an HTTP request and never names the table, so the retention job
+ * is a *sibling* that reclaims the history for all jobs. The check therefore
+ * asks whether *any* scheduled command names `cron.job_run_details`, and warns
+ * only when none does — the state in which the log grows without bound. A `warn`
+ * names every scheduled job and reports the current log size so the operator has
+ * something to act on. `null` is reserved for the states that carry no evidence:
+ * no `jobs` array (caller misuse) and a `readError` (the Management API could not
+ * be read, so the check proves nothing and must stay silent rather than green).
+ *
+ * @param {{jobs?: Array<{jobid?: number, jobname?: string, command?: string}>, runDetails?: {rows?: number, sizeBytes?: number}, readError?: string}} [observation]
+ * @returns {{level: 'ok'|'warn', area: 'cron', detail: string}|null}
+ */
+export function cronRetentionFinding({ jobs, runDetails, readError } = {}) {
+  if (readError) return null;
+  if (!Array.isArray(jobs)) return null;
+  if (jobs.length === 0) {
+    return { level: 'ok', area: 'cron', detail: 'no pg_cron job is scheduled' };
+  }
+  const pruners = jobs.filter((job) => commandPrunesRunDetails(job?.command));
+  if (pruners.length > 0) {
+    const names = pruners.map(jobName).slice(0, 3).join(', ');
+    const more = pruners.length > 3 ? ` and ${pruners.length - 3} more` : '';
+    return {
+      level: 'ok',
+      area: 'cron',
+      detail: `${jobs.length} scheduled job(s); cron.job_run_details is pruned by ${names}${more}`,
+    };
+  }
+  const named = jobs.map(jobName).slice(0, 3).join(', ');
+  const more = jobs.length > 3 ? ` and ${jobs.length - 3} more` : '';
+  const size = describeRunDetails(runDetails);
+  return {
+    level: 'warn',
+    area: 'cron',
+    detail: `no scheduled job prunes cron.job_run_details (${named}${more})${size} — the log grows without bound on the free plan`,
+  };
+}
+
+/** A job's name, falling back to its id when the name is missing or empty. */
+function jobName(job) {
+  return typeof job?.jobname === 'string' && job.jobname ? job.jobname : `job ${job?.jobid ?? '?'}`;
+}
+
+/**
+ * Whether a `cron.job` command reclaims run history.
+ *
+ * The only way to prune `cron.job_run_details` from a scheduled command is to
+ * name the table, so a command that mentions it does so. Matching the name rather
+ * than parsing SQL keeps this robust to the delete's shape while still catching
+ * the one thing it must: a job that never touches the log.
+ */
+function commandPrunesRunDetails(command) {
+  return typeof command === 'string' && command.includes('job_run_details');
+}
+
+/** A `; cron.job_run_details holds N row(s) (M MB)` suffix, or `''` when unknown. */
+function describeRunDetails(runDetails) {
+  if (!runDetails || !Number.isFinite(runDetails.rows)) return '';
+  const size = Number.isFinite(runDetails.sizeBytes)
+    ? ` (${formatBytes(runDetails.sizeBytes)})`
+    : '';
+  return `; cron.job_run_details holds ${runDetails.rows} row(s)${size}`;
+}
+
+/** Bytes as a compact `MB`/`kB`/`B` string for a one-line detail. */
+function formatBytes(bytes) {
+  if (bytes >= 1024 * 1024) return `${Math.round(bytes / (1024 * 1024))} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} kB`;
+  return `${bytes} B`;
+}

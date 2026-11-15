@@ -17,7 +17,7 @@
 import { execFileSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 
-import { classifyCronFreshness, classifyProductionProbe, classifyRedRuns, classifyTokenProbe, deployEvidenceFinding, duplicateConstraintFinding, migrationLedgerFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests, supabaseTokenProblem } from './system-health-core.mjs';
+import { classifyCronFreshness, classifyProductionProbe, classifyRedRuns, classifyTokenProbe, cronRetentionFinding, deployEvidenceFinding, duplicateConstraintFinding, migrationLedgerFinding, queueGlobalGates, redPullRequests, redRunsOnMain, stuckPullRequests, supabaseTokenProblem } from './system-health-core.mjs';
 
 const REPO = 'cenkmenk71-max/isbulkktc';
 const SUPABASE_PROJECT_REF = process.env.SUPABASE_PROJECT_REF ?? 'uwmhquvzbilbfzdrlxmb';
@@ -297,6 +297,49 @@ async function readDuplicateConstraints(token, projectRef) {
   }
 }
 
+/**
+ * Read the scheduled pg_cron jobs and their run-log size, or report why not.
+ *
+ * The notification worker's schedule lives only in Production — an operator runs
+ * `cron.schedule` per `production-launch.md` §4 — so no committed file describes
+ * it and the local stack (no `pg_cron`) cannot assert it. The only place to see
+ * whether a scheduled job reclaims its own run history is the live catalogue,
+ * which the Management API exposes. The read-only endpoint runs as
+ * `supabase_read_only_user`, which holds `USAGE` on the `cron` schema and
+ * `SELECT` on both tables; the query reads and never writes.
+ */
+async function readCronJobs(token, projectRef) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const response = await fetch(
+      `https://api.supabase.com/v1/projects/${projectRef}/database/query/read-only`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          query:
+            "select (select coalesce(json_agg(json_build_object('jobid', jobid, 'jobname', jobname, 'command', command) order by jobid), '[]'::json) from cron.job) as jobs, (select json_build_object('rows', count(*), 'sizeBytes', pg_total_relation_size('cron.job_run_details')) from cron.job_run_details) as run_details",
+        }),
+        signal: controller.signal,
+      },
+    );
+    if (!response.ok) {
+      return { error: `Management API answered HTTP ${response.status}` };
+    }
+    const rows = await response.json();
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return { error: 'Management API returned no rows array' };
+    }
+    const [row] = rows;
+    return { jobs: row?.jobs, runDetails: row?.run_details };
+  } catch (error) {
+    return { error: String(error?.message ?? error) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const findings = [];
 function note(level, area, detail) {
   findings.push({ level, area, detail });
@@ -549,6 +592,27 @@ if (tokenAuthenticated) {
   const finding = duplicateConstraintFinding({
     rows: duplicates.rows,
     readError: duplicates.error,
+  });
+  if (finding) note(finding.level, finding.area, finding.detail);
+}
+
+// 8. Cron retention: every scheduled pg_cron job must reclaim its own run
+//    history. The notification worker fires once a minute and pg_cron 1.6.4 — the
+//    version the hosted project ships — has no retention setting, so without a
+//    pruning job `cron.job_run_details` grows without bound; it reached 26 MB,
+//    over half the free-plan database, before
+//    20261114120000_v4_cron_job_run_details_retention.sql bounded it. The
+//    schedule lives only in Production, so the local pgTAP suite cannot assert
+//    this; only a live read of `cron.job` can. Gated on a token the API already
+//    accepted, so a rejected token does not also produce a second, misleading
+//    warning. WARN, never FAIL — an unbounded log is a latent disk-exhaustion
+//    risk, not a broken system today.
+if (tokenAuthenticated) {
+  const cron = await readCronJobs(process.env.SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF);
+  const finding = cronRetentionFinding({
+    jobs: cron.jobs,
+    runDetails: cron.runDetails,
+    readError: cron.error,
   });
   if (finding) note(finding.level, finding.area, finding.detail);
 }
