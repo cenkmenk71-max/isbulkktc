@@ -24,6 +24,49 @@ import type { AppLocale } from "@/i18n/routing";
 const MIN_TOKEN_LENGTH = 3;
 
 /**
+ * Short tokens that are nonetheless significant in this domain: they name a
+ * topic the support copy answers, so they survive the length filter *and* count
+ * as content words (see `isAnchor`). "cv" is the résumé in every locale's
+ * support copy — dropping it left "cv nasıl yüklenir" with only the generic
+ * "nasıl"/"yüklenir" and let it match the unrelated apply flow ("cv yükleme nasıl
+ * yapılır" → the application steps), a confident answer to a different question.
+ * "dil"/"kaç" carry the language-support question ("kaç dil" — how many
+ * languages), which is otherwise made only of three-letter tokens.
+ */
+const SHORT_SIGNIFICANT_TOKENS = new Set(["cv", "dil", "kaç"]);
+
+/**
+ * The length at which a token counts as a *content* word rather than a
+ * function word. In the six support languages the articles, pronouns and
+ * particles that carry no topic ("was", "ist", "das", "der", "die", "the",
+ * "how", "and", "für") are three characters or fewer, while a word that
+ * names the question's subject ("passwort", "wetter", "kostenlos", "fiyat",
+ * "diller") is longer.
+ */
+const ANCHOR_TOKEN_LENGTH = 4;
+
+/**
+ * Whether a token can *anchor* a match — carry the topic, so two texts sharing
+ * it are plausibly about the same thing. Every token the length filter keeps
+ * that is four characters or more is an anchor, plus the curated short domain
+ * tokens above.
+ *
+ * This is the fix for a whole class of confident wrong answers, not one string.
+ * A phrasing made only of function words — the German alias "was ist das" was
+ * exactly that — shares its tokens with *any* sentence in the language, so a
+ * question about the weather or a refund cleared the coverage bar on "was" and
+ * "ist" alone and was answered with the platform summary. Requiring at least one
+ * shared *anchor* means a match must turn on a word that names the topic, which
+ * a function-word-only phrasing cannot supply; a real paraphrase keeps its
+ * content word ("passwort vergessen", "fiyatlar nedir") and still matches.
+ */
+function isAnchor(token: string): boolean {
+  return (
+    token.length >= ANCHOR_TOKEN_LENGTH || SHORT_SIGNIFICANT_TOKENS.has(token)
+  );
+}
+
+/**
  * A question must share at least this share of the *matched phrasing's*
  * significant words before that phrasing may answer it. Pure overlap is too
  * eager here: every FAQ question ends in the same word for the language
@@ -48,7 +91,11 @@ function tokenize(text: string, locale: AppLocale): string[] {
   return text
     .toLocaleLowerCase(locale)
     .split(/[^\p{L}\p{N}]+/u)
-    .filter((token) => token.length >= MIN_TOKEN_LENGTH);
+    .filter(
+      (token) =>
+        token.length >= MIN_TOKEN_LENGTH ||
+        SHORT_SIGNIFICANT_TOKENS.has(token),
+    );
 }
 
 /**
@@ -108,14 +155,18 @@ export function answerFromKnowledge(
       const phrasingTokens = new Set(tokenize(phrasing, locale));
       if (phrasingTokens.size === 0) continue;
       let score = 0;
+      let anchored = false;
       for (const token of queryTokens) {
-        if (phrasingTokens.has(token)) score += 1;
+        if (phrasingTokens.has(token)) {
+          score += 1;
+          if (isAnchor(token)) anchored = true;
+        }
       }
       if (score === 0) continue;
       const covers =
         (score >= MIN_SHARED_TOKENS && score / phrasingTokens.size >= MIN_COVERAGE) ||
         (phrasingTokens.size === 1 && score / queryTokens.size >= MIN_COVERAGE);
-      if (covers && (!best || score > best.score)) {
+      if (covers && anchored && (!best || score > best.score)) {
         best = { score, answer: entry.answer };
       }
     }

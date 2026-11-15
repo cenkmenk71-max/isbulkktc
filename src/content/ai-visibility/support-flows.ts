@@ -81,6 +81,7 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "Doğrulama maili gelmedi",
         "Hesabımı aktifleştiremiyorum",
         "E-posta doğrulama",
+        "Mail doğrulama",
         "Mail gelmedi",
         "Hesabımı doğrulayamıyorum",
         "E-postamı doğrulayamıyorum",
@@ -127,6 +128,13 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "CV güvenli mi?",
         "CV'im güvenli mi?",
         "CV nasıl yüklerim",
+        "CV nasıl yüklenir",
+        "CV nasıl eklenir",
+        "CV nasıl yüklerim?",
+        "CV nereye yüklenir",
+        "CV yükleme nasıl yapılır",
+        "CV yükleme",
+        "CV dosyası nasıl yüklenir",
         "CVim nereye kaydediliyor",
         "CV yüklemek zorunda mıyım",
       ],
@@ -196,6 +204,13 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "Is my CV uploaded?",
         "CV privacy",
         "Is my CV safe?",
+        // Kept deliberately short and noun-only: a filler-heavy alias like
+        // "How do I upload my CV?" shares the generic "how" with an unrelated
+        // ask ("how do I get a free CV review") and answers it with the CV
+        // privacy fact — a confident reply to a question the copy does not
+        // cover. The aliases below share no word with such a question.
+        "CV upload",
+        "CV storage",
       ],
       answer:
         "CV privacy: your CV file is not uploaded to the server; it is parsed in your browser and stays there.",

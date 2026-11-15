@@ -39,13 +39,13 @@ export const faqByLocale: Record<AppLocale, readonly FaqEntry[]> = {
     },
     {
       question: "Hangi bölgelerde hizmet veriyor?",
-      paraphrases: ["hangi ilçelerde", "hangi bölgeler", "hangi şehirlerde", "hizmet bölgeleri", "hangi ilçeler", "kaç ilçe", "kaç bölge", "hangi illerde"],
+      paraphrases: ["hangi ilçelerde", "hangi bölgeler", "hangi şehirlerde", "hizmet bölgeleri", "hangi ilçeler", "kaç ilçe", "kaç bölge", "hangi illerde", "nerede hizmet veriyorsunuz", "hangi bölgede"],
       answer:
         "Platform, Kuzey Kıbrıs'ın altı ilçesini kapsar: Lefkoşa, Gazimağusa, Girne, Güzelyurt, İskele ve Lefke.",
     },
     {
       question: "İlan yayınlamak ve başvurmak ücretli mi?",
-      paraphrases: ["ücretli", "ücretsiz", "fiyat", "ilan ücretli mi", "ilan paketleri", "ilan paketi", "işveren ilan paketi", "işveren ilan paketleri", "paket fiyatları", "ilan paket fiyatları", "fiyat listesi", "ilan fiyatları", "ne kadar ücret", "başvuru ücretli mi", "paketleri nereden görebilirim"],
+      paraphrases: ["ücretli", "ücretsiz", "fiyat", "fiyatlar", "ücret", "ücretler", "fiyat nedir", "fiyatlar nedir", "fiyatlarınız nedir", "ücret nedir", "ücretler nedir", "ücretleriniz nedir", "fiyatlar ne kadar", "ücretler ne kadar", "kaç para", "ne kadar ödeyeceğim", "ne kadar öderim", "ücret alıyor musunuz", "para alıyor musunuz", "para ödemem gerekiyor mu", "başvuru ücretsiz mi", "ilan ücretli mi", "ilan paketleri", "ilan paketi", "işveren ilan paketi", "işveren ilan paketleri", "paket fiyatları", "ilan paket fiyatları", "fiyat listesi", "ilan fiyatları", "ne kadar ücret", "başvuru ücretli mi", "paketleri nereden görebilirim"],
       answer:
         "İş arayanlar için ilan arama ve başvuru ücretsizdir. İşverenler ilan paketlerini inceler; ödeme web sitesinde alınmaz, IBAN ve ödeme talimatı paket görüşmesi sonrası e-posta veya WhatsApp gibi kanallardan özel olarak iletilir.",
     },
@@ -57,7 +57,7 @@ export const faqByLocale: Record<AppLocale, readonly FaqEntry[]> = {
     },
     {
       question: "İşBul KKTC'ye nasıl ulaşabilirim?",
-      paraphrases: ["nasıl ulaşabilirim", "iletişim bilgileri", "telefon numarası", "e-posta adresi", "destek kanalları", "size nasıl ulaşırım", "bize nasıl ulaşabilirim", "whatsapp numarası"],
+      paraphrases: ["nasıl ulaşabilirim", "iletişim bilgileri", "iletişim bilgileriniz", "telefon numarası", "telefon numaranız", "e-posta adresi", "e-posta adresiniz", "destek kanalları", "size nasıl ulaşırım", "bize nasıl ulaşabilirim", "whatsapp numarası"],
       answer:
         "E-posta (info@isbulkktc.com), telefon veya WhatsApp üzerinden ulaşabilirsiniz. Destek kanalları sitenin alt bilgisinde ve iletişim sayfasında listelenir.",
     },
@@ -83,7 +83,7 @@ export const faqByLocale: Record<AppLocale, readonly FaqEntry[]> = {
     },
     {
       question: "Does it cost anything to post or apply?",
-      paraphrases: ["free", "price", "prices", "cost", "how much does it cost", "listing prices", "job packages", "package prices", "posting fee", "is posting free"],
+      paraphrases: ["free", "price", "prices", "cost", "costs", "fees", "pricing", "is it free", "how much is it", "what does it cost", "how much does it cost", "how much is posting", "what are the prices", "do you charge", "how much do you charge", "what do you charge", "cost of posting a job", "listing prices", "job packages", "package prices", "posting fee", "is posting free"],
       answer:
         "Searching and applying is free for job seekers. Employers review job packages; payment is not collected on the website — IBAN details and payment instructions are shared privately by email or WhatsApp after discussing the package.",
     },
@@ -121,7 +121,7 @@ export const faqByLocale: Record<AppLocale, readonly FaqEntry[]> = {
     },
     {
       question: "Kostet das Veröffentlichen oder Bewerben etwas?",
-      paraphrases: ["anzeigenpakete", "kostenlos", "kosten", "ist es kostenlos", "was kostet es", "wie viel kostet"],
+      paraphrases: ["anzeigenpakete", "kostenlos", "kosten", "ist es kostenlos", "was kostet es", "wie viel kostet", "preis", "preise", "gebühr", "wie viel kostet es"],
       answer:
         "Die Suche und die Bewerbung sind für Arbeitssuchende kostenlos. Arbeitgeber sehen sich Anzeigenpakete an; die Zahlung erfolgt nicht auf der Website — Bankdaten und Anweisungen werden nach Besprechung des Pakets privat per E-Mail oder WhatsApp mitgeteilt.",
     },
@@ -133,7 +133,7 @@ export const faqByLocale: Record<AppLocale, readonly FaqEntry[]> = {
     },
     {
       question: "Wie kann ich İşBul KKTC kontaktieren?",
-      paraphrases: ["wie erreiche ich euch", "e-mail-adresse", "support-kanäle"],
+      paraphrases: ["wie erreiche ich euch", "e-mail-adresse", "support-kanäle", "telefonnummer", "kontaktdaten"],
       answer:
         "Per E-Mail (info@isbulkktc.com), Telefon oder WhatsApp. Die Support-Kanäle sind im Footer der Website und auf der Kontaktseite aufgeführt.",
     },
@@ -159,7 +159,7 @@ export const faqByLocale: Record<AppLocale, readonly FaqEntry[]> = {
     },
     {
       question: "ثبت آگهی یا درخواست هزینه دارد؟",
-      paraphrases: ["رایگان", "هزینه", "رایگان است", "چقدر هزینه دارد", "بسته‌های آگهی", "هزینه دارد"],
+      paraphrases: ["رایگان", "هزینه", "رایگان است", "چقدر هزینه دارد", "بسته‌های آگهی", "هزینه دارد", "قیمت", "قیمت‌ها", "هزینه ثبت آگهی"],
       answer:
         "جست‌وجو و درخواست برای کارجویان رایگان است. کارفرمایان بسته‌های آگهی را بررسی می‌کنند؛ پرداخت در وب‌سایت انجام نمی‌شود و اطلاعات IBAN پس از گفتگو درباره بسته، از طریق ایمیل یا واتساپ به‌صورت خصوصی ارسال می‌شود.",
     },
@@ -171,7 +171,7 @@ export const faqByLocale: Record<AppLocale, readonly FaqEntry[]> = {
     },
     {
       question: "چگونه می‌توانم با İşBul KKTC تماس بگیرم؟",
-      paraphrases: ["چگونه تماس بگیرم", "شماره تلفن", "کانال‌های پشتیبانی"],
+      paraphrases: ["چگونه تماس بگیرم", "شماره تلفن", "کانال‌های پشتیبانی", "اطلاعات تماس"],
       answer:
         "از طریق ایمیل (info@isbulkktc.com)، تلفن یا واتساپ. کانال‌های پشتیبانی در پاورقی وب‌سایت و صفحه تماس فهرست شده‌اند.",
     },
