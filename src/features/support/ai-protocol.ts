@@ -267,6 +267,30 @@ export function sanitizeModelReply(raw: string | null): string | null {
 }
 
 /**
+ * How long a provider asked us to wait before retrying, in milliseconds.
+ *
+ * Reads the standard `Retry-After` header — seconds (`Retry-After: 2`) or an
+ * HTTP-date — and Groq's `x-ratelimit-reset-tokens`, a duration such as
+ * `9.412s` naming exactly when the token bucket refills. Returns `null` when
+ * neither is present or parseable, so the caller falls back to its own bounded
+ * backoff. A value already in the past (`Retry-After: 0`, a stale date) yields
+ * `0`, meaning "retry now" rather than "give up".
+ */
+export function parseRetryAfterMs(headers: Headers): number | null {
+  const retryAfter = headers.get("retry-after")?.trim();
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds)) return seconds > 0 ? Math.round(seconds * 1000) : 0;
+    const date = Date.parse(retryAfter);
+    if (!Number.isNaN(date)) return Math.max(0, date - Date.now());
+  }
+  const resetTokens = headers.get("x-ratelimit-reset-tokens")?.trim();
+  const match = resetTokens ? /^(\d+(?:\.\d+)?)s$/.exec(resetTokens) : null;
+  if (match) return Math.round(Number(match[1]) * 1000);
+  return null;
+}
+
+/**
  * Distinguishing phrases from the system prompt. A reply that carries any of
  * them is not an answer — it is the instructions read back. Lower-cased and
  * compared against the folded reply, so casing and padding do not hide them.
