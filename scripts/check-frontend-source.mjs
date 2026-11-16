@@ -609,7 +609,8 @@ assert.match(freelance, /href="\/register"/);
 assert.doesNotMatch(freelance, /category|search|filter|sample|demo/i);
 assert.match(packagesPage, /href="#packages-current"/);
 assert.match(packagesPage, /preload/);
-assert.match(packagesPage, /const packageTiers = \[/);
+assert.match(packagesPage, /const profiles = /);
+assert.match(packagesPage, /const interactiveProfiles = /);
 assert.match(packagesPage, /const packageTerms = \{/);
 assert.match(packagesPage, /<PackagesInteractiveShowcase/);
 assert.doesNotMatch(

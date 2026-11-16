@@ -269,6 +269,9 @@ export type Database = {
           max_active_jobs: number;
           job_duration_days: number;
           is_active: boolean;
+          price_minor: number;
+          currency: string;
+          job_credits: number;
           created_at: string;
           updated_at: string;
         },
@@ -382,6 +385,98 @@ export type Database = {
         never,
         never
       >;
+      orders: Table<
+        {
+          id: string;
+          company_id: string;
+          package_id: string;
+          status: string;
+          total_minor: number;
+          currency: string;
+          reference_code: string;
+          package_snapshot: Json;
+          payment_instruction_version_id: string | null;
+          expires_at: string;
+          created_at: string;
+          updated_at: string;
+        },
+        never,
+        never
+      >;
+      payment_submissions: Table<
+        {
+          id: string;
+          order_id: string;
+          submitted_by: string;
+          sender_name: string;
+          transfer_reference: string;
+          amount_minor: number;
+          currency: string;
+          transferred_at: string;
+          receipt_storage_path: string | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        },
+        never,
+        never
+      >;
+      payment_reconciliations: Table<
+        {
+          id: string;
+          order_id: string;
+          submission_id: string;
+          reviewed_by: string;
+          decision: string;
+          bank_reference_normalized: string;
+          notes: string | null;
+          reviewed_at: string;
+        },
+        never,
+        never
+      >;
+      credit_accounts: Table<
+        {
+          company_id: string;
+          available_balance: number;
+          updated_at: string;
+        },
+        never,
+        never
+      >;
+      credit_ledger_entries: Table<
+        {
+          id: string;
+          company_id: string;
+          order_id: string | null;
+          job_id: string | null;
+          entry_type: string;
+          quantity_delta: number;
+          idempotency_key: string;
+          actor_id: string;
+          reason: string;
+          created_at: string;
+        },
+        never,
+        never
+      >;
+      payment_instruction_versions: Table<
+        {
+          id: string;
+          beneficiary_name: string;
+          bank_name: string;
+          iban_restricted_value: string;
+          currency: string;
+          instructions: string;
+          active_from: string;
+          active_to: string | null;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        },
+        never,
+        never
+      >;
       // Web Push rows are capability storage, not user data: every read and
       // write goes through a `security definer` RPC bound to `auth.uid()`, so
       // there is no client-side INSERT/UPDATE shape to model here.
@@ -442,6 +537,9 @@ export type Database = {
           max_active_jobs: number;
           job_duration_days: number;
           is_active: boolean;
+          price_minor: number;
+          currency: string;
+          job_credits: number;
           created_at: string;
           updated_at: string;
         }[];
@@ -556,6 +654,9 @@ export type Database = {
           _max_active_jobs: number;
           _job_duration_days: number;
           _is_active: boolean;
+          _price_minor?: number;
+          _currency?: string;
+          _job_credits?: number;
         };
         Returns: string;
       };
@@ -811,6 +912,23 @@ export type Database = {
           sort_order: number;
         }[];
       };
+      get_public_job_packages: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          code: string;
+          display_name: string;
+          description: string;
+          max_active_jobs: number;
+          job_duration_days: number;
+          is_active: boolean;
+          price_minor: number;
+          currency: string;
+          job_credits: number;
+          created_at: string;
+          updated_at: string;
+        }[];
+      };
       get_public_directory: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -913,6 +1031,76 @@ export type Database = {
       admin_delete_directory_company: {
         Args: { _directory_entry_id: string };
         Returns: undefined;
+      };
+      get_active_payment_instruction: {
+        Args: { _for_admin: boolean };
+        Returns: {
+          id: string;
+          beneficiary_name: string;
+          bank_name: string;
+          iban_display: string;
+          currency: string;
+          instructions: string;
+        }[];
+      };
+      get_my_orders: {
+        Args: { _company_id: string };
+        Returns: {
+          id: string;
+          company_id: string;
+          package_id: string;
+          status: string;
+          total_minor: number;
+          currency: string;
+          reference_code: string;
+          package_snapshot: Json;
+          payment_instruction_version_id: string | null;
+          expires_at: string;
+          created_at: string;
+          updated_at: string;
+        }[];
+      };
+      create_order: {
+        Args: { _company_id: string; _package_id: string };
+        Returns: {
+          id: string;
+          company_id: string;
+          package_id: string;
+          status: string;
+          total_minor: number;
+          currency: string;
+          reference_code: string;
+          package_snapshot: Json;
+          payment_instruction_version_id: string | null;
+          expires_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+      };
+      submit_payment: {
+        Args: {
+          _order_id: string;
+          _sender_name: string;
+          _transfer_reference: string;
+          _amount_minor: number;
+          _currency: string;
+          _transferred_at: string;
+          _receipt_storage_path: string | null;
+        };
+        Returns: {
+          id: string;
+          order_id: string;
+          submitted_by: string;
+          sender_name: string;
+          transfer_reference: string;
+          amount_minor: number;
+          currency: string;
+          transferred_at: string;
+          receipt_storage_path: string | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
       };
     };
     Enums: {

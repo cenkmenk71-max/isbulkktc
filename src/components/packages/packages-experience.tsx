@@ -6,38 +6,8 @@ import type { AppLocale } from "@/i18n/routing";
 import { PackagesInteractiveShowcase } from "@/components/packages/packages-interactive-showcase";
 import { SalesLeadForm } from "@/features/sales/sales-lead-form";
 import { packageTierColors, packageTierPlanCodes } from "@/components/packages/package-tiers";
-import type { ListingDuration } from "@/experience/scenes/vend-pricing/lib/plans";
-
-const packageTiers = [
-  {
-    id: "singleListing",
-    code: packageTierPlanCodes.singleListing,
-    color: packageTierColors.singleListing,
-    listingCount: 1,
-    prices: { 1: 290, 7: 690, 30: 1290 },
-  },
-  {
-    id: "growth",
-    code: packageTierPlanCodes.growth,
-    color: packageTierColors.growth,
-    listingCount: 3,
-    prices: { 1: 590, 7: 1390, 30: 2790 },
-  },
-  {
-    id: "professional",
-    code: packageTierPlanCodes.professional,
-    color: packageTierColors.professional,
-    listingCount: 5,
-    prices: { 1: 890, 7: 2090, 30: 3990 },
-  },
-  {
-    id: "enterprise",
-    code: packageTierPlanCodes.enterprise,
-    color: packageTierColors.enterprise,
-    listingCount: null,
-    prices: null,
-  },
-] as const;
+import type { PublicJobPackage } from "@/server/dal/billing";
+import type { PackageProfile } from "@/components/packages/packages-interactive-showcase";
 
 const packageTerms = {
   singleListing: ["oneListing", "durationOptions", "onePosition"],
@@ -46,50 +16,89 @@ const packageTerms = {
   enterprise: ["finiteScope", "durationOptions", "writtenOffer"],
 } as const;
 
-const durations = [1, 7, 30] as const satisfies readonly ListingDuration[];
-const durationLabelKeys = {
-  1: "oneDay",
-  7: "sevenDays",
-  30: "thirtyDays",
-} as const;
+const durations = [1, 7, 30] as const;
 
-export type PlanPriceOverrides = Record<
-  string,
-  {
-    prices: Record<ListingDuration, number> | null;
-    listingCount: number | null;
-  }
->;
+type PackageTierId = keyof typeof packageTierPlanCodes;
+
+function getTierFromPackage(pkg: PublicJobPackage): PackageTierId | null {
+  const code = pkg.code;
+  const tierEntry = Object.entries(packageTierPlanCodes).find(([, planCode]) => planCode === code);
+  return tierEntry ? (tierEntry[0] as PackageTierId) : null;
+}
+
+function getTierDefaults(tierId: PackageTierId) {
+  const defaults: Record<PackageTierId, { listingCount: number | null; prices: Record<number, number> | null }> = {
+    singleListing: { listingCount: 1, prices: { 1: 290, 7: 690, 30: 1290 } },
+    growth: { listingCount: 3, prices: { 1: 590, 7: 1390, 30: 2790 } },
+    professional: { listingCount: 5, prices: { 1: 890, 7: 2090, 30: 3990 } },
+    enterprise: { listingCount: null, prices: null },
+  };
+  return defaults[tierId] ?? { listingCount: null, prices: null };
+}
+
+function mapPackageToTierProfile(pkg: PublicJobPackage): PackageProfile | null {
+  const tierId = getTierFromPackage(pkg);
+  if (!tierId) return null;
+  const defaults = getTierDefaults(tierId);
+  const prices: Record<1 | 7 | 30, number> | null = pkg.price_minor > 0
+    ? { 1: pkg.price_minor, 7: pkg.price_minor, 30: pkg.price_minor }
+    : defaults.prices as Record<1 | 7 | 30, number> | null;
+  return {
+    id: tierId,
+    color: packageTierColors[tierId],
+    listingCount: pkg.job_credits ?? defaults.listingCount,
+    prices,
+    title: pkg.display_name,
+    audience: pkg.description || "",
+    summary: pkg.description || "",
+    terms: [...packageTerms[tierId]],
+  };
+}
 
 export async function PackagesExperience({
   locale,
-  planPriceOverrides,
+  packages,
 }: {
   locale: AppLocale;
-  planPriceOverrides?: PlanPriceOverrides;
+  packages: PublicJobPackage[];
 }) {
   const copy = await getTranslations({ locale, namespace: "PackagesPage" });
   const leadCopy = await getTranslations({ locale, namespace: "SalesLeadForm" });
-  const profiles = packageTiers.map((tier) => {
-    const override = planPriceOverrides?.[tier.code];
+
+  const activePackages = packages.filter((p) => p.is_active);
+
+  const profiles = activePackages.map((pkg) => {
+    const tierId = getTierFromPackage(pkg);
+    const defaults = tierId ? getTierDefaults(tierId) : { listingCount: null, prices: null };
+    const tierColor = tierId ? packageTierColors[tierId] : packageTierColors.singleListing;
+
+    const prices: Record<number, number> | null = pkg.price_minor > 0
+      ? { 1: pkg.price_minor, 7: pkg.price_minor, 30: pkg.price_minor }
+      : defaults.prices;
+
     return {
-      ...tier,
-      // An override row is authoritative even when it clears a field: a null
-      // `prices` is "quote on request", not "keep the bundled numbers".
-      listingCount: override ? override.listingCount : tier.listingCount,
-      prices: override ? override.prices : tier.prices,
-      title: copy(`showcase.cards.${tier.id}.title`),
-      audience: copy(`showcase.cards.${tier.id}.audience`),
-      summary: copy(`showcase.cards.${tier.id}.summary`),
-      terms: packageTerms[tier.id].map((term) =>
-        copy(`showcase.terms.${term}`),
-      ),
+      id: pkg.code,
+      code: pkg.code,
+      color: tierColor,
+      listingCount: pkg.job_credits ?? defaults.listingCount,
+      prices,
+      title: pkg.display_name,
+      audience: pkg.description || copy(`showcase.cards.${tierId ?? "singleListing"}.audience`),
+      summary: pkg.description || copy(`showcase.cards.${tierId ?? "singleListing"}.summary`),
+      terms: tierId
+        ? [...packageTerms[tierId]].map((term) => copy(`showcase.terms.${term}`))
+        : [...packageTerms.singleListing].map((term) => copy(`showcase.terms.${term}`)),
     };
   });
-  const getDurationLabel = (days: ListingDuration) =>
-    copy(`showcase.pricing.${durationLabelKeys[days]}`);
+
+  const interactiveProfiles = activePackages
+    .map(mapPackageToTierProfile)
+    .filter((p): p is PackageProfile => p !== null);
+
+  const getDurationLabel = (days: number) =>
+    copy(`showcase.pricing.${durations.includes(days as 1 | 7 | 30) ? (days === 1 ? "oneDay" : days === 7 ? "sevenDays" : "thirtyDays") : "oneDay"}`);
   const durationOptions = durations.map((days) => ({
-    days,
+    days: days as 1 | 7 | 30,
     label: getDurationLabel(days),
   }));
 
@@ -164,7 +173,7 @@ export async function PackagesExperience({
                                 style: "currency",
                                 currency: "TRY",
                                 maximumFractionDigits: 0,
-                              }).format(prices[days])}
+                              }).format(prices[days] / 100)}
                             </dd>
                           </div>
                         ))}
@@ -185,12 +194,7 @@ export async function PackagesExperience({
       <section className="packages-vend-section" aria-label={copy("showcase.title")}>
         <div className="packages-vend-page">
           <PackagesInteractiveShowcase
-            profiles={profiles.map((profile) => ({
-              ...profile,
-              id: profile.id,
-              listingCount: profile.listingCount,
-              prices: profile.prices,
-            }))}
+            profiles={interactiveProfiles}
             title={copy("showcase.title")}
             instruction={copy("showcase.instruction")}
             brand={copy("showcase.brand")}

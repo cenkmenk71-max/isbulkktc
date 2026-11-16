@@ -1,6 +1,6 @@
 begin;
 
-select plan(23);
+select plan(28);
 
 insert into auth.users (id, email, raw_user_meta_data)
 values
@@ -114,6 +114,27 @@ select is(
    where id = current_setting('test.job_package_id')::uuid),
   1,
   'an administrator can configure the active-job entitlement'
+);
+
+select is(
+  (select price_minor from public.job_packages
+   where id = current_setting('test.job_package_id')::uuid),
+  0,
+  'new package gets default price_minor = 0'
+);
+
+select is(
+  (select currency from public.job_packages
+   where id = current_setting('test.job_package_id')::uuid),
+  'TRY',
+  'new package gets default currency = TRY'
+);
+
+select is(
+  (select job_credits from public.job_packages
+   where id = current_setting('test.job_package_id')::uuid),
+  1,
+  'new package gets default job_credits = 1'
 );
 
 select lives_ok(
@@ -287,6 +308,33 @@ select throws_ok(
   '42501',
   null,
   'anonymous visitors cannot read company package assignments'
+);
+
+-- anon can read price_minor and currency on active packages via column grants
+set local "request.jwt.claims" =
+  '{"role":"anon","iss":"supabase","aud":"authenticated"}';
+set local role anon;
+
+select ok(
+  has_any_column_privilege('anon', 'public.job_packages', 'SELECT'),
+  'anon has at least one column grant on job_packages'
+);
+
+select is(
+  (select count(*)::integer from public.job_packages where is_active),
+  0,
+  'anon sees zero active packages in this fixture'
+);
+
+-- authenticated can read price_minor and currency
+reset role;
+set local "request.jwt.claims" =
+  '{"sub":"60000000-0000-4000-8000-000000000001","role":"authenticated"}';
+set local role authenticated;
+
+select ok(
+  has_any_column_privilege('authenticated', 'public.job_packages', 'SELECT'),
+  'authenticated has at least one column grant on job_packages'
 );
 
 select * from finish();

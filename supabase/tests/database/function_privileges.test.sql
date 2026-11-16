@@ -161,7 +161,7 @@ select is(
     'admin_list_support_threads()',
     'admin_list_verified_companies()',
     'admin_reply_support_thread(_thread_id uuid, _body text)',
-    'admin_save_job_package(_package_id uuid, _code text, _display_name text, _description text, _max_active_jobs integer, _job_duration_days integer, _is_active boolean)',
+    'admin_save_job_package(_package_id uuid, _code text, _display_name text, _description text, _max_active_jobs integer, _job_duration_days integer, _is_active boolean, _price_minor integer, _currency text, _job_credits integer)',
     'admin_upsert_directory_company(_directory_entry_id text, _name text, _categories text[], _logo_file text, _logo_domain text, _logo_width integer, _logo_height integer, _locations jsonb)',
     'admin_upsert_faq_entry(_id uuid, _locale text, _question text, _answer text, _sort_order integer, _is_published boolean)',
     'admin_upsert_listing_plan(_code text, _audience text, _name text, _blurb text, _features text[], _color text, _listing_count integer, _price_1 integer, _price_7 integer, _price_30 integer, _is_active boolean, _sort_order integer)',

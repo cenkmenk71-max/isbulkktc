@@ -1,11 +1,12 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import {
-  ArrowRight,
   BadgeCheck,
   Building2,
   Clock3,
+  CreditCard,
   FileCheck2,
+  FileText,
   LogOut,
   MapPin,
   Plus,
@@ -18,10 +19,10 @@ import { CompanyProfileForm } from "@/features/companies/company-profile-form";
 import { markApplicationViewed } from "@/features/jobs/actions";
 import { companyDirectory } from "@/features/companies/directory-data";
 import { getManagedDirectoryEntries } from "@/server/dal/content";
-import { getCompanyProfileCompletion } from "@/features/companies/profile-completion";
 import { getCompanyApplications, isJobCompanyMember } from "@/server/dal/jobs";
 import { getApplicationStatusMessageKey } from "@/features/jobs/presentation";
 import { getEmployerWorkspace } from "@/server/dal/companies";
+import { getCompanyCreditAccount, getCompanyJobEntitlements } from "@/server/dal/billing";
 import {
   getNorthernCyprusDistrictForLocation,
   northernCyprusDistricts,
@@ -55,12 +56,15 @@ export default async function CompanyDashboardPage({
   if (!locale) notFound();
 
   setRequestLocale(locale);
-  const [{ user, companies, company, latestSubmission }, copy, managedDirectory] =
-    await Promise.all([
-      getEmployerWorkspace(query.company),
-      getTranslations("CompanyManagement"),
-      getManagedDirectoryEntries(),
-    ]);
+  const workspace = await getEmployerWorkspace(query.company);
+  const { user, companies, company, latestSubmission } = workspace;
+  const companyId = query.company ?? companies[0]?.id ?? "";
+  const [copy, managedDirectory, creditAccount, entitlements] = await Promise.all([
+    getTranslations("CompanyManagement"),
+    getManagedDirectoryEntries(),
+    getCompanyCreditAccount(companyId),
+    getCompanyJobEntitlements(companyId),
+  ]);
   const directoryEntries = managedDirectory ?? companyDirectory;
   const submittedProfile =
     latestSubmission && latestSubmission.status !== "approved"
@@ -87,8 +91,8 @@ export default async function CompanyDashboardPage({
   const submittedDistrictLabel = submittedDistrict
     ? districtLabels.get(submittedDistrict)
     : null;
-  const directoryTargetRows = directoryEntries.flatMap((entry) =>
-    entry.locations.map((location, index) => {
+  const directoryTargetRows = directoryEntries.flatMap((entry: { id: string; name: string; categories: string[]; locations: Array<{ address: string | null; municipality: string | null; phone: string | null; website: string | null; email?: string | null }> }) =>
+    entry.locations.map((location: { address: string | null; municipality: string | null; phone: string | null; website: string | null; email?: string | null }, index: number) => {
       const district = getNorthernCyprusDistrictForLocation(location);
       return {
         value: `${entry.id}:${index}`,
@@ -117,7 +121,7 @@ export default async function CompanyDashboardPage({
     );
   }
   const directoryTargetOccurrences = new Map<string, number>();
-  const directoryTargets = directoryTargetRows.map(({ baseLabel, ...target }) => {
+  const directoryTargets = directoryTargetRows.map(({ baseLabel, ...target }: { baseLabel: string; value: string; categories: string[]; website: string | null; phone: string | null; publicEmail: string | null; address: string | null; municipality: string | null }) => {
     const occurrence = (directoryTargetOccurrences.get(baseLabel) ?? 0) + 1;
     directoryTargetOccurrences.set(baseLabel, occurrence);
     return {
@@ -131,18 +135,8 @@ export default async function CompanyDashboardPage({
   const directoryTargetLabel =
     directoryTargets.find(({ value }) => value === directoryTarget)?.label ??
     null;
-  const profileCompletion = getCompanyProfileCompletion({
-    companyName: submittedCompanyName,
-    profileDescription: submittedProfile.profile_description,
-    categories: submittedProfile.categories,
-    website: submittedProfile.website,
-    phone: submittedProfile.phone,
-    publicEmail: submittedProfile.public_email,
-    address: submittedProfile.address,
-    municipality: submittedProfile.municipality,
-  });
   const reviewStatus = latestSubmission?.status ?? "notSubmitted";
-  const companyInitial = Array.from(submittedCompanyName.trim())[0] ?? "Ş";
+  const companyInitial: string = Array.from(submittedCompanyName.trim())[0] ?? "Ş";
   const localePrefix = getLocalePrefix(locale);
   const canReviewApplications =
     company.verification_status === "verified" &&
@@ -185,7 +179,7 @@ export default async function CompanyDashboardPage({
             aria-label={copy("companySwitcher")}
             className="company-management-switcher"
           >
-            {companies.map((item) => (
+            {companies.map((item: { id: string; name: string }) => (
               <a
                 aria-current={item.id === company.id ? "page" : undefined}
                 href={`${localePrefix}/company/dashboard?company=${encodeURIComponent(item.id)}`}
@@ -215,6 +209,8 @@ export default async function CompanyDashboardPage({
         <a href="#overview">{copy("workspace.overview")}</a>
         <a href="#company-profile">{copy("workspace.companyProfile")}</a>
         <a href="#directory-listing">{copy("workspace.directoryListing")}</a>
+        <a href="#entitlements">{copy("workspace.entitlements")}</a>
+        <a href="#orders">{copy("workspace.orders")}</a>
       </nav>
 
       {canReviewApplications ? (
@@ -327,41 +323,6 @@ export default async function CompanyDashboardPage({
             </span>
           </div>
         </div>
-
-        <div className="company-workspace-completion">
-          <div className="company-workspace-completion-heading">
-            <div>
-              <p>{copy("workspace.profileCompleteness")}</p>
-              <strong>
-                {copy("workspace.completedFields", {
-                  completed: profileCompletion.completed,
-                  total: profileCompletion.total,
-                })}
-              </strong>
-            </div>
-            <output
-              aria-label={copy("workspace.completionLabel", {
-                percent: profileCompletion.percentage,
-              })}
-              className="company-workspace-completion-value"
-            >
-              {profileCompletion.percentage}%
-            </output>
-          </div>
-          <progress
-            aria-label={copy("workspace.profileCompleteness")}
-            className="company-workspace-progress"
-            max={100}
-            value={profileCompletion.percentage}
-          />
-          <p className="company-workspace-completion-note">
-            {copy("workspace.completionDescription")}
-          </p>
-          <a className="company-workspace-action-link" href="#company-profile">
-            {copy("workspace.completeProfile")}
-            <ArrowRight size={15} aria-hidden="true" />
-          </a>
-        </div>
       </section>
 
       <div
@@ -410,6 +371,71 @@ export default async function CompanyDashboardPage({
           </div>
         </article>
       </div>
+
+      <section aria-labelledby="entitlements-title" className="company-entitlements" id="entitlements">
+        <header>
+          <p className="eyebrow">
+            <span className="eyebrow-rule" />
+            {copy("workspace.entitlementsEyebrow")}
+          </p>
+          <h2 id="entitlements-title">{copy("workspace.entitlementsTitle")}</h2>
+          <p>{copy("workspace.entitlementsDescription")}</p>
+        </header>
+        <div className="company-entitlements-grid">
+          <article className="company-entitlement-card">
+            <div className="company-entitlement-icon">
+              <CreditCard size={24} aria-hidden="true" />
+            </div>
+            <div>
+              <p className="company-entitlement-label">{copy("workspace.availableCredits")}</p>
+              <p className="company-entitlement-value">{creditAccount?.available_balance ?? 0}</p>
+              <p className="company-entitlement-unit">{copy("workspace.creditUnit")}</p>
+            </div>
+          </article>
+          {entitlements.length > 0 ? (
+            entitlements.map((e) => (
+              <article key={e.package_id} className="company-entitlement-card">
+                <div className="company-entitlement-icon">
+                  <BadgeCheck size={24} aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="company-entitlement-label">{copy("workspace.activePackage")}</p>
+                  <p className="company-entitlement-value">{e.package_name}</p>
+                  <p className="company-entitlement-detail">
+                    {e.active_jobs} / {e.max_active_jobs} {copy("workspace.activeJobs")}
+                    {e.job_duration_days && (
+                      <> · {copy("workspace.jobDuration")} {e.job_duration_days} {copy("workspace.dayUnit")}</>
+                    )}
+                    {e.assignment_expires_at && (
+                      <> · {copy("workspace.expiresAt")} {new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(e.assignment_expires_at))}</>
+                    )}
+                  </p>
+                </div>
+              </article>
+            ))
+          ) : (
+            <article className="company-entitlement-card empty">
+              <div className="company-entitlement-icon">
+                <ShieldCheck size={24} aria-hidden="true" />
+              </div>
+              <div>
+                <p className="company-entitlement-label">{copy("workspace.noActivePackage")}</p>
+                <p className="company-entitlement-value">{copy("workspace.noActivePackageDesc")}</p>
+              </div>
+            </article>
+          )}
+        </div>
+        <div className="company-entitlements-actions">
+          <Link className="button button-primary" href={`${localePrefix}/company/dashboard/orders/new?company=${encodeURIComponent(company.id)}`}>
+            <CreditCard size={16} aria-hidden="true" />
+            {copy("workspace.buyPackage")}
+          </Link>
+          <Link className="button button-outline" href={`${localePrefix}/company/dashboard/orders?company=${encodeURIComponent(company.id)}`}>
+            <FileText size={16} aria-hidden="true" />
+            {copy("workspace.myOrders")}
+          </Link>
+        </div>
+      </section>
 
       <div className="company-workspace-content">
         <section
@@ -474,7 +500,7 @@ export default async function CompanyDashboardPage({
                   aria-label={copy("categories")}
                   className="company-workspace-category-list"
                 >
-                  {submittedProfile.categories.slice(0, 4).map((category) => (
+                  {submittedProfile.categories.slice(0, 4).map((category: string) => (
                     <li key={category}>{category}</li>
                   ))}
                   {submittedProfile.categories.length > 4 ? (

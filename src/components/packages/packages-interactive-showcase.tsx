@@ -14,7 +14,7 @@ const VendMachine = dynamic(
   { ssr: false },
 );
 
-type PackageProfile = {
+export type PackageProfile = {
   id: "singleListing" | "growth" | "professional" | "enterprise";
   color: string;
   listingCount: number | null;
