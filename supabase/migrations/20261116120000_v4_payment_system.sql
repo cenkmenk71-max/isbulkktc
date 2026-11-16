@@ -338,11 +338,19 @@ begin
   end if;
 
   -- 3. Lock submission + order
-  select s.*, o.* into v_submission, v_order
+  select s.* into v_submission
   from public.payment_submissions s
-  join public.orders o on o.id = s.order_id
   where s.id = _submission_id
-  for update of s, o;
+  for update of s;
+
+  if not found then
+    raise exception 'Submission not found.' using errcode = '22023';
+  end if;
+
+  select o.* into v_order
+  from public.orders o
+  where o.id = v_submission.order_id
+  for update of o;
 
   if not found then
     raise exception 'Submission not found.' using errcode = '22023';
@@ -812,7 +820,311 @@ revoke all on function public.get_active_payment_instruction(boolean)
 grant execute on function public.get_active_payment_instruction(boolean)
   to authenticated;
 
--- 7. STORAGE POLICIES for private-payment-receipts
+-- 6. ADMIN RPCs
+
+-- admin_list_payment_console_orders: billing_admin/platform_admin lists all orders with submissions/reconciliations
+create or replace function public.admin_list_payment_console_orders()
+returns table (
+  id uuid,
+  company_id uuid,
+  package_id uuid,
+  status public.order_status,
+  total_minor integer,
+  currency text,
+  reference_code text,
+  package_snapshot jsonb,
+  payment_instruction_version_id uuid,
+  expires_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz,
+  company_name text,
+  company_slug text,
+  package_name text,
+  package_code text,
+  submission_id uuid,
+  submission_status public.submission_status,
+  submission_sender_name text,
+  submission_transfer_reference text,
+  submission_amount_minor integer,
+  submission_currency text,
+  submission_receipt_path text,
+  submission_created_at timestamptz,
+  reconciliation_id uuid,
+  reconciliation_decision public.reconciliation_decision,
+  reconciliation_notes text,
+  reconciliation_reviewed_at timestamptz,
+  reconciliation_bank_ref text,
+  reviewed_by_name text
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid := auth.uid();
+begin
+  if v_actor is null
+     or not exists (
+       select 1 from public.profiles p where p.id = v_actor and p.status = 'active'
+     )
+     or not (
+       exists (select 1 from public.user_roles where user_id = v_actor and role = 'billing_admin')
+       or exists (select 1 from public.user_roles where user_id = v_actor and role = 'platform_admin')
+     ) then
+    raise exception 'Active billing administrator required.' using errcode = '42501';
+  end if;
+
+  return query
+  select
+    o.id,
+    o.company_id,
+    o.package_id,
+    o.status,
+    o.total_minor,
+    o.currency,
+    o.reference_code,
+    o.package_snapshot,
+    o.payment_instruction_version_id,
+    o.expires_at,
+    o.created_at,
+    o.updated_at,
+    c.name as company_name,
+    c.slug as company_slug,
+    p.display_name as package_name,
+    p.code as package_code,
+    s.id as submission_id,
+    s.status as submission_status,
+    s.sender_name as submission_sender_name,
+    s.transfer_reference as submission_transfer_reference,
+    s.amount_minor as submission_amount_minor,
+    s.currency as submission_currency,
+    s.receipt_storage_path as submission_receipt_path,
+    s.created_at as submission_created_at,
+    r.id as reconciliation_id,
+    r.decision as reconciliation_decision,
+    r.notes as reconciliation_notes,
+    r.reviewed_at as reconciliation_reviewed_at,
+    r.bank_reference_normalized as reconciliation_bank_ref,
+    pr.display_name as reviewed_by_name
+  from public.orders o
+  join public.companies c on c.id = o.company_id
+  join public.job_packages p on p.id = o.package_id
+  left join public.payment_submissions s on s.order_id = o.id
+  left join public.payment_reconciliations r on r.order_id = o.id and r.submission_id = s.id
+  left join public.profiles pr on pr.id = r.reviewed_by
+  order by o.created_at desc;
+end;
+$$;
+
+-- admin_list_payment_instructions: billing_admin/platform_admin lists all instruction versions
+create or replace function public.admin_list_payment_instructions()
+returns table (
+  id uuid,
+  beneficiary_name text,
+  bank_name text,
+  iban_restricted_value text,
+  currency text,
+  instructions text,
+  active_from timestamptz,
+  active_to timestamptz,
+  created_by uuid,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid := auth.uid();
+begin
+  if v_actor is null
+     or not exists (
+       select 1 from public.profiles p where p.id = v_actor and p.status = 'active'
+     )
+     or not (
+       exists (select 1 from public.user_roles where user_id = v_actor and role = 'billing_admin')
+       or exists (select 1 from public.user_roles where user_id = v_actor and role = 'platform_admin')
+     ) then
+    raise exception 'Active billing administrator required.' using errcode = '42501';
+  end if;
+
+  return query
+  select
+    i.id,
+    i.beneficiary_name,
+    i.bank_name,
+    i.iban_restricted_value,
+    i.currency,
+    i.instructions,
+    i.active_from,
+    i.active_to,
+    i.created_by,
+    i.created_at,
+    i.updated_at
+  from public.payment_instruction_versions i
+  order by i.active_from desc;
+end;
+$$;
+
+-- admin_save_payment_instruction: platform_admin creates/updates instruction version
+create or replace function public.admin_save_payment_instruction(
+  _instruction_id uuid,
+  _beneficiary_name text,
+  _bank_name text,
+  _iban_restricted_value text,
+  _currency text,
+  _instructions text,
+  _active_from timestamptz,
+  _active_to timestamptz
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid := auth.uid();
+  v_instruction_id uuid;
+  v_norm_iban text := upper(btrim(_iban_restricted_value));
+  v_norm_currency text := upper(btrim(_currency));
+  v_norm_beneficiary text := btrim(_beneficiary_name);
+  v_norm_bank text := btrim(_bank_name);
+  v_norm_instructions text := btrim(coalesce(_instructions, ''));
+  v_active_from timestamptz := _active_from;
+  v_active_to timestamptz := _active_to;
+begin
+  if v_actor is null
+     or not exists (
+       select 1 from public.profiles p where p.id = v_actor and p.status = 'active'
+     )
+     or not exists (select 1 from public.user_roles where user_id = v_actor and role = 'platform_admin') then
+    raise exception 'An active platform administrator is required.' using errcode = '42501';
+  end if;
+
+  if v_norm_beneficiary is null
+     or char_length(v_norm_beneficiary) not between 2 and 120 then
+    raise exception 'Invalid beneficiary name.' using errcode = '22023';
+  end if;
+  if v_norm_bank is null
+     or char_length(v_norm_bank) not between 2 and 80 then
+    raise exception 'Invalid bank name.' using errcode = '22023';
+  end if;
+  if v_norm_iban is null
+     or char_length(v_norm_iban) not between 15 and 34 then
+    raise exception 'Invalid IBAN.' using errcode = '22023';
+  end if;
+  if char_length(v_norm_currency) <> 3 or v_norm_currency <> upper(v_norm_currency) then
+    raise exception 'Invalid currency code.' using errcode = '22023';
+  end if;
+  if char_length(v_norm_instructions) > 2000 then
+    raise exception 'Instructions too long.' using errcode = '22023';
+  end if;
+  if v_active_to is not null and v_active_to <= v_active_from then
+    raise exception 'active_to must be after active_from.' using errcode = '22023';
+  end if;
+
+  if _instruction_id is null then
+    insert into public.payment_instruction_versions (
+      beneficiary_name, bank_name, iban_restricted_value, currency,
+      instructions, active_from, active_to, created_by
+    ) values (
+      v_norm_beneficiary, v_norm_bank, v_norm_iban, v_norm_currency,
+      v_norm_instructions, v_active_from, v_active_to, v_actor
+    )
+    returning id into v_instruction_id;
+  else
+    update public.payment_instruction_versions
+    set beneficiary_name = v_norm_beneficiary,
+        bank_name = v_norm_bank,
+        iban_restricted_value = v_norm_iban,
+        currency = v_norm_currency,
+        instructions = v_norm_instructions,
+        active_from = v_active_from,
+        active_to = v_active_to
+    where id = _instruction_id
+    returning id into v_instruction_id;
+
+    if v_instruction_id is null then
+      raise exception 'Payment instruction not found.' using errcode = '22023';
+    end if;
+  end if;
+
+  insert into public.audit_logs (actor_id, action, resource_type, resource_id, metadata_redacted)
+  values (v_actor, 'payment_instruction.saved', 'payment_instruction_version', v_instruction_id,
+    jsonb_build_object(
+      'beneficiary_name', v_norm_beneficiary,
+      'bank_name', v_norm_bank,
+      'currency', v_norm_currency,
+      'active_from', v_active_from,
+      'active_to', v_active_to
+    ));
+
+  return v_instruction_id;
+end;
+$$;
+
+-- admin_delete_payment_instruction: platform_admin deletes instruction version (only if not referenced)
+create or replace function public.admin_delete_payment_instruction(_instruction_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid := auth.uid();
+  v_ref_count integer;
+begin
+  if v_actor is null
+     or not exists (
+       select 1 from public.profiles p where p.id = v_actor and p.status = 'active'
+     )
+     or not exists (select 1 from public.user_roles where user_id = v_actor and role = 'platform_admin') then
+    raise exception 'An active platform administrator is required.' using errcode = '42501';
+  end if;
+
+  select count(*) into v_ref_count
+  from public.orders
+  where payment_instruction_version_id = _instruction_id;
+
+  if v_ref_count > 0 then
+    raise exception 'Cannot delete instruction version referenced by orders.' using errcode = 'P0001';
+  end if;
+
+  delete from public.payment_instruction_versions where id = _instruction_id;
+
+  if not found then
+    raise exception 'Payment instruction not found.' using errcode = '22023';
+  end if;
+
+  insert into public.audit_logs (actor_id, action, resource_type, resource_id, metadata_redacted)
+  values (v_actor, 'payment_instruction.deleted', 'payment_instruction_version', _instruction_id, '{}'::jsonb);
+end;
+$$;
+
+-- 7. RPC GRANTS (extended)
+
+revoke all on function public.admin_list_payment_console_orders()
+  from public, anon, authenticated;
+grant execute on function public.admin_list_payment_console_orders()
+  to authenticated;
+
+revoke all on function public.admin_list_payment_instructions()
+  from public, anon, authenticated;
+grant execute on function public.admin_list_payment_instructions()
+  to authenticated;
+
+revoke all on function public.admin_save_payment_instruction(uuid, text, text, text, text, text, timestamptz, timestamptz)
+  from public, anon, authenticated;
+grant execute on function public.admin_save_payment_instruction(uuid, text, text, text, text, text, timestamptz, timestamptz)
+  to authenticated;
+
+revoke all on function public.admin_delete_payment_instruction(uuid)
+  from public, anon, authenticated;
+grant execute on function public.admin_delete_payment_instruction(uuid)
+  to authenticated;
+
+-- 8. STORAGE POLICIES for private-payment-receipts
 
 -- Bucket already created in 20261013000000_v4_identity_companies_security.sql
 -- Policies:

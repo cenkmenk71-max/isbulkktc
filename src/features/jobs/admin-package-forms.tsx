@@ -23,6 +23,9 @@ type PackageOption = {
   max_active_jobs: number;
   job_duration_days: number;
   is_active: boolean;
+  price_minor: number;
+  currency: string;
+  job_credits: number;
 };
 
 type VerifiedCompanyOption = {
@@ -97,6 +100,38 @@ function PackageFields({
           required
           type="number"
           defaultValue={jobPackage?.job_duration_days ?? 30}
+        />
+      </label>
+      <label>
+        {copy("fields.priceMinor")}
+        <input
+          min={0}
+          name="priceMinor"
+          required
+          type="number"
+          defaultValue={jobPackage?.price_minor ?? 0}
+        />
+      </label>
+      <label>
+        {copy("fields.currency")}
+        <input
+          maxLength={3}
+          minLength={3}
+          name="currency"
+          required
+          type="text"
+          defaultValue={jobPackage?.currency ?? "TRY"}
+        />
+      </label>
+      <label>
+        {copy("fields.jobCredits")}
+        <input
+          max={1000}
+          min={1}
+          name="jobCredits"
+          required
+          type="number"
+          defaultValue={jobPackage?.job_credits ?? 1}
         />
       </label>
       <label>

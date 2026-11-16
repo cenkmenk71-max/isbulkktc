@@ -53,6 +53,9 @@ export const jobPackageSchema = z.object({
   maxActiveJobs: z.coerce.number().int().min(1).max(1000),
   jobDurationDays: z.coerce.number().int().min(1).max(365),
   isActive: z.boolean(),
+  priceMinor: z.coerce.number().int().min(0).default(0),
+  currency: z.string().trim().length(3).toUpperCase().default("TRY"),
+  jobCredits: z.coerce.number().int().min(1).max(1000).default(1),
 });
 
 export const companyJobPackageAssignmentSchema = z.object({

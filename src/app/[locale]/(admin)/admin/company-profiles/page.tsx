@@ -24,10 +24,11 @@ export default async function CompanyProfileReviewPage({
   if (!locale) notFound();
 
   setRequestLocale(locale);
-  const [submissions, copy, adminCopy] = await Promise.all([
+  const [submissions, copy, adminCopy, paymentsCopy] = await Promise.all([
     getPendingCompanyProfileSubmissions(),
     getTranslations("CompanyReview"),
     getTranslations("AdminPackages"),
+    getTranslations("AdminPayments"),
   ]);
 
   return (
@@ -39,9 +40,11 @@ export default async function CompanyProfileReviewPage({
         </p>
         <h1>{copy("title")}</h1>
         <p>{copy("description")}</p>
-        <Link className="admin-review-link" href="/admin/packages">
-          {adminCopy("catalogTitle")}
-        </Link>
+        <div className="admin-packages-links">
+          <Link href="/admin/packages">{adminCopy("catalogTitle")}</Link>
+          <Link href="/admin/payments">{paymentsCopy("title")}</Link>
+          <Link href="/admin/payment-instructions">{paymentsCopy("instructionsLink")}</Link>
+        </div>
       </header>
 
       {submissions.length === 0 ? (

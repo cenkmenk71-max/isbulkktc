@@ -264,6 +264,9 @@ export async function saveJobPackage(
     maxActiveJobs: formData.get("maxActiveJobs"),
     jobDurationDays: formData.get("jobDurationDays"),
     isActive: activeValue === "true",
+    priceMinor: formData.get("priceMinor"),
+    currency: formData.get("currency"),
+    jobCredits: formData.get("jobCredits"),
   });
   if (!result.success) {
     return { ...initialPackageActionState, status: "error", message: "invalid" };
@@ -282,6 +285,9 @@ export async function saveJobPackage(
     _max_active_jobs: result.data.maxActiveJobs,
     _job_duration_days: result.data.jobDurationDays,
     _is_active: result.data.isActive,
+    _price_minor: result.data.priceMinor,
+    _currency: result.data.currency,
+    _job_credits: result.data.jobCredits,
   });
   if (error) {
     if (error.code === "42501") {

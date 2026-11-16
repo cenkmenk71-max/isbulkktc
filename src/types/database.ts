@@ -1102,6 +1102,93 @@ export type Database = {
           updated_at: string;
         };
       };
+      reconcile_payment: {
+        Args: {
+          _reconciliation_idempotency_key: string;
+          _submission_id: string;
+          _decision: string;
+          _bank_reference_normalized: string;
+          _notes: string | null;
+        };
+        Returns: {
+          id: string;
+          order_id: string;
+          submission_id: string;
+          reviewed_by: string;
+          decision: string;
+          bank_reference_normalized: string;
+          notes: string | null;
+          reviewed_at: string;
+        };
+      };
+      admin_list_payment_console_orders: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          company_id: string;
+          package_id: string;
+          status: string;
+          total_minor: number;
+          currency: string;
+          reference_code: string;
+          package_snapshot: Json;
+          payment_instruction_version_id: string | null;
+          expires_at: string;
+          created_at: string;
+          updated_at: string;
+          company_name: string;
+          company_slug: string;
+          package_name: string;
+          package_code: string;
+          submission_id: string | null;
+          submission_status: string | null;
+          submission_sender_name: string | null;
+          submission_transfer_reference: string | null;
+          submission_amount_minor: number | null;
+          submission_currency: string | null;
+          submission_receipt_path: string | null;
+          submission_created_at: string | null;
+          reconciliation_id: string | null;
+          reconciliation_decision: string | null;
+          reconciliation_notes: string | null;
+          reconciliation_reviewed_at: string | null;
+          reconciliation_bank_ref: string | null;
+          reviewed_by_name: string | null;
+        }[];
+      };
+      admin_list_payment_instructions: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          beneficiary_name: string;
+          bank_name: string;
+          iban_restricted_value: string;
+          currency: string;
+          instructions: string;
+          active_from: string;
+          active_to: string | null;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        }[];
+      };
+      admin_save_payment_instruction: {
+        Args: {
+          _instruction_id: string | null;
+          _beneficiary_name: string;
+          _bank_name: string;
+          _iban_restricted_value: string;
+          _currency: string;
+          _instructions: string | null;
+          _active_from: string;
+          _active_to: string | null;
+        };
+        Returns: string;
+      };
+      admin_delete_payment_instruction: {
+        Args: { _instruction_id: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       platform_role: PlatformRole;
