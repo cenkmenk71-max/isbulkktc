@@ -16,6 +16,41 @@ const packageTerms = {
   enterprise: ["finiteScope", "durationOptions", "writtenOffer"],
 } as const;
 
+// Keep the legacy listing-plan defaults as structured source data. The seed
+// generator reads this catalogue, while the live page uses database packages.
+// This lets the legacy seed and UI fallback share one definition without parsing
+// executable UI logic or duplicating prices elsewhere.
+const packageTiers = [
+  {
+    id: "singleListing",
+    code: packageTierPlanCodes.singleListing,
+    color: packageTierColors.singleListing,
+    listingCount: 1,
+    prices: { 1: 290, 7: 690, 30: 1290 },
+  },
+  {
+    id: "growth",
+    code: packageTierPlanCodes.growth,
+    color: packageTierColors.growth,
+    listingCount: 3,
+    prices: { 1: 590, 7: 1390, 30: 2790 },
+  },
+  {
+    id: "professional",
+    code: packageTierPlanCodes.professional,
+    color: packageTierColors.professional,
+    listingCount: 5,
+    prices: { 1: 890, 7: 2090, 30: 3990 },
+  },
+  {
+    id: "enterprise",
+    code: packageTierPlanCodes.enterprise,
+    color: packageTierColors.enterprise,
+    listingCount: null,
+    prices: null,
+  },
+] as const;
+
 const durations = [1, 7, 30] as const;
 
 type PackageTierId = keyof typeof packageTierPlanCodes;
@@ -27,13 +62,8 @@ function getTierFromPackage(pkg: PublicJobPackage): PackageTierId | null {
 }
 
 function getTierDefaults(tierId: PackageTierId) {
-  const defaults: Record<PackageTierId, { listingCount: number | null; prices: Record<number, number> | null }> = {
-    singleListing: { listingCount: 1, prices: { 1: 290, 7: 690, 30: 1290 } },
-    growth: { listingCount: 3, prices: { 1: 590, 7: 1390, 30: 2790 } },
-    professional: { listingCount: 5, prices: { 1: 890, 7: 2090, 30: 3990 } },
-    enterprise: { listingCount: null, prices: null },
-  };
-  return defaults[tierId] ?? { listingCount: null, prices: null };
+  const tier = packageTiers.find((candidate) => candidate.id === tierId);
+  return tier ?? { listingCount: null, prices: null };
 }
 
 function mapPackageToTierProfile(pkg: PublicJobPackage): PackageProfile | null {
