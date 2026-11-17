@@ -89,7 +89,12 @@ function businessCalls(): string[] {
   return recorded.supabase
     .filter((call) => call.kind !== "auth")
     .map((call) => (call.kind === "from" ? `from(${call.table})` : `rpc(${call.name})`))
-    .filter((call) => call !== "from(profiles)" && call !== "rpc(has_platform_role)");
+    .filter(
+      (call) =>
+        call !== "from(profiles)" &&
+        call !== "from(user_roles)" &&
+        call !== "rpc(has_platform_role)",
+    );
 }
 
 /** Every boundary call, for tests that must prove *nothing* was reached. */
@@ -139,6 +144,14 @@ const anonymousCases: ActionCase[] = [
   { module: "features/jobs/actions.ts", name: "submitJobForReview", args: () => [{}, form({ jobId: ID })] },
   { module: "features/jobs/actions.ts", name: "publishApprovedJob", args: () => [{}, form({ jobId: ID })] },
   { module: "features/jobs/actions.ts", name: "saveJobPackage", args: () => [{}, validPackageForm()] },
+  {
+    module: "features/companies/actions.ts",
+    name: "reviewCompanyVerification",
+    args: () => [
+      {},
+      form({ companyId: ID, decision: "verified" }),
+    ],
+  },
   {
     module: "features/jobs/actions.ts",
     name: "assignCompanyJobPackage",
@@ -259,6 +272,31 @@ test("an admin with the role reaches the protected package RPC", async () => {
 
   assert.equal(state.status, "success");
   assert.ok(rpcNames().includes("admin_save_job_package"), "the admin write must be attempted");
+});
+
+test("an assigned platform admin reaches the guarded company verification RPC", async () => {
+  resetBoundary({
+    user: fakeAuthUser({ id: ID }),
+    tables: {
+      profiles: { data: fakeProfileRow({ id: ID }), error: null },
+      user_roles: { data: { role: "platform_admin" }, error: null },
+    },
+    rpcs: { review_company_verification: { data: null, error: null } },
+  });
+
+  const { reviewCompanyVerification } = await import(
+    "../../src/features/companies/actions"
+  );
+  const state = await reviewCompanyVerification(
+    { status: "idle", message: "idle" },
+    form({ companyId: ID, decision: "verified" }),
+  );
+
+  assert.equal(state.status, "success");
+  assert.ok(
+    rpcNames().includes("review_company_verification"),
+    "the role-authorized admin must reach the database-enforced MFA check",
+  );
 });
 
 test("an active company member can save a job draft", async () => {

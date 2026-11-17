@@ -1258,6 +1258,21 @@
     "saving": "در حال ذخیره…",
     "approveAndPublish": "تأیید و انتشار",
     "reject": "درخواست اصلاح",
+    "verificationEyebrow": "تأیید شرکت",
+    "verificationTitle": "صف بررسی کارفرمایان",
+    "verificationDescription": "این تصمیم از انتشار پروفایل جداست. شرکت را تنها پس از انجام بررسی‌های لازم تأیید کنید.",
+    "verificationEmptyTitle": "شرکتی برای بررسی وجود ندارد",
+    "verificationEmptyDescription": "شرکت‌های در انتظار تأیید یا ردشده در اینجا نمایش داده می‌شوند.",
+    "verificationPending": "در انتظار تأیید",
+    "verificationRejected": "قبلاً رد شده",
+    "verifyCompany": "تأیید شرکت",
+    "rejectVerification": "رد تأیید",
+    "verificationMessages": {
+      "unauthorized": "این حساب اجازه تصمیم‌گیری درباره تأیید شرکت‌ها را ندارد.",
+      "failed": "ذخیره تصمیم ممکن نبود. صفحه را تازه‌سازی و دوباره تلاش کنید.",
+      "verified": "شرکت تأیید شد.",
+      "rejected": "تأیید شرکت رد شد."
+    },
     "messages": {
       "unauthorized": "این حساب اجازه بررسی پروفایل شرکت‌ها را ندارد.",
       "failed": "ذخیره تصمیم انجام نشد. صفحه را تازه‌سازی و دوباره تلاش کنید.",

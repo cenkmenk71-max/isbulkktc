@@ -60,7 +60,7 @@ async function createAdmin(
   request: APIRequestContext,
   email: string,
   password: string,
-): Promise<void> {
+): Promise<string> {
   const headers = {
     apikey: serviceRoleKey,
     Authorization: `Bearer ${serviceRoleKey}`,
@@ -84,6 +84,16 @@ async function createAdmin(
     data: { user_id: id, role: "platform_admin" },
   });
   expect(granted.ok(), await granted.text()).toBeTruthy();
+  return id;
+}
+
+function serviceRoleHeaders(extra: Record<string, string> = {}) {
+  return {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    "Content-Type": "application/json",
+    ...extra,
+  };
 }
 
 /** Signs in and clears the TOTP gate, leaving the browser on the console. */
@@ -155,4 +165,103 @@ test("an administrator writes content and the public page reflects it immediatel
     },
   );
   expect(cleanup.ok()).toBeTruthy();
+});
+
+test("an MFA-verified administrator can verify a company from the review queue", async ({
+  page,
+  request,
+}) => {
+  const stamp = Date.now();
+  const email = `e2e-company-verification-${stamp}@example.com`;
+  const password = "Admin-pass-2026";
+  const companyName = `E2E Verification ${stamp}`;
+  const companySlug = `e2e-verification-${stamp}`;
+  let adminId: string | undefined;
+  let companyId: string | undefined;
+
+  try {
+    adminId = await createAdmin(request, email, password);
+
+    const companyResponse = await request.post(
+      `${supabaseUrl}/rest/v1/companies`,
+      {
+        headers: serviceRoleHeaders({ Prefer: "return=representation" }),
+        data: {
+          name: companyName,
+          slug: companySlug,
+          verification_status: "pending",
+        },
+      },
+    );
+    expect(companyResponse.ok(), await companyResponse.text()).toBeTruthy();
+    const [company] = (await companyResponse.json()) as { id: string }[];
+    companyId = company.id;
+
+    const membershipResponse = await request.post(
+      `${supabaseUrl}/rest/v1/company_members`,
+      {
+        headers: serviceRoleHeaders({ Prefer: "return=minimal" }),
+        data: {
+          company_id: companyId,
+          user_id: adminId,
+          membership_role: "owner",
+          status: "active",
+        },
+      },
+    );
+    expect(membershipResponse.ok(), await membershipResponse.text()).toBeTruthy();
+
+    await signInThroughMfa(page, email, password);
+    await page.goto("/admin/company-profiles");
+
+    const companyCard = page.locator(".company-review-card").filter({
+      has: page.getByRole("heading", {
+        level: 3,
+        name: companyName,
+        exact: true,
+      }),
+    });
+    await expect(companyCard).toBeVisible();
+    await companyCard
+      .getByRole("button", { name: "Şirketi doğrula" })
+      .click();
+    await expect(companyCard).toHaveCount(0);
+
+    const statusResponse = await request.get(
+      `${supabaseUrl}/rest/v1/companies?id=eq.${companyId}&select=verification_status`,
+      { headers: serviceRoleHeaders() },
+    );
+    expect(statusResponse.ok(), await statusResponse.text()).toBeTruthy();
+    expect(await statusResponse.json()).toEqual([
+      { verification_status: "verified" },
+    ]);
+  } finally {
+    if (companyId) {
+      const auditCleanup = await request.delete(
+        `${supabaseUrl}/rest/v1/audit_logs?resource_id=eq.${companyId}`,
+        { headers: serviceRoleHeaders() },
+      );
+      expect(auditCleanup.ok(), await auditCleanup.text()).toBeTruthy();
+
+      const membershipCleanup = await request.delete(
+        `${supabaseUrl}/rest/v1/company_members?company_id=eq.${companyId}`,
+        { headers: serviceRoleHeaders() },
+      );
+      expect(membershipCleanup.ok(), await membershipCleanup.text()).toBeTruthy();
+
+      const companyCleanup = await request.delete(
+        `${supabaseUrl}/rest/v1/companies?id=eq.${companyId}`,
+        { headers: serviceRoleHeaders() },
+      );
+      expect(companyCleanup.ok(), await companyCleanup.text()).toBeTruthy();
+    }
+
+    if (adminId) {
+      const adminCleanup = await request.delete(
+        `${supabaseUrl}/auth/v1/admin/users/${adminId}`,
+        { headers: serviceRoleHeaders() },
+      );
+      expect(adminCleanup.ok(), await adminCleanup.text()).toBeTruthy();
+    }
+  }
 });

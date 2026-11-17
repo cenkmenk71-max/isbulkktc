@@ -1258,6 +1258,21 @@
     "saving": "Saving…",
     "approveAndPublish": "Approve and publish",
     "reject": "Request changes",
+    "verificationEyebrow": "COMPANY VERIFICATION",
+    "verificationTitle": "Employer verification queue",
+    "verificationDescription": "This decision is separate from publishing a profile. Verify a company only after completing the necessary checks.",
+    "verificationEmptyTitle": "No companies to review",
+    "verificationEmptyDescription": "Companies awaiting verification or previously rejected appear here.",
+    "verificationPending": "Verification pending",
+    "verificationRejected": "Previously rejected",
+    "verifyCompany": "Verify company",
+    "rejectVerification": "Reject verification",
+    "verificationMessages": {
+      "unauthorized": "This account cannot make company verification decisions.",
+      "failed": "The verification decision could not be saved. Refresh and try again.",
+      "verified": "The company was verified.",
+      "rejected": "Company verification was rejected."
+    },
     "messages": {
       "unauthorized": "This account cannot review company profiles.",
       "failed": "The review could not be saved. Refresh and try again.",

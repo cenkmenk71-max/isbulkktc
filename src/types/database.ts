@@ -446,6 +446,21 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      admin_list_company_verifications: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          name: string;
+          slug: string;
+          verification_status: CompanyVerificationStatus;
+          website: string | null;
+          phone: string | null;
+          public_email: string | null;
+          address: string | null;
+          municipality: string | null;
+          created_at: string;
+        }[];
+      };
       admin_list_verified_companies: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -467,6 +482,10 @@ export type Database = {
       };
       review_company_profile_submission: {
         Args: { _submission_id: string; _decision: string; _review_note?: string | null };
+        Returns: undefined;
+      };
+      review_company_verification: {
+        Args: { _company_id: string; _decision: "verified" | "rejected" };
         Returns: undefined;
       };
       submit_job_for_review: {

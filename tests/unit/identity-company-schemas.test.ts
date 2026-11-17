@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import {
+  companyVerificationReviewSchema,
   companyProfileSchema,
   createCompanySchema,
 } from "../../src/features/companies/schemas";
@@ -68,6 +69,29 @@ test("company slugs reject path separators, whitespace, and empty segments", () 
   ]) {
     assert.equal(createCompanySchema.safeParse({ name: "Geçerli Şirket", slug }).success, false);
   }
+});
+
+test("company verification review accepts only a UUID and explicit review decision", () => {
+  const valid = {
+    companyId: "00000000-0000-4000-8000-000000000001",
+    decision: "verified",
+  };
+
+  assert.deepEqual(companyVerificationReviewSchema.parse(valid), valid);
+  assert.equal(
+    companyVerificationReviewSchema.safeParse({
+      ...valid,
+      decision: "suspended",
+    }).success,
+    false,
+  );
+  assert.equal(
+    companyVerificationReviewSchema.safeParse({
+      ...valid,
+      companyId: "not-a-uuid",
+    }).success,
+    false,
+  );
 });
 
 test("registration enforces input bounds and accepts each supported language", () => {

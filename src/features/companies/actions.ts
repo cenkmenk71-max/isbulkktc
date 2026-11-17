@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
-import { getCurrentUser } from "@/server/dal/user";
+import {
+  getCurrentUser,
+  hasAssignedPlatformRole,
+} from "@/server/dal/user";
 import { getOwnedCompany } from "@/server/dal/companies";
 import { getLocalePrefix } from "@/i18n/routing";
 import { companyDirectory } from "./directory-data";
@@ -18,9 +21,11 @@ import { getManagedDirectoryEntries } from "@/server/dal/content";
 import * as mailer from "@/server/email/mailer";
 import {
   companyProfileSchema,
+  companyVerificationReviewSchema,
   createCompanySchema,
   type CompanyProfileFormState,
   type CompanyProfileSubmissionReviewState,
+  type CompanyVerificationReviewState,
   type CreateCompanyFormState,
 } from "./schemas";
 
@@ -302,4 +307,45 @@ export async function reviewCompanyProfile(
     status: "success",
     message: decision === "approved" ? "approved" : "rejected",
   };
+}
+
+export async function reviewCompanyVerification(
+  _previousState: CompanyVerificationReviewState,
+  formData: FormData,
+): Promise<CompanyVerificationReviewState> {
+  const user = await getCurrentUser();
+  if (
+    !user ||
+    user.status !== "active" ||
+    !(await hasAssignedPlatformRole("platform_admin"))
+  ) {
+    return { status: "error", message: "unauthorized" };
+  }
+
+  const result = companyVerificationReviewSchema.safeParse({
+    companyId: formData.get("companyId"),
+    decision: formData.get("decision"),
+  });
+  if (!result.success) return { status: "error", message: "failed" };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("review_company_verification", {
+    _company_id: result.data.companyId,
+    _decision: result.data.decision,
+  });
+
+  if (error) {
+    if (error.code === "42501") {
+      return { status: "error", message: "unauthorized" };
+    }
+
+    console.error("Company verification review failed.", {
+      code: error.code,
+    });
+    return { status: "error", message: "failed" };
+  }
+
+  revalidatePath(`${getLocalePrefix(user.locale)}/admin/company-profiles`);
+  revalidatePath(`${getLocalePrefix(user.locale)}/companies`);
+  return { status: "success", message: result.data.decision };
 }

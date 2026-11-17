@@ -138,6 +138,13 @@ mevcut profil başvuru akışından ayrıca gönderir. Bu işlem resmi belge do�
 değildir; taranmış PDF/OCR ve harici AI desteklenmez.
 Başvurular onaylanana kadar özel kalır; yalnız yetkili yönetici onayıyla
 yayımlanır. Bu yayın, şirketin ayrı resmi doğrulama durumunu değiştirmez.
+Şirket doğrulaması ayrı bir yönetici iş akışıdır: `/admin/company-profiles`
+sayfasındaki kuyruk yalnız etkin sahibi bulunan `pending` veya `rejected`
+şirketleri listeler. Aktif, MFA-doğrulanmış platform yöneticisi şirketi
+`verified` veya `rejected` olarak işaretleyebilir; her gerçek durum geçişi
+redakte edilmiş denetim kaydı üretir. `verification_status` doğrudan istemci
+yazımına kapalıdır. Bu karar profil başvurusunu yayımlamaz ve resmi belge
+doğrulamasının yapıldığı anlamına gelmez.
 Şirket belgelerinin sunucuya yüklenip doğrulama kanıtı olarak saklanması,
 tarama ve saklama kuralları kararlaştırılmadığı için kapalıdır. E-posta
 doğrulama bağlantıları yalnız yapılandırılmış HTTPS uygulama kökenine dönerek
