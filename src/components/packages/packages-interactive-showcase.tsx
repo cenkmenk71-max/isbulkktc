@@ -230,6 +230,14 @@ export function PackagesInteractiveShowcase({
     stageRef.current?.toggleAttribute("data-fog-wiped", true);
   }, []);
 
+  if (profiles.length === 0) {
+    return (
+      <div className="packages-vend-experience" role="status">
+        <p className="packages-vend-fallback">{fallbackMessage}</p>
+      </div>
+    );
+  }
+
   const selectPackage = (index: number) => {
     if (!sceneUnavailable) unlockAudio();
     selectedRef.current = index;

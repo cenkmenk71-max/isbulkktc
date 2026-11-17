@@ -39,6 +39,12 @@ alter table public.job_packages
 grant select (price_minor, currency) on public.job_packages to anon, authenticated;
 
 -- Update admin_save_job_package to accept and set the new columns
+-- Drop the old 7-parameter overload from 20261020192000_v4_package_entitlements.sql
+-- to avoid "function is not unique" conflicts (different signatures = overloads).
+drop function if exists public.admin_save_job_package(
+  uuid, text, text, text, integer, integer, boolean
+);
+
 create or replace function public.admin_save_job_package(
   _package_id uuid,
   _code text,
