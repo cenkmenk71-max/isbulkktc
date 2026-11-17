@@ -36,7 +36,7 @@ be visible to every VS Code extension host.
 
 ## Project checks
 
-Read `AGENTS.md` before asking an agent to change code. The repository's
+Project-specific Kilo subagents are defined in `.kilo/agents/`: architecture, application security, Supabase/database, frontend, and test review. They are deliberately read-only reviewers; the primary coding agent remains responsible for edits and command execution. They inherit the selected model unless you explicitly override it in Kilo settings. The repository's
 authoritative product architecture and security boundaries remain in
 `docs/architecture-v4.md`, `docs/architecture.md`, and the applicable
 instructions under `.github/` and `.agents/skills/`.
