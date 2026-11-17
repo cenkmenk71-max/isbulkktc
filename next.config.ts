@@ -193,10 +193,11 @@ const nextConfig: NextConfig = {
         // left is to stop the shared layer caching HTML at all, exactly as the
         // dynamic routes already are. The matcher is the middleware's own
         // (`src/proxy.ts`), so the rule covers precisely the routes that receive
-        // the cookie; file extensions, `_next/**`, `/api/**`, `/trpc` and
-        // `/vercel` stay out so immutable asset caching is untouched. See
-        // `docs/threat-model.md` (prerender cache headers) and issue #390.
-        source: "/((?!api|trpc|_next|_vercel|.*\\..*).*)",
+        // the cookie plus malformed encoded API separators rejected by Proxy.
+        // Canonical `/api/**`, file extensions, `_next/**`, `/trpc` and `/vercel`
+        // stay out so immutable asset caching is untouched. See `docs/threat-model.md`
+        // (prerender cache headers) and issues #390/#441.
+        source: "/((?!api(?!%2[fF])|trpc|_next|_vercel|.*\\..*).*)",
         headers: [
           {
             key: "Cache-Control",

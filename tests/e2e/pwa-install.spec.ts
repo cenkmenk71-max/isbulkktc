@@ -268,6 +268,16 @@ test("the QR route returns a scannable SVG for the install URL", async ({
   expect(target.searchParams.get("next")).toBe("/jobs");
 });
 
+test("encoded API separators return an uncached 404 before route resolution", async ({
+  request,
+}) => {
+  for (const path of ["/api%2Fqr", "/api%2Femail%2Funsubscribe"]) {
+    const response = await request.get(path);
+    expect(response.status(), path).toBe(404);
+    expect(response.headers()["cache-control"], path).toMatch(/no-store/i);
+  }
+});
+
 test("the QR route never encodes an off-site destination", async ({
   request,
   baseURL,
