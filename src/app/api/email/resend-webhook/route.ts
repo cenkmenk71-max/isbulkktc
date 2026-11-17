@@ -1,4 +1,5 @@
 import { createSupabaseServiceClient } from "@/server/db/supabase-server";
+import { jsonNoStore } from "@/server/http/no-store-response";
 import {
   classifyResendEvent,
   eventRecipients,
@@ -25,7 +26,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   const secret = process.env.RESEND_WEBHOOK_SECRET?.trim();
   if (!secret) {
-    return Response.json(
+    return jsonNoStore(
       { message: "Webhook receiver is not configured" },
       { status: 503 },
     );
@@ -45,23 +46,23 @@ export async function POST(request: Request) {
     );
   } catch {
     // Bad signature, missing headers, or a timestamp outside the replay window.
-    return Response.json({ message: "Invalid signature" }, { status: 401 });
+    return jsonNoStore({ message: "Invalid signature" }, { status: 401 });
   }
 
   const decision = classifyResendEvent(event.type);
   if (!decision.suppress) {
     // Acknowledge the rest so Resend stops retrying; there is nothing to record.
-    return Response.json({ message: "Ignored", type: event.type ?? null });
+    return jsonNoStore({ message: "Ignored", type: event.type ?? null });
   }
 
   const recipients = eventRecipients(event);
   if (recipients.length === 0) {
-    return Response.json({ message: "No recipients to suppress" });
+    return jsonNoStore({ message: "No recipients to suppress" });
   }
 
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
-    return Response.json(
+    return jsonNoStore(
       { message: "Suppression is not configured" },
       { status: 503 },
     );
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
       console.error("Resend suppression could not be stored.", {
         code: error.code,
       });
-      return Response.json(
+      return jsonNoStore(
         { message: "Suppression could not be stored", suppressed },
         { status: 502 },
       );
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
     suppressed += 1;
   }
 
-  return Response.json({
+  return jsonNoStore({
     message: "Suppressed",
     reason: decision.reason,
     suppressed,

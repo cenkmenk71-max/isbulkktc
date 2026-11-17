@@ -1,6 +1,7 @@
 import { getAppBaseUrl } from "@/server/config/app-url";
 import { createSupabaseServiceClient } from "@/server/db/supabase-server";
 import { sendEngagementEmail } from "@/server/email/mailer";
+import { jsonNoStore } from "@/server/http/no-store-response";
 import {
   isUnsubscribeSigningConfigured,
   unsubscribeUrlFor,
@@ -34,18 +35,18 @@ type EngagementRecipient = {
 export async function POST(request: Request) {
   const secret = process.env.ENGAGEMENT_CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
+    return jsonNoStore({ message: "Unauthorized" }, { status: 401 });
   }
 
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
-    return Response.json(
+    return jsonNoStore(
       { message: "Engagement delivery is not configured" },
       { status: 503 },
     );
   }
   if (!isUnsubscribeSigningConfigured()) {
-    return Response.json(
+    return jsonNoStore(
       { message: "Unsubscribe signing is not configured" },
       { status: 503 },
     );
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
 
   const jobs = await loadDigestJobs();
   if (jobs.length === 0) {
-    return Response.json({ message: "No jobs to feature", sent: 0 });
+    return jsonNoStore({ message: "No jobs to feature", sent: 0 });
   }
 
   const siteUrl = getAppBaseUrl();
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
       console.error("Engagement recipients could not be listed.", {
         code: error.code,
       });
-      return Response.json(
+      return jsonNoStore(
         { message: "Recipient list is temporarily unavailable", sent, failed },
         { status: 502 },
       );
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
     if (recipients.length < BATCH_SIZE) break;
   }
 
-  return Response.json({ message: "Engagement digest complete", sent, failed });
+  return jsonNoStore({ message: "Engagement digest complete", sent, failed });
 }
 
 async function loadDigestJobs(): Promise<EngagementJob[]> {

@@ -1,4 +1,5 @@
 import { createSupabaseServiceClient } from "@/server/db/supabase-server";
+import { jsonNoStore } from "@/server/http/no-store-response";
 import { sendPushMessage, type PushTarget } from "@/server/push/vapid";
 import {
   applicationNotificationCategory,
@@ -49,12 +50,12 @@ type TargetRow = {
 export async function POST(request: Request) {
   const secret = process.env.PUSH_CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
+    return jsonNoStore({ message: "Unauthorized" }, { status: 401 });
   }
 
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
-    return Response.json({ message: "Push delivery is not configured" }, { status: 503 });
+    return jsonNoStore({ message: "Push delivery is not configured" }, { status: 503 });
   }
 
   const { data: claimed, error: claimError } = await supabase.rpc(
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
 
   if (claimError) {
     console.error("Push work could not be claimed.", { code: claimError.code });
-    return Response.json({ message: "Claim failed" }, { status: 502 });
+    return jsonNoStore({ message: "Claim failed" }, { status: 502 });
   }
 
   const rows = (claimed ?? []) as ClaimedNotification[];
@@ -153,7 +154,7 @@ export async function POST(request: Request) {
     });
   }
 
-  return Response.json({
+  return jsonNoStore({
     message: "Push dispatch complete",
     claimed: rows.length,
     delivered,

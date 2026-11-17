@@ -120,6 +120,10 @@ function rpcCalls(name: string) {
   );
 }
 
+function assertNoStore(response: Response): void {
+  assert.equal(response.headers.get("cache-control"), "no-store");
+}
+
 test("an unauthenticated POST is refused before any work", async () => {
   resetBoundary({}, { rpcs: {} });
   const restore = configured();
@@ -128,6 +132,7 @@ test("an unauthenticated POST is refused before any work", async () => {
     const res = await POST(request());
 
     assert.equal(res.status, 401);
+    assertNoStore(res);
     assert.deepEqual(
       recorded.supabase,
       [],
@@ -147,6 +152,7 @@ test("a wrong bearer secret is refused without touching the database", async () 
     const res = await POST(request("Bearer not-the-secret"));
 
     assert.equal(res.status, 401);
+    assertNoStore(res);
     assert.deepEqual(recorded.supabase, []);
   } finally {
     restore();
@@ -161,6 +167,7 @@ test("a deployment without the service client answers 503 and sends nothing", as
     const res = await POST(request(`Bearer ${CRON_SECRET}`));
 
     assert.equal(res.status, 503);
+    assertNoStore(res);
     assert.deepEqual(recorded.engagementMail, []);
   } finally {
     restore();
@@ -181,6 +188,7 @@ test("a deployment without a signing key answers 503 and sends nothing", async (
     const res = await POST(request(`Bearer ${CRON_SECRET}`));
 
     assert.equal(res.status, 503);
+    assertNoStore(res);
     assert.deepEqual(recorded.engagementMail, []);
   } finally {
     restore();
@@ -241,6 +249,7 @@ test("with no featured jobs the digest sends nothing", async () => {
     const res = await POST(request(`Bearer ${CRON_SECRET}`));
 
     assert.equal(res.status, 200);
+    assertNoStore(res);
     assert.deepEqual(await res.json(), { message: "No jobs to feature", sent: 0 });
     assert.deepEqual(recorded.engagementMail, []);
     assert.deepEqual(
@@ -261,6 +270,7 @@ test("a recipient-list failure answers 502 and sends nothing", async () => {
     const res = await POST(request(`Bearer ${CRON_SECRET}`));
 
     assert.equal(res.status, 502);
+    assertNoStore(res);
     assert.deepEqual(await res.json(), {
       message: "Recipient list is temporarily unavailable",
       sent: 0,
