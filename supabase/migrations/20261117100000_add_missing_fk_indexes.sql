@@ -1,55 +1,59 @@
--- Add missing indexes for foreign keys in payment system tables
--- Fixes "every public foreign key is covered by a leading-column index" ratchet
+-- Cover every public foreign key with a valid, non-partial index whose leading
+-- columns match the FK. Derive the index list from the live schema instead of
+-- maintaining a hand-written list that can drift from table definitions.
+--
+-- This is intentionally stricter than checking whether a column appears anywhere
+-- in an index: PostgreSQL's referential-integrity checks need the FK columns as
+-- the leading index columns, and partial indexes cannot cover every referenced row.
 
--- credit_accounts
-create index if not exists credit_accounts_company_id_idx on public.credit_accounts (company_id);
+do $$
+declare
+  fk record;
+  index_columns text;
+  index_name text;
+begin
+  for fk in
+    select
+      con.oid as constraint_oid,
+      con.conrelid as table_oid,
+      con.conkey as key_columns,
+      relation.relname as table_name
+    from pg_catalog.pg_constraint as con
+    join pg_catalog.pg_class as relation on relation.oid = con.conrelid
+    join pg_catalog.pg_namespace as namespace on namespace.oid = relation.relnamespace
+    where con.contype = 'f'
+      and namespace.nspname = 'public'
+    order by relation.relname, con.conname
+  loop
+    if not exists (
+      select 1
+      from pg_catalog.pg_index as existing_index
+      where existing_index.indrelid = fk.table_oid
+        and existing_index.indisvalid
+        and existing_index.indpred is null
+        and (existing_index.indkey::int2[])[0:array_length(fk.key_columns, 1) - 1]
+          = fk.key_columns
+    ) then
+      select string_agg(pg_catalog.format('%I', attribute.attname), ', ' order by key_column.ordinality)
+        into index_columns
+      from unnest(fk.key_columns) with ordinality as key_column(attnum, ordinality)
+      join pg_catalog.pg_attribute as attribute
+        on attribute.attrelid = fk.table_oid
+       and attribute.attnum = key_column.attnum;
 
--- credit_ledger_entries
-create index if not exists credit_ledger_entries_company_id_idx on public.credit_ledger_entries (company_id);
-create index if not exists credit_ledger_entries_order_id_idx on public.credit_ledger_entries (order_id);
-create index if not exists credit_ledger_entries_payment_instruction_version_id_idx on public.credit_ledger_entries (payment_instruction_version_id);
-create index if not exists credit_ledger_entries_actor_id_idx on public.credit_ledger_entries (actor_id);
+      -- Keep the name below PostgreSQL's 63-byte identifier limit and include a
+      -- stable constraint hash so multiple FKs on one table cannot collide.
+      index_name := pg_catalog.left(fk.table_name, 36)
+        || '_fk_' || pg_catalog.substr(pg_catalog.md5(fk.constraint_oid::text), 1, 12) || '_idx';
 
--- orders
-create index if not exists orders_company_id_idx on public.orders (company_id);
-create index if not exists orders_package_id_idx on public.orders (package_id);
-create index if not exists orders_payment_instruction_version_id_idx on public.orders (payment_instruction_version_id);
-create index if not exists orders_created_by_idx on public.orders (created_by);
-
--- payment_instruction_versions (company_id is PK, already indexed)
-
--- payment_reconciliations
-create index if not exists payment_reconciliations_order_id_idx on public.payment_reconciliations (order_id);
-create index if not exists payment_reconciliations_submission_id_idx on public.payment_reconciliations (submission_id);
-create index if not exists payment_reconciliations_reviewed_by_idx on public.payment_reconciliations (reviewed_by);
-
--- payment_submissions
-create index if not exists payment_submissions_order_id_idx on public.payment_submissions (order_id);
-create index if not exists payment_submissions_submitted_by_idx on public.payment_submissions (submitted_by);
-
--- Other tables that may have missing FK indexes
--- applications (if any FK without index)
-create index if not exists applications_candidate_id_idx on public.applications (candidate_id);
-create index if not exists applications_job_id_idx on public.applications (job_id);
-
--- company_members
-create index if not exists company_members_company_id_idx on public.company_members (company_id);
-create index if not exists company_members_profile_id_idx on public.company_members (profile_id);
-
--- company_profile_submissions
-create index if not exists company_profile_submissions_company_id_idx on public.company_profile_submissions (company_id);
-create index if not exists company_profile_submissions_profile_id_idx on public.company_profile_submissions (profile_id);
-
--- notifications
-create index if not exists notifications_user_id_idx on public.notifications (user_id);
-
--- support_messages
-create index if not exists support_messages_thread_id_idx on public.support_messages (thread_id);
-create index if not exists support_messages_sender_id_idx on public.support_messages (sender_id);
-
--- support_threads
-create index if not exists support_threads_member_id_idx on public.support_threads (member_id);
-
--- user_roles
-create index if not exists user_roles_user_id_idx on public.user_roles (user_id);
-create index if not exists user_roles_company_id_idx on public.user_roles (company_id);
+      execute pg_catalog.format(
+        'create index %I on %I.%I (%s)',
+        index_name,
+        'public',
+        fk.table_name,
+        index_columns
+      );
+    end if;
+  end loop;
+end;
+$$;
