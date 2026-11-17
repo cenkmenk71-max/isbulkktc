@@ -38,7 +38,7 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "KiloCode.kilo-code",
+        "kilocode.Kilo-Code",
         "dbaeumer.vscode-eslint",
         "bradlc.vscode-tailwindcss",
         "ms-playwright.playwright"
