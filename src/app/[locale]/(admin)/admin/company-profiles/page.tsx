@@ -2,7 +2,10 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Building2 } from "lucide-react";
 import { CompanyProfileReviewForm } from "@/features/companies/company-profile-review-form";
-import { getPendingCompanyProfileSubmissions } from "@/server/dal/companies";
+import { CompanyVerificationReviewForm } from "@/features/companies/company-verification-review-form";
+import {
+  getAdminCompanyProfileReviewQueues,
+} from "@/server/dal/companies";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
@@ -24,11 +27,12 @@ export default async function CompanyProfileReviewPage({
   if (!locale) notFound();
 
   setRequestLocale(locale);
-  const [submissions, copy, adminCopy] = await Promise.all([
-    getPendingCompanyProfileSubmissions(),
+  const [queues, copy, adminCopy] = await Promise.all([
+    getAdminCompanyProfileReviewQueues(),
     getTranslations("CompanyReview"),
     getTranslations("AdminPackages"),
   ]);
+  const { submissions, verifications } = queues;
 
   return (
     <main className="company-review-page page-container">
@@ -43,6 +47,85 @@ export default async function CompanyProfileReviewPage({
           {adminCopy("catalogTitle")}
         </Link>
       </header>
+
+      <section aria-labelledby="company-verification-title">
+        <header className="company-review-verification-heading">
+          <p className="eyebrow">
+            <span className="eyebrow-rule" />
+            {copy("verificationEyebrow")}
+          </p>
+          <h2 id="company-verification-title">{copy("verificationTitle")}</h2>
+          <p>{copy("verificationDescription")}</p>
+        </header>
+        {verifications.length === 0 ? (
+          <section className="company-review-empty" role="status">
+            <Building2 size={23} aria-hidden="true" />
+            <h3>{copy("verificationEmptyTitle")}</h3>
+            <p>{copy("verificationEmptyDescription")}</p>
+          </section>
+        ) : (
+          <div className="company-review-list">
+            {verifications.map((company) => (
+              <article className="company-review-card" key={company.id}>
+                <header>
+                  <span data-status={company.verification_status}>
+                    {company.verification_status === "pending"
+                      ? copy("verificationPending")
+                      : copy("verificationRejected")}
+                  </span>
+                  <time dateTime={company.created_at}>
+                    {new Intl.DateTimeFormat(locale, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }).format(new Date(company.created_at))}
+                  </time>
+                </header>
+                <h3>{company.name}</h3>
+                <p>{company.slug}</p>
+                <dl>
+                  {company.public_email ? (
+                    <>
+                      <dt>{copy("publicEmail")}</dt>
+                      <dd>{company.public_email}</dd>
+                    </>
+                  ) : null}
+                  {company.phone ? (
+                    <>
+                      <dt>{copy("phone")}</dt>
+                      <dd>{company.phone}</dd>
+                    </>
+                  ) : null}
+                  {company.website ? (
+                    <>
+                      <dt>{copy("website")}</dt>
+                      <dd>
+                        <a
+                          href={company.website}
+                          rel="noopener noreferrer"
+                          target="_blank"
+                        >
+                          {company.website}
+                        </a>
+                      </dd>
+                    </>
+                  ) : null}
+                  {company.address || company.municipality ? (
+                    <>
+                      <dt>{copy("location")}</dt>
+                      <dd>
+                        {[company.address, company.municipality]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </dd>
+                    </>
+                  ) : null}
+                </dl>
+                <CompanyVerificationReviewForm companyId={company.id} />
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       {submissions.length === 0 ? (
         <section className="company-review-empty" role="status">

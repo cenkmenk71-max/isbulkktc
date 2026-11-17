@@ -12,6 +12,8 @@ type CompanyProfileSubmission =
   Database["public"]["Tables"]["company_profile_submissions"]["Row"];
 type CompanyDirectoryOverride =
   Database["public"]["Tables"]["company_directory_overrides"]["Row"];
+type CompanyVerificationQueue =
+  Database["public"]["Functions"]["admin_list_company_verifications"]["Returns"];
 
 export async function getOwnedCompany(
   userId: string,
@@ -121,27 +123,39 @@ export async function getEmployerWorkspace(requestedCompanyId?: string): Promise
   return { user, companies, company, latestSubmission };
 }
 
-export async function getPendingCompanyProfileSubmissions(): Promise<
-  CompanyProfileSubmission[]
-> {
+export async function getAdminCompanyProfileReviewQueues(): Promise<{
+  submissions: CompanyProfileSubmission[];
+  verifications: CompanyVerificationQueue;
+}> {
   await requirePlatformRole("platform_admin");
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("company_profile_submissions")
-    .select(
-      "id, company_id, submitted_by, company_name, profile_description, categories, website, phone, public_email, address, municipality, directory_entry_id, directory_location_index, status, review_note, reviewed_by, reviewed_at, created_at, updated_at",
-    )
-    .eq("status", "pending")
-    .order("created_at")
-    .limit(50);
+  const [submissionResult, verificationResult] = await Promise.all([
+    supabase
+      .from("company_profile_submissions")
+      .select(
+        "id, company_id, submitted_by, company_name, profile_description, categories, website, phone, public_email, address, municipality, directory_entry_id, directory_location_index, status, review_note, reviewed_by, reviewed_at, created_at, updated_at",
+      )
+      .eq("status", "pending")
+      .order("created_at")
+      .limit(50),
+    supabase.rpc("admin_list_company_verifications"),
+  ]);
 
-  if (error) {
+  if (submissionResult.error) {
     throw new Error("Pending company profile submissions could not be loaded.", {
-      cause: error,
+      cause: submissionResult.error,
+    });
+  }
+  if (verificationResult.error) {
+    throw new Error("Company verification reviews could not be loaded.", {
+      cause: verificationResult.error,
     });
   }
 
-  return data;
+  return {
+    submissions: submissionResult.data,
+    verifications: verificationResult.data,
+  };
 }
 
 export async function getPublicCompanyDirectoryOverrides(): Promise<

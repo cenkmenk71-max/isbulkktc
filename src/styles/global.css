@@ -6415,6 +6415,22 @@ html:dir(rtl) .company-workspace-action-link:hover > svg {
   font-size: 13px;
   line-height: 1.7;
 }
+.company-review-verification-heading {
+  margin: 30px 0 18px;
+}
+.company-review-verification-heading h2 {
+  margin: 14px 0 7px;
+  color: var(--ink);
+  font-size: clamp(24px, 3vw, 32px);
+  letter-spacing: -0.045em;
+}
+.company-review-verification-heading > p:last-child {
+  max-width: 650px;
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.7;
+}
 .company-review-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6443,7 +6459,12 @@ html:dir(rtl) .company-workspace-action-link:hover > svg {
   color: var(--color-status-warning);
   font-weight: 650;
 }
-.company-review-card h2 {
+.company-review-card > header span[data-status="rejected"] {
+  background: var(--color-status-error-bg);
+  color: var(--color-status-error);
+}
+.company-review-card h2,
+.company-review-card h3 {
   margin: 16px 0 8px;
   color: var(--ink);
   font-size: 21px;
@@ -6521,7 +6542,8 @@ html:dir(rtl) .company-workspace-action-link:hover > svg {
 .company-review-empty > svg {
   color: var(--green-mid);
 }
-.company-review-empty h2 {
+.company-review-empty h2,
+.company-review-empty h3 {
   margin: 14px 0 5px;
   color: var(--ink);
   font-size: 19px;

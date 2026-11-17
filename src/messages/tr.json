@@ -1258,6 +1258,21 @@
     "saving": "Kaydediliyor…",
     "approveAndPublish": "Onayla ve yayımla",
     "reject": "Düzeltme iste",
+    "verificationEyebrow": "ŞİRKET DOĞRULAMA",
+    "verificationTitle": "İşveren doğrulama kuyruğu",
+    "verificationDescription": "Bu karar profil yayımından ayrıdır. Şirketi yalnızca gerekli kontrolleri tamamladıktan sonra doğrulayın.",
+    "verificationEmptyTitle": "İncelenecek şirket yok",
+    "verificationEmptyDescription": "Doğrulama bekleyen veya daha önce reddedilen şirketler burada görünür.",
+    "verificationPending": "Doğrulama bekliyor",
+    "verificationRejected": "Daha önce reddedildi",
+    "verifyCompany": "Şirketi doğrula",
+    "rejectVerification": "Doğrulamayı reddet",
+    "verificationMessages": {
+      "unauthorized": "Bu hesap şirket doğrulama kararları veremez.",
+      "failed": "Şirket doğrulama kararı kaydedilemedi. Sayfayı yenileyip tekrar deneyin.",
+      "verified": "Şirket doğrulandı.",
+      "rejected": "Şirket doğrulaması reddedildi."
+    },
     "messages": {
       "unauthorized": "Bu hesap şirket profillerini inceleyemez.",
       "failed": "İnceleme kaydedilemedi. Sayfayı yenileyip tekrar deneyin.",

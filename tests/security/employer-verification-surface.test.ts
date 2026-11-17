@@ -12,17 +12,9 @@ import test from "node:test";
  * `verification_status = 'verified'`, and the package entitlement RPCs refuse a
  * company that is not verified. The column defaults to `pending`.
  *
- * What the audit found is not a leak but a dead end: **no code path promotes a
- * company to `verified`**. There is no RPC, no server action and no admin page
- * that writes the column — the only writer is a direct `update public.companies`
- * an operator runs by hand. A self-service employer therefore submits a profile
- * and waits forever; the approval form publishes the *profile* but explicitly
- * leaves verification alone ("Onay profil bilgisini yayımlar; şirketin ayrı
- * doğrulama durumunu değiştirmez").
- *
  * The gates below pin the parts that *are* enforced, so a refactor cannot
- * quietly drop the verification requirement; the last test documents the
- * missing writer as an open `todo` against the owning module.
+ * quietly drop the verification requirement or the administrative decision
+ * boundary.
  */
 
 const repoRoot = new URL("../../", import.meta.url);
@@ -46,10 +38,6 @@ const statements = migrations
   .split(";")
   .map((statement) => statement.trim())
   .filter(Boolean);
-
-const srcDir = new URL("src/", repoRoot);
-const sourceFiles = listFiles(srcDir, /\.(ts|tsx)$/);
-const source = sourceFiles.map((file) => readFileSync(file, "utf8")).join("\n");
 
 // ---------------------------------------------------------------------------
 // 1. Publishing a job still requires a verified company.
@@ -112,34 +100,57 @@ test("admin_list_verified_companies requires a platform administrator", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. Open gap: nothing promotes a company to `verified`.
+// 3. Company verification decisions are restricted to the admin boundary.
 // ---------------------------------------------------------------------------
 
-test(
-  "some code path promotes a company to `verified`",
-  { todo: "employer self-service dead-ends at `pending` — no RPC, action or admin page writes verification_status (owner: the database layer + the product layer, #418)" },
-  () => {
-    // A writer looks like `update public.companies ... set verification_status = …`.
-    const writers = statements.filter(
-      (statement) =>
-        /^update\s+public\.companies\b/i.test(statement) &&
-        /verification_status\s*=/i.test(statement),
-    );
-    assert.deepEqual(
-      writers.map((writer) => writer.slice(0, 60)),
-      [],
-    );
+test("the verification writer is MFA-gated, narrow, and audited", () => {
+  const match = migrations.match(
+    /create or replace function public\.review_company_verification[\s\S]*?\$\$;/i,
+  );
+  assert.ok(match, "review_company_verification is not defined");
+  assert.match(match[0], /security definer/i);
+  assert.match(match[0], /set search_path\s*=\s*''/i);
+  assert.match(
+    match[0],
+    /v_actor_id is null\s+or not public\.has_platform_role\(\s*'platform_admin'\s*\)/i,
+    "the writer is not guarded by an active MFA-verified platform role",
+  );
+  assert.match(
+    match[0],
+    /_decision not in \(\s*'verified'\s*,\s*'rejected'\s*\)/i,
+    "the writer accepts a status outside the reviewed decision set",
+  );
+  assert.match(match[0], /for update/i, "the company row is not locked");
+  assert.match(match[0], /insert into public\.audit_logs/i);
+  assert.match(match[0], /metadata_redacted/i);
+});
 
-    // A verification RPC would be called from a server action.
-    const verificationRpcs = [
-      ...source.matchAll(/rpc\(\s*["'`]([a-z0-9_]+)["'`]/gi),
-    ]
-      .map((match) => match[1])
-      .filter((name) =>
-        /^(?:verify_company|set_company_verified|admin_verify_company|approve_company)$/i.test(
-          name,
-        ),
-      );
-    assert.deepEqual(verificationRpcs, []);
-  },
-);
+test("the verification action and admin page use the guarded review RPC", () => {
+  const action = readFileSync(
+    new URL("src/features/companies/actions.ts", repoRoot),
+    "utf8",
+  );
+  const form = readFileSync(
+    new URL(
+      "src/features/companies/company-verification-review-form.tsx",
+      repoRoot,
+    ),
+    "utf8",
+  );
+  const page = readFileSync(
+    new URL(
+      "src/app/[locale]/(admin)/admin/company-profiles/page.tsx",
+      repoRoot,
+    ),
+    "utf8",
+  );
+
+  assert.match(action, /companyVerificationReviewSchema\.safeParse/);
+  assert.match(action, /hasAssignedPlatformRole\("platform_admin"\)/);
+  assert.match(action, /rpc\("review_company_verification"/);
+  assert.match(form, /reviewCompanyVerification/);
+  assert.match(form, /value="verified"/);
+  assert.match(form, /value="rejected"/);
+  assert.match(page, /getAdminCompanyProfileReviewQueues/);
+  assert.match(page, /CompanyVerificationReviewForm/);
+});

@@ -1258,6 +1258,21 @@
     "saving": "Wird gespeichert …",
     "approveAndPublish": "Freigeben und veröffentlichen",
     "reject": "Änderungen anfordern",
+    "verificationEyebrow": "UNTERNEHMENSVERIFIZIERUNG",
+    "verificationTitle": "Prüfwarteschlange für Arbeitgeber",
+    "verificationDescription": "Diese Entscheidung ist unabhängig von der Veröffentlichung des Profils. Verifizieren Sie ein Unternehmen erst nach den erforderlichen Prüfungen.",
+    "verificationEmptyTitle": "Keine Unternehmen zur Prüfung",
+    "verificationEmptyDescription": "Hier erscheinen Unternehmen, deren Verifizierung noch aussteht oder zuvor abgelehnt wurde.",
+    "verificationPending": "Verifizierung ausstehend",
+    "verificationRejected": "Zuvor abgelehnt",
+    "verifyCompany": "Unternehmen verifizieren",
+    "rejectVerification": "Verifizierung ablehnen",
+    "verificationMessages": {
+      "unauthorized": "Dieses Konto darf keine Unternehmensverifizierung entscheiden.",
+      "failed": "Die Entscheidung konnte nicht gespeichert werden. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "verified": "Das Unternehmen wurde verifiziert.",
+      "rejected": "Die Unternehmensverifizierung wurde abgelehnt."
+    },
     "messages": {
       "unauthorized": "Dieses Konto darf keine Unternehmensprofile prüfen.",
       "failed": "Die Prüfung konnte nicht gespeichert werden. Aktualisieren Sie die Seite und versuchen Sie es erneut.",

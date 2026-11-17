@@ -62,6 +62,11 @@ export const companyProfileSchema = z.object({
   directoryTarget: z.string().max(160),
 });
 
+export const companyVerificationReviewSchema = z.object({
+  companyId: z.string().uuid(),
+  decision: z.enum(["verified", "rejected"]),
+});
+
 export type CreateCompanyFormState = {
   message: "idle" | "invalid" | "duplicate" | "unauthorized" | "failed" | "saved";
   status: "idle" | "error" | "success";
@@ -82,4 +87,9 @@ export type CompanyProfileFormState = {
 export type CompanyProfileSubmissionReviewState = {
   status: "idle" | "error" | "success";
   message: "idle" | "unauthorized" | "failed" | "branchUnavailable" | "approved" | "rejected";
+};
+
+export type CompanyVerificationReviewState = {
+  status: "idle" | "error" | "success";
+  message: "idle" | "unauthorized" | "failed" | "verified" | "rejected";
 };
