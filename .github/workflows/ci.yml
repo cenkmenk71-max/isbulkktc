@@ -2,11 +2,13 @@ name: isbulkktc CI
 
 on:
   pull_request:
-  # No run on push to main: a squash merge reproduces the exact tree the PR
-  # already verified, so it doubles CI cost and image pulls for the same result.
+  push:
+    branches: [main]
 
 permissions:
   contents: read
+  checks: write
+  actions: read
 
 concurrency:
   group: isbulkktc-ci-${{ github.event.pull_request.number || github.ref }}
