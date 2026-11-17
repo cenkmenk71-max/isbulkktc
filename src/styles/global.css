@@ -8555,6 +8555,21 @@ main :where(p) {
   color: rgba(240, 241, 237, 0.7);
   font-size: 12px;
 }
+.vend-panel-contact-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.vend-panel-contact-actions .vend-panel-link {
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+  line-height: 1.35;
+}
+.vend-panel-contact-actions .vend-panel-instagram {
+  grid-column: 1 / -1;
+}
 .vend-panel-link {
   display: inline-flex;
   min-height: 48px;
@@ -8588,8 +8603,8 @@ main :where(p) {
   color: rgba(240, 241, 237, 0.52);
   cursor: not-allowed;
 }
-.vend-panel-quote-instructions,
-.vend-panel-quote-unavailable {
+.vend-panel-contact-instructions,
+.vend-panel-contact-note {
   margin: 0 0 10px;
   color: rgba(240, 241, 237, 0.62);
   font-size: 11px;
@@ -13132,6 +13147,49 @@ html[dir="rtl"] input[name="slug"] {
   margin-bottom: 22px;
 }
 
+.pwa-install-qr {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 192px;
+  align-items: center;
+  gap: 20px;
+  margin: 22px 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+
+.pwa-install-qr-copy {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+}
+
+.pwa-install-qr-copy h2 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--type-heading-sm);
+  line-height: 1.2;
+}
+
+.pwa-install-qr-copy p {
+  margin: 0 0 4px;
+  color: var(--ink-3);
+  line-height: var(--leading-copy);
+}
+
+.pwa-install-qr-image {
+  display: block;
+  width: 192px;
+  height: 192px;
+  max-width: 100%;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
 .pwa-install-status {
   display: inline-flex;
   align-items: center;
@@ -13268,6 +13326,12 @@ html[lang="fa"] .pwa-install-steps > li::before {
   margin-top: 22px;
   padding-top: 16px;
   border-top: 1px solid var(--line-soft);
+}
+
+@media (max-width: 560px) {
+  .pwa-install-qr {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .pwa-install-push {

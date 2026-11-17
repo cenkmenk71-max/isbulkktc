@@ -31,16 +31,18 @@ Run them in this order locally:
 
 Use `bun`, not `npm`: the lockfile is `bun.lock` and `npm ci` fails against it.
 
-CI triggers only on `pull_request` and on `push` to `main`. Pushing a feature
-branch by itself starts nothing — open a PR to get a run.
+CI (`.github/workflows/ci.yml`) triggers only on `pull_request`. Pushing a feature
+branch or `main` by itself does not run the test suite; open a PR to get a CI
+run. A push to `main` triggers the separate production-deployment verification,
+which checks the deployed commit rather than rerunning CI.
 
 **Branch protection does not require the branch to be up to date.** It was on
 once; every merge then invalidated every open PR, so a queue of parallel PRs
 left the last one waiting roughly forty-five minutes. With several PRs running
 at once the cascade cost more than it caught, so it is off. Full CI is still
-required on every PR, and `main` runs CI on every push, so an integration
-problem surfaces on `main` immediately. If the repository ever moves to a plan
-with merge queue, turn it on — that is the correct fix for the cascade.
+required on every PR. A push to `main` runs deployment verification but does not
+rerun the full test suite. If the repository ever moves to a plan with merge
+queue, turn it on — that is the correct fix for the cascade.
 
 ## Gotchas worth remembering
 

@@ -39,7 +39,10 @@ const plan = {
   features: ["انتشار هم‌زمان", "گزارش"],
 };
 
-function render(locale: AppLocale) {
+function render(
+  locale: AppLocale,
+  instagramUrl: string | null = "https://instagram.com/isbulkktc",
+) {
   return renderToStaticMarkup(
     <NextIntlClientProvider locale={locale} messages={messages(locale)}>
       <Panel
@@ -49,7 +52,17 @@ function render(locale: AppLocale) {
         durationGroupLabel="مدت"
         durationLabel="مدت انتشار"
         durationOptions={[{ days: 30, label: "Aylık" }]}
+        contactInstructions="پیش‌نویس را بررسی و خودتان ارسال کنید"
+        contactLabels={{
+          email: "ایمیل",
+          instagram: "اینستاگرام",
+          instagramNote: "پیام را دستی ارسال کنید",
+          whatsapp: "واتس‌اپ",
+        }}
+        contactTitle="درباره بسته تماس بگیرید"
         heading={{ current: null }}
+        inquiryBody="%PACKAGE% · %DAYS% · %PRICE%"
+        inquirySubject="درخواست بسته"
         locale={locale}
         onClose={() => {}}
         onDurationChange={() => {}}
@@ -57,15 +70,11 @@ function render(locale: AppLocale) {
         plan={plan}
         priceSummary="مجموع بسته"
         quiet={false}
-        quoteAction="درخواست"
-        quoteEmailBody="مدت: %DAYS% روز"
-        quoteEmailSubject="پیشنهاد"
-        quoteInstructions="ایمیل"
-        quoteTitle="قیمت اختصاصی"
-        quoteUnavailable="در دسترس نیست"
         customPriceLabel="قیمت اختصاصی"
-        salesContactEmail="sales@example.com"
         selectedDuration={30}
+        supportEmail="info@isbulkktc.com"
+        whatsappUrl="https://wa.me/905391316421"
+        instagramUrl={instagramUrl}
       />
     </NextIntlClientProvider>,
   );
@@ -92,4 +101,37 @@ test("the vend panel price and step markers use the page locale's numerals", () 
   assert.match(trPrice, /2\.790/);
   assert.doesNotMatch(tr, PERSIAN_DIGITS);
   assert.match(tr, />01</, "tr step marker must stay 01");
+});
+
+test("package inquiry drafts include the selected package, duration and locale-formatted price", () => {
+  const markup = render("tr");
+  const whatsappHref = markup.match(/class="vend-panel-link vend-panel-whatsapp" href="([^"]+)"/)?.[1];
+  const emailHref = markup.match(/class="vend-panel-link vend-panel-email" href="([^"]+)"/)?.[1];
+  const instagramHref = markup.match(/class="vend-panel-link vend-panel-instagram" href="([^"]+)"/)?.[1];
+
+  assert.ok(whatsappHref);
+  assert.ok(emailHref);
+  assert.ok(instagramHref);
+
+  const whatsapp = new URL(whatsappHref.replaceAll("&amp;", "&"));
+  const email = new URL(emailHref.replaceAll("&amp;", "&"));
+  const whatsappMessage = whatsapp.searchParams.get("text");
+  const emailMessage = email.searchParams.get("body");
+
+  assert.equal(whatsapp.origin, "https://wa.me");
+  assert.equal(whatsapp.pathname, "/905391316421");
+  assert.equal(email.protocol, "mailto:");
+  assert.equal(email.pathname, "info@isbulkktc.com");
+  assert.equal(email.searchParams.get("subject"), "درخواست بسته");
+  assert.match(whatsappMessage ?? "", /رشد · 30 · ₺2\.790/);
+  assert.equal(emailMessage, whatsappMessage);
+  assert.equal(instagramHref, "https://instagram.com/isbulkktc");
+  assert.match(markup, /پیام را دستی ارسال کنید/);
+});
+
+test("an unconfigured Instagram profile is not rendered as a contact option", () => {
+  const markup = render("tr", null);
+
+  assert.doesNotMatch(markup, /vend-panel-instagram/);
+  assert.doesNotMatch(markup, /پیام را دستی ارسال کنید/);
 });

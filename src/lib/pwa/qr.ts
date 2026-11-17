@@ -1,5 +1,11 @@
 import { defaultInstallDestination, sanitizeNextPath } from "./destination";
 import { isSupportedQrVersion, parseInstallCampaign } from "./campaign";
+import {
+  getLocalePrefix,
+  isAppLocale,
+  routing,
+  type AppLocale,
+} from "@/i18n/routing";
 
 /**
  * The QR payload and its render options, kept apart from the route so both can
@@ -38,6 +44,21 @@ export type QrRenderOptions = {
   color: { dark: string; light: string };
 };
 
+function localizeNextPath(path: string, locale: AppLocale): string {
+  if (locale === routing.defaultLocale) return path;
+
+  const destination = new URL(path, "https://install-next.invalid");
+  const alreadyLocalized = routing.locales.some(
+    (candidate) =>
+      destination.pathname === `/${candidate}` ||
+      destination.pathname.startsWith(`/${candidate}/`),
+  );
+  if (alreadyLocalized) return path;
+
+  destination.pathname = `${getLocalePrefix(locale)}${destination.pathname}`;
+  return `${destination.pathname}${destination.search}${destination.hash}`;
+}
+
 /**
  * Builds the absolute install URL a QR code should carry.
  *
@@ -50,10 +71,14 @@ export function buildInstallQrUrl(input: {
   searchParams: URLSearchParams;
 }): string {
   const next = sanitizeNextPath(input.searchParams.get("next")) ?? defaultInstallDestination;
+  const requestedLocale = input.searchParams.get("locale") ?? "";
+  const locale = isAppLocale(requestedLocale)
+    ? requestedLocale
+    : routing.defaultLocale;
   const campaign = parseInstallCampaign(input.searchParams);
 
-  const target = new URL("/install", input.origin);
-  target.searchParams.set("next", next);
+  const target = new URL(`${getLocalePrefix(locale)}/install`, input.origin);
+  target.searchParams.set("next", localizeNextPath(next, locale));
   if (campaign?.source) target.searchParams.set("utm_source", campaign.source);
   if (campaign?.medium) target.searchParams.set("utm_medium", campaign.medium);
   if (campaign?.name) target.searchParams.set("utm_campaign", campaign.name);

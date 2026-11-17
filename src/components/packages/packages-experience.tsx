@@ -6,6 +6,11 @@ import type { AppLocale } from "@/i18n/routing";
 import { PackagesInteractiveShowcase } from "@/components/packages/packages-interactive-showcase";
 import { SalesLeadForm } from "@/features/sales/sales-lead-form";
 import { packageTierColors, packageTierPlanCodes } from "@/components/packages/package-tiers";
+import {
+  getSocialChannels,
+  getWhatsAppUrl,
+  SUPPORT_EMAIL,
+} from "@/lib/social-links";
 import type { ListingDuration } from "@/experience/scenes/vend-pricing/lib/plans";
 
 const packageTiers = [
@@ -70,6 +75,9 @@ export async function PackagesExperience({
 }) {
   const copy = await getTranslations({ locale, namespace: "PackagesPage" });
   const leadCopy = await getTranslations({ locale, namespace: "SalesLeadForm" });
+  const instagramUrl = getSocialChannels().find(
+    (channel) => channel.id === "instagram",
+  )?.href;
   const profiles = packageTiers.map((tier) => {
     const override = planPriceOverrides?.[tier.code];
     return {
@@ -212,13 +220,19 @@ export async function PackagesExperience({
             durationOptions={durationOptions}
             priceSummary={copy("showcase.pricing.priceSummary")}
             customPriceLabel={copy("showcase.pricing.customPrice")}
-            quoteAction={copy("showcase.pricing.quoteAction")}
-            quoteTitle={copy("showcase.pricing.quoteTitle")}
-            quoteInstructions={copy("showcase.pricing.quoteInstructions")}
-            quoteUnavailable={copy("showcase.pricing.quoteUnavailable")}
-            quoteEmailSubject={copy("showcase.pricing.quoteEmailSubject")}
-            quoteEmailBody={copy("showcase.pricing.quoteEmailBody")}
-            salesContactEmail={process.env.SALES_CONTACT_EMAIL ?? ""}
+            contactTitle={copy("showcase.pricing.contactTitle")}
+            contactInstructions={copy("showcase.pricing.contactInstructions")}
+            inquirySubject={copy("showcase.pricing.inquirySubject")}
+            inquiryBody={copy("showcase.pricing.inquiryBody")}
+            contactLabels={{
+              whatsapp: copy("showcase.pricing.whatsappAction"),
+              email: copy("showcase.pricing.emailAction"),
+              instagram: copy("showcase.pricing.instagramAction"),
+              instagramNote: copy("showcase.pricing.instagramNote"),
+            }}
+            whatsappUrl={getWhatsAppUrl()}
+            supportEmail={SUPPORT_EMAIL}
+            instagramUrl={instagramUrl ?? null}
             fallbackMessage={copy("showcase.sceneFallback")}
             ctaTitle={copy("showcase.ctaTitle")}
             ctaLabel={copy("showcase.ctaAction")}

@@ -171,15 +171,21 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # The download is a network call to a CDN and fails transiently (seen
-      # once: the step failed while the tests themselves passed). Retry it
-      # rather than fail a whole shard on a flake.
-      # Split the two halves: `install-deps` needs apt/sudo and is deterministic,
-      # while the browser *download* is the part that fails transiently. Retrying
-      # the whole `--with-deps` command does not work — the retry wrapper cannot
-      # kill the sudo child and the step dies with `kill EPERM` (seen on #192).
+      # Both the apt-based system dependency install and browser download can
+      # fail transiently. Keep each command in the foreground so retries never
+      # have to kill Playwright's sudo child (the failure mode from #192).
       - name: Install Playwright system dependencies
-        run: bunx playwright install-deps chrome
+        run: |
+          set -uo pipefail
+          for attempt in 1 2 3; do
+            if bunx playwright install-deps chrome; then
+              exit 0
+            fi
+            echo "::warning::Playwright system dependency install failed (attempt $attempt), retrying"
+            sleep 15
+          done
+          echo "::error::Playwright system dependency install failed after 3 attempts"
+          exit 1
 
       - name: Install Playwright browser
         run: |

@@ -1,5 +1,7 @@
 # Deploy log — LANE-TESLİMAT
 
+**Tarihsel kapsam notu:** `LANE-*` atamaları ve lane brief atıfları, 2026-11-10'da kaldırılan eski koordinasyon modeline (#602) aittir; güncel sahiplik veya işlem talimatı değildir. Operasyonel iddiaları işlemden önce yeniden doğrulayın.
+
 Append-only record of what was merged, what production served, and whether the
 two agreed. One row per verification checkpoint (not one per merge): the point is
 to make divergence between `main` and the live site visible instead of assumed.

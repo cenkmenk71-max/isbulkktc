@@ -86,6 +86,7 @@ export async function SiteFooter() {
             <Link href="/sss">{t('links.faq')}</Link>
             <Link href="/blog">{t('links.blog')}</Link>
             <Link href="/contact">{t('links.contact')}</Link>
+            <Link href="/install">{t('links.install')}</Link>
           </div>
         </nav>
       </div>

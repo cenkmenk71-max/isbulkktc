@@ -36,6 +36,10 @@
     "desktopAccepted": "Installation bestätigt.",
     "desktopInstall": "App installieren",
     "desktopUnavailable": "Ihr Desktop-Browser bietet derzeit keine Installation an. Sie können die Website in einem normalen Tab weiter nutzen.",
+    "qrTitle": "Mit dem Telefon scannen",
+    "qrDescription": "Scannen Sie diesen Code, um die Installationsseite auf Ihrem Telefon zu öffnen.",
+    "qrDownload": "QR-Code herunterladen",
+    "qrAlt": "QR-Code zur İşBul-KKTC-Installationsseite",
     "offlineBanner": "Sie sind offline. Gespeicherte Seiten werden angezeigt.",
     "updateAvailable": "Eine neue Version ist bereit.",
     "updateApply": "Aktualisieren",
@@ -265,7 +269,8 @@
       "cookies": "Cookies",
       "terms": "Nutzungsbedingungen",
       "guides": "Karriereratgeber",
-      "faq": "Häufige Fragen"
+      "faq": "Häufige Fragen",
+      "install": "App installieren"
     },
     "rights": "© {year} İşBul KKTC. Alle Rechte vorbehalten.",
     "madeIn": "Nordzypern",
@@ -361,12 +366,14 @@
         "thirtyDays": "30 Tage",
         "priceSummary": "Gesamtpreis des Pakets",
         "customPrice": "Individueller Umfang · schriftliches Angebot",
-        "quoteAction": "Angebot mit unserem Team besprechen",
-        "quoteTitle": "Lassen Sie uns den Personalbedarf Ihrer Organisation abstimmen.",
-        "quoteInstructions": "Ein E-Mail-Entwurf wird geöffnet. Ergänzen Sie vor dem Versand Ihr Unternehmen, die gewünschte Anzeigenzahl und Ihre Kontaktdaten.",
-        "quoteUnavailable": "Die Vertriebs-E-Mail ist noch nicht eingerichtet; Angebotsanfragen können nicht versendet werden.",
-        "quoteEmailSubject": "İşBul KKTC · Angebot für ein Unternehmenspaket",
-        "quoteEmailBody": "Guten Tag,\n\nbitte senden Sie mir ein schriftliches Angebot für ein Unternehmenspaket für Stellenanzeigen.\nGewünschte Laufzeit je Anzeige: %DAYS% Tage.\nBitte geben Sie eine begrenzte Anzeigenzahl und Veröffentlichungsdauer an.\n\nUnternehmensname, Kontaktdaten und weitere Anforderungen:"
+        "contactTitle": "Kontaktieren Sie uns zu diesem Stellenanzeigenpaket.",
+        "contactInstructions": "Ein WhatsApp- oder E-Mail-Entwurf wird geöffnet, den Sie prüfen und selbst versenden. Öffnen Sie auf Instagram das Profil und schreiben Sie Ihre Nachricht selbst.",
+        "whatsappAction": "WhatsApp-Entwurf öffnen",
+        "emailAction": "E-Mail-Entwurf öffnen",
+        "instagramAction": "Instagram-Profil öffnen",
+        "instagramNote": "Instagram unterstützt keine vorausgefüllten Profilnachrichten; senden Sie Ihre Nachricht manuell über das Profil.",
+        "inquirySubject": "İşBul KKTC · Anfrage zu Stellenanzeigenpaketen",
+        "inquiryBody": "Guten Tag,\n\nich interessiere mich für das Anzeigenpaket %PACKAGE%.\nGewünschte Laufzeit je Anzeige: %DAYS% Tage.\nAngezeigter Paketpreis / Angebot: %PRICE% (nur zur Information; Zahlungen werden nicht auf der Website angenommen).\n\nUnternehmen:\nKontaktdaten:\n\nBitte informieren Sie mich über die Paketbedingungen und die Zahlungsabwicklung außerhalb der Website."
       },
       "sound": {
         "button": "Soundmodus",

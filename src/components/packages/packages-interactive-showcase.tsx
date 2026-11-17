@@ -38,13 +38,19 @@ type PackagesInteractiveShowcaseProps = {
   durationOptions: { days: ListingDuration; label: string }[];
   priceSummary: string;
   customPriceLabel: string;
-  quoteAction: string;
-  quoteTitle: string;
-  quoteInstructions: string;
-  quoteUnavailable: string;
-  quoteEmailSubject: string;
-  quoteEmailBody: string;
-  salesContactEmail: string;
+  contactTitle: string;
+  contactInstructions: string;
+  inquirySubject: string;
+  inquiryBody: string;
+  contactLabels: {
+    whatsapp: string;
+    email: string;
+    instagram: string;
+    instagramNote: string;
+  };
+  whatsappUrl: string;
+  supportEmail: string;
+  instagramUrl: string | null;
   fallbackMessage: string;
   ctaTitle: string;
   ctaLabel: string;
@@ -65,13 +71,14 @@ export function PackagesInteractiveShowcase({
   durationOptions,
   priceSummary,
   customPriceLabel,
-  quoteAction,
-  quoteTitle,
-  quoteInstructions,
-  quoteUnavailable,
-  quoteEmailSubject,
-  quoteEmailBody,
-  salesContactEmail,
+  contactTitle,
+  contactInstructions,
+  inquirySubject,
+  inquiryBody,
+  contactLabels,
+  whatsappUrl,
+  supportEmail,
+  instagramUrl,
   fallbackMessage,
   ctaTitle,
   ctaLabel,
@@ -313,13 +320,14 @@ export function PackagesInteractiveShowcase({
           durationOptions={durationOptions}
           priceSummary={priceSummary}
           customPriceLabel={customPriceLabel}
-          quoteAction={quoteAction}
-          quoteTitle={quoteTitle}
-          quoteInstructions={quoteInstructions}
-          quoteUnavailable={quoteUnavailable}
-          quoteEmailSubject={quoteEmailSubject}
-          quoteEmailBody={quoteEmailBody}
-          salesContactEmail={salesContactEmail}
+          contactTitle={contactTitle}
+          contactInstructions={contactInstructions}
+          inquirySubject={inquirySubject}
+          inquiryBody={inquiryBody}
+          contactLabels={contactLabels}
+          whatsappUrl={whatsappUrl}
+          supportEmail={supportEmail}
+          instagramUrl={instagramUrl}
           selectedDuration={selectedDuration}
           onDurationChange={setSelectedDuration}
           plan={plans[selectedIndex]}

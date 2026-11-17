@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { getScriptSrc } from "./src/lib/security/csp";
 
 // Restricts where the browser may load resources from. `unsafe-inline` is
 // required for the inline hydration bootstrap and inline styles Next emits;
@@ -11,7 +12,7 @@ const contentSecurityPolicy = [
   "object-src 'none'",
   "frame-ancestors 'self'",
   "form-action 'self'",
-  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://*.challenges.cloudflare.com https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com",
+  `script-src ${getScriptSrc(process.env.NODE_ENV === "development")}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
@@ -34,6 +35,8 @@ const securityHeaders = [
   },
   {
     key: "Strict-Transport-Security",
+    // Cloudflare owns the public HSTS value for proxied hosts. Keep this origin
+    // fallback explicit for direct Vercel aliases until those aliases are retired.
     value: "max-age=63072000; includeSubDomains; preload",
   },
   { key: "Content-Security-Policy", value: contentSecurityPolicy },

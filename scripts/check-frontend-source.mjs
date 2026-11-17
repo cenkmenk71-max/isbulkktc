@@ -618,14 +618,19 @@ assert.doesNotMatch(
 );
 assert.match(packagesShowcase, /role="group"/);
 assert.match(packagesPanel, /aria-pressed=/);
-// The quote body must consume the `%DAYS%` placeholder before it reaches the
-// mail client. Accept either the plain `String(selectedDuration)` form or the
-// locale-aware `Intl.NumberFormat(locale).format(selectedDuration)` form so
-// the `fa` numeral fix (#385) can land without the gate pinning
-// the Latin-only rendering.
+// The inquiry draft carries the selected package, locale-formatted duration,
+// and displayed price to the user's chosen contact channel.
 assert.match(
   packagesPanel,
-  /quoteEmailBody\.replace\(\s*"%DAYS%",\s*(?:String\(selectedDuration\)|new Intl\.NumberFormat\(locale\)\.format\(selectedDuration\))/,
+  /const messageBody = inquiryBody\s*\.replaceAll\("%PACKAGE%", plan\.name\)\s*\.replaceAll\("%DAYS%", new Intl\.NumberFormat\(locale\)\.format\(selectedDuration\)\)\s*\.replaceAll\("%PRICE%", formattedPrice\)/,
+);
+assert.match(
+  packagesPanel,
+  /const whatsappHref = `\$\{whatsappUrl\}\?text=\$\{encodeURIComponent\(messageBody\)\}`/,
+);
+assert.match(
+  packagesPanel,
+  /const emailHref = `mailto:\$\{supportEmail\}\?subject=\$\{encodeURIComponent\(inquirySubject\)\}&body=\$\{encodeURIComponent\(messageBody\)\}`/,
 );
 assert.doesNotMatch(packagesShowcase, /packages-vend-selector/);
 assert.match(packagesShowcase, /packages-vend-accessible-controls/);
@@ -685,8 +690,14 @@ assert.doesNotMatch(packagesLabels, /var\(--font-geist-/);
 assert.match(css, /\.packages-vend-section/);
 assert.match(css, /\.packages-vend-fallback/);
 assert.equal(Object.keys(trMessages.PackagesPage.showcase.cards).length, 4);
-assert.match(trMessages.PackagesPage.showcase.pricing.quoteEmailBody, /%DAYS%/);
-assert.match(enMessages.PackagesPage.showcase.pricing.quoteEmailBody, /%DAYS%/);
+assert.match(
+  trMessages.PackagesPage.showcase.pricing.inquiryBody,
+  /%PACKAGE%[\s\S]*%DAYS%[\s\S]*%PRICE%/,
+);
+assert.match(
+  enMessages.PackagesPage.showcase.pricing.inquiryBody,
+  /%PACKAGE%[\s\S]*%DAYS%[\s\S]*%PRICE%/,
+);
 assert.equal(
   trMessages.PackagesPage.showcase.scene.viewScope,
   "Jetonla Paketi Değiştir",

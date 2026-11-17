@@ -1,5 +1,7 @@
 # Doğrulama günlüğü
 
+**Tarihsel kapsam notu:** `LANE-*` atamaları ve lane brief atıfları, 2026-11-10'da kaldırılan eski koordinasyon modeline (#602) aittir; güncel sahiplik veya işlem talimatı değildir. Ölçüm sonuçlarını kullanmadan önce yeniden doğrulayın.
+
 Olgunlaşma sonrası gerçek dünya ölçümleri. Her satır **ölçülen** bir sonuçtur,
 iddia değil.
 

@@ -36,6 +36,10 @@
     "desktopAccepted": "Install accepted.",
     "desktopInstall": "Install the app",
     "desktopUnavailable": "Your desktop browser is not offering installation right now. You can keep using the site in a normal tab.",
+    "qrTitle": "Scan with your phone",
+    "qrDescription": "Scan this code to open the install page on your phone.",
+    "qrDownload": "Download QR code",
+    "qrAlt": "QR code that opens the İşBul KKTC install page",
     "offlineBanner": "You are offline. Showing saved pages.",
     "updateAvailable": "A new version is ready.",
     "updateApply": "Update",
@@ -263,12 +267,14 @@
         "thirtyDays": "30 days",
         "priceSummary": "Package total",
         "customPrice": "Custom scope · written quote",
-        "quoteAction": "Talk to our team for a quote",
-        "quoteTitle": "Let's scope your organisation's hiring needs.",
-        "quoteInstructions": "Your email draft will open. Add your company name, requested listing quantity, and contact details before sending.",
-        "quoteUnavailable": "The sales email is not configured yet; quote requests cannot be sent.",
-        "quoteEmailSubject": "İşBul KKTC · Enterprise listing package quote",
-        "quoteEmailBody": "Hello,\n\nPlease send a written quote for an enterprise listing package.\nPreferred duration per listing: %DAYS% days.\nPlease specify a finite listing quantity and publication term in the proposal.\n\nCompany name, contact details and other requirements:"
+        "contactTitle": "Contact our team about this listing package.",
+        "contactInstructions": "A WhatsApp or email draft opens for you to review and send. On Instagram, open the profile and write your message yourself.",
+        "whatsappAction": "Open WhatsApp draft",
+        "emailAction": "Open email draft",
+        "instagramAction": "Open Instagram profile",
+        "instagramNote": "Instagram does not support prefilled profile messages; send your message from the profile.",
+        "inquirySubject": "İşBul KKTC · Listing package inquiry",
+        "inquiryBody": "Hello,\n\nI am interested in the %PACKAGE% listing package.\nPreferred listing duration: %DAYS% days.\nDisplayed package price / quote: %PRICE% (for information only; payment is not collected on the website).\n\nCompany name:\nContact details:\n\nPlease share the package terms and the steps for arranging payment outside the website."
       },
       "sound": {
         "button": "Sound mode",
@@ -351,7 +357,8 @@
       "cookies": "Cookies",
       "terms": "Terms of use",
       "guides": "Career guides",
-      "faq": "FAQ"
+      "faq": "FAQ",
+      "install": "Install the app"
     },
     "rights": "© {year} İşBul KKTC. All rights reserved.",
     "madeIn": "Northern Cyprus",

@@ -1,5 +1,7 @@
 # V4 veri sınıflandırması, erişimi ve saklama yaşam döngüsü
 
+**Tarihsel kapsam notu:** `LANE-*` atamaları ve lane brief atıfları, 2026-11-10'da kaldırılan eski koordinasyon modeline (#602) aittir; güncel sahiplik veya işlem talimatı değildir. Saklama ve silme kararları ürün/hukuk onayı olmadan değiştirilmemelidir.
+
 V4 bir retention süresi, işletme hesabı, ülke/region, hukuki dayanak veya
 backup planı belirlemez. Sınır ötesi gizlilik yükümlülükleri hukuk uzmanıyla
 onaylanmadan hassas veri işleme açılmaz. Aşağıdaki tablo karar eksiklerini ve

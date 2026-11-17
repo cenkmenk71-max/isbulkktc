@@ -1,5 +1,7 @@
 # V4 güvenlik sınırları ve başlangıç tehdit modeli
 
+**Tarihsel kapsam notu:** `LANE-*` atamaları ve lane brief atıfları, 2026-11-10'da kaldırılan eski koordinasyon modeline (#602) aittir; güncel sahiplik veya işlem talimatı değildir. Uygulama durumunu değişikliklerden sonra yeniden doğrulayın.
+
 Bu belge [`architecture-v4.md`](./architecture-v4.md) ile birlikte
 değerlendirilir; iskelet kurulumu veya yerel test çalıştırması güvenlik
 sertifikası değildir. Kaynak dosyadaki V4 §4, §5 ve §9 daha kapsamlı kaynak
@@ -450,21 +452,18 @@ issue açar.
   bağlantısını başka bir host'a yönlendirebiliyordu (markalı poster üzerinden
   phishing). Düzeltme normalize edilen çıktıyı yeniden doğruluyor;
   `tests/security/open-redirect.test.ts` iki testi artık `todo` değil, kapı.
-- **Anonim formlarda istismar kontrolü yok** (sahibi: `src/features/feedback/**`,
-  `src/features/sales/**`, LANE-URUN). Ne captcha ne hız sınırı vardı. Şimdi
-  `src/features/abuse/**` action'da adres/IP başına throttle uyguluyor;
-  `tests/security/anonymous-write-surface.test.ts`'teki test `todo`'dan kapıya
-  terfi etti. (Endpoint'in kendisi hâlâ açık — yukarıdaki 1. bulgu.)
-- **Anon write RPC'leri doğrudan çağrılabiliyordu (#139)** (sahibi:
-  `supabase/**`, LANE-SUPABASE). `submit_feedback` / `submit_sales_lead`
-  `anon`'a grant'li ve `security definer`; abuse kontrolü yalnız action'daydı,
-  yani `POST /rest/v1/rpc/submit_feedback` ile atlanıyordu. LANE-SUPABASE
-  `20261106000000_v4_anon_write_throttle.sql` ile throttle'ı RPC gövdesine
-  taşıdı (insert'ten önce `consume_anon_write_quota`, ledger + helper client
-  rollerinden revoke'lu). `tests/security/anonymous-rpc-throttle.test.ts` artık
-  gevşek bir `/throttle/i` araması yerine her RPC'nin gövdesinde çağrının
-  varlığını ve insert'ten önce çalıştığını doğrulayan bir **kapı** çalıştırıyor.
-  (IP boyutunun app yolundaki kalan açığı yukarıdaki 1. bulgudur.)
+- **Anonim yazım RPC'lerinde hız sınırı (#139, #206 — düzeltildi)** (sahip:
+  `src/features/feedback/**`, `src/features/sales/**`, `supabase/**`). Action
+  katmanı e-posta yan etkilerinden önce IP/e-posta sınırı uygular; anon'a açık
+  RPC'ler de veritabanında, insert'ten önce kota tüketir. Doğrudan PostgREST
+  çağrısı action'ı atlayabilir ama veritabanı kotasını atlayamaz. Forged
+  `x-client-ip` için her anon yazma RPC'sinde ayrı edge-peer kotası vardır.
+  `tests/security/anonymous-write-surface.test.ts`,
+  `tests/security/anonymous-rpc-throttle.test.ts`,
+  `supabase/tests/database/anon_write_throttle.test.sql` ve
+  `supabase/tests/database/anon_write_throttle_peer_scopes.test.sql` bu
+  sınırları korur. App yolundaki paylaşılan egress tavanı ve çözümü üstteki
+  operasyon notunda açıklanmıştır.
 - **Oturum çerezi sertleştirilmemişti** (sahibi: LANE-AUTH; devir #167). Oturum
   çerezi `@supabase/ssr` varsayılanlarıyla yazılıyordu (`httpOnly: false`,
   `Secure` yok). LANE-AUTH (#201) iki çağrı noktasına da

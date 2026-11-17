@@ -114,6 +114,35 @@ test("the install page is not indexable", async ({ page }) => {
   );
 });
 
+test("desktop visitors can scan or download a locale-aware install QR", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/en/install?next=%2Fjobs%3Fdistrict%3Dnicosia");
+
+  const qr = page.locator(".pwa-install-qr");
+  await expect(qr).toBeVisible();
+  const image = qr.getByRole("img");
+  await expect(image).toHaveAttribute("alt", /QR code/i);
+  const imageUrl = new URL((await image.getAttribute("src"))!, page.url());
+  expect(imageUrl.pathname).toBe("/api/qr");
+  expect(imageUrl.searchParams.get("locale")).toBe("en");
+  expect(imageUrl.searchParams.get("next")).toBe("/jobs?district=nicosia");
+  const imageResponse = await page.request.get(imageUrl.toString());
+  expect(imageResponse.headers()["content-type"]).toContain("image/svg+xml");
+
+  const download = qr.getByRole("link", { name: "Download QR code" });
+  await expect(download).toHaveAttribute("download", "isbulkktc-install-qr.png");
+  const downloadUrl = new URL((await download.getAttribute("href"))!, page.url());
+  const downloadResponse = await page.request.get(downloadUrl.toString());
+  expect(downloadResponse.headers()["content-type"]).toBe("image/png");
+
+  await page.goto("/en");
+  await expect(
+    page.locator(".site-footer").getByRole("link", { name: "Install the app" }),
+  ).toHaveAttribute("href", "/en/install");
+});
+
 test("a valid next destination is honoured and carried into the continue link", async ({
   page,
 }) => {

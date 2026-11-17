@@ -1,5 +1,7 @@
 # Cloudflare denetimi — isbulkktc.com
 
+**Tarihsel kapsam notu:** `LANE-*` atamaları ve lane brief atıfları, 2026-11-10'da kaldırılan eski koordinasyon modeline (#602) aittir; güncel sahiplik veya işlem talimatı değildir. Canlı altyapıya yönelik bulguları işlemden önce yeniden doğrulayın.
+
 LANE-CLOUDFLARE (dalga 2) — **read-only** uç/edge denetimi. Bu dosya canlı
 kanıtla doğrulanmış bulguları ve onay bekleyen değişiklikleri tutar.
 
@@ -84,7 +86,7 @@ atıfları belirsizleştirir; bu dokümanda iki kez yaşandı: tur 18'de `V-01`
 | F-08 | **Origin doğrudan erişim** | `https://isbulkktc-amber.vercel.app` CF'yi **tamamen atlıyor**: `server: Vercel`, `cf-ray` yok, rate-limit yok (`POST /login` 12/12 200, apex'te aynı seri 429). **tur 24 nüansı:** alias'ın **kendi** koruması var — `x-vercel-mitigated: challenge` (Vercel Security Checkpoint) **saldırı-yolu taraması** ile tetiklenir, hacimle değil; challenge **IP'ye özel** (temiz egress → 200) ve tetikleyen IP'de **en az 6 dk** kalıcı (D-14) | Vercel Deployment Protection (Vercel Authentication / Protection Bypass) veya alias'ı public bırakma | `HTTP` alias |
 | F-09 | TLS min sürüm | **SSL Labs (tur 17): 4/4 endpoint grade `A+`, yalnız TLS 1.2 + 1.3 sunuluyor** (1.0/1.1 yok). Sandbox `openssl`'de 1.0/1.1 istemci tarafı da yok, o yüzden "`no protocols available`" **sunucu reddi kanıtı DEĞİL** (bkz. tur 17 düzeltmesi) | Min TLS 1.2 — doğru | SSL Labs API + Python `ssl` |
 | F-10 | Sertifika | Let's Encrypt `YE2`, SAN `*.isbulkktc.com, isbulkktc.com`, geçerlilik 2026-09-19 → 2026-12-18 | OK (CF Universal SSL) | `openssl x509` |
-| F-11 | HSTS | `max-age=31536000; includeSubDomains; preload` | Doğru | `HTTP` |
+| F-11 | HSTS | `max-age=31536000; includeSubDomains; preload`; Cloudflare edge başlığı origin değerinin üzerine yazar | Doğru; proxied public hostlarda Cloudflare zone ayarı tek otoritedir | `HTTP` |
 | F-12 | HSTS preload | `hstspreload.org` → **`status: pending`** | `preloaded` olana kadar bekle; kaydı geri çekme | hstspreload API |
 | F-13 | DNSSEC | Açık — DS `2371 13 2 36e0…775b`, apex+çoğu alt alan `AD=true`; **`rsend` CNAME'i `rmta.net`'e gidiyor (DS yok) → `AD=false`** (bkz. tur 18, D-01) | Apex doğru; kısmi kapsam bilinmeli | DoH DS + `AD` |
 | F-14 | Cache — dinamik HTML | `/`, `/jobs`, `/companies`, tüm dil önekleri: `cache-control: private, no-cache, no-store…`, `cf-cache-status: DYNAMIC`. **Prerender** rotalar (`/blog`, `/contact`, `/freelance`, `/about`, `/privacy`, `/terms` + dil-önekli varyantlar) da artık `private, no-cache, no-store, max-age=0, must-revalidate` (tur 22 — P-01 #403 ile **kapandı**) | Dinamik ve prerender asla cache'lenmemeli — **doğru** | `HTTP` |

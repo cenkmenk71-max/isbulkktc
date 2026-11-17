@@ -468,6 +468,39 @@ test("a check red on only one PR is that PR's own failure, not a shared gate", (
   assert.deepEqual(queueGlobalGates([prWithCheck(555, "E2E (1/4)")]), []);
 });
 
+test("duplicate red checks on one PR do not look like a queue-global gate", () => {
+  assert.deepEqual(
+    queueGlobalGates([
+      {
+        number: 555,
+        mergeStateStatus: "BLOCKED",
+        statusCheckRollup: [
+          { name: "E2E (1/4)", conclusion: "FAILURE" },
+          { name: "E2E (1/4)", conclusion: "FAILURE" },
+        ],
+      },
+    ]),
+    [],
+  );
+});
+
+test("duplicate check entries do not duplicate a PR in a genuine shared gate", () => {
+  assert.deepEqual(
+    queueGlobalGates([
+      {
+        number: 555,
+        mergeStateStatus: "BLOCKED",
+        statusCheckRollup: [
+          { name: "Database", conclusion: "FAILURE" },
+          { name: "Database", conclusion: "FAILURE" },
+        ],
+      },
+      prWithCheck(557, "Database"),
+    ]),
+    [{ check: "Database", prs: [555, 557] }],
+  );
+});
+
 test("two different checks each red on one PR do not make a queue-global gate", () => {
   assert.deepEqual(
     queueGlobalGates([prWithCheck(555, "Static checks"), prWithCheck(556, "E2E (1/4)")]),
