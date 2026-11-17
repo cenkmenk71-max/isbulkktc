@@ -474,7 +474,7 @@ const htmlCacheRegex = buildCustomRoute("header", {
 }).regex;
 const htmlCacheMatcher = new RegExp(htmlCacheRegex);
 
-test("the HTML cache rule covers exactly the routes the locale middleware touches", () => {
+test("the HTML cache rule covers locale pages and encoded API failures", () => {
   // Every route that can carry the per-request `NEXT_LOCALE` `Set-Cookie`: the
   // public pages, their locale-prefixed twins, and the dynamic detail routes.
   const mustBeUncacheable = [
@@ -522,6 +522,12 @@ test("the HTML cache rule covers exactly the routes the locale middleware touche
     [],
     `non-document paths caught by the HTML cache rule: ${overreached.join(", ")}`,
   );
+
+  assert.equal(
+    htmlCacheMatcher.test("/api%2Fqr"),
+    true,
+    "encoded API separators must be matched so Proxy can return a no-store 404",
+  );
 });
 
 test("the HTML cache rule forbids every shared-cache directive", () => {
@@ -544,12 +550,10 @@ test("the HTML cache rule forbids every shared-cache directive", () => {
   assert.doesNotMatch(cacheControl, /max-age\s*=\s*[1-9]/i, `HTML Cache-Control has a positive max-age: ${cacheControl}`);
 });
 
-test("the HTML cache matcher is the locale middleware's own (ratchet)", () => {
-  // The rule is only correct while it covers the same routes as the middleware
-  // that writes the cookie. Pinning them equal means a matcher change on either
-  // side fails here instead of silently re-opening a gap. The two sources live in
-  // different escaping contexts (a config value vs a TS string literal), so the
-  // comparison is on the compiled regex, which is what the server matches with.
+test("the HTML cache matcher stays aligned with Proxy (ratchet)", () => {
+  // Both sources must cover the same page routes and malformed encoded API
+  // separators. The two sources live in different escaping contexts, so compare
+  // the compiled regex that the server matches with.
   const proxySource = readFileSync(new URL("../../src/proxy.ts", import.meta.url), "utf8");
   const matcher = /matcher:\s*\[\s*"((?:[^"\\]|\\.)+)"\s*\]/.exec(proxySource)?.[1];
   assert.ok(matcher, "could not read the middleware matcher from src/proxy.ts");

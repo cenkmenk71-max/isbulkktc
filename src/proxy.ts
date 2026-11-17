@@ -8,7 +8,20 @@ import { isCorruptedSupabaseAuthError } from "@/server/auth/supabase-guards";
 const handleI18nRouting = createMiddleware(routing);
 
 export async function proxy(request: NextRequest) {
-  const pathnameLocale = request.nextUrl.pathname.split("/")[1];
+  const pathname = request.nextUrl.pathname;
+
+  // Next's route resolver can throw before a handler gets control when an API
+  // separator is percent-encoded. Catch only that malformed API shape here.
+  if (pathname.toLowerCase().startsWith("/api%2f")) {
+    return new NextResponse(null, {
+      status: 404,
+      headers: {
+        "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+      },
+    });
+  }
+
+  const pathnameLocale = pathname.split("/")[1];
 
   // The default locale has one canonical public URL when localePrefix="as-needed".
   // Do not exempt requests based on x-next-intl-locale: that header can also be
@@ -122,5 +135,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|trpc|_next|_vercel|.*\\..*).*)"],
+  matcher: ["/((?!api(?!%2[fF])|trpc|_next|_vercel|.*\\..*).*)"],
 };

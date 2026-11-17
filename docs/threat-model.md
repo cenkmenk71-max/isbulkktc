@@ -691,6 +691,16 @@ build-info yalnız sürüm kimliği + `no-store`; depoda/konfigde **hiç** ACAO 
 bildirir; her `force-static` rota `no-store` taşır. Üç self-test guard'ın
 görmediği biçimi göstermesi için (mutasyonla kanıtlandı).
 
+### #441 — kodlanmış API ayıracı güvenli biçimde reddet
+
+Next.js rota çözümleyicisi `/api%2F...` yollarını handler'a ulaşmadan hata
+yanıtına çevirebildiğinden, `src/proxy.ts` bu özel yolu eşleştirip `404` ve
+`Cache-Control: no-store` ile reddeder. Normal `/api/...` yolları Proxy dışında
+kalır; böylece bu koruma API oturum akışlarını değiştirmez. Güvenlik testi
+eşleştiricinin kanonik API yollarını dışarıda, kodlanmış ayıracı içeride
+tuttuğunu; üretim E2E testi de iki örneğin 404 ve `no-store` döndürdüğünü
+doğrular. Bu, canlı dağıtımın yeniden ölçüldüğü anlamına gelmez.
+
 ### Katmanın kendi dedektörleri (33. tur — HTTP başlık adı büyük/küçük harf körlüğü)
 
 31. turda dedektörler **konu keşfi**ne geçti; bu turda aynı sınıfın bir alt
