@@ -198,8 +198,13 @@ environment variables.
    `verify_jwt` is disabled at the gateway for this function because it checks
    the exact service-role bearer value itself. Do not remove that in-function
    check or expose the worker endpoint without it.
-4. In Supabase Database > Extensions, enable `pg_cron`, `pg_net`, and Vault if
-   they are not already enabled. In Vault, store:
+4. In Supabase Database > Extensions, enable `pg_net` in the `extensions`
+   schema, plus `pg_cron` and Vault if they are not already enabled. `pg_net`
+   is non-relocatable: an existing installation in `public` cannot be moved
+   with `ALTER EXTENSION`. Re-creating it needs a planned maintenance window:
+   inspect pending requests, response data and scheduled callers before
+   disabling it. Do not drop/re-create it as an incidental deployment step.
+   Verify its extension schema before scheduling jobs. In Vault, store:
    - `application_notification_function_url`: the project's Edge Function URL
    - `application_notification_apikey`: the project's publishable key
    - `application_notification_worker_token`: the same value as

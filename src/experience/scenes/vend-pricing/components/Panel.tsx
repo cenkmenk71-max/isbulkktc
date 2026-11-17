@@ -14,13 +14,19 @@ type Props = {
   durationOptions: { days: ListingDuration; label: string }[];
   priceSummary: string;
   customPriceLabel: string;
-  quoteAction: string;
-  quoteTitle: string;
-  quoteInstructions: string;
-  quoteUnavailable: string;
-  quoteEmailSubject: string;
-  quoteEmailBody: string;
-  salesContactEmail: string;
+  contactTitle: string;
+  contactInstructions: string;
+  inquirySubject: string;
+  inquiryBody: string;
+  contactLabels: {
+    whatsapp: string;
+    email: string;
+    instagram: string;
+    instagramNote: string;
+  };
+  whatsappUrl: string;
+  supportEmail: string;
+  instagramUrl: string | null;
   selectedDuration: ListingDuration;
   onDurationChange: (duration: ListingDuration) => void;
   ctaTitle: string;
@@ -40,13 +46,14 @@ export function Panel({
   durationOptions,
   priceSummary,
   customPriceLabel,
-  quoteAction,
-  quoteTitle,
-  quoteInstructions,
-  quoteUnavailable,
-  quoteEmailSubject,
-  quoteEmailBody,
-  salesContactEmail,
+  contactTitle,
+  contactInstructions,
+  inquirySubject,
+  inquiryBody,
+  contactLabels,
+  whatsappUrl,
+  supportEmail,
+  instagramUrl,
   selectedDuration,
   onDurationChange,
   ctaTitle,
@@ -57,10 +64,20 @@ export function Panel({
   heading,
 }: Props) {
   const selectedPrice = plan.prices?.[selectedDuration];
-  const quoteBody = quoteEmailBody.replace("%DAYS%", String(selectedDuration));
-  const quoteHref = salesContactEmail
-    ? `mailto:${salesContactEmail}?subject=${encodeURIComponent(quoteEmailSubject)}&body=${encodeURIComponent(quoteBody)}`
-    : null;
+  const formattedPrice =
+    selectedPrice === undefined
+      ? customPriceLabel
+      : new Intl.NumberFormat(locale, {
+          style: "currency",
+          currency: "TRY",
+          maximumFractionDigits: 0,
+        }).format(selectedPrice);
+  const messageBody = inquiryBody
+    .replaceAll("%PACKAGE%", plan.name)
+    .replaceAll("%DAYS%", new Intl.NumberFormat(locale).format(selectedDuration))
+    .replaceAll("%PRICE%", formattedPrice);
+  const whatsappHref = `${whatsappUrl}?text=${encodeURIComponent(messageBody)}`;
+  const emailHref = `mailto:${supportEmail}?subject=${encodeURIComponent(inquirySubject)}&body=${encodeURIComponent(messageBody)}`;
 
   return (
     <aside
@@ -122,6 +139,36 @@ export function Panel({
       </section>
 
       <div className="vend-panel-action">
+        <p>{contactTitle}</p>
+        <p className="vend-panel-contact-instructions">{contactInstructions}</p>
+        <div className="vend-panel-contact-actions">
+          <a
+            className="vend-panel-link vend-panel-whatsapp"
+            href={whatsappHref}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            {contactLabels.whatsapp}
+          </a>
+          <a className="vend-panel-link vend-panel-email" href={emailHref}>
+            {contactLabels.email}
+          </a>
+          {instagramUrl ? (
+            <a
+              className="vend-panel-link vend-panel-instagram"
+              href={instagramUrl}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              {contactLabels.instagram}
+            </a>
+          ) : null}
+        </div>
+        {instagramUrl ? (
+          <p className="vend-panel-contact-note">
+            {contactLabels.instagramNote}
+          </p>
+        ) : null}
         {plan.prices ? (
           <>
             <p>{ctaTitle}</p>
@@ -133,27 +180,7 @@ export function Panel({
               <ArrowRight size={16} aria-hidden="true" />
             </Link>
           </>
-        ) : (
-          <>
-            <p>{quoteTitle}</p>
-            {quoteHref ? (
-              <>
-                <p className="vend-panel-quote-instructions">{quoteInstructions}</p>
-                <a className="vend-panel-link" href={quoteHref}>
-                  {quoteAction}
-                  <ArrowRight size={16} aria-hidden="true" />
-                </a>
-              </>
-            ) : (
-              <>
-                <button className="vend-panel-link" disabled type="button">
-                  {quoteAction}
-                </button>
-                <p className="vend-panel-quote-unavailable">{quoteUnavailable}</p>
-              </>
-            )}
-          </>
-        )}
+        ) : null}
       </div>
       <button
         className="vend-panel-back"

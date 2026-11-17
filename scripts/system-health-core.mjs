@@ -367,12 +367,13 @@ export function queueGlobalGates(prs) {
   for (const pr of redPullRequests(prs)) {
     for (const check of pr.redChecks) {
       if (CI_AGGREGATOR_CHECKS.has(check)) continue;
-      if (!byCheck.has(check)) byCheck.set(check, []);
-      byCheck.get(check).push(pr.number);
+      if (!byCheck.has(check)) byCheck.set(check, new Set());
+      byCheck.get(check).add(pr.number);
     }
   }
   const gates = [];
-  for (const [check, numbers] of byCheck) {
+  for (const [check, prNumbers] of byCheck) {
+    const numbers = [...prNumbers];
     if (numbers.length > 1) gates.push({ check, prs: numbers });
   }
   return gates;

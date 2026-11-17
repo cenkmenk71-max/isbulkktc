@@ -59,6 +59,18 @@ function assertWellFormed(email: RenderedEmail, label: string) {
   assert.ok(!email.text.includes("<"), `${label}: text alternative contains tags`);
 }
 
+function contrastRatio(foreground: string, background: string): number {
+  const luminance = (hex: string) => {
+    const channel = (start: number) => {
+      const value = Number.parseInt(hex.slice(start, start + 2), 16) / 255;
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
+  };
+  const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+  return ((values[0] ?? 0) + 0.05) / ((values[1] ?? 0) + 0.05);
+}
+
 test("escapeHtml neutralises markup from untrusted copy", () => {
   assert.equal(escapeHtml("<script>alert(1)</script>"), "&lt;script&gt;alert(1)&lt;/script&gt;");
   assert.equal(escapeHtml(`"'&`), "&quot;&#39;&amp;");
@@ -143,6 +155,22 @@ test("the email shell palette matches the app design tokens", () => {
       BRAND[brandKey].toLowerCase(),
       token(tokenName).toLowerCase(),
       `BRAND.${brandKey} (${BRAND[brandKey]}) drifted from --${tokenName} (${token(tokenName)})`,
+    );
+  }
+});
+
+test("email text and action colors meet WCAG AA contrast", () => {
+  const pairs = [
+    ["button label", BRAND.white, BRAND.green],
+    ["brand link", BRAND.green, BRAND.surface],
+    ["body text", BRAND.ink, BRAND.surface],
+    ["footer text", BRAND.inkSoft, BRAND.footer],
+  ] as const;
+
+  for (const [label, foreground, background] of pairs) {
+    assert.ok(
+      contrastRatio(foreground, background) >= 4.5,
+      `${label} contrast is below 4.5:1`,
     );
   }
 });

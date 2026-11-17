@@ -87,6 +87,10 @@ paket kapsamı ve etkileşimli otomat deneyimiyle gösterir. TRY tutarları
 bilgilendirme amaçlıdır. Sitede ödeme alınmaz ve IBAN yayımlanmaz; paket koşulları
 görüşüldükten sonra ödeme talimatları özel kanaldan iletilir, havale site dışında
 yapılır. Otomat etkileşimi ödeme veya şirket hakkı ataması yapmaz.
+Paket seçimi, seçili paket/süre/tutar bilgilerini içeren WhatsApp veya e-posta
+taslağı açar; kullanıcı inceleyip kendisi gönderir. Yapılandırılmışsa Instagram
+bağlantısı yalnızca profile gider; otomatik DM gönderimi veya önceden doldurulmuş
+mesaj desteği yoktur.
 Yönetici tarafından etkinleştirilen hak kataloğu ayrıca listelenir; bu katalog
 boşken de bilgilendirme amaçlı paket seçenekleri görünür kalır.
 Aday, metin tabanlı PDF veya DOCX dosyasını yalnız

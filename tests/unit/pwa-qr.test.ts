@@ -60,6 +60,32 @@ test("a campaign QR decodes with its attribution intact", async () => {
   assert.equal(parsed.searchParams.get("utm_id"), "qr_04");
 });
 
+test("a localized QR preserves its locale and localizes the continuation path", () => {
+  const url = new URL(
+    buildInstallQrUrl({
+      origin: "https://isbulkktc.com",
+      searchParams: new URLSearchParams(
+        "locale=en&next=%2Fjobs%3Fdistrict%3Dnicosia",
+      ),
+    }),
+  );
+
+  assert.equal(url.pathname, "/en/install");
+  assert.equal(url.searchParams.get("next"), "/en/jobs?district=nicosia");
+});
+
+test("an unsupported QR locale falls back to the default locale", () => {
+  const url = new URL(
+    buildInstallQrUrl({
+      origin: "https://isbulkktc.com",
+      searchParams: new URLSearchParams("locale=he&next=%2Fjobs"),
+    }),
+  );
+
+  assert.equal(url.pathname, "/install");
+  assert.equal(url.searchParams.get("next"), "/jobs");
+});
+
 test("an off-site destination never reaches the encoded symbol", async () => {
   const url = buildInstallQrUrl({
     origin: "https://isbulkktc.com",

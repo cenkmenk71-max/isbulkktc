@@ -169,6 +169,22 @@ test("package pricing stays usable when WebGL 2 is unavailable", async ({ page }
   await expect(machine).toHaveAttribute("data-selected-package", "growth");
   // Panel opening is driven by the 3D frame loop; software renderers need slack.
   await expect(page.locator(".vend-panel")).toBeVisible({ timeout: 15_000 });
+
+  const whatsappLink = page.locator(".vend-panel-whatsapp");
+  await expect(whatsappLink).toHaveAttribute(
+    "href",
+    /^https:\/\/wa\.me\/905391316421\?text=/,
+  );
+  const whatsappDraft = new URL(
+    (await whatsappLink.getAttribute("href")) ?? "",
+  ).searchParams.get("text");
+  await expect(page.locator(".vend-panel-email")).toHaveAttribute(
+    "href",
+    /^mailto:info@isbulkktc\.com\?/,
+  );
+  expect(whatsappDraft).toContain("Büyüme");
+  expect(whatsappDraft).toContain("30");
+  expect(whatsappDraft).toContain("₺2.790");
 });
 
 

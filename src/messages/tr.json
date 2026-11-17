@@ -36,6 +36,10 @@
     "desktopAccepted": "Kurulum onaylandı.",
     "desktopInstall": "Uygulamayı yükle",
     "desktopUnavailable": "Masaüstü tarayıcınız şu anda kurulum sunmuyor. Siteyi normal sekmede kullanmaya devam edebilirsiniz.",
+    "qrTitle": "Telefonunuzla tarayın",
+    "qrDescription": "Bu kodu tarayarak yükleme sayfasını telefonunuzda açın.",
+    "qrDownload": "QR kodunu indir",
+    "qrAlt": "İşBul KKTC yükleme sayfasını açan QR kodu",
     "offlineBanner": "Çevrimdışısınız. Kaydedilmiş sayfalar gösteriliyor.",
     "updateAvailable": "Yeni sürüm hazır.",
     "updateApply": "Güncelle",
@@ -263,12 +267,14 @@
         "thirtyDays": "30 gün",
         "priceSummary": "Paket toplamı",
         "customPrice": "Özel kapsam · yazılı teklifle",
-        "quoteAction": "Ekiple görüşün, teklif alın",
-        "quoteTitle": "Kurumsal işe alım ihtiyacınızı birlikte netleştirelim.",
-        "quoteInstructions": "E-posta taslağınız açılır. Göndermeden önce şirket adınızı, istediğiniz ilan adedini ve iletişim bilgilerinizi ekleyin.",
-        "quoteUnavailable": "Teklif e-posta adresi henüz yapılandırılmadı; talep şu an gönderilemiyor.",
-        "quoteEmailSubject": "İşBul KKTC · Kurumsal ilan paketi teklifi",
-        "quoteEmailBody": "Merhaba,\n\nKurumsal ilan paketi için yazılı teklif rica ediyorum.\nİlan başına tercih edilen süre: %DAYS% gün.\nLütfen ilan adedini ve yayın süresini açıkça belirten, sınırları belirli bir kapsam paylaşın.\n\nŞirket adı, iletişim bilgileri ve diğer ihtiyaçlar:"
+        "contactTitle": "Seçtiğiniz ilan paketi hakkında ekibimize ulaşın.",
+        "contactInstructions": "WhatsApp veya e-posta taslağı açılır; göndermeden önce bilgileri kontrol edip kendiniz gönderin. Instagram profilinde mesajı kendiniz başlatın.",
+        "whatsappAction": "WhatsApp taslağını aç",
+        "emailAction": "E-posta taslağını aç",
+        "instagramAction": "Instagram profilini aç",
+        "instagramNote": "Instagram mesajı otomatik doldurulamaz; profil üzerinden manuel mesaj gönderin.",
+        "inquirySubject": "İşBul KKTC · İlan paketi talebi",
+        "inquiryBody": "Merhaba,\n\n%PACKAGE% ilan paketiyle ilgileniyorum.\nTercih edilen ilan süresi: %DAYS% gün.\nGösterilen paket tutarı / teklif: %PRICE% (bilgilendirme amaçlıdır; ödeme web sitesinde alınmaz).\n\nŞirket adı:\nİletişim bilgileri:\n\nLütfen paket koşulları ve site dışı ödeme adımları hakkında bilgi verin."
       },
       "sound": {
         "button": "Ses modu",
@@ -351,7 +357,8 @@
       "cookies": "Çerezler",
       "terms": "Kullanım koşulları",
       "guides": "Kariyer rehberleri",
-      "faq": "Sıkça sorulan sorular"
+      "faq": "Sıkça sorulan sorular",
+      "install": "Uygulamayı yükle"
     },
     "rights": "© {year} İşBul KKTC. Tüm hakları saklıdır.",
     "madeIn": "Kuzey Kıbrıs",

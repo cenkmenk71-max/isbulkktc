@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -28,13 +29,14 @@ import {
 import { trackInstallEvent } from "@/lib/pwa/install-analytics";
 import type { InstallCampaign } from "@/lib/pwa/campaign";
 import { PushPermissionControl } from "@/components/pwa/push-permission-control";
+import type { AppLocale } from "@/i18n/routing";
 
 type Props = {
   destination: string;
   destinationWasRequested: boolean;
   campaign: InstallCampaign | null;
   vapidPublicKey: string | null;
-  locale: string;
+  locale: AppLocale;
   copy: { title: string };
 };
 
@@ -57,9 +59,19 @@ export function InstallExperience({
   destinationWasRequested,
   campaign,
   vapidPublicKey,
+  locale,
   copy,
 }: Props) {
   const t = useTranslations("Install");
+  const qrParams = new URLSearchParams({ locale, next: destination });
+  const qrImageSrc = `/api/qr?${new URLSearchParams({
+    ...Object.fromEntries(qrParams),
+    format: "svg",
+  })}`;
+  const qrDownloadHref = `/api/qr?${new URLSearchParams({
+    ...Object.fromEntries(qrParams),
+    format: "png",
+  })}`;
   const prompt = useInstallPrompt();
   // `useSyncExternalStore` gives a server snapshot of `platform: null`, so the
   // markup is identical on both sides and no state is set from an effect.
@@ -176,6 +188,32 @@ export function InstallExperience({
             destinationWasRequested={destinationWasRequested}
           />
         )}
+
+        {ready && platform.family === "desktop" && !installed ? (
+          <section className="pwa-install-qr" aria-labelledby="pwa-install-qr-title">
+            <div className="pwa-install-qr-copy">
+              <h2 id="pwa-install-qr-title">{t("qrTitle")}</h2>
+              <p>{t("qrDescription")}</p>
+              <a
+                className="pwa-install-secondary"
+                href={qrDownloadHref}
+                download="isbulkktc-install-qr.png"
+              >
+                <Download aria-hidden="true" />
+                {t("qrDownload")}
+              </a>
+            </div>
+            <Image
+              alt={t("qrAlt")}
+              className="pwa-install-qr-image"
+              height={192}
+              loading="eager"
+              src={qrImageSrc}
+              unoptimized
+              width={192}
+            />
+          </section>
+        ) : null}
 
         {ready && !installed ? (
           <div className="pwa-install-push">

@@ -3,35 +3,19 @@ import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 /**
- * The anonymous write RPCs are reachable *without* the Next.js server action.
+ * The anonymous write RPCs are reachable without the Next.js server action, so
+ * their database-side quota checks must protect the PostgREST boundary too.
  *
  * `submit_feedback` and `submit_sales_lead` are `security definer` functions
  * granted to `anon`, so anyone holding the publishable key can POST them
- * straight to PostgREST (`POST /rest/v1/rpc/submit_feedback`) and skip the
- * server action entirely.
+ * straight to PostgREST (`POST /rest/v1/rpc/submit_feedback`) and skip action
+ * throttles. Each anon-write RPC therefore consumes a database quota before
+ * inserting. A separate per-form peer cap prevents rotating a forged
+ * `x-client-ip` from bypassing the direct-call bound.
  *
- * The only abuse control the repository ships — the fixed-window rate limiter in
- * `src/features/abuse/**` — runs inside the action (`submitFeedback` /
- * `submitSalesLead`), i.e. *above* the RPC. A caller that talks to PostgREST
- * directly never passes through it, so the throttle bounds the form but not the
- * endpoint. This is the residual gap the earlier finding (the actions had no
- * control at all) left behind.
- *
- * What the direct path can and cannot do, to scope the impact honestly:
- *
- *  - It **can** insert unbounded rows into `feedback_submissions` and
- *    `sales_leads`, carrying an attacker-chosen address and free text. Neither
- *    table has a retention job, so this is unbounded storage growth plus a
- *    PII-harvest surface (the team console reads the rows).
- *  - It **cannot** send mail: the fan-out lives in the action
- *    (`sendFeedbackEmails` / `sendSalesLeadEmails`), not in the RPC, so the
- *    mail-flood vector is closed for callers who skip the action.
- *
- * The fix belongs at the boundary the attacker actually uses: a database-side
- * throttle (a per-address counter maintained by a trigger or `pg_cron`), or
- * revoking the direct `anon` grant and proxying the write through a route that
- * re-applies the limiter. The RPC is the database layer's file; the action is
- * the product layer's.
+ * The actions retain their own limits because they also trigger email fan-out.
+ * The database tests verify the quota behavior; this source gate ensures every
+ * anon-granted write RPC continues to use it.
  */
 
 const migrationsDir = new URL("../../supabase/migrations/", import.meta.url);
