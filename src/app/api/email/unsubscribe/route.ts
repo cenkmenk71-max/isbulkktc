@@ -1,4 +1,5 @@
 import { createSupabaseServiceClient } from "@/server/db/supabase-server";
+import { textNoStore } from "@/server/http/no-store-response";
 import { verifyUnsubscribeSignature } from "@/server/email/unsubscribe-token-core";
 
 export const dynamic = "force-dynamic";
@@ -27,12 +28,12 @@ async function optOut(email: string, signature: string): Promise<Response> {
     email.length > 254 ||
     !verifyUnsubscribeSignature(email, signature)
   ) {
-    return new Response("Invalid or expired unsubscribe link.", { status: 400 });
+    return textNoStore("Invalid or expired unsubscribe link.", { status: 400 });
   }
 
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
-    return new Response("Unsubscribe is temporarily unavailable.", {
+    return textNoStore("Unsubscribe is temporarily unavailable.", {
       status: 503,
     });
   }
@@ -46,16 +47,15 @@ async function optOut(email: string, signature: string): Promise<Response> {
     console.error("Engagement opt-out could not be stored.", {
       code: error.code,
     });
-    return new Response("Unsubscribe is temporarily unavailable.", {
+    return textNoStore("Unsubscribe is temporarily unavailable.", {
       status: 503,
     });
   }
 
-  return new Response(SUCCESS_BODY, {
+  return textNoStore(SUCCESS_BODY, {
     status: 200,
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-store",
     },
   });
 }

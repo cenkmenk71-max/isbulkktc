@@ -148,6 +148,10 @@ function resetSendState(): void {
   sentPayloads.length = 0;
 }
 
+function assertNoStore(response: Response): void {
+  assert.equal(response.headers.get("cache-control"), "no-store");
+}
+
 test("an unauthenticated POST is refused before any work", async () => {
   resetBoundary({}, { rpcs: {} });
   resetSendState();
@@ -157,6 +161,7 @@ test("an unauthenticated POST is refused before any work", async () => {
     const res = await POST(request());
 
     assert.equal(res.status, 401);
+    assertNoStore(res);
     assert.deepEqual(recorded.supabase, [], "the guard must precede the service client");
     assert.deepEqual(sentPayloads, []);
   } finally {
@@ -173,6 +178,7 @@ test("an unconfigured service client answers 503 and claims nothing", async () =
     const res = await POST(request(`Bearer ${CRON_SECRET}`));
 
     assert.equal(res.status, 503);
+    assertNoStore(res);
     assert.deepEqual(rpcCalls("claim_application_push_notifications"), []);
   } finally {
     restore();
@@ -189,6 +195,7 @@ test("a failed claim answers 502 without leaking the database error", async () =
     const body = await res.json();
 
     assert.equal(res.status, 502);
+    assertNoStore(res);
     assert.equal(body.message, "Claim failed");
     assert.ok(!JSON.stringify(body).includes("57014"), "the DB error code must not be reflected");
   } finally {
@@ -222,6 +229,7 @@ test("a claimed row with no device is marked sent and counted skipped", async ()
     const res = await POST(request(`Bearer ${CRON_SECRET}`));
     const body = await res.json();
 
+    assertNoStore(res);
     assert.deepEqual(
       { claimed: body.claimed, delivered: body.delivered, failed: body.failed, skipped: body.skipped },
       { claimed: 1, delivered: 0, failed: 0, skipped: 1 },
@@ -254,6 +262,7 @@ test("a delivered send records success and marks the row delivered", async () =>
     const res = await POST(request(`Bearer ${CRON_SECRET}`));
     const body = await res.json();
 
+    assertNoStore(res);
     assert.deepEqual(
       { claimed: body.claimed, delivered: body.delivered, failed: body.failed, skipped: body.skipped },
       { claimed: 1, delivered: 1, failed: 0, skipped: 0 },

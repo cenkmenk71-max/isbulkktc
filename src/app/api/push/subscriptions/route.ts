@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
+import { jsonNoStore } from "@/server/http/no-store-response";
 import { isAllowedPushEndpoint } from "@/server/push/push-endpoint";
 
 export const dynamic = "force-dynamic";
@@ -37,19 +38,19 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
+    return jsonNoStore({ message: "Unauthorized" }, { status: 401 });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return Response.json({ message: "Invalid body" }, { status: 400 });
+    return jsonNoStore({ message: "Invalid body" }, { status: 400 });
   }
 
   const parsed = payloadSchema.safeParse(body);
   if (!parsed.success) {
-    return Response.json({ message: "Invalid subscription" }, { status: 422 });
+    return jsonNoStore({ message: "Invalid subscription" }, { status: 422 });
   }
 
   const { error } = await supabase.rpc("register_push_subscription", {
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
   });
 
   if (error) {
-    return Response.json({ message: "Subscription could not be stored" }, { status: 502 });
+    return jsonNoStore({ message: "Subscription could not be stored" }, { status: 502 });
   }
-  return Response.json({ message: "ok" });
+  return jsonNoStore({ message: "ok" });
 }

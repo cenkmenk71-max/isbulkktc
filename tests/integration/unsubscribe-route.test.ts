@@ -60,6 +60,10 @@ const optOutCalls = () =>
       call.kind === "rpc" && call.name === "opt_out_engagement",
   );
 
+function assertNoStore(response: Response): void {
+  assert.equal(response.headers.get("cache-control"), "no-store");
+}
+
 test("the unsubscribe route", async (t) => {
   const restore = withEnv({
     ENGAGEMENT_UNSUBSCRIBE_SECRET: UNSUB_SECRET,
@@ -76,7 +80,7 @@ test("the unsubscribe route", async (t) => {
     const res = await GET(new Request(signedLink("Ada@Example.com")));
 
     assert.equal(res.status, 200);
-    assert.equal(res.headers.get("cache-control"), "no-store");
+    assertNoStore(res);
     const calls = optOutCalls();
     assert.equal(calls.length, 1);
     // Lowercased before it reaches the RPC — a mixed-case link must still match
@@ -91,6 +95,7 @@ test("the unsubscribe route", async (t) => {
     const res = await GET(new Request(signedLink("ada@example.com", "not-a-valid-signature")));
 
     assert.equal(res.status, 400);
+    assertNoStore(res);
     assert.deepEqual(optOutCalls(), []);
   });
 
@@ -103,6 +108,7 @@ test("the unsubscribe route", async (t) => {
     const res = await GET(new Request(signedLink("someone-else@example.com", sign("ada@example.com"))));
 
     assert.equal(res.status, 400);
+    assertNoStore(res);
     assert.deepEqual(optOutCalls(), []);
   });
 
@@ -113,6 +119,7 @@ test("the unsubscribe route", async (t) => {
     const res = await GET(new Request("https://isbulkktc.test/api/email/unsubscribe?e=ada@example.com"));
 
     assert.equal(res.status, 400);
+    assertNoStore(res);
     assert.deepEqual(optOutCalls(), []);
   });
 
@@ -123,6 +130,7 @@ test("the unsubscribe route", async (t) => {
     const res = await GET(new Request(signedLink("ada@example.com")));
 
     assert.equal(res.status, 503);
+    assertNoStore(res);
     assert.deepEqual(optOutCalls(), []);
   });
 
@@ -133,6 +141,7 @@ test("the unsubscribe route", async (t) => {
     const res = await GET(new Request(signedLink("ada@example.com")));
 
     assert.equal(res.status, 503);
+    assertNoStore(res);
     assert.ok(!(await res.text()).includes("removed from promotional"), "must not claim opt-out");
   });
 
@@ -170,7 +179,7 @@ test("the unsubscribe route", async (t) => {
     );
 
     assert.equal(res.status, 200);
-    assert.equal(res.headers.get("cache-control"), "no-store");
+    assertNoStore(res);
     const calls = optOutCalls();
     assert.equal(calls.length, 1);
     assert.deepEqual(calls[0].args, { _email: "ada@example.com", _reason: "email_link" });
@@ -185,6 +194,7 @@ test("the unsubscribe route", async (t) => {
     );
 
     assert.equal(res.status, 400);
+    assertNoStore(res);
     assert.deepEqual(optOutCalls(), []);
   });
 });

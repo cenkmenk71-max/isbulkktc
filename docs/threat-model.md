@@ -635,20 +635,20 @@ korur, yarını değil; her yeni dosya/rota/fonksiyon sessizce kapsam dışı ka
 Keşif predicate'i de bir guard'dır — bu yüzden her biri için self-test (hem
 pozitif hem near-miss) eklendi.
 
-### #424 — API yanıt yüzeyi: platform davranışı ve kendi kapımız (32. tur)
+### #424/#435 — API yanıt yüzeyi: platform davranışı ve hata yanıtı cache kapısı
 
-LANE-CLOUDFLARE tur 25'in canlı ölçümüyle açtığı **#424** devralındı (devir, engel
-değil). Dört bulgu da **yeniden üretildi**; üçü origin'in değil **Vercel
-platformunun** davranışı çıktı. Ayırt edici ölçüm: aynı istek yerel üretim
-standalone sunucusunda (`node server.js`, platform katmanı yok) **hiç** o başlığı
-döndürmüyor. Kapsam notu M-01'in gerçek sahibinin "büyük olasılıkla Vercel"
-olduğunu söylüyordu; ölçüm bunu **kanıta** çevirdi.
+LANE-CLOUDFLARE tur 25'in canlı ölçümüyle açtığı **#424** dört bulgu içeriyordu.
+M-01/M-02/M-04 Vercel/Next.js platform davranışı olarak yeniden üretildi; #435
+ayrı olarak M-03'ün API route'larındaki hata yanıtı bölümünü ayırdı. Route'ların
+hata yanıtları artık `Cache-Control: no-store` taşır; bu canlı Vercel
+yapılandırmasını değiştirmez, fakat uygulamanın ürettiği yanıtları güvenli
+varsayılanla kapatır.
 
 | # | Gözlenen (canlı) | Yerel standalone | Kaynak | Sınıf |
 |---|---|---|---|---|
 | M-01 | `/api/build-info` → `access-control-allow-origin: *` | **ACAO yok** | `dynamic = "force-static"` → Vercel statik katmanı | platform |
 | M-02 | `PUT`/`DELETE`/`PATCH /`, `/jobs` → 200 | 200 (framework) | Next.js sayfa yönlendirmesi | framework |
-| M-03 | API hata yolları → `public, max-age=0, must-revalidate` | **CC yok** | Vercel dinamik fn varsayılanı | platform |
+| M-03 | API hata yolları → `public, max-age=0, must-revalidate` | yerel uygulama yanıtı `no-store` | Vercel'in varsayılanı route başlığını gölgelerse platform; route başlığını eklememek repo hatasıydı | repo kapandı; canlı teyit gerekli |
 | M-04 | `/_next/static/<yok>` 404 → `max-age=31536000` | `private, no-cache, no-store` | Vercel statik katmanı | platform |
 
 - **M-01 (düşük, kabul).** `access-control-allow-origin: *` depoda **hiç** yok
@@ -669,11 +669,17 @@ olduğunu söylüyordu; ölçüm bunu **kanıta** çevirdi.
   `Next-Action` ile → 400, başlıksız → 200). Cache zehirlenmesi zaten #390 kuralı
   (`private, no-cache, no-store`) ile kapalı: `PUT /de/blog` bu başlığı döndürüyor.
   Düzeltme kararı `src/proxy.ts` sahibinde; sahibi **yok** (aşağıda).
-- **M-03/M-04 (düşük, platform).** `max-age=0, must-revalidate` her istekte
-  yeniden doğrular; statik 404'ler içerik-adresli hash'lerle sunulur, `must-revalidate`
-  ile bayat-404 riski yok. CF bugün bu yolları cache'lemiyor. Depo-tarafı düzeltme
-  yok; bir CF Cache Rule eklenirse N-01 sınıfı risk yeniden doğar (LANE-CLOUDFLARE
-  izliyor).
+- **M-03 (düşük, repo + platform).** Hata yanıtlarının cache başlığı olmadan
+  kalması repo tarafında düzeltildi: push subscriptions/dispatch, engagement
+  digest, unsubscribe ve Resend webhook route'ları tüm yanıtlarını `no-store`
+  helper'larıyla üretir; acquisition campaign da aynı sözleşmeyi korur.
+  `tests/security/account-lifecycle-surface.test.ts` bu kapıyı tarar ve
+  entegrasyon testleri gerçek handler yanıtlarını doğrular. Canlı Vercel
+  yanıtında başlığın korunduğu ayrıca ölçülmeli.
+- **M-04 (düşük, platform).** Statik 404'ler içerik-adresli hash'lerle sunulur,
+  `must-revalidate` ile bayat-404 riski yok. CF bugün bu yolları cache'lemiyor.
+  Depo-tarafı düzeltme yok; bir CF Cache Rule eklenirse N-01 sınıfı risk yeniden
+  doğar (LANE-CLOUDFLARE izliyor).
 - **Yapısal boşluk (devir: LANE-INFRA).** `src/proxy.ts` (oturum/çerez/locale
   güvenlik sınırı) ve `src/app/api/build-info/**` **hiçbir** lane'in sahiplik
   tablosunda yok. Sahipsiz güvenlik-kritik yüzey = kimsenin düzeltmediği yüzey.

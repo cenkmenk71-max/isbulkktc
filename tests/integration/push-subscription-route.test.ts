@@ -32,6 +32,10 @@ const route = () => import("@/app/api/push/subscriptions/route");
 
 const VALID_ENDPOINT = "https://fcm.googleapis.com/fcm/send/dGVzdA";
 
+function assertNoStore(response: Response): void {
+  assert.equal(response.headers.get("cache-control"), "no-store");
+}
+
 function request(body: string, headers: Record<string, string> = {}): Request {
   return new Request("https://isbulkktc.test/api/push/subscriptions", {
     method: "POST",
@@ -65,6 +69,7 @@ test("an anonymous caller is refused with 401 before the RPC is reached", async 
   const response = await POST(request(validPayload()));
 
   assert.equal(response.status, 401);
+  assertNoStore(response);
   assert.deepEqual(await response.json(), { message: "Unauthorized" });
   assert.deepEqual(registerCalls(), [], "an unauthenticated request must not write a subscription");
 });
@@ -80,6 +85,7 @@ test("a body that is not JSON is answered 400 without reaching the RPC", async (
   const response = await POST(request("{ not json"));
 
   assert.equal(response.status, 400);
+  assertNoStore(response);
   assert.deepEqual(await response.json(), { message: "Invalid body" });
   assert.deepEqual(registerCalls(), []);
 });
@@ -105,6 +111,7 @@ for (const { label, body } of rejectedBodies) {
     const response = await POST(request(body));
 
     assert.equal(response.status, 422);
+    assertNoStore(response);
     assert.deepEqual(await response.json(), { message: "Invalid subscription" });
     assert.deepEqual(registerCalls(), [], `${label} must not be written`);
   });
@@ -126,6 +133,7 @@ test("a valid signed-in subscription is stored with the forwarded user-agent", a
   const response = await POST(request(validPayload(), { "user-agent": longAgent }));
 
   assert.equal(response.status, 200);
+  assertNoStore(response);
   assert.deepEqual(await response.json(), { message: "ok" });
 
   const [call] = registerCalls();
@@ -171,6 +179,7 @@ test("a failed write is answered 502 without leaking the database error", async 
   const body = await response.json();
 
   assert.equal(response.status, 502);
+  assertNoStore(response);
   assert.deepEqual(body, { message: "Subscription could not be stored" });
   assert.ok(
     !JSON.stringify(body).includes("An active account is required."),
