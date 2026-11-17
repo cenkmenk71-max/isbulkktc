@@ -5,7 +5,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { MessageCircle, Send, X } from "lucide-react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { RealtimeChannel } from "@supabase/supabase-js";
 
 /**
  * Visitor-facing live-support chat.
@@ -22,11 +21,6 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
  *
  * Message bodies are always rendered as React text nodes; nothing here ever
  * touches `dangerouslySetInnerHTML`.
- *
- * The widget hydrates prior messages from `sessionStorage` on mount so a page
- * reload or route change inside the same tab does not wipe the conversation, and
- * for signed-in visitors it subscribes to the Realtime channel so a staff reply
- * appears without a manual refresh.
  */
 
 type ChatRole = "visitor" | "support";
@@ -39,43 +33,9 @@ interface ChatMessage {
 
 const MAX_BODY_LENGTH = 1000;
 const SUGGESTION_KEYS = ["suggestion1", "suggestion2", "suggestion3"] as const;
-const STORAGE_KEY = "isbulkktc:support:messages";
 
 function newId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function readStoredMessages(): ChatMessage[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (m): m is ChatMessage =>
-        typeof m === "object" &&
-        m !== null &&
-        typeof (m as ChatMessage).id === "string" &&
-        ((m as ChatMessage).role === "visitor" ||
-          (m as ChatMessage).role === "support") &&
-        typeof (m as ChatMessage).body === "string",
-    );
-  } catch {
-    return [];
-  }
-}
-
-function writeStoredMessages(messages: ChatMessage[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-  } catch {
-    // Storage may be disabled; persistence is best-effort.
-  }
 }
 
 export function SupportWidget({
@@ -90,116 +50,46 @@ export function SupportWidget({
 
   const [open, setOpen] = useState(defaultOpen);
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>(() =>
-    readStoredMessages(),
-  );
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHuman, setShowHuman] = useState(false);
   const [email, setEmail] = useState("");
 
   const listRef = useRef<HTMLUListElement | null>(null);
-  const emailRef = useRef(email);
-  useEffect(() => {
-    emailRef.current = email;
-  }, [email]);
+  // `submit_support_message` opens a *new* thread on every call, so only the
+  // opening message is persisted: one conversation maps to one thread.
   const persistedRef = useRef(false);
-  const channelRef = useRef<RealtimeChannel | null>(null);
-
-  // Keep sessionStorage in sync with the conversation.
-  useEffect(() => {
-    writeStoredMessages(messages);
-  }, [messages]);
 
   useEffect(() => {
     const node = listRef.current;
     if (node) node.scrollTop = node.scrollHeight;
   }, [messages, open, sending]);
 
-  // Focus the email field when it is revealed.
-  useEffect(() => {
-    if (!showHuman) return;
-    const node = document.getElementById(humanFieldId);
-    if (node instanceof HTMLInputElement) node.focus();
-  }, [showHuman, humanFieldId]);
-
-  // Close on Escape.
-  useEffect(() => {
-    if (!open) return;
-    const handler = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [open]);
-
-  // Realtime: signed-in visitors receive staff replies without a refresh.
-  useEffect(() => {
-    let cancelled = false;
-    const supabase = createSupabaseBrowserClient();
-    void supabase.auth.getUser().then(({ data }) => {
-      if (cancelled || !data.user) return;
-      const channel = supabase
-        .channel("support-messages")
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "support_messages" },
-          (payload) => {
-            const row = payload.new as {
-              id?: string;
-              author_role?: string;
-              body?: string;
-            };
-            if (
-              row.author_role === "staff" &&
-              typeof row.id === "string" &&
-              typeof row.body === "string"
-            ) {
-              const messageId = row.id;
-              const messageBody = row.body;
-              setMessages((current) => {
-                if (current.some((m) => m.id === messageId)) return current;
-                return [
-                  ...current,
-                  { id: messageId, role: "support", body: messageBody },
-                ];
-              });
-            }
-          },
-        )
-        .subscribe();
-      channelRef.current = channel;
-    });
-    return () => {
-      cancelled = true;
-      if (channelRef.current) {
-        void channelRef.current.unsubscribe();
-        channelRef.current = null;
+  const persistOpeningMessage = useCallback(
+    (body: string) => {
+      if (persistedRef.current) return;
+      persistedRef.current = true;
+      try {
+        const supabase = createSupabaseBrowserClient();
+        void supabase
+          .rpc("submit_support_message", {
+            _name: null,
+            _email: email.trim() || null,
+            _subject: null,
+            _body: body,
+            _locale: locale,
+          })
+          .then(
+            () => undefined,
+            () => undefined,
+          );
+      } catch {
+        // Persistence is best-effort; the chat reply must still be delivered.
       }
-    };
-  }, []);
-
-  const persistOpeningMessage = useCallback((body: string) => {
-    if (persistedRef.current) return;
-    persistedRef.current = true;
-    try {
-      const supabase = createSupabaseBrowserClient();
-      void supabase
-        .rpc("submit_support_message", {
-          _name: null,
-          _email: emailRef.current.trim() || null,
-          _subject: null,
-          _body: body,
-          _locale: locale,
-        })
-        .then(
-          () => undefined,
-          () => undefined,
-        );
-    } catch {
-      // Persistence is best-effort; the chat reply must still be delivered.
-    }
-  }, [locale]);
+    },
+    [email, locale],
+  );
 
   const sendMessage = useCallback(
     async (raw: string) => {
@@ -232,8 +122,6 @@ export function SupportWidget({
         ]);
       } catch {
         setError(t("sendFailed"));
-        // Restore the typed text so the visitor does not lose their message.
-        setInput(trimmed);
       } finally {
         setSending(false);
       }
@@ -334,25 +222,24 @@ export function SupportWidget({
           </ul>
 
           {showSuggestions ? (
-            <ul
+            <div
               className="support-widget__suggestions"
               aria-label={t("suggestionsLabel")}
             >
               {SUGGESTION_KEYS.map((key) => {
                 const label = t(key);
                 return (
-                  <li key={key} style={{ listStyle: "none" }}>
-                    <button
-                      type="button"
-                      className="support-widget__chip"
-                      onClick={() => void sendMessage(label)}
-                    >
-                      {label}
-                    </button>
-                  </li>
+                  <button
+                    key={key}
+                    type="button"
+                    className="support-widget__chip"
+                    onClick={() => void sendMessage(label)}
+                  >
+                    {label}
+                  </button>
                 );
               })}
-            </ul>
+            </div>
           ) : null}
 
           {showHuman ? (
