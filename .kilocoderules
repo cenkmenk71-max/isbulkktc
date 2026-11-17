@@ -1,0 +1,278 @@
+# .kilocoderules — isbulkktc V4
+
+Bu dosya, proje kökündeki `AGENTS.md`, `docs/architecture-v4.md` ve
+docs/architecture.md`deki güncel kuralları kısa, doğrudan yaptırım haline
+getirir. Kod değişikliği yapmadan önce okunur; CI kapıları ve güvenlik
+sözleşmeleri buraya bağlıdır.
+
+---
+
+## 1. Proje ve araç zinciri
+
+- **Stack:** Next.js 16 (App Router), TypeScript, next-intl, Tailwind CSS v4,
+  Supabase (PostgreSQL + Auth + Storage), Playwright E2E, `node:test` birim
+  testleri, pgTAP veritabanı testleri.
+- **Paket yöneticisi:** `bun` zorunludur. `package-lock.json` yasaktır,
+  `npm install`/`npm ci` kullanılmaz; lockfile `bun.lock`.
+- **Push öncesi yerel doğrulama sırası:**
+  1. `bun run lint`
+  2. `bun run typecheck`
+  3. `bun run check:frontend-source`
+  4. `bun run test:unit`
+  5. `bun run build`
+  6. `bun run test:e2e`
+  7. `bun run test:db`
+- **Build kuralı:** Çalışma ağacında `npm run build` çalıştırma; bu
+  `tsconfig.json` ve `next-env.d.ts` üzerine yazar. Yerine
+  `NEXT_DIST_DIR=.next-<isim> npm run build` (veya `bun run build` ile özel
+  dist dizini) kullan ve sonrasında `git checkout -- tsconfig.json next-env.d.ts`
+  yap.
+- **Kilo/agent dosyaları:** `.kilo/`, `kilo.json*` Git'e gitmez; bunlar
+  `.gitignore` ile hariç tutulur.
+
+---
+
+## 2. V4 mimari hükümleri
+
+### 2.1 Genel mimari
+
+- **Modüler monolit:** Tek deploy edilebilir Next.js uygulaması. Mikroservis,
+  Kubernetes, ayrı arama kümesi ve otomatik banka entegrasyonu varsayılmaz.
+- **PostgreSQL nihai otoritedir:** Veri bütünlüğü, para ve kredi işlemleri,
+  yetkilendirme burada uygulanır.
+- **Sunucu tarafı yetkilendirme (DAL):** Ekranda düğme gizlemek yetki değildir.
+  Her Server Action / Route Handler şu sırayı izler:
+  1. Girdi şemasını doğrula (Zod).
+  2. Oturumu sunucuda doğrula.
+  3. Gerekli global rolü, şirket üyeliğini ve kaynak ilişkisini kontrol et.
+  4. İş kuralını doğrula.
+  5. Transaction / kısıtlarla veri değişikliğini yap.
+  6. Yalnız gerekli alanları DTO ile döndür.
+  7. Kritik olayı hassas veri sızdırmadan audit log'a yaz.
+- **Kimlik ve rol ayrımı:**
+  - Kimlik doğrulama Supabase Auth.
+  - Global platform rolü `platform_admin` gibi; kullanıcı tarafından yazılamaz.
+  - Şirket üyeliği rolü (`owner`, `recruiter`, `billing`, `viewer`) yalnızca
+    ilgili `company_members` kaydında etkin üyelikle verilir. Genel bir
+    `employer` rolü yoktur.
+
+### 2.2 Güven sınırları
+
+- **Güvenilir sayılmayan girdiler:** Tarayıcıdan gelen rol, kullanıcı kimliği,
+  şirket kimliği, fiyat, kredi adedi, süre, ödeme durumu; yüklenen CV/dekont/
+  profil fotoğrafı/metin; AI çıktısı; dış API yanıtı/webhook; 3D/DOM olayları.
+- **Secret yönetimi:**
+  - `service_role` veya başka ayrıcalıklı anahtar istemciye gönderilmez.
+  - `NEXT_PUBLIC_` değişkenlerine sır koyma.
+  - Supabase secret'ları sunucuda tut, loga yazma.
+- **Yönetici güvenliği:**
+  - Admin rolü kayıt formu veya profil güncellemesiyle atanamaz.
+  - İlk platform-admin kurulumu yalnızca tek-seferlik Dashboard SQL runbook'u ile.
+  - Admin işlemleri AAL2/MFA gerektirir; prod öncesi MFA kurulumu doğrulanır.
+  - Ödeme onayı, IBAN talimatı değişimi, kredi düzeltmesi, şirket doğrulama
+    kararı audit log ile kaydedilir.
+
+### 2.3 Veri bütünlüğü
+
+- Birincil anahtarlar UUID; ilişkilerde foreign key.
+- Durum alanları enum veya `CHECK` ile sınırlı.
+- Fiyat/tutarlar kayan nokta değil, tam sayı minor unit + 3 karakterli büyük
+  harf ISO para birimi kodu (`TRY`, `USD` vb.).
+- `created_at`, `updated_at`, `created_by`, `updated_by` eksik kalmamalı.
+- Silme davranışı `RESTRICT`/`CASCADE`/soft-delete olarak açık seçilir;
+  ödeme/audit geçmişi fiziksel silinmez.
+- Migration'lar tekrarlanabilir, yorumlanabilir ve CI'da uygulanabilir olmalı.
+
+---
+
+## 3. IBAN / ödeme sistemi kuralları (`feat/v4-payment-system`)
+
+### 3.1 Sipariş durum makinesi
+
+Sipariş durumları yalnızca aşağıdaki geçişleri yapabilir:
+
+- `awaiting_transfer` → `payment_submitted` (kullanıcı bildirim gönderdi)
+- `payment_submitted` → `payment_under_review` (inceleme başladı)
+- `payment_under_review` → `paid` (banka hareketi doğrulandı + kredi tahsisi)
+- `payment_under_review` → `rejected` (reddedildi)
+- Açık sipariş → `expired` (son ödeme zamanı geçti)
+- Açık sipariş → `cancelled` (izinli iptal)
+- `paid` → `refund_pending` → `refunded`
+
+`payment_submissions.status`: `submitted`, `under_review`, `accepted`,
+`rejected`, `needs_more_info`.
+
+### 3.2 Atomik mutabakat sözleşmesi
+
+`reconcile_payment` tek veritabanı transaction'ında:
+
+1. İlgili sipariş satırını `SELECT ... FOR UPDATE` veya eşdeğer atomik koşullu
+   güncelleme ile kilitle.
+2. Siparişin hâlâ `payment_under_review` olduğunu doğrula.
+3. Yetkili aktör (AAL2 + `billing_admin`/`platform_admin`) ve
+   gönderim/sipariş ilişkisini doğrula.
+4. Tutar, para birimi, banka referansı ve sipariş referansının eşleşmesini
+   kontrol et.
+5. Banka hareketinin başka siparişe bağlanmadığını kontrol et.
+6. Mutabakat kararını yaz.
+7. Siparişi `paid` durumuna geçir.
+8. `credit_ledger_entries` içine benzersiz `idempotency_key` ile tahsis kaydı
+   ekle.
+9. `credit_accounts` bakiyesini aynı transaction içinde güncelle.
+10. `audit_logs` ve gerekiyorsa `outbox_events` kaydı ekle.
+11. Hata durumunda tüm transaction geri alınır.
+
+- Aynı `idempotency_key` ile ikinci tahsis yapılamaz.
+- Aynı normalize edilmiş banka referansı kabul edilmiş başka bir ödemede
+  kullanılamaz.
+- `paid` durumu yalnızca onay etiketi değil; banka hareketi doğrulaması ve
+  kredi tahsisi birlikte commit olur.
+
+### 3.3 Kredi defteri kuralları
+
+- `credit_ledger_entries` append-only'dir; UPDATE/DELETE yapılmaz.
+- Hata durumunda ters kayıt (`reversal`) ile düzeltilir.
+- Her kayıt: `company_id`, `entry_type`, `quantity_delta <> 0`, benzersiz
+  `idempotency_key`, `actor_id`, `reason`.
+- `credit_accounts.available_balance`, ledger toplamıyla tutarlı olmalı.
+- `job_consume` işlemi ilan yayınlama sırasında atomik olarak yapılır.
+
+### 3.4 Dosya ve depolama
+
+- `private-payment-receipts` bucket'ı özeldir.
+- Yüklenen dekont: izin verilen tür (JPEG, PNG, WebP, PDF), boyut sınırı
+  (örn. 5 MB), MIME/imza kontrolü, rastgele object key.
+- Dekont indirme öncesi sahiplik ve iş ilişkisi doğrulanır; kısa süreli imzalı
+  URL kullanılır; hassas loglara yazılmaz.
+- IBAN talimatı `payment_instruction_versions` tablosunda saklanır; sitede
+  yalnızca masked (son 4 hane) gösterilir. Full IBAN yalnız AAL2 + admin
+  görebilir.
+
+### 3.5 Ödeme akışı uyarıları
+
+- Gerçek IBAN, hesap sahibi, paket fiyatı, para birimi, iade koşulları ve
+  yasal işletme bilgileri ürün sahibi onayı olmadan uydurulmaz.
+- Site içinde checkout, kart tahsilatı veya IBAN yayımlama yoktur; ödeme
+  site dışında manuel banka havalesiyle yapılır.
+- Kullanıcıya otomatik/anında onay vaat edilmez; operasyonel SLA açıklanır.
+
+---
+
+## 4. RLS, SQL izinleri ve function güvenliği
+
+- Her istemci erişimine açık `public` tablo için RLS etkin; `anon` ve
+  `authenticated` grant'leri ihtiyaç kadar daraltılır.
+- Her yeni fonksiyonda:
+  ```sql
+  revoke all on function public.<ad>(...) from public, anon, authenticated;
+  grant execute on function public.<ad>(...) to authenticated; -- veya service_role
+  ```
+  - İki istisna (IMMUTABLE CHECK validator'lar): izinleri `public` üzerinden
+    korunur.
+- `revoke ... from public` yalnız implicit PUBLIC grant'i kaldırır; `anon` ve
+  `authenticated` kalır. Güvenlik için `from public, anon, authenticated` kullan.
+- İstemci tarafından yazılabilir alanlar sınırlıdır: `user_roles`,
+  `orders.status`, `credit_accounts`, `credit_ledger_entries`,
+  `payment_reconciliations` doğrudan yazılamaz.
+- Her RLS değişikliği aynı migration/PR içinde pozitif ve negatif pgTAP
+  testleriyle gelir.
+- Yeni fonksiyon `supabase/tests/database/function_privileges.test.sql` içinde
+  tam imza ile ratchetlenir.
+
+---
+
+## 5. UI, erişilebilirlik ve çok dilli yapı
+
+- **Locale routing:** `localePrefix: "as-needed"`; default `tr` unprefixed.
+  `/tr/...` istekleri 308 ile `/...` yönlendirilir.
+- **Canonical URL'ler:** Mutlak string olmalı; `URL` instance değil.
+- **Erişilebilirlik:** Görünen metin `aria-label` içinde bulunmalı (WCAG 2.5.3);
+  gereksiz `aria-label` ekleme; aksine görünür metne güven.
+- **3D deneyimi:** `src/experience/` yalnız görsel katmandır; iş mantığı,
+  yetki veya ödeme durumu kararı vermez. 3D hata verirse ilan arama, başvuru,
+  oturum ve ödeme sayfaları çalışmaya devam eder; `prefers-reduced-motion`
+  uygulanır.
+- **Şablon ve auth:** Supabase Auth email şablonları `supabase/templates/`
+  içindedir; üretimde dashboard'dan manuel yapıştırılan şablonlar git ile
+  senkronize değildir. `scripts/verify-auth-config.mjs` drift'i raporlar.
+- **Turnstile:** İstemci tarafında effect ile render olur; SSR HTML'de sadece
+  boş container vardır. Canlılık gerçek tarayıcıda doğrulanır.
+
+---
+
+## 6. Test stratejisi ve üretim öncesi kabul kapıları
+
+### 6.1 Zorunlu test katmanları
+
+- **Birim:** Şema doğrulama, durum geçişleri, fiyat hesaplama, paket snapshot,
+  kredi politikaları.
+- **Database integration:** FK, check/unique constraint, transaction, kredi
+  defteri, ödeme idempotency.
+- **RLS/pgTAP:** Her tabloda anon/authenticated allow/deny senaryoları.
+- **API/güvenlik:** IDOR, rol yükseltme, CSRF, rate limit, dosya erişimi,
+  girdi doğrulama.
+- **E2E:** Kayıt → şirket oluşturma/doğrulama → paket → sipariş → IBAN
+  bildirimi → yönetici mutabakatı → kredi → ilan yayımlama.
+- **Görsel:** Mobil/masaüstü ve 3D fallback ekran görüntüleri.
+
+### 6.2 P0 üretim kapıları
+
+Aşağıdakiler doğrulanmadan gerçek para karşılığı paket satışı açılmaz:
+
+| Kapı | Ölçüt |
+|------|-------|
+| Yetkilendirme | Tüm kritik kaynaklar için pozitif/negatif test geçer |
+| RLS/SQL izinleri | Tüm exposed tablolar kapsanır; `supabase test db` başarılı |
+| Admin rolü | Normal kullanıcı rol yükseltemez; admin MFA doğrulanır |
+| IBAN onayı | Paralel onayda tek `paid` ve tek kredi tahsisi |
+| Referans tekrarı | Aynı transferin iki siparişe bağlanması engellenir |
+| Kredi defteri | Bakiye = ledger toplamı, tutarlı |
+| Dosya erişimi | Yetkisiz CV/dekont erişimi reddedilir; zararlı/yanlış tür reddedilir |
+| Gizli anahtarlar | Client bundle/repo/loglarda secret yok |
+| Backup/restore | Restore provası başarılı; RPO/RTO belgelendi |
+| Ödeme politikası | IBAN sahibi, para birimi, fiyat, süre, iade, uyuşmazlık onaylı |
+| E2E kritik akış | Temel aday ve işveren akışları CI'da başarılı |
+| 3D fallback | 3D kapalı/hatalı/düşük cihazda temel görevler çalışır |
+| Performans | Core Web Vitals hedefleri ölçülür (LCP ≤2.5 sn, INP ≤200 ms, CLS ≤0.1) |
+| Hukuk/gizlilik | Gizlilik metni, saklama ve mevzuat incelemesi tamam |
+
+---
+
+## 7. Yasaklar ve kritik dikkatler
+
+- `npm` kullanma; lockfile `bun.lock`.
+- Production build'i çalışma ağacına direkt `npm run build` ile çalıştırma;
+  `NEXT_DIST_DIR` kullan ve `tsconfig.json`/`next-env.d.ts` temizle.
+- İstemciden fiyat, kredi adedi, süre, ödeme durumu, rol güncellemesi kabul
+  etme.
+- Supabase `service_role` secret'ını istemci bundle'ına, environment'
+ın `NEXT_PUBLIC_`
+  değişkenlerine veya loga koyma.
+- Admin rol atamasını normal UI/Server Action üzerinden yapma; yalnız
+  runbook.
+- Banka hareketi doğrulanmadan siparişi `paid` yapma; dekont tek başına kanıt
+  değildir.
+- Kredi defterinde UPDATE/DELETE yapma; hata durumunda ters kayıt kullan.
+- `revoke ... from public` kullanırken `anon` ve `authenticated`'ı unutma.
+- Yeni renk eklemeden önce `@theme` içine taşı; hardcoded hex değerleri
+  `tests/unit/design-token-drift.baseline.json` listesini büyütme (yalnız
+  küçülebilir).
+- 3D/WebGL E2E yük duyarlıdır; cömert timeout ve CI retry budget kullan.
+- Client-rendered Turnstile'ı SSR HTML'den yargılama; gerçek tarayıcıda doğrula.
+
+---
+
+## 8. Definition of Done (DoD)
+
+Bir özellik tamamlandı sayılabilmesi için:
+
+- [ ] Ürün davranışı ve hata durumları belgelendi.
+- [ ] Yetki kontrolleri sunucuda ve gerektiği yerde DB'de uygulandı.
+- [ ] Migration ve kısıtlar eklendi; geri dönüş/ileri düzeltme yaklaşımı belirlendi.
+- [ ] Pozitif ve negatif testler yazıldı.
+- [ ] Hata, retry ve idempotency davranışı belirlendi.
+- [ ] Loglar hassas veri içermiyor.
+- [ ] Erişilebilirlik ve mobil görünüm kontrol edildi.
+- [ ] Harici servis varsa kesinti senaryosu test edildi.
+- [ ] İlgili kabul kapısı CI'da geçti.
+- [ ] Kullanıcı dokümantasyonu ve runbook güncellendi.

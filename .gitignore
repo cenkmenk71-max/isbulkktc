@@ -35,3 +35,7 @@ package-lock.json
 # committed template, which documents the variables the app reads.
 .env*
 !.env.example
+
+# Local Kilo/agent configuration and memory (not part of the product)
+.kilo/
+kilo.json*
