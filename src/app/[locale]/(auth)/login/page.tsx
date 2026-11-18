@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { signOut } from "@/features/identity/actions";
 import { SignInForm } from "@/features/identity/sign-in-form";
 import { EditorialFormPage } from "@/components/layout/editorial-form-page";
@@ -7,6 +8,8 @@ import { accountAudienceSchema } from "@/features/identity/schemas";
 import { messageKeyForOAuthFailureReason } from "@/features/identity/auth-errors";
 import { createAuthPageMetadata } from "@/features/identity/auth-metadata";
 import { resolveEnabledOAuthProviders } from "@/features/identity/oauth-providers";
+import { resolveAuthDestination } from "@/features/identity/auth-routing";
+import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
@@ -47,19 +50,64 @@ export async function generateMetadata({
 }
 
 export default async function LoginPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<LoginSearchParams>;
 }) {
-  const {
-    audience: requestedAudience,
-    error,
-    reason,
-    reset,
-  } = await searchParams;
+  const [
+    { locale: requestedLocale },
+    { audience: requestedAudience, error, reason, reset },
+  ] = await Promise.all([params, searchParams]);
+  const locale =
+    routing.locales.find((supported) => supported === requestedLocale) ??
+    routing.defaultLocale;
   const audience = accountAudienceSchema
     .catch("candidate")
     .parse(requestedAudience);
+
+  if (error !== "account") {
+    try {
+      const supabase = await createSupabaseServerClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, status")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!profile || profile.status === "active") {
+          const resolvedAudience =
+            profile?.role === "employer" || profile?.role === "admin"
+              ? "employer"
+              : audience;
+          redirect(resolveAuthDestination(resolvedAudience, locale));
+        }
+      }
+    } catch (authCheckError) {
+      if (
+        authCheckError instanceof Error &&
+        authCheckError.message === "NEXT_REDIRECT"
+      ) {
+        throw authCheckError;
+      }
+      if (
+        typeof authCheckError === "object" &&
+        authCheckError !== null &&
+        "digest" in authCheckError &&
+        typeof (authCheckError as { digest?: unknown }).digest === "string" &&
+        (authCheckError as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+      ) {
+        throw authCheckError;
+      }
+    }
+  }
+
   const copy = await getTranslations("AccountPages.login");
   // A malformed AUTH_OAUTH_PROVIDERS must not 500 the sign-in page; it degrades
   // to "no provider enabled", exactly like an empty value.
