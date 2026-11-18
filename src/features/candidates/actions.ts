@@ -39,8 +39,8 @@ export async function saveCandidateProfile(
     education: parseSection("education"),
     languages: parseSection("languages"),
     certifications: parseSection("certifications"),
-    summary: formData.get("summary"),
-    links: parseSection("links"),
+    summary: formData.get("summary") ?? "",
+    links: parseSection("links") ?? "[]",
   });
 
   if (!result.success) {
