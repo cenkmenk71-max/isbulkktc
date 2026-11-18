@@ -427,8 +427,6 @@ export async function sendMarketingEmail(input: {
   const email = renderMarketingEmail({
     locale,
     siteUrl: localeUrl(locale, "/"),
-    packagesUrl: localeUrl(locale, "/packages"),
-    registerUrl: localeUrl(locale, "/register?audience=employer"),
     unsubscribeUrl: input.unsubscribeUrl,
   });
   return deliver(email, input.to, `marketing/${input.campaignId}`, {

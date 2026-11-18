@@ -546,8 +546,6 @@ function renderMarketing(locale: string) {
   return renderMarketingEmail({
     locale,
     siteUrl: SITE,
-    packagesUrl: `${SITE}packages`,
-    registerUrl: `${SITE}register?audience=employer`,
     unsubscribeUrl: `${SITE}api/email/unsubscribe?e=x&s=y`,
   });
 }
@@ -591,11 +589,11 @@ test("the acquisition footer does not claim the recipient has an account", () =>
 test("the Turkish marketing copy keeps the owner's verbatim wording", () => {
   const tr = MARKETING_COPY.tr;
   assert.equal(tr.greeting, "Sayın Yetkili,");
-  assert.ok(tr.paragraphs[0].includes("yalnızca iş ilanı yayınlamakla bitmez"));
+  assert.ok(tr.paragraphs[0].includes("Kuzey Kıbrıs'ta doğru adaya ulaşmak"));
   assert.ok(tr.paragraphs[1].includes("İşBul KKTC"));
-  assert.ok(tr.features.some((feature) => feature.title.includes("İlan yayınlayabilir")));
-  assert.equal(tr.primaryCta, "İlan Paketlerini İnceleyin");
-  assert.equal(tr.secondaryCta, "İşveren Hesabı Oluştur");
+  assert.ok(tr.features.some((feature) => feature.title.includes("6 dilde ilan yayınlayın")));
+  assert.equal(tr.primaryCta, "WhatsApp'tan Hemen Başlayın");
+  assert.equal(tr.secondaryCta, "E-posta ile Bilgi Alın");
 });
 
 test("marketing email renders in every locale with both CTAs and contacts", () => {
@@ -606,17 +604,18 @@ test("marketing email renders in every locale with both CTAs and contacts", () =
     assert.equal(email.subject, copy.subject);
 
     // Both actions, in the owner's order, each with its lead-in line.
-    const primary = email.html.indexOf(copy.primaryCta);
-    const secondary = email.html.indexOf(copy.secondaryCta);
+    // CTA labels are HTML-escaped in the rendered output, so escape them for the search.
+    const primaryEscaped = escapeHtml(copy.primaryCta);
+    const secondaryEscaped = escapeHtml(copy.secondaryCta);
+    const primary = email.html.indexOf(primaryEscaped);
+    const secondary = email.html.indexOf(secondaryEscaped);
     assert.ok(primary !== -1 && secondary !== -1, `${locale}: both CTAs present`);
     assert.ok(primary < secondary, `${locale}: primary CTA precedes secondary`);
     assert.ok(email.html.includes(copy.packagesLead), `${locale}: primary lead-in`);
     assert.ok(email.html.includes(copy.registerLead), `${locale}: secondary lead-in`);
-    assert.ok(email.html.includes(`${SITE}packages`), `${locale}: packages link`);
-    assert.ok(
-      email.html.includes(`${SITE}register?audience=employer`),
-      `${locale}: employer register link`,
-    );
+    // Primary CTA links to WhatsApp, secondary CTA links to mailto:destek@isbulkktc.com
+    assert.ok(email.html.includes(MARKETING_CONTACTS.whatsapp), `${locale}: primary CTA whatsapp link`);
+    assert.ok(email.html.includes(`mailto:${MARKETING_CONTACTS.email}`), `${locale}: secondary CTA mailto link`);
 
     // The three reachable contact channels, each as a real link.
     assert.ok(email.html.includes(`mailto:${MARKETING_CONTACTS.email}`), `${locale}: email link`);
@@ -630,7 +629,7 @@ test("marketing email renders in every locale with both CTAs and contacts", () =
     );
 
     // Promotional: the opt-out is present in the body (HTML-escaped) and the
-    // text alternative (raw).
+    // text alternative (raw). The URL in HTML has & for the ampersand.
     assert.ok(
       email.html.includes(`${SITE}api/email/unsubscribe?e=x&amp;s=y`),
       `${locale}: unsubscribe link`,
@@ -650,13 +649,13 @@ test("headings uppercase with the recipient's language rules, not the client's",
   // Casing now happens in the sender, so the Turkish dotted `i` survives.
   const tr = renderMarketing("tr");
   assert.ok(
-    tr.html.includes("İŞBUL KKTC İLE İŞLETMENİZ:"),
+    tr.html.includes("İŞBUL KKTC İLE İŞLETMENİZ ŞUNLARI KAZANIR:"),
     "the Turkish features heading keeps its dotted capital İ",
   );
-  assert.ok(tr.html.includes("BİZE ULAŞIN"), "the Turkish contact heading keeps its dotted İ");
+  assert.ok(tr.html.includes("HIZLI İLETİŞİM — KARAR VERMEK İSTİYORSANIZ:"), "the Turkish contact heading keeps its dotted İ");
   // The dotless form is exactly the regression; it must not appear anywhere.
-  assert.ok(!tr.html.includes("IŞLETMENIZ"), "no dotless capital I in the Turkish heading");
-  assert.ok(!tr.html.includes("BIZE ULAŞIN"), "no dotless capital I in the Turkish contact heading");
+  assert.ok(!tr.html.includes("IŞLETMENİZ"), "no dotless capital I in the Turkish heading");
+  assert.ok(!tr.html.includes("HIZLI ILETISIM"), "no dotless capital I in the Turkish contact heading");
 
   // Casing no longer depends on a CSS property the client may drop (Outlook),
   // and it never lowercases a heading that the sender already cased.

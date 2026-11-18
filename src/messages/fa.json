@@ -1560,5 +1560,60 @@
       "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
       "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
     }
+  },
+  "CompanyCandidates": {
+    "eyebrow": "استخر توانمندی",
+    "title": "جستجوی استعداد در استخر نامزدها",
+    "description": "پروفایل نامزدها را در سراسر شمالی قبرس کشف کنید. بر اساس مهارت، تحصیلات، زبان‌ها و گواهینامه‌ها فیلتر کنید. با یک بسته آگهی فعال، دسترسی کامل را فراهم کنید.",
+    "backToDashboard": "بازگشت به داشبورد",
+    "searchPlaceholder": "جستجوی نام، عنوان، مهارت یا واژه کلیدی…",
+    "districtFilter": "شهرستان",
+    "allDistricts": "تمام شهرستان‌ها",
+    "advancedFilters": "فیلترهای پیشرفته",
+    "skillsFilter": "مهارت‌ها",
+    "languagesFilter": "زبان‌ها",
+    "educationFilter": "موسسات آموزشی",
+    "licensesFilter": "گواهینامه‌ها / جوازها",
+    "loading": "در حال بارگذاری نامزدها…",
+    "resultsCount": "{total, plural, =0 {هیچ نامزدی یافت نشد} one {۱ نامزد یافت شد} few {# نامزد یافت شد} many {# نامزد یافت شد} other {# نامزد یافت شد}}",
+    "noResults": "هیچ نامزدی با معیارهای شما یافت نشد.",
+    "pagination": "صفحه‌بندی",
+    "previous": "قبلی",
+    "next": "بعدی",
+    "pageInfo": "صفحه {current, number} / {total, number}",
+    "location": "موقعیت",
+    "skills": "مهارت‌ها",
+    "education": "تحصیلات",
+    "languages": "زبان‌ها",
+    "licenses": "گواهینامه‌ها",
+    "shortlistedBadge": "علاقه‌مندی‌ها",
+    "addToShortlist": "افزودن به علاقه‌مندی‌ها",
+    "removeFromShortlist": "حذف از علاقه‌مندی‌ها",
+    "inviteToJob": "دعوت به موقعیت",
+    "contactCandidate": "تماس با نامزد",
+    "viewDetail": "مشاهده جزئیات",
+    "maskedBadge": "قفل شده",
+    "freemium": {
+      "title": "برای دسترسی کامل بسته آگهی فعال لازم است",
+      "description": "دسترسی کامل به استخر نامزدها نیازمند یک بسته آگهی فعال و حداقل یک آگهی منتشرشده است. شرکت‌ها بدون بسته تنها پیش‌نمایش‌های ماسک شده ۳ نامزد اول را می‌بینند.",
+      "benefits": {
+        "maskedIdentity": "هویت نامزدها ماسک شده است (مثال: نامزد #KKT-9281)",
+        "limitedView": "تنها ۳ نامزد اول قابل پیش‌نمایش است؛ بقیه تار شده‌اند",
+        "noContact": "دکمه‌های تماس، دعوت و جزئیات قفل شده‌اند"
+      },
+      "whatsappCta": "💬 خرید بسته آگهی از طریق واتس‌اپ و باز کردن قفل‌ها",
+      "emailCta": "✉️ درخواست پیشنهاد تجاری از طریق ایمیل",
+      "notice": "بدون بسته، تنها {visible} نامزد اول به صورت ماسک شده قابل مشاهده هستند."
+    },
+    "paywall": {
+      "title": "دسترسی قفل شده",
+      "defaultTrigger": "این عملیات نیازمند یک بسته آگهی فعال است.",
+      "triggerInvite": "برای دعوت از این نامزد، باید بسته آگهی بخرید.",
+      "triggerContact": "برای تماس با این نامزد، باید بسته آگهی بخرید.",
+      "triggerViewDetail": "برای مشاهده جزئیات این نامزد، باید بسته آگهی بخرید.",
+      "whatsappCta": "💬 خرید بسته آگهی از طریق واتس‌اپ و باز کردن قفل‌ها",
+      "emailCta": "✉️ درخواست پیشنهاد تجاری از طریق ایمیل",
+      "note": "پس از خرید بسته، تمام قفل‌ها بلافاصله برداشته می‌شوند و پروفایل‌های کامل نامزدها قابل مشاهده می‌شوند."
+    }
   }
 }

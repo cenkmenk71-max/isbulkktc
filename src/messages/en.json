@@ -1560,5 +1560,60 @@
     "suggestion1": "What is İşBul KKTC?",
     "suggestion2": "Which areas does it cover?",
     "suggestion3": "Does it cost anything to post or apply?"
+  },
+  "CompanyCandidates": {
+    "eyebrow": "TALENT POOL",
+    "title": "Search Talent in the Candidate Pool",
+    "description": "Discover candidate profiles across Northern Cyprus. Filter by skills, education, languages, and licenses. Unlock full access with an active job package.",
+    "backToDashboard": "Back to dashboard",
+    "searchPlaceholder": "Search name, title, skill or keyword…",
+    "districtFilter": "District",
+    "allDistricts": "All districts",
+    "advancedFilters": "Advanced filters",
+    "skillsFilter": "Skills",
+    "languagesFilter": "Languages",
+    "educationFilter": "Education institutions",
+    "licensesFilter": "Licenses / Licences",
+    "loading": "Loading candidates…",
+    "resultsCount": "{total, plural, one {# candidate found} other {# candidates found}}",
+    "noResults": "No candidates match your criteria.",
+    "pagination": "Pagination",
+    "previous": "Previous",
+    "next": "Next",
+    "pageInfo": "Page {current} / {total}",
+    "location": "Location",
+    "skills": "Skills",
+    "education": "Education",
+    "languages": "Languages",
+    "licenses": "Licenses",
+    "shortlistedBadge": "Shortlisted",
+    "addToShortlist": "Add to shortlist",
+    "removeFromShortlist": "Remove from shortlist",
+    "inviteToJob": "Invite to job",
+    "contactCandidate": "Contact candidate",
+    "viewDetail": "View details",
+    "maskedBadge": "Locked",
+    "freemium": {
+      "title": "Active Job Package Required for Full Access",
+      "description": "Full access to the candidate pool requires an active job package and at least one published listing. Companies without a package only see masked previews of the first 3 candidates.",
+      "benefits": {
+        "maskedIdentity": "Candidate identities are masked (e.g. Candidate #KKT-9281)",
+        "limitedView": "Only the first 3 candidates are previewable; the rest are blurred",
+        "noContact": "Contact, invite, and detail buttons are locked"
+      },
+      "whatsappCta": "💬 Buy Job Package via WhatsApp & Unlock",
+      "emailCta": "✉️ Request Corporate Quote via Email",
+      "notice": "Without a package, only the first {visible} candidates are shown in masked form."
+    },
+    "paywall": {
+      "title": "Access Locked",
+      "defaultTrigger": "This action requires an active job package.",
+      "triggerInvite": "You need a job package to invite this candidate.",
+      "triggerContact": "You need a job package to contact this candidate.",
+      "triggerViewDetail": "You need a job package to view this candidate's details.",
+      "whatsappCta": "💬 Buy Job Package via WhatsApp & Unlock",
+      "emailCta": "✉️ Request Corporate Quote via Email",
+      "note": "Once you purchase a package, all locks are lifted instantly and full candidate profiles become visible."
+    }
   }
 }

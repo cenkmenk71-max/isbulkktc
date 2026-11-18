@@ -57,49 +57,53 @@ export type MarketingCopy = {
  * own client instead of a copied address.
  */
 export const MARKETING_CONTACTS = {
-  email: "info@isbulkktc.com",
+  email: "destek@isbulkktc.com",
   phoneDisplay: "0539 131 64 21",
   phoneTel: "+905391316421",
-  whatsapp: "https://wa.me/905391316421",
+  whatsapp: "https://wa.me/905391316421?text=Merhaba%20IsBul%20KKTC%2C%20ilan%20paketleri%20ve%20aday%20havuzu%20aktivasyonu%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum.",
 } as const;
 
 const tr: MarketingCopy = {
-  subject: "İşe alım sürecinizi İşBul KKTC ile tek platformda yönetin",
+  subject: "🎯 6 Dilde İlan, Google'da Zirve, Canlı Aday Havuzu — İşe Alımınız Bitmiştir",
   preheader:
-    "İlan yayınlayın, aday havuzunu keşfedin ve başvuruları tek panelden yönetin.",
-  heading: "Doğru adaya ulaşmak, ilan yayınlamakla bitmez",
+    "İlanlarınız otomatik 6 dile çevrilir, Google Jobs'a entegre olur ve binlerce aday profiline anında erişirsiniz. Kredi kartı yok, doğrudan WhatsApp'tan başlayın.",
+  heading: "Doğru yetenekler size gelsin, siz sadece seçin",
   greeting: "Sayın Yetkili,",
   paragraphs: [
-    "Bir pozisyon için doğru adayı bulmak, yalnızca iş ilanı yayınlamakla bitmez. Adaylara ulaşmak, başvuruları değerlendirmek ve işe alım sürecini verimli yönetmek de en az ilan kadar önemlidir.",
-    "İşBul KKTC, işletmelerin personel arayışlarını tek bir dijital platform üzerinden yürütebilmeleri için geliştirilmiş bir iş ve istihdam platformudur.",
+    "Kuzey Kıbrıs'ta doğru adaya ulaşmak için artık onlarca farklı kanal ve karmaşık Excel tablolarıyla uğraşmanıza gerek yok.",
+    "İşBul KKTC, ilanlarınızı tek tıkla 6 dile çevirip dünyaya açan, Google'da en üst sıraya taşıyan ve başvuruları profesyonelce yönetmenizi sağlayan bölgenin en güçlü kariyer ağıdır.",
   ],
-  featuresHeading: "İşBul KKTC ile işletmeniz:",
+  featuresHeading: "İşBul KKTC ile işletmeniz şunları kazanır:",
   features: [
     {
-      title: "İlan yayınlayabilir",
-      body: "Açık pozisyonlarınızı ilgili iş arayanlarla buluşturabilirsiniz.",
+      title: "🌍 6 dilde ilan yayınlayın — Google'da önde yer alın",
+      body: "tr, en, ru, el, fa, de desteğiyle ilanlarınız otomatik olarak 6 dilde yayına girer. Google Jobs şeması entegrasyonu sayesinde arama sonuçlarında üst sıralara çıkar, uluslararası ve yerel aday kitlesine aynı anda ulaşırsınız.",
     },
     {
-      title: "Aday havuzunu keşfedebilir",
-      body: "Aday profillerini inceleyerek personel arayışınızı yalnızca ilan başvurularıyla sınırlı tutmazsınız.",
+      title: "🔍 Aday havuzunu keşfedin — sadece başvurularla sınırlı kalmayın",
+      body: "Platformdaki binlerce aday profilini filtreleyerek, ilanınıza başvurmayan ama tam uyan yetenekleri de bulun. Arama ve filtreleme araçlarıyla doğru adaya saniyeler içinde ulaşın.",
     },
     {
-      title: "Başvuru sürecini kolaylaştırabilir",
-      body: "Adaylar CV'lerini yükleyerek otomatik profil oluşturma imkânından yararlanabilir.",
+      title: "⚡ CV/başvuru yönetimini tek panelden otomatikleştirin",
+      body: "Adaylar CV yükler, sistem anında yapılandırılmış profil oluşturur. Başvuruları kanban panellere taşıyın, not ekleyin, takımınızla paylaşın — e-posta zincirleri ve Excel tabloları tarihe karışıyor.",
     },
     {
-      title: "İşletmenizi tanıtabilir",
-      body: "Şirket profilinizi oluşturarak işletmenizi ve açık pozisyonlarınızı platformda sergileyebilirsiniz.",
+      title: "✅ Doğrulanmış şirket rozeti — güven kazanın, başvuru artın",
+      body: "Şirket kimlik doğrulaması geçen işletmelere 'Doğrulanmış' rozeti verilir. Rozetteki işletmeler aday gözünde öne çıkar, başvuru oranları ölçülebilir derecede artar.",
+    },
+    {
+      title: "📦 Esnek ilan paketleri — ihtiyacınıza göre ödeyin",
+      body: "Tek ilan, aylık sınırsız, kurumsal yıllık paketler. Süre dolduğunda otomatik yenileme yok, gizli ücret yok. Şeffaf fiyatlandırma ile bütçenizi siz yönetin.",
     },
   ],
-  closing: "İşe alım sürecinizde kullanabileceğiniz bu imkânları keşfedin.",
-  packagesLead: "İşletmenize uygun ilan paketlerini inceleyin:",
-  registerLead: "İşveren hesabınızı oluşturmak için:",
-  primaryCta: "İlan Paketlerini İnceleyin",
-  secondaryCta: "İşveren Hesabı Oluştur",
+  closing: "İşe alım sürecinizi bugün aynı tek platformda başlatın.",
+  packagesLead: "İşletmenize uygun ilan paketlerini inceleyin ve hemen başlayın:",
+  registerLead: "Veya doğrudan destek ekibimizle iletişime geçin:",
+  primaryCta: "WhatsApp'tan Hemen Başlayın",
+  secondaryCta: "E-posta ile Bilgi Alın",
   signOff:
     "Saygılarımızla, İşBul KKTC — Kuzey Kıbrıs'ta iş ve istihdam için dijital buluşma noktası",
-  contactHeading: "Bize ulaşın",
+  contactHeading: "Hızlı iletişim — karar vermek istiyorsanız:",
   contactLabels: { email: "E-posta", phone: "Telefon", whatsapp: "WhatsApp" },
   unsubscribeLabel: "Abonelikten çık",
   footerNote:
@@ -107,42 +111,46 @@ const tr: MarketingCopy = {
 };
 
 const en: MarketingCopy = {
-  subject: "Run your whole hiring process on İşBul KKTC",
+  subject: "🎯 6 Languages, Top Google Rank, Live Candidate Pool — Your Hiring Is Done",
   preheader:
-    "Post listings, explore the candidate pool and manage applications from one dashboard.",
-  heading: "Reaching the right candidate takes more than posting a listing",
+    "Your listings auto-translate to 6 languages, integrate with Google Jobs, and unlock instant access to thousands of candidates. No credit card — start directly via WhatsApp.",
+  heading: "Let the right talent come to you — you just choose",
   greeting: "Dear Hiring Manager,",
   paragraphs: [
-    "Finding the right candidate for a role does not end with publishing a job listing. Reaching applicants, reviewing applications and running the hiring process efficiently matter just as much.",
-    "İşBul KKTC is an employment platform built so businesses can run their entire staffing search through a single digital platform.",
+    "Finding the right candidate in Northern Cyprus no longer requires juggling dozens of channels and messy spreadsheets.",
+    "İşBul KKTC is the region's most powerful career network — your listings go live in 6 languages, rank top on Google Jobs, and give you professional application management in a single click.",
   ],
-  featuresHeading: "With İşBul KKTC, your business can:",
+  featuresHeading: "With İşBul KKTC, your business gains:",
   features: [
     {
-      title: "Publish listings",
-      body: "Connect your open positions with the job seekers who are looking for them.",
+      title: "🌍 Publish in 6 languages — rank top on Google",
+      body: "Listings automatically go live in tr, en, ru, el, fa, de. Google Jobs schema integration pushes your posts to top search positions, reaching international and local talent simultaneously.",
     },
     {
-      title: "Explore the candidate pool",
-      body: "Review candidate profiles, so your search is not limited to the applications a listing brings.",
+      title: "🔍 Explore the candidate pool — don't limit yourself to applicants",
+      body: "Filter thousands of candidate profiles on the platform to find talent that didn't even apply to your listing. Search and filtering tools surface the right fit in seconds.",
     },
     {
-      title: "Simplify applications",
-      body: "Candidates can upload their CV and benefit from automatic profile creation.",
+      title: "⚡ Automate CV/application management from one dashboard",
+      body: "Candidates upload CVs, the system instantly creates structured profiles. Move applications across kanban boards, add notes, share with your team — email chains and spreadsheets become history.",
     },
     {
-      title: "Showcase your company",
-      body: "Build a company profile and present your business and open positions on the platform.",
+      title: "✅ Verified company badge — build trust, increase applications",
+      body: "Companies that pass identity verification receive a 'Verified' badge. Verified businesses stand out to candidates, measurably increasing application rates.",
+    },
+    {
+      title: "📦 Flexible listing packages — pay for what you need",
+      body: "Single listing, monthly unlimited, annual corporate packages. No auto-renewal surprises, no hidden fees. Transparent pricing puts you in control of your budget.",
     },
   ],
-  closing: "Explore the tools you can use in your hiring process.",
-  packagesLead: "Review the listing packages that fit your business:",
-  registerLead: "To create your employer account:",
-  primaryCta: "View Listing Packages",
-  secondaryCta: "Create Employer Account",
+  closing: "Start running your hiring process on one platform today.",
+  packagesLead: "Review the listing packages that fit your business and get started:",
+  registerLead: "Or contact our support team directly:",
+  primaryCta: "Start via WhatsApp",
+  secondaryCta: "Get Info by Email",
   signOff:
     "Best regards, İşBul KKTC — the digital meeting point for jobs and employment in Northern Cyprus",
-  contactHeading: "Get in touch",
+  contactHeading: "Quick contact — if you want to decide fast:",
   contactLabels: { email: "Email", phone: "Phone", whatsapp: "WhatsApp" },
   unsubscribeLabel: "Unsubscribe",
   footerNote:
@@ -150,42 +158,46 @@ const en: MarketingCopy = {
 };
 
 const ru: MarketingCopy = {
-  subject: "Ведите весь процесс найма в İşBul KKTC",
+  subject: "🎯 6 языков, топ Google, живая база кандидатов — ваш найм завершён",
   preheader:
-    "Публикуйте вакансии, изучайте базу кандидатов и управляйте откликами из одной панели.",
-  heading: "Найти нужного кандидата — это больше, чем разместить вакансию",
+    "Ваши вакансии автоматически переводятся на 6 языков, интегрируются с Google Jobs и дают мгновенный доступ к тысячам кандидатов. Без кредитной карты — начните прямо через WhatsApp.",
+  heading: "Пусть правильные таланты найдут вас — вы только выбирайте",
   greeting: "Уважаемый руководитель,",
   paragraphs: [
-    "Поиск подходящего кандидата не заканчивается публикацией вакансии. Донести предложение до соискателей, рассмотреть отклики и эффективно вести процесс найма не менее важно.",
-    "İşBul KKTC — это платформа занятости, созданная для того, чтобы компании вели поиск персонала через единую цифровую платформу.",
+    "Для поиска подходящего кандидата на Северном Кипре больше не нужно ловлиться между десятками каналов и хаотичными таблицами.",
+    "İşBul KKTC — самая мощная платформа занятости региона: ваши вакансии уходят в эфир на 6 языках, занимают верхние позиции в Google Jobs и дают профессиональное управление откликами в один клик.",
   ],
-  featuresHeading: "С İşBul KKTC ваша компания может:",
+  featuresHeading: "С İşBul KKTC ваша компания получает:",
   features: [
     {
-      title: "Публиковать вакансии",
-      body: "Связывайте открытые позиции с соискателями, которые их ищут.",
+      title: "🌍 Публикуйте на 6 языках — будьте в топе Google",
+      body: "Вакансии автоматически публикуются на tr, en, ru, el, fa, de. Интеграция со схемой Google Jobs поднимает ваши объявления в топ выдачи, охватывая международную и локальную аудиторию одновременно.",
     },
     {
-      title: "Изучать базу кандидатов",
-      body: "Просматривайте профили кандидатов, чтобы поиск не ограничивался откликами на вакансию.",
+      title: "🔍 Изучайте базу кандидатов — не ограничивайтесь откликами",
+      body: "Фильтруйте тысячи профилей кандидатов на платформе, чтобы найти таланты, которые не откликались на вашу вакансию. Инструменты поиска и фильтрации находят идеального кандидата за секунды.",
     },
     {
-      title: "Упростить отклики",
-      body: "Кандидаты могут загрузить резюме и воспользоваться автоматическим созданием профиля.",
+      title: "⚡ Автоматизируйте управление резюме/откликами из одной панели",
+      body: "Кандидаты загружают резюме, система мгновенно создает структурированные профили. Перемещайте отклики по канбан-доскам, добавляйте заметки, делитесь с командой — цепочки писем и таблицы остаются в прошлом.",
     },
     {
-      title: "Презентовать компанию",
-      body: "Создайте профиль компании и представьте свой бизнес и открытые позиции на платформе.",
+      title: "✅ Верифицированная значка компании — выигрывайте доверие, увеличивайте отклики",
+      body: "Компании, прошедшие верификацию личности, получают значок 'Верифицирован'. Верифицированные бизнесы выделяются в глазах кандидатов, измеримо увеличивая количество откликов.",
+    },
+    {
+      title: "📦 Гибкие тарифы на вакансии — платите за то, что нужно",
+      body: "Одна вакансия, безлимит на месяц, корпоративный годовой пакет. Никаких неожиданных автопродлений, никаких скрытых комиссий. Прозрачная цена дает вам контроль над бюджетом.",
     },
   ],
-  closing: "Изучите возможности, которые можно использовать в процессе найма.",
-  packagesLead: "Ознакомьтесь с тарифами на размещение вакансий:",
-  registerLead: "Чтобы создать аккаунт работодателя:",
-  primaryCta: "Посмотреть тарифы",
-  secondaryCta: "Создать аккаунт работодателя",
+  closing: "Начните вести процесс найма на одной платформе уже сегодня.",
+  packagesLead: "Ознакомьтесь с тарифами, подходящими для вашего бизнеса, и начните:",
+  registerLead: "Или свяжитесь с нашей командой поддержки напрямую:",
+  primaryCta: "Начать через WhatsApp",
+  secondaryCta: "Получить информацию по email",
   signOff:
     "С уважением, İşBul KKTC — цифровая точка встречи для работы и занятости в Северном Кипре",
-  contactHeading: "Свяжитесь с нами",
+  contactHeading: "Быстрая связь — если хотите решить быстро:",
   contactLabels: { email: "Эл. почта", phone: "Телефон", whatsapp: "WhatsApp" },
   unsubscribeLabel: "Отписаться",
   footerNote:
@@ -193,42 +205,46 @@ const ru: MarketingCopy = {
 };
 
 const el: MarketingCopy = {
-  subject: "Διαχειριστείτε όλη τη διαδικασία πρόσληψης στο İşBul KKTC",
+  subject: "🎯 6 Γλώσσες, Κορυφή στο Google, Ζωντανό Πλαίσιο Υποψηφίων — Η Πρόσληψή σας Ολοκληρώθηκε",
   preheader:
-    "Δημοσιεύστε αγγελίες, εξερευνήστε το σύνολο υποψηφίων και διαχειριστείτε τις αιτήσεις από ένα ταμπλό.",
-  heading: "Η εύρεση του σωστού υποψηφίου είναι κάτι περισσότερο από μια αγγελία",
+    "Οι αγγελίες σας μεταφράζονται αυτόματα σε 6 γλώσσες, ενσωματώνονται στο Google Jobs και σας δίνουν άμεση πρόσβαση σε χιλιάδες υποψηφίους. Χωρίς πιστωτική κάρτα — ξεκινήστε απευθείας μέσω WhatsApp.",
+  heading: "Ας έρθει το σωστό τάλεντο κοντά σας — εσείς απλά επιλέγετε",
   greeting: "Αξιότιμε/η,",
   paragraphs: [
-    "Η εύρεση του σωστού υποψηφίου για μια θέση δεν τελειώνει με τη δημοσίευση μιας αγγελίας. Η προσέγγιση των υποψηφίων, η αξιολόγηση των αιτήσεων και η αποδοτική διαχείριση της διαδικασίας πρόσληψης είναι εξίσου σημαντικές.",
-    "Το İşBul KKTC είναι μια πλατφόρμα απασχόλησης, σχεδιασμένη ώστε οι επιχειρήσεις να διεξάγουν την αναζήτηση προσωπικού μέσω μίας ψηφιακής πλατφόρμας.",
+    "Η εύρεση του σωστού υποψηφίου στη Βόρεια Κύπρο δεν απαιτεί πλέον να ξεχωρίζετε μεταξύ δεκάδων καναλιών και хаотиχών υπολογιστικών φύλλων.",
+    "Το İşBul KKTC είναι το ισχυρότερο δίκτυο καριέρας της περιοχής — οι αγγελίες σας δημοσιεύονται σε 6 γλώσσες, κατακτώνται την κορυφή του Google Jobs και σας προσφέρουν επαγγελματική διαχείριση αιτήσεων με ένα κλικ.",
   ],
-  featuresHeading: "Με το İşBul KKTC η επιχείρησή σας μπορεί να:",
+  featuresHeading: "Με το İşBul KKTC η επιχείρησή σας κερδίζει:",
   features: [
     {
-      title: "Δημοσιεύει αγγελίες",
-      body: "Συνδέστε τις ανοιχτές θέσεις σας με τους υποψηφίους που τις αναζητούν.",
+      title: "🌍 Δημοσιεύστε σε 6 γλώσσες — κατακτήστε την κορυφή του Google",
+      body: "Οι αγγελίες δημοσιεύονται αυτόματα στα tr, en, ru, el, fa, de. Η ενσωμάτωση σχήματος Google Jobs αναβαθμίζει τις αγγελίες σας στην κορυφή των αποτελεσμάτων αναζήτησης, φτάνοντας ταυτόχρονα διεθνή και τοπικό ταλέντο.",
     },
     {
-      title: "Εξερευνά το σύνολο υποψηφίων",
-      body: "Δείτε προφίλ υποψηφίων, ώστε η αναζήτησή σας να μην περιορίζεται στις αιτήσεις μιας αγγελίας.",
+      title: "🔍 Εξερευνήστε το σύνολο υποψηφίων — μην περιορίζεστε στις αιτήσεις",
+      body: "Φιλτράρετε χιλιάδες προφίλ υποψηφίων στην πλατφόρμα για να βρείτε ταλέντα που δεν έκαναν καν αιτήσεις. Τα εργαλεία αναζήτησης και φιλτράρισης εντοπίζουν το ιδανικό match δευτερόλεπτα.",
     },
     {
-      title: "Απλοποιεί τις αιτήσεις",
-      body: "Οι υποψήφιοι μπορούν να ανεβάσουν το βιογραφικό τους και να επωφεληθούν από την αυτόματη δημιουργία προφίλ.",
+      title: "⚡ Αυτοματοποιήστε τη διαχείριση CV/αιτήσεων από έναν πίνακα",
+      body: "Οι υποψήφιοι ανεβάζουν CV, το σύστημα δημιουργεί άμεσα δομημένα προφίλ. Μετακινείτε αιτήσεις σε kanban πίνακες, προσθέτετε σημειώσεις, μοιράζεστε με την ομάδα — αλυσίδες email και υπολογιστικά φύλλα γίνονται παρελθόν.",
     },
     {
-      title: "Προβάλλει την εταιρεία σας",
-      body: "Δημιουργήστε προφίλ εταιρείας και παρουσιάστε την επιχείρησή σας και τις ανοιχτές θέσεις στην πλατφόρμα.",
+      title: "✅ Επιβεβαιωμένο βεϊλ εταιρείας — χτίστε εμπιστοσύνη, αυξήστε αιτήσεις",
+      body: "Οι επιχειρήσεις που περνάνε την επαλήθευση ταυτότητας λαμβάνουν βεϊλ 'Επιβεβαιωμένο'. Οι επιβεβαιωμένες επιχειρήσεις ξεχωρίζουν στους υποψηφίους, αυξάνοντας μετρήσιμα τις αιτήσεις.",
+    },
+    {
+      title: "📦 Ελαστικά πακέτα αγγελιών — πληρώστε για ό,τι χρειάζεστε",
+      body: "Μια αγγελία, απεριόριστο μηνιαίο, ετήσιο εταιρικό πακέτο. Καμία εκπληκτική αυτόματη ανανέωση, καμία κρυφή χρέωση. Διαφανές pricing σας δίνει τον έλεγχο του προϋπολογισμού.",
     },
   ],
-  closing: "Εξερευνήστε τα εργαλεία που μπορείτε να χρησιμοποιήσετε στη διαδικασία πρόσληψης.",
-  packagesLead: "Δείτε τα πακέτα αγγελιών που ταιριάζουν στην επιχείρησή σας:",
-  registerLead: "Για να δημιουργήσετε λογαριασμό εργοδότη:",
-  primaryCta: "Δείτε τα πακέτα αγγελιών",
-  secondaryCta: "Δημιουργία λογαριασμού εργοδότη",
+  closing: "Ξεκινήστε να διαχειρίζεστε τη διαδικασία πρόσληψης σε μία πλατφόρμα σήμερα.",
+  packagesLead: "Δείτε τα πακέτα αγγελιών που ταιριάζουν στην επιχείρησή σας και ξεκινήστε:",
+  registerLead: "Ή επικοινωνήστε άμεσα με την ομάδα υποστήριξής μας:",
+  primaryCta: "Ξεκινήστε μέσω WhatsApp",
+  secondaryCta: "Λάβετε πληροφορίες με email",
   signOff:
     "Με εκτίμηση, İşBul KKTC — το ψηφιακό σημείο συνάντησης για εργασία και απασχόληση στη Βόρεια Κύπρο",
-  contactHeading: "Επικοινωνήστε μαζί μας",
+  contactHeading: "Γρήγορη επικοινωνία — αν θέλετε να αποφασίσετε τώρα:",
   contactLabels: { email: "Email", phone: "Τηλέφωνο", whatsapp: "WhatsApp" },
   unsubscribeLabel: "Διαγραφή",
   footerNote:
@@ -236,42 +252,46 @@ const el: MarketingCopy = {
 };
 
 const fa: MarketingCopy = {
-  subject: "کل فرایند استخدام خود را در İşBul KKTC مدیریت کنید",
+  subject: "🎯 ۶ زبان، رتبه اول گوگل، مخزن زنده کارجویان — استخدام شما تمام شد",
   preheader:
-    "آگهی منتشر کنید، مجموعه کارجویان را ببینید و درخواست‌ها را از یک پنل مدیریت کنید.",
-  heading: "یافتن کارجوی مناسب بیش از انتشار یک آگهی است",
+    "آگهی‌های شما به‌صورت خودکار به ۶ زبان ترجمه می‌شوند، با Google Jobs یکپارچه می‌شوند و دسترسی فوری به هزاران کارجوی را فراهم می‌کنند. بدون کارت اعتباری — مستقیماً از طریق واتس‌اپ آغاز کنید.",
+  heading: "بگذارید تا بهترین استعدادها به سراغ شما بیایند — شما فقط انتخاب کنید",
   greeting: "مدیر محترم،",
   paragraphs: [
-    "یافتن کارجوی مناسب برای یک موقعیت، تنها با انتشار آگهی تمام نمی‌شود. رسیدن به کارجویان، بررسی درخواست‌ها و مدیریت کارآمد فرایند استخدام نیز به همان اندازه مهم است.",
-    "İşBul KKTC یک پلتفرم اشتغال است که ساخته شده تا کسب‌وکارها جستجوی نیروی خود را از طریق یک پلتفرم دیجیتال واحد پیش ببرند.",
+    "یافتن کارجوی مناسب در Kuzey Kıbrıs دیگر نیازی به جستجو در ده‌ها کانال مختلف و 엑سل‌های مضطرب ندارد.",
+    "İşBul KKTC قدرتمندترین شبکه کار و اشتغال منطقه است — آگهی‌های شما در ۶ زبان منتشر می‌شوند، در رتبه اول Google Jobs قرار می‌گیرند و مدیریت حرفه‌ای درخواست‌ها را با یک کلیک فراهم می‌کنند.",
   ],
-  featuresHeading: "با İşBul KKTC، کسب‌وکار شما می‌تواند:",
+  featuresHeading: "با İşBul KKTC، کسب‌وکار شما موارد زیر را بدست می‌آورد:",
   features: [
     {
-      title: "آگهی منتشر کند",
-      body: "موقعیت‌های شغلی باز خود را به کارجویانی که به دنبال آن‌ها هستند برسانید.",
+      title: "🌍 در ۶ زبان آگهی دهید — در رتبه اول Google قرار بگیرید",
+      body: "آگهی‌ها به‌صورت خودکار در tr، en، ru، el، fa، de منتشر می‌شوند. یکپارچه‌سازی با اسکیمای Google Jobs آگهی‌های شما را در نتایج جستجوی بالایی قرار می‌دهد و همزمان مخاطبین بین‌المللی و محلی را پوشش می‌دهد.",
     },
     {
-      title: "مجموعه کارجویان را ببیند",
-      body: "پروفایل کارجویان را بررسی کنید تا جستجوی شما به درخواست‌های یک آگهی محدود نماند.",
+      title: "🔍 مجموعه کارجویان را کاوش کنید — به درخواست‌های آگهی محدود نمانید",
+      body: "هزاران پروفایل کارجوی در پلتفرم را فیلتر کنید تا talentoهایی را پیدا کنید که اصلا به آگهی شما درخواست نداده‌اند. ابزارهای جستجو و فیلتر، فرد مناسب را در ثانیه‌ها شناسایی می‌کنند.",
     },
     {
-      title: "درخواست‌ها را ساده کند",
-      body: "کارجویان می‌توانند رزومه خود را بارگذاری کنند و از ساخت خودکار پروفایل بهره ببرند.",
+      title: "⚡ مدیریت CV/درخواست‌ها را از یک داشبورد خودکار کنید",
+      body: "کارجویان CV بارگذاری می‌کنند، سیستم بلافاصله پروفایل ساختاریافته می‌سازد. درخواست‌ها را در بردهای kanban جابجا کنید، یادداشت اضافه کنید، با تیم به اشتراک بگذارید — زنجیره‌های ایمیل و اکسل‌ها گذشته می‌شوند.",
     },
     {
-      title: "شرکت خود را معرفی کند",
-      body: "پروفایل شرکت بسازید و کسب‌وکار و موقعیت‌های باز خود را در پلتفرم نمایش دهید.",
+      title: "✅ نشانه تایید شرکت — اعتماد بسازید، درخواست‌ها را افزایش دهید",
+      body: "شرکت‌هایی که احراز هویت را می‌گذرند، نشانه «تایید شده» دریافت می‌کنند. شرکت‌های تایید شده در نظر کارجویان برجسته می‌شوند و نرخ درخواست‌ها به‌صورت قابل‌قياسی افزایش می‌یابد.",
+    },
+    {
+      title: "📦 بسته‌های آگهی انعطاف‌پذیر — برای نیاز خود بپردازید",
+      body: "یک آگهی، نامحدود ماهانه، بسته سالانه سازمانی. هیچ تمدید خودکار شگفت‌انگیزی، هیچ هزینه مخفی. قیمت‌گذاری شفاف، کنترل بودجه را به دست شما می‌دهد.",
     },
   ],
-  closing: "امکاناتی را که می‌توانید در فرایند استخدام به کار ببرید کشف کنید.",
-  packagesLead: "بسته‌های آگهی مناسب کسب‌وکار خود را ببینید:",
-  registerLead: "برای ساخت حساب کارفرما:",
-  primaryCta: "مشاهده بسته‌های آگهی",
-  secondaryCta: "ساخت حساب کارفرما",
+  closing: "فرایند استخدام خود را امروز در یک پلتفرم آغاز کنید.",
+  packagesLead: "بسته‌های آگهی مناسب کسب‌وکار خود را ببینید و آغاز کنید:",
+  registerLead: "یا مستقیماً با تیم پشتیبانی ما تماس بگیرید:",
+  primaryCta: "از طریق واتس‌اپ آغاز کنید",
+  secondaryCta: "دریافت اطلاعات از طریق ایمیل",
   signOff:
     "با احترام، İşBul KKTC — نقطه دیدار دیجیتال برای کار و اشتغال در قبرس شمالی",
-  contactHeading: "با ما در تماس باشید",
+  contactHeading: "تماس سریع — اگر می‌خواهید سریع تصمیم بگیرید:",
   contactLabels: { email: "ایمیل", phone: "تلفن", whatsapp: "واتس‌اپ" },
   unsubscribeLabel: "لغو اشتراک",
   footerNote:
@@ -279,43 +299,46 @@ const fa: MarketingCopy = {
 };
 
 const de: MarketingCopy = {
-  subject: "Steuern Sie Ihren gesamten Einstellungsprozess mit İşBul KKTC",
+  subject: "🎯 6 Sprachen, Top-Google-Platz, Live-Kandidatenpool — Ihr Einstellungsprozess ist erledigt",
   preheader:
-    "Anzeigen veröffentlichen, Kandidatenpool durchsuchen und Bewerbungen in einem Dashboard verwalten.",
-  heading: "Den richtigen Kandidaten zu finden ist mehr als eine Anzeige",
+    "Ihre Anzeigen werden automatisch in 6 Sprachen übersetzt, in Google Jobs integriert und geben Ihnen sofortigen Zugriff auf Tausende Kandidaten. Keine Kreditkarte — starten Sie direkt per WhatsApp.",
+  heading: "Lassen Sie die richtigen Talente zu sich kommen — Sie wählen nur aus",
   greeting: "Sehr geehrte Damen und Herren,",
   paragraphs: [
-    "Den richtigen Kandidaten für eine Stelle zu finden, endet nicht mit der Veröffentlichung einer Anzeige. Kandidaten zu erreichen, Bewerbungen zu prüfen und den Einstellungsprozess effizient zu steuern, ist ebenso wichtig.",
-    "İşBul KKTC ist eine Beschäftigungsplattform, mit der Unternehmen ihre Personalsuche über eine einzige digitale Plattform abwickeln können.",
+    "Die Suche nach dem richtigen Kandidaten in Nordzypern erfordert nicht mehr das Jonglieren zwischen Dutzenden Kanälen und chaotischen Tabellen.",
+    "İşBul KKTC ist das stärkste Karrierenetzwerk der Region — Ihre Anzeigen gehen in 6 Sprachen live, erreichen Top-Platzierungen bei Google Jobs und geben Ihnen professionelles Bewerbermanagement mit einem Klick.",
   ],
-  featuresHeading: "Mit İşBul KKTC kann Ihr Unternehmen:",
+  featuresHeading: "Mit İşBul KKTC gewinnt Ihr Unternehmen:",
   features: [
     {
-      title: "Anzeigen veröffentlichen",
-      body: "Bringen Sie Ihre offenen Stellen mit den Jobsuchenden zusammen, die sie suchen.",
+      title: "🌍 In 6 Sprachen veröffentlichen — bei Google ganz oben stehen",
+      body: "Anzeigen gehen automatisch in tr, en, ru, el, fa, de live. Die Google-Jobs-Schema-Integration katapultiert Ihre Anzeigen an die Spitze der Suchergebnisse und erreicht internationale sowie lokale Talente gleichzeitig.",
     },
     {
-      title: "Den Kandidatenpool durchsuchen",
-      body: "Prüfen Sie Kandidatenprofile, damit Ihre Suche nicht auf die Bewerbungen einer Anzeige beschränkt bleibt.",
+      title: "🔍 Kandidatenpool durchsuchen — nicht auf Bewerbungen beschränkt",
+      body: "Filtern Sie tausende Kandidatenprofile auf der Plattform, um Talente zu finden, die sich gar nicht auf Ihre Anzeige beworben haben. Such- und Filtertools finden den perfekten Match in Sekunden.",
     },
     {
-      title: "Bewerbungen vereinfachen",
-      body: "Kandidaten können ihren Lebenslauf hochladen und die automatische Profilerstellung nutzen.",
+      title: "⚡ CV/Bewerbungs-Management aus einem Dashboard automatisieren",
+      body: "Kandidaten laden CVs hoch, das System erstellt sofort strukturierte Profile. Bewerbungen auf Kanban-Boards verschieben, Notizen hinzufügen, mit dem Team teilen — E-Mail-Ketten und Tabellen gehören der Vergangenheit an.",
     },
     {
-      title: "Ihr Unternehmen präsentieren",
-      body: "Erstellen Sie ein Firmenprofil und präsentieren Sie Ihr Unternehmen und Ihre offenen Stellen auf der Plattform.",
+      title: "✅ Verifiziertes Firmen-Badge — Vertrauen schaffen, Bewerbungen steigern",
+      body: "Unternehmen, die die Identitätsprüfung bestehen, erhalten ein 'Verifiziert'-Badge. Verifizierte Unternehmen stechen Kandidaten ins Auge und erhöhen die Bewerbungsrate messbar.",
+    },
+    {
+      title: "📦 Flexible Anzeigenpakete — zahlen Sie nur für das, was Sie brauchen",
+      body: "Einzelanzeige, monatlich unbegrenzt, jährliches Corporate-Paket. Keine automatischen Verlängerungen, keine versteckten Gebühren. Transparente Preise geben Ihnen die Budgetkontrolle.",
     },
   ],
-  closing:
-    "Entdecken Sie die Möglichkeiten, die Sie in Ihrem Einstellungsprozess nutzen können.",
-  packagesLead: "Sehen Sie sich die Anzeigenpakete an, die zu Ihrem Unternehmen passen:",
-  registerLead: "Um Ihr Arbeitgeberkonto zu erstellen:",
-  primaryCta: "Anzeigenpakete ansehen",
-  secondaryCta: "Arbeitgeberkonto erstellen",
+  closing: "Starten Sie Ihren Einstellungsprozess noch heute auf einer Plattform.",
+  packagesLead: "Sehen Sie sich die Anzeigenpakete an, die zu Ihrem Unternehmen passen, und legen Sie los:",
+  registerLead: "Oder kontaktieren Sie unser Support-Team direkt:",
+  primaryCta: "Per WhatsApp starten",
+  secondaryCta: "Info per E-Mail anfordern",
   signOff:
     "Mit freundlichen Grüßen, İşBul KKTC — der digitale Treffpunkt für Arbeit und Beschäftigung in Nordzypern",
-  contactHeading: "Kontakt aufnehmen",
+  contactHeading: "Schneller Kontakt — wenn Sie schnell entscheiden wollen:",
   contactLabels: { email: "E-Mail", phone: "Telefon", whatsapp: "WhatsApp" },
   unsubscribeLabel: "Abmelden",
   footerNote:

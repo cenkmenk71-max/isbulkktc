@@ -122,7 +122,7 @@ export function escapeHtml(value: string): string {
 }
 
 function isSafeUrl(value: string): boolean {
-  return /^https?:\/\//i.test(value);
+  return /^(https?:\/\/|mailto:)/i.test(value);
 }
 
 /**

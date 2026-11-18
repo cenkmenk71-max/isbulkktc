@@ -477,10 +477,6 @@ export function renderEngagementEmail(input: SiteContext & {
 }
 
 export type MarketingInput = SiteContext & {
-  /** Listing packages page. */
-  packagesUrl: string;
-  /** Employer account registration page. */
-  registerUrl: string;
   /** Opt-out URL; the family is promotional, so it always carries one. */
   unsubscribeUrl: string;
 };
@@ -509,6 +505,9 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
     )
     .join("");
 
+  const primaryCtaUrl = MARKETING_CONTACTS.whatsapp;
+  const secondaryCtaUrl = `mailto:${MARKETING_CONTACTS.email}`;
+
   const opts = {
     locale,
     preheader: copy.preheader,
@@ -522,8 +521,8 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
     ],
     outroHtml: paragraph(copy.closing),
     buttons: [
-      { label: copy.primaryCta, url: input.packagesUrl, lead: copy.packagesLead },
-      { label: copy.secondaryCta, url: input.registerUrl, lead: copy.registerLead },
+      { label: copy.primaryCta, url: primaryCtaUrl, lead: copy.packagesLead },
+      { label: copy.secondaryCta, url: secondaryCtaUrl, lead: copy.registerLead },
     ],
     signatureHtml: paragraph(copy.signOff),
     contacts: [
