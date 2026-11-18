@@ -91,6 +91,9 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v7
 
+      - name: Keep Supabase ports out of the ephemeral port range
+        run: sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54327
+
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
@@ -170,6 +173,9 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Keep Supabase ports out of the ephemeral port range
+        run: sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54327
 
       # Both the apt-based system dependency install and browser download can
       # fail transiently. Keep each command in the foreground so retries never
