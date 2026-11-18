@@ -108,6 +108,7 @@ export function CandidateProfileForm({
   account: AccountPanelAccount;
 }) {
   const copy = useTranslations("CandidateDashboard");
+  const rootCopy = useTranslations();
   const [state, action, pending] = useActionState(
     saveCandidateProfile,
     initialState,
@@ -122,6 +123,8 @@ export function CandidateProfileForm({
   const [education, setEducation] = useState(profile.education);
   const [languages, setLanguages] = useState(profile.languages);
   const [certifications, setCertifications] = useState(profile.certifications);
+  const [summary, setSummary] = useState(profile.summary ?? "");
+  const [links, setLinks] = useState(profile.links ?? []);
   const [importing, setImporting] = useState(false);
   const [importStatus, setImportStatus] = useState<
     | "idle"
@@ -134,6 +137,7 @@ export function CandidateProfileForm({
     | "tooManyPages"
     | "empty"
     | "unreadable"
+    | "legacyDoc"
   >("idle");
   const [importSkipped, setImportSkipped] = useState(0);
   const [resumeImported, setResumeImported] = useState(false);
@@ -142,7 +146,8 @@ export function CandidateProfileForm({
       profile.experience.length ||
         profile.education.length ||
         profile.languages.length ||
-        profile.certifications.length,
+        profile.certifications.length ||
+        profile.links.length,
     ),
   );
 
@@ -157,6 +162,8 @@ export function CandidateProfileForm({
     { key: "education", complete: education.length > 0 },
     { key: "languages", complete: languages.length > 0 },
     { key: "certifications", complete: certifications.length > 0 },
+    { key: "summary", complete: Boolean(summary.trim()) },
+    { key: "links", complete: links.length > 0 },
   ] as const;
   const completedEssentials = profileEssentials.filter(
     (item) => item.complete,
@@ -210,6 +217,29 @@ export function CandidateProfileForm({
     );
   }
 
+  function updateLink(
+    index: number,
+    field: "label" | "url",
+    value: string,
+  ) {
+    setLinks((currentLinks) =>
+      currentLinks.map((link, linkIndex) =>
+        linkIndex === index ? { ...link, [field]: value } : link,
+      ),
+    );
+  }
+
+  function removeLink(index: number) {
+    setLinks((currentLinks) => currentLinks.filter((_, linkIndex) => linkIndex !== index));
+  }
+
+  function addLink() {
+    setLinks((currentLinks) => [
+      ...currentLinks,
+      { label: "", url: "" },
+    ]);
+  }
+
   async function handleResumeFile(file: File) {
     setImporting(true);
     setImportStatus("idle");
@@ -228,6 +258,8 @@ export function CandidateProfileForm({
           education,
           languages,
           certifications,
+          summary,
+          links,
         },
         draft,
       );
@@ -239,11 +271,14 @@ export function CandidateProfileForm({
       setEducation(mergedProfile.education);
       setLanguages(mergedProfile.languages);
       setCertifications(mergedProfile.certifications);
+      setSummary(mergedProfile.summary);
+      setLinks(mergedProfile.links);
       if (
         mergedProfile.experience.length ||
         mergedProfile.education.length ||
         mergedProfile.languages.length ||
-        mergedProfile.certifications.length
+        mergedProfile.certifications.length ||
+        mergedProfile.links.length
       ) {
         setAdditionalSectionsOpen(true);
       }
@@ -293,21 +328,21 @@ export function CandidateProfileForm({
               <FileUp size={19} />
             </div>
             <div className="candidate-resume-import-copy">
-              <h3 id="resume-import-title">{copy("resumeImport.title")}</h3>
-              <p>{copy("resumeImport.description")}</p>
+              <h3 id="resume-import-title">{rootCopy("resumeImport.title")}</h3>
+              <p>{rootCopy("resumeImport.description")}</p>
               <p className="candidate-resume-privacy">
                 <LockKeyhole size={14} aria-hidden="true" />
-                {copy("resumeImport.privacy")}
+                {rootCopy("resumeImport.privacy")}
               </p>
             </div>
             <label className="candidate-resume-file">
               <span>
                 {importing
-                  ? copy("resumeImport.processing")
-                  : copy("resumeImport.chooseFile")}
+                  ? rootCopy("resumeImport.processing")
+                  : rootCopy("resumeImport.chooseFile")}
               </span>
               <input
-                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                accept=".pdf,.docx,.rtf,.odt,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
                 disabled={importing}
                 onChange={(event) => {
                   const file = event.currentTarget.files?.[0];
@@ -342,21 +377,21 @@ export function CandidateProfileForm({
             >
               {importStatus === "idle"
                 ? importing
-                  ? copy("resumeImport.processingStatus")
-                  : copy("resumeImport.fileHint")
+                  ? rootCopy("resumeImport.processingStatus")
+                  : rootCopy("resumeImport.fileHint")
                 : importStatus === "imported"
-                  ? copy("resumeImport.imported")
+                  ? rootCopy("resumeImport.imported")
                   : importStatus === "importedWithSkipped"
-                    ? copy("resumeImport.importedWithSkipped", {
+                    ? rootCopy("resumeImport.importedWithSkipped", {
                         count: importSkipped,
                       })
                     : importStatus === "noNewInformationWithSkipped"
-                      ? copy("resumeImport.noNewInformationWithSkipped", {
+                      ? rootCopy("resumeImport.noNewInformationWithSkipped", {
                           count: importSkipped,
                         })
                       : importStatus === "noNewInformation"
-                      ? copy("resumeImport.noNewInformation")
-                  : copy(`resumeImport.errors.${importStatus}`)}
+                      ? rootCopy("resumeImport.noNewInformation")
+                  : rootCopy(`resumeImport.errors.${importStatus}`)}
             </p>
           </section>
 
@@ -371,6 +406,16 @@ export function CandidateProfileForm({
             name="certifications"
             type="hidden"
             value={JSON.stringify(certifications)}
+          />
+          <input
+            name="summary"
+            type="hidden"
+            value={JSON.stringify(summary)}
+          />
+          <input
+            name="links"
+            type="hidden"
+            value={JSON.stringify(links)}
           />
           <input
             name="resumeImported"
@@ -424,6 +469,63 @@ export function CandidateProfileForm({
             <small>{copy("skillsHint")}</small>
           </label>
 
+          <ProfileSection
+            title={copy("summaryLabel")}
+            description={copy("summaryDescription")}
+          >
+            <ProfileEntry
+              label={copy("summaryLabel")}
+              maxLength={2000}
+              multiline
+              name="summary"
+              onChange={setSummary}
+              placeholder={copy("summaryPlaceholder")}
+              value={summary}
+            />
+          </ProfileSection>
+
+          <ProfileSection
+            title={copy("linksLabel")}
+            description={copy("linksDescription")}
+          >
+            {links.map((link, index) => (
+              <fieldset className="candidate-profile-entry" key={index}>
+                <legend>{copy("entryLabel", { number: index + 1 })}</legend>
+                <button
+                  aria-label={copy("removeEntry")}
+                  className="candidate-entry-remove"
+                  onClick={() => removeLink(index)}
+                  type="button"
+                >
+                  <Trash2 size={15} aria-hidden="true" />
+                </button>
+                <div className="candidate-entry-fields">
+                  <ProfileEntry
+                    label={copy("fields.linkLabel")}
+                    maxLength={120}
+                    onChange={(value) => updateLink(index, "label", value)}
+                    value={link.label}
+                  />
+                  <ProfileEntry
+                    label={copy("fields.linkUrl")}
+                    maxLength={600}
+                    onChange={(value) => updateLink(index, "url", value)}
+                    value={link.url}
+                  />
+                </div>
+              </fieldset>
+            ))}
+            <button
+              className="candidate-entry-add"
+              disabled={links.length >= 12}
+              onClick={addLink}
+              type="button"
+            >
+              <Plus size={16} aria-hidden="true" />
+              {copy("linksAdd")}
+            </button>
+          </ProfileSection>
+
           <details
             className="candidate-profile-additional"
             onToggle={(event) => setAdditionalSectionsOpen(event.currentTarget.open)}
@@ -435,7 +537,8 @@ export function CandidateProfileForm({
                   experience.length +
                   education.length +
                   languages.length +
-                  certifications.length,
+                  certifications.length +
+                  links.length,
               })}
             </summary>
             <p>{copy("additionalDetailsHint")}</p>

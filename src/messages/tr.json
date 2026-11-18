@@ -1088,27 +1088,6 @@
         "add": "Bağlantı ekle",
         "description": "LinkedIn, GitHub ve diğer profesyonel bağlantılarınızı ekleyin"
       }
-    },
-    "resumeImport": {
-      "title": "CV’den içe aktar",
-      "description": "Metin tabanlı PDF veya DOCX seçin; çıkarılan bilgiler profil formunda incelenip düzenlenebilecek öneriler olarak gösterilir.",
-      "privacy": "Dosya bu tarayıcıda okunur; yüklenmez veya saklanmaz. Öneriler, siz kontrol edip Değişiklikleri kaydet’i seçene kadar profilinize kaydedilmez.",
-      "chooseFile": "CV dosyası seç",
-      "processing": "CV okunuyor…",
-      "processingStatus": "CV’niz tarayıcıda okunuyor.",
-      "fileHint": "PDF veya DOCX · en fazla 5 MB ve 25 sayfa · taranmış dosyalar desteklenmez",
-      "imported": "CV’den çıkarılan bilgiler forma öneri olarak eklendi; henüz kaydedilmedi. Kontrol edip düzenledikten sonra Değişiklikleri kaydet’i seçin.",
-      "importedWithSkipped": "CV önerileri forma eklendi; henüz kaydedilmedi. Bölüm sınırı nedeniyle {count} kayıt eklenmedi. Önerileri kontrol edip Değişiklikleri kaydet’i seçin.",
-      "noNewInformation": "CV okundu ancak eklenecek yeni bilgi bulunamadı. Profiliniz değiştirilmedi.",
-      "noNewInformationWithSkipped": "Eklenecek yeni bilgi bulunamadı; {count} kayıt profil sınırını aştığı için eklenmedi. Mevcut profiliniz değiştirilmedi.",
-      "errors": {
-        "unsupported": "PDF veya DOCX dosyası seçin.",
-        "tooLarge": "Dosya veya çıkarılan metin desteklenen sınırı aşıyor.",
-        "tooManyPages": "PDF dosyaları en fazla 25 sayfa olabilir.",
-        "empty": "CV’den desteklenen profil bilgisi çıkarılamadı. Metin tabanlı başka bir dosya deneyin veya eksik bilgileri ekleyin.",
-        "unreadable": "Dosya okunamadı. Metin tabanlı başka bir PDF veya DOCX deneyin.",
-        "legacyDoc": "Eski .doc formatını desteklemiyoruz. Lütfen PDF veya DOCX olarak kaydedin."
-      }
     }
   },
   "AccountPanel": {
