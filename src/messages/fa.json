@@ -991,7 +991,9 @@
       "experience": "سوابق کاری",
       "education": "تحصیلات",
       "languages": "زبان‌ها",
-      "certifications": "گواهی‌ها"
+      "certifications": "گواهی‌ها",
+      "summary": "خلاصه",
+      "links": "پیوندها"
     },
     "privacyTitle": "پروفایل شما خصوصی است",
     "privacyDescription": "این اطلاعات در حساب شما می‌ماند و به‌عنوان پروفایل عمومی متقاضی منتشر نمی‌شود.",
@@ -1000,6 +1002,12 @@
     "headlineHint": "حداکثر ۱۴۰ نویسه.",
     "locationLabel": "شهرستان",
     "locationPlaceholder": "یک شهرستان انتخاب کنید",
+    "summaryLabel": "خلاصه",
+    "summaryDescription": "یک توصیف کوتاه که پروفایل شما را متمایز می‌کند",
+    "summaryPlaceholder": "مسیر شغلی خود را در یک جمله خلاصه کنید",
+    "linksLabel": "پیوندها",
+    "linksDescription": "LinkedIn، GitHub و سایر پیوندهای حرفه‌ای خود را اضافه کنید",
+    "linksAdd": "افزودن پیوند",
     "districts": {
       "lefkosia": "نیکوزیا",
       "magusa": "فاماگوستا",
@@ -1042,7 +1050,9 @@
       "certification": "گواهی یا مجوز",
       "issuer": "مرجع صادرکننده",
       "issueDate": "تاریخ صدور",
-      "expiryDate": "تاریخ انقضا"
+      "expiryDate": "تاریخ انقضا",
+      "linkLabel": "برچسب پیوند",
+      "linkUrl": "آدرس پیوند"
     },
     "sections": {
       "experience": {
@@ -1064,6 +1074,16 @@
         "title": "گواهی‌ها و مجوزها",
         "add": "افزودن گواهی",
         "description": "گواهی‌ها و مجوزهای حرفه‌ای مرتبط با کارتان را فهرست کنید."
+      },
+      "summary": {
+        "title": "خلاصه",
+        "add": "افزودن خلاصه",
+        "description": "یک توصیف کوتاه که پروفایل شما را متمایز می‌کند"
+      },
+      "links": {
+        "title": "پیوندها",
+        "add": "افزودن پیوند",
+        "description": "LinkedIn، GitHub و سایر پیوندهای حرفه‌ای خود را اضافه کنید"
       }
     },
     "resumeImport": {
@@ -1083,8 +1103,19 @@
         "tooLarge": "اندازه فایل یا متن استخراج‌شده از حد مجاز بیشتر است.",
         "tooManyPages": "فایل PDF حداکثر می‌تواند ۲۵ صفحه داشته باشد.",
         "empty": "اطلاعات قابل استفاده‌ای از رزومه استخراج نشد. فایل متنی دیگری را امتحان کنید یا اطلاعات باقی‌مانده را اضافه کنید.",
-        "unreadable": "خواندن فایل ممکن نشد. یک فایل متنی PDF یا DOCX دیگر را امتحان کنید."
+        "unreadable": "خواندن فایل ممکن نشد. یک فایل متنی PDF یا DOCX دیگر را امتحان کنید.",
+        "legacyDoc": "فرمت قدیمی .doc پشتیبانی نمی‌شود. لطفاً به عنوان PDF یا DOCX ذخیره کنید."
       }
+    },
+    "links": {
+      "title": "پیوندها",
+      "add": "افزودن پیوند",
+      "description": "LinkedIn، GitHub و سایر پیوندهای حرفه‌ای خود را اضافه کنید"
+    },
+    "summary": {
+      "title": "خلاصه",
+      "add": "افزودن خلاصه",
+      "description": "یک توصیف کوتاه که پروفایل شما را متمایز می‌کند"
     }
   },
   "AccountPanel": {
@@ -1227,7 +1258,8 @@
         "tooLarge": "اندازه سند یا متن استخراج‌شده از حد مجاز بیشتر است.",
         "tooManyPages": "فایل PDF حداکثر می‌تواند ۲۵ صفحه داشته باشد.",
         "empty": "اطلاعات پشتیبانی‌شده و دارای برچسب روشن درباره شرکت پیدا نشد. می‌توانید فیلدها را دستی وارد کنید.",
-        "unreadable": "خواندن سند ممکن نشد. یک فایل متنی PDF یا DOCX دیگر را امتحان کنید."
+        "unreadable": "خواندن سند ممکن نشد. یک فایل متنی PDF یا DOCX دیگر را امتحان کنید.",
+        "legacyDoc": "فرمت قدیمی .doc پشتیبانی نمی‌شود. لطفاً به عنوان PDF یا DOCX ذخیره کنید."
       }
     },
     "publicationNote": "در صورت تأیید، ایمیلی که اینجا وارد می‌کنید برای عموم نمایش داده می‌شود.",
@@ -1507,5 +1539,26 @@
     "suggestion1": "İşBul KKTC چیست؟",
     "suggestion2": "این پلتفرم کدام مناطق را پوشش می‌دهد؟",
     "suggestion3": "ثبت آگهی یا درخواست هزینه دارد؟"
+  },
+  "resumeImport": {
+    "title": "Import from your CV",
+    "description": "Choose a text-based PDF or DOCX; extracted details appear as suggestions in your editable profile form.",
+    "privacy": "The file is read in this browser and is never uploaded or stored. Suggestions are not saved to your profile until you review them and select Save changes.",
+    "chooseFile": "Choose CV",
+    "processing": "Reading CV…",
+    "processingStatus": "Your CV is being read in this browser.",
+    "fileHint": "PDF or DOCX · up to 5 MB and 25 pages · scanned files are not supported",
+    "imported": "CV details were added as suggestions to the form and have not been saved. Review or edit them, then select Save changes.",
+    "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count, number} entries exceeded section limits. Review the suggestions and select Save changes.",
+    "noNewInformation": "The CV was read, but there were no new details to add. Your profile was not changed.",
+    "noNewInformationWithSkipped": "There were no new details to add; {count, number} entries exceeded profile limits. Your existing profile was not changed.",
+    "errors": {
+      "unsupported": "Choose a PDF or DOCX file.",
+      "tooLarge": "This file or its extracted text exceeds the supported limit.",
+      "tooManyPages": "PDF files can contain up to 25 pages.",
+      "empty": "No supported profile details could be extracted. Try another text-based file or add any missing details.",
+      "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
+      "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
+    }
   }
 }

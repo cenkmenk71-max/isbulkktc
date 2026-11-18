@@ -7789,7 +7789,7 @@ main :where(p) {
   padding: clamp(24px, 3vw, 34px);
   border: 1px solid rgba(21, 47, 36, 0.12);
   border-radius: 18px;
-  background: rgba(255, 253, 248, 0.84);
+  background: var(--surface-raised);
   box-shadow: 0 14px 42px rgba(20, 39, 30, 0.07);
 }
 .package-catalog-code {
@@ -12978,8 +12978,8 @@ html[dir="rtl"] input[name="slug"] {
       var(--color-crayon-50),
       var(--color-shade-green-50)
     );
-  padding-block: clamp(56px, 8vw, 108px);
-}
+  padding-block: clamp(54px, 8vw, 106px);
+  }
 .packages-lead-layout {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);

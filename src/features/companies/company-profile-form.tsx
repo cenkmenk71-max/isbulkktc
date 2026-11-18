@@ -114,6 +114,7 @@ export function CompanyProfileForm({
     | "tooManyPages"
     | "empty"
     | "unreadable"
+    | "legacyDoc"
   >("idle");
   const [documentFieldsFilled, setDocumentFieldsFilled] = useState(0);
   const [documentConflicts, setDocumentConflicts] = useState<

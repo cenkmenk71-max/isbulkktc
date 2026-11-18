@@ -50,6 +50,8 @@ function candidateProfileForm(values: Record<string, string> = {}): FormData {
     education: "[]",
     languages: "[]",
     certifications: "[]",
+    summary: "",
+    links: "[]",
     ...values,
   });
 }

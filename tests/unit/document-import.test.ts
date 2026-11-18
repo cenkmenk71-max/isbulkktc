@@ -34,8 +34,9 @@ async function expectCode(
   );
 }
 
-test("an unsupported extension is rejected", async () => {
-  await expectCode(textFile("plain", "notes.rtf"), "unsupported");
+test("a legacy .doc (OLE) file is rejected with legacyDoc code", async () => {
+  const oleHeader = new Uint8Array([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
+  await expectCode(textFile(oleHeader, "cv.doc"), "legacyDoc");
 });
 
 test("a file with no extension is rejected", async () => {
@@ -90,4 +91,19 @@ test("a .pdf without a %PDF- header is unreadable, not empty", async () => {
 
 test("a .docx without the ZIP signature is unreadable", async () => {
   await expectCode(textFile("this is not a docx", "cv.docx"), "unreadable");
+});
+
+test("a simple RTF file with ASCII text extracts correctly", async () => {
+  const rtf = "{\\rtf1\\ansi Hello world}";
+  const text = await extractTextDocument(textFile(rtf, "cv.rtf"));
+  assert.ok(text.includes("Hello world"));
+});
+
+test("an ODT file with paragraph text extracts correctly", async () => {
+  const { zipSync } = await import("fflate");
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"><office:body><office:text><text:p>Test paragraph</text:p><text:h text:outline-level="1">Heading</text:h></office:text></office:body></office:document-content>`;
+  const zip = zipSync({ "content.xml": new TextEncoder().encode(xml) });
+  const text = await extractTextDocument(textFile(zip, "cv.odt"));
+  assert.ok(text.includes("Test paragraph"));
+  assert.ok(text.includes("Heading"));
 });

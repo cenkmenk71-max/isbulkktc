@@ -46,6 +46,13 @@ const certificationEntrySchema = z
   })
   .strict();
 
+const linksEntrySchema = z
+  .object({
+    label: optionalProfileText(120),
+    url: optionalProfileText(600),
+  })
+  .strict();
+
 function removeBlankEntries<T extends Record<string, string>>(entries: T[]): T[] {
   return entries.filter((entry) => Object.values(entry).some(Boolean));
 }
@@ -101,6 +108,16 @@ export const candidateProfileSchema = z.object({
     .max(12)
     .default([])
     .transform(removeBlankEntries),
+  summary: z
+    .string()
+    .trim()
+    .max(2000)
+    .transform((value) => value || null),
+  links: z
+    .array(linksEntrySchema)
+    .max(12)
+    .default([])
+    .transform(removeBlankEntries),
 });
 
 export type CandidateExperience = z.infer<typeof experienceEntrySchema>;
@@ -116,6 +133,8 @@ export type CandidateProfileValues = {
   education: CandidateEducation[];
   languages: CandidateLanguage[];
   certifications: CandidateCertification[];
+  summary: string | null;
+  links: { label: string; url: string }[];
 };
 
 /**

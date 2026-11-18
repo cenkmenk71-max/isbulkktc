@@ -85,6 +85,8 @@ export type Database = {
           education: Json;
           languages: Json;
           certifications: Json;
+          summary: string | null;
+          links: Json;
           visibility: string;
           created_at: string;
           updated_at: string;
@@ -98,6 +100,8 @@ export type Database = {
           education?: Json;
           languages?: Json;
           certifications?: Json;
+          summary?: string | null;
+          links?: Json;
           visibility?: string;
           created_at?: never;
           updated_at?: never;
@@ -110,6 +114,8 @@ export type Database = {
           education?: Json;
           languages?: Json;
           certifications?: Json;
+          summary?: string | null;
+          links?: Json;
           visibility?: string;
           user_id?: never;
           created_at?: never;

@@ -991,7 +991,9 @@
       "experience": "Berufserfahrung",
       "education": "Ausbildung",
       "languages": "Sprachen",
-      "certifications": "Zertifikate"
+      "certifications": "Zertifikate",
+      "summary": "Zusammenfassung",
+      "links": "Links"
     },
     "privacyTitle": "Ihr Profil ist privat",
     "privacyDescription": "Diese Angaben bleiben in Ihrem Konto und werden nicht als öffentliches Bewerberprofil veröffentlicht.",
@@ -1000,6 +1002,12 @@
     "headlineHint": "Bis zu 140 Zeichen.",
     "locationLabel": "Bezirk",
     "locationPlaceholder": "Bezirk auswählen",
+    "summaryLabel": "Zusammenfassung",
+    "summaryDescription": "Eine kurze Zusammenfassung, die Ihr Profil hervorhebt",
+    "summaryPlaceholder": "Fassen Sie Ihren Werdegang in einem Satz zusammen",
+    "linksLabel": "Links",
+    "linksDescription": "Fügen Sie LinkedIn, GitHub und andere berufliche Links hinzu",
+    "linksAdd": "Link hinzufügen",
     "districts": {
       "lefkosia": "Nikosia",
       "magusa": "Famagusta",
@@ -1042,7 +1050,9 @@
       "certification": "Zertifikat oder Lizenz",
       "issuer": "Ausstellende Stelle",
       "issueDate": "Ausstellungsdatum",
-      "expiryDate": "Ablaufdatum"
+      "expiryDate": "Ablaufdatum",
+      "linkLabel": "Link-Bezeichnung",
+      "linkUrl": "Link-URL"
     },
     "sections": {
       "experience": {
@@ -1064,7 +1074,27 @@
         "title": "Zertifikate und Lizenzen",
         "add": "Zertifikat hinzufügen",
         "description": "Führen Sie beruflich relevante Zertifikate und Lizenzen auf."
+      },
+      "summary": {
+        "title": "Zusammenfassung",
+        "add": "Zusammenfassung hinzufügen",
+        "description": "Eine kurze Zusammenfassung, die Ihr Profil hervorhebt"
+      },
+      "links": {
+        "title": "Links",
+        "add": "Link hinzufügen",
+        "description": "Fügen Sie LinkedIn, GitHub und andere berufliche Links hinzu"
       }
+    },
+    "summary": {
+      "title": "Zusammenfassung",
+      "add": "Zusammenfassung hinzufügen",
+      "description": "Eine kurze Zusammenfassung, die Ihr Profil hervorhebt"
+    },
+    "links": {
+      "title": "Links",
+      "add": "Link hinzufügen",
+      "description": "Fügen Sie LinkedIn, GitHub und andere berufliche Links hinzu"
     },
     "resumeImport": {
       "title": "Lebenslauf importieren",
@@ -1083,7 +1113,8 @@
         "tooLarge": "Die Datei oder der extrahierte Text überschreitet die zulässige Größe.",
         "tooManyPages": "PDF-Dateien dürfen höchstens 25 Seiten enthalten.",
         "empty": "Aus dem CV konnten keine passenden Profilangaben extrahiert werden. Versuchen Sie eine andere Textdatei oder ergänzen Sie fehlende Angaben.",
-        "unreadable": "Die Datei konnte nicht gelesen werden. Versuchen Sie es mit einer anderen textbasierten PDF- oder DOCX-Datei."
+        "unreadable": "Die Datei konnte nicht gelesen werden. Versuchen Sie es mit einer anderen textbasierten PDF- oder DOCX-Datei.",
+        "legacyDoc": "Das alte .doc-Format wird nicht unterstützt. Bitte als PDF oder DOCX speichern."
       }
     }
   },
@@ -1227,7 +1258,8 @@
         "tooLarge": "Das Dokument oder der extrahierte Text überschreitet die zulässige Größe.",
         "tooManyPages": "PDF-Dateien dürfen höchstens 25 Seiten enthalten.",
         "empty": "Es wurden keine unterstützten, eindeutig beschrifteten Unternehmensangaben gefunden. Sie können die Felder manuell ausfüllen.",
-        "unreadable": "Das Dokument konnte nicht gelesen werden. Versuchen Sie es mit einer anderen textbasierten PDF- oder DOCX-Datei."
+        "unreadable": "Das Dokument konnte nicht gelesen werden. Versuchen Sie es mit einer anderen textbasierten PDF- oder DOCX-Datei.",
+        "legacyDoc": "Das alte .doc-Format wird nicht unterstützt. Bitte als PDF oder DOCX speichern."
       }
     },
     "publicationNote": "Die hier angegebene E-Mail-Adresse ist nach Freigabe öffentlich sichtbar.",
@@ -1507,5 +1539,26 @@
     "suggestion1": "Was ist İşBul KKTC?",
     "suggestion2": "Welche Gebiete werden abgedeckt?",
     "suggestion3": "Kostet das Veröffentlichen oder Bewerben etwas?"
+  },
+  "resumeImport": {
+    "title": "Import from your CV",
+    "description": "Choose a text-based PDF or DOCX; extracted details appear as suggestions in your editable profile form.",
+    "privacy": "The file is read in this browser and is never uploaded or stored. Suggestions are not saved to your profile until you review them and select Save changes.",
+    "chooseFile": "Choose CV",
+    "processing": "Reading CV…",
+    "processingStatus": "Your CV is being read in this browser.",
+    "fileHint": "PDF or DOCX · up to 5 MB and 25 pages · scanned files are not supported",
+    "imported": "CV details were added as suggestions to the form and have not been saved. Review or edit them, then select Save changes.",
+    "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count} entries exceeded section limits. Review the suggestions and select Save changes.",
+    "noNewInformation": "The CV was read, but there were no new details to add. Your profile was not changed.",
+    "noNewInformationWithSkipped": "There were no new details to add; {count} entries exceeded profile limits. Your existing profile was not changed.",
+    "errors": {
+      "unsupported": "Choose a PDF or DOCX file.",
+      "tooLarge": "This file or its extracted text exceeds the supported limit.",
+      "tooManyPages": "PDF files can contain up to 25 pages.",
+      "empty": "No supported profile details could be extracted. Try another text-based file or add any missing details.",
+      "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
+      "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
+    }
   }
 }

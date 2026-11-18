@@ -53,6 +53,8 @@ const emptyProfile = {
   education: [] as never[],
   languages: [] as never[],
   certifications: [] as never[],
+  summary: "",
+  links: [] as never[],
 };
 
 function experienceOf(...lines: string[]) {
