@@ -1,5 +1,6 @@
 import { getWhatsAppUrl } from "@/lib/social-links";
 import { useTranslations } from "next-intl";
+import { buttonVariants } from "@/components/ui/button";
 
 interface WhatsAppButtonProps {
   locale: string;
@@ -30,7 +31,7 @@ export function WhatsAppButton({
       rel="noopener noreferrer"
       target="_blank"
       aria-label={t("whatsappAction")}
-      className="inline-flex items-center justify-center rounded-lg border border-crayon-highlight/15 bg-crayon-highlight text-shade-green-950 shadow-sm font-medium whitespace-nowrap transition-[background-color,border-color,box-shadow,transform,color] duration-220 ease-premium focus-visible:ring-3 focus-visible:ring-shade-green-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 hover:-translate-y-px hover:bg-crayon-50 active:translate-y-0"
+      className={buttonVariants({ variant: "inverse" })}
     >
       {t("whatsappAction")}
     </a>

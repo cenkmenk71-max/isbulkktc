@@ -1549,9 +1549,9 @@
     "processingStatus": "Your CV is being read in this browser.",
     "fileHint": "PDF or DOCX · up to 5 MB and 25 pages · scanned files are not supported",
     "imported": "CV details were added as suggestions to the form and have not been saved. Review or edit them, then select Save changes.",
-    "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count} entries exceeded section limits. Review the suggestions and select Save changes.",
+    "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count, number} entries exceeded section limits. Review the suggestions and select Save changes.",
     "noNewInformation": "The CV was read, but there were no new details to add. Your profile was not changed.",
-    "noNewInformationWithSkipped": "There were no new details to add; {count} entries exceeded profile limits. Your existing profile was not changed.",
+    "noNewInformationWithSkipped": "There were no new details to add; {count, number} entries exceeded profile limits. Your existing profile was not changed.",
     "errors": {
       "unsupported": "Choose a PDF or DOCX file.",
       "tooLarge": "This file or its extracted text exceeds the supported limit.",
