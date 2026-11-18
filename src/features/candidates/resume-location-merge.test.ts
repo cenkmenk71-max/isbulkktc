@@ -24,6 +24,8 @@ const emptyProfile: CandidateProfileDraft = {
   education: [],
   languages: [],
   certifications: [],
+  summary: "",
+  links: [],
 };
 
 test("a multi-district CV location resolves to its first district", () => {

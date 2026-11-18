@@ -176,7 +176,7 @@ export async function getCandidateWorkspace(): Promise<{
   const { data, error } = await supabase
     .from("candidate_profiles")
     .select(
-      "headline, location, skills, experience, education, languages, certifications",
+      "headline, location, skills, experience, education, languages, certifications, summary, links",
     )
     .eq("user_id", user.id)
     .maybeSingle();
@@ -195,6 +195,8 @@ export async function getCandidateWorkspace(): Promise<{
     education: data?.education ?? [],
     languages: data?.languages ?? [],
     certifications: data?.certifications ?? [],
+    summary: data?.summary ?? "",
+    links: data?.links ?? [],
   });
 
   if (!profile.success) {
@@ -213,6 +215,8 @@ export async function getCandidateWorkspace(): Promise<{
       education: profile.data.education,
       languages: profile.data.languages,
       certifications: profile.data.certifications,
+      summary: profile.data.summary,
+      links: profile.data.links,
     },
   };
 }

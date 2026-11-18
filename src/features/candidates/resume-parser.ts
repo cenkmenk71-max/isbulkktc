@@ -6,6 +6,11 @@ import type {
 } from "./schemas";
 import { resolveNorthernCyprusDistrict } from "@/features/locations/northern-cyprus-districts";
 
+export type CandidateLink = {
+  label: string;
+  url: string;
+};
+
 export type CandidateResumeDraft = {
   headline?: string;
   location?: string;
@@ -14,6 +19,8 @@ export type CandidateResumeDraft = {
   education?: CandidateEducation[];
   languages?: CandidateLanguage[];
   certifications?: CandidateCertification[];
+  summary?: string;
+  links?: CandidateLink[];
 };
 
 type ResumeSection =
@@ -23,7 +30,9 @@ type ResumeSection =
   | "experience"
   | "education"
   | "languages"
-  | "certifications";
+  | "certifications"
+  | "summary"
+  | "links";
 
 const sectionLabels: Record<ResumeSection, string[]> = {
   headline: [
@@ -144,24 +153,45 @@ const sectionLabels: Record<ResumeSection, string[]> = {
     "zertifikate",
     "zertifizierungen",
   ],
+  summary: [
+    "ozet",
+    "ozet bilgileri",
+    "hakkimda",
+    "hakkinda",
+    "profil",
+    "summary",
+    "profile",
+    "about",
+    "about me",
+    "objective",
+    "career objective",
+    "о себе",
+    "профиль",
+    "σχετικά με εμένα",
+    "درباره من",
+    "über mich",
+    "zusammenfassung",
+  ],
+  links: [
+    "links",
+    "linkler",
+    "bağlantılar",
+    "baglanti",
+    "profil links",
+    "profile links",
+    "ссылки",
+    "σύνδεσμοι",
+    "پیوندها",
+    "links",
+    "verknüpfungen",
+  ],
 };
 
 // Headings that carry no profile data but still delimit the sections around
 // them, so a CV's "ÖZET" block does not leak into the preceding section.
 const ignoredSectionLabels = [
-  "ozet",
-  "ozet bilgileri",
-  "hakkimda",
-  "hakkinda",
-  "profil",
   "kisisel bilgiler",
   "kisisel bilgilerim",
-  "summary",
-  "profile",
-  "about",
-  "about me",
-  "objective",
-  "career objective",
   "personal details",
   "personal information",
   // An address block is personal data, not the candidate's headline or
@@ -1145,6 +1175,104 @@ function mergeSections(
   return merged;
 }
 
+/**
+ * Extract URLs from text and normalize them.
+ * - bare `www.example.com` or `example.com` → prepend `https://`
+ * - detect LinkedIn/GitHub/etc. subdomains for label derivation
+ * - deduplicate by normalized full URL
+ * - if a link's label field stays empty, default label to hostname
+ */
+function extractLinks(text: string): CandidateLink[] {
+  // URL patterns to match
+  const urlPattern = /(?:https?:\/\/|www\.|linkedin\.com\/in\/|github\.com\/|gitlab\.com\/|behance\.net\/|x\.com\/|twitter\.com\/|portfolio\.|dribbble\.com\/|medium\.com\/|dev\.to\/)[\w.-]+(?:\/[\w.-]*)*/gi;
+  
+  // Extract all URLs
+  const urls = text.match(urlPattern) || [];
+  
+  // Normalize and deduplicate URLs
+  const seenUrls = new Set<string>();
+  const links: CandidateLink[] = [];
+  
+  for (const url of urls) {
+    // Normalize URL
+    let normalizedUrl = url.trim();
+    
+    // Prepend https:// if needed
+    if (normalizedUrl.startsWith('www.')) {
+      normalizedUrl = 'https://' + normalizedUrl;
+    } else if (!normalizedUrl.startsWith('http')) {
+      // Try to detect common domains and prepend https://
+      if (/^(linkedin|github|gitlab|behance|x|twitter|dribbble|medium|dev)\./i.test(normalizedUrl)) {
+        normalizedUrl = 'https://' + normalizedUrl;
+      } else {
+        // For other domains, try to extract domain and prepend https://
+        const domainMatch = normalizedUrl.match(/^([a-zA-Z0-9.-]+)(?:\/|$)/);
+        if (domainMatch && domainMatch[1]) {
+          normalizedUrl = 'https://' + domainMatch[1];
+        }
+      }
+    }
+    
+    // Skip if invalid or already seen
+    if (!normalizedUrl || seenUrls.has(normalizedUrl)) continue;
+    
+    // Derive label from hostname
+    let label = '';
+    try {
+      const urlObj = new URL(normalizedUrl);
+      const hostname = urlObj.hostname.toLowerCase();
+      
+      // Special cases for common platforms
+      if (hostname.includes('linkedin.com')) {
+        label = 'LinkedIn';
+      } else if (hostname.includes('github.com')) {
+        label = 'GitHub';
+      } else if (hostname.includes('gitlab.com')) {
+        label = 'GitLab';
+      } else if (hostname.includes('behance.net')) {
+        label = 'Behance';
+      } else if (hostname.includes('x.com') || hostname.includes('twitter.com')) {
+        label = 'X';
+      } else if (hostname.includes('dribbble.com')) {
+        label = 'Dribbble';
+      } else if (hostname.includes('medium.com')) {
+        label = 'Medium';
+      } else if (hostname.includes('dev.to')) {
+        label = 'Dev.to';
+      } else if (hostname.includes('portfolio')) {
+        label = 'Portfolio';
+      } else {
+        // Default to hostname without www and TLD
+        label = hostname.replace(/^www\./, '').split('.')[0];
+      }
+    } catch {
+      // If URL parsing fails, use the domain part
+      const domainMatch = normalizedUrl.match(/(?:https?:\/\/)?([^\/]+)/);
+      if (domainMatch && domainMatch[1]) {
+        label = domainMatch[1].replace(/^www\./, '').split('.')[0];
+      } else {
+        label = 'Website';
+      }
+    }
+    
+    // Cap label length
+    label = label.slice(0, 120);
+    
+    // Add to results
+    links.push({
+      label,
+      url: normalizedUrl.slice(0, 600),
+    });
+    
+    seenUrls.add(normalizedUrl);
+    
+    // Cap at 12 entries
+    if (links.length >= 12) break;
+  }
+  
+  return links;
+}
+
 export function parseResumeText(text: string): CandidateResumeDraft {
   const { sections: detected, loose } = sectionLines(text.slice(0, 80_000));
   const inferred = inferSections(loose);
@@ -1158,6 +1286,18 @@ export function parseResumeText(text: string): CandidateResumeDraft {
     ),
     40,
   );
+
+  // Extract summary from summary section
+  let summary = "";
+  if (sections.has("summary")) {
+    const summaryLines = sections.get("summary") ?? [];
+    // Filter out contact lines
+    const filteredLines = summaryLines.filter(line => !isContactLine(line));
+    summary = filteredLines.join("\n").slice(0, 2000);
+  }
+  
+  // Extract links from entire text
+  const links = extractLinks(text);
 
   return {
     ...(first("headline", 140) ? { headline: first("headline", 140) } : {}),
@@ -1179,6 +1319,8 @@ export function parseResumeText(text: string): CandidateResumeDraft {
           ),
         }
       : {}),
+    ...(summary ? { summary } : {}),
+    ...(links.length ? { links } : {}),
   };
 }
 
@@ -1190,6 +1332,8 @@ export function hasResumeDraftContent(draft: CandidateResumeDraft): boolean {
       draft.experience?.some((entry) => Object.values(entry).some(Boolean)) ||
       draft.education?.some((entry) => Object.values(entry).some(Boolean)) ||
       draft.languages?.length ||
-      draft.certifications?.length,
+      draft.certifications?.length ||
+      draft.summary ||
+      draft.links?.length,
   );
 }
