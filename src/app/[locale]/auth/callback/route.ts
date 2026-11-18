@@ -176,10 +176,22 @@ export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient({
     allowCookieWrites: true,
   });
-  const { error } = await supabase.auth.exchangeCodeForSession(
+  let { error } = await supabase.auth.exchangeCodeForSession(
     code,
     flowId ? { flowId } : undefined,
   );
+
+  // When the PKCE flow id is present but the exchange fails with a flow-state
+  // error, the verifier may have expired or been consumed. Retry without the
+  // flow id so the legacy shared verifier key gets a chance — this covers
+  // older clients and edge cases where the flow id was appended but the
+  // verifier storage was lost.
+  if (error && flowId && (error.code === "flow_state_not_found" || error.code === "flow_state_expired")) {
+    const { error: retryError } = await supabase.auth.exchangeCodeForSession(code);
+    if (!retryError) {
+      error = null;
+    }
+  }
 
   if (error) {
     // A PKCE code is single-use. When the same `/auth/callback` request is

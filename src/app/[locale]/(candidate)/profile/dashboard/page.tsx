@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { CandidateProfileForm } from "@/features/candidates/candidate-profile-form";
 import { signOut } from "@/features/identity/actions";
+import { DeleteAccountButton } from "@/features/identity/delete-account-button";
 import { getCandidateWorkspace } from "@/server/dal/user";
 import { BriefcaseBusiness, LogOut } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -129,6 +130,18 @@ export default async function CandidateDashboardPage() {
         <h2 id="candidate-notifications-title">{copy("notificationsTitle")}</h2>
         <p>{copy("notificationsDescription")}</p>
         <PushPermissionControl vapidPublicKey={getVapidPublicKey()} />
+      </section>
+      <section
+        aria-labelledby="candidate-danger-zone-title"
+        className="candidate-dashboard-danger"
+      >
+        <h2 id="candidate-danger-zone-title">Hesap Silme</h2>
+        <p>Bu işlem geri alınamaz. Tüm verileriniz kalıcı olarak silinecektir.</p>
+        <DeleteAccountButton
+          confirmLabel="Evet, hesabımı sil"
+          buttonLabel="Hesabımı Sil"
+          warningText="Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        />
       </section>
     </div>
   );

@@ -509,3 +509,36 @@ export async function signOut(): Promise<void> {
 
   return redirectLocalized("/login");
 }
+
+export type DeleteAccountResult = {
+  status: "error" | "success";
+  message: "deletionFailed" | "rateLimited" | "success";
+};
+
+export async function deleteAccount(): Promise<DeleteAccountResult> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { status: "error", message: "deletionFailed" };
+  }
+
+  const response = await fetch(`${getAppBaseUrl()}/api/account/delete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (response.status === 429) {
+    return { status: "error", message: "rateLimited" };
+  }
+
+  if (!response.ok) {
+    console.error("Account deletion API call failed.", {
+      status: response.status,
+      userId: user.id,
+    });
+    return { status: "error", message: "deletionFailed" };
+  }
+
+  return { status: "success", message: "success" };
+}

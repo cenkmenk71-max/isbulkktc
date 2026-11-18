@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { signOut } from "@/features/identity/actions";
+import { DeleteAccountButton } from "@/features/identity/delete-account-button";
 import { AccountPanel } from "@/features/identity/account-panel";
 import { CompanyProfileForm } from "@/features/companies/company-profile-form";
 import { markApplicationViewed } from "@/features/jobs/actions";
@@ -539,6 +540,18 @@ export default async function CompanyDashboardPage({
               <h2>{copy("workspace.verificationNoticeTitle")}</h2>
               <p>{copy("workspace.verificationNoticeDescription")}</p>
             </div>
+          </section>
+          <section
+            aria-labelledby="company-danger-zone-title"
+            className="company-workspace-danger"
+          >
+            <h2 id="company-danger-zone-title">Hesap Silme</h2>
+            <p>Bu işlem geri alınamaz. Tüm verileriniz kalıcı olarak silinecektir.</p>
+            <DeleteAccountButton
+              confirmLabel="Evet, hesabımı sil"
+              buttonLabel="Hesabımı Sil"
+              warningText="Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+            />
           </section>
         </aside>
       </div>
