@@ -991,7 +991,9 @@
       "experience": "Berufserfahrung",
       "education": "Ausbildung",
       "languages": "Sprachen",
-      "certifications": "Zertifikate"
+      "certifications": "Zertifikate",
+      "summary": "Zusammenfassung",
+      "links": "Links"
     },
     "privacyTitle": "Ihr Profil ist privat",
     "privacyDescription": "Diese Angaben bleiben in Ihrem Konto und werden nicht als öffentliches Bewerberprofil veröffentlicht.",
@@ -1000,6 +1002,12 @@
     "headlineHint": "Bis zu 140 Zeichen.",
     "locationLabel": "Bezirk",
     "locationPlaceholder": "Bezirk auswählen",
+    "summaryLabel": "Zusammenfassung",
+    "summaryDescription": "Eine kurze Zusammenfassung, die Ihr Profil hervorhebt",
+    "summaryPlaceholder": "Fassen Sie Ihren Werdegang in einem Satz zusammen",
+    "linksLabel": "Links",
+    "linksDescription": "Fügen Sie LinkedIn, GitHub und andere berufliche Links hinzu",
+    "linksAdd": "Link hinzufügen",
     "districts": {
       "lefkosia": "Nikosia",
       "magusa": "Famagusta",
@@ -1042,7 +1050,9 @@
       "certification": "Zertifikat oder Lizenz",
       "issuer": "Ausstellende Stelle",
       "issueDate": "Ausstellungsdatum",
-      "expiryDate": "Ablaufdatum"
+      "expiryDate": "Ablaufdatum",
+      "linkLabel": "Link-Bezeichnung",
+      "linkUrl": "Link-URL"
     },
     "sections": {
       "experience": {
@@ -1064,6 +1074,16 @@
         "title": "Zertifikate und Lizenzen",
         "add": "Zertifikat hinzufügen",
         "description": "Führen Sie beruflich relevante Zertifikate und Lizenzen auf."
+      },
+      "summary": {
+        "title": "Zusammenfassung",
+        "add": "Zusammenfassung hinzufügen",
+        "description": "Eine kurze Zusammenfassung, die Ihr Profil hervorhebt"
+      },
+      "links": {
+        "title": "Links",
+        "add": "Link hinzufügen",
+        "description": "Fügen Sie LinkedIn, GitHub und andere berufliche Links hinzu"
       }
     },
     "resumeImport": {
@@ -1083,7 +1103,8 @@
         "tooLarge": "Die Datei oder der extrahierte Text überschreitet die zulässige Größe.",
         "tooManyPages": "PDF-Dateien dürfen höchstens 25 Seiten enthalten.",
         "empty": "Aus dem CV konnten keine passenden Profilangaben extrahiert werden. Versuchen Sie eine andere Textdatei oder ergänzen Sie fehlende Angaben.",
-        "unreadable": "Die Datei konnte nicht gelesen werden. Versuchen Sie es mit einer anderen textbasierten PDF- oder DOCX-Datei."
+        "unreadable": "Die Datei konnte nicht gelesen werden. Versuchen Sie es mit einer anderen textbasierten PDF- oder DOCX-Datei.",
+        "legacyDoc": "Das alte .doc-Format wird nicht unterstützt. Bitte als PDF oder DOCX speichern."
       }
     }
   },

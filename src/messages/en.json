@@ -1000,6 +1000,12 @@
     "headlineHint": "Up to 140 characters.",
     "locationLabel": "District",
     "locationPlaceholder": "Select a district",
+    "summaryLabel": "Summary",
+    "summaryDescription": "A short summary that highlights your profile",
+    "summaryPlaceholder": "Summarise your background in one sentence",
+    "linksLabel": "Links",
+    "linksDescription": "Add LinkedIn, GitHub and other professional links",
+    "linksAdd": "Add link",
     "districts": {
       "lefkosia": "Nicosia",
       "magusa": "Famagusta",
@@ -1064,6 +1070,27 @@
         "title": "Certificates and licences",
         "add": "Add certificate",
         "description": "List professional certificates and licences relevant to your work."
+      },
+      "summary": {
+        "title": "Summary",
+        "add": "Add summary",
+        "description": "A short summary that highlights your profile"
+      },
+      "links": {
+        "title": "Links",
+        "add": "Add link",
+        "description": "Add LinkedIn, GitHub and other professional links"
+      }
+    },
+      "summary": {
+        "title": "Summary",
+        "add": "Add summary",
+        "description": "A short summary that highlights your profile"
+      },
+      "links": {
+        "title": "Links",
+        "add": "Add link",
+        "description": "Add LinkedIn, GitHub and other professional links"
       }
     },
     "resumeImport": {
@@ -1083,11 +1110,11 @@
         "tooLarge": "This file or its extracted text exceeds the supported limit.",
         "tooManyPages": "PDF files can contain up to 25 pages.",
         "empty": "No supported profile details could be extracted. Try another text-based file or add any missing details.",
-        "unreadable": "This file could not be read. Try another text-based PDF or DOCX file."
+        "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
+        "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
       }
-    }
-  },
-  "AccountPanel": {
+},
+    "AccountPanel": {
     "title": "Account details",
     "givenNameLabel": "First name",
     "familyNameLabel": "Last name",

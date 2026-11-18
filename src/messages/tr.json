@@ -991,7 +991,9 @@
       "experience": "İş deneyimi",
       "education": "Eğitim",
       "languages": "Diller",
-      "certifications": "Sertifikalar"
+      "certifications": "Sertifikalar",
+      "summary": "Özet",
+      "links": "Bağlantılar"
     },
     "privacyTitle": "Profiliniz size özel",
     "privacyDescription": "Bu bilgiler hesabınızda saklanır; herkese açık aday profili olarak yayımlanmaz.",
@@ -1000,6 +1002,12 @@
     "headlineHint": "En fazla 140 karakter.",
     "locationLabel": "İlçe",
     "locationPlaceholder": "İlçe seçin",
+    "summaryLabel": "Özet",
+    "summaryDescription": "Profili özetleyen kısa bir açıklama",
+    "summaryPlaceholder": "Özgeçmişinizin ana hatlarını tek cümlede ifade edin",
+    "linksLabel": "Bağlantılar",
+    "linksDescription": "LinkedIn, GitHub ve diğer profesyonel bağlantılarınızı ekleyin",
+    "linksAdd": "Bağlantı ekle",
     "districts": {
       "lefkosia": "Lefkoşa",
       "magusa": "Mağusa",
@@ -1042,7 +1050,9 @@
       "certification": "Sertifika veya lisans",
       "issuer": "Düzenleyen kurum",
       "issueDate": "Düzenlenme tarihi",
-      "expiryDate": "Son geçerlilik tarihi"
+      "expiryDate": "Son geçerlilik tarihi",
+      "linkLabel": "Bağlantı etiketi",
+      "linkUrl": "Bağlantı URL'si"
     },
     "sections": {
       "experience": {
@@ -1064,6 +1074,16 @@
         "title": "Sertifika ve lisanslar",
         "add": "Sertifika ekle",
         "description": "Mesleki sertifika ve lisanslarınızı listeleyin."
+      },
+      "summary": {
+        "title": "Özet",
+        "add": "Özet ekle",
+        "description": "Profili özetleyen kısa bir açıklama"
+      },
+      "links": {
+        "title": "Bağlantılar",
+        "add": "Bağlantı ekle",
+        "description": "LinkedIn, GitHub ve diğer profesyonel bağlantılarınızı ekleyin"
       }
     },
     "resumeImport": {
@@ -1083,7 +1103,8 @@
         "tooLarge": "Dosya veya çıkarılan metin desteklenen sınırı aşıyor.",
         "tooManyPages": "PDF dosyaları en fazla 25 sayfa olabilir.",
         "empty": "CV’den desteklenen profil bilgisi çıkarılamadı. Metin tabanlı başka bir dosya deneyin veya eksik bilgileri ekleyin.",
-        "unreadable": "Dosya okunamadı. Metin tabanlı başka bir PDF veya DOCX deneyin."
+        "unreadable": "Dosya okunamadı. Metin tabanlı başka bir PDF veya DOCX deneyin.",
+        "legacyDoc": "Eski .doc formatını desteklemiyoruz. Lütfen PDF veya DOCX olarak kaydedin."
       }
     }
   },
