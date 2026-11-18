@@ -1,0 +1,4 @@
+- Paket yöneticisi olarak SADECE `bun` kullan (npm, npx veya yarn kesinlikle kullanma).
+- `src/app/api/` altında oluşturulan veya düzenlenen her `route.ts` dosyasında `export const dynamic = 'force-dynamic';` ve hata/özel yanıtlarda `Cache-Control: no-store` başlığı bulunmalıdır.
+- Dosya düzenlerken `apply_diff` aracı hata verirse aynı yamayı tekrar deneme; dosyayı `read_file` ile baştan oku ve `write_to_file` ile güncelle.
+- Kod yazmayı bitirmeden önce terminalde sırasıyla `bun run typecheck`, `bun run lint` ve `bun run test:security` komutlarını çalıştır; sıfır hata almadan görevi tamamlama.

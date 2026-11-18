@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/server/db/supabase-server";
 import { clientIp } from "@/features/abuse/request-context";
 
+export const dynamic = "force-dynamic";
+
 const DELETE_ACCOUNT_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const DELETE_ACCOUNT_MAX_ATTEMPTS = 3;
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
@@ -30,7 +32,7 @@ export async function POST(request: NextRequest) {
   if (!checkRateLimit(rateLimitKey)) {
     return NextResponse.json(
       { error: "rate_limited" },
-      { status: 429, headers: { "Cache-Control": "private, no-store" } }
+      { status: 429, headers: { "Cache-Control": "no-store" } }
     );
   }
 
@@ -40,7 +42,7 @@ export async function POST(request: NextRequest) {
   if (authError || !user) {
     return NextResponse.json(
       { error: "unauthorized" },
-      { status: 401, headers: { "Cache-Control": "private, no-store" } }
+      { status: 401, headers: { "Cache-Control": "no-store" } }
     );
   }
 
@@ -49,7 +51,7 @@ export async function POST(request: NextRequest) {
     console.error("Account deletion failed: service role key not configured.");
     return NextResponse.json(
       { error: "service_unavailable" },
-      { status: 503, headers: { "Cache-Control": "private, no-store" } }
+      { status: 503, headers: { "Cache-Control": "no-store" } }
     );
   }
 
@@ -62,13 +64,13 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json(
       { error: "deletion_failed" },
-      { status: 500, headers: { "Cache-Control": "private, no-store" } }
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
 
   const response = NextResponse.json(
     { success: true },
-    { headers: { "Cache-Control": "private, no-store" } }
+    { headers: { "Cache-Control": "no-store" } }
   );
 
   const cookieNames = request.cookies
