@@ -30,6 +30,10 @@ export async function saveCandidateProfile(
     }
   };
 
+  // Parse cvFullText separately (it's a plain string, not JSON)
+  const cvFullText = formData.get("cvFullText");
+  const cvFullTextString = typeof cvFullText === "string" ? cvFullText.slice(0, 100_000) : null;
+
   const result = candidateProfileUpdateSchema.safeParse({
     fullName: formData.get("fullName"),
     headline: formData.get("headline"),
@@ -40,6 +44,7 @@ export async function saveCandidateProfile(
     languages: parseSection("languages"),
     certifications: parseSection("certifications"),
     summary: formData.get("summary") ?? "",
+    cvFullText: cvFullTextString,
     links: parseSection("links") ?? "[]",
   });
 
@@ -59,6 +64,7 @@ export async function saveCandidateProfile(
       languages: result.data.languages,
       certifications: result.data.certifications,
       summary: result.data.summary,
+      cv_full_text: result.data.cvFullText ?? null,
       links: result.data.links,
     },
     { onConflict: "user_id" },

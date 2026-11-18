@@ -25,8 +25,10 @@ test("a labelled personal-data line under any explicit section reaches no field"
       "TC: 2019",
       "IBAN: TR12 3456",
     ]) {
+      const draft = parseResumeText([heading, line].join("\n"));
+      const { cvFullText: _cvFullText, ...draftWithoutFullText } = draft;
       assert.deepEqual(
-        parseResumeText([heading, line].join("\n")),
+        draftWithoutFullText,
         {},
         `${heading} + "${line}" must reach no field`,
       );
@@ -35,10 +37,18 @@ test("a labelled personal-data line under any explicit section reaches no field"
 });
 
 test("a heading's inline remainder is filtered like a body line", () => {
-  assert.deepEqual(parseResumeText("EĞİTİM: Doğum Tarihi: 1995"), {});
-  assert.deepEqual(parseResumeText("DENEYİM: Telefon: 0533 123 45 67"), {});
+  let draft = parseResumeText("EĞİTİM: Doğum Tarihi: 1995");
+  let { cvFullText: _cvFullText, ...draftWithoutFullText } = draft;
+  assert.deepEqual(draftWithoutFullText, {});
+
+  draft = parseResumeText("DENEYİM: Telefon: 0533 123 45 67");
+  ({ cvFullText: _cvFullText, ...draftWithoutFullText } = draft);
+  assert.deepEqual(draftWithoutFullText, {});
+
   // A real inline entry must still survive.
-  assert.deepEqual(parseResumeText("EĞİTİM: Acme Üniversitesi - Bilgisayar - 2012 - 2016"), {
+  const realEntry = parseResumeText("EĞİTİM: Acme Üniversitesi - Bilgisayar - 2012 - 2016");
+  const { cvFullText: __cvFullText, ...realEntryWithoutFullText } = realEntry;
+  assert.deepEqual(realEntryWithoutFullText, {
     education: [
       {
         institution: "Acme Üniversitesi",

@@ -5,6 +5,10 @@ import type {
   CandidateLanguage,
 } from "./schemas";
 import { resolveNorthernCyprusDistrict } from "@/features/locations/northern-cyprus-districts";
+import { mapLanguageNameToCode } from "./language-mapping";
+import { mapProficiencyToCEFR } from "./cefr-alignment";
+import { convertToCandidateLanguages, extractLanguagesFromCV } from "@/server/ai/language-extraction";
+import { synthesizeCVNarrative, type CVSynthesisResult } from "@/server/ai/cv-synthesis";
 
 export type CandidateLink = {
   label: string;
@@ -20,6 +24,8 @@ export type CandidateResumeDraft = {
   languages?: CandidateLanguage[];
   certifications?: CandidateCertification[];
   summary?: string;
+  cvFullText?: string;
+  cvSynthesis?: CVSynthesisResult;
   links?: CandidateLink[];
 };
 
@@ -954,7 +960,29 @@ function parseLanguages(lines: string[]): CandidateLanguage[] {
     12,
   );
 
-  return values.map((name) => ({ name: name.slice(0, 80), proficiency: "" }));
+  return values.map((name) => {
+    const mapped = mapLanguageNameToCode(name);
+    const proficiencyMatch = name.match(
+      /\b(native|ana dil|mother tongue|fluent|advanced|ileri|upper intermediate|orta\.?[üu]st\.?|intermediate|orta|elementary|temel|beginner|başlangıç|c2|c1|b2|b1|a2|a1|expert|proficient|good|fair|basic|ilr \d|dlpt \d)\b/i
+    );
+    const proficiency = proficiencyMatch
+      ? mapProficiencyToCEFR(proficiencyMatch[1])
+      : "B1";
+    const standardName = mapped?.standardNameTr ?? name.slice(0, 80);
+    return { name: standardName, proficiency };
+  });
+}
+
+export async function parseLanguagesWithAI(
+  cvText: string,
+  locale: string = "tr"
+): Promise<CandidateLanguage[]> {
+  try {
+    const extracted = await extractLanguagesFromCV(cvText, locale);
+    return convertToCandidateLanguages(extracted);
+  } catch {
+    return [];
+  }
 }
 
 function parseCertifications(lines: string[]): CandidateCertification[] {
@@ -1299,6 +1327,9 @@ export function parseResumeText(text: string): CandidateResumeDraft {
   // Extract links from entire text
   const links = extractLinks(text);
 
+  // Store the full raw CV text (truncated to 100k chars for storage)
+  const cvFullText = text.slice(0, 100_000);
+
   return {
     ...(first("headline", 140) ? { headline: first("headline", 140) } : {}),
     ...(first("location", 120) ? { location: first("location", 120) } : {}),
@@ -1320,8 +1351,29 @@ export function parseResumeText(text: string): CandidateResumeDraft {
         }
       : {}),
     ...(summary ? { summary } : {}),
+    cvFullText,
     ...(links.length ? { links } : {}),
   };
+}
+
+export async function parseResumeTextWithAI(
+  text: string,
+  locale: string = "tr"
+): Promise<CandidateResumeDraft> {
+  const draft = parseResumeText(text);
+  
+  // Synthesize professional narrative from full CV text
+  try {
+    const synthesis = await synthesizeCVNarrative(draft.cvFullText ?? text, locale);
+    return {
+      ...draft,
+      cvSynthesis: synthesis,
+      // Use AI-generated summary if no explicit summary section exists
+      ...(!draft.summary && synthesis.professionalSummary ? { summary: synthesis.professionalSummary } : {}),
+    };
+  } catch {
+    return draft;
+  }
 }
 
 export function hasResumeDraftContent(draft: CandidateResumeDraft): boolean {

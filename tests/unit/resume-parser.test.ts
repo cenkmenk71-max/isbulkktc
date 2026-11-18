@@ -48,8 +48,8 @@ test("resume parser extracts supported English headings without guessing persona
     description: "",
   });
   assert.deepEqual(draft.languages, [
-    { name: "English", proficiency: "" },
-    { name: "Turkish", proficiency: "" },
+    { name: "İngilizce", proficiency: "B1" },
+    { name: "Türkçe", proficiency: "B1" },
   ]);
   assert.deepEqual(draft.certifications, [
     {
@@ -95,7 +95,10 @@ test("resume parser supports Persian section labels and leaves unknown text unto
   assert.equal(draft.headline, "طراح محصول");
   assert.deepEqual(draft.skills, ["طراحی محصول", "پژوهش کاربر"]);
   assert.equal(draft.experience?.[0]?.description, "توسعه محصولات دیجیتال");
-  assert.deepEqual(parseResumeText("Alex Example\nalex@example.test"), {});
+  
+  const emptyDraft = parseResumeText("Alex Example\nalex@example.test");
+  assert.equal(emptyDraft.cvFullText?.includes("Alex Example"), true);
+  assert.equal(emptyDraft.cvFullText?.includes("alex@example.test"), true);
   assert.equal(hasResumeDraftContent({}), false);
 });
 
@@ -231,6 +234,7 @@ test("does not treat a date range as a phone number", () => {
 
 test("keeps an unmatched free-text CV from inventing categories", () => {
   const draft = parseResumeText("Just a single short line");
-  assert.deepEqual(Object.keys(draft), []);
+  assert.equal(draft.cvFullText, "Just a single short line");
+  assert.equal(Object.keys(draft).filter(k => k !== "cvFullText").length, 0);
   assert.equal(hasResumeDraftContent(draft), false);
 });
