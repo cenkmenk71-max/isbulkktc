@@ -1560,5 +1560,60 @@
       "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
       "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
     }
+  },
+  "CompanyCandidates": {
+    "eyebrow": "TALENT POOL",
+    "title": "Talente im Kandidatenpool suchen",
+    "description": "Entdecken Sie Kandidatenprofile in ganz Nordzypern. Filtern Sie nach Fähigkeiten, Ausbildung, Sprachen und Lizenzen. Erhalten Sie vollen Zugriff mit einem aktiven Stellenpaket.",
+    "backToDashboard": "Zurück zum Dashboard",
+    "searchPlaceholder": "Nach Name, Titel, Fähigkeit oder Stichwort suchen…",
+    "districtFilter": "Bezirk",
+    "allDistricts": "Alle Bezirke",
+    "advancedFilters": "Erweiterte Filter",
+    "skillsFilter": "Fähigkeiten",
+    "languagesFilter": "Sprachen",
+    "educationFilter": "Bildungseinrichtungen",
+    "licensesFilter": "Lizenzen / Führerscheine",
+    "loading": "Kandidaten werden geladen…",
+    "resultsCount": "{total, plural, one {# Kandidat gefunden} other {# Kandidaten gefunden}}",
+    "noResults": "Keine Kandidaten entsprechen Ihren Kriterien.",
+    "pagination": "Pagination",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "pageInfo": "Seite {current} / {total}",
+    "location": "Standort",
+    "skills": "Fähigkeiten",
+    "education": "Ausbildung",
+    "languages": "Sprachen",
+    "licenses": "Lizenzen",
+    "shortlistedBadge": "Favoriten",
+    "addToShortlist": "Zu Favoriten hinzufügen",
+    "removeFromShortlist": "Aus Favoriten entfernen",
+    "inviteToJob": "Zur Stelle einladen",
+    "contactCandidate": "Kandidaten kontaktieren",
+    "viewDetail": "Details anzeigen",
+    "maskedBadge": "Gesperrt",
+    "freemium": {
+      "title": "Aktives Stellenpaket für vollen Zugriff erforderlich",
+      "description": "Der volle Zugriff auf den Kandidatenpool erfordert ein aktives Stellenpaket und mindestens eine veröffentlichte Anzeige. Firmen ohne Paket sehen nur maskierte Vorschauen der ersten 3 Kandidaten.",
+      "benefits": {
+        "maskedIdentity": "Kandidatenidentitäten sind maskiert (z.B. Kandidat #KKT-9281)",
+        "limitedView": "Nur die ersten 3 Kandidaten sind als Vorschau verfügbar; der Rest ist unscharf",
+        "noContact": "Kontakt-, Einladungs- und Detail-Buttons sind gesperrt"
+      },
+      "whatsappCta": "💬 Stellenpaket via WhatsApp kaufen & freischalten",
+      "emailCta": "✉️ Firmenangebot per E-Mail anfordern",
+      "notice": "Ohne Paket sind nur die ersten {visible} Kandidaten in maskierter Form sichtbar."
+    },
+    "paywall": {
+      "title": "Zugriff gesperrt",
+      "defaultTrigger": "Diese Aktion erfordert ein aktives Stellenpaket.",
+      "triggerInvite": "Sie benötigen ein Stellenpaket, um diesen Kandidaten einzuladen.",
+      "triggerContact": "Sie benötigen ein Stellenpaket, um diesen Kandidaten zu kontaktieren.",
+      "triggerViewDetail": "Sie benötigen ein Stellenpaket, um die Details dieses Kandidaten zu sehen.",
+      "whatsappCta": "💬 Stellenpaket via WhatsApp kaufen & freischalten",
+      "emailCta": "✉️ Firmenangebot per E-Mail anfordern",
+      "note": "Sobald Sie ein Paket kaufen, werden alle Sperren sofort aufgehoben und vollständige Kandidatenprofile sichtbar."
+    }
   }
 }

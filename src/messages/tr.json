@@ -1560,5 +1560,60 @@
     "processing": "Dosya okunuyor…",
     "processingStatus": "Dosya tarayıcıda okunuyor; dosya gönderilmiyor.",
     "title": "CV'den profil bilgisi al"
+  },
+  "CompanyCandidates": {
+    "eyebrow": "ADAY HAVUZU",
+    "title": "Yetenek Havuzunda Aday Ara",
+    "description": "KKTC genelindeki aday profillerini keşfedin. Becerilere, eğitime, dillere ve lisanslara göre filtreleyin. İlan paketinizle tam erişim kazanın.",
+    "backToDashboard": "Panoya dön",
+    "searchPlaceholder": "Ad, unvan, beceri veya anahtar kelime ara…",
+    "districtFilter": "İlçe",
+    "allDistricts": "Tüm ilçeler",
+    "advancedFilters": "Gelişmiş filtreler",
+    "skillsFilter": "Beceriler",
+    "languagesFilter": "Diller",
+    "educationFilter": "Eğitim kurumları",
+    "licensesFilter": "Lisanslar / Ehliyetler",
+    "loading": "Adaylar yükleniyor…",
+    "resultsCount": "{total, plural, one {# aday bulundu} other {# aday bulundu}}",
+    "noResults": "Kriterlerinize uygun aday bulunamadı.",
+    "pagination": "Sayfalama",
+    "previous": "Önceki",
+    "next": "Sonraki",
+    "pageInfo": "Sayfa {current} / {total}",
+    "location": "Konum",
+    "skills": "Beceriler",
+    "education": "Eğitim",
+    "languages": "Diller",
+    "licenses": "Lisanslar",
+    "shortlistedBadge": "Favorilerde",
+    "addToShortlist": "Favorilere ekle",
+    "removeFromShortlist": "Favorilerden çıkar",
+    "inviteToJob": "İlana davet et",
+    "contactCandidate": "İletişime geç",
+    "viewDetail": "Detayları gör",
+    "maskedBadge": "Kilitli",
+    "freemium": {
+      "title": "Tam Erişim İçin İlan Paketi Gerekli",
+      "description": "Aday havuzuna tam erişim, aktif bir ilan paketi ve en az bir yayında ilan gerektirir. Paketsiz firmalar sadece ilk 3 adayın maskelenmiş profilini görebilir.",
+      "benefits": {
+        "maskedIdentity": "Aday kimlikleri kodlanmıştır (örn. Aday #KKT-9281)",
+        "limitedView": "Sadece ilk 3 aday önizlenebilir, diğerleri bulanıktır",
+        "noContact": "İletişim, davet ve detay butonları kilitlidir"
+      },
+      "whatsappCta": "💬 WhatsApp ile İlan Paketini Satın Al & Kilitleri Aç",
+      "emailCta": "✉️ E-posta ile Kurumsal Teklif İste",
+      "notice": "Paket almadan sadece ilk {visible} aday maskelenmiş olarak görünüyor."
+    },
+    "paywall": {
+      "title": "Erişim Kilitli",
+      "defaultTrigger": "Bu işlem için aktif ilan paketi gereklidir.",
+      "triggerInvite": "Bu adayı ilanınıza davet etmek için paket satın almanız gerekiyor.",
+      "triggerContact": "Bu adayla iletişime geçmek için paket satın almanız gerekiyor.",
+      "triggerViewDetail": "Bu adayın detaylarını görmek için paket satın almanız gerekiyor.",
+      "whatsappCta": "💬 WhatsApp ile İlan Paketini Satın Al & Kilitleri Aç",
+      "emailCta": "✉️ E-posta ile Kurumsal Teklif İste",
+      "note": "Paket satın aldığınızda kilitler anında kalkar ve tüm aday profilleri tam görünür hale gelir."
+    }
   }
 }
