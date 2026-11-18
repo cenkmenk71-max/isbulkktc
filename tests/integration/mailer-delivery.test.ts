@@ -395,10 +395,11 @@ test("the acquisition email sends from info@ with the one-click unsubscribe pair
       payload.headers?.["List-Unsubscribe-Post"],
       "List-Unsubscribe=One-Click",
     );
-    // The owner's verbatim Turkish copy and both actions reach the body.
+// The owner's verbatim Turkish copy and both actions reach the body.
+    // HTML escapes apostrophes as '
     assert.ok(payload.html?.includes("Sayın Yetkili,"));
-    assert.ok(payload.html?.includes("İlan Paketlerini İnceleyin"));
-    assert.ok(payload.html?.includes("İşveren Hesabı Oluştur"));
+    assert.ok(payload.html?.includes("WhatsApp&#39;tan Hemen Başlayın"));
+    assert.ok(payload.html?.includes("E-posta ile Bilgi Alın"));
   } finally {
     restoreInbox();
     restore();
