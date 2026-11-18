@@ -11,6 +11,8 @@ import {
   getWhatsAppUrl,
   SUPPORT_EMAIL,
 } from "@/lib/social-links";
+import { WhatsAppButton } from "@/components/packages/whatsapp-button";
+import { EmailButton } from "@/components/packages/email-button";
 import type { ListingDuration } from "@/experience/scenes/vend-pricing/lib/plans";
 
 const packageTiers = [
@@ -181,8 +183,30 @@ export async function PackagesExperience({
                       <p className="package-proposal-custom-price">
                         {copy("showcase.pricing.customPrice")}
                       </p>
-                    )}
-                  </article>
+                     )}
+                     <div className="package-catalog-contact-actions">
+                       <WhatsAppButton
+                         locale={locale}
+                         packageName={profile.title}
+                         duration={prices ? 1 : undefined}
+                         price={prices ? new Intl.NumberFormat(locale, {
+                           style: "currency",
+                           currency: "TRY",
+                           maximumFractionDigits: 0,
+                         }).format(prices[1]) : undefined}
+                       />
+                       <EmailButton
+                         locale={locale}
+                         packageName={profile.title}
+                         duration={prices ? 1 : undefined}
+                         price={prices ? new Intl.NumberFormat(locale, {
+                           style: "currency",
+                           currency: "TRY",
+                           maximumFractionDigits: 0,
+                         }).format(prices[1]) : undefined}
+                       />
+                     </div>
+                   </article>
                 </li>
               );
             })}
