@@ -9,6 +9,8 @@ export type CandidateProfileDraft = Omit<CandidateProfileValues, "skills"> & {
   headline: string;
   location: string;
   skills: string[];
+  summary: string;
+  links: { label: string; url: string }[];
 };
 
 export type ResumeDraftMergeResult = {
@@ -120,6 +122,8 @@ export function mergeResumeDraft(
     resolveFirstDistrict(current.location) ??
     resolveFirstDistrict(draft.location) ??
     "";
+  const summary = (current.summary.trim() || draft.summary) ?? "";
+  const links = mergeEntries(current.links, draft.links);
 
   return {
     profile: {
@@ -130,20 +134,25 @@ export function mergeResumeDraft(
       education: education.entries,
       languages: languages.entries,
       certifications: certifications.entries,
+      summary,
+      links: links.entries,
     },
     added:
       Number(Boolean(!current.headline.trim() && headline.trim())) +
       Number(Boolean(!current.location.trim() && location.trim())) +
+      Number(Boolean(!current.summary.trim() && summary.trim())) +
       (skills.length - current.skills.length) +
       (experience.entries.length - current.experience.length) +
       (education.entries.length - current.education.length) +
       (languages.entries.length - current.languages.length) +
-      (certifications.entries.length - current.certifications.length),
+      (certifications.entries.length - current.certifications.length) +
+      (links.entries.length - current.links.length),
     skipped:
       skipped +
       experience.skipped +
       education.skipped +
       languages.skipped +
-      certifications.skipped,
+      certifications.skipped +
+      links.skipped,
   };
 }

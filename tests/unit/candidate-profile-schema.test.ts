@@ -8,6 +8,8 @@ test("candidate profile trims text and normalizes a unique skills list", () => {
       headline: "  Senior product designer  ",
       location: "  Lefkoşa ",
       skillsText: "Figma\nUser research, figma; Prototyping",
+      summary: "",
+      links: [],
     }),
     {
       headline: "Senior product designer",
@@ -17,6 +19,8 @@ test("candidate profile trims text and normalizes a unique skills list", () => {
       education: [],
       languages: [],
       certifications: [],
+      summary: null,
+      links: [],
     },
   );
 });
@@ -26,6 +30,12 @@ test("candidate district input uses Mağusa as the only saved name", () => {
     headline: "",
     location: "Mağusa",
     skillsText: "",
+    experience: [],
+    education: [],
+    languages: [],
+    certifications: [],
+    summary: "",
+    links: [],
   };
 
   assert.equal(candidateProfileSchema.safeParse(profile).success, true);
@@ -44,6 +54,8 @@ test("candidate profile accepts blank optional fields without storing whitespace
       headline: "  ",
       location: "",
       skillsText: " \n, ; ",
+      summary: "",
+      links: [],
     }),
     {
       headline: null,
@@ -53,6 +65,8 @@ test("candidate profile accepts blank optional fields without storing whitespace
       education: [],
       languages: [],
       certifications: [],
+      summary: null,
+      links: [],
     },
   );
 });
@@ -63,6 +77,8 @@ test("candidate profile trims structured sections and drops blank entries", () =
       headline: "",
       location: "",
       skillsText: "",
+      summary: "",
+      links: [],
       experience: [
         {
           role: " Senior designer ",
@@ -102,6 +118,8 @@ test("candidate profile trims structured sections and drops blank entries", () =
       education: [],
       languages: [{ name: "Turkish", proficiency: "Native" }],
       certifications: [],
+      summary: null,
+      links: [],
     },
   );
 });
@@ -141,6 +159,12 @@ test("candidate profile location accepts only a Northern Cyprus district", () =>
     headline: "",
     location: "Alsancak",
     skillsText: "",
+    experience: [],
+    education: [],
+    languages: [],
+    certifications: [],
+    summary: "",
+    links: [],
   };
 
   assert.equal(candidateProfileSchema.safeParse(profile).success, false);

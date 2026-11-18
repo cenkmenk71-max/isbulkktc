@@ -13,6 +13,8 @@ const emptyProfile: CandidateProfileDraft = {
   education: [],
   languages: [],
   certifications: [],
+  summary: "",
+  links: [],
 };
 
 test("adds CV details without replacing existing profile values", () => {
@@ -21,6 +23,8 @@ test("adds CV details without replacing existing profile values", () => {
     headline: "Existing headline",
     location: "Girne",
     skills: ["TypeScript"],
+    summary: "",
+    links: [],
     experience: [
       {
         role: "Product designer",
@@ -89,6 +93,8 @@ test("fills blank fields and recognizes Turkish skill duplicates", () => {
     {
       ...emptyProfile,
       skills: ["İletişim"],
+      summary: "",
+      links: [],
     },
     {
       headline: "UX Designer",
@@ -136,6 +142,8 @@ test("deduplicates imported entries and reports entries beyond profile limits", 
       ...emptyProfile,
       experience: currentExperience,
       skills: currentSkills,
+      summary: "",
+      links: [],
     },
     {
       experience: [

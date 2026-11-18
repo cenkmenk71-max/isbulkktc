@@ -1248,7 +1248,8 @@
         "tooLarge": "Das Dokument oder der extrahierte Text überschreitet die zulässige Größe.",
         "tooManyPages": "PDF-Dateien dürfen höchstens 25 Seiten enthalten.",
         "empty": "Es wurden keine unterstützten, eindeutig beschrifteten Unternehmensangaben gefunden. Sie können die Felder manuell ausfüllen.",
-        "unreadable": "Das Dokument konnte nicht gelesen werden. Versuchen Sie es mit einer anderen textbasierten PDF- oder DOCX-Datei."
+        "unreadable": "Das Dokument konnte nicht gelesen werden. Versuchen Sie es mit einer anderen textbasierten PDF- oder DOCX-Datei.",
+        "legacyDoc": "Das alte .doc-Format wird nicht unterstützt. Bitte als PDF oder DOCX speichern."
       }
     },
     "publicationNote": "Die hier angegebene E-Mail-Adresse ist nach Freigabe öffentlich sichtbar.",

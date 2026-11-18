@@ -1254,7 +1254,8 @@
         "tooLarge": "The document or extracted text exceeds the supported limit.",
         "tooManyPages": "PDF files can contain up to 25 pages.",
         "empty": "No supported, clearly labeled company details were found. You can enter the fields manually.",
-        "unreadable": "The document could not be read. Try another text-based PDF or DOCX file."
+        "unreadable": "The document could not be read. Try another text-based PDF or DOCX file.",
+        "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
       }
     },
     "publicationNote": "The email address you enter here will be visible to the public if approved.",

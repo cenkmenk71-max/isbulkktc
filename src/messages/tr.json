@@ -1002,12 +1002,7 @@
     "headlineHint": "En fazla 140 karakter.",
     "locationLabel": "İlçe",
     "locationPlaceholder": "İlçe seçin",
-    "summaryLabel": "Özet",
-    "summaryDescription": "Profili özetleyen kısa bir açıklama",
-    "summaryPlaceholder": "Özgeçmişinizin ana hatlarını tek cümlede ifade edin",
-    "linksLabel": "Bağlantılar",
-    "linksDescription": "LinkedIn, GitHub ve diğer profesyonel bağlantılarınızı ekleyin",
-    "linksAdd": "Bağlantı ekle",
+    
     "districts": {
       "lefkosia": "Lefkoşa",
       "magusa": "Mağusa",
@@ -1248,7 +1243,8 @@
         "tooLarge": "Belge veya çıkarılan metin desteklenen sınırı aşıyor.",
         "tooManyPages": "PDF dosyaları en fazla 25 sayfa olabilir.",
         "empty": "Desteklenen ve açıkça etiketlenmiş şirket bilgisi bulunamadı. Alanları elle girebilirsiniz.",
-        "unreadable": "Belge okunamadı. Başka bir metin tabanlı PDF veya DOCX deneyin."
+        "unreadable": "Belge okunamadı. Başka bir metin tabanlı PDF veya DOCX deneyin.",
+        "legacyDoc": "Eski .doc formatını desteklemiyoruz. Lütfen PDF veya DOCX olarak kaydedin."
       }
     },
     "publicationNote": "Buraya girdiğiniz e-posta, onaylanması hâlinde herkese açık görünür.",
@@ -1528,5 +1524,26 @@
     "suggestion1": "İşBul KKTC nedir?",
     "suggestion2": "Hangi bölgelerde hizmet veriyor?",
     "suggestion3": "İlan yayınlamak ve başvurmak ücretli mi?"
+  },
+  "resumeImport": {
+    "chooseFile": "CV'den doldur",
+    "description": "PDF veya DOCX dosyasından net etiketli bilgileri forma öneri olarak getir.",
+    "errors": {
+      "empty": "CV'den desteklenen profil bilgisi çıkarılamadı. Metin tabanlı başka bir dosya deneyin veya eksik bilgileri ekleyin.",
+      "legacyDoc": "Eski .doc formatını desteklemiyoruz. Lütfen PDF veya DOCX olarak kaydedin.",
+      "tooLarge": "Dosya veya çıkarılan metin desteklenen sınırı aşıyor.",
+      "tooManyPages": "PDF dosyaları en fazla 25 sayfa olabilir.",
+      "unreadable": "Dosya okunamadı. Metin tabanlı başka bir PDF veya DOCX deneyin.",
+      "unsupported": "PDF veya DOCX dosyası seçin."
+    },
+    "fileHint": "PDF veya DOCX · en fazla 5 MB ve 25 sayfa",
+    "imported": "{count} boş alan formda dolduruldu ve henüz kaydedilmedi. Mevcut bilgiler korundu; kontrol edip kaydedin.",
+    "importedWithSkipped": "{count} boş alan dolduruldu; {skipped} öneri sınır nedeniyle atlandı. Mevcut bilgiler korundu; kontrol edip kaydedin.",
+    "noNewInformation": "Boş alan doldurmak için yeni bilgi bulunamadı. Mevcut bilgiler korundu.",
+    "noNewInformationWithSkipped": "Yeni bilgi bulunamadı; {skipped} öneri sınır nedeniyle atlandı. Mevcut bilgiler korundu.",
+    "privacy": "Dosya sadece bu tarayıcıda okunur; yüklenmez veya saklanmaz. Öneriler, değişiklikleri kontrol edip kaydettiğinizdeye kadar kaydedilmez.",
+    "processing": "Dosya okunuyor…",
+    "processingStatus": "Dosya tarayıcıda okunuyor; dosya gönderilmiyor.",
+    "title": "CV'den profil bilgisi al"
   }
 }
