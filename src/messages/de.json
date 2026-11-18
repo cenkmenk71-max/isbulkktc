@@ -1252,6 +1252,33 @@
         "legacyDoc": "Das alte .doc-Format wird nicht unterstützt. Bitte als PDF oder DOCX speichern."
       }
     },
+    "resumeImport": {
+      "title": "Aus Ihrem Lebenslauf importieren",
+      "description": "Wählen Sie ein textbasiertes PDF oder DOCX; extrahierte Details erscheinen als Vorschläge in Ihrem bearbeitbaren Profilformular.",
+      "privacy": "Die Datei wird nur in diesem Browser gelesen und nicht hochgeladen oder gespeichert. Vorschläge werden erst in Ihrem Profil gespeichert, wenn Sie sie prüfen und Änderungen speichern wählen.",
+      "chooseFile": "Lebenslauf auswählen",
+      "processing": "Lebenslauf wird gelesen…",
+      "processingStatus": "Der Lebenslauf wird in diesem Browser gelesen.",
+      "fileHint": "PDF oder DOCX · bis 5 MB und 25 Seiten · gescannte Dateien werden nicht unterstützt",
+      "imported": "Lebenslauf-Details wurden als Vorschläge zum Formular hinzugefügt und noch nicht gespeichert. Prüfen oder bearbeiten Sie sie und wählen Sie dann Änderungen speichern.",
+      "importedWithSkipped": "Lebenslauf-Vorschläge wurden zum Formular hinzugefügt, aber noch nicht gespeichert. {count} Einträge überschritten Abschnittslimits. Prüfen Sie die Vorschläge und wählen Sie Änderungen speichern.",
+      "noNewInformation": "Der Lebenslauf wurde gelesen, aber es gab keine neuen Details zum Hinzufügen. Ihr Profil wurde nicht geändert.",
+      "noNewInformationWithSkipped": "Es gab keine neuen Details zum Hinzufügen; {count} Einträge überschritten Profilgrenzen. Ihr bestehendes Profil wurde nicht geändert.",
+      "errors": {
+        "unsupported": "Wählen Sie eine PDF- oder DOCX-Datei aus.",
+        "tooLarge": "Diese Datei oder ihr extrahierter Text übersteigt das zulässige Limit.",
+        "tooManyPages": "PDF-Dateien können höchstens 25 Seiten enthalten.",
+        "empty": "Keine unterstützten Profildetails konnten extrahiert werden. Probieren Sie eine andere textbasierte Datei oder fügen Sie fehlende Details hinzu.",
+        "unreadable": "Diese Datei konnte nicht gelesen werden. Probieren Sie eine andere textbasierte PDF- oder DOCX-Datei.",
+        "legacyDoc": "Das alte .doc-Format wird nicht unterstützt. Bitte als PDF oder DOCX speichern."
+      },
+      "summaryLabel": "Zusammenfassung",
+      "summaryDescription": "Eine kurze Zusammenfassung, die Ihr Profil hervorhebt",
+      "summaryPlaceholder": "Fassen Sie Ihren Werdegang in einem Satz zusammen",
+      "linksLabel": "Links",
+      "linksDescription": "Fügen Sie LinkedIn, GitHub und andere berufliche Links hinzu",
+      "linksAdd": "Link hinzufügen"
+    },
     "publicationNote": "Die hier angegebene E-Mail-Adresse ist nach Freigabe öffentlich sichtbar.",
     "submitForReview": "Änderungen zur Prüfung einreichen",
     "saving": "Wird eingereicht …",
