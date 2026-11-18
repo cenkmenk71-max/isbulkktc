@@ -984,7 +984,7 @@
     "completionOf": "/ {total} bilgi eklendi",
     "completionLabel": "{total} temel bilginin {current} tanesi eklendi",
     "completionHint": "CV’den çıkarılan bilgiler önce formda öneri olarak gösterilir. Kontrol ettikten sonra Değişiklikleri kaydet ile onaylayın.",
-"completionFields": {
+    "completionFields": {
       "headline": "Mesleki başlık",
       "location": "Konum",
       "skills": "Beceriler",
@@ -1000,17 +1000,24 @@
     "headlineLabel": "Mesleki başlık",
     "headlinePlaceholder": "Uzmanlık alanınızı yazın",
     "headlineHint": "En fazla 140 karakter.",
-"locationLabel": "İlçe",
+    "locationLabel": "İlçe",
     "locationPlaceholder": "İlçe seçin",
     "summaryLabel": "Özet",
     "summaryDescription": "Profili özetleyen kısa bir açıklama",
     "summaryPlaceholder": "Özgeçmişinizin ana hatlarını tek cümlede ifade edin",
-    "summary": { "title": "Özet", "add": "Özet ekle", "description": "Profili özetleyen kısa bir açıklama" },
+    "summary": {
+      "title": "Özet",
+      "add": "Özet ekle",
+      "description": "Profili özetleyen kısa bir açıklama"
+    },
     "linksLabel": "Bağlantılar",
     "linksDescription": "LinkedIn, GitHub ve diğer profesyonel bağlantılarınızı ekleyin",
     "linksAdd": "Bağlantı ekle",
-    "links": { "title": "Bağlantılar", "add": "Bağlantı ekle", "description": "LinkedIn, GitHub ve diğer profesyonel bağlantılarınızı ekleyin" },
-
+    "links": {
+      "title": "Bağlantılar",
+      "add": "Bağlantı ekle",
+      "description": "LinkedIn, GitHub ve diğer profesyonel bağlantılarınızı ekleyin"
+    },
     "districts": {
       "lefkosia": "Lefkoşa",
       "magusa": "Mağusa",
@@ -1038,7 +1045,7 @@
     "additionalDetailsHint": "Bu bölümler isteğe bağlıdır. CV’den çıkarılan bilgiler mevcut kayıtlarınız korunarak forma eklenir; kaydetmeden önce kontrol edip düzenleyebilirsiniz.",
     "entryLabel": "Kayıt {number}",
     "removeEntry": "Bu kaydı kaldır",
-"fields": {
+    "fields": {
       "role": "Görev unvanı",
       "organization": "Şirket",
       "startDate": "Başlangıç tarihi",
@@ -1087,6 +1094,27 @@
         "title": "Bağlantılar",
         "add": "Bağlantı ekle",
         "description": "LinkedIn, GitHub ve diğer profesyonel bağlantılarınızı ekleyin"
+      }
+    },
+    "resumeImport": {
+      "title": "CV’den içe aktar",
+      "description": "Metin tabanlı PDF veya DOCX seçin; çıkarılan bilgiler profil formunda incelenip düzenlenebilecek öneriler olarak gösterilir.",
+      "privacy": "Dosya bu tarayıcıda okunur; yüklenmez veya saklanmaz. Öneriler, siz kontrol edip Değişiklikleri kaydet’i seçene kadar profilinize kaydedilmez.",
+      "chooseFile": "CV dosyası seç",
+      "processing": "CV okunuyor…",
+      "processingStatus": "CV’niz tarayıcıda okunuyor.",
+      "fileHint": "PDF veya DOCX · en fazla 5 MB ve 25 sayfa · taranmış dosyalar desteklenmez",
+      "imported": "CV’den çıkarılan bilgiler forma öneri olarak eklendi; henüz kaydedilmedi. Kontrol edip düzenledikten sonra Değişiklikleri kaydet’i seçin.",
+      "importedWithSkipped": "CV önerileri forma eklendi; henüz kaydedilmedi. Bölüm sınırı nedeniyle {count} kayıt eklenmedi. Önerileri kontrol edip Değişiklikleri kaydet’i seçin.",
+      "noNewInformation": "CV okundu ancak eklenecek yeni bilgi bulunamadı. Profiliniz değiştirilmedi.",
+      "noNewInformationWithSkipped": "Eklenecek yeni bilgi bulunamadı; {count} kayıt profil sınırını aştığı için eklenmedi. Mevcut profiliniz değiştirilmedi.",
+      "errors": {
+        "unsupported": "PDF veya DOCX dosyası seçin.",
+        "tooLarge": "Dosya veya çıkarılan metin desteklenen sınırı aşıyor.",
+        "tooManyPages": "PDF dosyaları en fazla 25 sayfa olabilir.",
+        "empty": "CV’den desteklenen profil bilgisi çıkarılamadı. Metin tabanlı başka bir dosya deneyin veya eksik bilgileri ekleyin.",
+        "unreadable": "Dosya okunamadı. Metin tabanlı başka bir PDF veya DOCX deneyin.",
+        "legacyDoc": "Eski .doc formatını desteklemiyoruz. Lütfen PDF veya DOCX olarak kaydedin."
       }
     }
   },
@@ -1233,33 +1261,6 @@
         "unreadable": "Belge okunamadı. Başka bir metin tabanlı PDF veya DOCX deneyin.",
         "legacyDoc": "Eski .doc formatını desteklemiyoruz. Lütfen PDF veya DOCX olarak kaydedin."
       }
-    },
-    "resumeImport": {
-      "title": "CV'nizden aktar",
-      "description": "Metin tabanlı bir PDF veya DOCX seçin; ayrıntılar düzenlenebilir profil formunda öneri olarak görünecektir.",
-      "privacy": "Dosya sadece bu tarayıcıda okunur, yüklenmez veya depolanmaz. Öneriler, siz inceleyip Değişiklikleri kaydet' demeden profilinize kaydedilmez.",
-      "chooseFile": "CV seçin",
-      "processing": "CV okunuyor…",
-      "processingStatus": "CV'niz bu tarayıcıda okunuyor.",
-      "fileHint": "PDF veya DOCX · en fazla 5 MB ve 25 sayfa · taranmış dosyalar desteklenmez",
-      "imported": "CV bilgileri formda öneri olarak eklendi ve kaydedilmedi. İnceleyip veya düzenleyip, Değişiklikleri kaydet'i seçin.",
-      "importedWithSkipped": "CV önerileri forma eklendi ama kaydedilmedi. Bölüm limitlerinden dolayı {count} girdi eklenemedi. Önerileri inceleyip Değişiklikleri kaydet'i seçin.",
-      "noNewInformation": "CV okundu ama eklenecek yeni bilgi yoktu. Profiliniz değişmedi.",
-      "noNewInformationWithSkipped": "Eklenecek yeni bilgi yok; {count} girdi profil limitlerini aşıyor. Mevcut profiliniz değişmedi.",
-      "errors": {
-        "unsupported": "PDF veya DOCX dosyası seçin.",
-        "tooLarge": "Bu dosya veya çıkarılan metin desteklenen sınırı aşıyor.",
-        "tooManyPages": "PDF dosyaları en fazla 25 sayfa olabilir.",
-        "empty": "Desteklenen profil bilgisi çıkarılamadı. Başka bir metin tabanlı dosya deneyin veya eksik detayları elle ekleyin.",
-        "unreadable": "Bu dosya okunamadı. Başka bir metin tabanlı PDF veya DOCX dosyası deneyin.",
-        "legacyDoc": "Eski .doc formatını desteklemiyoruz. Lütfen PDF veya DOCX olarak kaydedin."
-      },
-      "summaryLabel": "Özet",
-      "summaryDescription": "Profili özetleyen kısa bir açıklama",
-      "summaryPlaceholder": "Özgeçmişinizin ana hatlarını tek cümlede ifade edin",
-      "linksLabel": "Bağlantılar",
-      "linksDescription": "LinkedIn, GitHub ve diğer profesyonel bağlantılarınızı ekleyin",
-      "linksAdd": "Bağlantı ekle"
     },
     "publicationNote": "Buraya girdiğiniz e-posta, onaylanması hâlinde herkese açık görünür.",
     "submitForReview": "Değişiklikleri incelemeye gönder",
@@ -1551,10 +1552,10 @@
       "unsupported": "PDF veya DOCX dosyası seçin."
     },
     "fileHint": "PDF veya DOCX · en fazla 5 MB ve 25 sayfa",
-    "imported": "{count} boş alan formda dolduruldu ve henüz kaydedilmedi. Mevcut bilgiler korundu; kontrol edip kaydedin.",
-    "importedWithSkipped": "{count} boş alan dolduruldu; {skipped} öneri sınır nedeniyle atlandı. Mevcut bilgiler korundu; kontrol edip kaydedin.",
+    "imported": "boş alan formda dolduruldu ve henüz kaydedilmedi. Mevcut bilgiler korundu; kontrol edip kaydedin.",
+    "importedWithSkipped": "{count} boş alan dolduruldu. Mevcut bilgiler korundu; kontrol edip kaydedin.",
     "noNewInformation": "Boş alan doldurmak için yeni bilgi bulunamadı. Mevcut bilgiler korundu.",
-    "noNewInformationWithSkipped": "Yeni bilgi bulunamadı; {skipped} öneri sınır nedeniyle atlandı. Mevcut bilgiler korundu.",
+    "noNewInformationWithSkipped": "Yeni bilgi bulunamadı; {count} öneri sınır nedeniyle atlandı. Mevcut bilgiler korundu.",
     "privacy": "Dosya sadece bu tarayıcıda okunur; yüklenmez veya saklanmaz. Öneriler, değişiklikleri kontrol edip kaydettiğinizdeye kadar kaydedilmez.",
     "processing": "Dosya okunuyor…",
     "processingStatus": "Dosya tarayıcıda okunuyor; dosya gönderilmiyor.",

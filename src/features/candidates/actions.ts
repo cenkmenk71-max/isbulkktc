@@ -39,6 +39,8 @@ export async function saveCandidateProfile(
     education: parseSection("education"),
     languages: parseSection("languages"),
     certifications: parseSection("certifications"),
+    summary: formData.get("summary"),
+    links: parseSection("links"),
   });
 
   if (!result.success) {
@@ -56,6 +58,8 @@ export async function saveCandidateProfile(
       education: result.data.education,
       languages: result.data.languages,
       certifications: result.data.certifications,
+      summary: result.data.summary,
+      links: result.data.links,
     },
     { onConflict: "user_id" },
   );

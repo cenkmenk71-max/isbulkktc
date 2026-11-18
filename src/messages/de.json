@@ -1086,6 +1086,16 @@
         "description": "Fügen Sie LinkedIn, GitHub und andere berufliche Links hinzu"
       }
     },
+    "summary": {
+      "title": "Zusammenfassung",
+      "add": "Zusammenfassung hinzufügen",
+      "description": "Eine kurze Zusammenfassung, die Ihr Profil hervorhebt"
+    },
+    "links": {
+      "title": "Links",
+      "add": "Link hinzufügen",
+      "description": "Fügen Sie LinkedIn, GitHub und andere berufliche Links hinzu"
+    },
     "resumeImport": {
       "title": "Lebenslauf importieren",
       "description": "Wählen Sie eine textbasierte PDF- oder DOCX-Datei; extrahierte Angaben erscheinen als Vorschläge in Ihrem bearbeitbaren Profilformular.",
