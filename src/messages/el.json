@@ -1262,33 +1262,6 @@
         "legacyDoc": "Η παλιά μορφή .doc δεν υποστηρίζεται. Αποθηκεύστε ως PDF ή DOCX."
       }
     },
-    "resumeImport": {
-      "title": "Εισαγωγή από το βιογραφικό σας",
-      "description": "Επιλέξτε PDF ή DOCX βασισμένο σε κείμενο· τα εξαγόμενα στοιχεία εμφανίζονται ως προτάσεις στην επεξεργάσιμη φόρμα προφίλ σας.",
-      "privacy": "Το αρχείο διαβάζεται μόνο σε αυτόν τον browser και δεν ανεβαίνει ούτε αποθηκεύεται. Οι προτάσεις δεν αποθηκεύονται στο προφίλ σας μέχρι να τις ελέγξετε και να επιλέξετε Αποθήκευση αλλαγών.",
-      "chooseFile": "Επιλέξτε βιογραφικό",
-      "processing": "Ανάγνωση βιογραφικού…",
-      "processingStatus": "Το βιογραφικό σας διαβάζεται σε αυτόν τον browser.",
-      "fileHint": "PDF ή DOCX · έως 5 MB και 25 σελίδες · σαρωμένα αρχεία δεν υποστηρίζονται",
-      "imported": "Τα στοιχεία του βιογραφικού προστέθηκαν ως προτάσεις στη φόρμα και δεν έχουν αποθηκευτεί. Ελέγξτε ή επεξεργαστείτε τα, και μετά επιλέξτε Αποθήκευση αλλαγών.",
-      "importedWithSkipped": "Οι προτάσεις από το βιογραφικό προστέθηκαν στη φόρμα αλλά δεν έχουν αποθηκευτεί. {count} καταχωρήσεις υπερέβησαν τα όρια τμημάτων. Ελέγξτε τις προτάσεις και επιλέξτε Αποθήκευση αλλαγών.",
-      "noNewInformation": "Το βιογραφικό διαβάστηκε, αλλά δεν υπήρξαν νέα στοιχεία για προσθήκη. Το προφίλ σας δεν άλλαξε.",
-      "noNewInformationWithSkipped": "Δεν υπήρξαν νέα στοιχεία για προσθήκη· {count} καταχωρήσεις υπερέβησαν τα όρια προφίλ. Το υπάρχον προφίλ δεν άλλαξε.",
-      "errors": {
-        "unsupported": "Επιλέξτε αρχείο PDF ή DOCX.",
-        "tooLarge": "Αυτό το αρχείο ή το εξαγόμενο κείμενο ξεπερνά το υποστηριζόμενο όριο.",
-        "tooManyPages": "Τα αρχεία PDF μπορούν να έχουν έως 25 σελίδες.",
-        "empty": "Δεν ήταν δυνατή η εξαγωγή υποστηριζόμενων στοιχείων προφίλ. Δοκιμάστε άλλο αρχείο με κείμενο ή προσθέστε τα ελλείποντα στοιχεία.",
-        "unreadable": "Δεν ήταν δυνατή η ανάγνωση του αρχείου. Δοκιμάστε άλλο PDF ή DOCX με κείμενο.",
-        "legacyDoc": "Η παλιά μορφή .doc δεν υποστηρίζεται. Αποθηκεύστε ως PDF ή DOCX."
-      },
-      "summaryLabel": "Συνοπτική βιογραφία",
-      "summaryDescription": "Μια σύντομη περιγραφή που ξεχωρίζει το προφίλ σας",
-      "summaryPlaceholder": "Αποδώστε τη διαδρομή σας σε μια πρόταση",
-      "linksLabel": "Σύνδεσμοι",
-      "linksDescription": "Προσθέστε LinkedIn, GitHub και άλλους επαγγελματικούς συνδέσμους",
-      "linksAdd": "Προσθήκη συνδέσμου"
-    },
     "publicationNote": "Το email που δηλώνετε εδώ θα είναι δημόσιο εφόσον εγκριθεί.",
     "submitForReview": "Υποβολή αλλαγών για έλεγχο",
     "saving": "Υποβολή…",
@@ -1566,5 +1539,26 @@
     "suggestion1": "Τι είναι το İşBul KKTC;",
     "suggestion2": "Ποιες περιοχές καλύπτει;",
     "suggestion3": "Υπάρχει χρέωση για δημοσίευση ή αίτηση;"
+  },
+  "resumeImport": {
+    "title": "Import from your CV",
+    "description": "Choose a text-based PDF or DOCX; extracted details appear as suggestions in your editable profile form.",
+    "privacy": "The file is read in this browser and is never uploaded or stored. Suggestions are not saved to your profile until you review them and select Save changes.",
+    "chooseFile": "Choose CV",
+    "processing": "Reading CV…",
+    "processingStatus": "Your CV is being read in this browser.",
+    "fileHint": "PDF or DOCX · up to 5 MB and 25 pages · scanned files are not supported",
+    "imported": "CV details were added as suggestions to the form and have not been saved. Review or edit them, then select Save changes.",
+    "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count} entries exceeded section limits. Review the suggestions and select Save changes.",
+    "noNewInformation": "The CV was read, but there were no new details to add. Your profile was not changed.",
+    "noNewInformationWithSkipped": "There were no new details to add; {count} entries exceeded profile limits. Your existing profile was not changed.",
+    "errors": {
+      "unsupported": "Choose a PDF or DOCX file.",
+      "tooLarge": "This file or its extracted text exceeds the supported limit.",
+      "tooManyPages": "PDF files can contain up to 25 pages.",
+      "empty": "No supported profile details could be extracted. Try another text-based file or add any missing details.",
+      "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
+      "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
+    }
   }
 }

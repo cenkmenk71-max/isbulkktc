@@ -228,105 +228,6 @@
     "title": "Актуальные вакансии и работа на Северном Кипре (ТРСК)",
     "description": "Ищите актуальные вакансии и работу на Северном Кипре (ТРСК) по должности, району, типу занятости и формату работы."
   },
-  "Nav": {
-    "login": "Войти",
-    "openMenu": "Открыть меню",
-    "closeMenu": "Закрыть меню",
-    "skipToContent": "Перейти к содержимому",
-    "primaryNavigation": "Основная навигация",
-    "jobs": "Вакансии",
-    "freelance": "Фриланс",
-    "candidate": "Кандидатам",
-    "employer": "Компаниям",
-    "packages": "Пакеты",
-    "about": "О нас",
-    "blog": "Деловые новости",
-    "contact": "Контакты",
-    "account": "Мой аккаунт",
-    "signOut": "Безопасный выход",
-    "register": "Создать бесплатный аккаунт",
-    "homeLabel": "Главная İşBul KKTC",
-    "currentLanguage": "Текущий язык"
-  },
-  "Footer": {
-    "tagline": "Регистрация кандидатов и компаний на Северном Кипре.",
-    "candidates": "Кандидатам",
-    "employers": "Работодателям",
-    "account": "Ваш аккаунт",
-    "information": "İşBul KKTC",
-    "links": {
-      "jobs": "Смотреть вакансии",
-      "register": "Создать профиль кандидата",
-      "freelance": "Самостоятельная работа",
-      "directory": "Каталог компаний",
-      "createCompany": "Начать регистрацию компании",
-      "login": "Войти",
-      "profile": "Мой профиль кандидата",
-      "about": "О нас",
-      "blog": "Деловые новости",
-      "contact": "Контакты",
-      "privacy": "Конфиденциальность",
-      "cookies": "Файлы cookie",
-      "terms": "Условия использования",
-      "guides": "Карьерные гиды",
-      "faq": "Частые вопросы",
-      "install": "Установить приложение"
-    },
-    "rights": "© {year} İşBul KKTC. Все права защищены.",
-    "madeIn": "Северный Кипр",
-    "footerNavigation": "Навигация внизу страницы",
-    "siteFooterLabel": "Нижняя часть сайта",
-    "homeLinkLabel": "Главная İşBul KKTC",
-    "location": "Алсанджак, Северный Кипр",
-    "legalNavigation": "Правовая информация",
-    "supportNavigation": "Каналы поддержки",
-    "supportEmailLabel": "Поддержка по e-mail",
-    "supportEmailSubject": "Запрос в поддержку İşBul KKTC",
-    "supportWhatsAppLabel": "WhatsApp",
-    "supportPhoneLabel": "Телефон",
-    "socialNavigation": "Соцсети"
-  },
-  "LanguageMenu": {
-    "title": "Язык интерфейса",
-    "notice": "Доступны переводы интерфейса на турецкий, английский, русский, греческий, персидский и немецкий языки."
-  },
-  "Analytics": {
-    "description": "Мы используем файлы cookie, чтобы улучшить ваш опыт и обеспечить безопасность сайта. Вы можете изменить свой выбор в любое время.",
-    "settings": "Настройки аналитики",
-    "policyLink": "Политика cookie",
-    "title": "Настройки файлов cookie",
-    "necessaryLabel": "Обязательные файлы cookie",
-    "necessaryDescription": "Необходимы для входа и безопасности; их нельзя отключить.",
-    "alwaysOn": "Всегда включены",
-    "analyticsLabel": "Аналитика",
-    "analyticsDescription": "Помогает нам понять, как вы используете сайт.",
-    "marketingLabel": "Маркетинг",
-    "marketingDescription": "Используется для показа релевантного контента и рекламы.",
-    "stateOn": "Вкл",
-    "stateOff": "Выкл",
-    "rejectAll": "Отклонить все",
-    "savePreferences": "Сохранить настройки",
-    "acceptAll": "Принять все",
-    "close": "Закрыть",
-    "backToPreferences": "Назад к настройкам",
-    "privacyLink": "Политика конфиденциальности",
-    "withdraw": "Отозвать согласие",
-    "openFullPolicy": "Открыть полную политику",
-    "managePreferences": "Управление настройками файлов cookie"
-  },
-  "NotFound": {
-    "title": "Страница не найдена",
-    "body": "Не удалось найти запрошенную страницу.",
-    "home": "На главную",
-    "register": "Создать профиль кандидата"
-  },
-  "AppError": {
-    "eyebrow": "НЕ УДАЛОСЬ ЗАВЕРШИТЬ ЗАПРОС",
-    "title": "Сейчас эта страница недоступна.",
-    "body": "Возникла временная проблема. Попробуйте ещё раз чуть позже или вернитесь на главную.",
-    "retry": "Попробовать снова",
-    "home": "На главную"
-  },
   "PackagesPage": {
     "eyebrow": "ПРАВА РАБОТОДАТЕЛЕЙ НА ПУБЛИКАЦИЮ",
     "title": "Права на найм — чётко и прозрачно.",
@@ -415,6 +316,64 @@
       }
     }
   },
+  "Nav": {
+    "login": "Войти",
+    "openMenu": "Открыть меню",
+    "closeMenu": "Закрыть меню",
+    "skipToContent": "Перейти к содержимому",
+    "primaryNavigation": "Основная навигация",
+    "jobs": "Вакансии",
+    "freelance": "Фриланс",
+    "candidate": "Кандидатам",
+    "employer": "Компаниям",
+    "packages": "Пакеты",
+    "about": "О нас",
+    "blog": "Деловые новости",
+    "contact": "Контакты",
+    "account": "Мой аккаунт",
+    "signOut": "Безопасный выход",
+    "register": "Создать бесплатный аккаунт",
+    "homeLabel": "Главная İşBul KKTC",
+    "currentLanguage": "Текущий язык"
+  },
+  "Footer": {
+    "tagline": "Регистрация кандидатов и компаний на Северном Кипре.",
+    "candidates": "Кандидатам",
+    "employers": "Работодателям",
+    "account": "Ваш аккаунт",
+    "information": "İşBul KKTC",
+    "links": {
+      "jobs": "Смотреть вакансии",
+      "register": "Создать профиль кандидата",
+      "freelance": "Самостоятельная работа",
+      "directory": "Каталог компаний",
+      "createCompany": "Начать регистрацию компании",
+      "login": "Войти",
+      "profile": "Мой профиль кандидата",
+      "about": "О нас",
+      "blog": "Деловые новости",
+      "contact": "Контакты",
+      "privacy": "Конфиденциальность",
+      "cookies": "Файлы cookie",
+      "terms": "Условия использования",
+      "guides": "Карьерные гиды",
+      "faq": "Частые вопросы",
+      "install": "Установить приложение"
+    },
+    "rights": "© {year} İşBul KKTC. Все права защищены.",
+    "madeIn": "Северный Кипр",
+    "footerNavigation": "Навигация внизу страницы",
+    "siteFooterLabel": "Нижняя часть сайта",
+    "homeLinkLabel": "Главная İşBul KKTC",
+    "location": "Алсанджак, Северный Кипр",
+    "legalNavigation": "Правовая информация",
+    "supportNavigation": "Каналы поддержки",
+    "supportEmailLabel": "Поддержка по e-mail",
+    "supportEmailSubject": "Запрос в поддержку İşBul KKTC",
+    "supportWhatsAppLabel": "WhatsApp",
+    "supportPhoneLabel": "Телефон",
+    "socialNavigation": "Соцсети"
+  },
   "AboutPage": {
     "eyebrow": "İŞBUL KKTC · НАШ ПОДХОД",
     "title": "Местный взгляд на работу на Северном Кипре.",
@@ -478,6 +437,19 @@
     "feedbackKicker": "ОБРАТНАЯ СВЯЗЬ",
     "feedbackTitle": "Поделитесь мнением",
     "feedbackBody": "Оцените опыт, сообщите об ошибке или предложите новую функцию. Мы читаем каждое сообщение."
+  },
+  "NotFound": {
+    "title": "Страница не найдена",
+    "body": "Не удалось найти запрошенную страницу.",
+    "home": "На главную",
+    "register": "Создать профиль кандидата"
+  },
+  "AppError": {
+    "eyebrow": "НЕ УДАЛОСЬ ЗАВЕРШИТЬ ЗАПРОС",
+    "title": "Сейчас эта страница недоступна.",
+    "body": "Возникла временная проблема. Попробуйте ещё раз чуть позже или вернитесь на главную.",
+    "retry": "Попробовать снова",
+    "home": "На главную"
   },
   "AccountPages": {
     "register": {
@@ -664,6 +636,34 @@
     "localBody": "Проверьте извлечённые данные перед сохранением.",
     "applyTitle": "Профиль под вашим контролем",
     "applyBody": "Обновляйте данные в аккаунте, когда вам удобно."
+  },
+  "LanguageMenu": {
+    "title": "Язык интерфейса",
+    "notice": "Доступны переводы интерфейса на турецкий, английский, русский, греческий, персидский и немецкий языки."
+  },
+  "Analytics": {
+    "description": "Мы используем файлы cookie, чтобы улучшить ваш опыт и обеспечить безопасность сайта. Вы можете изменить свой выбор в любое время.",
+    "settings": "Настройки аналитики",
+    "policyLink": "Политика cookie",
+    "title": "Настройки файлов cookie",
+    "necessaryLabel": "Обязательные файлы cookie",
+    "necessaryDescription": "Необходимы для входа и безопасности; их нельзя отключить.",
+    "alwaysOn": "Всегда включены",
+    "analyticsLabel": "Аналитика",
+    "analyticsDescription": "Помогает нам понять, как вы используете сайт.",
+    "marketingLabel": "Маркетинг",
+    "marketingDescription": "Используется для показа релевантного контента и рекламы.",
+    "stateOn": "Вкл",
+    "stateOff": "Выкл",
+    "rejectAll": "Отклонить все",
+    "savePreferences": "Сохранить настройки",
+    "acceptAll": "Принять все",
+    "close": "Закрыть",
+    "backToPreferences": "Назад к настройкам",
+    "privacyLink": "Политика конфиденциальности",
+    "withdraw": "Отозвать согласие",
+    "openFullPolicy": "Открыть полную политику",
+    "managePreferences": "Управление настройками файлов cookie"
   },
   "HomePage": {
     "eyebrow": "РАБОТА И ВАКАНСИИ НА СЕВЕРНОМ КИПРЕ",
@@ -992,8 +992,8 @@
       "education": "Образование",
       "languages": "Языки",
       "certifications": "Сертификаты",
-      "summary": "Краткое резюме",
-      "links": "Ссылки"
+      "links": "Ссылки",
+      "summary": "Краткое резюме"
     },
     "privacyTitle": "Ваш профиль закрытый",
     "privacyDescription": "Эти сведения остаются в аккаунте и не публикуются в открытом профиле кандидата.",
@@ -1001,13 +1001,13 @@
     "headlinePlaceholder": "Опишите свою специализацию",
     "headlineHint": "Не более 140 символов.",
     "locationLabel": "Район",
+    "locationPlaceholder": "Выберите район",
     "summaryLabel": "Краткое резюме",
     "summaryDescription": "Краткое описание, которое выделяет ваш профиль",
     "summaryPlaceholder": "Суммируйте свой опыт в одном предложении",
     "linksLabel": "Ссылки",
     "linksDescription": "Добавьте LinkedIn, GitHub и другие профессиональные ссылки",
     "linksAdd": "Добавить ссылку",
-    "locationPlaceholder": "Выберите район",
     "districts": {
       "lefkosia": "Никосия",
       "magusa": "Фамагуста",
@@ -1029,6 +1029,27 @@
       "inactive": "Сейчас этот аккаунт нельзя обновить.",
       "saveFailed": "Не удалось сохранить профиль. Попробуйте ещё раз.",
       "saved": "Профиль сохранён."
+    },
+    "resumeImport": {
+      "title": "Import from your CV",
+      "description": "Choose a text-based PDF or DOCX; extracted details appear as suggestions in your editable profile form.",
+      "privacy": "The file is read in this browser and is never uploaded or stored. Suggestions are not saved to your profile until you review them and select Save changes.",
+      "chooseFile": "Choose CV",
+      "processing": "Reading CV…",
+      "processingStatus": "Your CV is being read in this browser.",
+      "fileHint": "PDF or DOCX · up to 5 MB and 25 pages · scanned files are not supported",
+      "imported": "CV details were added as suggestions to the form and have not been saved. Review or edit them, then select Save changes.",
+      "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count} entries exceeded section limits. Review the suggestions and select Save changes.",
+      "noNewInformation": "The CV was read, but there were no new details to add. Your profile was not changed.",
+      "noNewInformationWithSkipped": "There were no new details to add; {count} entries exceeded profile limits. Your existing profile was not changed.",
+      "errors": {
+        "unsupported": "Choose a PDF or DOCX file.",
+        "tooLarge": "This file or its extracted text exceeds the supported limit.",
+        "tooManyPages": "PDF files can contain up to 25 pages.",
+        "empty": "No supported profile details could be extracted. Try another text-based file or add any missing details.",
+        "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
+        "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
+      }
     },
     "profileIndex": "ПРОФИЛЬ · 01",
     "additionalDetails": "Опыт, образование и другое · записей: {count}",
@@ -1074,7 +1095,6 @@
         "title": "Сертификаты и лицензии",
         "add": "Добавить сертификат",
         "description": "Укажите профессиональные сертификаты и лицензии."
-      }
       },
       "summary": {
         "title": "Краткое резюме",
@@ -1087,28 +1107,39 @@
         "description": "Добавьте LinkedIn, GitHub и другие профессиональные ссылки"
       }
     },
-    "resumeImport": {
-      "title": "Импортировать данные из резюме",
-      "description": "Выберите текстовый PDF или DOCX: извлечённые сведения появятся как предложения в редактируемой форме профиля.",
-      "privacy": "Файл обрабатывается в браузере и не загружается и не хранится. Предложения не сохраняются в профиль, пока вы не проверите их и не нажмёте «Сохранить изменения».",
-      "chooseFile": "Выбрать резюме",
-      "processing": "Чтение резюме…",
-      "processingStatus": "Резюме обрабатывается в этом браузере.",
-      "fileHint": "PDF или DOCX · до 5 МБ и 25 страниц · сканы не поддерживаются",
-      "imported": "Данные из резюме добавлены в форму как предложения и ещё не сохранены. Проверьте или измените их, затем нажмите «Сохранить изменения».",
-      "importedWithSkipped": "Предложения из резюме добавлены в форму, но ещё не сохранены. Из-за ограничений разделов не добавлено записей: {count}. Проверьте данные и нажмите «Сохранить изменения».",
-      "noNewInformation": "Резюме прочитано, но новых сведений для добавления нет. Профиль не изменён.",
-      "noNewInformationWithSkipped": "Новых сведений для добавления нет; {count} записей превышают лимит профиля. Существующий профиль не изменён.",
-      "errors": {
-        "unsupported": "Выберите файл PDF или DOCX.",
-        "tooLarge": "Размер файла или извлечённого текста превышает допустимый предел.",
-        "tooManyPages": "В PDF может быть не более 25 страниц.",
-        "empty": "Не удалось извлечь подходящие сведения из резюме. Попробуйте другой текстовый файл или добавьте недостающие данные.",
-        "unreadable": "Не удалось прочитать файл. Попробуйте другой текстовый файл PDF или DOCX.",
-        "legacyDoc": "Формат .doc устарел и не поддерживается. Сохраните как PDF или DOCX вместо этого."
-      }
-},
-      "AccountPanel": {
+    "summary": {
+      "title": "Краткое резюме",
+      "add": "Добавить краткое резюме",
+      "description": "Краткое описание, которое выделяет ваш профиль"
+    },
+    "links": {
+      "title": "Ссылки",
+      "add": "Добавить ссылку",
+      "description": "Добавьте LinkedIn, GitHub и другие профессиональные ссылки"
+    }
+  },
+  "resumeImport": {
+    "title": "Импортировать данные из резюме",
+    "description": "Выберите текстовый PDF или DOCX: извлечённые сведения появятся как предложения в редактируемой форме профиля.",
+    "privacy": "Файл обрабатывается в браузере и не загружается и не хранится. Предложения не сохраняются в профиль, пока вы не проверите их и не нажмёте «Сохранить изменения».",
+    "chooseFile": "Выбрать резюме",
+    "processing": "Чтение резюме…",
+    "processingStatus": "Резюме обрабатывается в этом браузере.",
+    "fileHint": "PDF или DOCX · до 5 МБ и 25 страниц · сканы не поддерживаются",
+    "imported": "Данные из резюме добавлены в форму как предложения и ещё не сохранены. Проверьте или измените их, затем нажмите «Сохранить изменения».",
+    "importedWithSkipped": "Предложения из резюме добавлены в форму, но ещё не сохранены. Из-за ограничений разделов не добавлено записей: {count}. Проверьте данные и нажмите «Сохранить изменения».",
+    "noNewInformation": "Резюме прочитано, но новых сведений для добавления нет. Профиль не изменён.",
+    "noNewInformationWithSkipped": "Новых сведений для добавления нет; {count} записей превышают лимит профиля. Существующий профиль не изменён.",
+    "errors": {
+      "unsupported": "Выберите файл PDF или DOCX.",
+      "tooLarge": "Размер файла или извлечённого текста превышает допустимый предел.",
+      "tooManyPages": "В PDF может быть не более 25 страниц.",
+      "empty": "Не удалось извлечь подходящие сведения из резюме. Попробуйте другой текстовый файл или добавьте недостающие данные.",
+      "unreadable": "Не удалось прочитать файл. Попробуйте другой текстовый файл PDF или DOCX.",
+      "legacyDoc": "Формат .doc устарел и не поддерживается. Сохраните как PDF или DOCX вместо этого."
+    }
+  },
+  "AccountPanel": {
     "title": "Данные аккаунта",
     "givenNameLabel": "Имя",
     "familyNameLabel": "Фамилия",
@@ -1251,33 +1282,6 @@
         "unreadable": "Не удалось прочитать документ. Попробуйте другой текстовый файл PDF или DOCX.",
         "legacyDoc": "Формат .doc устарел и не поддерживается. Сохраните как PDF или DOCX вместо этого."
       }
-    },
-    "resumeImport": {
-      "title": "Импортировать данные из резюме",
-      "description": "Выберите текстовый PDF или DOCX: извлечённые сведения появятся как предложения в редактируемой форме профиля.",
-      "privacy": "Файл обрабатывается в браузере и не загружается и не хранится. Предложения не сохраняются в профиль, пока вы не проверите их и не нажмёте «Сохранить изменения».",
-      "chooseFile": "Выбрать резюме",
-      "processing": "Чтение резюме…",
-      "processingStatus": "Резюме обрабатывается в этом браузере.",
-      "fileHint": "PDF или DOCX · до 5 МБ и 25 страниц · сканы не поддерживаются",
-      "imported": "Данные из резюме добавлены в форму как предложения и ещё не сохранены. Проверьте или измените их, затем нажмите «Сохранить изменения».",
-      "importedWithSkipped": "Предложения из резюме добавлены в форму, но ещё не сохранены. Из-за ограничений разделов не добавлено записей: {count}. Проверьте данные и нажмите «Сохранить изменения».",
-      "noNewInformation": "Резюме прочитано, но новых сведений для добавления нет. Профиль не изменён.",
-      "noNewInformationWithSkipped": "Новых сведений для добавления нет; {count} записей превышают лимит профиля. Существующий профиль не изменён.",
-      "errors": {
-        "unsupported": "Выберите файл PDF или DOCX.",
-        "tooLarge": "Размер файла или извлечённого текста превышает допустимый предел.",
-        "tooManyPages": "В PDF может быть не более 25 страниц.",
-        "empty": "Не удалось извлечь подходящие сведения из резюме. Попробуйте другой текстовый файл или добавьте недостающие данные.",
-        "unreadable": "Не удалось прочитать файл. Попробуйте другой текстовый файл PDF или DOCX.",
-        "legacyDoc": "Формат .doc устарел и не поддерживается. Сохраните как PDF или DOCX вместо этого."
-      },
-      "summaryLabel": "Краткое резюме",
-      "summaryDescription": "Краткое описание, которое выделяет ваш профиль",
-      "summaryPlaceholder": "Суммируйте свой опыт в одном предложении",
-      "linksLabel": "Ссылки",
-      "linksDescription": "Добавьте LinkedIn, GitHub и другие профессиональные ссылки",
-      "linksAdd": "Добавить ссылку"
     },
     "publicationNote": "Указанный здесь адрес электронной почты станет общедоступным после одобрения.",
     "submitForReview": "Отправить изменения на проверку",

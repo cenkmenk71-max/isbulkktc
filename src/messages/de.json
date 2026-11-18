@@ -1262,33 +1262,6 @@
         "legacyDoc": "Das alte .doc-Format wird nicht unterstützt. Bitte als PDF oder DOCX speichern."
       }
     },
-    "resumeImport": {
-      "title": "Aus Ihrem Lebenslauf importieren",
-      "description": "Wählen Sie ein textbasiertes PDF oder DOCX; extrahierte Details erscheinen als Vorschläge in Ihrem bearbeitbaren Profilformular.",
-      "privacy": "Die Datei wird nur in diesem Browser gelesen und nicht hochgeladen oder gespeichert. Vorschläge werden erst in Ihrem Profil gespeichert, wenn Sie sie prüfen und Änderungen speichern wählen.",
-      "chooseFile": "Lebenslauf auswählen",
-      "processing": "Lebenslauf wird gelesen…",
-      "processingStatus": "Der Lebenslauf wird in diesem Browser gelesen.",
-      "fileHint": "PDF oder DOCX · bis 5 MB und 25 Seiten · gescannte Dateien werden nicht unterstützt",
-      "imported": "Lebenslauf-Details wurden als Vorschläge zum Formular hinzugefügt und noch nicht gespeichert. Prüfen oder bearbeiten Sie sie und wählen Sie dann Änderungen speichern.",
-      "importedWithSkipped": "Lebenslauf-Vorschläge wurden zum Formular hinzugefügt, aber noch nicht gespeichert. {count} Einträge überschritten Abschnittslimits. Prüfen Sie die Vorschläge und wählen Sie Änderungen speichern.",
-      "noNewInformation": "Der Lebenslauf wurde gelesen, aber es gab keine neuen Details zum Hinzufügen. Ihr Profil wurde nicht geändert.",
-      "noNewInformationWithSkipped": "Es gab keine neuen Details zum Hinzufügen; {count} Einträge überschritten Profilgrenzen. Ihr bestehendes Profil wurde nicht geändert.",
-      "errors": {
-        "unsupported": "Wählen Sie eine PDF- oder DOCX-Datei aus.",
-        "tooLarge": "Diese Datei oder ihr extrahierter Text übersteigt das zulässige Limit.",
-        "tooManyPages": "PDF-Dateien können höchstens 25 Seiten enthalten.",
-        "empty": "Keine unterstützten Profildetails konnten extrahiert werden. Probieren Sie eine andere textbasierte Datei oder fügen Sie fehlende Details hinzu.",
-        "unreadable": "Diese Datei konnte nicht gelesen werden. Probieren Sie eine andere textbasierte PDF- oder DOCX-Datei.",
-        "legacyDoc": "Das alte .doc-Format wird nicht unterstützt. Bitte als PDF oder DOCX speichern."
-      },
-      "summaryLabel": "Zusammenfassung",
-      "summaryDescription": "Eine kurze Zusammenfassung, die Ihr Profil hervorhebt",
-      "summaryPlaceholder": "Fassen Sie Ihren Werdegang in einem Satz zusammen",
-      "linksLabel": "Links",
-      "linksDescription": "Fügen Sie LinkedIn, GitHub und andere berufliche Links hinzu",
-      "linksAdd": "Link hinzufügen"
-    },
     "publicationNote": "Die hier angegebene E-Mail-Adresse ist nach Freigabe öffentlich sichtbar.",
     "submitForReview": "Änderungen zur Prüfung einreichen",
     "saving": "Wird eingereicht …",
@@ -1566,5 +1539,26 @@
     "suggestion1": "Was ist İşBul KKTC?",
     "suggestion2": "Welche Gebiete werden abgedeckt?",
     "suggestion3": "Kostet das Veröffentlichen oder Bewerben etwas?"
+  },
+  "resumeImport": {
+    "title": "Import from your CV",
+    "description": "Choose a text-based PDF or DOCX; extracted details appear as suggestions in your editable profile form.",
+    "privacy": "The file is read in this browser and is never uploaded or stored. Suggestions are not saved to your profile until you review them and select Save changes.",
+    "chooseFile": "Choose CV",
+    "processing": "Reading CV…",
+    "processingStatus": "Your CV is being read in this browser.",
+    "fileHint": "PDF or DOCX · up to 5 MB and 25 pages · scanned files are not supported",
+    "imported": "CV details were added as suggestions to the form and have not been saved. Review or edit them, then select Save changes.",
+    "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count} entries exceeded section limits. Review the suggestions and select Save changes.",
+    "noNewInformation": "The CV was read, but there were no new details to add. Your profile was not changed.",
+    "noNewInformationWithSkipped": "There were no new details to add; {count} entries exceeded profile limits. Your existing profile was not changed.",
+    "errors": {
+      "unsupported": "Choose a PDF or DOCX file.",
+      "tooLarge": "This file or its extracted text exceeds the supported limit.",
+      "tooManyPages": "PDF files can contain up to 25 pages.",
+      "empty": "No supported profile details could be extracted. Try another text-based file or add any missing details.",
+      "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
+      "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
+    }
   }
 }

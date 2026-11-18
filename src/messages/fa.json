@@ -1106,6 +1106,16 @@
         "unreadable": "خواندن فایل ممکن نشد. یک فایل متنی PDF یا DOCX دیگر را امتحان کنید.",
         "legacyDoc": "فرمت قدیمی .doc پشتیبانی نمی‌شود. لطفاً به عنوان PDF یا DOCX ذخیره کنید."
       }
+    },
+    "links": {
+      "title": "پیوندها",
+      "add": "افزودن پیوند",
+      "description": "LinkedIn، GitHub و سایر پیوندهای حرفه‌ای خود را اضافه کنید"
+    },
+    "summary": {
+      "title": "خلاصه",
+      "add": "افزودن خلاصه",
+      "description": "یک توصیف کوتاه که پروفایل شما را متمایز می‌کند"
     }
   },
   "AccountPanel": {
@@ -1251,43 +1261,6 @@
         "unreadable": "خواندن سند ممکن نشد. یک فایل متنی PDF یا DOCX دیگر را امتحان کنید.",
         "legacyDoc": "فرمت قدیمی .doc پشتیبانی نمی‌شود. لطفاً به عنوان PDF یا DOCX ذخیره کنید."
       }
-    },
-    "summary": {
-      "title": "خلاصه",
-      "add": "افزودن خلاصه",
-      "description": "یک توصیف کوتاه که پروفایل شما را متمایز می‌کند"
-    },
-    "links": {
-      "title": "پیوندها",
-      "add": "افزودن پیوند",
-      "description": "LinkedIn، GitHub و سایر پیوندهای حرفه‌ای خود را اضافه کنید"
-    },
-    "resumeImport": {
-      "title": "وارد کردن از رزومه",
-      "description": "یک PDF یا DOCX متنی انتخاب کنید؛ جزئیات استخراج‌شده به عنوان پیشنهادها در فرم قابل ویرایش نمایه ظاهر می‌شوند.",
-      "privacy": "فایل تنها در این مرورگر خوانده می‌شود، آپلود یا ذخیره نمی‌شود. پیشنهادها تا زمانی که شما آن‌ها را بررسی و ذخیره کنید، در نمایه شما ذخیره نمی‌شوند.",
-      "chooseFile": "انتخاب رزومه",
-      "processing": "خواندن رزومه…",
-      "processingStatus": "رزومه شما در این مرورگر در حال خوانده شدن است.",
-      "fileHint": "PDF یا DOCX · حداکثر ۵ مگابایت و ۲۵ صفحه · فایل‌های اسکن‌شده پشتیبانی نمی‌شوند",
-      "imported": "جزئیات رزومه به عنوان پیشنهادها به فرم اضافه شدند و هنوز ذخیره نشده‌اند. آن‌ها را مرور یا ویرایش کنید، سپس ذخیره تغییرات را بزنید.",
-      "importedWithSkipped": "پیشنهادهای رزومه به فرم اضافه شدند اما هنوز ذخیره نشده‌اند. {count, number} ورودی محدودیت‌های بخش را رد کردند. پیشنهادات را بررسی و ذخیره تغییرات را بزنید.",
-      "noNewInformation": "رزومه خوانده شد، اما جزئیات تازه‌ای برای اضافه کردن وجود نداشت. نمایه شما تغییر نکرد.",
-      "noNewInformationWithSkipped": "هیچ جزئیات تازه‌ای برای اضافه کردن وجود نداشت؛ {count, number} ورودی محدودیت‌های نمایه را رد کرد. نمایه موجود شما تغییر نکرد.",
-      "errors": {
-        "unsupported": "یک فایل PDF یا DOCX انتخاب کنید.",
-        "tooLarge": "این فایل یا متن استخراج‌شده آن از حد مجاز فراتر رفته است.",
-        "tooManyPages": "فایل‌های PDF می‌توانند حداکثر ۲۵ صفحه داشته باشند.",
-        "empty": "جزئیات نمایه قابل پشتیبانی استخراج نشد. یک فایل متنی دیگر امتحان کنید یا جزئیات thiếu را اضافه کنید.",
-        "unreadable": "این فایل قابل خواندن نبود. یک PDF یا DOCX متنی دیگر امتحان کنید.",
-        "legacyDoc": "فرمت قدیمی .doc پشتیبانی نمی‌شود. لطفاً به عنوان PDF یا DOCX ذخیره کنید."
-      },
-      "summaryLabel": "خلاصه",
-      "summaryDescription": "یک توصیف کوتاه که پروفایل شما را متمایز می‌کند",
-      "summaryPlaceholder": "مسیر شغلی خود را در یک جمله خلاصه کنید",
-      "linksLabel": "پیوندها",
-      "linksDescription": "LinkedIn، GitHub و سایر پیوندهای حرفه‌ای خود را اضافه کنید",
-      "linksAdd": "افزودن پیوند"
     },
     "publicationNote": "در صورت تأیید، ایمیلی که اینجا وارد می‌کنید برای عموم نمایش داده می‌شود.",
     "submitForReview": "ارسال تغییرات برای بررسی",
@@ -1566,5 +1539,26 @@
     "suggestion1": "İşBul KKTC چیست؟",
     "suggestion2": "این پلتفرم کدام مناطق را پوشش می‌دهد؟",
     "suggestion3": "ثبت آگهی یا درخواست هزینه دارد؟"
+  },
+  "resumeImport": {
+    "title": "Import from your CV",
+    "description": "Choose a text-based PDF or DOCX; extracted details appear as suggestions in your editable profile form.",
+    "privacy": "The file is read in this browser and is never uploaded or stored. Suggestions are not saved to your profile until you review them and select Save changes.",
+    "chooseFile": "Choose CV",
+    "processing": "Reading CV…",
+    "processingStatus": "Your CV is being read in this browser.",
+    "fileHint": "PDF or DOCX · up to 5 MB and 25 pages · scanned files are not supported",
+    "imported": "CV details were added as suggestions to the form and have not been saved. Review or edit them, then select Save changes.",
+    "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count} entries exceeded section limits. Review the suggestions and select Save changes.",
+    "noNewInformation": "The CV was read, but there were no new details to add. Your profile was not changed.",
+    "noNewInformationWithSkipped": "There were no new details to add; {count} entries exceeded profile limits. Your existing profile was not changed.",
+    "errors": {
+      "unsupported": "Choose a PDF or DOCX file.",
+      "tooLarge": "This file or its extracted text exceeds the supported limit.",
+      "tooManyPages": "PDF files can contain up to 25 pages.",
+      "empty": "No supported profile details could be extracted. Try another text-based file or add any missing details.",
+      "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
+      "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
+    }
   }
 }
