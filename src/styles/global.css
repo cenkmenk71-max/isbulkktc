@@ -12979,8 +12979,7 @@ html[dir="rtl"] input[name="slug"] {
       var(--color-shade-green-50)
     );
   padding-block: clamp(54px, 8vw, 106px);
-  padding-bottom: calc(clamp(54px, 8vw, 106px) - 1px);
-}
+  }
 .packages-lead-layout {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
