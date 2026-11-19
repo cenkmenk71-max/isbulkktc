@@ -1,14 +1,19 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  NATIVE_GOTRUE_TEMPLATES,
+  PREVIEW_ONLY_TEMPLATES,
   PREVIEW_SIGNATURE,
   PROMOTIONAL_TEMPLATES,
+  STATIC_GOTRUE_TEMPLATES,
   assertNoPreviewLink,
   buildTemplates,
   isDirectRun,
   planSend,
   previewUnsubscribeUrl,
+  renderGoTrueTemplatePreview,
   renderTemplate,
 } from "./email-preview.mjs";
 import { verifyUnsubscribeSignatureWithKey } from "../src/server/email/unsubscribe-signature.ts";
@@ -25,6 +30,105 @@ test("isDirectRun matches the launched path and ignores a bare import", () => {
   assert.equal(isDirectRun(`file://${self}`, self), true);
   assert.equal(isDirectRun("file:///other.mjs", self), false);
   assert.equal(isDirectRun("file:///x.mjs", undefined), false);
+});
+
+test("the preview catalog covers the complete email pack", async () => {
+  const renderer = await render();
+  const companyProfileRenderer = await import("../src/server/email/company-profile-render.ts");
+  const templates = buildTemplates(
+    renderer,
+    { locale: "tr", siteUrl: SITE_URL + "/tr/" },
+    companyProfileRenderer,
+    Object.fromEntries(
+      NATIVE_GOTRUE_TEMPLATES.map(({ name }) => [
+        name,
+        `<!DOCTYPE html><html><body>${name}</body></html>`,
+      ]),
+    ),
+  );
+  for (const name of [
+    "auth-confirmation",
+    "auth-recovery",
+    "auth-reauthentication",
+    "auth-password-changed",
+    ...STATIC_GOTRUE_TEMPLATES,
+    "welcome-candidate",
+    "welcome-employer",
+    "notification-candidate-applied",
+    "notification-employer-applied",
+    "notification-viewed",
+    "notification-status",
+    "feedback-ack",
+    "feedback-team",
+    "job-published",
+    "resume-received",
+    "resume-updated",
+    "sales-ack",
+    "sales-team",
+    "company-profile-ack",
+    "company-profile-team",
+    "engagement",
+    "marketing",
+  ]) {
+    assert.equal(typeof templates[name], "function", name);
+  }
+  assert.deepEqual(
+    STATIC_GOTRUE_TEMPLATES,
+    new Set([
+      "auth-source-confirmation",
+      "auth-source-recovery",
+      "auth-source-invite",
+      "auth-source-magic-link",
+      "auth-source-email-change",
+      "auth-source-reauthentication",
+      "auth-source-password-changed",
+    ]),
+  );
+});
+
+test("all auth previews with sample data are blocked from sending", () => {
+  for (const name of PREVIEW_ONLY_TEMPLATES) {
+    const decision = planSend({
+      name,
+      recipient: "a@example.com",
+      siteUrl: SITE_URL,
+      signingKey: KEY,
+    });
+    assert.equal(decision.send, false, name);
+    assert.match(decision.reason, /sample authentication data/);
+  }
+});
+
+test("every native GoTrue source is rendered with inert Turkish preview values", () => {
+  for (const { name, filename } of NATIVE_GOTRUE_TEMPLATES) {
+    const source = readFileSync(
+      new URL(`../supabase/templates/${filename}`, import.meta.url),
+      "utf8",
+    );
+    const html = renderGoTrueTemplatePreview(source);
+    assert.ok(html.includes("info@isbulkktc.com"), name);
+    assert.doesNotMatch(html, /\{\{[\s\S]*?\}\}/, name);
+    if (["confirmation", "recovery", "invite", "magic_link", "email_change"].includes(name)) {
+      assert.ok(html.includes("code=SAMPLE"), name);
+    }
+    if (name === "reauthentication") assert.ok(html.includes("482913"), name);
+  }
+});
+
+test("GoTrue preview processor selects Turkish copy and removes template directives", () => {
+  const html = renderGoTrueTemplatePreview([
+    '{{- $locale := "tr" -}}',
+    '{{ if eq $locale "tr" }}Türkçe{{ else if eq $locale "en" }}English{{ end }}',
+    '{{ if $rtl }}padding-right{{ else }}padding-left{{ end }}',
+    '{{ .Email }}',
+    '{{ .ConfirmationURL }}',
+  ].join(" "));
+  assert.match(html, /Türkçe/);
+  assert.doesNotMatch(html, /English/);
+  assert.match(html, /ornek@isbulkktc\.com/);
+  assert.match(html, /code=SAMPLE/);
+  assert.match(html, /padding-left/);
+  assert.doesNotMatch(html, /\{\{/);
 });
 
 test("promotional families need a signing key; transactional ones never do", () => {
@@ -142,8 +246,13 @@ test("assertNoPreviewLink refuses a body that still carries the placeholder", ()
 
 test("the body the send path renders carries the real link, never the placeholder", async () => {
   const renderer = await render();
-  const site = { locale: "tr", siteUrl: SITE_URL };
-  const templates = buildTemplates(renderer, site);
+  const companyProfileRenderer = await import("../src/server/email/company-profile-render.ts");
+  const site = { locale: "tr", siteUrl: SITE_URL + "/tr/" };
+  const templates = buildTemplates(renderer, site, companyProfileRenderer, {
+    invite: "<!DOCTYPE html><html><body>invite</body></html>",
+    magic_link: "<!DOCTYPE html><html><body>magic link</body></html>",
+    email_change: "<!DOCTYPE html><html><body>email change</body></html>",
+  });
 
   const recipient = "letgodeneme97@outlook.com";
   const plan = planSend({

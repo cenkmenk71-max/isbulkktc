@@ -114,11 +114,13 @@ function isSafeUrl(value: string): boolean {
 function htmlToText(html: string): string {
   return html
     .replace(/<[^>]+>/g, " ")
-    .replace(/'/g, "'")
-    .replace(/"/g, '"')
-    .replace(/&/g, "&")
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#39;|&#x27;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&amp;/gi, "&")
+    .replace(/\\s+/g, " ")
     .trim();
 }
 
@@ -155,6 +157,7 @@ export type EmailButton = {
   label: string;
   url: string;
   lead?: string;
+  secondary?: boolean;
 };
 
 export type EmailContact = { label: string; value: string; url: string };
@@ -180,6 +183,7 @@ export type EmailLayoutOptions = {
   unsubscribeLabel?: string;
   /** Marketing-specific: hero section with hook, features, packages */
   hero?: {
+    eyebrow?: string;
     hook: string;
     subhook?: string;
     cta?: EmailButton;
@@ -191,11 +195,12 @@ export type EmailLayoutOptions = {
   }>;
   packages?: Array<{
     name: string;
-    price: string;
-    period: string;
-    highlights: string[];
+    audience: string;
+    description: string;
+    scope: string;
+    durationLabel: string;
+    accent: string;
     cta: EmailButton;
-    popular?: boolean;
   }>;
 };
 
@@ -208,26 +213,30 @@ function preheaderBlock(text: string): string {
 
 function heroBlock(hero: EmailLayoutOptions["hero"], locale: string): string {
   if (!hero) return "";
-  const _dir = isRtlLocale(locale) ? "rtl" : "ltr";
+  const eyebrow = hero.eyebrow?.trim()
+    ? uppercaseHeading(hero.eyebrow.trim(), locale)
+    : BRAND.name.toLocaleUpperCase(locale);
   const subhook = hero.subhook
-    ? `<p style="margin:${SPACE.sm}px 0 0;font-size:${TYPE.lead}px;line-height:${LEADING.normal};color:rgba(255,255,255,0.9);font-weight:400;">${escapeHtml(hero.subhook)}</p>`
+    ? `<p style="margin:${SPACE.sm}px 0 0;font-size:${TYPE.lead}px;line-height:${LEADING.normal};color:#EAF1EC;font-weight:400;">${escapeHtml(hero.subhook)}</p>`
     : "";
   const cta = hero.cta && isSafeUrl(hero.cta.url)
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:${SPACE.lg}px 0 0;">
-       <tr><td align="center">
-         <a href="${escapeHtml(hero.cta.url)}" style="display:inline-block;background:#FFFFFF;color:${BRAND.green};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.pill}px;padding:${SPACE.md}px ${SPACE.xl}px;box-shadow:0 4px 14px rgba(0,0,0,0.15);">${escapeHtml(hero.cta.label)}</a>
+       <tr><td align="center" bgcolor="#FFFFFF" style="border-radius:${RADIUS.pill}px;">
+         <a href="${escapeHtml(hero.cta.url)}" style="display:inline-block;background:#FFFFFF;color:${BRAND.green};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.pill}px;padding:${SPACE.md}px ${SPACE.xl}px;">${escapeHtml(hero.cta.label)}</a>
        </td></tr></table>`
     : "";
-  return `<tr><td style="background:${BRAND.green};border-radius:${RADIUS.card}px ${RADIUS.card}px 0 0;padding:${SPACE.xxl}px ${SPACE.xl}px;text-align:center;">
-    <p style="margin:0 0 ${SPACE.xs}px;font-size:${TYPE.small}px;font-weight:700;letter-spacing:0.1em;color:rgba(255,255,255,0.8);">${escapeHtml("🎯 ÖZEL TEKLİF".toLocaleUpperCase(locale))}</p>
-    <h1 style="margin:0 0 ${SPACE.sm}px;font-size:${TYPE.h1}px;line-height:${LEADING.tight};font-weight:800;letter-spacing:-0.5px;color:#FFFFFF;">${escapeHtml(hero.hook)}</h1>
-    ${subhook}
-    ${cta}
-  </td></tr>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 ${SPACE.xl}px;">
+    <tr><td style="background:${BRAND.green};border-radius:${RADIUS.card}px;padding:${SPACE.xxl}px ${SPACE.xl}px;text-align:left;">
+      <p style="margin:0 0 ${SPACE.sm}px;font-size:${TYPE.micro}px;font-weight:700;letter-spacing:0.12em;color:#C9D9CF;">${escapeHtml(eyebrow)}</p>
+      <h2 style="margin:0;font-size:${TYPE.h1}px;line-height:${LEADING.tight};font-weight:800;letter-spacing:-0.5px;color:#FFFFFF;">${escapeHtml(hero.hook)}</h2>
+      ${subhook}
+      ${cta}
+    </td></tr>
+  </table>`;
 }
 
 function headingBlock(heading: string): string {
-  return `<h1 style="margin:0 0 ${SPACE.md}px;font-size:${TYPE.h1}px;line-height:${LEADING.tight};font-weight:800;letter-spacing:-0.5px;color:${BRAND.ink};">${escapeHtml(
+  return `<h1 class="ibk-h1" style="margin:0 0 ${SPACE.md}px;font-size:${TYPE.h1}px;line-height:${LEADING.tight};font-weight:800;letter-spacing:-0.5px;color:${BRAND.ink};">${escapeHtml(
     heading,
   )}</h1>`;
 }
@@ -259,75 +268,58 @@ function featuresBlock(
     .map(
       (feature) => `
     <tr>
-      <td style="vertical-align:top;padding:${SPACE.md}px ${SPACE.md}px ${SPACE.lg}px 0;width:48px;">
-        <span style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:${BRAND.greenSoft};border-radius:${RADIUS.control}px;font-size:20px;line-height:1;">${feature.icon}</span>
+      <td width="48" valign="top" style="padding:${SPACE.md}px ${SPACE.md}px ${SPACE.lg}px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:40px;height:40px;background:${BRAND.greenSoft};border-radius:${RADIUS.control}px;">
+          <tr><td align="center" valign="middle" style="font-size:18px;line-height:1;color:${BRAND.green};font-weight:700;" aria-hidden="true">${escapeHtml(feature.icon)}</td></tr>
+        </table>
       </td>
-      <td style="vertical-align:top;padding:${SPACE.md}px 0 ${SPACE.lg}px;font-size:${TYPE.body}px;line-height:${LEADING.normal};color:${BRAND.ink};">
+      <td valign="top" style="padding:${SPACE.md}px 0 ${SPACE.lg}px;font-size:${TYPE.body}px;line-height:${LEADING.normal};color:${BRAND.ink};">
         <strong style="font-size:${TYPE.body}px;font-weight:700;color:${BRAND.ink};">${escapeHtml(feature.title)}</strong>
         <p style="margin:${SPACE.xs}px 0 0;font-weight:400;color:${BRAND.inkSoft};">${escapeHtml(feature.body)}</p>
       </td>
     </tr>`,
     )
     .join("");
-  return `<div style="margin:${SPACE.xl}px 0 0;">
+  return `<div style="margin:${SPACE.lg}px 0 0;">
     <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">${rows}</table>
   </div>`;
 }
 
 function packagesBlock(
-  packages: Array<{
-    name: string;
-    price: string;
-    period: string;
-    highlights: string[];
-    cta: EmailButton;
-    popular?: boolean;
-  }> | undefined,
+  packages: EmailLayoutOptions["packages"],
 ): string {
   if (!packages || packages.length === 0) return "";
-  const cards = packages
-    .map((pkg, _index) => {
-      const isPopular = pkg.popular === true;
-      const border = isPopular ? `border:2px solid ${BRAND.green};` : `border:1px solid ${BRAND.line};`;
-      const badge = isPopular
-        ? `<div style="position:absolute;top:-10px;right:${SPACE.lg}px;background:${BRAND.green};color:#FFFFFF;font-size:${TYPE.micro}px;font-weight:700;padding:4px 10px;border-radius:${RADIUS.pill}px;">${escapeHtml("En Popüler")}</div>`
+  const rows: string[] = [];
+  for (let index = 0; index < packages.length; index += 2) {
+    const pair = packages.slice(index, index + 2);
+    const cells = pair.map((pkg) => {
+      const accent = /^#[0-9a-f]{6}$/i.test(pkg.accent) ? pkg.accent : BRAND.green;
+      const cta = isSafeUrl(pkg.cta.url)
+        ? `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:${SPACE.lg}px 0 0;width:100%;">
+            <tr><td align="center" bgcolor="${BRAND.green}" style="border-radius:${RADIUS.control}px;">
+              <a href="${escapeHtml(pkg.cta.url)}" class="ibk-btn" style="display:block;padding:${SPACE.md}px ${SPACE.lg}px;color:${BRAND.white};text-decoration:none;font-weight:700;font-size:${TYPE.small}px;line-height:${LEADING.normal};border-radius:${RADIUS.control}px;text-align:center;">${escapeHtml(pkg.cta.label)}</a>
+            </td></tr>
+          </table>`
         : "";
-      const highlights = pkg.highlights
-        .map(
-          (h) => `<li style="margin:0 0 ${SPACE.xs}px;padding-left:${SPACE.md}px;position:relative;font-size:${TYPE.small}px;line-height:${LEADING.normal};color:${BRAND.inkSoft};"><span style="position:absolute;left:0;top:2px;color:${BRAND.green};font-weight:700;">✓</span>${escapeHtml(h)}</li>`,
-        )
-        .join("");
-      const cta = pkg.cta && isSafeUrl(pkg.cta.url)
-        ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:${SPACE.lg}px 0 0;width:100%;">
-           <tr><td align="center">
-             <a href="${escapeHtml(pkg.cta.url)}" style="display:block;background:${isPopular ? BRAND.green : BRAND.white};color:${isPopular ? BRAND.white : BRAND.green};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.control}px;padding:${SPACE.md}px ${SPACE.lg}px;text-align:center;${isPopular ? "" : `border:2px solid ${BRAND.green};`}">${escapeHtml(pkg.cta.label)}</a>
-           </td></tr></table>`
-        : "";
-      return `
-      <!--[if mso]>
-      <td width="50%" valign="top">
-      <![endif]-->
-      <div style="display:inline-block;vertical-align:top;width:100%;min-width:280px;max-width:300px;margin:0 ${SPACE.xs}px;position:relative;${border}background:${BRAND.white};border-radius:${RADIUS.card}px;box-shadow:0 2px 8px rgba(0,0,0,0.04);${isPopular ? `box-shadow:0 8px 24px rgba(25,68,53,0.12);` : ""}">
-        ${badge}
-        <div style="padding:${SPACE.xl}px;">
-          <p style="margin:0 0 ${SPACE.xs}px;font-size:${TYPE.small}px;font-weight:700;letter-spacing:0.06em;color:${BRAND.green};">${escapeHtml(pkg.name.toUpperCase())}</p>
-          <p style="margin:0 0 ${SPACE.xs}px;font-size:${TYPE.display}px;font-weight:800;letter-spacing:-1px;color:${BRAND.ink};line-height:1;">${escapeHtml(pkg.price)}<span style="font-size:${TYPE.small}px;font-weight:400;color:${BRAND.inkSoft};vertical-align:super;">/${escapeHtml(pkg.period)}</span></p>
-          <ul style="margin:${SPACE.lg}px 0 0;padding:0;list-style:none;">${highlights}</ul>
-          ${cta}
-        </div>
-      </div>
-      <!--[if mso]>
-      </td>
-      <![endif]-->
-    `;
-    })
-    .join("");
-  return `
-  <div style="margin:${SPACE.xl}px 0 0;">
-    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
-      <td align="center" style="font-size:0;line-height:0;">${cards}</td>
-    </tr></table>
-  </div>`;
+      return `<td class="ibk-package-cell" width="50%" valign="top" style="width:50%;padding:6px;vertical-align:top;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;background:${BRAND.white};border:1px solid ${BRAND.line};border-top:4px solid ${accent};border-radius:${RADIUS.card}px;">
+          <tr><td style="padding:${SPACE.lg}px;">
+            <p style="margin:0 0 ${SPACE.sm}px;font-size:${TYPE.micro}px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:${BRAND.green};">${escapeHtml(pkg.audience)}</p>
+            <h3 style="margin:0;font-size:${TYPE.h2}px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:${BRAND.ink};">${escapeHtml(pkg.name)}</h3>
+            <p style="margin:${SPACE.sm}px 0 0;min-height:44px;font-size:${TYPE.small}px;line-height:${LEADING.normal};color:${BRAND.inkSoft};">${escapeHtml(pkg.description)}</p>
+            <p style="margin:${SPACE.md}px 0 0;padding:${SPACE.md}px 0;border-top:1px solid ${BRAND.line};border-bottom:1px solid ${BRAND.line};font-size:${TYPE.small}px;line-height:${LEADING.normal};font-weight:700;color:${BRAND.ink};">${escapeHtml(pkg.scope)}</p>
+            <p style="margin:${SPACE.md}px 0 0;font-size:${TYPE.small}px;line-height:${LEADING.normal};color:${BRAND.inkSoft};">${escapeHtml(pkg.durationLabel)}</p>
+${cta}
+          </td></tr>
+        </table>
+      </td>`;
+    });
+    if (cells.length === 1) {
+      cells.push('<td class="ibk-package-cell" width="50%" style="width:50%;padding:6px;">&nbsp;</td>');
+    }
+    rows.push(`<tr>${cells.join("")}</tr>`);
+  }
+  return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;margin:${SPACE.lg}px 0 0;">${rows.join("")}</table>`;
 }
 
 function buttonCell(button: EmailButton, secondary: boolean): string {
@@ -353,18 +345,21 @@ ${lead}<table role="presentation" cellpadding="0" cellspacing="0" style="width:1
 function buttonsBlock(buttons: EmailButton[] | undefined): string {
   const usable = (buttons ?? []).filter((button) => isSafeUrl(button.url));
   if (usable.length === 0) return "";
-  if (usable.length === 1 && !usable[0].lead) return buttonBlock(usable[0]);
+  if (usable.length === 1 && !usable[0].lead) return buttonBlock(usable[0], usable[0].secondary === true);
   const rows = usable
-    .map((button, index) => buttonCell(button, index > 0))
+    .map((button, index) => buttonCell(button, index > 0 || button.secondary === true))
     .join("");
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:${SPACE.sm}px 0 0;width:100%;">${rows}</table>`;
 }
 
-function buttonBlock(button: EmailButton | undefined): string {
+function buttonBlock(button: EmailButton | undefined, secondary = false): string {
   if (!button || !isSafeUrl(button.url)) return "";
+  const bg = secondary ? BRAND.white : BRAND.green;
+  const fg = secondary ? BRAND.green : BRAND.white;
+  const border = secondary ? `border:2px solid ${BRAND.green};` : "";
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:${SPACE.lg}px 0 0;">
-<tr><td align="center" bgcolor="${BRAND.green}" style="border-radius:${RADIUS.control}px;">
-<a href="${escapeHtml(button.url)}" class="ibk-btn" style="display:inline-block;padding:${SPACE.md}px ${SPACE.xl}px;color:${BRAND.white};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.control}px;">${escapeHtml(
+<tr><td align="center" bgcolor="${bg}" style="border-radius:${RADIUS.control}px;${border}">
+<a href="${escapeHtml(button.url)}" class="ibk-btn" style="display:inline-block;padding:${SPACE.md}px ${SPACE.xl}px;color:${fg};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.control}px;">${escapeHtml(
     button.label,
   )}</a>
 </td></tr>
@@ -436,6 +431,7 @@ function footerBlock(options: EmailLayoutOptions): string {
     : "";
   return `<tr><td class="ibk-foot" style="padding:${SPACE.xl}px ${SPACE.xl}px;background:${BRAND.footer};border-top:1px solid ${BRAND.line};text-align:center;font-size:${TYPE.micro}px;line-height:${LEADING.loose};color:${BRAND.inkSoft};">
 <p style="margin:0 0 ${SPACE.sm}px;">${escapeHtml(options.footerNote)}</p>
+<p style="margin:0 0 ${SPACE.sm}px;"><a href="mailto:info@isbulkktc.com" style="color:${BRAND.green};text-decoration:none;font-weight:600;">info@isbulkktc.com</a> <span aria-hidden="true">·</span> <a href="tel:+905391316421" style="color:${BRAND.green};text-decoration:none;font-weight:600;">0539 131 64 21</a></p>
 <p style="margin:0 0 ${SPACE.sm}px;">${escapeHtml(formatPostalAddress())}</p>
 <p style="margin:0;">© ${new Date().getUTCFullYear()} ${BRAND.name} · <a href="${escapeHtml(
     options.siteUrl,
@@ -487,6 +483,7 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
   @media (max-width:600px) {
     .ibk-pad { padding-left:20px !important; padding-right:20px !important; }
     .ibk-h1 { font-size:${TYPE.h2}px !important; }
+    .ibk-package-cell { display:block !important; width:100% !important; padding:0 0 12px !important; }
   }
   @media (prefers-color-scheme:dark) {
     .ibk-bg { background:#171B1A !important; }
@@ -506,7 +503,7 @@ ${heroHtml ? `
 <tr><td class="ibk-pad" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
 <td style="vertical-align:middle;">
-<img src="${LOGO_URL}" width="56" height="33" alt="" style="display:block;border:0;outline:none;text-decoration:none;" />
+<a href="${escapeHtml(options.siteUrl)}" style="display:inline-block;text-decoration:none;"><img src="${LOGO_URL}" width="56" height="33" alt="${BRAND.name}" style="display:block;border:0;outline:none;text-decoration:none;" /></a>
 </td>
 <td style="vertical-align:middle;padding-${dir === "rtl" ? "right" : "left"}:14px;">
 <div style="color:${BRAND.white};font-size:${TYPE.h1}px;font-weight:800;letter-spacing:-0.4px;line-height:1.1;">${BRAND.name}</div>
@@ -518,7 +515,7 @@ ${heroHtml ? `
 <tr><td class="ibk-pad" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
 <td style="vertical-align:middle;">
-<img src="${LOGO_URL}" width="56" height="33" alt="" style="display:block;border:0;outline:none;text-decoration:none;" />
+<a href="${escapeHtml(options.siteUrl)}" style="display:inline-block;text-decoration:none;"><img src="${LOGO_URL}" width="56" height="33" alt="${BRAND.name}" style="display:block;border:0;outline:none;text-decoration:none;" /></a>
 </td>
 <td style="vertical-align:middle;padding-${dir === "rtl" ? "right" : "left"}:14px;">
 <div style="color:${BRAND.white};font-size:${TYPE.h1}px;font-weight:800;letter-spacing:-0.4px;line-height:1.1;">${BRAND.name}</div>
@@ -541,57 +538,59 @@ ${footerBlock(options)}
 /** Plain-text alternative with the same information, for accessibility filters. */
 export function renderEmailText(options: EmailLayoutOptions): string {
   const lines: string[] = [options.heading, ""];
-  if (options.hero?.hook) {
-    lines.push(options.hero.hook, "");
-  }
+  if (options.hero?.hook) lines.push(options.hero.hook, "");
+  if (options.hero?.subhook) lines.push(options.hero.subhook, "");
   if (options.hero?.cta && isSafeUrl(options.hero.cta.url)) {
     lines.push(`${options.hero.cta.label}: ${options.hero.cta.url}`, "");
   }
-  if (options.introHtml) {
-    lines.push(htmlToText(options.introHtml), "");
-  }
+  if (options.introHtml) lines.push(htmlToText(options.introHtml), "");
   for (const section of options.sections ?? []) {
     const separator = section.heading.trimEnd().endsWith(":") ? " " : ": ";
     lines.push(`${section.heading}${separator}${htmlToText(section.html)}`, "");
   }
-  if (options.features) {
+  if (options.features?.length) {
     lines.push("ÖZELLİKLER:", "");
-    for (const f of options.features) {
-      lines.push(`• ${f.title}: ${f.body}`, "");
+    for (const feature of options.features) {
+      lines.push(`• ${feature.title}: ${feature.body}`, "");
     }
   }
-  if (options.packages) {
+  if (options.packages?.length) {
     lines.push("PAKETLER:", "");
-    for (const p of options.packages) {
-      lines.push(`${p.name} — ${p.price}/${p.period}`);
-      for (const h of p.highlights) lines.push(`  ✓ ${h}`);
+    for (const pkg of options.packages) {
+      lines.push(`${pkg.name} — ${pkg.scope}`, pkg.description);
+      lines.push(pkg.durationLabel);
+      if (isSafeUrl(pkg.cta.url)) lines.push(`${pkg.cta.label}: ${pkg.cta.url}`);
       lines.push("");
     }
   }
   if (options.code) lines.push(options.code, "");
-  if (options.outroHtml) {
-    lines.push(htmlToText(options.outroHtml), "");
-  }
+  if (options.outroHtml) lines.push(htmlToText(options.outroHtml), "");
   for (const button of options.buttons ?? []) {
+    if (button.lead) lines.push(button.lead);
     if (isSafeUrl(button.url)) lines.push(`${button.label}: ${button.url}`);
   }
-  if ((options.buttons ?? []).length > 0) lines.push("");
-  if (options.button) lines.push(`${options.button.label}: ${options.button.url}`, "");
-  if (options.note) lines.push(options.note, "");
-  if (options.signatureHtml) {
-    lines.push(htmlToText(options.signatureHtml), "");
+  if ((options.buttons ?? []).length) lines.push("");
+  if (options.button && isSafeUrl(options.button.url)) {
+    lines.push(`${options.button.label}: ${options.button.url}`, "");
   }
+  if (options.linkFallback && options.button?.url && isSafeUrl(options.button.url)) {
+    lines.push(options.linkFallback, options.button.url, "");
+  }
+  if (options.note) lines.push(options.note, "");
+  if (options.signatureHtml) lines.push(htmlToText(options.signatureHtml), "");
+  if (options.contactsHeading) lines.push(options.contactsHeading, "");
   for (const contact of options.contacts ?? []) {
     if (isSafeContactUrl(contact.url)) {
       lines.push(`${contact.label}: ${contact.value} (${contact.url})`);
     }
   }
-  if ((options.contacts ?? []).length > 0) lines.push("");
-  lines.push(options.footerNote, formatPostalAddress(), BRAND.domain);
+  if ((options.contacts ?? []).length) lines.push("");
+  lines.push(options.footerNote);
+  lines.push("E-posta: info@isbulkktc.com (mailto:info@isbulkktc.com)");
+  lines.push("Telefon: 0539 131 64 21 (tel:+905391316421)");
+  lines.push(formatPostalAddress(), BRAND.domain);
   if (options.unsubscribeUrl && isSafeUrl(options.unsubscribeUrl)) {
-    lines.push(
-      `${options.unsubscribeLabel ?? "Abonelikten çık"}: ${options.unsubscribeUrl}`,
-    );
+    lines.push(`${options.unsubscribeLabel ?? "Abonelikten çık"}: ${options.unsubscribeUrl}`);
   }
   return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }

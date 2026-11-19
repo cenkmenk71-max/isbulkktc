@@ -51,6 +51,12 @@ export type EmailCopy = {
     employerLead: string;
     employerSteps: string[];
     employerCta: string;
+    candidateEyebrow: string;
+    employerEyebrow: string;
+    candidateStepsHeading: string;
+    employerStepsHeading: string;
+    candidateSecondaryCta: string;
+    employerSecondaryCta: string;
   };
   notification: {
     candidateAppliedSubject: string;
@@ -71,6 +77,7 @@ export type EmailCopy = {
     receivedCta: string;
     teamSubject: string;
     teamHeading: string;
+    teamReplyCta: string;
   };
   labels: {
     jobLabel: string;
@@ -137,6 +144,12 @@ const tr: EmailCopy = {
       "Başvuruları tek panelden yönetin",
     ],
     employerCta: "Şirket profilimi oluştur",
+    candidateEyebrow: "ADAY HESABI",
+    employerEyebrow: "İŞVEREN HESABI",
+    candidateStepsHeading: "Aday olarak ilk adımlarınız",
+    employerStepsHeading: "İşveren olarak ilk adımlarınız",
+    candidateSecondaryCta: "İş ilanlarını keşfet",
+    employerSecondaryCta: "İlan paketlerini incele",
   },
   notification: {
     candidateAppliedSubject: "Başvurunuz işverene iletildi",
@@ -165,6 +178,7 @@ const tr: EmailCopy = {
     receivedCta: "İlanlara göz atın",
     teamSubject: "Yeni geri bildirim",
     teamHeading: "Yeni geri bildirim alındı",
+    teamReplyCta: "Geri bildirimi yanıtla",
   },
   labels: {
     jobLabel: "İlan",
@@ -233,6 +247,12 @@ const en: EmailCopy = {
       "Manage applications from one dashboard",
     ],
     employerCta: "Create my company profile",
+    candidateEyebrow: "CANDIDATE ACCOUNT",
+    employerEyebrow: "EMPLOYER ACCOUNT",
+    candidateStepsHeading: "Your first steps as a candidate",
+    employerStepsHeading: "Your first steps as an employer",
+    candidateSecondaryCta: "Explore job listings",
+    employerSecondaryCta: "Explore listing packages",
   },
   notification: {
     candidateAppliedSubject: "Your application was sent",
@@ -262,6 +282,7 @@ const en: EmailCopy = {
     receivedCta: "Browse listings",
     teamSubject: "New feedback received",
     teamHeading: "New feedback received",
+    teamReplyCta: "Reply to this feedback",
   },
   labels: {
     jobLabel: "Listing",
@@ -328,6 +349,12 @@ const ru: EmailCopy = {
       "Управляйте откликами из одного кабинета",
     ],
     employerCta: "Создать профиль компании",
+    candidateEyebrow: "АККАУНТ КАНДИДАТА",
+    employerEyebrow: "АККАУНТ РАБОТОДАТЕЛЯ",
+    candidateStepsHeading: "Первые шаги для кандидата",
+    employerStepsHeading: "Первые шаги работодателя",
+    candidateSecondaryCta: "Смотреть вакансии",
+    employerSecondaryCta: "Посмотреть пакеты вакансий",
   },
   notification: {
     candidateAppliedSubject: "Отклик передан работодателю",
@@ -356,6 +383,7 @@ const ru: EmailCopy = {
     receivedCta: "Смотреть вакансии",
     teamSubject: "Получен новый отзыв",
     teamHeading: "Получен новый отзыв",
+    teamReplyCta: "Ответить на отзыв",
   },
   labels: {
     jobLabel: "Вакансия",
@@ -423,6 +451,12 @@ const el: EmailCopy = {
       "Διαχειριστείτε τις αιτήσεις από ένα ταμπλό",
     ],
     employerCta: "Δημιουργία προφίλ εταιρείας",
+    candidateEyebrow: "ΛΟΓΑΡΙΑΣΜΟΣ ΥΠΟΨΗΦΙΟΥ",
+    employerEyebrow: "ΛΟΓΑΡΙΑΣΜΟΣ ΕΡΓΟΔΟΤΗ",
+    candidateStepsHeading: "Τα πρώτα σας βήματα ως υποψήφιος",
+    employerStepsHeading: "Τα πρώτα σας βήματα ως εργοδότης",
+    candidateSecondaryCta: "Δείτε τις αγγελίες",
+    employerSecondaryCta: "Δείτε τα πακέτα αγγελιών",
   },
   notification: {
     candidateAppliedSubject: "Η αίτησή σας παραδόθηκε",
@@ -453,6 +487,7 @@ const el: EmailCopy = {
     receivedCta: "Δείτε αγγελίες",
     teamSubject: "Νέα σχόλια",
     teamHeading: "Λήφθηκαν νέα σχόλια",
+    teamReplyCta: "Απάντηση σε αυτό το σχόλιο",
   },
   labels: {
     jobLabel: "Αγγελία",
@@ -520,6 +555,12 @@ const fa: EmailCopy = {
       "درخواست‌ها را از یک پنل مدیریت کنید",
     ],
     employerCta: "ایجاد نمایه شرکت",
+    candidateEyebrow: "حساب کارجو",
+    employerEyebrow: "حساب کارفرما",
+    candidateStepsHeading: "گام‌های نخست شما به‌عنوان کارجو",
+    employerStepsHeading: "گام‌های نخست شما به‌عنوان کارفرما",
+    candidateSecondaryCta: "مشاهده فرصت‌های شغلی",
+    employerSecondaryCta: "مشاهده بسته‌های آگهی",
   },
   notification: {
     candidateAppliedSubject: "درخواست شما به کارفرما تحویل شد",
@@ -548,6 +589,7 @@ const fa: EmailCopy = {
     receivedCta: "مشاهده آگهی‌ها",
     teamSubject: "بازخورد جدید دریافت شد",
     teamHeading: "بازخورد جدید دریافت شد",
+    teamReplyCta: "پاسخ به این بازخورد",
   },
   labels: {
     jobLabel: "آگهی",
@@ -615,6 +657,12 @@ const de: EmailCopy = {
       "Bewerbungen über ein Dashboard verwalten",
     ],
     employerCta: "Unternehmensprofil erstellen",
+    candidateEyebrow: "BEWERBERKONTO",
+    employerEyebrow: "ARBEITGEBERKONTO",
+    candidateStepsHeading: "Ihre ersten Schritte als Bewerber",
+    employerStepsHeading: "Ihre ersten Schritte als Arbeitgeber",
+    candidateSecondaryCta: "Stellenangebote entdecken",
+    employerSecondaryCta: "Anzeigenpakete ansehen",
   },
   notification: {
     candidateAppliedSubject: "Ihre Bewerbung wurde übermittelt",
@@ -645,6 +693,7 @@ const de: EmailCopy = {
     receivedCta: "Angebote ansehen",
     teamSubject: "Neues Feedback eingegangen",
     teamHeading: "Neues Feedback eingegangen",
+    teamReplyCta: "Auf dieses Feedback antworten",
   },
   labels: {
     jobLabel: "Angebot",

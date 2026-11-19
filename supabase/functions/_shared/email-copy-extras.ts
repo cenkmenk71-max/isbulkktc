@@ -41,6 +41,7 @@ export type EmailCopyExtras = {
     planLabel: string;
     durationLabel: string;
     messageLabel: string;
+    replyCta: string;
   };
   engagement: {
     subject: string;
@@ -96,6 +97,7 @@ const tr: EmailCopyExtras = {
     planLabel: "Paket",
     durationLabel: "İlan süresi",
     messageLabel: "Not",
+    replyCta: "Teklif talebine e-posta ile yanıt ver",
   },
   engagement: {
     subject: "Size uygun yeni ilanlar var",
@@ -150,6 +152,7 @@ const en: EmailCopyExtras = {
     planLabel: "Package",
     durationLabel: "Listing duration",
     messageLabel: "Note",
+    replyCta: "Reply to the quote request by email",
   },
   engagement: {
     subject: "New jobs picked for you",
@@ -204,6 +207,7 @@ const ru: EmailCopyExtras = {
     planLabel: "Пакет",
     durationLabel: "Срок объявления",
     messageLabel: "Примечание",
+    replyCta: "Ответить на запрос по электронной почте",
   },
   engagement: {
     subject: "Новые вакансии для вас",
@@ -258,6 +262,7 @@ const el: EmailCopyExtras = {
     planLabel: "Πακέτο",
     durationLabel: "Διάρκεια αγγελίας",
     messageLabel: "Σημείωση",
+    replyCta: "Απάντηση στο αίτημα μέσω email",
   },
   engagement: {
     subject: "Νέες θέσεις για εσάς",
@@ -312,6 +317,7 @@ const fa: EmailCopyExtras = {
     planLabel: "بسته",
     durationLabel: "مدت آگهی",
     messageLabel: "یادداشت",
+    replyCta: "پاسخ به درخواست از طریق ایمیل",
   },
   engagement: {
     subject: "موقعیت‌های جدید برای شما",
@@ -366,6 +372,7 @@ const de: EmailCopyExtras = {
     planLabel: "Paket",
     durationLabel: "Anzeigendauer",
     messageLabel: "Notiz",
+    replyCta: "Per E-Mail auf die Angebotsanfrage antworten",
   },
   engagement: {
     subject: "Neue Stellen für Sie",
