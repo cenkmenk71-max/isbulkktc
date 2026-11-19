@@ -570,6 +570,9 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
     },
   ];
 
+  const primaryCtaUrl = MARKETING_CONTACTS.whatsapp;
+  const secondaryCtaUrl = `mailto:${MARKETING_CONTACTS.email}`;
+
   const opts = {
     locale,
     preheader: copy.preheader,
@@ -583,6 +586,8 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
     ],
     outroHtml: paragraph(copy.closing),
     buttons: [
+    { label: copy.primaryCta, url: primaryCtaUrl, lead: copy.packagesLead },
+    { label: copy.secondaryCta, url: secondaryCtaUrl, lead: copy.registerLead },
       { label: copy.secondaryCta, url: secondaryCtaUrl, lead: copy.registerLead },
     ],
     signatureHtml: paragraph(copy.signOff),
