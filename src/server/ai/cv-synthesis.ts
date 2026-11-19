@@ -1,5 +1,4 @@
 import "server-only";
-"use server";
 
 import { z } from "zod";
 

@@ -1,5 +1,4 @@
 import "server-only";
-"use server";
 
 import { LanguageExtractionResultSchema, type ExtractedLanguage, type LanguageExtractionResult } from "@/features/candidates/language-extraction";
 import { mapLanguageNameToCode } from "@/features/candidates/language-mapping";

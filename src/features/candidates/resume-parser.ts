@@ -7,9 +7,6 @@ import type {
 import { resolveNorthernCyprusDistrict } from "@/features/locations/northern-cyprus-districts";
 import { mapLanguageNameToCode } from "./language-mapping";
 import { mapProficiencyToCEFR } from "./cefr-alignment";
-import { convertToCandidateLanguages } from "./language-utils";
-import { extractLanguagesFromCV } from "@/server/ai/language-extraction";
-import { synthesizeCVNarrative, type CVSynthesisResult } from "@/server/ai/cv-synthesis";
 
 export type CandidateLink = {
   label: string;
@@ -26,7 +23,6 @@ export type CandidateResumeDraft = {
   certifications?: CandidateCertification[];
   summary?: string;
   cvFullText?: string;
-  cvSynthesis?: CVSynthesisResult;
   links?: CandidateLink[];
 };
 
@@ -974,18 +970,6 @@ function parseLanguages(lines: string[]): CandidateLanguage[] {
   });
 }
 
-export async function parseLanguagesWithAI(
-  cvText: string,
-  locale: string = "tr"
-): Promise<CandidateLanguage[]> {
-  try {
-    const extracted = await extractLanguagesFromCV(cvText, locale);
-    return convertToCandidateLanguages(extracted);
-  } catch {
-    return [];
-  }
-}
-
 function parseCertifications(lines: string[]): CandidateCertification[] {
   return lines
     .map(cleanLine)
@@ -1355,26 +1339,6 @@ export function parseResumeText(text: string): CandidateResumeDraft {
     cvFullText,
     ...(links.length ? { links } : {}),
   };
-}
-
-export async function parseResumeTextWithAI(
-  text: string,
-  locale: string = "tr"
-): Promise<CandidateResumeDraft> {
-  const draft = parseResumeText(text);
-  
-  // Synthesize professional narrative from full CV text
-  try {
-    const synthesis = await synthesizeCVNarrative(draft.cvFullText ?? text, locale);
-    return {
-      ...draft,
-      cvSynthesis: synthesis,
-      // Use AI-generated summary if no explicit summary section exists
-      ...(!draft.summary && synthesis.professionalSummary ? { summary: synthesis.professionalSummary } : {}),
-    };
-  } catch {
-    return draft;
-  }
 }
 
 export function hasResumeDraftContent(draft: CandidateResumeDraft): boolean {
