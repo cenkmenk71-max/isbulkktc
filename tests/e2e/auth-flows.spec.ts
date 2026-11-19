@@ -107,7 +107,9 @@ async function signUp(
 }
 
 async function expectCandidateDashboard(page: Page) {
-  await expect(page).toHaveURL((url) => url.pathname.endsWith("/profile/dashboard"));
+  await expect(page).toHaveURL((url) =>
+    url.pathname.endsWith("/profile/dashboard"),
+  );
   await expect(page.locator(".candidate-dashboard")).toBeVisible();
   await expect(page.locator(".candidate-profile-form")).toBeVisible();
   await expect(page.locator(".route-error")).toHaveCount(0);
@@ -186,7 +188,7 @@ test("sign-up, confirmation, sign-in and recovery all round-trip", async ({
     /auth\/v1\/verify|ConfirmationURL|type=signup/,
   );
   await page.goto(extractFirstLink(confirmation.body));
-  await expectCandidateDashboard(/\/profile\/dashboard/);
+  await expectCandidateDashboard(page);
 
   // Sign out and sign back in with the password chosen at registration.
   await page.context().clearCookies();
@@ -194,7 +196,7 @@ test("sign-up, confirmation, sign-in and recovery all round-trip", async ({
   await page.getByLabel("Email address").fill(address);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Candidate sign in" }).click();
-  await expectCandidateDashboard(/\/profile\/dashboard/);
+  await expectCandidateDashboard(page);
 
   // Password recovery: request, open the mail, set a new password, sign in.
   await page.context().clearCookies();
@@ -215,7 +217,7 @@ test("sign-up, confirmation, sign-in and recovery all round-trip", async ({
   await page.getByLabel("Email address").fill(address);
   await page.getByLabel("Password", { exact: true }).fill(newPassword);
   await page.getByRole("button", { name: "Candidate sign in" }).click();
-  await expectCandidateDashboard(/\/profile\/dashboard/);
+  await expectCandidateDashboard(page);
 });
 
 test("the invite mail is localized and carries a usable token", async ({
