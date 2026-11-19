@@ -611,7 +611,7 @@ test("marketing email renders in every locale with both CTAs and contacts", () =
     const secondary = email.html.indexOf(secondaryEscaped);
     assert.ok(primary !== -1 && secondary !== -1, `${locale}: both CTAs present`);
     assert.ok(primary < secondary, `${locale}: primary CTA precedes secondary`);
-    assert.ok(email.html.includes(copy.packagesLead), `${locale}: primary lead-in`);
+    assert.ok(email.html.includes(escapeHtml(copy.paragraphs[1])), `${locale}: primary lead-in`);
     assert.ok(email.html.includes(copy.registerLead), `${locale}: secondary lead-in`);
     // Primary CTA links to WhatsApp, secondary CTA links to mailto:destek@isbulkktc.com
     assert.ok(email.html.includes(MARKETING_CONTACTS.whatsapp), `${locale}: primary CTA whatsapp link`);

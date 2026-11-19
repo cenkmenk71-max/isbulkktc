@@ -495,33 +495,96 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
   const locale = resolveEmailLocale(input.locale);
   const copy = getMarketingCopy(locale);
 
-  const paragraphs = copy.paragraphs.map((text) => paragraph(text)).join("");
-  const featureRows = copy.features
-    .map(
-      (feature) =>
-        `<tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:${BRAND.greenSoft};color:${BRAND.green};font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:${BRAND.ink};"><strong>${escapeHtml(
-          feature.title,
-        )}</strong> — ${escapeHtml(feature.body)}</td></tr>`,
-    )
-    .join("");
+  const _paragraphs = copy.paragraphs.map((text) => paragraph(text)).join("");
 
   const primaryCtaUrl = MARKETING_CONTACTS.whatsapp;
   const secondaryCtaUrl = `mailto:${MARKETING_CONTACTS.email}`;
+
+  const hero = {
+    hook: copy.paragraphs[0],
+    subhook: copy.paragraphs[1],
+    cta: { label: copy.primaryCta, url: primaryCtaUrl },
+  };
+
+  const features = copy.features.map((f) => ({
+    icon: f.title.match(/^([🌍🔍⚡✅📦])/)?.[1] || "✨",
+    title: f.title.replace(/^([🌍🔍⚡✅📦])\s*/, ""),
+    body: f.body,
+  }));
+
+  const packages = [
+    {
+      name: "Tek İlan",
+      price: "₺1.290",
+      period: "ay (30 gün)",
+      highlights: [
+        "1 ilan hakkı",
+        "6 dilde otomatik yayın",
+        "Google Jobs indeksleme",
+        "Aday havuzu erişimi",
+        "Doğrulanmış şirket rozeti",
+      ],
+      cta: { label: "Bu Paketi Seç", url: primaryCtaUrl },
+    },
+    {
+      name: "Büyüme",
+      price: "₺2.790",
+      period: "ay (30 gün)",
+      highlights: [
+        "En fazla 3 ilan hakkı",
+        "Tüm Tek İlan özellikleri",
+        "Google Jobs indeksleme",
+        "Aday havuzu erişimi",
+        "Doğrulanmış şirket rozeti",
+      ],
+      cta: { label: "En Popüler — Başla", url: primaryCtaUrl },
+      popular: true,
+    },
+    {
+      name: "Profesyonel",
+      price: "₺3.990",
+      period: "ay (30 gün)",
+      highlights: [
+        "En fazla 5 ilan hakkı",
+        "Tüm Büyüme özellikleri",
+        "Google Jobs indeksleme",
+        "Aday havuzu erişimi",
+        "Doğrulanmış şirket rozeti",
+        "Öncelikli destek",
+      ],
+      cta: { label: "Bu Paketi Seç", url: primaryCtaUrl },
+    },
+    {
+      name: "Kurumsal",
+      price: "Özel teklif",
+      period: "yazılı teklifle",
+      highlights: [
+        "İlan adedi yazılı teklifte netleştirilir",
+        "Her ilan için 1, 7 veya 30 gün",
+        "Kapsam ve süre teklif öncesi onaylanır",
+        "Tüm Profesyonel özellikleri",
+        "Özel hesap yöneticisi",
+        "API erişimi",
+      ],
+      cta: { label: "Kurumsal İletişim", url: secondaryCtaUrl },
+    },
+  ];
 
   const opts = {
     locale,
     preheader: copy.preheader,
     heading: copy.heading,
-    introHtml: `${paragraph(copy.greeting)}${paragraphs}`,
+    introHtml: paragraph(copy.greeting),
     sections: [
       {
         heading: copy.featuresHeading,
-        html: `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0;width:100%;">${featureRows}</table>`,
+        html: "", // Features rendered via featuresBlock
       },
     ],
     outroHtml: paragraph(copy.closing),
     buttons: [
-      { label: copy.primaryCta, url: primaryCtaUrl, lead: copy.packagesLead },
+    { label: copy.primaryCta, url: primaryCtaUrl, lead: copy.packagesLead },
+    { label: copy.secondaryCta, url: secondaryCtaUrl, lead: copy.registerLead },
       { label: copy.secondaryCta, url: secondaryCtaUrl, lead: copy.registerLead },
     ],
     signatureHtml: paragraph(copy.signOff),
@@ -535,6 +598,9 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
     siteUrl: input.siteUrl,
     unsubscribeUrl: input.unsubscribeUrl,
     unsubscribeLabel: copy.unsubscribeLabel,
+    hero,
+    features,
+    packages,
   };
   return {
     subject: copy.subject,
