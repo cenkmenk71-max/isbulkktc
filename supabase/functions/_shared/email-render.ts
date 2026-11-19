@@ -495,33 +495,79 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
   const locale = resolveEmailLocale(input.locale);
   const copy = getMarketingCopy(locale);
 
-  const paragraphs = copy.paragraphs.map((text) => paragraph(text)).join("");
-  const featureRows = copy.features
-    .map(
-      (feature) =>
-        `<tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:${BRAND.greenSoft};color:${BRAND.green};font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:${BRAND.ink};"><strong>${escapeHtml(
-          feature.title,
-        )}</strong> — ${escapeHtml(feature.body)}</td></tr>`,
-    )
-    .join("");
+  const _paragraphs = copy.paragraphs.map((text) => paragraph(text)).join("");
 
   const primaryCtaUrl = MARKETING_CONTACTS.whatsapp;
   const secondaryCtaUrl = `mailto:${MARKETING_CONTACTS.email}`;
+
+  const hero = {
+    hook: copy.paragraphs[0],
+    subhook: copy.paragraphs[1],
+    cta: { label: copy.primaryCta, url: primaryCtaUrl },
+  };
+
+  const features = copy.features.map((f) => ({
+    icon: f.title.match(/^([🌍🔍⚡✅📦])/)?.[1] || "✨",
+    title: f.title.replace(/^([🌍🔍⚡✅📦])\s*/, ""),
+    body: f.body,
+  }));
+
+  const packages = [
+    {
+      name: "Starter",
+      price: "₺299",
+      period: "ay",
+      highlights: [
+        "1 ilan paketi",
+        "6 dilde otomatik yayın",
+        "Google Jobs indeksleme",
+        "Aday havuzu erişimi",
+        "7 gün aktif",
+      ],
+      cta: { label: "Bu Paketi Seç", url: primaryCtaUrl },
+    },
+    {
+      name: "Profesyonel",
+      price: "₺799",
+      period: "ay",
+      highlights: [
+        "5 ilan paketi",
+        "Tüm Starter özellikleri",
+        "Doğrulanmış şirket rozeti",
+        "Öncelikli destek",
+        "30 gün aktif",
+      ],
+      cta: { label: "En Popüler — Başla", url: primaryCtaUrl },
+      popular: true,
+    },
+    {
+      name: "Kurumsal",
+      price: "₺1.999",
+      period: "ay",
+      highlights: [
+        "Sınırsız ilan",
+        "Tüm Profesyonel özellikleri",
+        "Özel hesap yöneticisi",
+        "API erişimi",
+        "Yıllık faturalama %20 indirim",
+      ],
+      cta: { label: "Kurumsal İletişim", url: secondaryCtaUrl },
+    },
+  ];
 
   const opts = {
     locale,
     preheader: copy.preheader,
     heading: copy.heading,
-    introHtml: `${paragraph(copy.greeting)}${paragraphs}`,
+    introHtml: paragraph(copy.greeting),
     sections: [
       {
         heading: copy.featuresHeading,
-        html: `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0;width:100%;">${featureRows}</table>`,
+        html: "", // Features rendered via featuresBlock
       },
     ],
     outroHtml: paragraph(copy.closing),
     buttons: [
-      { label: copy.primaryCta, url: primaryCtaUrl, lead: copy.packagesLead },
       { label: copy.secondaryCta, url: secondaryCtaUrl, lead: copy.registerLead },
     ],
     signatureHtml: paragraph(copy.signOff),
@@ -535,6 +581,9 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
     siteUrl: input.siteUrl,
     unsubscribeUrl: input.unsubscribeUrl,
     unsubscribeLabel: copy.unsubscribeLabel,
+    hero,
+    features,
+    packages,
   };
   return {
     subject: copy.subject,
