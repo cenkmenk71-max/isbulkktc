@@ -128,8 +128,8 @@ export const candidateProfileSchema = z.object({
   cvFullText: z
     .string()
     .max(100_000)
-    .transform((value) => value || null)
-    .optional(),
+    .nullish()
+    .transform((value) => value?.trim() || null),
   links: z
     .array(linksEntrySchema)
     .max(12)
