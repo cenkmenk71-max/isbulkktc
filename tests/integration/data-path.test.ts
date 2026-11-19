@@ -97,6 +97,8 @@ test("saving a candidate profile upserts the caller's own row", async () => {
       fullName: "Ada Lovelace",
       headline: "Yazılım geliştirici",
       skillsText: "TypeScript, React",
+      // Simulate a forged client attempting to persist the local-only raw CV.
+      cvFullText: "PRIVATE RAW CV TEXT",
     }),
   );
 
@@ -105,6 +107,8 @@ test("saving a candidate profile upserts the caller's own row", async () => {
   const upserts = fromCalls("candidate_profiles").flatMap((call) => call.ops.filter((op) => op.startsWith("upsert:")));
   assert.equal(upserts.length, 1, "exactly one upsert is expected");
   assert.ok(upserts[0].includes(`"user_id":"${ID}"`), `the row must be bound to the session id: ${upserts[0]}`);
+  assert.ok(!upserts[0].includes("cv_full_text"), "the raw CV column must never be written");
+  assert.ok(!upserts[0].includes("PRIVATE RAW CV TEXT"), "raw CV content must not reach persistence");
 });
 
 test("the display name is written to profiles only when it changed", async () => {
