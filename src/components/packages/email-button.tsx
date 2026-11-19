@@ -30,7 +30,7 @@ export function EmailButton({
     <a
       href={emailUrl}
       aria-label={t("emailAction")}
-      className={buttonVariants({ variant: "inverse" })}
+      className={buttonVariants({ variant: "default" })}
     >
       {t("emailAction")}
     </a>
