@@ -30,10 +30,6 @@ export async function saveCandidateProfile(
     }
   };
 
-  // Parse cvFullText separately (it's a plain string, not JSON)
-  const cvFullText = formData.get("cvFullText");
-  const cvFullTextString = typeof cvFullText === "string" ? cvFullText.slice(0, 100_000) : null;
-
   const result = candidateProfileUpdateSchema.safeParse({
     fullName: formData.get("fullName"),
     headline: formData.get("headline"),
@@ -44,7 +40,6 @@ export async function saveCandidateProfile(
     languages: parseSection("languages"),
     certifications: parseSection("certifications"),
     summary: formData.get("summary") ?? "",
-    cvFullText: cvFullTextString,
     links: parseSection("links") ?? "[]",
   });
 
@@ -52,6 +47,8 @@ export async function saveCandidateProfile(
     return { status: "error", message: "invalid" };
   }
 
+  // Parsed fields are persisted on explicit save; the raw CV text remains
+  // transient and is never sent to or stored by this profile write.
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("candidate_profiles").upsert(
     {

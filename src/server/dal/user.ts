@@ -176,7 +176,7 @@ export async function getCandidateWorkspace(): Promise<{
   const { data, error } = await supabase
     .from("candidate_profiles")
     .select(
-      "headline, location, skills, experience, education, languages, certifications, summary, cv_full_text, links",
+      "headline, location, skills, experience, education, languages, certifications, summary, links",
     )
     .eq("user_id", user.id)
     .maybeSingle();
@@ -196,7 +196,8 @@ export async function getCandidateWorkspace(): Promise<{
     languages: data?.languages ?? [],
     certifications: data?.certifications ?? [],
     summary: data?.summary ?? "",
-    cvFullText: data?.cv_full_text ?? null,
+    // Raw CV text is transient and is deliberately never read from the database.
+    cvFullText: null,
     links: data?.links ?? [],
   });
 

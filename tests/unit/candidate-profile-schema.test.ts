@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { candidateProfileSchema } from "../../src/features/candidates/schemas";
+import {
+  candidateProfileSchema,
+  candidateProfileUpdateSchema,
+} from "../../src/features/candidates/schemas";
 
 test("candidate profile trims text and normalizes a unique skills list", () => {
   assert.deepEqual(
@@ -191,4 +194,39 @@ test("candidate profile rejects database-overflowing values and excessive skills
   for (const profile of invalidProfiles) {
     assert.equal(candidateProfileSchema.safeParse(profile).success, false);
   }
+});
+
+
+test("raw CV text stays available to transient parsing but is rejected by the profile write schema", () => {
+  const profile = {
+    headline: "",
+    location: "",
+    skillsText: "",
+    experience: [],
+    education: [],
+    languages: [],
+    certifications: [],
+    summary: "",
+    links: [],
+  };
+
+  const localDraft = candidateProfileSchema.safeParse({
+    ...profile,
+    cvFullText: "PRIVATE RAW CV CONTENT",
+  });
+  assert.equal(localDraft.success, true);
+  if (localDraft.success) {
+    assert.equal(localDraft.data.cvFullText, "PRIVATE RAW CV CONTENT");
+  }
+
+  const writeInput = {
+    ...profile,
+    fullName: "Ada Lovelace",
+    cvFullText: "PRIVATE RAW CV CONTENT",
+  };
+  assert.equal(
+    candidateProfileUpdateSchema.safeParse(writeInput).success,
+    false,
+    "the server-action schema must not accept raw CV text",
+  );
 });
