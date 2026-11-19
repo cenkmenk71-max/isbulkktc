@@ -20,6 +20,7 @@ test("candidate profile trims text and normalizes a unique skills list", () => {
       languages: [],
       certifications: [],
       summary: null,
+      cvFullText: null,
       links: [],
     },
   );
@@ -66,6 +67,7 @@ test("candidate profile accepts blank optional fields without storing whitespace
       languages: [],
       certifications: [],
       summary: null,
+      cvFullText: null,
       links: [],
     },
   );
@@ -119,6 +121,7 @@ test("candidate profile trims structured sections and drops blank entries", () =
       languages: [{ name: "Turkish", proficiency: "Native" }],
       certifications: [],
       summary: null,
+      cvFullText: null,
       links: [],
     },
   );
