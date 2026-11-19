@@ -7,10 +7,10 @@ import { Link } from '@/i18n/navigation'
 
 type LocaleErrorProps = {
   error: Error & { digest?: string }
-  reset: () => void
+  retry: () => void
 }
 
-export default function LocaleError({ error, reset }: LocaleErrorProps) {
+export default function LocaleError({ error, retry }: LocaleErrorProps) {
   const t = useTranslations('AppError')
   const supportReference = error.digest?.trim().slice(0, 80)
 
@@ -28,7 +28,7 @@ export default function LocaleError({ error, reset }: LocaleErrorProps) {
         </p>
       ) : null}
       <div className="route-error-actions">
-        <button className="button button-dark" type="button" onClick={reset}>
+        <button className="button button-dark" type="button" onClick={retry}>
           <RefreshCw size={16} aria-hidden="true" />
           {t('retry')}
         </button>
