@@ -25,6 +25,7 @@ const emptyProfile: CandidateProfileDraft = {
   languages: [],
   certifications: [],
   summary: "",
+  cvFullText: "",
   links: [],
 };
 

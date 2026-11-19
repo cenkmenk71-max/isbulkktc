@@ -10,6 +10,7 @@ export type CandidateProfileDraft = Omit<CandidateProfileValues, "skills"> & {
   location: string;
   skills: string[];
   summary: string;
+  cvFullText: string;
   links: { label: string; url: string }[];
 };
 
@@ -125,6 +126,9 @@ export function mergeResumeDraft(
   const summary = (current.summary.trim() || draft.summary) ?? "";
   const links = mergeEntries(current.links, draft.links);
 
+  // Preserve the full CV text from the imported draft (latest CV import)
+  const cvFullText = draft.cvFullText ?? current.cvFullText ?? "";
+
   return {
     profile: {
       headline,
@@ -135,6 +139,7 @@ export function mergeResumeDraft(
       languages: languages.entries,
       certifications: certifications.entries,
       summary,
+      cvFullText,
       links: links.entries,
     },
     added:

@@ -30,10 +30,22 @@ const educationEntrySchema = z
   })
   .strict();
 
+import { LanguageCodeSchema, ProficiencyCodeSchema } from "./language-extraction";
+
+const optionalProficiencyText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((value) => value)
+    .pipe(ProficiencyCodeSchema);
+
 const languageEntrySchema = z
   .object({
     name: optionalProfileText(80),
-    proficiency: optionalProfileText(80),
+    proficiency: optionalProficiencyText(80),
+    language_code: LanguageCodeSchema.optional(),
+    language_name_localized: optionalProfileText(80).optional(),
   })
   .strict();
 
@@ -113,6 +125,11 @@ export const candidateProfileSchema = z.object({
     .trim()
     .max(2000)
     .transform((value) => value || null),
+  cvFullText: z
+    .string()
+    .max(100_000)
+    .nullish()
+    .transform((value) => value?.trim() || null),
   links: z
     .array(linksEntrySchema)
     .max(12)
@@ -134,6 +151,7 @@ export type CandidateProfileValues = {
   languages: CandidateLanguage[];
   certifications: CandidateCertification[];
   summary: string | null;
+  cvFullText: string | null;
   links: { label: string; url: string }[];
 };
 

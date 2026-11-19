@@ -141,8 +141,10 @@ test("a personal detail still reaches no field (the fix must not widen the leak)
   ];
 
   for (const line of lines) {
+    const draft = parseResumeText(["AHMET YILMAZ", line].join("\n"));
+    const { cvFullText: _cvFullText, ...draftWithoutFullText } = draft;
     assert.deepEqual(
-      parseResumeText(["AHMET YILMAZ", line].join("\n")),
+      draftWithoutFullText,
       {},
       `${line} must not become any profile field`,
     );

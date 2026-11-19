@@ -259,6 +259,7 @@ export function CandidateProfileForm({
           languages,
           certifications,
           summary,
+          cvFullText: "",
           links,
         },
         draft,
@@ -769,7 +770,7 @@ export function CandidateProfileForm({
               onClick={() =>
                 setLanguages((entries) => [
                   ...entries,
-                  { name: "", proficiency: "" },
+                  { name: "", proficiency: "B1" as const },
                 ])
               }
               type="button"

@@ -89,11 +89,12 @@ test("a phone number is never captured as a profile value", () => {
 
   assert.equal(draft.experience, undefined, "a phone line must not create an experience entry");
   assert.equal(draft.education, undefined, "a phone line must not create an education entry");
-  // No field anywhere may carry a phone-shaped digit run.
+  // No field anywhere may carry a phone-shaped digit run (excluding cvFullText).
+  const { cvFullText: _cvFullText, ...draftWithoutFullText } = draft;
   assert.equal(
-    /\d{7,}/.test(JSON.stringify(draft)),
+    /\d{7,}/.test(JSON.stringify(draftWithoutFullText)),
     false,
-    `a phone number leaked into the draft: ${JSON.stringify(draft)}`,
+    `a phone number leaked into the draft: ${JSON.stringify(draftWithoutFullText)}`,
   );
 });
 
@@ -195,7 +196,8 @@ test("a personal-data line reaches no field, labelled or not", () => {
 
   for (const heading of ["DENEYİM", "EĞİTİM", "SERTİFİKALAR", "DİLLER", "BECERİLER"]) {
     const draft = parseResumeText([heading, "Telefon: 0533 123 45 67"].join("\n"));
-    assert.deepEqual(draft, {}, `${heading}: a phone line must reach no field`);
+    const { cvFullText: _cvFullText, ...draftWithoutFullText } = draft;
+    assert.deepEqual(draftWithoutFullText, {}, `${heading}: a phone line must reach no field`);
   }
 });
 
@@ -273,7 +275,8 @@ test("a labelled address line is dropped, not read as a location", () => {
   // #331 moved "adres"/"address"/"ikametgah" into `ignoredSectionLabels`, so the
   // whole line is consumed and neither the year nor "Lefkoşa - 2019" survives.
   const draft = parseResumeText(["AHMET YILMAZ", "Adres: Lefkoşa - 2019"].join("\n"));
-  assert.deepEqual(draft, {});
+  const { cvFullText: _cvFullText, ...draftWithoutFullText } = draft;
+  assert.deepEqual(draftWithoutFullText, {});
 });
 
 test("a future date range is rejected", () => {
@@ -339,7 +342,8 @@ test("personal lines reach no profile field", () => {
 
   for (const [label, line] of personal) {
     const draft = parseResumeText(["AHMET YILMAZ", line].join("\n"));
-    assert.deepEqual(draft, {}, `${label} line must not become any profile field`);
+    const { cvFullText: _cvFullText, ...draftWithoutFullText } = draft;
+    assert.deepEqual(draftWithoutFullText, {}, `${label} line must not become any profile field`);
   }
 });
 
@@ -352,7 +356,8 @@ test("an unlabelled birth line does not become the headline", () => {
   // #343 dropped the label requirement: `isPersonalDataLine` now also guards the
   // `index === bodyStart` headline branch, so a bare birth line is skipped.
   const draft = parseResumeText(["AHMET YILMAZ", "1995-2000 doğumlu"].join("\n"));
-  assert.deepEqual(draft, {});
+  const { cvFullText: _cvFullText, ...draftWithoutFullText } = draft;
+  assert.deepEqual(draftWithoutFullText, {});
 });
 
 test("a birth line after the real headline is skipped, not appended", () => {

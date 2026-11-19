@@ -31,7 +31,7 @@ export function WhatsAppButton({
       rel="noopener noreferrer"
       target="_blank"
       aria-label={t("whatsappAction")}
-      className={buttonVariants({ variant: "inverse" })}
+      className={buttonVariants({ variant: "default" })}
     >
       {t("whatsappAction")}
     </a>
