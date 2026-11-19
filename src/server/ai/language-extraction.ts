@@ -1,9 +1,9 @@
+import "server-only";
 "use server";
 
 import { LanguageExtractionResultSchema, type ExtractedLanguage, type LanguageExtractionResult } from "@/features/candidates/language-extraction";
 import { mapLanguageNameToCode } from "@/features/candidates/language-mapping";
 import { mapProficiencyToCEFR } from "@/features/candidates/cefr-alignment";
-import type { ProficiencyCode } from "@/features/candidates/language-extraction";
 
 const LANGUAGE_EXTRACTION_SYSTEM_PROMPT = `You are a multilingual CV/resume language extraction engine. Your task is to extract ALL languages and their proficiency levels from the provided CV text.
 
@@ -207,11 +207,3 @@ function enhanceWithMapping(result: LanguageExtractionResult): LanguageExtractio
   };
 }
 
-export function convertToCandidateLanguages(
-  extracted: LanguageExtractionResult
-): Array<{ name: string; proficiency: ProficiencyCode }> {
-  return extracted.languages.map((lang) => ({
-    name: lang.language_name_standard,
-    proficiency: lang.proficiency_code as ProficiencyCode,
-  }));
-}

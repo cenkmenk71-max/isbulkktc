@@ -7,7 +7,8 @@ import type {
 import { resolveNorthernCyprusDistrict } from "@/features/locations/northern-cyprus-districts";
 import { mapLanguageNameToCode } from "./language-mapping";
 import { mapProficiencyToCEFR } from "./cefr-alignment";
-import { convertToCandidateLanguages, extractLanguagesFromCV } from "@/server/ai/language-extraction";
+import { convertToCandidateLanguages } from "./language-utils";
+import { extractLanguagesFromCV } from "@/server/ai/language-extraction";
 import { synthesizeCVNarrative, type CVSynthesisResult } from "@/server/ai/cv-synthesis";
 
 export type CandidateLink = {
