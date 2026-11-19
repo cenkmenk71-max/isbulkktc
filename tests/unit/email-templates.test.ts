@@ -56,7 +56,13 @@ function assertWellFormed(email: RenderedEmail, label: string) {
   const tdCloses = (email.html.match(/<\/td>/g) ?? []).length;
   assert.equal(tdOpens, tdCloses, `${label}: unbalanced <td> (${tdOpens}/${tdCloses})`);
   assert.ok(email.text.length > 0, `${label}: text alternative empty`);
-  assert.ok(!email.text.includes("<"), `${label}: text alternative contains tags`);
+  assert.doesNotMatch(
+    email.text,
+    /<!doctype html|<\/?(?:html|head|body|table|thead|tbody|tr|td|th|div|span|p|a|h[1-6]|ul|ol|li|style)\b/i,
+    `${label}: text alternative contains generated HTML markup`,
+  );
+  assert.equal((email.html.match(/<h1\b/g) ?? []).length, 1, `${label}: exactly one primary heading`);
+  assert.match(email.html, /<body\b[^>]*>\s*<div lang="[a-z]{2}" dir="(?:ltr|rtl)">/, `${label}: body content carries language and direction`);
 }
 
 function contrastRatio(foreground: string, background: string): number {
@@ -725,16 +731,24 @@ test("the marketing contact rows only admit mailto:, tel: and https:", () => {
   assert.ok(html.includes("mailto:info@isbulkktc.com"));
 });
 
-test("the text alternative carries no tags and lists every contact", () => {
+test("the text alternative keeps entity decoding, paragraph breaks and contact details", () => {
   const email = renderMarketing("tr");
-  assert.ok(!email.text.includes("<"), "no markup in the text alternative");
-  // The escaped HTML entities must be decoded back for the text part, or a
-  // recipient of the text alternative reads `Kuzey Kıbrıs&#39;ta`.
-  assert.ok(!email.text.includes("&#39;"), "no escaped apostrophe in the text part");
-  assert.ok(email.text.includes("Kuzey Kıbrıs'ta"), "the apostrophe is decoded");
+  assert.ok(!email.text.includes("<"), "marketing copy has no markup-like text");
   assert.ok(email.text.includes(MARKETING_CONTACTS.email));
   assert.ok(email.text.includes(MARKETING_CONTACTS.phoneDisplay));
   assert.ok(email.text.includes(MARKETING_CONTACTS.whatsapp));
   assert.ok(email.text.includes(MARKETING_COPY.tr.primaryCta));
   assert.ok(email.text.includes(MARKETING_COPY.tr.secondaryCta));
+
+  const plain = renderEmailText({
+    locale: "tr",
+    preheader: "Ön izleme",
+    heading: "Düz metin testi",
+    introHtml: "<p>Kuzey Kıbrıs&#39;ta çalışmak.</p><p>İkinci paragraf.</p>",
+    footerNote: "Bilgilendirme",
+    siteUrl: SITE,
+  });
+  assert.ok(!plain.includes("&#39;"), "apostrophe entity is decoded");
+  assert.ok(plain.includes("Kuzey Kıbrıs'ta"), "the apostrophe is preserved");
+  assert.ok(plain.includes("çalışmak.\nİkinci paragraf."), "paragraph boundaries are preserved");
 });

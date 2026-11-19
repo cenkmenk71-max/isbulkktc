@@ -74,7 +74,7 @@ export const MARKETING_COPY: Record<EmailLocale, MarketingCopy> = {
     "heroHook": "İşe alım ihtiyacınıza uygun ilan paketini seçin",
     "heroSubhook": "İlan adedini belirleyin; her ilan için 1, 7 veya 30 gün seçin.",
     "packagesHeading": "İşe alımınıza uygun ilan paketini seçin.",
-    "pricingNote": "İlan paketlerini inceleyin. Ödeme web sitesinde alınmaz; IBAN ve ödeme talimatı, paket görüşmesi sonrası e-posta veya WhatsApp gibi kanallardan özel olarak iletilir.",
+    "pricingNote": "Güncel ilan paketi koşullarını inceleyin; ödeme web sitesinde alınmaz. IBAN ve ödeme talimatı, paket görüşmesi sonrasında özel olarak iletilir.",
     "durationLabel": "İlan süresi: Her ilan için 1, 7 veya 30 gün",
     "whatsappCta": "WhatsApp taslağını aç",
     "contactHeading": "Seçtiğiniz ilan paketi hakkında ekibimize ulaşın.",

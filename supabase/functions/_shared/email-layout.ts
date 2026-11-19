@@ -112,18 +112,30 @@ function isSafeUrl(value: string): boolean {
 }
 
 function htmlToText(html: string): string {
-  return html
+  const withLinkDestinations = html.replace(
+    /<a\b[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi,
+    (_match, rawHref: string, label: string) => {
+      const href = rawHref.replace(/&amp;/gi, "&");
+      const visible = label.replace(/<[^>]+>/g, " ").trim();
+      return href && visible !== href ? `${visible} (${href})` : visible;
+    },
+  );
+  return withLinkDestinations
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/(?:p|div|li|tr|h[1-6])\s*>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/gi, " ")
-    .replace(/&#39;|&#x27;/gi, "'")
+    .replace(/&#39;|&#x27;|&apos;/gi, "'")
     .replace(/&quot;/gi, '"')
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
     .replace(/&amp;/gi, "&")
-    .replace(/\\s+/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
-
 function isSafeContactUrl(value: string): boolean {
   return /^(https?:\/\/|mailto:|tel:)/i.test(value);
 }
@@ -228,17 +240,18 @@ function heroBlock(hero: EmailLayoutOptions["hero"], locale: string): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 ${SPACE.xl}px;">
     <tr><td style="background:${BRAND.green};border-radius:${RADIUS.card}px;padding:${SPACE.xxl}px ${SPACE.xl}px;text-align:left;">
       <p style="margin:0 0 ${SPACE.sm}px;font-size:${TYPE.micro}px;font-weight:700;letter-spacing:0.12em;color:#C9D9CF;">${escapeHtml(eyebrow)}</p>
-      <h2 style="margin:0;font-size:${TYPE.h1}px;line-height:${LEADING.tight};font-weight:800;letter-spacing:-0.5px;color:#FFFFFF;">${escapeHtml(hero.hook)}</h2>
+      <h1 class="ibk-h1" style="margin:0;font-size:${TYPE.h1}px;line-height:${LEADING.tight};font-weight:800;letter-spacing:-0.5px;color:#FFFFFF;">${escapeHtml(hero.hook)}</h1>
       ${subhook}
       ${cta}
     </td></tr>
   </table>`;
 }
 
-function headingBlock(heading: string): string {
-  return `<h1 class="ibk-h1" style="margin:0 0 ${SPACE.md}px;font-size:${TYPE.h1}px;line-height:${LEADING.tight};font-weight:800;letter-spacing:-0.5px;color:${BRAND.ink};">${escapeHtml(
+function headingBlock(heading: string, hasHero: boolean): string {
+  const tag = hasHero ? "h2" : "h1";
+  return `<${tag} class="ibk-h1" style="margin:0 0 ${SPACE.md}px;font-size:${TYPE.h1}px;line-height:${LEADING.tight};font-weight:800;letter-spacing:-0.5px;color:${BRAND.ink};">${escapeHtml(
     heading,
-  )}</h1>`;
+  )}</${tag}>`;
 }
 
 function introBlock(html: string | undefined): string {
@@ -251,11 +264,12 @@ function outroBlock(html: string | undefined): string {
   return `<div style="margin:${SPACE.lg}px 0 0;font-size:${TYPE.body}px;line-height:${LEADING.normal};color:${BRAND.ink};">${html}</div>`;
 }
 
-function sectionBlock(section: EmailSection, locale: string): string {
+function sectionBlock(section: EmailSection, locale: string, hasHero: boolean): string {
+  const tag = hasHero ? "h3" : "h2";
   return `<div style="margin:${SPACE.lg}px 0 0;">
-  <p style="margin:0 0 ${SPACE.sm}px;font-size:${TYPE.small}px;font-weight:700;letter-spacing:0.06em;color:${BRAND.green};">${escapeHtml(
+  <${tag} style="margin:0 0 ${SPACE.sm}px;font-size:${TYPE.small}px;line-height:${LEADING.normal};font-weight:700;letter-spacing:0.06em;color:${BRAND.green};">${escapeHtml(
     uppercaseHeading(section.heading, locale),
-  )}</p>
+  )}</${tag}>
   <div style="font-size:${TYPE.body}px;line-height:${LEADING.normal};color:${BRAND.ink};">${section.html}</div>
 </div>`;
 }
@@ -287,8 +301,10 @@ function featuresBlock(
 
 function packagesBlock(
   packages: EmailLayoutOptions["packages"],
+  hasHero: boolean,
 ): string {
   if (!packages || packages.length === 0) return "";
+  const titleTag = hasHero ? "h4" : "h3";
   const rows: string[] = [];
   for (let index = 0; index < packages.length; index += 2) {
     const pair = packages.slice(index, index + 2);
@@ -305,7 +321,7 @@ function packagesBlock(
         <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;background:${BRAND.white};border:1px solid ${BRAND.line};border-top:4px solid ${accent};border-radius:${RADIUS.card}px;">
           <tr><td style="padding:${SPACE.lg}px;">
             <p style="margin:0 0 ${SPACE.sm}px;font-size:${TYPE.micro}px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:${BRAND.green};">${escapeHtml(pkg.audience)}</p>
-            <h3 style="margin:0;font-size:${TYPE.h2}px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:${BRAND.ink};">${escapeHtml(pkg.name)}</h3>
+            <${titleTag} style="margin:0;font-size:${TYPE.h2}px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:${BRAND.ink};">${escapeHtml(pkg.name)}</${titleTag}>
             <p style="margin:${SPACE.sm}px 0 0;min-height:44px;font-size:${TYPE.small}px;line-height:${LEADING.normal};color:${BRAND.inkSoft};">${escapeHtml(pkg.description)}</p>
             <p style="margin:${SPACE.md}px 0 0;padding:${SPACE.md}px 0;border-top:1px solid ${BRAND.line};border-bottom:1px solid ${BRAND.line};font-size:${TYPE.small}px;line-height:${LEADING.normal};font-weight:700;color:${BRAND.ink};">${escapeHtml(pkg.scope)}</p>
             <p style="margin:${SPACE.md}px 0 0;font-size:${TYPE.small}px;line-height:${LEADING.normal};color:${BRAND.inkSoft};">${escapeHtml(pkg.durationLabel)}</p>
@@ -443,15 +459,16 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
   const lang = htmlLang(options.locale);
   const dir = isRtlLocale(lang) ? "rtl" : "ltr";
   
+  const hasHero = Boolean(options.hero);
   const heroHtml = heroBlock(options.hero, lang);
-  const sectionsHtml = (options.sections ?? []).map((section) => sectionBlock(section, lang)).join("");
+  const sectionsHtml = (options.sections ?? []).map((section) => sectionBlock(section, lang, hasHero)).join("");
   const featuresHtml = featuresBlock(options.features);
-  const packagesHtml = packagesBlock(options.packages);
+  const packagesHtml = packagesBlock(options.packages, hasHero);
   
   const body = [
     heroHtml,
     `<div style="padding:${SPACE.xl}px;">`,
-    headingBlock(options.heading),
+    headingBlock(options.heading, hasHero),
     introBlock(options.introHtml),
     sectionsHtml,
     featuresHtml,
@@ -495,6 +512,7 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
 </style>
 </head>
 <body style="margin:0;padding:0;background:${BRAND.surface};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND.ink};">
+<div lang="${lang}" dir="${dir}">
 ${preheaderBlock(options.preheader)}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-bg" style="background:${BRAND.surface};padding:${SPACE.xl}px ${SPACE.sm}px;">
 <tr><td align="center">
@@ -531,6 +549,7 @@ ${footerBlock(options)}
 </table>
 </td></tr>
 </table>
+</div>
 </body>
 </html>`;
 }
