@@ -15,12 +15,14 @@ test("localized route error gives recovery actions without exposing server error
         "utf8",
       ),
     );
+    const supportReference = "safe-support-123";
+    const error = Object.assign(
+      new Error("private database connection details"),
+      { digest: supportReference },
+    );
     const markup = renderToStaticMarkup(
       <NextIntlClientProvider locale={locale} messages={messages}>
-        <LocaleError
-          error={new Error("private database connection details")}
-          retry={() => undefined}
-        />
+        <LocaleError error={error} reset={() => undefined} />
       </NextIntlClientProvider>,
     );
 
@@ -28,6 +30,12 @@ test("localized route error gives recovery actions without exposing server error
     assert.match(markup, /<button[^>]*>.*?<\/button>/);
     assert.match(markup, /href="(?:\/|\/[a-z]{2})"/);
     assert.ok(markup.includes(messages.AppError.title));
+    assert.ok(
+      markup.includes(
+        messages.AppError.supportReference.replace("{digest}", supportReference),
+      ),
+      "the safe support reference should be shown in every locale",
+    );
     assert.doesNotMatch(markup, /private database connection details/);
   }
 });
