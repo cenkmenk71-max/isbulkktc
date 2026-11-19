@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { candidateProfileSchema } from "../../src/features/candidates/schemas";
+import {
+  candidateProfileSchema,
+  candidateProfileUpdateSchema,
+} from "../../src/features/candidates/schemas";
 
 test("candidate profile trims text and normalizes a unique skills list", () => {
   assert.deepEqual(
@@ -20,7 +23,6 @@ test("candidate profile trims text and normalizes a unique skills list", () => {
       languages: [],
       certifications: [],
       summary: null,
-      cvFullText: null,
       links: [],
     },
   );
@@ -67,7 +69,6 @@ test("candidate profile accepts blank optional fields without storing whitespace
       languages: [],
       certifications: [],
       summary: null,
-      cvFullText: null,
       links: [],
     },
   );
@@ -121,7 +122,6 @@ test("candidate profile trims structured sections and drops blank entries", () =
       languages: [{ name: "Turkish", proficiency: "Native" }],
       certifications: [],
       summary: null,
-      cvFullText: null,
       links: [],
     },
   );
@@ -191,4 +191,34 @@ test("candidate profile rejects database-overflowing values and excessive skills
   for (const profile of invalidProfiles) {
     assert.equal(candidateProfileSchema.safeParse(profile).success, false);
   }
+});
+
+
+test("candidate profile persistence rejects raw CV text", () => {
+  const profile = {
+    headline: "Product designer",
+    location: "Girne",
+    skillsText: "Figma, Research",
+    experience: [],
+    education: [],
+    languages: [],
+    certifications: [],
+    summary: "Product designer with accessible product experience.",
+    links: [],
+    cvFullText: "PRIVATE RAW CV TEXT",
+  };
+
+  assert.equal(
+    candidateProfileSchema.safeParse(profile).success,
+    false,
+    "read DTOs must not silently accept raw CV text",
+  );
+  assert.equal(
+    candidateProfileUpdateSchema.safeParse({
+      ...profile,
+      fullName: "Ada Lovelace",
+    }).success,
+    false,
+    "profile writes must not persist the raw CV document",
+  );
 });

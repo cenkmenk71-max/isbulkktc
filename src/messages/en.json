@@ -449,7 +449,8 @@
     "title": "This page is unavailable right now.",
     "body": "A temporary issue got in the way. Try again in a moment or return to the home page.",
     "retry": "Try again",
-    "home": "Back to home"
+    "home": "Back to home",
+    "supportReference": "Support reference: {digest}"
   },
   "AccountPages": {
     "register": {
@@ -1107,39 +1108,39 @@
         "description": "Add LinkedIn, GitHub and other professional links"
       }
     },
-      "summary": {
-        "title": "Summary",
-        "add": "Add summary",
-        "description": "A short summary that highlights your profile"
-      },
-      "links": {
-        "title": "Links",
-        "add": "Add link",
-        "description": "Add LinkedIn, GitHub and other professional links"
-      }
+    "summary": {
+      "title": "Summary",
+      "add": "Add summary",
+      "description": "A short summary that highlights your profile"
     },
-    "resumeImport": {
-      "title": "Import from your CV",
-      "description": "Choose a text-based PDF or DOCX; extracted details appear as suggestions in your editable profile form.",
-      "privacy": "The file is read in this browser and is never uploaded or stored. Suggestions are not saved to your profile until you review them and select Save changes.",
-      "chooseFile": "Choose CV",
-      "processing": "Reading CV…",
-      "processingStatus": "Your CV is being read in this browser.",
-      "fileHint": "PDF or DOCX · up to 5 MB and 25 pages · scanned files are not supported",
-      "imported": "CV details were added as suggestions to the form and have not been saved. Review or edit them, then select Save changes.",
-      "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count} entries exceeded section limits. Review the suggestions and select Save changes.",
-      "noNewInformation": "The CV was read, but there were no new details to add. Your profile was not changed.",
-      "noNewInformationWithSkipped": "There were no new details to add; {count} entries exceeded profile limits. Your existing profile was not changed.",
-      "errors": {
-        "unsupported": "Choose a PDF or DOCX file.",
-        "tooLarge": "This file or its extracted text exceeds the supported limit.",
-        "tooManyPages": "PDF files can contain up to 25 pages.",
-        "empty": "No supported profile details could be extracted. Try another text-based file or add any missing details.",
-        "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
-        "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
-      }
-},
-    "AccountPanel": {
+    "links": {
+      "title": "Links",
+      "add": "Add link",
+      "description": "Add LinkedIn, GitHub and other professional links"
+    }
+  },
+  "resumeImport": {
+    "title": "Import from your CV",
+    "description": "Choose a text-based PDF or DOCX; extracted details appear as suggestions in your editable profile form.",
+    "privacy": "The file is read in this browser and is never uploaded or stored. Suggestions are not saved to your profile until you review them and select Save changes.",
+    "chooseFile": "Choose CV",
+    "processing": "Reading CV…",
+    "processingStatus": "Your CV is being read in this browser.",
+    "fileHint": "PDF or DOCX · up to 5 MB and 25 pages · scanned files are not supported",
+    "imported": "CV details were added as suggestions to the form and have not been saved. Review or edit them, then select Save changes.",
+    "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count} entries exceeded section limits. Review the suggestions and select Save changes.",
+    "noNewInformation": "The CV was read, but there were no new details to add. Your profile was not changed.",
+    "noNewInformationWithSkipped": "There were no new details to add; {count} entries exceeded profile limits. Your existing profile was not changed.",
+    "errors": {
+      "unsupported": "Choose a PDF or DOCX file.",
+      "tooLarge": "This file or its extracted text exceeds the supported limit.",
+      "tooManyPages": "PDF files can contain up to 25 pages.",
+      "empty": "No supported profile details could be extracted. Try another text-based file or add any missing details.",
+      "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
+      "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
+    }
+  },
+  "AccountPanel": {
     "title": "Account details",
     "givenNameLabel": "First name",
     "familyNameLabel": "Last name",
@@ -1280,7 +1281,7 @@
         "tooManyPages": "PDF files can contain up to 25 pages.",
         "empty": "No supported, clearly labeled company details were found. You can enter the fields manually.",
         "unreadable": "The document could not be read. Try another text-based PDF or DOCX file.",
-"legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
+        "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
       }
     },
     "publicationNote": "The email address you enter here will be visible to the public if approved.",

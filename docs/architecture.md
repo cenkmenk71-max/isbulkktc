@@ -94,8 +94,10 @@ mesaj desteği yoktur.
 Yönetici tarafından etkinleştirilen hak kataloğu ayrıca listelenir; bu katalog
 boşken de bilgilendirme amaçlı paket seçenekleri görünür kalır.
 Aday, metin tabanlı PDF veya DOCX dosyasını yalnız
-tarayıcıda ayrıştırır; dosyanın kendisi sunucuya yüklenmez veya saklanmaz.
-Çıkarılan bilgiler formdaki mevcut değerlerle birleştirilir: tekil başlık ve
+tarayıcıda ayrıştırır; dosyanın kendisi sunucuya yüklenmez veya saklanmaz. Bu
+profil kaydetme akışında ayrıştırılmış ham CV metni aday tablosuna yazılmaz;
+yalnızca adayın gözden geçirip açıkça kaydettiği yapılandırılmış alanlar kalıcı
+olur. Çıkarılan bilgiler formdaki mevcut değerlerle birleştirilir: tekil başlık ve
 konum yalnız boşsa doldurulur, mevcut kayıtlar silinmez, beceri ve bölüm
 tekrarları ayıklanır. Bu yalnızca tarayıcıdaki düzenlenebilir form taslağını
 değiştirir; aday alanları kontrol edip profil formundaki açık kaydetme eylemini

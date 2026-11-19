@@ -125,17 +125,12 @@ export const candidateProfileSchema = z.object({
     .trim()
     .max(2000)
     .transform((value) => value || null),
-  cvFullText: z
-    .string()
-    .max(100_000)
-    .nullish()
-    .transform((value) => value?.trim() || null),
   links: z
     .array(linksEntrySchema)
     .max(12)
     .default([])
     .transform(removeBlankEntries),
-});
+}).strict();
 
 export type CandidateExperience = z.infer<typeof experienceEntrySchema>;
 export type CandidateEducation = z.infer<typeof educationEntrySchema>;
@@ -151,7 +146,6 @@ export type CandidateProfileValues = {
   languages: CandidateLanguage[];
   certifications: CandidateCertification[];
   summary: string | null;
-  cvFullText: string | null;
   links: { label: string; url: string }[];
 };
 
@@ -167,7 +161,7 @@ export type CandidateProfileValues = {
  */
 export const candidateProfileUpdateSchema = candidateProfileSchema.extend({
   fullName: z.string().trim().min(2).max(80),
-});
+}).strict();
 
 export type CandidateProfileUpdate = z.infer<
   typeof candidateProfileUpdateSchema

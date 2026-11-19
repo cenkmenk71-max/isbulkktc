@@ -7,26 +7,12 @@ import { Link } from '@/i18n/navigation'
 
 type LocaleErrorProps = {
   error: Error & { digest?: string }
-  retry: () => void
+  reset: () => void
 }
 
-export default function LocaleError({ retry }: LocaleErrorProps) {
-  let t: (key: "eyebrow" | "title" | "body" | "retry" | "home") => string
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    t = useTranslations('AppError') as (
-      key: "eyebrow" | "title" | "body" | "retry" | "home",
-    ) => string
-  } catch {
-    const fallback: Record<string, string> = {
-      eyebrow: 'HATA',
-      title: 'Bir hata oluştu.',
-      body: 'İstenen sayfa yüklenirken beklenmeyen bir hata meydana geldi.',
-      retry: 'Yeniden dene',
-      home: 'Ana sayfaya dön',
-    }
-    t = (k) => fallback[k] ?? k
-  }
+export default function LocaleError({ error, reset }: LocaleErrorProps) {
+  const t = useTranslations('AppError')
+  const supportReference = error.digest?.trim().slice(0, 80)
 
   return (
     <section className="page-container route-error" role="alert">
@@ -36,8 +22,13 @@ export default function LocaleError({ retry }: LocaleErrorProps) {
       <p className="route-error-eyebrow">{t('eyebrow')}</p>
       <h1>{t('title')}</h1>
       <p className="route-error-description">{t('body')}</p>
+      {supportReference ? (
+        <p className="route-error-description" aria-live="polite">
+          {t('supportReference', { digest: supportReference })}
+        </p>
+      ) : null}
       <div className="route-error-actions">
-        <button className="button button-dark" type="button" onClick={retry}>
+        <button className="button button-dark" type="button" onClick={reset}>
           <RefreshCw size={16} aria-hidden="true" />
           {t('retry')}
         </button>

@@ -325,7 +325,8 @@
     "title": "Diese Seite ist gerade nicht verfügbar.",
     "body": "Es ist ein vorübergehendes Problem aufgetreten. Versuchen Sie es gleich noch einmal oder kehren Sie zur Startseite zurück.",
     "retry": "Erneut versuchen",
-    "home": "Zur Startseite"
+    "home": "Zur Startseite",
+    "supportReference": "Support-Referenz: {digest}"
   },
   "PackagesPage": {
     "eyebrow": "ANZEIGENRECHTE FÜR ARBEITGEBER",

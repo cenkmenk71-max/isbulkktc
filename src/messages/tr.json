@@ -449,7 +449,8 @@
     "title": "Bu sayfa şu anda yüklenemiyor.",
     "body": "Geçici bir sorun oluştu. Biraz sonra yeniden deneyin veya ana sayfaya dönün.",
     "retry": "Yeniden dene",
-    "home": "Ana sayfaya dön"
+    "home": "Ana sayfaya dön",
+    "supportReference": "Destek kodu: {digest}"
   },
   "AccountPages": {
     "register": {

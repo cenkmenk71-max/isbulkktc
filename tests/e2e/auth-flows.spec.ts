@@ -106,6 +106,13 @@ async function signUp(
   await expect(page.getByText(/verification link sent/i)).toBeVisible();
 }
 
+async function expectCandidateDashboard(page: Page) {
+  await expect(page).toHaveURL((url) => url.pathname.endsWith("/profile/dashboard"));
+  await expect(page.locator(".candidate-dashboard")).toBeVisible();
+  await expect(page.locator(".candidate-profile-form")).toBeVisible();
+  await expect(page.locator(".route-error")).toHaveCount(0);
+}
+
 test("sign-up requires a verified mailbox before sign-in", async ({ page }) => {
   const stamp = Date.now();
   const address = `e2e-unconfirmed-${stamp}@example.com`;
@@ -179,7 +186,7 @@ test("sign-up, confirmation, sign-in and recovery all round-trip", async ({
     /auth\/v1\/verify|ConfirmationURL|type=signup/,
   );
   await page.goto(extractFirstLink(confirmation.body));
-  await expect(page).toHaveURL(/\/profile\/dashboard/);
+  await expectCandidateDashboard(/\/profile\/dashboard/);
 
   // Sign out and sign back in with the password chosen at registration.
   await page.context().clearCookies();
@@ -187,7 +194,7 @@ test("sign-up, confirmation, sign-in and recovery all round-trip", async ({
   await page.getByLabel("Email address").fill(address);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Candidate sign in" }).click();
-  await expect(page).toHaveURL(/\/profile\/dashboard/);
+  await expectCandidateDashboard(/\/profile\/dashboard/);
 
   // Password recovery: request, open the mail, set a new password, sign in.
   await page.context().clearCookies();
@@ -208,7 +215,7 @@ test("sign-up, confirmation, sign-in and recovery all round-trip", async ({
   await page.getByLabel("Email address").fill(address);
   await page.getByLabel("Password", { exact: true }).fill(newPassword);
   await page.getByRole("button", { name: "Candidate sign in" }).click();
-  await expect(page).toHaveURL(/\/profile\/dashboard/);
+  await expectCandidateDashboard(/\/profile\/dashboard/);
 });
 
 test("the invite mail is localized and carries a usable token", async ({
