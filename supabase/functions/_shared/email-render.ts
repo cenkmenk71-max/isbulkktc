@@ -541,30 +541,19 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
   const baseUrl = new URL(input.siteUrl);
   if (!baseUrl.pathname.endsWith("/")) baseUrl.pathname += "/";
   const packagePageUrl = new URL("packages#packages-current", baseUrl).toString();
-  const packageUrl = (anchor: string) =>
-    new URL(`packages#${anchor}`, baseUrl).toString();
+  const packageUrl = (anchor: string) => new URL("packages#" + anchor, baseUrl).toString();
+
   const whatsappUrl = new URL(MARKETING_CONTACTS.whatsapp);
   whatsappUrl.searchParams.set("text", copy.whatsappMessage);
-  const emailUrl = new URL(`mailto:${MARKETING_CONTACTS.email}`);
+  const emailUrl = new URL("mailto:" + MARKETING_CONTACTS.email);
   emailUrl.searchParams.set("subject", copy.subject);
-  emailUrl.searchParams.set(
-    "body",
-    `${copy.whatsappMessage}\n\n${packagePageUrl}`,
-  );
+  emailUrl.searchParams.set("body", copy.whatsappMessage + "\n\n" + packagePageUrl);
 
   const tierConfig = [
-    {
-      id: "singleListing",
-      anchor: "package-tek-ilan",
-      accent: "#4b8066",
-    },
+    { id: "singleListing", anchor: "package-tek-ilan", accent: "#4b8066" },
     { id: "growth", anchor: "package-buyume", accent: "#c6a46a" },
-    {
-      id: "professional",
-      anchor: "package-profesyonel",
-      accent: "#326c54",
-    },
-    { id: "enterprise", anchor: "package-kurumsal", accent: "#9cbba7" },
+    { id: "professional", anchor: "package-profesyonel", accent: "#326c54" },
+    { id: "enterprise", anchor: "packages-lead-title", accent: "#9cbba7" },
   ] as const;
 
   const packages = tierConfig.map(({ id, anchor, accent }) => {
@@ -576,14 +565,7 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
       scope: item.scope,
       durationLabel: copy.durationLabel,
       accent,
-      cta: {
-        label:
-          id === "enterprise" ? copy.packageCta : copy.packageCta,
-        url:
-          id === "enterprise"
-            ? new URL("packages#packages-lead-title", baseUrl).toString()
-            : packageUrl(anchor),
-      },
+      cta: { label: copy.packageCta, url: packageUrl(anchor) },
     };
   });
 
@@ -591,10 +573,7 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
     locale,
     preheader: copy.preheader,
     heading: copy.heading,
-    introHtml: [
-      paragraph(copy.greeting),
-      ...copy.paragraphs.map((item) => paragraph(item)),
-    ].join(""),
+    introHtml: [paragraph(copy.greeting), ...copy.paragraphs.map(paragraph)].join(""),
     sections: [
       { heading: copy.featuresHeading, html: "" },
       {
@@ -610,7 +589,7 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
         lead: copy.whatsappLead,
       },
       {
-        label: copy.contactLabels.email,
+        label: copy.secondaryCta,
         url: emailUrl.toString(),
         lead: copy.contactHeading,
       },
@@ -620,12 +599,17 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
       {
         label: copy.contactLabels.email,
         value: MARKETING_CONTACTS.email,
-        url: `mailto:${MARKETING_CONTACTS.email}`,
+        url: "mailto:" + MARKETING_CONTACTS.email,
       },
       {
         label: copy.contactLabels.phone,
         value: MARKETING_CONTACTS.phoneDisplay,
-        url: `tel:${MARKETING_CONTACTS.phoneTel}`,
+        url: "tel:" + MARKETING_CONTACTS.phoneTel,
+      },
+      {
+        label: copy.contactLabels.whatsapp,
+        value: MARKETING_CONTACTS.phoneDisplay,
+        url: whatsappUrl.toString(),
       },
     ],
     contactsHeading: copy.contactHeading,

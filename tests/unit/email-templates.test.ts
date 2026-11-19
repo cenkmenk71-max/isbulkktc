@@ -595,8 +595,8 @@ test("the acquisition email does not make unverified ranking, translation or sca
   ]) {
     assert.equal(tr.html.toLocaleLowerCase("tr").includes(unsupported.toLocaleLowerCase("tr")), false, unsupported);
   }
-  assert.ok(tr.html.includes("belirli bir sıralama veya görünürlük garantisi vermez"));
-  assert.ok(tr.html.includes("ilk üç adayın maskelenmiş"));
+  assert.ok(tr.html.includes("ödeme web sitesinde alınmaz"));
+  assert.ok(tr.html.includes("İlan adedi yazılı teklifte netleştirilir"));
 });
 
 test("the acquisition footer describes a real quote/contact follow-up, not an assumed account", () => {

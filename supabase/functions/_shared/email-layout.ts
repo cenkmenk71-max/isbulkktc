@@ -549,13 +549,11 @@ export function renderEmailText(options: EmailLayoutOptions): string {
     lines.push(`${section.heading}${separator}${htmlToText(section.html)}`, "");
   }
   if (options.features?.length) {
-    lines.push("ÖZELLİKLER:", "");
     for (const feature of options.features) {
       lines.push(`• ${feature.title}: ${feature.body}`, "");
     }
   }
   if (options.packages?.length) {
-    lines.push("PAKETLER:", "");
     for (const pkg of options.packages) {
       lines.push(`${pkg.name} — ${pkg.scope}`, pkg.description);
       lines.push(pkg.durationLabel);

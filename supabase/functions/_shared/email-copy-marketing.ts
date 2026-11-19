@@ -1,361 +1,527 @@
 /**
- * Localized copy for the acquisition ("marketing") email family.
- *
- * Every other family in this directory writes to someone the platform already
- * knows: a new signup, a candidate who applied, an employer whose listing went
- * live. This family is the one message that has to work on someone who has
- * never heard of İşBul KKTC — an employer who is hiring now — so it carries the
- * product's actual promises rather than a generic "welcome to our platform".
- *
- * The Turkish copy is the owner's own text, kept verbatim (only spacing
- * normalised); the other five locales are faithful translations of it. Kept in
- * its own module (like `email-copy-extras.ts`) so the core catalog and its
- * contract stay untouched. Same rule as the others: every locale implements the
- * whole type, so a missing translation is a compile error, never a silent
- * fallback to Turkish.
+ * Localized employer-acquisition copy. Package names, audiences, summaries and
+ * terms mirror the public package catalogue in src/messages so prices and
+ * entitlements are not duplicated or allowed to drift in email campaigns.
  */
 
 import { resolveEmailLocale, type EmailLocale } from "./email-copy.ts";
 
-export type MarketingFeature = { title: string; body: string };
-
+export type MarketingFeature = { icon: string; title: string; body: string };
+export type MarketingPackage = { name: string; audience: string; description: string; scope: string };
 export type MarketingCopy = {
-  subject: string;
-  preheader: string;
-  heading: string;
-  greeting: string;
-  /** The two opening paragraphs, shown before the feature list. */
-  paragraphs: string[];
-  featuresHeading: string;
-  features: MarketingFeature[];
-  closing: string;
-  /** Line introducing the packages call to action. */
-  packagesLead: string;
-  /** Line introducing the employer-registration call to action. */
-  registerLead: string;
-  primaryCta: string;
-  secondaryCta: string;
-  signOff: string;
-  contactHeading: string;
+  subject: string; preheader: string; heading: string; greeting: string;
+  paragraphs: string[]; featuresHeading: string; features: MarketingFeature[];
+  closing: string; packagesLead: string; registerLead: string;
+  primaryCta: string; secondaryCta: string; signOff: string; contactHeading: string;
   contactLabels: { email: string; phone: string; whatsapp: string };
-  unsubscribeLabel: string;
-  /**
-   * Footer line stating why this message was received. The transactional
-   * families say "because of activity on your account"; a prospect has no
-   * account, so claiming one would be false (and an accurate reason is what
-   * consent-aware footer rules ask for). Kept per-locale with the rest of the
-   * copy rather than reusing the account-activity wording.
-   */
-  footerNote: string;
+  unsubscribeLabel: string; footerNote: string; heroHook: string; heroSubhook: string;
+  packagesHeading: string; pricingNote: string; durationLabel: string; packageCta: string;
+  whatsappCta: string; whatsappLead: string; whatsappMessage: string;
+  packages: Record<"singleListing" | "growth" | "professional" | "enterprise", MarketingPackage>;
 };
 
-/**
- * The brand's reachable contact channels. Addresses are locale-independent, so
- * they live here once rather than being repeated (and mistranslated) per
- * locale; only the row labels are localized. `mailto:`/`tel:` are the two
- * schemes the layout permits for contact rows so a tap opens the recipient's
- * own client instead of a copied address.
- */
 export const MARKETING_CONTACTS = {
-  email: "destek@isbulkktc.com",
+  email: "info@isbulkktc.com",
   phoneDisplay: "0539 131 64 21",
   phoneTel: "+905391316421",
-  whatsapp: "https://wa.me/905391316421?text=Merhaba%20IsBul%20KKTC%2C%20ilan%20paketleri%20ve%20aday%20havuzu%20aktivasyonu%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum.",
+  whatsapp: "https://wa.me/905391316421",
 } as const;
 
-const tr: MarketingCopy = {
-  subject: "🎯 6 Dilde İlan, Google'da Zirve, Canlı Aday Havuzu — İşe Alımınız Bitmiştir",
-  preheader:
-    "İlanlarınız otomatik 6 dile çevrilir, Google Jobs'a entegre olur ve binlerce aday profiline anında erişirsiniz. Kredi kartı yok, doğrudan WhatsApp'tan başlayın.",
-  heading: "Doğru yetenekler size gelsin, siz sadece seçin",
-  greeting: "Sayın Yetkili,",
-  paragraphs: [
-    "Kuzey Kıbrıs'ta doğru adaya ulaşmak için artık onlarca farklı kanal ve karmaşık Excel tablolarıyla uğraşmanıza gerek yok.",
-    "İşBul KKTC, ilanlarınızı tek tıkla 6 dile çevirip dünyaya açan, Google'da en üst sıraya taşıyan ve başvuruları profesyonelce yönetmenizi sağlayan bölgenin en güçlü kariyer ağıdır.",
-  ],
-  featuresHeading: "İşBul KKTC ile işletmeniz şunları kazanır:",
-  features: [
-    {
-      title: "🌍 6 dilde ilan yayınlayın — Google'da önde yer alın",
-      body: "tr, en, ru, el, fa, de desteğiyle ilanlarınız otomatik olarak 6 dilde yayına girer. Google Jobs şeması entegrasyonu sayesinde arama sonuçlarında üst sıralara çıkar, uluslararası ve yerel aday kitlesine aynı anda ulaşırsınız.",
-    },
-    {
-      title: "🔍 Aday havuzunu keşfedin — sadece başvurularla sınırlı kalmayın",
-      body: "Platformdaki binlerce aday profilini filtreleyerek, ilanınıza başvurmayan ama tam uyan yetenekleri de bulun. Arama ve filtreleme araçlarıyla doğru adaya saniyeler içinde ulaşın.",
-    },
-    {
-      title: "⚡ CV/başvuru yönetimini tek panelden otomatikleştirin",
-      body: "Adaylar CV yükler, sistem anında yapılandırılmış profil oluşturur. Başvuruları kanban panellere taşıyın, not ekleyin, takımınızla paylaşın — e-posta zincirleri ve Excel tabloları tarihe karışıyor.",
-    },
-    {
-      title: "✅ Doğrulanmış şirket rozeti — güven kazanın, başvuru artın",
-      body: "Şirket kimlik doğrulaması geçen işletmelere 'Doğrulanmış' rozeti verilir. Rozetteki işletmeler aday gözünde öne çıkar, başvuru oranları ölçülebilir derecede artar.",
-    },
-    {
-      title: "📦 Esnek ilan paketleri — ihtiyacınıza göre ödeyin",
-      body: "Tek ilan, aylık sınırsız, kurumsal yıllık paketler. Süre dolduğunda otomatik yenileme yok, gizli ücret yok. Şeffaf fiyatlandırma ile bütçenizi siz yönetin.",
-    },
-  ],
-  closing: "İşe alım sürecinizi bugün aynı tek platformda başlatın.",
-  packagesLead: "İşletmenize uygun ilan paketlerini inceleyin ve hemen başlayın:",
-  registerLead: "Veya doğrudan destek ekibimizle iletişime geçin:",
-  primaryCta: "WhatsApp'tan Hemen Başlayın",
-  secondaryCta: "E-posta ile Bilgi Alın",
-  signOff:
-    "Saygılarımızla, İşBul KKTC — Kuzey Kıbrıs'ta iş ve istihdam için dijital buluşma noktası",
-  contactHeading: "Hızlı iletişim — karar vermek istiyorsanız:",
-  contactLabels: { email: "E-posta", phone: "Telefon", whatsapp: "WhatsApp" },
-  unsubscribeLabel: "Abonelikten çık",
-  footerNote:
-    "Bu e-postayı, İşBul KKTC'nin işletmeniz için yararlı olabileceğini düşündüğümüz için aldınız.",
-};
-
-const en: MarketingCopy = {
-  subject: "🎯 6 Languages, Top Google Rank, Live Candidate Pool — Your Hiring Is Done",
-  preheader:
-    "Your listings auto-translate to 6 languages, integrate with Google Jobs, and unlock instant access to thousands of candidates. No credit card — start directly via WhatsApp.",
-  heading: "Let the right talent come to you — you just choose",
-  greeting: "Dear Hiring Manager,",
-  paragraphs: [
-    "Finding the right candidate in Northern Cyprus no longer requires juggling dozens of channels and messy spreadsheets.",
-    "İşBul KKTC is the region's most powerful career network — your listings go live in 6 languages, rank top on Google Jobs, and give you professional application management in a single click.",
-  ],
-  featuresHeading: "With İşBul KKTC, your business gains:",
-  features: [
-    {
-      title: "🌍 Publish in 6 languages — rank top on Google",
-      body: "Listings automatically go live in tr, en, ru, el, fa, de. Google Jobs schema integration pushes your posts to top search positions, reaching international and local talent simultaneously.",
-    },
-    {
-      title: "🔍 Explore the candidate pool — don't limit yourself to applicants",
-      body: "Filter thousands of candidate profiles on the platform to find talent that didn't even apply to your listing. Search and filtering tools surface the right fit in seconds.",
-    },
-    {
-      title: "⚡ Automate CV/application management from one dashboard",
-      body: "Candidates upload CVs, the system instantly creates structured profiles. Move applications across kanban boards, add notes, share with your team — email chains and spreadsheets become history.",
-    },
-    {
-      title: "✅ Verified company badge — build trust, increase applications",
-      body: "Companies that pass identity verification receive a 'Verified' badge. Verified businesses stand out to candidates, measurably increasing application rates.",
-    },
-    {
-      title: "📦 Flexible listing packages — pay for what you need",
-      body: "Single listing, monthly unlimited, annual corporate packages. No auto-renewal surprises, no hidden fees. Transparent pricing puts you in control of your budget.",
-    },
-  ],
-  closing: "Start running your hiring process on one platform today.",
-  packagesLead: "Review the listing packages that fit your business and get started:",
-  registerLead: "Or contact our support team directly:",
-  primaryCta: "Start via WhatsApp",
-  secondaryCta: "Get Info by Email",
-  signOff:
-    "Best regards, İşBul KKTC — the digital meeting point for jobs and employment in Northern Cyprus",
-  contactHeading: "Quick contact — if you want to decide fast:",
-  contactLabels: { email: "Email", phone: "Phone", whatsapp: "WhatsApp" },
-  unsubscribeLabel: "Unsubscribe",
-  footerNote:
-    "You received this email because we believe İşBul KKTC could be useful for your business.",
-};
-
-const ru: MarketingCopy = {
-  subject: "🎯 6 языков, топ Google, живая база кандидатов — ваш найм завершён",
-  preheader:
-    "Ваши вакансии автоматически переводятся на 6 языков, интегрируются с Google Jobs и дают мгновенный доступ к тысячам кандидатов. Без кредитной карты — начните прямо через WhatsApp.",
-  heading: "Пусть правильные таланты найдут вас — вы только выбирайте",
-  greeting: "Уважаемый руководитель,",
-  paragraphs: [
-    "Для поиска подходящего кандидата на Северном Кипре больше не нужно ловлиться между десятками каналов и хаотичными таблицами.",
-    "İşBul KKTC — самая мощная платформа занятости региона: ваши вакансии уходят в эфир на 6 языках, занимают верхние позиции в Google Jobs и дают профессиональное управление откликами в один клик.",
-  ],
-  featuresHeading: "С İşBul KKTC ваша компания получает:",
-  features: [
-    {
-      title: "🌍 Публикуйте на 6 языках — будьте в топе Google",
-      body: "Вакансии автоматически публикуются на tr, en, ru, el, fa, de. Интеграция со схемой Google Jobs поднимает ваши объявления в топ выдачи, охватывая международную и локальную аудиторию одновременно.",
-    },
-    {
-      title: "🔍 Изучайте базу кандидатов — не ограничивайтесь откликами",
-      body: "Фильтруйте тысячи профилей кандидатов на платформе, чтобы найти таланты, которые не откликались на вашу вакансию. Инструменты поиска и фильтрации находят идеального кандидата за секунды.",
-    },
-    {
-      title: "⚡ Автоматизируйте управление резюме/откликами из одной панели",
-      body: "Кандидаты загружают резюме, система мгновенно создает структурированные профили. Перемещайте отклики по канбан-доскам, добавляйте заметки, делитесь с командой — цепочки писем и таблицы остаются в прошлом.",
-    },
-    {
-      title: "✅ Верифицированная значка компании — выигрывайте доверие, увеличивайте отклики",
-      body: "Компании, прошедшие верификацию личности, получают значок 'Верифицирован'. Верифицированные бизнесы выделяются в глазах кандидатов, измеримо увеличивая количество откликов.",
-    },
-    {
-      title: "📦 Гибкие тарифы на вакансии — платите за то, что нужно",
-      body: "Одна вакансия, безлимит на месяц, корпоративный годовой пакет. Никаких неожиданных автопродлений, никаких скрытых комиссий. Прозрачная цена дает вам контроль над бюджетом.",
-    },
-  ],
-  closing: "Начните вести процесс найма на одной платформе уже сегодня.",
-  packagesLead: "Ознакомьтесь с тарифами, подходящими для вашего бизнеса, и начните:",
-  registerLead: "Или свяжитесь с нашей командой поддержки напрямую:",
-  primaryCta: "Начать через WhatsApp",
-  secondaryCta: "Получить информацию по email",
-  signOff:
-    "С уважением, İşBul KKTC — цифровая точка встречи для работы и занятости в Северном Кипре",
-  contactHeading: "Быстрая связь — если хотите решить быстро:",
-  contactLabels: { email: "Эл. почта", phone: "Телефон", whatsapp: "WhatsApp" },
-  unsubscribeLabel: "Отписаться",
-  footerNote:
-    "Вы получили это письмо, потому что мы считаем, что İşBul KKTC может быть полезен вашей компании.",
-};
-
-const el: MarketingCopy = {
-  subject: "🎯 6 Γλώσσες, Κορυφή στο Google, Ζωντανό Πλαίσιο Υποψηφίων — Η Πρόσληψή σας Ολοκληρώθηκε",
-  preheader:
-    "Οι αγγελίες σας μεταφράζονται αυτόματα σε 6 γλώσσες, ενσωματώνονται στο Google Jobs και σας δίνουν άμεση πρόσβαση σε χιλιάδες υποψηφίους. Χωρίς πιστωτική κάρτα — ξεκινήστε απευθείας μέσω WhatsApp.",
-  heading: "Ας έρθει το σωστό τάλεντο κοντά σας — εσείς απλά επιλέγετε",
-  greeting: "Αξιότιμε/η,",
-  paragraphs: [
-    "Η εύρεση του σωστού υποψηφίου στη Βόρεια Κύπρο δεν απαιτεί πλέον να ξεχωρίζετε μεταξύ δεκάδων καναλιών και хаотиχών υπολογιστικών φύλλων.",
-    "Το İşBul KKTC είναι το ισχυρότερο δίκτυο καριέρας της περιοχής — οι αγγελίες σας δημοσιεύονται σε 6 γλώσσες, κατακτώνται την κορυφή του Google Jobs και σας προσφέρουν επαγγελματική διαχείριση αιτήσεων με ένα κλικ.",
-  ],
-  featuresHeading: "Με το İşBul KKTC η επιχείρησή σας κερδίζει:",
-  features: [
-    {
-      title: "🌍 Δημοσιεύστε σε 6 γλώσσες — κατακτήστε την κορυφή του Google",
-      body: "Οι αγγελίες δημοσιεύονται αυτόματα στα tr, en, ru, el, fa, de. Η ενσωμάτωση σχήματος Google Jobs αναβαθμίζει τις αγγελίες σας στην κορυφή των αποτελεσμάτων αναζήτησης, φτάνοντας ταυτόχρονα διεθνή και τοπικό ταλέντο.",
-    },
-    {
-      title: "🔍 Εξερευνήστε το σύνολο υποψηφίων — μην περιορίζεστε στις αιτήσεις",
-      body: "Φιλτράρετε χιλιάδες προφίλ υποψηφίων στην πλατφόρμα για να βρείτε ταλέντα που δεν έκαναν καν αιτήσεις. Τα εργαλεία αναζήτησης και φιλτράρισης εντοπίζουν το ιδανικό match δευτερόλεπτα.",
-    },
-    {
-      title: "⚡ Αυτοματοποιήστε τη διαχείριση CV/αιτήσεων από έναν πίνακα",
-      body: "Οι υποψήφιοι ανεβάζουν CV, το σύστημα δημιουργεί άμεσα δομημένα προφίλ. Μετακινείτε αιτήσεις σε kanban πίνακες, προσθέτετε σημειώσεις, μοιράζεστε με την ομάδα — αλυσίδες email και υπολογιστικά φύλλα γίνονται παρελθόν.",
-    },
-    {
-      title: "✅ Επιβεβαιωμένο βεϊλ εταιρείας — χτίστε εμπιστοσύνη, αυξήστε αιτήσεις",
-      body: "Οι επιχειρήσεις που περνάνε την επαλήθευση ταυτότητας λαμβάνουν βεϊλ 'Επιβεβαιωμένο'. Οι επιβεβαιωμένες επιχειρήσεις ξεχωρίζουν στους υποψηφίους, αυξάνοντας μετρήσιμα τις αιτήσεις.",
-    },
-    {
-      title: "📦 Ελαστικά πακέτα αγγελιών — πληρώστε για ό,τι χρειάζεστε",
-      body: "Μια αγγελία, απεριόριστο μηνιαίο, ετήσιο εταιρικό πακέτο. Καμία εκπληκτική αυτόματη ανανέωση, καμία κρυφή χρέωση. Διαφανές pricing σας δίνει τον έλεγχο του προϋπολογισμού.",
-    },
-  ],
-  closing: "Ξεκινήστε να διαχειρίζεστε τη διαδικασία πρόσληψης σε μία πλατφόρμα σήμερα.",
-  packagesLead: "Δείτε τα πακέτα αγγελιών που ταιριάζουν στην επιχείρησή σας και ξεκινήστε:",
-  registerLead: "Ή επικοινωνήστε άμεσα με την ομάδα υποστήριξής μας:",
-  primaryCta: "Ξεκινήστε μέσω WhatsApp",
-  secondaryCta: "Λάβετε πληροφορίες με email",
-  signOff:
-    "Με εκτίμηση, İşBul KKTC — το ψηφιακό σημείο συνάντησης για εργασία και απασχόληση στη Βόρεια Κύπρο",
-  contactHeading: "Γρήγορη επικοινωνία — αν θέλετε να αποφασίσετε τώρα:",
-  contactLabels: { email: "Email", phone: "Τηλέφωνο", whatsapp: "WhatsApp" },
-  unsubscribeLabel: "Διαγραφή",
-  footerNote:
-    "Λάβατε αυτό το email επειδή πιστεύουμε ότι το İşBul KKTC μπορεί να είναι χρήσιμο για την επιχείρησή σας.",
-};
-
-const fa: MarketingCopy = {
-  subject: "🎯 ۶ زبان، رتبه اول گوگل، مخزن زنده کارجویان — استخدام شما تمام شد",
-  preheader:
-    "آگهی‌های شما به‌صورت خودکار به ۶ زبان ترجمه می‌شوند، با Google Jobs یکپارچه می‌شوند و دسترسی فوری به هزاران کارجوی را فراهم می‌کنند. بدون کارت اعتباری — مستقیماً از طریق واتس‌اپ آغاز کنید.",
-  heading: "بگذارید تا بهترین استعدادها به سراغ شما بیایند — شما فقط انتخاب کنید",
-  greeting: "مدیر محترم،",
-  paragraphs: [
-    "یافتن کارجوی مناسب در Kuzey Kıbrıs دیگر نیازی به جستجو در ده‌ها کانال مختلف و 엑سل‌های مضطرب ندارد.",
-    "İşBul KKTC قدرتمندترین شبکه کار و اشتغال منطقه است — آگهی‌های شما در ۶ زبان منتشر می‌شوند، در رتبه اول Google Jobs قرار می‌گیرند و مدیریت حرفه‌ای درخواست‌ها را با یک کلیک فراهم می‌کنند.",
-  ],
-  featuresHeading: "با İşBul KKTC، کسب‌وکار شما موارد زیر را بدست می‌آورد:",
-  features: [
-    {
-      title: "🌍 در ۶ زبان آگهی دهید — در رتبه اول Google قرار بگیرید",
-      body: "آگهی‌ها به‌صورت خودکار در tr، en، ru، el، fa، de منتشر می‌شوند. یکپارچه‌سازی با اسکیمای Google Jobs آگهی‌های شما را در نتایج جستجوی بالایی قرار می‌دهد و همزمان مخاطبین بین‌المللی و محلی را پوشش می‌دهد.",
-    },
-    {
-      title: "🔍 مجموعه کارجویان را کاوش کنید — به درخواست‌های آگهی محدود نمانید",
-      body: "هزاران پروفایل کارجوی در پلتفرم را فیلتر کنید تا talentoهایی را پیدا کنید که اصلا به آگهی شما درخواست نداده‌اند. ابزارهای جستجو و فیلتر، فرد مناسب را در ثانیه‌ها شناسایی می‌کنند.",
-    },
-    {
-      title: "⚡ مدیریت CV/درخواست‌ها را از یک داشبورد خودکار کنید",
-      body: "کارجویان CV بارگذاری می‌کنند، سیستم بلافاصله پروفایل ساختاریافته می‌سازد. درخواست‌ها را در بردهای kanban جابجا کنید، یادداشت اضافه کنید، با تیم به اشتراک بگذارید — زنجیره‌های ایمیل و اکسل‌ها گذشته می‌شوند.",
-    },
-    {
-      title: "✅ نشانه تایید شرکت — اعتماد بسازید، درخواست‌ها را افزایش دهید",
-      body: "شرکت‌هایی که احراز هویت را می‌گذرند، نشانه «تایید شده» دریافت می‌کنند. شرکت‌های تایید شده در نظر کارجویان برجسته می‌شوند و نرخ درخواست‌ها به‌صورت قابل‌قياسی افزایش می‌یابد.",
-    },
-    {
-      title: "📦 بسته‌های آگهی انعطاف‌پذیر — برای نیاز خود بپردازید",
-      body: "یک آگهی، نامحدود ماهانه، بسته سالانه سازمانی. هیچ تمدید خودکار شگفت‌انگیزی، هیچ هزینه مخفی. قیمت‌گذاری شفاف، کنترل بودجه را به دست شما می‌دهد.",
-    },
-  ],
-  closing: "فرایند استخدام خود را امروز در یک پلتفرم آغاز کنید.",
-  packagesLead: "بسته‌های آگهی مناسب کسب‌وکار خود را ببینید و آغاز کنید:",
-  registerLead: "یا مستقیماً با تیم پشتیبانی ما تماس بگیرید:",
-  primaryCta: "از طریق واتس‌اپ آغاز کنید",
-  secondaryCta: "دریافت اطلاعات از طریق ایمیل",
-  signOff:
-    "با احترام، İşBul KKTC — نقطه دیدار دیجیتال برای کار و اشتغال در قبرس شمالی",
-  contactHeading: "تماس سریع — اگر می‌خواهید سریع تصمیم بگیرید:",
-  contactLabels: { email: "ایمیل", phone: "تلفن", whatsapp: "واتس‌اپ" },
-  unsubscribeLabel: "لغو اشتراک",
-  footerNote:
-    "این ایمیل را دریافت کردید چون فکر می‌کنیم İşBul KKTC می‌تواند برای کسب‌وکار شما مفید باشد.",
-};
-
-const de: MarketingCopy = {
-  subject: "🎯 6 Sprachen, Top-Google-Platz, Live-Kandidatenpool — Ihr Einstellungsprozess ist erledigt",
-  preheader:
-    "Ihre Anzeigen werden automatisch in 6 Sprachen übersetzt, in Google Jobs integriert und geben Ihnen sofortigen Zugriff auf Tausende Kandidaten. Keine Kreditkarte — starten Sie direkt per WhatsApp.",
-  heading: "Lassen Sie die richtigen Talente zu sich kommen — Sie wählen nur aus",
-  greeting: "Sehr geehrte Damen und Herren,",
-  paragraphs: [
-    "Die Suche nach dem richtigen Kandidaten in Nordzypern erfordert nicht mehr das Jonglieren zwischen Dutzenden Kanälen und chaotischen Tabellen.",
-    "İşBul KKTC ist das stärkste Karrierenetzwerk der Region — Ihre Anzeigen gehen in 6 Sprachen live, erreichen Top-Platzierungen bei Google Jobs und geben Ihnen professionelles Bewerbermanagement mit einem Klick.",
-  ],
-  featuresHeading: "Mit İşBul KKTC gewinnt Ihr Unternehmen:",
-  features: [
-    {
-      title: "🌍 In 6 Sprachen veröffentlichen — bei Google ganz oben stehen",
-      body: "Anzeigen gehen automatisch in tr, en, ru, el, fa, de live. Die Google-Jobs-Schema-Integration katapultiert Ihre Anzeigen an die Spitze der Suchergebnisse und erreicht internationale sowie lokale Talente gleichzeitig.",
-    },
-    {
-      title: "🔍 Kandidatenpool durchsuchen — nicht auf Bewerbungen beschränkt",
-      body: "Filtern Sie tausende Kandidatenprofile auf der Plattform, um Talente zu finden, die sich gar nicht auf Ihre Anzeige beworben haben. Such- und Filtertools finden den perfekten Match in Sekunden.",
-    },
-    {
-      title: "⚡ CV/Bewerbungs-Management aus einem Dashboard automatisieren",
-      body: "Kandidaten laden CVs hoch, das System erstellt sofort strukturierte Profile. Bewerbungen auf Kanban-Boards verschieben, Notizen hinzufügen, mit dem Team teilen — E-Mail-Ketten und Tabellen gehören der Vergangenheit an.",
-    },
-    {
-      title: "✅ Verifiziertes Firmen-Badge — Vertrauen schaffen, Bewerbungen steigern",
-      body: "Unternehmen, die die Identitätsprüfung bestehen, erhalten ein 'Verifiziert'-Badge. Verifizierte Unternehmen stechen Kandidaten ins Auge und erhöhen die Bewerbungsrate messbar.",
-    },
-    {
-      title: "📦 Flexible Anzeigenpakete — zahlen Sie nur für das, was Sie brauchen",
-      body: "Einzelanzeige, monatlich unbegrenzt, jährliches Corporate-Paket. Keine automatischen Verlängerungen, keine versteckten Gebühren. Transparente Preise geben Ihnen die Budgetkontrolle.",
-    },
-  ],
-  closing: "Starten Sie Ihren Einstellungsprozess noch heute auf einer Plattform.",
-  packagesLead: "Sehen Sie sich die Anzeigenpakete an, die zu Ihrem Unternehmen passen, und legen Sie los:",
-  registerLead: "Oder kontaktieren Sie unser Support-Team direkt:",
-  primaryCta: "Per WhatsApp starten",
-  secondaryCta: "Info per E-Mail anfordern",
-  signOff:
-    "Mit freundlichen Grüßen, İşBul KKTC — der digitale Treffpunkt für Arbeit und Beschäftigung in Nordzypern",
-  contactHeading: "Schneller Kontakt — wenn Sie schnell entscheiden wollen:",
-  contactLabels: { email: "E-Mail", phone: "Telefon", whatsapp: "WhatsApp" },
-  unsubscribeLabel: "Abmelden",
-  footerNote:
-    "Sie erhalten diese E-Mail, weil wir glauben, dass İşBul KKTC für Ihr Unternehmen nützlich sein könnte.",
-};
-
 export const MARKETING_COPY: Record<EmailLocale, MarketingCopy> = {
-  tr,
-  en,
-  ru,
-  el,
-  fa,
-  de,
+  "tr": {
+    "subject": "İşBul KKTC işveren paketleri: işe alım kapsamınızı seçin",
+    "preheader": "Tek ilan, en fazla üç veya beş ilan ya da kurumsal teklif. Her ilan için 1, 7 veya 30 günlük süre seçeneklerini inceleyin.",
+    "heading": "İşe alım ihtiyacınıza uygun ilan paketini seçin",
+    "greeting": "Sayın Yetkili,",
+    "paragraphs": [
+      "İşBul KKTC işveren paketleri, aynı anda yayınlamak istediğiniz açık pozisyon sayısına göre farklı ilan hakları sunar.",
+      "Her ilan için 1, 7 veya 30 gün seçebilirsiniz. Kurumsal paketin ilan adedi ve kapsamı yazılı teklifte netleştirilir."
+    ],
+    "featuresHeading": "Paketlerin temel farkları",
+    "features": [
+      {
+        "icon": "01",
+        "title": "Tek açık pozisyon",
+        "body": "Tek İlan paketi, bir açık pozisyon için 1 ilan hakkı sunar."
+      },
+      {
+        "icon": "03",
+        "title": "Birden fazla pozisyon",
+        "body": "Büyüme paketi, aynı dönemde en fazla 3 ilan hakkı sunar."
+      },
+      {
+        "icon": "05",
+        "title": "Düzenli işe alım",
+        "body": "Profesyonel paketi, aynı dönemde en fazla 5 ilan hakkı sunar."
+      },
+      {
+        "icon": "✓",
+        "title": "Kurumsal kapsam",
+        "body": "Kurumsal paketin ilan adedi, kapsamı ve süresi yazılı teklifte netleştirilir."
+      }
+    ],
+    "closing": "Paket kapsamlarını inceleyin ve ihtiyacınıza uygun seçeneği ekibimizle netleştirin.",
+    "packagesLead": "İşveren paketlerini ilan kapsamı ve süre seçenekleriyle karşılaştırın.",
+    "registerLead": "Ödeme web sitesinde alınmaz. IBAN ve ödeme talimatı, paket görüşmesi sonrasında özel olarak iletilir.",
+    "primaryCta": "Paketleri incele",
+    "secondaryCta": "E-posta taslağını aç",
+    "signOff": "Saygılarımızla, İşBul KKTC",
+    "unsubscribeLabel": "Abonelikten çık",
+    "footerNote": "Bu e-posta, İşBul KKTC'nin işverenlere yönelik ilan paketleri hakkında bilgilendirme amacıyla gönderilmiştir.",
+    "packageCta": "Paketi incele",
+    "whatsappLead": "Seçtiğiniz ilan paketi ve kapsamı hakkında ekibimizle görüşün.",
+    "whatsappMessage": "Merhaba, İşBul KKTC ilan paketleri hakkında bilgi almak istiyorum. Lütfen paket kapsamı ve ödeme adımları hakkında bilgi paylaşır mısınız?",
+    "heroHook": "İşe alım ihtiyacınıza uygun ilan paketini seçin",
+    "heroSubhook": "İlan adedini belirleyin; her ilan için 1, 7 veya 30 gün seçin.",
+    "packagesHeading": "İşe alımınıza uygun ilan paketini seçin.",
+    "pricingNote": "İlan paketlerini inceleyin. Ödeme web sitesinde alınmaz; IBAN ve ödeme talimatı, paket görüşmesi sonrası e-posta veya WhatsApp gibi kanallardan özel olarak iletilir.",
+    "durationLabel": "İlan süresi: Her ilan için 1, 7 veya 30 gün",
+    "whatsappCta": "WhatsApp taslağını aç",
+    "contactHeading": "Seçtiğiniz ilan paketi hakkında ekibimize ulaşın.",
+    "contactLabels": {
+      "email": "E-posta",
+      "phone": "Telefon",
+      "whatsapp": "WhatsApp"
+    },
+    "packages": {
+      "singleListing": {
+        "audience": "TEK AÇIK POZİSYON",
+        "name": "Tek İlan",
+        "description": "Bir pozisyonu, ihtiyacınıza uygun 1, 7 veya 30 günlük süreyle yayımlamak için.",
+        "scope": "1 ilan hakkı · Her ilan için 1, 7 veya 30 gün · Tek bir açık pozisyon için"
+      },
+      "growth": {
+        "audience": "BİRDEN FAZLA POZİSYON",
+        "name": "Büyüme",
+        "description": "Aynı dönemde en fazla üç pozisyon için sade ve ölçülü bir ilan kapsamı.",
+        "scope": "En fazla 3 ilan hakkı · Her ilan için 1, 7 veya 30 gün · Birden fazla pozisyon için"
+      },
+      "professional": {
+        "audience": "DÜZENLİ İŞE ALIM",
+        "name": "Profesyonel",
+        "description": "Aynı dönemde en fazla beş pozisyon yayımlayan işe alım ekipleri için.",
+        "scope": "En fazla 5 ilan hakkı · Her ilan için 1, 7 veya 30 gün · Düzenli işe alım yapan ekipler için"
+      },
+      "enterprise": {
+        "audience": "KURUMSAL İŞE ALIM",
+        "name": "Kurumsal",
+        "description": "İlan adedi ve süreleri önceden belirlenmiş, yazılı özel teklif isteyen kuruluşlar için.",
+        "scope": "İlan adedi yazılı teklifte netleştirilir · Her ilan için 1, 7 veya 30 gün · Kapsam ve süre teklif öncesi onaylanır"
+      }
+    }
+  },
+  "en": {
+    "subject": "İşBul KKTC employer packages: choose your hiring scope",
+    "preheader": "Compare one-, up-to-three and up-to-five listing options, with 1, 7 or 30 days per listing. Corporate scope is agreed in a written quote.",
+    "heading": "Choose a listing package for your hiring needs",
+    "greeting": "Dear Hiring Manager,",
+    "paragraphs": [
+      "İşBul KKTC employer packages provide listing allowances based on the number of open roles you need to publish at the same time.",
+      "Choose 1, 7 or 30 days for each listing. The listing quantity and scope for a corporate package are defined in a written quote."
+    ],
+    "featuresHeading": "How the packages differ",
+    "features": [
+      {
+        "icon": "01",
+        "title": "One open role",
+        "body": "Single Listing includes one job listing for one open role."
+      },
+      {
+        "icon": "03",
+        "title": "Multiple open roles",
+        "body": "Growth includes up to three listings at the same time."
+      },
+      {
+        "icon": "05",
+        "title": "Regular hiring",
+        "body": "Professional includes up to five listings at the same time."
+      },
+      {
+        "icon": "✓",
+        "title": "Corporate scope",
+        "body": "The listing quantity, scope and duration for Corporate are agreed in a written quote."
+      }
+    ],
+    "closing": "Review the package scope and discuss the option that fits your hiring needs with our team.",
+    "packagesLead": "Compare employer packages by listing allowance and duration.",
+    "registerLead": "Payment is not collected on the website. IBAN details and payment instructions are shared privately after discussing the package.",
+    "primaryCta": "View packages",
+    "secondaryCta": "Open email draft",
+    "signOff": "Best regards, İşBul KKTC",
+    "unsubscribeLabel": "Unsubscribe",
+    "footerNote": "This email provides information about İşBul KKTC listing packages for employers.",
+    "packageCta": "View package",
+    "whatsappLead": "Speak with our team about the selected listing package and its scope.",
+    "whatsappMessage": "Hello, I would like information about İşBul KKTC listing packages. Please share the package scope and payment steps.",
+    "heroHook": "Choose a listing package for your hiring needs",
+    "heroSubhook": "Choose your listing allowance, then select 1, 7 or 30 days per listing.",
+    "packagesHeading": "Choose a job package that fits your hiring.",
+    "pricingNote": "Explore job packages. Payment is not collected on the website; IBAN details and payment instructions are shared privately by email or WhatsApp after discussing the package.",
+    "durationLabel": "Listing duration: Choose 1, 7 or 30 days per listing",
+    "whatsappCta": "Open WhatsApp draft",
+    "contactHeading": "Contact our team about this listing package.",
+    "contactLabels": {
+      "email": "Email",
+      "phone": "Phone",
+      "whatsapp": "WhatsApp"
+    },
+    "packages": {
+      "singleListing": {
+        "audience": "ONE OPEN ROLE",
+        "name": "Single Listing",
+        "description": "Publish one role for the duration that fits: 1, 7 or 30 days.",
+        "scope": "1 job listing · Choose 1, 7 or 30 days per listing · For one open position"
+      },
+      "growth": {
+        "audience": "MULTIPLE OPEN ROLES",
+        "name": "Growth",
+        "description": "Straightforward listing capacity for up to three open roles at a time.",
+        "scope": "Up to 3 job listings · Choose 1, 7 or 30 days per listing · For multiple open positions"
+      },
+      "professional": {
+        "audience": "REGULAR HIRING",
+        "name": "Professional",
+        "description": "For hiring teams publishing up to five open roles at a time.",
+        "scope": "Up to 5 job listings · Choose 1, 7 or 30 days per listing · For teams hiring regularly"
+      },
+      "enterprise": {
+        "audience": "ENTERPRISE HIRING",
+        "name": "Corporate",
+        "description": "For organisations that need a written quote with clearly defined listing quantities and durations.",
+        "scope": "Listing quantity is set in the written quote · Choose 1, 7 or 30 days per listing · Scope and duration agreed before the quote"
+      }
+    }
+  },
+  "ru": {
+    "subject": "Пакеты İşBul KKTC для работодателей: выберите объём найма",
+    "preheader": "Сравните пакеты на 1, до 3 и до 5 объявлений. Для каждого объявления доступны сроки 1, 7 или 30 дней; корпоративные условия фиксируются письменно.",
+    "heading": "Выберите пакет объявлений для ваших задач найма",
+    "greeting": "Уважаемый работодатель!",
+    "paragraphs": [
+      "Пакеты İşBul KKTC предоставляют разное количество объявлений в зависимости от числа открытых вакансий, которые вы хотите публиковать одновременно.",
+      "Для каждого объявления можно выбрать срок 1, 7 или 30 дней. Количество объявлений и объём корпоративного пакета фиксируются в письменном предложении."
+    ],
+    "featuresHeading": "Чем отличаются пакеты",
+    "features": [
+      {
+        "icon": "01",
+        "title": "Одна открытая вакансия",
+        "body": "Пакет «Одно объявление» включает одно объявление для одной открытой вакансии."
+      },
+      {
+        "icon": "03",
+        "title": "Несколько вакансий",
+        "body": "Пакет «Рост» позволяет одновременно разместить до трёх объявлений."
+      },
+      {
+        "icon": "05",
+        "title": "Регулярный найм",
+        "body": "Пакет «Профессиональный» позволяет одновременно разместить до пяти объявлений."
+      },
+      {
+        "icon": "✓",
+        "title": "Корпоративные условия",
+        "body": "Количество объявлений, объём и срок корпоративного пакета согласуются в письменном предложении."
+      }
+    ],
+    "closing": "Изучите условия пакетов и обсудите с нашей командой подходящий вариант.",
+    "packagesLead": "Сравните пакеты для работодателей по количеству объявлений и срокам публикации.",
+    "registerLead": "Оплата на сайте не принимается. Реквизиты IBAN и инструкции по оплате сообщаются лично после обсуждения пакета.",
+    "primaryCta": "Посмотреть пакеты",
+    "secondaryCta": "Открыть черновик письма",
+    "signOff": "С уважением, İşBul KKTC",
+    "unsubscribeLabel": "Отписаться",
+    "footerNote": "Это письмо содержит информацию о пакетах объявлений İşBul KKTC для работодателей.",
+    "packageCta": "Посмотреть пакет",
+    "whatsappLead": "Обсудите с нашей командой выбранный пакет объявлений и его условия.",
+    "whatsappMessage": "Здравствуйте! Меня интересуют пакеты объявлений İşBul KKTC. Пожалуйста, расскажите об объёме пакетов и порядке оплаты.",
+    "heroHook": "Выберите пакет объявлений для ваших задач найма",
+    "heroSubhook": "Выберите количество объявлений и срок публикации: 1, 7 или 30 дней.",
+    "packagesHeading": "Выберите пакет вакансий для ваших задач.",
+    "pricingNote": "Изучите пакеты вакансий. Оплата производится переводом по IBAN вне сайта; реквизиты и инструкции сообщаются лично после обсуждения условий.",
+    "durationLabel": "Срок публикации: 1, 7 или 30 дней для каждого объявления",
+    "whatsappCta": "Открыть черновик WhatsApp",
+    "contactHeading": "Свяжитесь с нами по поводу выбранного пакета вакансий.",
+    "contactLabels": {
+      "email": "Эл. почта",
+      "phone": "Телефон",
+      "whatsapp": "WhatsApp"
+    },
+    "packages": {
+      "singleListing": {
+        "audience": "ОДНА ОТКРЫТАЯ ВАКАНСИЯ",
+        "name": "Одно объявление",
+        "description": "Опубликуйте одну вакансию на подходящий срок: 1, 7 или 30 дней.",
+        "scope": "1 объявление о вакансии · 1, 7 или 30 дней для каждого объявления · Для одной открытой вакансии"
+      },
+      "growth": {
+        "audience": "НЕСКОЛЬКО ОТКРЫТЫХ ВАКАНСИЙ",
+        "name": "Рост",
+        "description": "Простой пакет до трёх одновременно открытых вакансий.",
+        "scope": "До 3 объявлений о вакансиях · 1, 7 или 30 дней для каждого объявления · Для нескольких открытых вакансий"
+      },
+      "professional": {
+        "audience": "РЕГУЛЯРНЫЙ НАЙМ",
+        "name": "Профессиональный",
+        "description": "Для команд, публикующих до пяти открытых вакансий одновременно.",
+        "scope": "До 5 объявлений о вакансиях · 1, 7 или 30 дней для каждого объявления · Для команд с регулярным наймом"
+      },
+      "enterprise": {
+        "audience": "КОРПОРАТИВНЫЙ НАЙМ",
+        "name": "Корпоративный",
+        "description": "Для организаций, которым нужно письменное предложение с точным количеством объявлений и сроками.",
+        "scope": "Количество объявлений указывается в письменном предложении · 1, 7 или 30 дней для каждого объявления · Объём и срок согласуются до подготовки предложения"
+      }
+    }
+  },
+  "el": {
+    "subject": "Πακέτα εργοδοτών İşBul KKTC: επιλέξτε το εύρος προσλήψεων",
+    "preheader": "Συγκρίνετε επιλογές για 1, έως 3 και έως 5 αγγελίες, με διάρκεια 1, 7 ή 30 ημερών ανά αγγελία. Οι εταιρικοί όροι συμφωνούνται γραπτώς.",
+    "heading": "Επιλέξτε πακέτο αγγελιών για τις ανάγκες προσλήψεών σας",
+    "greeting": "Αγαπητέ εργοδότη,",
+    "paragraphs": [
+      "Τα πακέτα εργοδοτών του İşBul KKTC προσφέρουν διαφορετικό αριθμό αγγελιών ανάλογα με τις ανοιχτές θέσεις που θέλετε να δημοσιεύετε ταυτόχρονα.",
+      "Για κάθε αγγελία μπορείτε να επιλέξετε διάρκεια 1, 7 ή 30 ημερών. Ο αριθμός αγγελιών και το εύρος του εταιρικού πακέτου καθορίζονται σε γραπτή προσφορά."
+    ],
+    "featuresHeading": "Οι βασικές διαφορές των πακέτων",
+    "features": [
+      {
+        "icon": "01",
+        "title": "Μία ανοιχτή θέση",
+        "body": "Το πακέτο Μίας Αγγελίας περιλαμβάνει μία αγγελία για μία ανοιχτή θέση."
+      },
+      {
+        "icon": "03",
+        "title": "Πολλαπλές θέσεις",
+        "body": "Το πακέτο Ανάπτυξης περιλαμβάνει έως τρεις αγγελίες ταυτόχρονα."
+      },
+      {
+        "icon": "05",
+        "title": "Τακτικές προσλήψεις",
+        "body": "Το Επαγγελματικό πακέτο περιλαμβάνει έως πέντε αγγελίες ταυτόχρονα."
+      },
+      {
+        "icon": "✓",
+        "title": "Εταιρικό εύρος",
+        "body": "Ο αριθμός, το εύρος και η διάρκεια των εταιρικών αγγελιών συμφωνούνται σε γραπτή προσφορά."
+      }
+    ],
+    "closing": "Εξετάστε το εύρος των πακέτων και συζητήστε με την ομάδα μας την κατάλληλη επιλογή.",
+    "packagesLead": "Συγκρίνετε τα πακέτα εργοδοτών ως προς τον αριθμό και τη διάρκεια των αγγελιών.",
+    "registerLead": "Η πληρωμή δεν πραγματοποιείται στον ιστότοπο. Τα στοιχεία IBAN και οι οδηγίες πληρωμής αποστέλλονται ιδιωτικά μετά τη συζήτηση του πακέτου.",
+    "primaryCta": "Δείτε τα πακέτα",
+    "secondaryCta": "Άνοιγμα προσχεδίου email",
+    "signOff": "Με εκτίμηση, İşBul KKTC",
+    "unsubscribeLabel": "Κατάργηση εγγραφής",
+    "footerNote": "Αυτό το email παρέχει πληροφορίες για τα πακέτα αγγελιών του İşBul KKTC για εργοδότες.",
+    "packageCta": "Προβολή πακέτου",
+    "whatsappLead": "Συζητήστε με την ομάδα μας για το επιλεγμένο πακέτο και το εύρος του.",
+    "whatsappMessage": "Γεια σας, θα ήθελα πληροφορίες για τα πακέτα αγγελιών του İşBul KKTC. Παρακαλώ ενημερώστε με για το εύρος των πακέτων και τα βήματα πληρωμής.",
+    "heroHook": "Επιλέξτε πακέτο αγγελιών για τις ανάγκες προσλήψεών σας",
+    "heroSubhook": "Επιλέξτε αριθμό αγγελιών και διάρκεια 1, 7 ή 30 ημερών για καθεμία.",
+    "packagesHeading": "Επιλέξτε πακέτο αγγελιών που ταιριάζει στις ανάγκες σας.",
+    "pricingNote": "Εξερευνήστε τα πακέτα αγγελιών. Η πληρωμή γίνεται με μεταφορά IBAN εκτός ιστοτόπου· τα στοιχεία και οι οδηγίες κοινοποιούνται ιδιωτικά μετά τη συζήτηση των όρων.",
+    "durationLabel": "Διάρκεια αγγελίας: Επιλέξτε 1, 7 ή 30 ημέρες ανά αγγελία",
+    "whatsappCta": "Άνοιγμα πρόχειρου WhatsApp",
+    "contactHeading": "Επικοινωνήστε μαζί μας για αυτό το πακέτο αγγελιών.",
+    "contactLabels": {
+      "email": "Email",
+      "phone": "Τηλέφωνο",
+      "whatsapp": "WhatsApp"
+    },
+    "packages": {
+      "singleListing": {
+        "audience": "ΜΙΑ ΑΝΟΙΧΤΗ ΘΕΣΗ",
+        "name": "Μία αγγελία",
+        "description": "Δημοσιεύστε μία θέση για 1, 7 ή 30 ημέρες, ανάλογα με τις ανάγκες σας.",
+        "scope": "1 αγγελία εργασίας · Επιλέξτε 1, 7 ή 30 ημέρες ανά αγγελία · Για μία ανοιχτή θέση"
+      },
+      "growth": {
+        "audience": "ΠΟΛΛΕΣ ΑΝΟΙΧΤΕΣ ΘΕΣΕΙΣ",
+        "name": "Ανάπτυξη",
+        "description": "Απλή δυνατότητα δημοσίευσης έως τριών ανοιχτών θέσεων ταυτόχρονα.",
+        "scope": "Έως 3 αγγελίες εργασίας · Επιλέξτε 1, 7 ή 30 ημέρες ανά αγγελία · Για πολλές ανοιχτές θέσεις"
+      },
+      "professional": {
+        "audience": "ΤΑΚΤΙΚΕΣ ΠΡΟΣΛΗΨΕΙΣ",
+        "name": "Επαγγελματικό",
+        "description": "Για ομάδες προσλήψεων που δημοσιεύουν έως πέντε ανοιχτές θέσεις ταυτόχρονα.",
+        "scope": "Έως 5 αγγελίες εργασίας · Επιλέξτε 1, 7 ή 30 ημέρες ανά αγγελία · Για ομάδες με τακτικές προσλήψεις"
+      },
+      "enterprise": {
+        "audience": "ΕΤΑΙΡΙΚΕΣ ΠΡΟΣΛΗΨΕΙΣ",
+        "name": "Εταιρικό",
+        "description": "Για οργανισμούς που χρειάζονται γραπτή προσφορά με καθορισμένο αριθμό και διάρκεια αγγελιών.",
+        "scope": "Ο αριθμός αγγελιών ορίζεται στη γραπτή προσφορά · Επιλέξτε 1, 7 ή 30 ημέρες ανά αγγελία · Το εύρος και η διάρκεια συμφωνούνται πριν από την προσφορά"
+      }
+    }
+  },
+  "fa": {
+    "subject": "بسته‌های کارفرمایان İşBul KKTC: دامنه استخدام خود را انتخاب کنید",
+    "preheader": "گزینه‌های ۱، حداکثر ۳ و حداکثر ۵ آگهی را مقایسه کنید؛ مدت هر آگهی ۱، ۷ یا ۳۰ روز است. شرایط سازمانی در پیشنهاد کتبی تعیین می‌شود.",
+    "heading": "بسته آگهی متناسب با نیاز استخدام خود را انتخاب کنید",
+    "greeting": "کارفرمای گرامی،",
+    "paragraphs": [
+      "بسته‌های کارفرمایان İşBul KKTC بر اساس تعداد موقعیت‌های شغلی بازی که می‌خواهید هم‌زمان منتشر کنید، ظرفیت‌های متفاوتی ارائه می‌کنند.",
+      "برای هر آگهی می‌توانید مدت ۱، ۷ یا ۳۰ روز را انتخاب کنید. تعداد آگهی‌ها و دامنه بسته سازمانی در پیشنهاد کتبی مشخص می‌شود."
+    ],
+    "featuresHeading": "تفاوت اصلی بسته‌ها",
+    "features": [
+      {
+        "icon": "01",
+        "title": "یک موقعیت شغلی باز",
+        "body": "بسته یک آگهی شامل یک آگهی برای یک موقعیت شغلی باز است."
+      },
+      {
+        "icon": "03",
+        "title": "چند موقعیت شغلی",
+        "body": "بسته رشد امکان انتشار هم‌زمان حداکثر سه آگهی را فراهم می‌کند."
+      },
+      {
+        "icon": "05",
+        "title": "استخدام منظم",
+        "body": "بسته حرفه‌ای امکان انتشار هم‌زمان حداکثر پنج آگهی را فراهم می‌کند."
+      },
+      {
+        "icon": "✓",
+        "title": "دامنه سازمانی",
+        "body": "تعداد، دامنه و مدت آگهی‌های سازمانی در پیشنهاد کتبی توافق می‌شود."
+      }
+    ],
+    "closing": "دامنه بسته‌ها را بررسی کنید و گزینه مناسب را با تیم ما نهایی کنید.",
+    "packagesLead": "بسته‌های کارفرمایان را از نظر تعداد آگهی و مدت انتشار مقایسه کنید.",
+    "registerLead": "پرداخت در وب‌سایت انجام نمی‌شود. اطلاعات IBAN و دستورالعمل پرداخت پس از گفتگو درباره بسته به‌صورت خصوصی ارسال می‌شود.",
+    "primaryCta": "مشاهده بسته‌ها",
+    "secondaryCta": "باز کردن پیش‌نویس ایمیل",
+    "signOff": "با احترام، İşBul KKTC",
+    "unsubscribeLabel": "لغو اشتراک",
+    "footerNote": "این ایمیل برای ارائه اطلاعات درباره بسته‌های آگهی İşBul KKTC ویژه کارفرمایان ارسال شده است.",
+    "packageCta": "مشاهده بسته",
+    "whatsappLead": "درباره بسته انتخابی و دامنه آن با تیم ما گفتگو کنید.",
+    "whatsappMessage": "سلام، مایل به دریافت اطلاعات درباره بسته‌های آگهی İşBul KKTC هستم. لطفاً دامنه بسته‌ها و مراحل پرداخت را توضیح دهید.",
+    "heroHook": "بسته آگهی متناسب با نیاز استخدام خود را انتخاب کنید",
+    "heroSubhook": "تعداد آگهی را انتخاب کنید، سپس برای هر آگهی مدت ۱، ۷ یا ۳۰ روز را برگزینید.",
+    "packagesHeading": "بسته‌ای متناسب با نیاز استخدام خود انتخاب کنید.",
+    "pricingNote": "بسته‌های آگهی را بررسی کنید. پرداخت از طریق انتقال IBAN و خارج از وب‌سایت انجام می‌شود؛ اطلاعات بانکی پس از گفتگو درباره شرایط بسته به‌صورت خصوصی ارسال می‌شود.",
+    "durationLabel": "مدت انتشار آگهی: انتخاب ۱، ۷ یا ۳۰ روز برای هر آگهی",
+    "whatsappCta": "باز کردن پیش‌نویس واتس‌اپ",
+    "contactHeading": "درباره این بسته آگهی با تیم ما تماس بگیرید.",
+    "contactLabels": {
+      "email": "ایمیل",
+      "phone": "تلفن",
+      "whatsapp": "WhatsApp"
+    },
+    "packages": {
+      "singleListing": {
+        "audience": "یک موقعیت شغلی باز",
+        "name": "یک آگهی",
+        "description": "یک موقعیت را برای مدت مناسب خود، یعنی ۱، ۷ یا ۳۰ روز منتشر کنید.",
+        "scope": "۱ آگهی شغلی · انتخاب ۱، ۷ یا ۳۰ روز برای هر آگهی · برای یک موقعیت شغلی باز"
+      },
+      "growth": {
+        "audience": "چند موقعیت شغلی باز",
+        "name": "رشد",
+        "description": "ظرفیت ساده برای انتشار هم‌زمان حداکثر سه موقعیت شغلی باز.",
+        "scope": "تا ۳ آگهی شغلی · انتخاب ۱، ۷ یا ۳۰ روز برای هر آگهی · برای چند موقعیت شغلی باز"
+      },
+      "professional": {
+        "audience": "استخدام منظم",
+        "name": "حرفه‌ای",
+        "description": "برای تیم‌هایی که هم‌زمان حداکثر پنج موقعیت شغلی باز منتشر می‌کنند.",
+        "scope": "تا ۵ آگهی شغلی · انتخاب ۱، ۷ یا ۳۰ روز برای هر آگهی · برای تیم‌هایی با استخدام منظم"
+      },
+      "enterprise": {
+        "audience": "استخدام سازمانی",
+        "name": "سازمانی",
+        "description": "برای سازمان‌هایی که پیشنهاد کتبی با تعداد و مدت مشخص آگهی نیاز دارند.",
+        "scope": "تعداد آگهی‌ها در پیشنهاد کتبی مشخص می‌شود · انتخاب ۱، ۷ یا ۳۰ روز برای هر آگهی · دامنه و مدت پیش از ارائه پیشنهاد توافق می‌شود"
+      }
+    }
+  },
+  "de": {
+    "subject": "İşBul KKTC Arbeitgeberpakete: Wählen Sie Ihren Personalbedarf",
+    "preheader": "Vergleichen Sie Optionen für 1, bis zu 3 und bis zu 5 Anzeigen. Je Anzeige sind 1, 7 oder 30 Tage möglich; Unternehmensumfänge werden schriftlich vereinbart.",
+    "heading": "Wählen Sie ein Anzeigenpaket passend zu Ihrem Personalbedarf",
+    "greeting": "Guten Tag,",
+    "paragraphs": [
+      "Die Arbeitgeberpakete von İşBul KKTC bieten unterschiedliche Anzeigenkontingente, je nachdem, wie viele offene Stellen Sie gleichzeitig veröffentlichen möchten.",
+      "Für jede Anzeige können Sie 1, 7 oder 30 Tage wählen. Anzahl, Umfang und Laufzeit eines Unternehmenspakets werden in einem schriftlichen Angebot festgelegt."
+    ],
+    "featuresHeading": "Die wichtigsten Paketunterschiede",
+    "features": [
+      {
+        "icon": "01",
+        "title": "Eine offene Stelle",
+        "body": "Das Einzelanzeigenpaket umfasst eine Stellenanzeige für eine offene Stelle."
+      },
+      {
+        "icon": "03",
+        "title": "Mehrere offene Stellen",
+        "body": "Das Wachstumspaket umfasst bis zu drei gleichzeitig veröffentlichte Anzeigen."
+      },
+      {
+        "icon": "05",
+        "title": "Regelmäßige Personalsuche",
+        "body": "Das Professional-Paket umfasst bis zu fünf gleichzeitig veröffentlichte Anzeigen."
+      },
+      {
+        "icon": "✓",
+        "title": "Unternehmensumfang",
+        "body": "Anzahl, Umfang und Laufzeit der Unternehmensanzeigen werden schriftlich vereinbart."
+      }
+    ],
+    "closing": "Prüfen Sie den Paketumfang und besprechen Sie mit unserem Team die passende Option.",
+    "packagesLead": "Vergleichen Sie Arbeitgeberpakete nach Anzeigenkontingent und Laufzeit.",
+    "registerLead": "Zahlungen werden nicht auf der Website angenommen. IBAN-Daten und Zahlungsanweisungen erhalten Sie nach Besprechung des Pakets privat.",
+    "primaryCta": "Pakete ansehen",
+    "secondaryCta": "E-Mail-Entwurf öffnen",
+    "signOff": "Mit freundlichen Grüßen, İşBul KKTC",
+    "unsubscribeLabel": "Abbestellen",
+    "footerNote": "Diese E-Mail informiert über die Anzeigenpakete von İşBul KKTC für Arbeitgeber.",
+    "packageCta": "Paket ansehen",
+    "whatsappLead": "Besprechen Sie das ausgewählte Anzeigenpaket und seinen Umfang mit unserem Team.",
+    "whatsappMessage": "Guten Tag, ich hätte gerne Informationen zu den Anzeigenpaketen von İşBul KKTC. Bitte informieren Sie mich über Paketumfang und Zahlungsablauf.",
+    "heroHook": "Wählen Sie ein Anzeigenpaket passend zu Ihrem Personalbedarf",
+    "heroSubhook": "Legen Sie die Anzahl der Anzeigen fest und wählen Sie je Anzeige 1, 7 oder 30 Tage.",
+    "packagesHeading": "Wählen Sie ein Stellenpaket passend zu Ihrem Bedarf.",
+    "pricingNote": "Entdecken Sie Anzeigenpakete. Die Zahlung erfolgt per IBAN-Überweisung außerhalb der Website; Bankdaten und Anweisungen werden nach Besprechung der Paketbedingungen privat mitgeteilt.",
+    "durationLabel": "Anzeigendauer: Je Anzeige 1, 7 oder 30 Tage",
+    "whatsappCta": "WhatsApp-Entwurf öffnen",
+    "contactHeading": "Kontaktieren Sie uns zu diesem Stellenanzeigenpaket.",
+    "contactLabels": {
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "whatsapp": "WhatsApp"
+    },
+    "packages": {
+      "singleListing": {
+        "audience": "EINE OFFENE STELLE",
+        "name": "Einzelanzeige",
+        "description": "Veröffentlichen Sie eine Stelle für 1, 7 oder 30 Tage – passend zu Ihrem Bedarf.",
+        "scope": "1 Stellenanzeige · Je Anzeige 1, 7 oder 30 Tage · Für eine offene Stelle"
+      },
+      "growth": {
+        "audience": "MEHRERE OFFENE STELLEN",
+        "name": "Wachstum",
+        "description": "Einfacher Anzeigenumfang für bis zu drei gleichzeitig offene Stellen.",
+        "scope": "Bis zu 3 Stellenanzeigen · Je Anzeige 1, 7 oder 30 Tage · Für mehrere offene Stellen"
+      },
+      "professional": {
+        "audience": "REGELMÄSSIGE PERSONALSUCHE",
+        "name": "Professionell",
+        "description": "Für Teams, die bis zu fünf offene Stellen gleichzeitig veröffentlichen.",
+        "scope": "Bis zu 5 Stellenanzeigen · Je Anzeige 1, 7 oder 30 Tage · Für Teams mit regelmäßigem Personalbedarf"
+      },
+      "enterprise": {
+        "audience": "PERSONALSUCHE FÜR UNTERNEHMEN",
+        "name": "Unternehmen",
+        "description": "Für Organisationen, die ein schriftliches Angebot mit festgelegter Anzeigenzahl und Laufzeit benötigen.",
+        "scope": "Die Anzeigenzahl wird im schriftlichen Angebot festgelegt · Je Anzeige 1, 7 oder 30 Tage · Umfang und Laufzeit werden vor dem Angebot vereinbart"
+      }
+    }
+  }
 };
 
-export function getMarketingCopy(
-  locale: string | null | undefined,
-): MarketingCopy {
+export function getMarketingCopy(locale: string | null | undefined): MarketingCopy {
   return MARKETING_COPY[resolveEmailLocale(locale)];
 }
