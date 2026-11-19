@@ -570,9 +570,6 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
     },
   ];
 
-  const primaryCtaUrl = MARKETING_CONTACTS.whatsapp;
-  const secondaryCtaUrl = `mailto:${MARKETING_CONTACTS.email}`;
-
   const opts = {
     locale,
     preheader: copy.preheader,
