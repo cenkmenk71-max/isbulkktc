@@ -86,7 +86,6 @@ export type Database = {
           languages: Json;
           certifications: Json;
           summary: string | null;
-          cv_full_text: string | null;
           links: Json;
           visibility: string;
           created_at: string;
@@ -102,7 +101,6 @@ export type Database = {
           languages?: Json;
           certifications?: Json;
           summary?: string | null;
-          cv_full_text?: string | null;
           links?: Json;
           visibility?: string;
           created_at?: never;
@@ -117,7 +115,6 @@ export type Database = {
           languages?: Json;
           certifications?: Json;
           summary?: string | null;
-          cv_full_text?: string | null;
           links?: Json;
           visibility?: string;
           user_id?: never;
