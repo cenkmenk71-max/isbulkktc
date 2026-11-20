@@ -15,10 +15,10 @@ type LocaleErrorKey =
 
 type LocaleErrorProps = {
   error: Error & { digest?: string }
-  retry: () => void
+  reset: () => void
 }
 
-export default function LocaleError({ error, retry }: LocaleErrorProps) {
+export default function LocaleError({ error, reset }: LocaleErrorProps) {
   let t: (key: LocaleErrorKey, values?: { digest: string }) => string
   try {
     // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -54,7 +54,7 @@ export default function LocaleError({ error, retry }: LocaleErrorProps) {
         </p>
       ) : null}
       <div className="route-error-actions">
-        <button className="button button-dark" type="button" onClick={retry}>
+        <button className="button button-dark" type="button" onClick={reset}>
           <RefreshCw size={16} aria-hidden="true" />
           {t('retry')}
         </button>
