@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { BriefcaseBusiness, Plus } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { getEmployerWorkspace } from "@/server/dal/companies";
-import { getCompanyJobs, getCompanyJobEntitlements } from "@/server/dal/jobs";
+import { getCompanyJobsPage, getCompanyJobEntitlements } from "@/server/dal/jobs";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
 
@@ -12,7 +12,7 @@ export const metadata = noIndexMetadata;
 
 type EmployerJobsPageProps = {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ company?: string }>;
+  searchParams: Promise<{ company?: string; afterCreatedAt?: string; afterId?: string }>;
 };
 
 export default async function EmployerJobsPage({
@@ -31,10 +31,14 @@ export default async function EmployerJobsPage({
     getEmployerWorkspace(query.company),
     getTranslations("JobManagement.employer"),
   ]);
-  const [jobs, entitlements] = await Promise.all([
-    getCompanyJobs(company.id),
+  const [jobPage, entitlements] = await Promise.all([
+    getCompanyJobsPage(company.id, {
+      afterCreatedAt: query.afterCreatedAt,
+      afterId: query.afterId,
+    }),
     getCompanyJobEntitlements(company.id),
   ]);
+  const { jobs, nextCursor } = jobPage;
   const entitlement = entitlements[0] ?? null;
   const dateFormatter = new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
@@ -57,6 +61,7 @@ export default async function EmployerJobsPage({
             {copy("newJob")}
           </Link>
         </div>
+        {jobs.length > 0 ? <p className="employer-jobs-capacity">{copy("pageCount")}: {jobs.length}</p> : null}
         {entitlement ? (
           <p className="employer-jobs-capacity">
             {copy("activeJobs")}: {copy("activeJobCount", { count: entitlement.active_jobs })} / {entitlement.max_active_jobs}
@@ -107,6 +112,23 @@ export default async function EmployerJobsPage({
           </Link>
         </div>
       )}
+      {nextCursor ? (
+        <nav aria-label={copy("nextPage")} className="admin-job-review-pagination">
+          <Link
+            className="button button-outline"
+            href={{
+              pathname: "/company/jobs",
+              query: {
+                company: company.id,
+                afterCreatedAt: nextCursor.createdAt,
+                afterId: nextCursor.id,
+              },
+            }}
+          >
+            {copy("nextPage")}
+          </Link>
+        </nav>
+      ) : null}
     </main>
   );
 }
