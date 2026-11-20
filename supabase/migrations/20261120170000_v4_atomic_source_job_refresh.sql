@@ -370,6 +370,21 @@ begin
       select 1
       from public.jobs as remaining_job
       where remaining_job.company_id = source_company.id
+    )
+    and not exists (
+      select 1
+      from public.company_members as member_row
+      where member_row.company_id = source_company.id
+    )
+    and not exists (
+      select 1
+      from public.company_job_package_assignments as assignment_row
+      where assignment_row.company_id = source_company.id
+    )
+    and not exists (
+      select 1
+      from public.company_profile_submissions as submission_row
+      where submission_row.company_id = source_company.id
     );
   get diagnostics v_deleted_company_count = row_count;
 
