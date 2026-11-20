@@ -4,7 +4,7 @@
 **Date:** 20 November 2026  
 **Design source:** Supplied V3 material system  
 **Architecture source:** [Architecture V4](../architecture-v4.md)  
-**Implementation status (verified against the repository on 20 November 2026):** Public pages and account flows are localized in six supported languages; company registration, private candidate-profile editing, public job search/detail pages, imported source listings, candidate applications, and employer application review/detail are implemented. The job draft, moderation, package-entitlement, and publication backend (Server Actions + PostgreSQL RPCs) exists, but the employer-facing job create/edit/listing UI is not implemented. CV file upload/storage and online checkout/payment processing are not implemented; the public package page is an inquiry/catalogue experience, not a purchase flow. Production activation of integrations is a separate operational gate.
+**Implementation status (verified against the repository on 20 November 2026):** Public pages and account flows are localized in six supported languages; company registration, private candidate-profile editing, public job search/detail pages, imported source listings, candidate applications, and employer application review/detail are implemented. The job draft, moderation, package-entitlement, and publication backend (Server Actions + PostgreSQL RPCs) exists, but neither the employer-facing job create/edit/listing UI nor the admin job-moderation queue UI is implemented. CV file upload/storage and online checkout/payment processing are not implemented; the public package page is an inquiry/catalogue experience, not a purchase flow. Production activation of integrations is a separate operational gate.
 
 ## Visual direction
 
