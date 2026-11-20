@@ -449,7 +449,8 @@
     "title": "This page is unavailable right now.",
     "body": "A temporary issue got in the way. Try again in a moment or return to the home page.",
     "retry": "Try again",
-    "home": "Back to home"
+    "home": "Back to home",
+    "supportReference": "Support reference: {digest}"
   },
   "AccountPages": {
     "register": {
