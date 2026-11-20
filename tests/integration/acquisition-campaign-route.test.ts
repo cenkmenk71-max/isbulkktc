@@ -98,6 +98,9 @@ function configured(): () => void {
   return withEnv({
     MARKETING_CRON_SECRET: CRON_SECRET,
     ENGAGEMENT_UNSUBSCRIBE_SECRET: UNSUB_SECRET,
+    // Test-only release-gate override. Production must not set this until
+    // the versioned consent source and SQL recipient predicate are live.
+    MARKETING_CAMPAIGN_CONSENT_READY: "true",
   });
 }
 
@@ -127,6 +130,30 @@ test("an unauthenticated POST is refused before any work", async () => {
       "authentication must precede the service client, so no call is recorded",
     );
     assert.deepEqual(recorded.marketingMail, []);
+  } finally {
+    restore();
+  }
+});
+
+
+test("the acquisition campaign fails closed until explicit-consent enforcement is deployed", async () => {
+  resetBoundary({}, { rpcs: {} });
+  const restore = withEnv({
+    MARKETING_CRON_SECRET: CRON_SECRET,
+    ENGAGEMENT_UNSUBSCRIBE_SECRET: UNSUB_SECRET,
+    MARKETING_CAMPAIGN_CONSENT_READY: undefined,
+  });
+  try {
+    const { POST } = await campaignRoute();
+    const res = await POST(request(`Bearer ${CRON_SECRET}`));
+
+    assert.equal(res.status, 503);
+    assert.equal(res.headers.get("cache-control"), "no-store");
+    assert.deepEqual(await res.json(), {
+      message: "Acquisition marketing consent enforcement is not ready",
+    });
+    assert.deepEqual(recorded.supabase, [], "must not access recipients before consent enforcement is ready");
+    assert.deepEqual(recorded.marketingMail, [], "must not send promotional mail before consent enforcement is ready");
   } finally {
     restore();
   }
