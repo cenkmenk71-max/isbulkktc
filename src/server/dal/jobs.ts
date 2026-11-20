@@ -61,6 +61,7 @@ export async function getJobCompanyId(jobId: string): Promise<string | null> {
     .from("jobs")
     .select("company_id")
     .eq("id", jobId)
+    .eq("publication_source", "platform")
     .maybeSingle();
 
   if (error) {
