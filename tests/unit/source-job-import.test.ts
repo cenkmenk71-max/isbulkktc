@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildSourceCompanySlug,
+  collectCompleteSourceResults,
   buildSourceJobSlug,
   htmlToPlainText,
   isWithinSourceWindow,
@@ -216,6 +217,52 @@ function sourceJob(overrides: {
     },
   };
 }
+
+test("collectCompleteSourceResults combines complete upstream snapshots", () => {
+  const first = sourceJob({
+    title: "A",
+    publishedAt: "2026-10-01T00:00:00.000Z",
+    company: "c1",
+    sector: "s1",
+  });
+  const second = {
+    ...sourceJob({
+      title: "B",
+      publishedAt: "2026-10-02T00:00:00.000Z",
+      company: "c2",
+      sector: "s2",
+    }),
+    source: "isbulkibris" as const,
+  };
+
+  const records = collectCompleteSourceResults([
+    { source: "iskibris", result: { status: "fulfilled", value: [first] } },
+    { source: "isbulkibris", result: { status: "fulfilled", value: [second] } },
+  ]);
+
+  assert.deepEqual(records, [first, second]);
+});
+
+test("collectCompleteSourceResults fails closed when either upstream is unavailable", () => {
+  const healthy = sourceJob({
+    title: "A",
+    publishedAt: "2026-10-01T00:00:00.000Z",
+    company: "c1",
+    sector: "s1",
+  });
+
+  assert.throws(
+    () =>
+      collectCompleteSourceResults([
+        { source: "iskibris", result: { status: "fulfilled", value: [healthy] } },
+        {
+          source: "isbulkibris",
+          result: { status: "rejected", reason: new Error("upstream timeout") },
+        },
+      ]),
+    /isbulkibris: upstream timeout.*Canlı katalog korunuyor/,
+  );
+});
 
 test("selectDiverseSourceJobs keeps the newest listings up to the limit", () => {
   const jobs = [
