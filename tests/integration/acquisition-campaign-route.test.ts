@@ -6,6 +6,7 @@ import {
   mailFailures,
   recorded,
   resetBoundary,
+  type SupabaseCall,
 } from "./support/harness";
 
 installBoundaryMocks();
@@ -311,7 +312,8 @@ test("a full campaign page returns a cursor and the next request resumes without
     assert.equal(secondBody.campaignDate, campaignDate);
 
     const listCalls = recorded.supabase.filter(
-      (call) => call.kind === "rpc" && call.name === "list_marketing_recipients",
+      (call): call is Extract<SupabaseCall, { kind: "rpc" }> =>
+        call.kind === "rpc" && call.name === "list_marketing_recipients",
     );
     assert.equal(listCalls.length, 2);
     assert.equal(listCalls[0].args._after, null);
