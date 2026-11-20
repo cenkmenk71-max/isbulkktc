@@ -52,7 +52,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const jobs = await loadDigestJobs();
+  let jobs: EngagementJob[];
+  try {
+    jobs = await loadDigestJobs(supabase);
+  } catch (error) {
+    console.error("Digest jobs could not be loaded.", {
+      error: error instanceof Error ? error.name : "unknown_error",
+    });
+    return jsonNoStore(
+      { message: "Featured jobs are temporarily unavailable" },
+      { status: 502 },
+    );
+  }
   if (jobs.length === 0) {
     return jsonNoStore({ message: "No jobs to feature", sent: 0 });
   }
@@ -103,7 +114,7 @@ export async function POST(request: Request) {
       } catch (error) {
         failed += 1;
         console.error("Engagement email could not be sent.", {
-          error: error instanceof Error ? error.message : "unknown_error",
+          error: error instanceof Error ? error.name : "unknown_error",
         });
       }
     }
@@ -114,10 +125,9 @@ export async function POST(request: Request) {
   return jsonNoStore({ message: "Engagement digest complete", sent, failed });
 }
 
-async function loadDigestJobs(): Promise<EngagementJob[]> {
-  const supabase = createSupabaseServiceClient();
-  if (!supabase) return [];
-
+async function loadDigestJobs(
+  supabase: NonNullable<ReturnType<typeof createSupabaseServiceClient>>,
+): Promise<EngagementJob[]> {
   const { data, error } = await supabase.rpc("search_public_jobs", {
     _query: "",
     _district: null,
@@ -125,10 +135,15 @@ async function loadDigestJobs(): Promise<EngagementJob[]> {
     _workplace_mode: null,
     _page: 1,
   });
-  if (error || !data || typeof data !== "object") return [];
+  if (error) throw new Error("search_public_jobs_failed", { cause: error });
+  if (!data || typeof data !== "object") {
+    throw new Error("search_public_jobs_returned_no_data");
+  }
 
   const jobs = (data as { jobs?: unknown }).jobs;
-  if (!Array.isArray(jobs)) return [];
+  if (!Array.isArray(jobs)) {
+    throw new Error("search_public_jobs_returned_invalid_shape");
+  }
 
   const baseUrl = getAppBaseUrl();
   return jobs.slice(0, DIGEST_JOB_COUNT).flatMap((job) => {

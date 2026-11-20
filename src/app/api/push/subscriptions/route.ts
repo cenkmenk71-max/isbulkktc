@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { jsonNoStore } from "@/server/http/no-store-response";
 import { isAllowedPushEndpoint } from "@/server/push/push-endpoint";
+import { readBoundedTextBody } from "@/server/http/bounded-text-body";
 
 export const dynamic = "force-dynamic";
 
@@ -41,9 +42,17 @@ export async function POST(request: Request) {
     return jsonNoStore({ message: "Unauthorized" }, { status: 401 });
   }
 
+  const boundedBody = await readBoundedTextBody(request, 4 * 1024);
+  if (!boundedBody.ok) {
+    return jsonNoStore(
+      { message: boundedBody.reason === "too_large" ? "Body too large" : "Invalid body" },
+      { status: boundedBody.reason === "too_large" ? 413 : 400 },
+    );
+  }
+
   let body: unknown;
   try {
-    body = await request.json();
+    body = JSON.parse(boundedBody.text);
   } catch {
     return jsonNoStore({ message: "Invalid body" }, { status: 400 });
   }

@@ -70,11 +70,12 @@ function serviceScript(
   pages: Recipient[][],
   jobs: unknown[] = jobRows(3),
   listError: { code?: string } | null = null,
+  jobsError: { code?: string } | null = null,
 ) {
   let call = 0;
   return {
     rpcs: {
-      search_public_jobs: { data: { jobs }, error: null },
+      search_public_jobs: { data: jobsError ? null : { jobs }, error: jobsError },
       list_engagement_recipients: () => {
         if (listError) return { data: null, error: listError };
         return { data: pages[call++] ?? [], error: null };
@@ -335,6 +336,30 @@ test("a full batch advances the cursor to the last recipient and stops", async (
     // Each recipient gets their own signature — not one shared link.
     const links = new Set(recorded.engagementMail.map((mail) => mail.unsubscribeUrl));
     assert.equal(links.size, 51);
+  } finally {
+    restore();
+  }
+});
+
+
+test("a featured-job search failure answers 502 instead of masquerading as an empty digest", async () => {
+  resetBoundary({}, serviceScript([], jobRows(1), null, { code: "57014" }));
+  const restore = configured();
+  try {
+    const { POST } = await digestRoute();
+    const res = await POST(request(`Bearer ${CRON_SECRET}`));
+
+    assert.equal(res.status, 502);
+    assertNoStore(res);
+    assert.deepEqual(await res.json(), {
+      message: "Featured jobs are temporarily unavailable",
+    });
+    assert.deepEqual(recorded.engagementMail, []);
+    assert.deepEqual(
+      rpcCalls("list_engagement_recipients"),
+      [],
+      "the recipient list must not be walked when the featured-job query failed",
+    );
   } finally {
     restore();
   }

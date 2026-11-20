@@ -186,3 +186,16 @@ test("a failed write is answered 502 without leaking the database error", async 
     "the database error text must not be reflected to the caller",
   );
 });
+
+
+test("an oversized authenticated subscription body is refused before JSON parsing or RPC", async () => {
+  resetBoundary({ user: fakeAuthUser() });
+  const { POST } = await route();
+
+  const response = await POST(request("x".repeat(4 * 1024 + 1)));
+
+  assert.equal(response.status, 413);
+  assertNoStore(response);
+  assert.deepEqual(await response.json(), { message: "Body too large" });
+  assert.deepEqual(registerCalls(), []);
+});

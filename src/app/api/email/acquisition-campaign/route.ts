@@ -128,7 +128,7 @@ export async function POST(request: Request) {
       } catch (error) {
         failed += 1;
         console.error("Marketing email could not be sent.", {
-          error: error instanceof Error ? error.message : "unknown_error",
+          error: error instanceof Error ? error.name : "unknown_error",
         });
       }
     }
