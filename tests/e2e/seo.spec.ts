@@ -524,10 +524,10 @@ test("localized vacancy URLs canonicalise to the Turkish listing", async ({
   // Imported listings do not accept applications on this platform. The
   // visible source link gives candidates the real application route and makes
   // the listing's provenance transparent.
-  const sourceLink = page.getByRole("link", { name: /iskibris\\.com/ });
+  const sourceLink = page.getByRole("link", { name: /iskibris\.com/ });
   await expect(sourceLink).toHaveAttribute(
     "href",
-    /^https:\/\/www\.iskibris\.com\/jobs\/\d{1,18}$/,
+    "https://www.iskibris.com/jobs/25822",
   );
   await expect(sourceLink).toHaveAttribute("target", "_blank");
   await expect(sourceLink).toHaveAttribute("rel", "noopener noreferrer");
