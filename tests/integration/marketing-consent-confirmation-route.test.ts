@@ -77,8 +77,12 @@ test("only a valid explicit POST invokes the service-role confirmation RPC", asy
 
     assert.equal(response.status, 200);
     assert.match(await response.text(), /tercihiniz doğrulandı/i);
-    const call = recorded.supabase.find(
-      (entry) => entry.kind === "rpc" && entry.name === "confirm_sales_lead_marketing_consent",
+    const rpcCalls = recorded.supabase.filter(
+      (entry): entry is Extract<(typeof recorded.supabase)[number], { kind: "rpc" }> =>
+        entry.kind === "rpc",
+    );
+    const call = rpcCalls.find(
+      (entry) => entry.name === "confirm_sales_lead_marketing_consent",
     );
     assert.ok(call);
     assert.equal(call.args._lead_id, LEAD_ID);
