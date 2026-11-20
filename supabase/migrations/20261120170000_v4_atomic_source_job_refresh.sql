@@ -174,7 +174,7 @@ begin
       using errcode = '22023';
   end if;
 
-  insert into public.companies (
+  insert into public.companies as current_company (
     name,
     slug,
     verification_status,
@@ -216,21 +216,21 @@ begin
     -- Once a source company is verified, claimed by a member, assigned a
     -- package, or has a profile submission in review, its curated data belongs
     -- to the platform/company workflow rather than the upstream scraper.
-    where public.companies.verification_status = 'pending'
+    where current_company.verification_status = 'pending'
       and not exists (
         select 1
         from public.company_members as member_row
-        where member_row.company_id = public.companies.id
+        where member_row.company_id = current_company.id
       )
       and not exists (
         select 1
         from public.company_job_package_assignments as assignment_row
-        where assignment_row.company_id = public.companies.id
+        where assignment_row.company_id = current_company.id
       )
       and not exists (
         select 1
         from public.company_profile_submissions as submission_row
-        where submission_row.company_id = public.companies.id
+        where submission_row.company_id = current_company.id
       );
 
   -- This delete, the subsequent inserts, and the snapshot update all commit or
