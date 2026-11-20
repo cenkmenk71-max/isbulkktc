@@ -883,7 +883,9 @@
     "companyLabel": "РАБОТОДАТЕЛЬ",
     "companyLocation": "Местоположение компании",
     "companyWebsite": "Веб-сайт",
-    "companyDirectoryLink": "Открыть в каталоге компаний"
+    "companyDirectoryLink": "Открыть в каталоге компаний",
+    "sourceAttributionLabel": "ПЕРВОИСТОЧНИК",
+    "sourceAttributionLink": "Открыть исходное объявление"
   },
   "JobApplication": {
     "title": "Откликнуться на вакансию",
