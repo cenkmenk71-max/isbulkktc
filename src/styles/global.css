@@ -14537,3 +14537,9 @@ body:has(.pwa-update-toast) .support-widget {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+@media (max-width: 680px) {
+  .job-authoring-fields {
+    grid-template-columns: 1fr;
+  }
+}
