@@ -82,7 +82,7 @@ Vercel `RESEND_API_KEY` **doğru ekibin** yeni `re_…` anahtarıyla değiştiri
 İki sır da `openssl rand -hex 32` ile üretildi ve **hem Vercel'e** (`production`,
 `preview`) **hem GitHub Actions'a** (repository secret) **aynı değerle** yazıldı.
 Dispatch origin değişkenleri de eklendi:
-`MARKETING_DISPATCH_ORIGIN` / `ENGAGEMENT_DISPATCH_ORIGIN` = `https://isbulkktc-prod.vercel.app`.
+`MARKETING_DISPATCH_ORIGIN` / `ENGAGEMENT_DISPATCH_ORIGIN` were set to a Vercel deployment alias at the time of the original test; this historical value must be revalidated against current deployment protection.
 
 Doğrulama (uçtan uca): Actions → **Send acquisition campaign** → **Run workflow** →
 log `HTTP 200` + `{"message":"Acquisition campaign complete","sent":0,"failed":0}`.
@@ -431,8 +431,11 @@ Workflow, Cloudflare'in bot korumasının GitHub'ın veri merkezi çıkışını
 engellememesi için **Vercel alias**'ını çağırır (`vars.MARKETING_DISPATCH_ORIGIN`,
 varsayılan `https://isbulkktc-amber.vercel.app`). Aynı derlemeyi sunar.
 
-Her iki rota da **idempotent**'tir (bir parti talebeder, gönderir, işaretler), bu
-yüzden kaçan/yinelenen bir koşu güvenlidir.
+Her iki rota da Resend idempotency key kullanır; bu, sağlayıcının sınırlı
+idempotency saklama penceresi içinde tekrarları azaltır ancak kalıcı exactly-once
+garantisi değildir. Acquisition gönderimi kabul edildikten sonra DB işaretleme
+başarısız olursa sonraki kampanya tarihinde tekrar gönderim riski vardır (issue
+#710); reconciliation tamamlanmadan yeni kampanya başlatılmamalıdır.
 
 ## Doğrulama kapısı
 
@@ -514,7 +517,9 @@ Tam adımlar için yukarıdaki **"Kalan altyapı maddeleri"** bölümüne bak.
 ### Cloudflare 1010 bot-koruması notu (2026-11-12)
 
 `https://isbulkktc.com` Cloudflare arkasında ve bot koruması bazı istemci UA'larını
-**403 error 1010** ile bloklar (ör. Python `urllib`). `curl` ve `Svix-Webhooks` UA
-geçer. Bu yüzden webhook ve cron çağrıları **Cloudflare'siz Vercel alias**'ını
-(`https://isbulkktc-prod.vercel.app`) kullanır; aynı derlemeyi sunar. Kanonik host da
-çalışır ama Cloudflare'i atlamak teslim garantisi için daha güvenli.
+**403 error 1010** ile bloklar (ör. Python `urllib`). Bu nedenle webhook ve cron çağrıları tarihsel olarak Cloudflare'i atlayan bir
+deployment alias'ı üzerinden yapılandırılmıştı. Vercel deployment protection
+sonradan değiştiği için eski 200/401 testleri güncel erişimi kanıtlamaz. Kalıcı
+çözüm, public custom domain üzerinden çağrı yapmak ve gerekiyorsa yalnızca ilgili
+POST endpoint'leri için dar kapsamlı Cloudflare kuralı eklemektir. Uygulama
+katmanındaki Svix ve cron Bearer doğrulamaları korunmalıdır.
