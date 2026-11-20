@@ -115,25 +115,6 @@ export async function JobDetailExperience({
               {job.publication_source === "platform" ? (
                 <JobApplicationForm contact={viewerContact} jobId={job.id} />
               ) : null}
-              {job.publication_source === "source_site" && job.source_listing_url ? (
-                <section
-                  className="job-detail-source-card"
-                  aria-label={t("sourceAttributionLabel")}
-                >
-                  <span className="job-detail-source-label">
-                    {t("sourceAttributionLabel")}
-                  </span>
-                  <strong>{new URL(job.source_listing_url).hostname}</strong>
-                  <a
-                    href={job.source_listing_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {t("sourceAttributionLink")}
-                    <ArrowUpRight size={14} aria-hidden="true" />
-                  </a>
-                </section>
-              ) : null}
               <section className="job-detail-company-card">
                 <span>{t("companyLabel")}</span>
                 <strong>{job.company.name}</strong>
@@ -145,10 +126,24 @@ export async function JobDetailExperience({
                     {t("companyLocation")}: {job.company.municipality}
                   </p>
                 ) : null}
-                <Link href="/companies">
-                  {t("companyDirectoryLink")}
-                  <ArrowUpRight size={14} aria-hidden="true" />
-                </Link>
+                <div className="job-detail-company-links">
+                  <Link className="job-detail-company-link" href="/companies">
+                    {t("companyDirectoryLink")}
+                    <ArrowUpRight size={14} aria-hidden="true" />
+                  </Link>
+                  {job.publication_source === "source_site" && job.source_listing_url ? (
+                    <a
+                      aria-label={t("sourceAttributionLink")}
+                      className="job-detail-source-link"
+                      href={job.source_listing_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {new URL(job.source_listing_url).hostname}
+                      <ArrowUpRight size={14} aria-hidden="true" />
+                    </a>
+                  ) : null}
+                </div>
               </section>
             </aside>
           </div>
