@@ -409,3 +409,25 @@ test("the engagement campaign key is the UTC Monday and stays stable through tha
   assert.equal(engagementWeekKey(new Date("2026-11-23T00:00:00.000Z")), "2026-11-23");
   assert.throws(() => engagementWeekKey(new Date(Number.NaN)), /valid date/);
 });
+
+
+test("a canonical Postgres UUID cursor is accepted even when it is not RFC 4122 versioned", async () => {
+  const nilUuid = "00000000-0000-0000-0000-000000000000";
+  resetBoundary({}, serviceScript([[]]));
+  const restore = configured();
+  try {
+    const { POST } = await digestRoute();
+    const response = await POST(request(`Bearer ${CRON_SECRET}`, nilUuid));
+
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.complete, true);
+    assert.equal(body.nextCursor, null);
+
+    const calls = rpcCalls("list_engagement_recipients");
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].args._after, nilUuid);
+  } finally {
+    restore();
+  }
+});

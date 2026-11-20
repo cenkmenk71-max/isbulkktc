@@ -13,7 +13,7 @@ export const maxDuration = 60;
 
 const BATCH_SIZE = 50;
 const DIGEST_JOB_COUNT = 5;
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Engagement-digest sender. Intended to run on a schedule (a cron entry hitting

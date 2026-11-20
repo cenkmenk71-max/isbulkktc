@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import test, { mock } from "node:test";
 
 import { supportChatRateLimiter } from "@/features/abuse/limits";
+
+// Keep the route module graph real while allowing its server-only AI adapter to
+// load in node:test. All three cases stop before the hosted AI call is reached.
+mock.module("server-only", { namedExports: {} });
 
 const route = () => import("@/app/api/support/chat/route");
 
