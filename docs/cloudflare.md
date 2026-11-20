@@ -9,6 +9,7 @@ firewall ve rate-limit ruleset'leri okundu. Hiçbir Cloudflare ayarı değiştir
 ### Zone / DNS
 
 - Zone: `isbulkktc.com`, active, Free plan.
+- Vercel project `isbulkktc`: SSO protection enabled for all deployments except custom domains; Vercel `.vercel.app` aliases are therefore behind Vercel protection while apex/www remain public through Cloudflare. Password protection and trusted-IP restrictions are off. The direct origin alias bypasses Cloudflare rules, so its Vercel protection must remain enabled.
 - Apex A kaydı Vercel origin'ine proxied; `www` CNAME kaydı da proxied.
 - SSL mode: `strict`; Always Use HTTPS ve Automatic HTTPS Rewrites açık.
 - Minimum TLS 1.2; TLS 1.3, HTTP/2, HTTP/3, Brotli ve Early Hints açık.
