@@ -55,6 +55,38 @@ export type SourceJobRecord = {
   employer: SourceEmployerRecord;
 };
 
+/**
+ * Combines source results only when every upstream completed successfully.
+ *
+ * The importer replaces the source catalogue as one snapshot. Treating a failed
+ * upstream as an empty catalogue would delete that source's existing listings
+ * during the subsequent purge, so partial snapshots are never publishable.
+ */
+export function collectCompleteSourceResults(
+  results: readonly {
+    source: SourceJobSite;
+    result: PromiseSettledResult<SourceJobRecord[]>;
+  }[],
+): SourceJobRecord[] {
+  const failures = results.flatMap(({ source, result }) =>
+    result.status === "rejected"
+      ? [
+          `${source}: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
+        ]
+      : [],
+  );
+
+  if (failures.length > 0) {
+    throw new Error(
+      `Kaynak ilan yenilemesi durduruldu; ${failures.join("; ")}. Canlı katalog korunuyor.`,
+    );
+  }
+
+  return results.flatMap(({ result }) =>
+    result.status === "fulfilled" ? result.value : [],
+  );
+}
+
 const turkishStopWords = new Set(["ve", "ile", "icin", "için", "the", "and", "of"]);
 
 const districtAliases = new Map<string, SourceDistrict>([

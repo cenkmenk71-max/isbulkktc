@@ -26,7 +26,19 @@ export type FetchSourceJobsOptions = {
   onProgress?: (message: string) => void;
 };
 
-async function fetchJson<T>(url: string): Promise<T | null> {
+type JsonFetchResult<T> =
+  | { kind: "ok"; data: T }
+  | { kind: "not-found" }
+  | { kind: "unavailable" };
+
+class NonRetryableSourceResponseError extends Error {
+  constructor(status: number) {
+    super(`Source API returned non-retryable HTTP ${status}.`);
+    this.name = "NonRetryableSourceResponseError";
+  }
+}
+
+async function fetchJson<T>(url: string): Promise<JsonFetchResult<T>> {
   const maxAttempts = 4;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
@@ -35,18 +47,23 @@ async function fetchJson<T>(url: string): Promise<T | null> {
         signal: AbortSignal.timeout(requestTimeoutMs),
       });
       if (response.ok) {
-        return (await response.json()) as T;
+        return { kind: "ok", data: (await response.json()) as T };
       }
-      // 429/5xx are transient; other 4xx responses will not succeed on retry.
-      if (response.status !== 429 && response.status < 500) return null;
-    } catch {
-      // Network timeouts and aborted requests are retried below.
+      // A missing detail is a definitive removal. Every other permanent 4xx
+      // indicates a broken request/configuration and must abort the snapshot.
+      if (response.status === 404) return { kind: "not-found" };
+      if (response.status !== 429 && response.status < 500) {
+        throw new NonRetryableSourceResponseError(response.status);
+      }
+    } catch (error) {
+      if (error instanceof NonRetryableSourceResponseError) throw error;
+      // Network timeouts, malformed JSON and aborted requests are retried below.
     }
     if (attempt < maxAttempts) {
       await sleep(400 * 2 ** (attempt - 1));
     }
   }
-  return null;
+  return { kind: "unavailable" };
 }
 
 function sleep(ms: number): Promise<void> {
@@ -88,24 +105,37 @@ async function fetchDetailsWithRetry<TItem, TDetail>(
     fetchJson<TDetail>(toUrl(item)),
   );
 
+  // 404 means the source has removed this listing; retry only transient
+  // failures so a temporary 429/5xx cannot be mistaken for a deletion.
   const failedIndices = firstPass
-    .map((detail, index) => (detail === null ? index : -1))
+    .map((result, index) => (result.kind === "unavailable" ? index : -1))
     .filter((index) => index >= 0);
 
-  if (failedIndices.length === 0) return firstPass;
+  const merged: JsonFetchResult<TDetail>[] = [...firstPass];
+  if (failedIndices.length > 0) {
+    await sleep(1500);
+    const retries = await mapWithConcurrency(
+      failedIndices,
+      Math.max(1, Math.floor(concurrency / 2)),
+      (index) => fetchJson<TDetail>(toUrl(items[index])),
+    );
+    failedIndices.forEach((index, position) => {
+      merged[index] = retries[position];
+    });
+  }
 
-  await sleep(1500);
-  const retries = await mapWithConcurrency(
-    failedIndices,
-    Math.max(1, Math.floor(concurrency / 2)),
-    (index) => fetchJson<TDetail>(toUrl(items[index])),
+  const stillUnavailable = merged.filter(
+    (result) => result.kind === "unavailable",
+  ).length;
+  if (stillUnavailable > 0) {
+    throw new Error(
+      `Source detail refresh is incomplete: ${stillUnavailable} listing detail(s) remained unavailable after retries.`,
+    );
+  }
+
+  return merged.map((result) =>
+    result.kind === "ok" ? result.data : null,
   );
-
-  const merged = [...firstPass];
-  failedIndices.forEach((index, position) => {
-    merged[index] = retries[position];
-  });
-  return merged;
 }
 
 type IskibrisListItem = {
@@ -385,19 +415,29 @@ export async function fetchIskibrisJobs(
   const listItems: IskibrisListItem[] = [];
 
   for (let page = 1; page <= 20; page += 1) {
-    const payload = await fetchJson<{
+    const result = await fetchJson<{
       data?: IskibrisListItem[];
       next_page_url?: string | null;
     }>(`https://api.iskibris.com/api/v2/jobs/paginated?page=${page}&per_page=100`);
-    if (payload === null) {
-      // A failed first page means the source is unreachable; abort rather than
-      // report zero listings, which would otherwise purge live data.
-      if (page === 1) {
-        throw new Error("iskibris ilan listesi alınamadı (kaynak yanıt vermiyor).");
-      }
-      break;
+    if (result.kind !== "ok") {
+      // A missing or unavailable page makes the source snapshot incomplete.
+      // Never publish a partial page walk over the existing live catalogue.
+      throw new Error(
+        `iskibris ilan listesi alınamadı (sayfa ${page}, kaynak yanıtı eksik).`,
+      );
     }
-    if (!payload.data || payload.data.length === 0) break;
+    const payload = result.data;
+    if (
+      !Array.isArray(payload.data) ||
+      payload.data.some(
+        (item) => !item || !Number.isSafeInteger(item.id) || item.id <= 0,
+      )
+    ) {
+      throw new Error(
+        `iskibris ilan listesi geçersiz biçimde döndü (sayfa ${page}).`,
+      );
+    }
+    if (payload.data.length === 0) break;
     listItems.push(...payload.data);
     if (!payload.next_page_url) break;
   }
@@ -438,16 +478,30 @@ export async function fetchIsbulkibrisJobs(
   const listIds: string[] = [];
 
   for (let page = 1; page <= 20; page += 1) {
-    const payload = await fetchJson<{ items?: IsbulkibrisListItem[] }>(
+    const result = await fetchJson<{ items?: IsbulkibrisListItem[] }>(
       `https://api.isbulkibris.com/api/jobs?page=${page}&pageSize=100`,
     );
-    if (payload === null) {
-      if (page === 1) {
-        throw new Error("isbulkibris ilan listesi alınamadı (kaynak yanıt vermiyor).");
-      }
-      break;
+    if (result.kind !== "ok") {
+      throw new Error(
+        `isbulkibris ilan listesi alınamadı (sayfa ${page}, kaynak yanıtı eksik).`,
+      );
     }
-    if (!payload.items || payload.items.length === 0) break;
+    const payload = result.data;
+    if (
+      !Array.isArray(payload.items) ||
+      payload.items.some(
+        (item) =>
+          !item ||
+          typeof item.id !== "string" ||
+          item.id.trim().length === 0 ||
+          item.id.length > 128,
+      )
+    ) {
+      throw new Error(
+        `isbulkibris ilan listesi geçersiz biçimde döndü (sayfa ${page}).`,
+      );
+    }
+    if (payload.items.length === 0) break;
     listIds.push(...payload.items.map((item) => item.id));
     if (payload.items.length < 100) break;
   }
