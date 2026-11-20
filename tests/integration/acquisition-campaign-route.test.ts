@@ -59,6 +59,12 @@ function serviceScript(
 ) {
   let call = 0;
   return {
+    tables: {
+      // The explicit-consent schema probe succeeds by default. Tests for a
+      // production database that has not received the consent migration
+      // override this result with a missing-column error.
+      sales_leads: { data: [], error: null },
+    },
     rpcs: {
       list_marketing_recipients: () => {
         if (listError) return { data: null, error: listError };
@@ -98,6 +104,9 @@ function configured(): () => void {
   return withEnv({
     MARKETING_CRON_SECRET: CRON_SECRET,
     ENGAGEMENT_UNSUBSCRIBE_SECRET: UNSUB_SECRET,
+    // Test-only override. Production must not enable this until the versioned
+    // consent source, confirmation flow and SQL recipient predicate are live.
+    MARKETING_CAMPAIGN_CONSENT_READY: "true",
   });
 }
 
@@ -127,6 +136,29 @@ test("an unauthenticated POST is refused before any work", async () => {
       "authentication must precede the service client, so no call is recorded",
     );
     assert.deepEqual(recorded.marketingMail, []);
+  } finally {
+    restore();
+  }
+});
+
+test("the acquisition campaign fails closed until affirmative-consent enforcement is deployed", async () => {
+  resetBoundary({}, null);
+  const restore = withEnv({
+    MARKETING_CRON_SECRET: CRON_SECRET,
+    ENGAGEMENT_UNSUBSCRIBE_SECRET: UNSUB_SECRET,
+    MARKETING_CAMPAIGN_CONSENT_READY: undefined,
+  });
+  try {
+    const { POST } = await campaignRoute();
+    const response = await POST(request("Bearer " + CRON_SECRET));
+
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.deepEqual(await response.json(), {
+      message: "Acquisition marketing consent enforcement is not ready",
+    });
+    assert.deepEqual(recorded.supabase, [], "the closed sender must not access recipients");
+    assert.deepEqual(recorded.marketingMail, [], "the closed sender must not send promotional email");
   } finally {
     restore();
   }
@@ -175,6 +207,48 @@ test("a deployment without a signing key answers 503 and sends nothing", async (
 
     assert.equal(res.status, 503);
     assert.deepEqual(recorded.marketingMail, []);
+  } finally {
+    restore();
+  }
+});
+
+test("a campaign fails closed when explicit-consent columns are absent", async () => {
+  resetBoundary(
+    {},
+    {
+      tables: {
+        sales_leads: { data: null, error: { code: "42703" } },
+      },
+      rpcs: {},
+    },
+  );
+  const restore = configured();
+  try {
+    const { POST } = await campaignRoute();
+    const response = await POST(request(`Bearer ${CRON_SECRET}`));
+
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), {
+      message: "Marketing consent schema is not ready",
+    });
+    assert.equal(recorded.marketingMail.length, 0);
+    assert.equal(
+      recorded.supabase.some(
+        (call) => call.kind === "rpc" && call.name === "list_marketing_recipients",
+      ),
+      false,
+      "the recipient RPC must not run before the consent schema is verified",
+    );
+    const schemaProbe = recorded.supabase.find(
+      (call) => call.kind === "from" && call.table === "sales_leads",
+    );
+    if (!schemaProbe || schemaProbe.kind !== "from") {
+      assert.fail("the sales_leads consent schema probe must be recorded");
+    }
+    assert.ok(schemaProbe.ops.includes(
+      "select:marketing_consent,marketing_consent_requested_at,marketing_consent_at,marketing_consent_version",
+    ));
+    assert.ok(schemaProbe.ops.includes("limit:0"));
   } finally {
     restore();
   }
