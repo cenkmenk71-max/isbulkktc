@@ -26,7 +26,8 @@ declare
   v_deleted_job_count integer;
   v_deleted_company_count integer;
 begin
-  if coalesce((select auth.role()), '') <> 'service_role' then
+  if (select auth.role()) is null
+     or (select auth.role()) <> 'service_role' then
     raise exception 'The source catalogue worker role is required.'
       using errcode = '42501';
   end if;
