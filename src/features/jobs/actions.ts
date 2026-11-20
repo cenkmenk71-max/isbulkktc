@@ -135,6 +135,11 @@ export async function saveJobDraft(
     return { ...initialJobFormState, status: "error", message: "saveFailed" };
   }
 
+  const prefix = getLocalePrefix(user.locale);
+  revalidatePath(`${prefix}/company/jobs`);
+  revalidatePath(`${prefix}/company/dashboard`);
+  revalidatePath(`${prefix}/admin/jobs`);
+
   return {
     status: "success",
     message: "saved",
@@ -176,6 +181,10 @@ export async function submitJobForReview(
     return { ...initialJobFormState, status: "error", message: "submitFailed" };
   }
 
+  const prefix = getLocalePrefix(user.locale);
+  revalidatePath(`${prefix}/company/jobs`);
+  revalidatePath(`${prefix}/company/dashboard`);
+  revalidatePath(`${prefix}/admin/jobs`);
   return { status: "success", message: "submitted", jobId: result.data.jobId };
 }
 
@@ -551,5 +560,9 @@ export async function reviewJob(
     return { ...initialReviewFormState, status: "error", message: "reviewFailed" };
   }
 
+  const prefix = getLocalePrefix(user.locale);
+  revalidatePath(`${prefix}/admin/jobs`);
+  revalidatePath(`${prefix}/company/jobs`);
+  revalidatePath(`${prefix}/company/dashboard`);
   return { status: "success", message: "reviewed" };
 }
