@@ -967,6 +967,7 @@
     "applicationsTitle": "My applications",
     "applicationsDescription": "Track whether your application reached the employer, its status, and when the employer first viewed it.",
     "noApplications": "You have not applied for a job yet.",
+    "applicationsLoadFailed": "Your applications couldn't be loaded right now. Please refresh the page.",
     "applicationSubmittedAt": "Applied on",
     "applicationViewedAt": "First viewed by employer",
     "applicationNotViewed": "The employer has not viewed your application yet.",
