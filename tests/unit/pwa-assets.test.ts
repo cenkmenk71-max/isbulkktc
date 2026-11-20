@@ -187,6 +187,7 @@ test("the service worker never stores authenticated navigation HTML for offline 
   );
   assert.match(sw, /if \(cache && isCacheableNavigationResponse\(preload\)\)/);
   assert.match(sw, /if \(cache && isCacheableNavigationResponse\(response\)\)/);
+  assert.match(sw, /await cache\.delete\(event\.request\)/);
   assert.match(sw, /if \(cache\) \{\s*const cached = await cache\.match/);
 
   // Cache API ignores these headers unless the worker checks them explicitly.
