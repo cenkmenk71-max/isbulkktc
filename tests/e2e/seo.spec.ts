@@ -520,6 +520,18 @@ test("localized vacancy URLs canonicalise to the Turkish listing", async ({
     "href",
     canonicalUrl,
   );
+
+  // Imported listings do not accept applications on this platform. The
+  // visible source link gives candidates the real application route and makes
+  // the listing's provenance transparent.
+  const sourceLink = page.getByRole("link", { name: "Kaynak ilanda görüntüle" });
+  await expect(sourceLink).toHaveAttribute(
+    "href",
+    /^https:\/\/www\.iskibris\.com\/jobs\/\d{1,18}$/,
+  );
+  await expect(sourceLink).toHaveAttribute("target", "_blank");
+  await expect(sourceLink).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(page.locator(".job-application-card")).toHaveCount(0);
 });
 
 test("filtered job searches that match nothing are not indexable", async ({
