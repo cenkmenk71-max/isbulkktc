@@ -1711,7 +1711,9 @@
       "nextPage": "Sonraki 50 ilan",
       "mfaRequired": "İlan inceleme kuyruğuna erişmek için MFA doğrulaması gereklidir.",
       "backToPackages": "Paket yönetimine dön",
-      "idle": ""
+      "idle": "",
+      "pageCount": "Bu sayfadaki ilanlar",
+      "viewDetails": "İlan ayrıntılarını görüntüle"
     }
   }
 }
