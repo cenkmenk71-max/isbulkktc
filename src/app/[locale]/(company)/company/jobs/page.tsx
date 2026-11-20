@@ -91,7 +91,7 @@ export default async function EmployerJobsPage({
                   {editable ? (
                     <Link
                       className="button button-outline"
-                      href={{ pathname: "/company/jobs/[jobId]/edit", params: { jobId: job.id }, query: { company: company.id } }}
+                      href={`/company/jobs/${job.id}/edit?company=${encodeURIComponent(company.id)}`}
                     >
                       {copy("editJob")}
                     </Link>
