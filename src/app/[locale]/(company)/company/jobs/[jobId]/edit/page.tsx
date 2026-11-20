@@ -41,7 +41,22 @@ export default async function EditEmployerJobPage({
         <h1>{copy("editJob")}</h1>
         <p>{job.title}</p>
       </header>
-      <JobDraftForm companyId={company.id} job={job} />
+      <JobDraftForm
+        companyId={company.id}
+        job={{
+          id: job.id,
+          status: job.status,
+          title: job.title,
+          slug: job.slug,
+          summary: job.summary,
+          description: job.description,
+          requirements: job.requirements,
+          responsibilities: job.responsibilities,
+          job_type: job.job_type,
+          workplace_mode: job.workplace_mode,
+          district: job.district,
+        }}
+      />
     </main>
   );
 }
