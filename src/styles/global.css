@@ -14494,7 +14494,8 @@ body:has(.pwa-update-toast) .support-widget {
     flex-direction: column;
   }
 
-  .job-authoring-form {
+  .job-authoring-form,
+  .job-authoring-fields {
     grid-template-columns: 1fr;
   }
 
@@ -14505,7 +14506,10 @@ body:has(.pwa-update-toast) .support-widget {
 }
 
 .job-authoring-fields {
-  display: contents;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
   min-width: 0;
   margin: 0;
   padding: 0;
