@@ -1690,7 +1690,9 @@
       "packageRequired": "An active listing package is required to publish.",
       "packageLimit": "Your active listing capacity has been reached.",
       "publishFailed": "The listing could not be published.",
-      "closed": "Closed"
+      "closed": "Closed",
+      "pageCount": "Listings on this page",
+      "nextPage": "Next 50 listings"
     },
     "admin": {
       "title": "Job moderation queue",
