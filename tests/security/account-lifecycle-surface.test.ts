@@ -114,22 +114,30 @@ test("account suspension and closure remain an explicit, tested product gap", ()
   // Keep this as a passing, intentional finding rather than a failing TODO test:
   // when the transition feature is added, replace this assertion with positive
   // tests for authorised suspension, closure, audit logging and session revocation.
-  const updateProfiles = /\bupdate\s+public\.profiles\b/i;
-  const writesStatus = /\bstatus\s*=/i;
-  const statusWriters = statements.filter(
-    (statement) => updateProfiles.test(statement) && writesStatus.test(statement),
-  );
+  function isProfileStatusWriter(statement: string): boolean {
+    const sql = statement
+      .replace(/^\s*--.*$/gm, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    return (
+      /\bupdate\s+public\.profiles\b/i.test(sql) &&
+      /\bstatus\s*=/i.test(sql)
+    );
+  }
 
-  // Prove the detector itself recognises the exact SQL shape before relying on
-  // it to record that no production migration currently writes this column.
+  const statusWriters = statements.filter(isProfileStatusWriter);
+
+  // Prove the detector recognises a real SQL writer but ignores commented-out
+  // examples. This prevents the test from passing vacuously due to bad escaping.
   const representativeWriter =
     "update public.profiles set status = 'suspended' where id = auth.uid();";
-  assert.equal(updateProfiles.test(representativeWriter), true);
-  assert.equal(writesStatus.test(representativeWriter), true);
+  assert.equal(isProfileStatusWriter(representativeWriter), true);
   assert.equal(
-    updateProfiles.test("-- update public.profiles is mentioned in a comment"),
-    true,
-    "the scanner operates on SQL statements, so comment handling must be explicit",
+    isProfileStatusWriter(["-- update public.profiles set status = 'closed';", "select 1;"].join("\n")),
+    false,
+  );
+  assert.equal(
+    isProfileStatusWriter("/* update public.profiles set status = 'closed'; */ select 1;"),
+    false,
   );
 
   assert.equal(
