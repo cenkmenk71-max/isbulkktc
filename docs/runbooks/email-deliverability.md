@@ -97,10 +97,9 @@ Webhook oluşturuldu (6 olay: `email.sent/delivered/delivery_delayed/bounced/com
 
 **Cloudflare bulgusu (önemli):** `https://isbulkktc.com` Cloudflare arkasında ve
 bot koruması bazı istemci UA'larını **403 error 1010** ile bloklar (ör. Python
-`urllib`). Webhook bu yüzden **Cloudflare'siz Vercel alias**'ına taşındı:
-`https://isbulkktc-prod.vercel.app/api/email/resend-webhook` (cron'ların da
-kullandığı alias; aynı derlemeyi sunar). Kanonik host da çalışır ama alias
-Cloudflare'i tamamen atlar.
+`urllib`). Webhook bu yüzden geçmişte **Cloudflare'siz deployment alias**'ına taşınmıştı
+(aynı deployment derlemesini sunar). Bu tercih deployment koruma ayarlarıyla
+birlikte yeniden doğrulanmadan sürdürülmemelidir.
 
 Doğrulama: doğru Svix imzasıyla POST → **200** `{"message":"Ignored",...}`;
 bozuk imza → **401** `{"message":"Invalid signature"}`.
