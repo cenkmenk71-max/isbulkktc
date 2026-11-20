@@ -883,7 +883,8 @@
     "companyLabel": "ARBEITGEBER",
     "companyLocation": "Unternehmensstandort",
     "companyWebsite": "Website",
-    "companyDirectoryLink": "Im Unternehmensverzeichnis ansehen"
+    "companyDirectoryLink": "Im Unternehmensverzeichnis ansehen",
+    "sourceAttributionLink": "Auf der Veröffentlichungswebsite öffnen"
   },
   "JobApplication": {
     "title": "Auf diese Stelle bewerben",
