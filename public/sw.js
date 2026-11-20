@@ -23,7 +23,7 @@
  * handler deletes every cache whose name is not in the current list.
  */
 
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const PRECACHE = `isbulk-precache-${CACHE_VERSION}`;
 const PAGES = `isbulk-pages-${CACHE_VERSION}`;
 const ASSETS = `isbulk-assets-${CACHE_VERSION}`;
@@ -44,6 +44,20 @@ const PRECACHE_URLS = [
 const MAX_PAGE_ENTRIES = 40;
 const MAX_IMAGE_ENTRIES = 60;
 const NAVIGATION_TIMEOUT_MS = 6000;
+
+// These route families contain authenticated or account-specific HTML. They
+// must never be written to the URL-keyed offline page cache, even if a server
+// response accidentally omits private/no-store headers. Locale prefixes are
+// stripped before this list is checked.
+const PRIVATE_NAVIGATION_PATHS = [
+  "/profile",
+  "/company",
+  "/admin",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -97,6 +111,33 @@ function isSameOrigin(url) {
   return url.origin === self.location.origin;
 }
 
+function isPrivateNavigation(url) {
+  const pathname =
+    url.pathname.replace(/^\/(?:tr|en|de|ru|el|fa)(?=\/|$)/, "") || "/";
+  return PRIVATE_NAVIGATION_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
+}
+
+function isCacheableNavigationResponse(response) {
+  if (!response.ok) return false;
+  if (!(response.headers.get("content-type") ?? "").includes("text/html")) {
+    return false;
+  }
+
+  // Cache API writes do not automatically honour HTTP cache directives. Enforce
+  // them here, and refuse cookie-varying responses as a second privacy barrier.
+  const cacheControl = response.headers.get("Cache-Control") ?? "";
+  if (/\b(?:private|no-store|no-cache)\b/i.test(cacheControl)) return false;
+  if (response.headers.has("Set-Cookie")) return false;
+  const vary = (response.headers.get("Vary") ?? "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase());
+  if (vary.includes("*") || vary.includes("cookie")) return false;
+
+  return true;
+}
+
 /**
  * Responses that must never enter a cache, whatever the strategy.
  *
@@ -126,13 +167,13 @@ function isImageRequest(request, url) {
   return url.pathname.startsWith("/_next/image");
 }
 
-async function networkFirstNavigation(event) {
-  const cache = await caches.open(PAGES);
+async function networkFirstNavigation(event, allowOfflineCache = true) {
+  const cache = allowOfflineCache ? await caches.open(PAGES) : null;
   const preload = await event.preloadResponse;
   if (preload) {
-    // Only a real HTML document is worth storing; an error page or a redirect
-    // must not become the offline copy of the route.
-    if (preload.ok && (preload.headers.get("content-type") ?? "").includes("text/html")) {
+    // Only a public, cache-safe HTML document is worth storing; an error page,
+    // private response or redirect must not become an offline copy of the route.
+    if (cache && isCacheableNavigationResponse(preload)) {
       await cache.put(event.request, preload.clone());
       await trimCache(PAGES, MAX_PAGE_ENTRIES);
     }
@@ -142,16 +183,24 @@ async function networkFirstNavigation(event) {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), NAVIGATION_TIMEOUT_MS);
-    const response = await fetch(event.request, { signal: controller.signal });
-    clearTimeout(timer);
-    if (response.ok && (response.headers.get("content-type") ?? "").includes("text/html")) {
+    let response;
+    try {
+      response = await fetch(event.request, { signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+    if (cache && isCacheableNavigationResponse(response)) {
       await cache.put(event.request, response.clone());
       await trimCache(PAGES, MAX_PAGE_ENTRIES);
     }
     return response;
   } catch {
-    const cached = await cache.match(event.request, { ignoreSearch: false });
-    if (cached) return cached;
+    // A private navigation may use the generic offline document, but it must
+    // never fall back to HTML previously stored under that account's URL.
+    if (cache) {
+      const cached = await cache.match(event.request, { ignoreSearch: false });
+      if (cached) return cached;
+    }
     const offline = await caches.match(OFFLINE_URL);
     if (offline) return offline;
     return new Response("", { status: 503, statusText: "Offline" });
@@ -192,7 +241,9 @@ self.addEventListener("fetch", (event) => {
   if (isUncacheable(request, url)) return;
 
   if (request.mode === "navigate" && request.destination === "document") {
-    event.respondWith(networkFirstNavigation(event));
+    event.respondWith(
+      networkFirstNavigation(event, !isPrivateNavigation(url)),
+    );
     return;
   }
 
