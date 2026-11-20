@@ -11,10 +11,9 @@ name: Send acquisition campaign
 # idempotency keys are stable within the selected UTC campaign date (24-hour
 # provider retention), not a permanent delivery ledger.
 #
-# Requires two repository secrets: the production origin and the bearer secret
-# the route checks. Until both exist the job stays green and warns, so the
-# Actions tab only shows red for genuine breakage (same contract as
-# push-dispatch.yml).
+# Requires the bearer secret checked by the route. Missing configuration is a
+# failed run, not a green skip: a silently disabled campaign is operationally
+# indistinguishable from a successful one.
 on:
   schedule:
     # Daily at 06:00 UTC (09:00 KKTC). A lead is mailed once and then marked
@@ -42,20 +41,15 @@ jobs:
     timeout-minutes: 360
     steps:
       - name: Check configuration
-        id: config
         env:
-          APP_URL: ${{ secrets.APP_URL || vars.APP_URL || secrets.NEXT_PUBLIC_APP_URL }}
           CRON_SECRET: ${{ secrets.MARKETING_CRON_SECRET }}
         run: |
-          if [ -n "${APP_URL:-}" ] && [ -n "${CRON_SECRET:-}" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=Acquisition campaign not configured::Add the MARKETING_CRON_SECRET secret and the APP_URL variable to enable the acquisition sender. Skipping this run."
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error title=Acquisition campaign not configured::MARKETING_CRON_SECRET is required; refusing a green no-op run."
+            exit 1
           fi
 
       - name: Send the acquisition campaign
-        if: steps.config.outputs.configured == 'true'
         env:
           APP_URL: ${{ secrets.APP_URL || vars.APP_URL || secrets.NEXT_PUBLIC_APP_URL }}
           CRON_SECRET: ${{ secrets.MARKETING_CRON_SECRET }}
@@ -93,10 +87,6 @@ jobs:
             echo "Page ${page}: HTTP ${status}"
             cat /tmp/acquisition-response.txt
 
-            if [ "$status" = "503" ] && [ "$page" -eq 1 ]; then
-              echo "::warning title=Acquisition campaign unavailable::No recipients were processed because the production sender is not configured."
-              exit 0
-            fi
             if [ "$status" != "200" ]; then
               echo "::error::Acquisition campaign page ${page} failed with HTTP ${status}."
               exit 1
