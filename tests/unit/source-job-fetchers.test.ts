@@ -199,6 +199,30 @@ test("pagination follows next_page_url and stops when it clears", async () => {
 });
 
 // ---------------------------------------------------------------------------
+test("a failed later pagination page aborts the source snapshot", async () => {
+  let pageTwoAttempts = 0;
+  await assert.rejects(
+    () =>
+      withFetch(
+        (url) => {
+          const page = Number(new URL(url).searchParams.get("page") ?? "1");
+          if (page === 1) {
+            return json({
+              data: [{ id: 1 }],
+              next_page_url: "https://api.iskibris.com/api/v2/jobs/paginated?page=2",
+            });
+          }
+          pageTwoAttempts += 1;
+          return new Response("upstream unavailable", { status: 503 });
+        },
+        () => fetchIskibrisJobs({ now: NOW, concurrency: 1 }),
+      ),
+    /iskibris ilan listesi alınamadı.*sayfa 2/,
+  );
+  assert.equal(pageTwoAttempts, 4, "an incomplete later page is retried before aborting");
+});
+
+// ---------------------------------------------------------------------------
 // 3. The record mapping — the field each value lands in.
 // ---------------------------------------------------------------------------
 
@@ -329,6 +353,29 @@ test("a detail that exhausts its retries in the first pass is recovered on the s
   assert.equal(detailAttempts, 5, "four attempts in the first pass, one on the retry");
   assert.equal(jobs.length, 1, "the second pass must recover the listing");
   assert.equal(jobs[0].sourceJobId, "1");
+});
+
+test("details still unavailable after both retry passes abort the source snapshot", async () => {
+  let detailAttempts = 0;
+  await assert.rejects(
+    () =>
+      withFetch(
+        (url) => {
+          if (url.includes("paginated")) {
+            return json({ data: [{ id: 1 }], next_page_url: null });
+          }
+          detailAttempts += 1;
+          return new Response("upstream unavailable", { status: 503 });
+        },
+        () => fetchIskibrisJobs({ now: NOW, concurrency: 1 }),
+      ),
+    /detail refresh is incomplete.*remained unavailable/i,
+  );
+  assert.equal(
+    detailAttempts,
+    8,
+    "the detail gets four attempts in the first pass and four in the retry pass",
+  );
 });
 
 test("a permanently unavailable detail drops only itself, not the batch", async () => {
