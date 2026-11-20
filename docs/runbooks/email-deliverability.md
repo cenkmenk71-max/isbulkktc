@@ -1,5 +1,7 @@
 # Runbook: E-posta teslim edilebilirliği (Resend + DNS)
 
+> Gizlilik notu: Kişisel test alıcıları sentetik `example.invalid` adresleriyle gösterilir. Gerçek alıcı adresleri ve üretim alıcı listeleri bu herkese açık runbook'ta tutulmaz.
+
 Bu runbook, `info@isbulkktc.com` üzerinden giden pazarlama/edinim e-postalarının
 spam'e değil gelen kutusuna düşmesi için gereken DNS durumunu ve bozulduğunda
 nasıl teşhis edileceğini tanımlar. Ölçüm tek komuttur; token gerekmez.
@@ -194,7 +196,7 @@ geçersiz kılabilirsin; varsayılan canlı gelen MX'tir.
 Araç bunu yapamaz; gerçek bir kutu gerekir. Outlook'a yapılan gönderimler hâlâ
 sahibin o kutuları kontrol etmesini bekler (`delivery_delayed`'da kaldılar).
 
-Ayrıca sahip talebiyle **Gmail**'e (`jakanamamomoko@gmail.com`) bir test postası
+Ayrıca sahip talebiyle **Gmail**'e (`test-recipient-02@example.invalid`) bir test postası
 gönderildi; Gmail sunucusu **`delivered`** ile kabul etti ve **sahip iletinin Gelen
 Kutusu'na düştüğünü teyit etti** (spam değil). Gmail bu testte greylisting yapmadı;
 Outlook'un `delivery_delayed` davranışından farklı olarak **teyitli gelen kutusu
@@ -208,9 +210,9 @@ alıcıların "spam değil" işaretlemesini sağla. Hacmi haftalar içinde kadem
 ## Bu turda gönderilen test postaları (2026-11-12)
 
 > **Adres düzeltmesi (sahip, 2026-11-12):** doğru üç adres
-> `muhammedali.kahraman@outlook.com`, `m.ali.kahraman@outlook.com` ve
-> `letgodeneme97@outlook.com`'dur. Aşağıdaki tablolarda geçen
-> `muhammed.ali.kahraman@outlook.com` **yanlış** adrestir (yazım hatası, hard
+> `test-recipient-06@example.invalid`, `test-recipient-04@example.invalid` ve
+> `test-recipient-03@example.invalid`'dur. Aşağıdaki tablolarda geçen
+> `test-recipient-05@example.invalid` **yanlış** adrestir (yazım hatası, hard
 > bounce etti); yeni gönderimlerde **kullanılmaz**. Satırlar geçmiş kayıt olarak
 > bırakıldı.
 
@@ -220,9 +222,9 @@ ile üç adrese gönderildi. Hepsi `from İşBul KKTC <info@isbulkktc.com>`,
 
 | Alıcı | Resend e-posta id | son olay |
 |---|---|---|
-| muhammedali.kahraman@outlook.com | `01a1d203-3eac-7435-b840-80cc21926541` | sent |
-| muhammed.ali.kahraman@outlook.com | `01a1d203-3fb1-73aa-98f7-e8b865102bd9` | sent |
-| letgodeneme97@outlook.com | `01a1d203-40b6-7e84-ada2-c7e97cda60b6` | sent |
+| test-recipient-06@example.invalid | `01a1d203-3eac-7435-b840-80cc21926541` | sent |
+| test-recipient-05@example.invalid | `01a1d203-3fb1-73aa-98f7-e8b865102bd9` | sent |
+| test-recipient-03@example.invalid | `01a1d203-40b6-7e84-ada2-c7e97cda60b6` | sent |
 
 **Yeni anahtarla ikinci gönderim (aynı gün):** doğru ekibin anahtarı Vercel'e
 yazıldıktan sonra üç adrese yeniden gönderildi. Gönderim anında `sent`; sonradan
@@ -230,9 +232,9 @@ yazıldıktan sonra üç adrese yeniden gönderildi. Gönderim anında `sent`; s
 
 | Alıcı | Resend e-posta id | son olay |
 |---|---|---|
-| muhammedali.kahraman@outlook.com | `01a1d23c-2df0-7cbd-a4a5-d6e701aa74e4` | delivery_delayed |
-| muhammed.ali.kahraman@outlook.com | `01a1d23c-2efa-734e-bdba-7a6b89083958` | delivery_delayed |
-| letgodeneme97@outlook.com | `01a1d23c-3027-7d63-8df8-92dc46c132cb` | delivery_delayed |
+| test-recipient-06@example.invalid | `01a1d23c-2df0-7cbd-a4a5-d6e701aa74e4` | delivery_delayed |
+| test-recipient-05@example.invalid | `01a1d23c-2efa-734e-bdba-7a6b89083958` | delivery_delayed |
+| test-recipient-03@example.invalid | `01a1d23c-3027-7d63-8df8-92dc46c132cb` | delivery_delayed |
 
 **Üçüncü gönderim — `Reply-To` düzeltmesinden sonra (2026-11-12, aynı gün):**
 `SALES_INBOX_EMAIL` Vercel'e yazıldıktan sonra üç adrese yeniden gönderildi.
@@ -241,9 +243,9 @@ doğrulandı (`GET /emails/<id>`):
 
 | Alıcı | Resend e-posta id | reply_to | son olay |
 |---|---|---|---|
-| muhammedali.kahraman@outlook.com | `01a1d24c-3c7e-7e46-844b-145126219007` | info@isbulkktc.com | sent |
-| muhammed.ali.kahraman@outlook.com | `01a1d24c-3d88-704d-a357-f69e88fb6ee5` | info@isbulkktc.com | sent |
-| letgodeneme97@outlook.com | `01a1d24c-3e92-7b54-8ff3-05a38424900d` | info@isbulkktc.com | sent |
+| test-recipient-06@example.invalid | `01a1d24c-3c7e-7e46-844b-145126219007` | info@isbulkktc.com | sent |
+| test-recipient-05@example.invalid | `01a1d24c-3d88-704d-a357-f69e88fb6ee5` | info@isbulkktc.com | sent |
+| test-recipient-03@example.invalid | `01a1d24c-3e92-7b54-8ff3-05a38424900d` | info@isbulkktc.com | sent |
 
 `last_event` başta `sent` olur; `delivered` = alıcı sunucu kabul etti (yine de
 gelen kutusu garantisi değildir), `delivery_delayed` = alıcı sunucu 4xx ile
@@ -255,7 +257,7 @@ curl -H "Authorization: Bearer re_…" https://api.resend.com/emails/<id>
 
 ### Bounce → bastırma hattı doğrulandı (2026-11-12)
 
-Üç adrese gönderilen testte `muhammed.ali.kahraman@outlook.com` **hard bounce**
+Üç adrese gönderilen testte `test-recipient-05@example.invalid` **hard bounce**
 verdi (Resend `email.bounced`, "mailbox unavailable" — geçersiz adres, teslim
 edilebilirlik kusuru değil). Webhook bunu işledi ve **otomatik bastırma** devreye
 girdi:
@@ -264,19 +266,35 @@ girdi:
 |---|---|
 | Resend olayı | `email.bounced`, 2026-11-13 00:30:09 UTC |
 | Webhook işledi | `POST /api/resend-webhook` 200 (Svix imzası geçti) |
-| Bastırma kaydı | `public.email_engagement_optouts` → `(muhammed.ali.kahraman@outlook.com, reason=bounce, 00:30:11)` |
+| Bastırma kaydı | `public.email_engagement_optouts` → `(test-recipient-05@example.invalid, reason=bounce, 00:30:11)` |
 
 Yani bounce → opt-out hattı **uçtan uca çalışıyor**; geçersiz adres artık pazarlama
 gönderimlerinden otomatik düşecek. Hem edinim hem etkileşim yolu bu tabloyu
 filtreler: `list_marketing_recipients` (edinim) ve `list_engagement_recipients`
 (etkileşim) `not exists (select 1 from email_engagement_optouts where email = lower(...))`
-koşulunu taşır. Aynı gün üç adres için ölçülen **gönderim uygunluğu**:
+koşulunu taşır. Etkileşim digest'i 50 alıcılık keyset sayfaları döndürür; GitHub cron
+cursor'ı takip ederek sayfaları ayrı Vercel çağrılarında tüketir. Cursor kalıcı DB
+checkpoint'i değildir. Haftalık anahtar her hafta Pazartesi UTC tarihini kullanır;
+Resend idempotency kayıtları yalnız 24 saat tutulduğu için aynı hafta içindeki
+yeniden deneme de yalnız bu 24 saat içinde duplicate-safe kabul edilmelidir. Bu
+süre geçtikten sonra workflow'u körlemesine yeniden çalıştırma; önce Resend
+gönderim kayıtlarını uzlaştır. Kalıcı gönderim defteri/checkpoint'i hâlâ açık
+ölçek/güvenilirlik işidir.
+
+Edinim kampanyası da 25 alıcılık keyset sayfaları döndürür; GitHub cron cursor'ı
+ayrı Vercel çağrılarında izler. Başarılı gönderimden sonra lead `contacted` olur;
+gönderim veya durum güncelleme hatası workflow'u başarısız kılar ve lead'i
+kuyrukta bırakır. Manuel retry, aynı Resend idempotency anahtarını kullanmak için
+ilk çalıştırmadaki `campaign_date` değerini vermelidir ve yalnız 24 saat içinde
+duplicate-safe kabul edilmelidir. Bu süreden sonra önce Resend gönderim
+kayıtlarını ve lead durumunu uzlaştır. Kalıcı gönderim defteri hâlâ açık.
+Aynı gün üç adres için ölçülen **gönderim uygunluğu**:
 
 | Adres | `eligible_for_send` | Neden |
 |---|---|---|
-| muhammed.ali.kahraman@outlook.com | **false** | hard bounce → `email_engagement_optouts` |
-| muhammedali.kahraman@outlook.com | true | teslim edildi |
-| letgodeneme97@outlook.com | true | teslim edildi |
+| test-recipient-05@example.invalid | **false** | hard bounce → `email_engagement_optouts` |
+| test-recipient-06@example.invalid | true | teslim edildi |
+| test-recipient-03@example.invalid | true | teslim edildi |
 
 Doğrulama sorgusu:
 
@@ -297,12 +315,12 @@ DMARC `reject`'e çekildikten sonra aynı yolla üç adrese yeniden gönderildi
 
 | Alıcı | Resend e-posta id | gönderim anı | sonraki ölçüm |
 |---|---|---|---|
-| muhammedali.kahraman@outlook.com | `01a1d461-cc1d-7f0f-9214-7a9ddb2df7c3` | sent | delivery_delayed |
-| letgodeneme97@outlook.com | `01a1d461-cd23-792c-837d-f3a7918db659` | sent | delivery_delayed |
-| m.ali.kahraman@outlook.com | `01a1d462-ea3a-7852-8a3f-2e5f650214b8` | sent | delivery_delayed |
+| test-recipient-06@example.invalid | `01a1d461-cc1d-7f0f-9214-7a9ddb2df7c3` | sent | delivery_delayed |
+| test-recipient-03@example.invalid | `01a1d461-cd23-792c-837d-f3a7918db659` | sent | delivery_delayed |
+| test-recipient-04@example.invalid | `01a1d462-ea3a-7852-8a3f-2e5f650214b8` | sent | delivery_delayed |
 
-**Düzeltme:** doğru adres `m.ali.kahraman@outlook.com`'dur. Yanlış yazım
-`muhammed.ali.kahraman@outlook.com` bu turda `suppressed` döndü — Resend
+**Düzeltme:** doğru adres `test-recipient-04@example.invalid`'dur. Yanlış yazım
+`test-recipient-05@example.invalid` bu turda `suppressed` döndü — Resend
 bastırma listesindeki (önceki hard bounce) adresi **göndermeden engelledi**, yani
 bounce → bastırma hattı yeniden doğrulandı.
 
@@ -322,16 +340,16 @@ politikasını ve Outlook postmaster panelini incele.
 ### Beşinci gönderim — Gmail'e spam/yerleşim kontrolü (2026-11-12, sahip talebi)
 
 Sahip, önceki testin spam'e mi gelen kutusuna mı düştüğünü hatırlamadığını
-belirtti ve **yeni bir alıcı** verdi: `jakanamamomoko@gmail.com`. Önceki
+belirtti ve **yeni bir alıcı** verdi: `test-recipient-02@example.invalid`. Önceki
 gönderimlerin hepsi Outlook'a gitti ve yalnızca `delivery_delayed` gösterdi —
 yani hiçbiri teyitli `delivered` durumuna ulaşmadı. Gmail farklı bir alıcı
 sunucudur ve bu testte **greylisting yapmadı**.
 
-`RESEND_API_KEY='re_…' RESEND_FROM_EMAIL='İşBul KKTC <info@isbulkktc.com>' node scripts/verify-deliverability.mjs --send jakanamamomoko@gmail.com`
+`RESEND_API_KEY='re_…' RESEND_FROM_EMAIL='İşBul KKTC <info@isbulkktc.com>' node scripts/verify-deliverability.mjs --send <owner-supplied-test-mailbox> --confirm-send
 
 | Alıcı | Resend e-posta id | gönderim anı | sonraki ölçüm |
 |---|---|---|---|
-| jakanamamomoko@gmail.com | `01a1d4ff-8cf1-7715-abba-cc3d9945d8e1` | sent | **delivered** |
+| test-recipient-02@example.invalid | `01a1d4ff-8cf1-7715-abba-cc3d9945d8e1` | sent | **delivered** |
 
 `from İşBul KKTC <info@isbulkktc.com>`, konu `isbulkktc deliverability test`.
 `delivered`, Gmail sunucusunun iletiyi kabul ettiği anlamına gelir. **Sahip
@@ -468,7 +486,7 @@ Tam adımlar için yukarıdaki **"Kalan altyapı maddeleri"** bölümüne bak.
 - [x] MTA-STS politika dosyası **kodda sunuluyor** (`/.well-known/mta-sts.txt`, `mode: testing`)
 - [x] MTA-STS + TLS-RPT **DNS kayıtları** (Vercel host + CF CNAME/TXT; canlı 200, `verify-deliverability` PASS)
 - [x] Gerçek gelen kutusu/spam yerleşim doğrulaması — **Gmail teyitli Gelen Kutusu**
-      (2026-11-12, sahip): `jakanamamomoko@gmail.com` adresine gönderilen test
+      (2026-11-12, sahip): `test-recipient-02@example.invalid` adresine gönderilen test
       `delivered` oldu ve **spam'e değil Gelen Kutusu'na düştü**. Outlook'a yapılan
       4 gönderim `delivery_delayed`'da kaldı (alıcı-tarafı greylisting; kimlik
       doğrulama sorunu değil)

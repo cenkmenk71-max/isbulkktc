@@ -48,7 +48,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: process.env.CI ? "node .next/standalone/server.js" : "npm run dev",
+    command: process.env.CI ? "node .next/standalone/server.js" : "bun run dev",
     url: readinessURL,
     env: {
       NEXT_PUBLIC_APP_URL: baseURL,

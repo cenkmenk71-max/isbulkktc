@@ -1023,6 +1023,17 @@
     "save": "Änderungen speichern",
     "saving": "Wird gespeichert…",
     "signOut": "Sicher abmelden",
+    "deleteAccount": {
+      "title": "Konto löschen",
+      "description": "Vor dem Löschen werden verknüpfte Datensätze geprüft. Bestehende Bewerbungen, Anzeigenhistorie oder administrative Einträge, die aufbewahrt werden müssen, können den Vorgang verhindern.",
+      "buttonLabel": "Mein Konto löschen",
+      "confirmLabel": "Mein Konto endgültig löschen",
+      "warningText": "Diese Aktion kann nicht rückgängig gemacht werden. Aufzubewahrende Bewerbungs-, Anzeigen- oder Verwaltungsdaten können die Löschung verhindern. In diesem Fall bleiben Ihr Konto und dessen Daten bestehen.",
+      "pending": "Wird gelöscht…",
+      "cancel": "Abbrechen",
+      "rateLimited": "Zu viele Löschversuche. Bitte versuchen Sie es später erneut.",
+      "failed": "Ihr Konto konnte nicht gelöscht werden. Vorhandene Datensätze könnten den Vorgang verhindert haben. Bitte wenden Sie sich an den Support."
+    },
     "employerWorkspaceLink": "Arbeitgeberbereich",
     "messages": {
       "invalid": "Prüfen Sie die Angaben und versuchen Sie es erneut.",
@@ -1461,7 +1472,6 @@
     "noteLabel": "Beschreiben Sie kurz Ihren Bedarf",
     "submit": "Angebotsanfrage senden",
     "sending": "Wird gesendet…",
-    "marketingConsentLabel": "Ich möchte gelegentlich Werbe-E-Mails zu Diensten und Neuigkeiten von İşBul KKTC erhalten. Die Einwilligung ist freiwillig und jederzeit widerrufbar.",
     "privacyNote": "Ihre Angaben werden zur Bearbeitung Ihrer Angebotsanfrage verwendet. Werbe-E-Mails werden nur mit der unten separat erteilten freiwilligen Einwilligung versendet; Sie können sich jederzeit abmelden.",
     "durations": {
       "oneDay": "1 Tag",
@@ -1472,7 +1482,8 @@
       "invalid": "Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
       "submitted": "Ihre Anfrage ist eingegangen! Wir melden uns in Kürze.",
       "failed": "Die Anfrage konnte gerade nicht gesendet werden. Bitte später erneut versuchen."
-    }
+    },
+    "marketingConsentLabel": "Ich möchte gelegentlich Werbe-E-Mails zu Diensten und Neuigkeiten von İşBul KKTC erhalten. Die Einwilligung ist freiwillig und jederzeit widerrufbar."
   },
   "DistrictPage": {
     "eyebrow": "JOBS IN NORDZYPERN",

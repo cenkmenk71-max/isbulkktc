@@ -72,3 +72,28 @@ export const resendConfirmationThrottle = {
   /** Per submitted address. Keeps one victim mailbox from being flooded. */
   email: createRateLimiter({ limit: 5, windowMs }),
 };
+
+
+/**
+ * Self-service account erasure is irreversible and needs a dedicated budget.
+ * Both dimensions use the shared bounded limiter implementation, so
+ * attacker-controlled IPs cannot grow an unbounded Map in one instance.
+ *
+ * Important: this is an in-memory, per-process limit, not a distributed quota.
+ * Vercel can serve requests on separate instances, so the effective limit may
+ * exceed 3 attempts/hour across the deployment. The authenticated-user bucket
+ * also protects a single account within each instance, but strict global
+ * enforcement requires a shared atomic store or a database-backed quota.
+ */
+const accountDeletionWindowMs = 60 * 60 * 1000;
+
+export const deleteAccountThrottle = {
+  address: createRateLimiter({
+    limit: 3,
+    windowMs: accountDeletionWindowMs,
+  }),
+  user: createRateLimiter({
+    limit: 3,
+    windowMs: accountDeletionWindowMs,
+  }),
+};

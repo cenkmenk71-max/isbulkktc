@@ -178,13 +178,15 @@ test("the registration route requires a session before it parses the body", () =
   const route = read("src/app/api/push/subscriptions/route.ts");
   const getUser = route.indexOf("supabase.auth.getUser()");
   const unauthorized = route.indexOf("Unauthorized");
-  const parseBody = route.indexOf("request.json()");
+  const boundedRead = route.indexOf("readBoundedTextBody(request, 4 * 1024)");
+  const parseBody = route.indexOf("JSON.parse(boundedBody.text)");
   assert.ok(getUser > -1, "the route no longer resolves the session user");
   assert.ok(unauthorized > -1, "the route no longer returns 401 for a missing session");
-  assert.ok(parseBody > -1, "the route no longer parses the request body");
+  assert.ok(boundedRead > -1, "the route no longer enforces a bounded request-body read");
+  assert.ok(parseBody > -1, "the route no longer parses the bounded request body");
   assert.ok(
-    getUser < unauthorized && getUser < parseBody,
-    "the route parses the body before it checks the session",
+    getUser < unauthorized && unauthorized < boundedRead && boundedRead < parseBody,
+    "the route must check the session, then cap the body, then parse JSON",
   );
 });
 

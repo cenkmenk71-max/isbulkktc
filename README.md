@@ -30,7 +30,10 @@ doldurun; gizli anahtarları kaynak denetimine eklemeyin.
 ```powershell
 bun run lint
 bun run typecheck
+bun run check:frontend-source
 bun run test:unit
+bun run test:security
+bun run test:integration
 bun run security:audit
 bun run db:start
 bun run test:db
@@ -38,6 +41,13 @@ bun run db:stop
 bun run test:e2e
 bun run build
 ```
+
+PR kapılarıyla aynı yerel denetim sırası için `lint`, `typecheck`,
+`check:frontend-source`, `test:unit`, `test:security` ve
+`test:integration` komutlarının hepsini çalıştırın. `test:db` yerel
+Supabase/Docker gerektirir; `test:e2e` tarayıcı ve çalışan uygulama ortamı
+gerektirir. Yalnızca tek bir katmanın geçmesi, tüm CI kapılarının geçtiği
+anlamına gelmez.
 
 `db:start` ve `test:db` için erişilebilir bir Docker Engine gerekir. Bu Windows
 projesinde Supabase CLI proje bağımlılığıdır; WSL2 Ubuntu Docker motorunu

@@ -4,6 +4,7 @@ import { clientIpFromHeaders } from "@/features/abuse/request-context";
 import { planSupportReply } from "@/features/support/answer";
 import { answerFromKnowledge } from "@/features/support/knowledge";
 import { aiSupportReply } from "@/server/support/ai";
+import { readBoundedTextBody } from "@/server/http/bounded-text-body";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +32,17 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: "rate_limited" }, 429);
   }
 
+  const body = await readBoundedTextBody(request, 8 * 1024);
+  if (!body.ok) {
+    return json(
+      { error: body.reason === "too_large" ? "request_too_large" : "invalid_json" },
+      body.reason === "too_large" ? 413 : 400,
+    );
+  }
+
   let payload: unknown;
   try {
-    payload = await request.json();
+    payload = JSON.parse(body.text);
   } catch {
     return json({ error: "invalid_json" }, 400);
   }

@@ -22,11 +22,13 @@
 -- This file exists so the repository matches the database and a fresh rebuild
 -- reproduces the same schema; `if exists` makes re-running it a no-op.
 --
--- `rls_auto_enable()` is deliberately NOT dropped. The advisor lists it in the
--- same "anon-executable SECURITY DEFINER" bucket, but it is the Supabase
--- platform's own RLS auto-enable helper (`returns event_trigger`, targeted by
--- the `ensure_rls` event trigger) and is not reachable over REST
--- (`/rest/v1/rpc/rls_auto_enable` answers HTTP 400 on the pseudo-type return).
+-- `rls_auto_enable()` is deliberately NOT dropped here. It is the project's
+-- custom RLS-on-create event-trigger helper (following the pattern in the
+-- Supabase event-trigger guide), returns the `event_trigger` pseudo-type and is
+-- registered as `ensure_rls`; PostgREST cannot invoke it as an ordinary RPC.
+-- Its missing source-controlled definition, swallowed RLS errors and default
+-- client EXECUTE grants are corrected by
+-- `20261120100000_v4_harden_rls_auto_enable_event_trigger.sql`.
 
 drop function if exists public.__lane_probe_headers();
 drop function if exists public._oh_probe_headers();

@@ -135,12 +135,12 @@ export default async function CandidateDashboardPage() {
         aria-labelledby="candidate-danger-zone-title"
         className="candidate-dashboard-danger"
       >
-        <h2 id="candidate-danger-zone-title">Hesap Silme</h2>
-        <p>Bu işlem geri alınamaz. Tüm verileriniz kalıcı olarak silinecektir.</p>
+        <h2 id="candidate-danger-zone-title">{copy("deleteAccount.title")}</h2>
+        <p>{copy("deleteAccount.description")}</p>
         <DeleteAccountButton
-          confirmLabel="Evet, hesabımı sil"
-          buttonLabel="Hesabımı Sil"
-          warningText="Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+          confirmLabel={copy("deleteAccount.confirmLabel")}
+          buttonLabel={copy("deleteAccount.buttonLabel")}
+          warningText={copy("deleteAccount.warningText")}
         />
       </section>
     </div>

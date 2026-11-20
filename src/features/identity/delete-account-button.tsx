@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { deleteAccount } from "./actions";
 import { Trash2 } from "lucide-react";
 
@@ -20,18 +21,26 @@ export function DeleteAccountButton({
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const copy = useTranslations("CandidateDashboard.deleteAccount");
+  const warningId = useId();
 
   function handleDelete() {
     setError(null);
     startTransition(async () => {
-      const result = await deleteAccount();
-      if (result.status === "success") {
-        router.push("/");
-        router.refresh();
-      } else if (result.message === "rateLimited") {
-        setError("Çok fazla deneme. Lütfen daha sonra tekrar deneyin.");
-      } else {
-        setError("Hesap silinemedi. Lütfen tekrar deneyin.");
+      try {
+        const result = await deleteAccount();
+        if (result.status === "success") {
+          router.push("/");
+          router.refresh();
+        } else if (result.message === "rateLimited") {
+          setError(copy("rateLimited"));
+        } else {
+          setError(copy("failed"));
+        }
+      } catch {
+        // A lost network response or a rejected Server Action is still a
+        // visible, localized failure rather than an unhandled transition.
+        setError(copy("failed"));
       }
     });
   }
@@ -51,8 +60,8 @@ export function DeleteAccountButton({
   }
 
   return (
-    <div className="delete-account-confirm" role="alertdialog" aria-live="assertive">
-      <p className="delete-account-warning">{warningText}</p>
+    <div className="delete-account-confirm" role="group" aria-labelledby={warningId} aria-busy={isPending}>
+      <p className="delete-account-warning" id={warningId}>{warningText}</p>
       <div className="delete-account-actions">
         <button
           className="button button-danger"
@@ -60,7 +69,7 @@ export function DeleteAccountButton({
           onClick={handleDelete}
           disabled={isPending}
         >
-          {isPending ? "Siliniyor..." : confirmLabel}
+          {isPending ? copy("pending") : confirmLabel}
         </button>
         <button
           className="button button-outline"
@@ -68,10 +77,10 @@ export function DeleteAccountButton({
           onClick={() => setShowConfirm(false)}
           disabled={isPending}
         >
-          İptal
+          {copy("cancel")}
         </button>
       </div>
-      {error && <p className="delete-account-error">{error}</p>}
+      {error && <p className="delete-account-error" role="alert">{error}</p>}
     </div>
   );
 }

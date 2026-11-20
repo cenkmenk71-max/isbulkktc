@@ -1033,6 +1033,17 @@
     "save": "Değişiklikleri kaydet",
     "saving": "Kaydediliyor…",
     "signOut": "Güvenli çıkış",
+    "deleteAccount": {
+      "title": "Hesap silme",
+      "description": "Hesap silme işlemi, ilişkili kayıtlar denetlenerek gerçekleştirilir. Geçmiş başvuru, ilan veya yönetim kayıtları gibi korunması gereken ilişkiler işlemin tamamlanmasını engelleyebilir.",
+      "buttonLabel": "Hesabımı sil",
+      "confirmLabel": "Hesabımı kalıcı olarak sil",
+      "warningText": "Bu işlem geri alınamaz. Geçmiş başvuru ve işlem kayıtları silmeyi engelleyebilir. Silme engellenirse hesabınız ve verileriniz silinmez.",
+      "pending": "Siliniyor…",
+      "cancel": "Vazgeç",
+      "rateLimited": "Çok fazla silme denemesi. Lütfen daha sonra tekrar deneyin.",
+      "failed": "Hesabınız silinemedi. Geçmiş kayıtlar nedeniyle işlem engellenmiş olabilir. Lütfen destek ekibiyle iletişime geçin."
+    },
     "employerWorkspaceLink": "İşveren alanı",
     "messages": {
       "invalid": "Bilgileri kontrol edip tekrar deneyin.",
@@ -1461,7 +1472,6 @@
     "noteLabel": "İhtiyacınızı kısaca anlatın",
     "submit": "Teklif talebini gönder",
     "sending": "Gönderiliyor…",
-    "marketingConsentLabel": "İşBul KKTC hizmetleri ve yenilikleri hakkında ara sıra tanıtım e-postaları almak istiyorum. Bu onay isteğe bağlıdır; dilediğim zaman abonelikten çıkabilirim.",
     "privacyNote": "Bilgileriniz teklif talebinizi yanıtlamak için kullanılır. Tanıtım e-postaları yalnızca aşağıdaki ayrı onayla gönderilir; dilediğiniz zaman abonelikten çıkabilirsiniz.",
     "durations": {
       "oneDay": "1 gün",
@@ -1472,7 +1482,8 @@
       "invalid": "Lütfen formu kontrol edip tekrar deneyin.",
       "submitted": "Talebiniz bize ulaştı! Ekibimiz en kısa sürede dönecek.",
       "failed": "Talep şu anda gönderilemedi. Lütfen daha sonra tekrar deneyin."
-    }
+    },
+    "marketingConsentLabel": "İşBul KKTC hizmetleri ve yenilikleri hakkında ara sıra tanıtım e-postaları almak istiyorum. Bu onay isteğe bağlıdır; dilediğim zaman abonelikten çıkabilirim."
   },
   "DistrictPage": {
     "eyebrow": "KKTC İŞ İLANLARI",

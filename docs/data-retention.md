@@ -9,7 +9,7 @@ ilk kurulumun erişim durumunu açıkça kaydeder; uydurma silme süresi içerme
 
 | Veri | Sınıf / asıl erişim | İlk kurulum | Saklama / imha kararı |
 |---|---|---|---|
-| Supabase kimlik bilgileri ve Auth metadata | Kimlik; Auth sunucusu + oturum sahibinin yetkisi | Yeni hesabın display name'i güvenilmeyen metadata olarak 80 karaktere kırpılarak profil tetikleyicisine geçer | Hesap kapatma, auth silme ve varsa yasal hold süreci ürün/hukuk kararı bekliyor |
+| Supabase kimlik bilgileri ve Auth metadata | Kimlik; Auth sunucusu + oturum sahibinin yetkisi | Yeni hesabın display name'i güvenilmeyen metadata olarak 80 karaktere kırpılarak profil tetikleyicisine geçer | Hesap silme Server Action oturumu doğrular ve yalnız oturum sahibinin Auth kaydını silmeyi dener; istemci id kabul etmez ve işlem sınırlanır. `jobs.created_by`, `applications.candidate_id`, şirket/ilan inceleme atıfları, `user_roles.granted_by` ve paket atayan admin gibi `ON DELETE RESTRICT` ilişkileri bazı hesapların silinmesini bilinçli olarak durdurur. İşlem, geçerli oturum doğrulaması yapar ancak ayrıca son giriş zamanı veya yeniden parola/MFA doğrulaması istemez; ele geçirilmiş aktif oturumun hesap silmeyi tetikleyebilmesi ayrı bir risk olarak ürün/güvenlik onayı bekler. Silme denemesi limiti `Map` tabanlı ve Vercel instance başınadır; farklı instance'lar arasında atomik/global limit sağlamaz. Küresel kota için dağıtık atomik store veya DB tabanlı limit gerekir. Bu ilişkileri anonimleştirme/aktarma, başvuru saklama ve yasal hold kuralları ürün/hukuk onayı bekliyor; silme işlemi her hesap için garanti edilmez |
 | Profil ve aday bilgisi | Kişisel veri; profil sahibi | RLS yalnız sahibin erişimine izin verir; başlık, konum, beceriler ve sınırlı JSONB deneyim/eğitim/dil/sertifika bölümleri doğrulanır | Dışa aktarma/silme, saklama zamanı ve başvuru istisnası bekliyor |
 | Şirket ve üyelik | İş verisi; şirket üyeleri ve onaylanan kamuya açık alanlar | Şirket hesabı; özel profil başvurusu; onaylanan alanlar mevcut rehbere yansır. Yönetici incelemesi şirketin resmi doğrulama durumunu değiştirmez | Reddedilen/terk edilmiş başvuruların saklama ve şirket sahibi kaybı prosedürü bekliyor |
 | CV, başvuru eki | Özgeçmiş içeriği hassas kişisel veri; profil sahibi | PDF/DOCX metni tarayıcıda işlenir. Ham dosya yüklenmez/saklanmaz; çıkarılan alanlar mevcut değerleri koruyan düzenlenebilir bir form taslağına eklenir. Aday alanları gözden geçirip kaydetme eylemini başlatmadıkça profil veritabanı değişmez; onaylanan alanlar doğrulamalı Server Action ile özel profile kaydedilir. OCR ve harici AI yoktur. CV/başvuru eki dosya akışı kapalıdır | Ayrı dosya upload/depolama akışı kurulmadı; gelecekte açılması için dosya tipi/limit, scanner/karantina, erişim audit'i ve silme yaşam döngüsü kararı gerekir |
@@ -35,7 +35,9 @@ ilk kurulumun erişim durumunu açıkça kaydeder; uydurma silme süresi içerme
    request-rate/quota ve backup retention testlerini yap.
 4. Hesap kapatma/erasure akışını önce test kopyasında yürüt; cascade'in
    başvuruyu, audit delilini veya şirket owner'ını yanlışlıkla silmediğini
-   doğrula.
+   doğrula. `ON DELETE RESTRICT` ile korunan tarihsel kayıtlar için anonimleştirme,
+   aktarma, retention ve yasal hold politikası onaylanmadan bu FK'leri cascade'e
+   çevirme; başarısız silme hiçbir zaman başarı olarak gösterilmemelidir.
 5. Supabase yedek ayarlarını plan/region ile kanıtla; recovery runbook'taki
    restore provasını tamamla. Canlı üretimde hiçbir cleanup işlemini prova
    yapılmadan çalıştırma.

@@ -1,9 +1,9 @@
 import { createSupabaseServiceClient } from "@/server/db/supabase-server";
 import { jsonNoStore } from "@/server/http/no-store-response";
+import { readBoundedTextBody } from "@/server/http/bounded-text-body";
 import {
   classifyResendEvent,
   eventRecipients,
-  readResendWebhookPayload,
   verifyResendWebhook,
 } from "@/server/email/resend-webhook-core";
 
@@ -12,17 +12,19 @@ export const dynamic = "force-dynamic";
 /**
  * Resend delivery-event receiver.
  *
- * Resend posts `email.bounced` / `email.complained` / `email.suppressed` here
- * after a send. Without it the digest kept mailing addresses that hard-bounced
- * or reported spam, which is the fastest way to lose sending reputation, so a
- * bounce or a complaint is written to `email_engagement_optouts` through the
- * same service-role RPC the unsubscribe link uses and drops the address from
- * every later batch.
+ * Resend posts `email.bounced` / `email.complained` / `email.suppressed`
+ * after a send. These events are persisted through the same service-role
+ * suppression RPC used by unsubscribe links, preventing suppressed addresses
+ * from receiving subsequent campaign messages.
  *
- * Trust comes entirely from the Svix signature over the raw body. The body is
- * read with a strict 1 MiB streaming bound before verification; forged or
- * replayed requests never reach the database. A transient failure to store the
- * suppression answers 5xx so Resend retries instead of the event being lost.
+ * The raw body is read with a strict 256 KiB streaming bound and fatal UTF-8
+ * decoding before signature verification. Svix verifies the original raw body;
+ * missing, forged, or replayed signatures are rejected before JSON parsing or
+ * database access. The body limit protects the receiver from oversized
+ * unauthenticated uploads.
+ *
+ * A transient failure to store suppression returns 5xx so Resend retries
+ * instead of silently losing the event.
  */
 export async function POST(request: Request) {
   const secret = process.env.RESEND_WEBHOOK_SECRET?.trim();
@@ -33,16 +35,15 @@ export async function POST(request: Request) {
     );
   }
 
-  let payload: string | null;
-  try {
-    payload = await readResendWebhookPayload(request);
-  } catch {
-    return jsonNoStore({ message: "Invalid payload" }, { status: 400 });
+  const body = await readBoundedTextBody(request, 256 * 1024);
+  if (!body.ok) {
+    const status = body.reason === "too_large" ? 413 : 400;
+    return jsonNoStore(
+      { message: body.reason === "too_large" ? "Webhook body is too large" : "Invalid webhook body" },
+      { status },
+    );
   }
-  if (payload === null) {
-    return jsonNoStore({ message: "Payload too large" }, { status: 413 });
-  }
-
+  const payload = body.text;
   let event: { type?: string; data?: { to?: unknown } };
   try {
     event = verifyResendWebhook(

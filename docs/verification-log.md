@@ -833,10 +833,10 @@ Gönderen: `İşBul KKTC <info@isbulkktc.com>`, `reply_to: info@isbulkktc.com`
 
 | Alıcı | Sonuç | Resend id |
 |---|---|---|
-| muhammedali.kahraman@outlook.com | `sent` | `01a1d461-cc1d-7f0f-9214-7a9ddb2df7c3` |
-| letgodeneme97@outlook.com | `sent` | `01a1d461-cd23-792c-837d-f3a7918db659` |
-| m.ali.kahraman@outlook.com | `sent` | `01a1d462-ea3a-7852-8a3f-2e5f650214b8` |
-| muhammed.ali.kahraman@outlook.com | `suppressed` | `01a1d461-ce2d-79fd-abd5-e3b786ab6016` |
+| test-recipient-06@example.invalid | `sent` | `01a1d461-cc1d-7f0f-9214-7a9ddb2df7c3` |
+| test-recipient-03@example.invalid | `sent` | `01a1d461-cd23-792c-837d-f3a7918db659` |
+| test-recipient-04@example.invalid | `sent` | `01a1d462-ea3a-7852-8a3f-2e5f650214b8` |
+| test-recipient-05@example.invalid | `suppressed` | `01a1d461-ce2d-79fd-abd5-e3b786ab6016` |
 
 Son satır **beklenen/dogru davranis**: adres daha önce hard-bounce olmus, Resend onu
 `email_engagement_optouts` (reason=bounce) ile basti. Bounce'i geri acmak deliverability'yi
