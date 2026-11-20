@@ -320,3 +320,26 @@ test("the credential-expression rule catches the real leak shapes (self-test)", 
   assert.equal(CREDENTIAL_WORD.test(stripStringLiterals("{ email, password }")), true);
   assert.equal(CREDENTIAL_WORD.test(stripStringLiterals('"sign-in failed", { email, token }')), true);
 });
+
+
+test("CV AI diagnostics never log provider response bodies or invalid CV-derived values", () => {
+  for (const file of [
+    "src/server/ai/cv-synthesis.ts",
+    "src/server/ai/language-extraction.ts",
+  ]) {
+    const code = readFileSync(file, "utf8");
+    const calls = consoleArguments(code);
+    for (const args of calls) {
+      assert.doesNotMatch(
+        args,
+        /response\.text\s*\(\)|parsed\.error(?!\.issues)/,
+        `${file} must not log provider response bodies or Zod issue values`,
+      );
+    }
+    assert.match(
+      code,
+      /issues: parsed\.error\.issues\.map\(\(\{ code, path \}\)/,
+      `${file} should retain only non-value schema diagnostics`,
+    );
+  }
+});
