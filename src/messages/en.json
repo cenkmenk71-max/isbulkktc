@@ -1645,7 +1645,7 @@
       "pending_review": "In review",
       "approved": "Approved",
       "rejected": "Changes requested",
-      "published": "Published",
+      "published": "The listing is published.",
       "expired": "Expired",
       "saveDraft": "Save draft",
       "submitReview": "Submit for review",
@@ -1685,7 +1685,11 @@
       "pendingNote": "Your listing is awaiting administrator review.",
       "publishedNote": "Published listings cannot be edited from this screen.",
       "activeJobs": "Active listing capacity",
-      "activeJobCount": "{count} active listings"
+      "activeJobCount": "{count} active listings",
+      "idle": "",
+      "packageRequired": "An active listing package is required to publish.",
+      "packageLimit": "Your active listing capacity has been reached.",
+      "publishFailed": "The listing could not be published."
     },
     "admin": {
       "title": "Job moderation queue",
