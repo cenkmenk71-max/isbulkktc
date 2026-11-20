@@ -1709,7 +1709,8 @@
       "reviewFailed": "The moderation decision could not be saved.",
       "nextPage": "Next 50 listings",
       "mfaRequired": "MFA verification is required to access the moderation queue.",
-      "backToPackages": "Back to package management"
+      "backToPackages": "Back to package management",
+      "idle": ""
     }
   }
 }
