@@ -96,7 +96,7 @@ test("an employer can create and submit a listing using the current form values"
     await expect(
       page.getByRole("heading", { name: "My job listings" }),
     ).toBeVisible();
-    await page.getByRole("link", { name: "Create a listing" }).click();
+    await page.locator(".employer-jobs-heading-row").getByRole("link", { name: "Create a listing" }).click();
     await expect(page).toHaveURL(/\/en\/company\/jobs\/new/);
 
     await page.getByLabel("Job title").fill(jobTitle);
