@@ -633,3 +633,63 @@ test("reviewJob maps 22023 to reviewFailed", async () => {
 
   assert.equal(state.message, "reviewFailed");
 });
+
+
+// ---------------------------------------------------------------------------
+// Employer ownership and moderation queue boundaries
+// ---------------------------------------------------------------------------
+
+test("getCompanyJobs exposes only platform-owned employer listings", async () => {
+  signedIn({
+    rpcs: memberRpc(true),
+    tables: { jobs: { data: [], error: null } },
+  });
+
+  const { getCompanyJobs } = await import("../../src/server/dal/jobs");
+  assert.deepEqual(await getCompanyJobs(COMPANY), []);
+
+  const jobsQuery = fromCalls("jobs").at(-1);
+  assert.ok(jobsQuery);
+  assert.ok(
+    jobsQuery.ops.some((operation) =>
+      operation.includes("publication_source") && operation.includes("platform"),
+    ),
+    "source-site imports must never appear in an employer's editable listing collection",
+  );
+});
+
+test("moderation queue uses stable keyset pagination and excludes imported source listings", async () => {
+  const timestamp = "2026-11-20T10:00:00.000Z";
+  const rows = Array.from({ length: 51 }, (_, index) => ({
+    id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    company_id: COMPANY,
+    created_at: new Date(Date.parse(timestamp) + index * 1000).toISOString(),
+  }));
+  signedIn({
+    rpcs: { has_platform_role: { data: true, error: null } },
+    tables: {
+      user_roles: { data: { role: "platform_admin" }, error: null },
+      jobs: { data: rows, error: null },
+      companies: { data: [{ id: COMPANY, name: "Acme" }], error: null },
+    },
+  });
+
+  const { getPendingJobsForReview } = await import("../../src/server/dal/jobs");
+  const firstPage = await getPendingJobsForReview();
+
+  assert.equal(firstPage.jobs.length, 50);
+  assert.deepEqual(firstPage.nextCursor, {
+    createdAt: rows[49].created_at,
+    id: rows[49].id,
+  });
+  assert.equal(firstPage.companyNames[COMPANY], "Acme");
+
+  const query = fromCalls("jobs").at(-1);
+  assert.ok(query);
+  assert.ok(query.ops.some((operation) => operation.includes("limit:51")));
+  assert.ok(
+    query.ops.some((operation) =>
+      operation.includes("publication_source") && operation.includes("platform"),
+    ),
+  );
+});
