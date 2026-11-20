@@ -1645,7 +1645,7 @@
       "pending_review": "İncelemede",
       "approved": "Onaylandı",
       "rejected": "Düzeltme istendi",
-      "published": "Yayında",
+      "published": "İlan yayınlandı.",
       "expired": "Süresi doldu",
       "saveDraft": "Taslağı kaydet",
       "submitReview": "İncelemeye gönder",
@@ -1685,7 +1685,11 @@
       "pendingNote": "İlanınız yönetici incelemesinde.",
       "publishedNote": "Yayındaki ilanlar bu ekrandan düzenlenemez.",
       "activeJobs": "Aktif ilan kapasitesi",
-      "activeJobCount": "{count} aktif ilan"
+      "activeJobCount": "{count} aktif ilan",
+      "idle": "",
+      "packageRequired": "Yayınlamak için geçerli bir ilan paketi gerekir.",
+      "packageLimit": "Aktif ilan kapasiteniz dolu.",
+      "publishFailed": "İlan yayınlanamadı."
     },
     "admin": {
       "title": "İlan inceleme kuyruğu",
