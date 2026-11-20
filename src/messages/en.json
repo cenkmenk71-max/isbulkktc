@@ -1689,7 +1689,8 @@
       "idle": "",
       "packageRequired": "An active listing package is required to publish.",
       "packageLimit": "Your active listing capacity has been reached.",
-      "publishFailed": "The listing could not be published."
+      "publishFailed": "The listing could not be published.",
+      "closed": "Closed"
     },
     "admin": {
       "title": "Job moderation queue",
