@@ -27,7 +27,7 @@ export function JobDraftForm({
     initialJobState,
   );
   const savedJobId = state.jobId ?? job?.id;
-  const canSubmit = savedJobId && (!job || job.status === "draft" || job.status === "rejected");
+  const canSubmit = savedJobId && submission.status !== "success" && (!job || job.status === "draft" || job.status === "rejected");
 
   return (
     <div className="job-authoring">
