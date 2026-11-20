@@ -10,9 +10,12 @@
  *    the signed-in user's data — application lists, profile details, dashboard
  *    payloads — and a shared HTTP cache keyed by URL would serve one account's
  *    data to the next person who uses the device.
- *  - Navigations are network-first: fresh server HTML wins, and a cached page or
- *    the offline document is only a fallback. Serving a stale app shell ahead of
- *    the network is how a deployed update stops reaching people.
+ *  - Navigations are network-first. Account/admin routes are never stored as
+ *    HTML, and other routes are cached only when the response explicitly allows
+ *    it. The app currently marks HTML private/no-store, so offline navigation
+ *    falls back to the generic offline document rather than account-specific HTML.
+ *    Serving a stale app shell ahead of the network is how a deployed update
+ *    stops reaching people.
  *  - Hashed build assets (`/_next/static/**`) are immutable, so they are
  *    cache-first. The browser cache is not trusted for this because a cold
  *    start of the installed app has no HTTP cache entry.
