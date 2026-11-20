@@ -36,3 +36,66 @@ test("the Resend webhook error response forbids shared caching", async () => {
     restore();
   }
 });
+
+
+test("the Resend webhook rejects a declared body over the byte limit before signature verification", async () => {
+  resetBoundary({}, { rpcs: {} });
+  const restore = withEnv("RESEND_WEBHOOK_SECRET", "test-webhook-secret");
+  try {
+    const { POST } = await webhookRoute();
+    const response = await POST(
+      new Request("https://isbulkktc.test/api/email/resend-webhook", {
+        method: "POST",
+        headers: { "content-length": String(256 * 1024 + 1) },
+        body: "small body",
+      }),
+    );
+
+    assert.equal(response.status, 413);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.deepEqual(recorded.supabase, []);
+  } finally {
+    restore();
+  }
+});
+
+test("the Resend webhook enforces the stream byte limit when Content-Length is absent", async () => {
+  resetBoundary({}, { rpcs: {} });
+  const restore = withEnv("RESEND_WEBHOOK_SECRET", "test-webhook-secret");
+  try {
+    const { POST } = await webhookRoute();
+    const oversizedBody = "x".repeat(256 * 1024 + 1);
+    const response = await POST(
+      new Request("https://isbulkktc.test/api/email/resend-webhook", {
+        method: "POST",
+        body: oversizedBody,
+      }),
+    );
+
+    assert.equal(response.status, 413);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.deepEqual(recorded.supabase, []);
+  } finally {
+    restore();
+  }
+});
+
+test("the Resend webhook rejects invalid UTF-8 before parsing or database access", async () => {
+  resetBoundary({}, { rpcs: {} });
+  const restore = withEnv("RESEND_WEBHOOK_SECRET", "test-webhook-secret");
+  try {
+    const { POST } = await webhookRoute();
+    const response = await POST(
+      new Request("https://isbulkktc.test/api/email/resend-webhook", {
+        method: "POST",
+        body: new Uint8Array([0xc3, 0x28]),
+      }),
+    );
+
+    assert.equal(response.status, 400);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.deepEqual(recorded.supabase, []);
+  } finally {
+    restore();
+  }
+});

@@ -1,5 +1,6 @@
 import { createSupabaseServiceClient } from "@/server/db/supabase-server";
 import { jsonNoStore } from "@/server/http/no-store-response";
+import { readBoundedTextBody } from "@/server/http/bounded-text-body";
 import {
   classifyResendEvent,
   eventRecipients,
@@ -18,10 +19,11 @@ export const dynamic = "force-dynamic";
  * same service-role RPC the unsubscribe link uses and drops the address from
  * every later batch.
  *
- * Trust comes entirely from the Svix signature over the raw body; a missing,
- * forged or replayed request is a 401 before the body is read. A transient
- * failure to store the suppression answers 5xx on purpose so Resend retries
- * instead of the event being lost.
+ * The raw body is read with a hard byte ceiling before signature
+ * verification; a missing, forged or replayed signature is then rejected with
+ * 401 before JSON parsing or database access. The body ceiling protects the
+ * receiver from large unauthenticated uploads. A transient failure to store the
+ * suppression answers 5xx on purpose so Resend retries instead of losing it.
  */
 export async function POST(request: Request) {
   const secret = process.env.RESEND_WEBHOOK_SECRET?.trim();
@@ -32,7 +34,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const payload = await request.text();
+  const body = await readBoundedTextBody(request, 256 * 1024);
+  if (!body.ok) {
+    const status = body.reason === "too_large" ? 413 : 400;
+    return jsonNoStore(
+      { message: body.reason === "too_large" ? "Webhook body is too large" : "Invalid webhook body" },
+      { status },
+    );
+  }
+  const payload = body.text;
   let event: { type?: string; data?: { to?: unknown } };
   try {
     event = verifyResendWebhook(
