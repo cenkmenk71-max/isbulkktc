@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
-import { getCurrentUser } from "@/server/dal/user";
+import { getCurrentUser, getPlatformAdminMfaStatus } from "@/server/dal/user";
 import { redirectLocalized } from "@/i18n/redirect";
 import { getLocalePrefix } from "@/i18n/routing";
 import {
@@ -540,6 +540,14 @@ export async function reviewJob(
   }
 
   if (!(await hasPlatformRole("platform_admin"))) {
+    return { ...initialReviewFormState, status: "error", message: "unauthorized" };
+  }
+
+  // The route's MFA gate is presentation, not an authorization boundary.
+  // Re-check AAL2 inside the server action so a forged direct action POST
+  // cannot moderate a listing from an AAL1 session.
+  const mfa = await getPlatformAdminMfaStatus();
+  if (!mfa.aal2) {
     return { ...initialReviewFormState, status: "error", message: "unauthorized" };
   }
 
