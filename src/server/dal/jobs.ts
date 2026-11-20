@@ -556,9 +556,27 @@ export async function getPendingJobsForReview(input?: {
   const hasMore = data.length > 50;
   const jobs = hasMore ? data.slice(0, 50) : data;
   const last = jobs.at(-1);
+  const companyIds = [...new Set(jobs.map(({ company_id }) => company_id))];
+  const companyNames: Record<string, string> = {};
+
+  if (companyIds.length > 0) {
+    const { data: companies, error: companiesError } = await supabase
+      .from("companies")
+      .select("id, name")
+      .in("id", companyIds);
+
+    if (companiesError) {
+      throw new Error("Moderation queue company names could not be loaded.", {
+        cause: companiesError,
+      });
+    }
+
+    for (const company of companies) companyNames[company.id] = company.name;
+  }
 
   return {
     jobs,
+    companyNames,
     nextCursor: hasMore && last
       ? { createdAt: last.created_at, id: last.id }
       : null,
