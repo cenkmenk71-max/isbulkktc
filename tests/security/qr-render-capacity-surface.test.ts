@@ -8,35 +8,18 @@ import { buildInstallQrUrl, buildQrRenderOptions } from "@/lib/pwa/qr";
 import { maxQrVersion, minQrVersion } from "@/lib/pwa/campaign";
 
 /**
- * The `/api/qr` render capacity boundary (this round's finding, handed to the
- * route owner).
+ * Generator-capacity boundary probes for the public `/api/qr` route.
  *
- * `src/app/api/qr/route.ts` serialises the payload `buildInstallQrUrl` returns
- * straight through `QRCode.toString`/`toBuffer` with no error path. That is only
- * safe while the payload always fits in a QR symbol. It does not:
+ * The qrcode library throws when a payload exceeds version 40 or a caller pins
+ * a version too small for the payload. Those generator exceptions are expected
+ * inputs to the route's recovery logic, not uncaught production errors:
+ * `route.ts` retries an undersized pin with automatic sizing and returns a
+ * controlled 414/no-store response when the payload cannot fit any symbol.
+ * `tests/integration/qr-route.test.ts` imports the actual route and verifies
+ * both branches, including decoding PNG/SVG responses with jsQR.
  *
- *  - `next` is capped at 2048 **characters** (`src/lib/pwa/destination.ts:23`),
- *    and the cap is byte-blind, so a 2047-character multi-byte path
- *    (percent-encoded 3x by `URLSearchParams`) is 12 314 bytes — past the
- *    2 953-byte ceiling of version 40 at error-correction M, so *every* version
- *    throws `The amount of data is too big to be stored in a QR Code`.
- *  - `version` accepts any integer 1..40 (`src/lib/pwa/campaign.ts`), so a caller
- *    can pin a symbol smaller than the payload needs — `?next=/jobs&version=1`
- *    throws `The chosen QR Code version cannot contain this amount of data` for a
- *    42-byte payload.
- *
- * Neither is validated against capacity, so the route answers an unhandled throw
- * (500) on attacker-influenced input. It is not a compromise — there is no
- * injection, no data disclosure and no denial of service (one cheap request) —
- * but it is the failure path of a public, cacheable route, and it returns a
- * generic framework error instead of a controlled status.
- *
- * The boundary is proven here at the `qrcode` level, which is exactly where the
- * route breaks. The route file cannot be imported from this suite: it pulls in
- * `server-only` (via `getAppBaseUrl`), and `bun run test:security` runs `tsx`
- * without the `react-server` condition, so a functional route test would need a
- * runner change owned by the CI/infra layer. The static half below pins the missing
- * error path in the route itself.
+ * This file keeps the lower-level capacity conditions observable and guards
+ * the route's recovery branch against accidental removal.
  */
 
 // Capacity of version 40 at error-correction M (2953 bytes); a payload past it
@@ -61,13 +44,13 @@ async function renderOutcome(body: string, version: number | null): Promise<stri
   }
 }
 
-test("the payload builder accepts a `next` the generator cannot encode (finding)", async () => {
+test("a byte-oversized `next` reaches the generator capacity boundary", async () => {
   // 2047 characters is inside the 2048-character cap, so `sanitizeNextPath`
   // passes it through — but `é` percent-encodes to three bytes each.
   const body = payload(`next=/${"é".repeat(2046)}`);
   assert.ok(
     body.length > 2048,
-    "the accepted `next` must survive into a payload longer than the character cap",
+    "the encoded request URL must exceed the QR generator byte ceiling",
   );
   assert.ok(
     Buffer.byteLength(body, "utf8") > version40MByteCapacity,
@@ -76,11 +59,11 @@ test("the payload builder accepts a `next` the generator cannot encode (finding)
   assert.notEqual(
     await renderOutcome(body, null),
     null,
-    "the oversized payload must currently throw when rendered",
+    "the raw generator must reject this payload so the route can return its controlled 414",
   );
 });
 
-test("a pinned `version` smaller than the payload needs throws (finding)", async () => {
+test("a pinned version below payload capacity is rejected by the raw generator", async () => {
   // A perfectly ordinary payload (42 bytes) — only the caller-chosen version is
   // too small, and nothing rejects it before the generator.
   const body = payload("next=/jobs");
@@ -95,7 +78,7 @@ test("a pinned `version` smaller than the payload needs throws (finding)", async
   );
 });
 
-test("the accepted version range starts below what even the default payload needs (finding)", async () => {
+test("the default payload needs a later QR version, exercising auto-size fallback", async () => {
   // `buildQrRenderOptions` passes through any version in 1..40, but the default
   // `/install?next=/jobs` payload needs version 3: the route advertises a range
   // whose low end can never render. Pin the exact boundary so a capacity check
@@ -108,7 +91,7 @@ test("the accepted version range starts below what even the default payload need
   const firstRendering = outcomes.findIndex((message) => message === null) + minQrVersion;
   assert.ok(
     firstRendering > minQrVersion,
-    "some accepted version below the payload's minimum must throw (finding: the route accepts it)",
+    "some supported versions cannot contain this payload and must trigger route auto-sizing",
   );
   for (let version = minQrVersion; version < firstRendering; version += 1) {
     assert.notEqual(
@@ -126,27 +109,30 @@ test("the accepted version range starts below what even the default payload need
   }
 });
 
-test("the route guards its generator with an error path (was a finding, now fixed)", () => {
-  // Was pinned as "the route has no try/catch". #544 added one: an unrenderable
-  // `version` falls back to auto-sizing and a payload no version can hold answers
-  // a controlled 4xx. Assert the guard exists so a refactor cannot silently
-  // reintroduce the unhandled throw (the functional half lives in
-  // `tests/integration/qr-route.test.ts`).
+test("the route retries undersized pins and returns a controlled 414 when no symbol fits", () => {
   const route = readFileSync(new URL("../../src/app/api/qr/route.ts", import.meta.url), "utf8");
-  assert.ok(
-    route.includes("QRCode.toString"),
-    "the route must still be the file under test",
+  const renderStart = route.indexOf("async function render(");
+  const renderEnd = route.indexOf("\n}\n\nexport async function GET", renderStart);
+  assert.ok(renderStart >= 0 && renderEnd > renderStart, "the route render helper must remain present");
+  const renderSource = route.slice(renderStart, renderEnd);
+  assert.match(renderSource, /try/);
+  assert.match(renderSource, /catch/);
+  assert.match(
+    renderSource,
+    /attempt\(\{\s*\.\.\.options,\s*version:\s*undefined\s*\}\)/,
+    "a pinned version that is too small must retry with automatic sizing",
   );
-  assert.ok(
-    /\btry\b/.test(route),
-    "the QR route must guard its generator (finding: it once did not)",
-  );
+
+  const handlerStart = route.indexOf("const rendered = await render");
+  const handler = route.slice(handlerStart);
+  assert.match(handler, /status:\s*414/);
+  assert.match(handler, /"Cache-Control":\s*"no-store"/);
 });
 
 test("the capacity detector is not vacuous (self-test)", async () => {
   // A guard that always reports "fine" would pass the boundary tests by
   // accident. Prove the render helper really sees a throw and really sees a
-  // success, so the two findings above cannot be produced by a broken detector.
+  // success, so the generator capacity boundary cannot be produced by a broken detector.
   const short = payload("next=/jobs");
   assert.equal(await renderOutcome(short, null), null, "a short payload must render");
   const huge = "x".repeat(version40MByteCapacity + 1);
