@@ -209,3 +209,14 @@ test("email confirmation and recovery flows opt into per-flow PKCE ids", async (
     );
   }
 });
+
+test("a present malformed PKCE flow id is rejected before any verifier fallback", async () => {
+  const route = await read("src/app/[locale]/auth/callback/route.ts");
+
+  assert.match(route, /const invalidFlowId = rawFlowId !== null && flowId === undefined/);
+  const rejectionIndex = route.indexOf("if (invalidFlowId)");
+  const clientIndex = route.indexOf("createSupabaseServerClient({", rejectionIndex);
+  assert.ok(rejectionIndex >= 0, "malformed flow ids must have an explicit rejection");
+  assert.ok(clientIndex > rejectionIndex, "reject before reading any verifier cookie storage");
+  assert.match(route.slice(rejectionIndex, clientIndex), /flow_state_not_found/);
+});
