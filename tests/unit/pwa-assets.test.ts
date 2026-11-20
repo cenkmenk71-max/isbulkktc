@@ -158,6 +158,48 @@ test("the service worker never caches authenticated or private responses", () =>
   assert.match(sw, /url\.origin === self\.location\.origin/);
 });
 
+test("the service worker never stores authenticated navigation HTML for offline reuse", () => {
+  const sw = read("public/sw.js");
+
+  // These route families contain account-specific HTML. The locale prefix is
+  // stripped before the private-path check, so /en/profile and /fa/company
+  // receive the same protection as their unprefixed routes.
+  assert.match(sw, /const PRIVATE_NAVIGATION_PATHS = \[/);
+  for (const path of [
+    '"/profile"',
+    '"/company"',
+    '"/admin"',
+    '"/login"',
+    '"/register"',
+    '"/forgot-password"',
+    '"/reset-password"',
+  ]) {
+    assert.ok(sw.includes(path), `private navigation path ${path} is not protected`);
+  }
+  assert.match(sw, /function isPrivateNavigation\(url\)/);
+  assert.match(sw, /pathname\.replace\(\/\^\\\/\(\?:tr\|en\|de\|ru\|el\|fa\)/);
+
+  // Private routes are still intercepted for the generic offline document,
+  // but their HTML never enters the page cache and no cached HTML is read back.
+  assert.match(
+    sw,
+    /networkFirstNavigation\(event, !isPrivateNavigation\(url\)\)/,
+  );
+  assert.match(sw, /if \(isCacheableNavigationResponse\(preload\)\)/);
+  assert.match(sw, /if \(isCacheableNavigationResponse\(response\)\)/);
+  assert.match(sw, /await cache\.delete\(event\.request\)/);
+  assert.match(sw, /if \(cache\) \{\s*const cached = await cache\.match/);
+
+  // Cache API ignores these headers unless the worker checks them explicitly.
+  assert.match(sw, /Cache-Control/);
+  assert.match(sw, /Set-Cookie/);
+  assert.match(sw, /Vary/);
+
+  // Bump the cache namespace so private HTML stored by the previous worker is
+  // deleted during activation rather than surviving the policy fix.
+  assert.match(sw, /const CACHE_VERSION = "v2"/);
+});
+
 test("the service worker keeps navigations network-first with an offline fallback", () => {
   const sw = read("public/sw.js");
   assert.match(sw, /async function networkFirstNavigation/);
