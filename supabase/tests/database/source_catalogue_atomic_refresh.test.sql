@@ -2,8 +2,6 @@ begin;
 
 select plan(20);
 
-set local "request.jwt.claims" = '{"role":"service_role","iss":"supabase"}';
-
 select ok(
   not has_function_privilege(
     'anon',
@@ -113,6 +111,10 @@ insert into public.job_source_snapshots (
   pg_catalog.now() - interval '1 day'
 );
 
+-- PostgREST assumes the service_role from the JWT. Exercise the RPC under
+-- that actual Postgres role, not only by setting a request claim.
+set local role service_role;
+
 -- A database constraint failure happens after the function has upserted the
 -- new company and deleted old source jobs. The function call must roll back all
 -- of those earlier writes, not leave an empty or half-rebuilt catalogue.
@@ -174,6 +176,8 @@ select throws_ok(
   'a failed listing insert aborts the whole catalogue replacement'
 );
 
+reset role;
+
 select ok(
   exists (
     select 1 from public.jobs
@@ -208,6 +212,8 @@ select ok(
 
 -- A valid replacement atomically swaps the previous catalogue for the new
 -- company, listing, provenance row and change-ledger snapshot.
+set local role service_role;
+
 select is(
   public.replace_source_job_catalogue(
     pg_catalog.jsonb_build_array(
@@ -262,6 +268,8 @@ select is(
   '1',
   'the atomic replacement reports the complete imported listing count'
 );
+
+reset role;
 
 select ok(
   not exists (
