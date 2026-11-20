@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { JobDraftForm } from "@/features/jobs/job-management-forms";
 import { getEmployerWorkspace } from "@/server/dal/companies";
-import { getCompanyJobs } from "@/server/dal/jobs";
+import { getCompanyJobForEdit } from "@/server/dal/jobs";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
 
@@ -28,9 +28,8 @@ export default async function EditEmployerJobPage({
     getEmployerWorkspace(query.company),
     getTranslations("JobManagement.employer"),
   ]);
-  const jobs = await getCompanyJobs(company.id);
-  const job = jobs.find((item) => item.id === jobId);
-  if (!job || (job.status !== "draft" && job.status !== "rejected")) notFound();
+  const job = await getCompanyJobForEdit(company.id, jobId);
+  if (!job) notFound();
 
   return (
     <main className="employer-job-editor page-container">
