@@ -346,9 +346,9 @@ async function main(): Promise<void> {
 
   // The RPC accepts a bounded JSON snapshot so an accidental unbounded
   // manual import cannot create an oversized PostgREST request.
-  if (selected.length > 1000) {
+  if (selected.length > 200) {
     throw new Error(
-      `Seçilen ${selected.length} ilan atomik içe aktarma sınırını (1000) aşıyor; --limit=1000 veya daha düşük bir değer kullanın.`,
+      `Seçilen ${selected.length} ilan atomik içe aktarma sınırını (200) aşıyor; --limit=200 veya daha düşük bir değer kullanın.`,
     );
   }
 
