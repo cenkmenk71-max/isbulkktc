@@ -49,6 +49,22 @@ function form(values: Record<string, string> = {}): FormData {
   return data;
 }
 
+function validDraftForm(jobId = JOB, title = "Senior Operations Manager"): FormData {
+  return form({
+    jobId,
+    companyId: COMPANY,
+    title,
+    slug: "senior-operations-manager",
+    summary: "Lead the daily operations of a growing team.",
+    description: "Own operational planning, team coordination and measurable delivery outcomes.",
+    requirements: "Five years of relevant experience.",
+    responsibilities: "Coordinate teams and improve operational processes.",
+    jobType: "full_time",
+    workplaceMode: "on_site",
+    district: "Lefkosa",
+  });
+}
+
 const actions = () => import("@/features/jobs/actions");
 
 /** RPC calls by name, in order. */
@@ -220,77 +236,78 @@ test("saveJobDraft maps a row-level refusal to unauthorized and a generic one to
 // submitJobForReview — the re-derived company and the RPC mapping
 // ---------------------------------------------------------------------------
 
-test("submitJobForReview refuses when the job's company is unknown or the caller is not a member", async () => {
-  // (a) the job resolves to no company at all.
-  signedIn({ tables: { jobs: { data: null, error: null } } });
+test("submitJobForReview refuses an unknown job or a non-member before the review RPC", async () => {
+  signedIn({ rpcs: memberRpc(true), tables: { jobs: { data: null, error: null } } });
   const { submitJobForReview } = await actions();
-  let state = await submitJobForReview(
-    { status: "idle", message: "idle" },
-    form({ jobId: JOB }),
-  );
+  let state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm(JOB));
   assert.equal(state.message, "unauthorized");
   assert.deepEqual(rpcCalls("submit_job_for_review"), []);
 
-  // (b) the company exists but the caller is not a member.
   signedIn({
-    tables: { jobs: { data: { company_id: COMPANY }, error: null } },
     rpcs: memberRpc(false),
+    tables: { jobs: { data: { company_id: COMPANY }, error: null } },
   });
-  state = await submitJobForReview(
-    { status: "idle", message: "idle" },
-    form({ jobId: JOB }),
-  );
+  state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm(JOB));
   assert.equal(state.message, "unauthorized");
   assert.deepEqual(rpcCalls("submit_job_for_review"), []);
 });
 
-test("submitJobForReview sends the job id to the RPC for a member", async () => {
+test("submitJobForReview persists the current form values before the review RPC", async () => {
   signedIn({
-    tables: { jobs: { data: { company_id: COMPANY }, error: null } },
-    rpcs: {
-      ...memberRpc(true),
-      submit_job_for_review: { data: null, error: null },
+    rpcs: { ...memberRpc(true), submit_job_for_review: { data: null, error: null } },
+    tables: {
+      jobs: (ops) => ops.some((operation) => operation.startsWith("update:"))
+        ? { data: { id: JOB }, error: null }
+        : { data: { company_id: COMPANY }, error: null },
     },
   });
 
   const { submitJobForReview } = await actions();
   const state = await submitJobForReview(
     { status: "idle", message: "idle" },
-    form({ jobId: JOB }),
+    validDraftForm(JOB, "Updated Senior Operations Manager"),
   );
 
-  assert.deepEqual(state, {
-    status: "success",
-    message: "submitted",
-    jobId: JOB,
-  });
-  const calls = rpcCalls("submit_job_for_review");
-  assert.equal(calls.length, 1);
-  assert.deepEqual(calls[0].args, { _job_id: JOB });
+  assert.deepEqual(state, { status: "success", message: "submitted", jobId: JOB });
+  const update = fromCalls("jobs").find((call) => call.ops.some((operation) => operation.startsWith("update:")));
+  assert.ok(update);
+  assert.ok(update.ops.some((operation) => operation.includes("Updated Senior Operations Manager")));
+  assert.deepEqual(rpcCalls("submit_job_for_review")[0].args, { _job_id: JOB });
 });
 
-test("submitJobForReview maps 42501 to unauthorized and 22023 to submitFailed", async () => {
-  const cases: [string, string][] = [
-    ["42501", "unauthorized"],
-    ["22023", "submitFailed"],
-    ["XX000", "submitFailed"],
-  ];
+test("submitJobForReview preserves a newly created draft id when review submission fails", async () => {
+  signedIn({
+    rpcs: { ...memberRpc(true), submit_job_for_review: { data: null, error: { code: "22023" } } },
+    tables: {
+      jobs: (ops) => ops.some((operation) => operation.startsWith("insert:"))
+        ? { data: { id: JOB }, error: null }
+        : { data: { company_id: COMPANY }, error: null },
+    },
+  });
 
+  const { submitJobForReview } = await actions();
+  const state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm(""));
+  assert.equal(state.status, "error");
+  assert.equal(state.message, "submitFailed");
+  assert.equal(state.jobId, JOB);
+  assert.equal(fromCalls("jobs").filter((call) => call.ops.some((operation) => operation.startsWith("insert:"))).length, 1);
+});
+
+test("submitJobForReview maps review RPC errors after persisting the draft", async () => {
+  const cases: [string, string][] = [["42501", "unauthorized"], ["22023", "submitFailed"], ["XX000", "submitFailed"]];
   for (const [code, expected] of cases) {
     signedIn({
-      tables: { jobs: { data: { company_id: COMPANY }, error: null } },
-      rpcs: {
-        ...memberRpc(true),
-        submit_job_for_review: { data: null, error: { code } },
+      rpcs: { ...memberRpc(true), submit_job_for_review: { data: null, error: { code } } },
+      tables: {
+        jobs: (ops) => ops.some((operation) => operation.startsWith("update:"))
+          ? { data: { id: JOB }, error: null }
+          : { data: { company_id: COMPANY }, error: null },
       },
     });
-
     const { submitJobForReview } = await actions();
-    const state = await submitJobForReview(
-      { status: "idle", message: "idle" },
-      form({ jobId: JOB }),
-    );
-    assert.equal(state.message, expected, `RPC code ${code}`);
+    const state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm(JOB));
+    assert.equal(state.message, expected, "RPC code " + code);
+    assert.equal(state.jobId, JOB);
   }
 });
 
