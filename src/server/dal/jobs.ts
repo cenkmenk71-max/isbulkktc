@@ -20,40 +20,17 @@ type PlatformRole = Database["public"]["Enums"]["platform_role"];
 
 export type PublicJobListing = z.infer<typeof publicJobListingSchema>;
 
-async function fetchFallbackPublicJobs(): Promise<PublicJobListing[]> {
-  return [];
-}
-
-async function searchFallbackPublicJobs(
-  filters: z.output<typeof publicJobSearchSchema>,
-): Promise<z.output<typeof publicJobSearchResultsSchema>> {
-  const jobs = await fetchFallbackPublicJobs();
-  const query = filters.query.trim().toLocaleLowerCase("tr");
-  const filtered = jobs.filter((job) => {
-    const haystack = [job.title, job.company.name, job.summary, job.description]
-      .join(" ")
-      .toLocaleLowerCase("tr");
-
-    const matchesQuery = !query || haystack.includes(query);
-    const matchesDistrict = !filters.district || job.district === filters.district;
-    const matchesJobType = !filters.jobType || job.job_type === filters.jobType;
-    const matchesWorkplaceMode = !filters.workplaceMode || job.workplace_mode === filters.workplaceMode;
-
-    return matchesQuery && matchesDistrict && matchesJobType && matchesWorkplaceMode;
-  });
-
-  const pageSize = 20;
-  const total = filtered.length;
-  const page = Math.min(filters.page, Math.max(1, Math.ceil(total / pageSize) || 1));
-  const start = (page - 1) * pageSize;
-  const jobsPage = filtered.slice(start, start + pageSize);
-
-  return {
-    jobs: jobsPage,
-    total,
-    page,
-    pageSize,
-  };
+/**
+ * A public catalogue outage is not an empty catalogue and must never be
+ * translated into a successful empty state or a genuine not-found response.
+ * Route boundaries may render a retryable error page; valid empty RPC results
+ * remain ordinary empty results.
+ */
+export class PublicJobDataUnavailableError extends Error {
+  constructor(operation: string, options?: ErrorOptions) {
+    super(`Public job data is temporarily unavailable (${operation}).`, options);
+    this.name = "PublicJobDataUnavailableError";
+  }
 }
 
 export async function isJobCompanyMember(
@@ -84,7 +61,6 @@ export async function getJobCompanyId(jobId: string): Promise<string | null> {
     .from("jobs")
     .select("company_id")
     .eq("id", jobId)
-    .eq("publication_source", "platform")
     .maybeSingle();
 
   if (error) {
@@ -196,14 +172,10 @@ export async function searchPublicJobs(
 
     return results.data;
   } catch (error) {
-    // Falling back to an empty result set is deliberate (the listing must never
-    // 500), but it is indistinguishable from "no vacancies" to the caller. Log
-    // so a broken RPC surfaces as an outage instead of a silently empty board.
-    console.error("The public job search failed; rendering the fallback.", {
+    console.error("The public job search failed.", {
       cause: error instanceof Error ? error.message : undefined,
     });
-    const fallback = await searchFallbackPublicJobs(filters);
-    return fallback as Awaited<ReturnType<typeof searchPublicJobs>>;
+    throw new PublicJobDataUnavailableError("search", { cause: error });
   }
 }
 
@@ -232,16 +204,10 @@ export async function getPublicJobBySlug(input: unknown) {
 
     return job.data;
   } catch (error) {
-    // A thrown lookup makes this route answer 404 — a live vacancy would be
-    // reported as missing. The fallback still decides the outcome, but the log
-    // makes the difference between "gone" and "the RPC broke" visible.
-    console.error("The public job detail could not be loaded; rendering the fallback.", {
+    console.error("The public job detail could not be loaded.", {
       cause: error instanceof Error ? error.message : undefined,
     });
-    const jobs = await fetchFallbackPublicJobs();
-    const match = jobs.find((job) => job.slug === slug);
-    if (!match) return null;
-    return match as PublicJobListing;
+    throw new PublicJobDataUnavailableError("detail", { cause: error });
   }
 }
 
@@ -312,15 +278,12 @@ export async function listPublicJobSitemapEntries(): Promise<
 
     return entries;
   } catch (error) {
-    // The sitemap must never fail the build or the request, so it degrades to
-    // the static routes. But an empty list is not the same as "no vacancies":
-    // if it is silent, a broken RPC quietly drops every vacancy URL from the
-    // sitemap and nothing surfaces it. Log so the outage is visible, then fall
-    // back.
+    // Returning [] here would publish a successful sitemap that falsely claims
+    // there are no vacancies. Let Next return a non-success response instead.
     console.error("The job sitemap entries could not be listed.", {
       cause: error instanceof Error ? error.message : undefined,
     });
-    return [];
+    throw new PublicJobDataUnavailableError("sitemap", { cause: error });
   }
 }
 
@@ -372,35 +335,10 @@ export async function searchPublicJobPreviews(input: unknown) {
 
     return { previews, total, page, pageSize };
   } catch (error) {
-    console.error("Public job preview search failed; using the local fallback.", {
+    console.error("Public job preview search failed.", {
       error: error instanceof Error ? error.message : "unknown_error",
     });
-    const jobs = await fetchFallbackPublicJobs();
-    const query = filters.query.trim().toLocaleLowerCase("tr");
-    const filtered = jobs.filter((job) => {
-      const haystack = [job.title, job.company.name, job.summary, job.description]
-        .join(" ")
-        .toLocaleLowerCase("tr");
-      const matchesQuery = !query || haystack.includes(query);
-      const matchesDistrict = !filters.district || job.district === filters.district;
-      const matchesJobType = !filters.jobType || job.job_type === filters.jobType;
-      const matchesWorkplaceMode = !filters.workplaceMode || job.workplace_mode === filters.workplaceMode;
-      return matchesQuery && matchesDistrict && matchesJobType && matchesWorkplaceMode;
-    });
-
-    const total = filtered.length;
-    const page = Math.min(filters.page, Math.max(1, Math.ceil(total / pageSize) || 1));
-    const start = (page - 1) * pageSize;
-    const fallbackPreviews = filtered.slice(start, start + pageSize).map((job) => ({
-      title: job.title,
-      companyName: job.company.name,
-    }));
-    return {
-      previews: fallbackPreviews,
-      total,
-      page,
-      pageSize,
-    };
+    throw new PublicJobDataUnavailableError("previews", { cause: error });
   }
 }
 
@@ -456,7 +394,9 @@ export async function getPublicJobCompanies(): Promise<PublicJobCompany[]> {
     console.error("Public job companies lookup failed.", {
       error: error instanceof Error ? error.message : "unknown_error",
     });
-    return [];
+    throw new PublicJobDataUnavailableError("company directory", {
+      cause: error,
+    });
   }
 }
 
@@ -609,11 +549,6 @@ export async function getCompanyJobEntitlements(companyId: string) {
 
   return data;
 }
-
-const moderationCursorSchema = z.object({
-  createdAt: z.string().datetime({ offset: true }),
-  id: z.string().uuid(),
-});
 
 export async function getPendingJobsForReview(input?: {
   afterCreatedAt?: string;
