@@ -32,6 +32,7 @@ export function JobDraftForm({
   return (
     <div className="job-authoring">
       <form action={action} className="job-authoring-form">
+        <fieldset className="job-authoring-fields" disabled={submission.status === "success"}>
         <input name="companyId" type="hidden" value={companyId} />
         <input name="jobId" type="hidden" value={savedJobId ?? ""} />
 
@@ -145,6 +146,7 @@ export function JobDraftForm({
             </p>
           ) : null}
         </div>
+        </fieldset>
       </form>
 
       {canSubmit ? (
