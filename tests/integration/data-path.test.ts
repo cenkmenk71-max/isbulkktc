@@ -466,3 +466,48 @@ test("account deletion does not report success when retained history blocks the 
     "a rejected deletion must not claim that the account was erased",
   );
 });
+
+
+test("account deletion converts an Admin API transport exception into a controlled failure", async () => {
+  const { deleteAccountThrottle } = await import("../../src/features/identity/auth-rate-limits");
+  deleteAccountThrottle.address.clear();
+  deleteAccountThrottle.user.clear();
+  resetBoundary({ user: fakeAuthUser({ id: ID }) }, { adminDeleteThrows: true });
+  setRequestHeaders({ "cf-connecting-ip": "203.0.113.14" });
+
+  const { deleteAccount } = await import("../../src/features/identity/actions");
+  await assert.doesNotReject(async () => {
+    assert.deepEqual(
+      await deleteAccount(),
+      { status: "error", message: "deletionFailed" },
+    );
+  });
+  assert.ok(
+    !recorded.supabase.some(
+      (call) => call.kind === "auth" && call.method === "signOut",
+    ),
+    "the session must not be reported signed out when the deletion request failed",
+  );
+});
+
+test("account deletion converts a session lookup exception into a controlled failure", async () => {
+  const { deleteAccountThrottle } = await import("../../src/features/identity/auth-rate-limits");
+  deleteAccountThrottle.address.clear();
+  deleteAccountThrottle.user.clear();
+  resetBoundary({ getUserThrows: true });
+  setRequestHeaders({ "cf-connecting-ip": "203.0.113.15" });
+
+  const { deleteAccount } = await import("../../src/features/identity/actions");
+  await assert.doesNotReject(async () => {
+    assert.deepEqual(
+      await deleteAccount(),
+      { status: "error", message: "deletionFailed" },
+    );
+  });
+  assert.ok(
+    !recorded.supabase.some(
+      (call) => call.kind === "auth" && call.method === "admin.deleteUser",
+    ),
+    "a failed session lookup must not reach the service-role deletion",
+  );
+});

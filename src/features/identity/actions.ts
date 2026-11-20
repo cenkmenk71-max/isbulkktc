@@ -517,67 +517,94 @@ export type DeleteAccountResult = {
 };
 
 export async function deleteAccount(): Promise<DeleteAccountResult> {
-  // A Server Action already has the caller's authenticated request context.
-  // Calling our own HTTP route would create a second request without forwarding
-  // that cookie, so the route would see an anonymous caller. Verify the session
-  // here and use the privileged client only for this caller's own id.
-  const supabase = await createSupabaseServerClient({ allowCookieWrites: true });
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return { status: "error", message: "deletionFailed" };
-  }
-
-  const ip = await clientIp();
-  if (
-    !deleteAccountThrottle.address.check(`ip:${ip}`).ok ||
-    !deleteAccountThrottle.user.check(`user:${user.id}`).ok
-  ) {
-    return { status: "error", message: "rateLimited" };
-  }
-
-  const serviceClient = createSupabaseServiceClient();
-  if (!serviceClient) {
-    console.error("Account deletion is unavailable: service role key is not configured.");
-    return { status: "error", message: "deletionFailed" };
-  }
-
-  // Never accept a user id from the browser. The target is derived exclusively
-  // from the verified Supabase session. FK RESTRICT is allowed to refuse the
-  // delete: historical applications, job authorship and admin attribution must
-  // not be erased or reassigned without an approved retention policy.
-  const { error: deleteError } = await serviceClient.auth.admin.deleteUser(user.id);
-  if (deleteError) {
-    console.error("Supabase account deletion failed.", {
-      code: deleteError.code,
-    });
-    return { status: "error", message: "deletionFailed" };
-  }
-
   try {
-    const { error: signOutError } = await supabase.auth.signOut();
-    if (signOutError) {
-      console.error("Sign-out after account deletion failed.", {
-        code: signOutError.code,
+    // A Server Action already has the caller's authenticated request context.
+    // Calling our own HTTP route would create a second request without forwarding
+    // that cookie, so the route would see an anonymous caller. Verify the session
+    // here and use the privileged client only for this caller's own id.
+    const supabase = await createSupabaseServerClient({ allowCookieWrites: true });
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { status: "error", message: "deletionFailed" };
+    }
+
+    const ip = await clientIp();
+    if (
+      !deleteAccountThrottle.address.check(`ip:${ip}`).ok ||
+      !deleteAccountThrottle.user.check(`user:${user.id}`).ok
+    ) {
+      return { status: "error", message: "rateLimited" };
+    }
+
+    const serviceClient = createSupabaseServiceClient();
+    if (!serviceClient) {
+      console.error("Account deletion is unavailable: service role key is not configured.");
+      return { status: "error", message: "deletionFailed" };
+    }
+
+    // Never accept a user id from the browser. The target is derived exclusively
+    // from the verified Supabase session. FK RESTRICT is allowed to refuse the
+    // delete: historical applications, job authorship and admin attribution must
+    // not be erased or reassigned without an approved retention policy.
+    let deleteError: { code?: string; message?: string } | null;
+    try {
+      ({ error: deleteError } = await serviceClient.auth.admin.deleteUser(user.id));
+    } catch (error) {
+      // Network/transport exceptions must be treated as a failed erasure, not a
+      // rejected Server Action. Log only the exception class, never its message.
+      console.error("Supabase account deletion request failed.", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      return { status: "error", message: "deletionFailed" };
+    }
+
+    if (deleteError) {
+      console.error("Supabase account deletion was rejected.", {
+        code: deleteError.code ?? "unknown_error",
+      });
+      return { status: "error", message: "deletionFailed" };
+    }
+
+    try {
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) {
+        console.error("Sign-out after account deletion failed.", {
+          code: signOutError.code ?? "unknown_error",
+        });
+      }
+    } catch (error) {
+      console.error("Sign-out after account deletion threw.", {
+        error: error instanceof Error ? error.name : "unknown_error",
       });
     }
+
+    // Best-effort cleanup: the Auth record is already gone, so a cookie-store
+    // failure must not turn a completed deletion into a false failure result.
+    try {
+      const cookieStore = await cookies();
+      for (const cookie of cookieStore.getAll()) {
+        if (/^(sb-|.*(auth|session|supabase)).*$/i.test(cookie.name)) {
+          cookieStore.delete(cookie.name);
+        }
+      }
+    } catch (error) {
+      console.error("Session cookies could not be cleared after account deletion.", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+    }
+
+    return { status: "success", message: "success" };
   } catch (error) {
-    console.error("Sign-out after account deletion threw.", {
+    // Includes session lookup, request-context and configuration failures.
+    // Keep the public result generic and avoid logging potentially sensitive
+    // transport/provider error messages.
+    console.error("Account deletion could not be completed.", {
       error: error instanceof Error ? error.name : "unknown_error",
     });
-  } finally {
-    // Clear every Supabase auth cookie chunk even if remote sign-out fails
-    // after the Auth user has already been deleted.
-    const cookieStore = await cookies();
-    for (const cookie of cookieStore.getAll()) {
-      if (/^(sb-|.*(auth|session|supabase)).*$/i.test(cookie.name)) {
-        cookieStore.delete(cookie.name);
-      }
-    }
+    return { status: "error", message: "deletionFailed" };
   }
-
-  return { status: "success", message: "success" };
 }

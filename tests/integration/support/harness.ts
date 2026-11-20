@@ -120,6 +120,10 @@ export type FakeSupabaseScript = {
   user?: unknown;
   /** Auth methods (`signInWithPassword`, …) return this `error` when set. */
   authError?: { code?: string; message?: string } | null;
+  /** Simulate a transport exception from the privileged delete endpoint. */
+  adminDeleteThrows?: boolean;
+  /** Simulate a thrown session lookup, not just an auth error response. */
+  getUserThrows?: boolean;
 };
 
 export class FakeSupabase {
@@ -230,6 +234,7 @@ export class FakeSupabase {
   auth = {
     getUser: async () => {
       recorded.supabase.push({ kind: "auth", method: "getUser" });
+      if (this.script.getUserThrows) throw new Error("simulated auth transport failure");
       return this.script.user
         ? { data: { user: this.script.user }, error: null }
         : { data: { user: null }, error: null };
@@ -280,6 +285,9 @@ export class FakeSupabase {
           method: "admin.deleteUser",
           userId,
         });
+        if (this.script.adminDeleteThrows) {
+          throw new Error("simulated admin transport failure");
+        }
         return {
           data: { user: null },
           error: this.script.authError ?? null,

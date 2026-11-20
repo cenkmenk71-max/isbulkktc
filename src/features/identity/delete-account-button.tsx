@@ -27,13 +27,19 @@ export function DeleteAccountButton({
   function handleDelete() {
     setError(null);
     startTransition(async () => {
-      const result = await deleteAccount();
-      if (result.status === "success") {
-        router.push("/");
-        router.refresh();
-      } else if (result.message === "rateLimited") {
-        setError(copy("rateLimited"));
-      } else {
+      try {
+        const result = await deleteAccount();
+        if (result.status === "success") {
+          router.push("/");
+          router.refresh();
+        } else if (result.message === "rateLimited") {
+          setError(copy("rateLimited"));
+        } else {
+          setError(copy("failed"));
+        }
+      } catch {
+        // A lost network response or a rejected Server Action is still a
+        // visible, localized failure rather than an unhandled transition.
         setError(copy("failed"));
       }
     });

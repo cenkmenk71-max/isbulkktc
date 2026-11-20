@@ -176,7 +176,7 @@ test("sign-in refuses an account whose profile is not active", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4. Open gap: there is no deletion path at all.
+// 4. Session-bound deletion path; retention and reauthentication remain open.
 // ---------------------------------------------------------------------------
 
 test("account deletion is session-bound, rate-limited and uses the service role", () => {
