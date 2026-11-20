@@ -9,6 +9,55 @@ import { Webhook } from "standardwebhooks";
  * and `delivery-health.ts` live here.
  */
 
+/** Maximum accepted raw Resend webhook body (1 MiB). */
+export const MAX_RESEND_WEBHOOK_BODY_BYTES = 1_048_576;
+
+/**
+ * Reads a signed webhook body without buffering unbounded input.
+ * Returns null when Content-Length or the actual stream exceeds the limit.
+ * The exact raw text is retained for signature verification; never parse and
+ * re-serialize JSON before checking the provider signature.
+ */
+export async function readResendWebhookPayload(
+  request: Request,
+  maxBytes = MAX_RESEND_WEBHOOK_BODY_BYTES,
+): Promise<string | null> {
+  const declaredLength = request.headers.get("content-length");
+  if (declaredLength && /^\d+$/.test(declaredLength) && Number(declaredLength) > maxBytes) {
+    await request.body?.cancel().catch(() => undefined);
+    return null;
+  }
+
+  const body = request.body;
+  if (!body) return "";
+
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 export type ResendWebhookHeaders = {
   id: string;
   timestamp: string;

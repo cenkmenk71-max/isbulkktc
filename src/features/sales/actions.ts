@@ -31,6 +31,7 @@ export async function submitSalesLead(
     durationDays: formData.get("durationDays") ?? "",
     note: formData.get("note") ?? "",
     locale: formData.get("locale") ?? "tr",
+    marketingConsent: formData.get("marketingConsent") === "true",
   });
 
   if (!result.success) return invalidForm;
@@ -65,6 +66,7 @@ export async function submitSalesLead(
       _duration_days: durationDays,
       _note: result.data.note || null,
       _locale: result.data.locale,
+      _marketing_consent: result.data.marketingConsent,
     })
     .setHeader("x-client-ip", ip);
 

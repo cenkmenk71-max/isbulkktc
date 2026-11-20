@@ -3,9 +3,8 @@
  *
  * Kept free of Deno and Node globals so both the Edge Function worker and the
  * Node-side sender (server actions) can import the same strings, and so it is
- * unit testable with plain `node --test`. Only the `tr` catalog is fully
- * maintained; the other five mirror the app's `localePrefix` set and fall back
- * to `tr` when a key is missing.
+ * unit testable with plain `node --test`. Each supported locale has a complete
+ * typed catalog; unknown locale values resolve to Turkish at the boundary.
  */
 
 export const EMAIL_LOCALES = ["tr", "en", "ru", "el", "fa", "de"] as const;

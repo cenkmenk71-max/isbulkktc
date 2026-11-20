@@ -673,6 +673,7 @@ export type Database = {
           _duration_days: number | null;
           _note: string | null;
           _locale: string;
+          _marketing_consent: boolean;
         };
         Returns: string;
       };

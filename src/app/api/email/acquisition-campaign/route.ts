@@ -19,8 +19,10 @@ const BATCH_SIZE = 50;
  * until now existed fully rendered and tested but was never dispatched. It
  * follows the engagement-digest pattern: a bearer secret authenticates the
  * worker before any configuration is read, recipients come from a
- * `service_role`-only RPC that already excludes opted-out addresses, and every
- * message carries a signed one-click unsubscribe link.
+ * `service_role`-only RPC that returns only leads with a recorded affirmative
+ * marketing consent and no opt-out, and every message carries a signed one-click
+ * unsubscribe link. Legacy quote requests remain transactional-only unless the
+ * visitor separately ticks the optional marketing checkbox.
  *
  * The recipient source is opt-in `sales_leads` only (see
  * `list_marketing_recipients`): a company that submitted the quote form asked

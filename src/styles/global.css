@@ -13005,6 +13005,28 @@ html[dir="rtl"] input[name="slug"] {
   border-radius: 20px;
   background: var(--surface-raised);
 }
+.sales-lead-form > .sales-lead-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.55;
+  cursor: pointer;
+}
+.sales-lead-consent > input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 2px 0 0;
+  accent-color: var(--color-shade-green-800);
+  cursor: pointer;
+}
+.sales-lead-consent:focus-within > input {
+  outline: 2px solid var(--color-shade-green-700);
+  outline-offset: 3px;
+}
 @media (max-width: 900px) {
   .packages-lead-layout {
     grid-template-columns: minmax(0, 1fr);

@@ -202,6 +202,7 @@ select is(
     'submit_feedback(_name text, _email text, _category text, _rating integer, _message text, _locale text)',
     'submit_job_for_review(_job_id uuid)',
     'submit_sales_lead(_company_name text, _contact_name text, _email text, _phone text, _plan text, _duration_days integer, _note text, _locale text)',
+    'submit_sales_lead(_company_name text, _contact_name text, _email text, _phone text, _plan text, _duration_days integer, _note text, _locale text, _marketing_consent boolean)',
     'submit_support_message(_name text, _email text, _subject text, _body text, _locale text)',
     'sync_oauth_profile()',
     'transition_application(_application_id uuid, _next_status text)'

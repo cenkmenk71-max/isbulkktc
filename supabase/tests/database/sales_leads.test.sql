@@ -8,7 +8,7 @@ begin;
 -- any phone up to 32 characters with no minimum, but the column requires 4–32, so
 -- a short value used to fail the whole INSERT with `23514`.
 
-select plan(16);
+select plan(19);
 
 -- ---------------------------------------------------------------------------
 -- Least privilege: the table is service-role-only, the visitor writes through
@@ -84,6 +84,34 @@ select is(
   (select locale from public.sales_leads where email = 'dana@example.test'),
   'en',
   'the requested locale is stored for localised copy'
+);
+
+select is(
+  (select marketing_consent from public.sales_leads where email = 'dana@example.test'),
+  false,
+  'the legacy eight-argument RPC never infers marketing consent'
+);
+
+set local role anon;
+set local "request.jwt.claims" = '{"role":"anon","iss":"supabase"}';
+
+select lives_ok(
+  $select public.submit_sales_lead(
+      'Consent Ltd', 'Dana Consent', 'consent@example.test', null, null, null,
+      null, 'tr', true
+    )$,
+  'an anonymous visitor can explicitly grant optional marketing consent'
+);
+
+reset role;
+
+select ok(
+  (select marketing_consent
+      and marketing_consent_at is not null
+      and marketing_consent_version = 'sales-lead-marketing-v1'
+   from public.sales_leads
+   where email = 'consent@example.test'),
+  'affirmative consent is stored with a timestamp and exact copy version'
 );
 
 -- ---------------------------------------------------------------------------

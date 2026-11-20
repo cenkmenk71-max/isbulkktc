@@ -1,6 +1,6 @@
 begin;
 
-select plan(16);
+select plan(18);
 
 -- The acquisition ("marketing") campaign is promotional mail to a consented
 -- prospect list (`sales_leads`), so its two RPCs are the consent gate and the
@@ -66,16 +66,40 @@ select ok(
 -- Recipient selection: only `new` leads, keyed by id, in insertion order.
 -- ---------------------------------------------------------------------------
 
-insert into public.sales_leads (id, company_name, email, locale, status) values
-  ('84000000-0000-4000-8000-000000000001', 'Alpha', 'alpha@example.test', 'tr', 'new'),
-  ('84000000-0000-4000-8000-000000000002', 'Beta', 'beta@example.test', 'en', 'new'),
-  ('84000000-0000-4000-8000-000000000003', 'Gamma', 'gamma@example.test', 'ru', 'quoted'),
-  ('84000000-0000-4000-8000-000000000004', 'Delta', 'delta@example.test', 'de', 'new');
+insert into public.sales_leads (
+  id, company_name, email, locale, status,
+  marketing_consent, marketing_consent_at, marketing_consent_version
+) values
+  ('84000000-0000-4000-8000-000000000001', 'Alpha', 'alpha@example.test', 'tr', 'new', true, pg_catalog.now(), 'sales-lead-marketing-v1'),
+  ('84000000-0000-4000-8000-000000000002', 'Beta', 'beta@example.test', 'en', 'new', true, pg_catalog.now(), 'sales-lead-marketing-v1'),
+  ('84000000-0000-4000-8000-000000000003', 'Gamma', 'gamma@example.test', 'ru', 'quoted', true, pg_catalog.now(), 'sales-lead-marketing-v1');
+
+-- A lead without affirmative permission represents both legacy records and
+-- visitors who leave the optional checkbox unticked; it must never enter a batch.
+insert into public.sales_leads (id, company_name, email, locale, status)
+values ('84000000-0000-4000-8000-000000000004', 'Delta', 'delta@example.test', 'de', 'new');
 
 select is(
   (select count(*)::integer from public.list_marketing_recipients(null, 100)),
-  3,
-  'only leads still in the `new` queue are recipients'
+  2,
+  'only new leads with explicit marketing consent are recipients'
+);
+
+select is(
+  (select count(*)::integer
+   from public.list_marketing_recipients(null, 100)
+   where lead_id = '84000000-0000-4000-8000-000000000004'),
+  0,
+  'a lead with no consent (including a legacy lead) is not a recipient'
+);
+
+select ok(
+  (select marketing_consent
+      and marketing_consent_at is not null
+      and marketing_consent_version = 'sales-lead-marketing-v1'
+   from public.sales_leads
+   where id = '84000000-0000-4000-8000-000000000001'),
+  'affirmative marketing permission has a timestamp and copy-version audit'
 );
 
 select is(
@@ -92,7 +116,7 @@ select is(
      (select lead_id from public.list_marketing_recipients(null, 1)),
      100
    )),
-  2,
+  1,
   'the batch cursor resumes after the last returned lead id'
 );
 
@@ -106,7 +130,7 @@ insert into public.email_engagement_optouts (email, reason) values
 
 select is(
   (select count(*)::integer from public.list_marketing_recipients(null, 100)),
-  2,
+  1,
   'an opted-out address is excluded from the marketing batch'
 );
 
@@ -129,7 +153,7 @@ select is(
 
 select is(
   (select count(*)::integer from public.list_marketing_recipients(null, 100)),
-  1,
+  0,
   'a contacted lead is no longer a recipient'
 );
 

@@ -1461,7 +1461,8 @@
     "noteLabel": "İhtiyacınızı kısaca anlatın",
     "submit": "Teklif talebini gönder",
     "sending": "Gönderiliyor…",
-    "privacyNote": "Bilgileriniz yalnızca teklif süreci için kullanılır; üçüncü taraflarla paylaşılmaz.",
+    "marketingConsentLabel": "İşBul KKTC hizmetleri ve yenilikleri hakkında ara sıra tanıtım e-postaları almak istiyorum. Bu onay isteğe bağlıdır; dilediğim zaman abonelikten çıkabilirim.",
+    "privacyNote": "Bilgileriniz teklif talebinizi yanıtlamak için kullanılır. Tanıtım e-postaları yalnızca aşağıdaki ayrı onayla gönderilir; dilediğiniz zaman abonelikten çıkabilirsiniz.",
     "durations": {
       "oneDay": "1 gün",
       "sevenDays": "7 gün",
