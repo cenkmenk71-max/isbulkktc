@@ -96,6 +96,11 @@ export function SalesLeadForm({ plan }: { plan?: string }) {
         />
       </label>
 
+      <label className="sales-lead-consent" htmlFor="sales-marketing-consent">
+        <input id="sales-marketing-consent" name="marketingConsent" type="checkbox" value="true" />
+        <span>{copy("marketingConsentLabel")}</span>
+      </label>
+
       <button
         className="button button-dark editorial-submit editorial-auth-email-button"
         disabled={pending}

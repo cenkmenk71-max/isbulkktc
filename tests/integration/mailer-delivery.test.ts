@@ -576,3 +576,33 @@ test("getFeedbackInbox prefers the dedicated inbox, falls back to sales, then nu
     notAnAddress();
   }
 });
+
+
+test("a checked marketing preference sends a separate double-opt-in email before the transactional receipt", async () => {
+  reset();
+  const restore = deliverableEnv();
+  const restoreInbox = withEnv({ SALES_INBOX_EMAIL: TEAM_INBOX });
+  try {
+    const { sendSalesLeadEmails } = await mailer();
+    const confirmationUrl = "https://isbulkktc.com/api/email/confirm-marketing?token=payload.signature";
+    await sendSalesLeadEmails({
+      email: "prospect@example.com",
+      locale: "tr",
+      leadId: "84000000-0000-4000-8000-000000000001",
+      marketingConsentConfirmationUrl: confirmationUrl,
+    });
+
+    assert.equal(sent.length, 3, "confirmation, quote receipt, and team notification");
+    assert.equal(
+      sent[0].options?.idempotencyKey,
+      "marketing-consent-confirmation/84000000-0000-4000-8000-000000000001",
+    );
+    assert.ok(sent[0].payload.html?.includes(confirmationUrl));
+    assert.match(sent[0].payload.subject ?? "", /tercihinizi doğrulayın/i);
+    assert.equal(sent[1].options?.idempotencyKey, "sales-ack/84000000-0000-4000-8000-000000000001");
+    assert.equal(sent[2].options?.idempotencyKey, "sales-team/84000000-0000-4000-8000-000000000001");
+  } finally {
+    restoreInbox();
+    restore();
+  }
+});

@@ -6,10 +6,11 @@ import { authorizationIndex, authorizationLookup } from "./authorization-header"
 import { envReadNames } from "./env-access";
 
 /**
- * The bearer-secret authentication on the two Next.js cron routes.
+ * The bearer-secret authentication on the three Next.js cron routes.
  *
- * `/api/push/dispatch` and `/api/email/engagement-digest` are reachable over the
- * public internet and carry a `service_role` Supabase client, so each has to
+ * `/api/push/dispatch`, `/api/email/engagement-digest`, and
+ * `/api/email/acquisition-campaign` are reachable over the public internet and
+ * carry a `service_role` Supabase client, so each has to
  * establish its own authority from a shared secret before it does anything else.
  * The threat model's rule for this class of endpoint — first pinned for the edge
  * worker in `notification-worker-auth.test.ts` — is that authentication happens
@@ -219,6 +220,7 @@ test("both known cron routes are discovered, not listed (self-test)", () => {
   for (const expected of [
     "src/app/api/push/dispatch/route.ts",
     "src/app/api/email/engagement-digest/route.ts",
+    "src/app/api/email/acquisition-campaign/route.ts",
   ]) {
     assert.ok(
       discovered.includes(expected),

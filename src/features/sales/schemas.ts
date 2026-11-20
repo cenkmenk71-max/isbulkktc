@@ -24,6 +24,7 @@ export const salesLeadSchema = z.object({
     .optional(),
   note: z.string().trim().max(2000).optional().or(z.literal("")),
   locale: z.enum(routing.locales),
+  marketingConsent: z.boolean().default(false),
 });
 
 export type SalesLeadFormState = {

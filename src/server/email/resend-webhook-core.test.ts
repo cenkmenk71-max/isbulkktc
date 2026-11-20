@@ -6,6 +6,7 @@ import { Webhook } from "standardwebhooks";
 import {
   classifyResendEvent,
   eventRecipients,
+  readResendWebhookPayload,
   verifyResendWebhook,
 } from "./resend-webhook-core";
 
@@ -129,4 +130,30 @@ test("a missing or non-array to yields no recipients", () => {
   assert.deepEqual(eventRecipients({ data: {} }), []);
   assert.deepEqual(eventRecipients({}), []);
   assert.deepEqual(eventRecipients({ data: { to: null } }), []);
+});
+
+
+test("the webhook reader rejects an oversized declared body before buffering", async () => {
+  const request = new Request("https://isbulkktc.test/webhook", {
+    method: "POST",
+    headers: { "content-length": "9" },
+    body: "tiny",
+  });
+  assert.equal(await readResendWebhookPayload(request, 8), null);
+});
+
+test("the webhook reader enforces the actual byte limit without Content-Length", async () => {
+  const request = new Request("https://isbulkktc.test/webhook", {
+    method: "POST",
+    body: "123456789",
+  });
+  assert.equal(await readResendWebhookPayload(request, 8), null);
+});
+
+test("the webhook reader accepts exactly the byte limit and preserves UTF-8", async () => {
+  const request = new Request("https://isbulkktc.test/webhook", {
+    method: "POST",
+    body: "éé",
+  });
+  assert.equal(await readResendWebhookPayload(request, 4), "éé");
 });

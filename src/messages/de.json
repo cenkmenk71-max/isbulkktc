@@ -1472,7 +1472,7 @@
     "noteLabel": "Beschreiben Sie kurz Ihren Bedarf",
     "submit": "Angebotsanfrage senden",
     "sending": "Wird gesendet…",
-    "privacyNote": "Ihre Angaben werden nur für den Angebotsprozess genutzt und nicht an Dritte weitergegeben.",
+    "privacyNote": "Ihre Angaben werden zur Bearbeitung Ihrer Angebotsanfrage verwendet. Werbe-E-Mails werden nur mit der unten separat erteilten freiwilligen Einwilligung versendet; Sie können sich jederzeit abmelden.",
     "durations": {
       "oneDay": "1 Tag",
       "sevenDays": "7 Tage",
@@ -1482,7 +1482,8 @@
       "invalid": "Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
       "submitted": "Ihre Anfrage ist eingegangen! Wir melden uns in Kürze.",
       "failed": "Die Anfrage konnte gerade nicht gesendet werden. Bitte später erneut versuchen."
-    }
+    },
+    "marketingConsentLabel": "Ich möchte gelegentlich Werbe-E-Mails zu Diensten und Neuigkeiten von İşBul KKTC erhalten. Die Einwilligung ist freiwillig und jederzeit widerrufbar."
   },
   "DistrictPage": {
     "eyebrow": "JOBS IN NORDZYPERN",

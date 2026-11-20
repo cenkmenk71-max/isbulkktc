@@ -17,20 +17,22 @@ const UTC_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
  * Acquisition-campaign sender. Intended to run on a schedule (a cron entry
  * hitting this path with `Authorization: Bearer $MARKETING_CRON_SECRET`).
  *
- * This is the caller of `sendMarketingEmail` — the acquisition family — which
- * until now existed fully rendered and tested but was never dispatched. It
- * follows the engagement-digest pattern: a bearer secret authenticates the
- * worker before any configuration is read, recipients come from a
- * `service_role`-only RPC that already excludes opted-out addresses, and every
- * message carries a signed one-click unsubscribe link.
+ * This is the caller of `sendMarketingEmail` — the acquisition family.
+ * A bearer secret authenticates the worker before configuration is read;
+ * recipients come from the service-role-only `list_marketing_recipients` RPC,
+ * and every message carries a signed one-click unsubscribe link.
  *
- * The recipient source is opt-in `sales_leads` only (see
- * `list_marketing_recipients`): a company that submitted the quote form asked
- * to be contacted, so this is a consented follow-up rather than cold outreach.
- * A lead is marked `contacted` after its send. The route processes one bounded
- * keyset page per invocation; the workflow follows the returned cursor so a
- * large queue cannot exceed the Vercel function execution ceiling. A failed send
- * or failed status update is counted and leaves the lead eligible for reconciliation.
+ * The recipient source is `sales_leads` only. A quote request alone does not
+ * constitute marketing permission. The recipient RPC must require separately
+ * requested and email-confirmed `marketing_consent`, a matching consent
+ * timestamp, and absence from the shared suppression list. Legacy and
+ * pending-confirmation leads must remain excluded.
+ *
+ * A lead is marked `contacted` only after an accepted send. The route
+ * processes one bounded keyset page per invocation; the workflow follows the
+ * returned cursor so a large queue cannot exceed the Vercel execution ceiling.
+ * A failed send or failed status update is counted and leaves the lead
+ * eligible for reconciliation.
  */
 
 type MarketingRecipient = {

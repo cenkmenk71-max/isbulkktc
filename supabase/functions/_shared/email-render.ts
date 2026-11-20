@@ -7,7 +7,7 @@
  */
 
 import { BRAND, escapeHtml, renderEmailLayout, renderEmailText } from "./email-layout.ts";
-import { getEmailCopy, resolveEmailLocale, type EmailLocale } from "./email-copy.ts";
+import { getEmailCopy, MARKETING_CONSENT_COPY, resolveEmailLocale, type EmailLocale } from "./email-copy.ts";
 import { getEmailCopyExtras } from "./email-copy-extras.ts";
 import { getMarketingCopy, MARKETING_CONTACTS } from "./email-copy-marketing.ts";
 
@@ -415,6 +415,35 @@ export function renderSalesAcknowledgement(input: SalesLeadInput): RenderedEmail
   };
   return {
     subject: extras.sales.ackSubject,
+    html: renderEmailLayout(opts),
+    text: renderEmailText(opts),
+  };
+}
+
+
+/**
+ * Double-opt-in message. It asks the recipient to verify a marketing
+ * preference; it is not itself a promotional campaign.
+ */
+export function renderMarketingConsentConfirmation(
+  input: SiteContext & { confirmationUrl: string },
+): RenderedEmail {
+  const locale = resolveEmailLocale(input.locale);
+  const copy = MARKETING_CONSENT_COPY[locale];
+  const legal = getEmailCopy(locale).footer.legal;
+  const opts = {
+    locale,
+    preheader: copy.lead,
+    heading: copy.heading,
+    introHtml: paragraph(copy.lead),
+    button: { label: copy.cta, url: input.confirmationUrl },
+    linkFallback: copy.fallback,
+    note: copy.ignore,
+    footerNote: legal,
+    siteUrl: input.siteUrl,
+  };
+  return {
+    subject: copy.subject,
     html: renderEmailLayout(opts),
     text: renderEmailText(opts),
   };

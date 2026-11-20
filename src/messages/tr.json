@@ -1472,7 +1472,7 @@
     "noteLabel": "İhtiyacınızı kısaca anlatın",
     "submit": "Teklif talebini gönder",
     "sending": "Gönderiliyor…",
-    "privacyNote": "Bilgileriniz yalnızca teklif süreci için kullanılır; üçüncü taraflarla paylaşılmaz.",
+    "privacyNote": "Bilgileriniz teklif talebinizi yanıtlamak için kullanılır. Tanıtım e-postaları yalnızca aşağıdaki ayrı onayla gönderilir; dilediğiniz zaman abonelikten çıkabilirsiniz.",
     "durations": {
       "oneDay": "1 gün",
       "sevenDays": "7 gün",
@@ -1482,7 +1482,8 @@
       "invalid": "Lütfen formu kontrol edip tekrar deneyin.",
       "submitted": "Talebiniz bize ulaştı! Ekibimiz en kısa sürede dönecek.",
       "failed": "Talep şu anda gönderilemedi. Lütfen daha sonra tekrar deneyin."
-    }
+    },
+    "marketingConsentLabel": "İşBul KKTC hizmetleri ve yenilikleri hakkında ara sıra tanıtım e-postaları almak istiyorum. Bu onay isteğe bağlıdır; dilediğim zaman abonelikten çıkabilirim."
   },
   "DistrictPage": {
     "eyebrow": "KKTC İŞ İLANLARI",

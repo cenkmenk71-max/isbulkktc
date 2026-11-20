@@ -10,6 +10,7 @@ import {
   renderFeedbackTeamEmail,
   renderJobPublishedEmail,
   renderMarketingEmail,
+  renderMarketingConsentConfirmation,
   renderResumeReceivedEmail,
   renderSalesAcknowledgement,
   renderSalesTeamEmail,
@@ -285,11 +286,25 @@ export async function sendSalesLeadEmails(input: {
   durationDays?: number | null;
   note?: string | null;
   leadId: string;
+  marketingConsentConfirmationUrl?: string | null;
 }): Promise<void> {
   const locale = resolveEmailLocale(input.locale);
   const siteUrl = localeUrl(locale, "/");
 
   if (input.email) {
+    if (input.marketingConsentConfirmationUrl) {
+      const confirmation = renderMarketingConsentConfirmation({
+        locale,
+        siteUrl,
+        confirmationUrl: input.marketingConsentConfirmationUrl,
+      });
+      await deliver(
+        confirmation,
+        input.email,
+        "marketing-consent-confirmation/" + input.leadId,
+      );
+    }
+
     const acknowledgement = renderSalesAcknowledgement({
       locale,
       siteUrl,

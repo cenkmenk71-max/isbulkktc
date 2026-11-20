@@ -12,18 +12,19 @@ export const dynamic = "force-dynamic";
 /**
  * Resend delivery-event receiver.
  *
- * Resend posts `email.bounced` / `email.complained` / `email.suppressed` here
- * after a send. Without it the digest kept mailing addresses that hard-bounced
- * or reported spam, which is the fastest way to lose sending reputation, so a
- * bounce or a complaint is written to `email_engagement_optouts` through the
- * same service-role RPC the unsubscribe link uses and drops the address from
- * every later batch.
+ * Resend posts `email.bounced` / `email.complained` / `email.suppressed`
+ * after a send. These events are persisted through the same service-role
+ * suppression RPC used by unsubscribe links, preventing suppressed addresses
+ * from receiving subsequent campaign messages.
  *
- * The raw body is read with a hard byte ceiling before signature
- * verification; a missing, forged or replayed signature is then rejected with
- * 401 before JSON parsing or database access. The body ceiling protects the
- * receiver from large unauthenticated uploads. A transient failure to store the
- * suppression answers 5xx on purpose so Resend retries instead of losing it.
+ * The raw body is read with a strict 256 KiB streaming bound and fatal UTF-8
+ * decoding before signature verification. Svix verifies the original raw body;
+ * missing, forged, or replayed signatures are rejected before JSON parsing or
+ * database access. The body limit protects the receiver from oversized
+ * unauthenticated uploads.
+ *
+ * A transient failure to store suppression returns 5xx so Resend retries
+ * instead of silently losing the event.
  */
 export async function POST(request: Request) {
   const secret = process.env.RESEND_WEBHOOK_SECRET?.trim();
