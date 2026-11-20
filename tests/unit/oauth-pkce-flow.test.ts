@@ -110,3 +110,113 @@ test("the home page applies the auth-error redirect", async () => {
   assert.match(page, /resolveAuthErrorRedirect\(query,\s*locale\)/);
   assert.match(page, /redirect\(authErrorRedirect\)/);
 });
+
+test("PKCE diagnostics detect only the matching flow verifier cookie", async () => {
+  const { inspectPkceVerifierCookies } = await import(
+    "../../src/features/identity/pkce-cookie-diagnostics"
+  );
+  const storageKey = "sb-example-auth-token";
+  const flowId = "505e96d1e1a6debd9cdd3e80cf443a0b";
+
+  assert.deepEqual(
+    inspectPkceVerifierCookies(
+      [
+        `${storageKey}-flow-${flowId}-code-verifier`,
+        `${storageKey}-code-verifier`,
+      ],
+      storageKey,
+      flowId,
+    ),
+    {
+      hasFlowVerifierCookie: true,
+      hasLegacyVerifierCookie: true,
+    },
+  );
+
+  assert.deepEqual(
+    inspectPkceVerifierCookies(
+      [
+        `${storageKey}-flow-${flowId}-code-verifier.0`,
+        `${storageKey}-flow-${flowId}-code-verifier.1`,
+        `${storageKey}-unrelated`,
+      ],
+      storageKey,
+      flowId,
+    ),
+    {
+      hasFlowVerifierCookie: true,
+      hasLegacyVerifierCookie: false,
+    },
+  );
+
+  assert.deepEqual(
+    inspectPkceVerifierCookies(
+      [`${storageKey}-flow-another-flow-code-verifier`],
+      storageKey,
+      flowId,
+    ),
+    {
+      hasFlowVerifierCookie: false,
+      hasLegacyVerifierCookie: false,
+    },
+  );
+});
+
+test("PKCE diagnostics do not infer a flow verifier when the callback has no flow id", async () => {
+  const { inspectPkceVerifierCookies } = await import(
+    "../../src/features/identity/pkce-cookie-diagnostics"
+  );
+
+  assert.deepEqual(
+    inspectPkceVerifierCookies(
+      ["sb-example-auth-token-code-verifier"],
+      "sb-example-auth-token",
+      undefined,
+    ),
+    {
+      hasFlowVerifierCookie: null,
+      hasLegacyVerifierCookie: true,
+    },
+  );
+});
+
+test("a callback with an explicit flow id never retries against the shared legacy verifier", async () => {
+  const route = await read("src/app/[locale]/auth/callback/route.ts");
+
+  assert.equal(
+    (route.match(/exchangeCodeForSession\(/g) ?? []).length,
+    1,
+    "the callback must make exactly one code-exchange attempt",
+  );
+  assert.match(route, /inspectPkceVerifierCookies\(/);
+  assert.match(route, /hasFlowVerifierCookie/);
+  assert.match(route, /callbackHostMatchesAppOrigin/);
+});
+
+test("email confirmation and recovery flows opt into per-flow PKCE ids", async () => {
+  const actions = await read("src/features/identity/actions.ts");
+
+  for (const method of ["signUp", "resendConfirmation", "requestPasswordReset"]) {
+    const start = actions.indexOf(`export async function ${method}(`);
+    assert.ok(start >= 0, `${method} action must exist`);
+    const nextAction = actions.indexOf("\nexport async function ", start + 10);
+    const body = actions.slice(start, nextAction < 0 ? actions.length : nextAction);
+
+    assert.match(
+      body,
+      /experimental:\s*\{\s*appendPkceFlowIdToRedirects:\s*true\s*\}/,
+      `${method} must carry a unique flow id through the email redirect`,
+    );
+  }
+});
+
+test("a present malformed PKCE flow id is rejected before any verifier fallback", async () => {
+  const route = await read("src/app/[locale]/auth/callback/route.ts");
+
+  assert.match(route, /const invalidFlowId = rawFlowId !== null && flowId === undefined/);
+  const rejectionIndex = route.indexOf("if (invalidFlowId)");
+  const clientIndex = route.indexOf("createSupabaseServerClient({", rejectionIndex);
+  assert.ok(rejectionIndex >= 0, "malformed flow ids must have an explicit rejection");
+  assert.ok(clientIndex > rejectionIndex, "reject before reading any verifier cookie storage");
+  assert.match(route.slice(rejectionIndex, clientIndex), /flow_state_not_found/);
+});

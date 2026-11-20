@@ -14,6 +14,7 @@ import {
   resolveAuthFailurePath,
 } from "@/features/identity/auth-routing";
 import { isAccountBlocked } from "@/features/identity/account-status";
+import { inspectPkceVerifierCookies } from "@/features/identity/pkce-cookie-diagnostics";
 import {
   isNewOAuthAccount,
   mergeLocaleIntoUserMetadata,
@@ -71,6 +72,52 @@ function redirectAndClearOAuthIntent(url: URL): NextResponse {
   const response = NextResponse.redirect(url);
   response.cookies.delete(oauthSignupIntentCookieName);
   return response;
+}
+
+/**
+ * Reports only whether the expected PKCE verifier cookie was sent. Cookie
+ * values, auth codes, email addresses and flow ids are never logged.
+ */
+function hasCookieValueOrChunk(
+  cookieNames: readonly string[],
+  baseName: string,
+): boolean {
+  return cookieNames.some((name) => {
+    if (name === baseName) return true;
+    if (!name.startsWith(`${baseName}.`)) return false;
+    return /^\d+$/.test(name.slice(baseName.length + 1));
+  });
+}
+
+function getPkceCookieDiagnostics(
+  request: NextRequest,
+  flowId: string | undefined,
+  appBaseUrl: URL,
+) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  let storageKey: string | null = null;
+
+  if (supabaseUrl) {
+    try {
+      const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
+      if (projectRef) storageKey = `sb-${projectRef}-auth-token`;
+    } catch {
+      // Keep diagnostics non-fatal if deployment configuration is malformed.
+    }
+  }
+
+  const cookieNames = request.cookies.getAll().map(({ name }) => name);
+
+  return {
+    hasFlowId: Boolean(flowId),
+    ...(storageKey
+      ? inspectPkceVerifierCookies(cookieNames, storageKey, flowId)
+      : {
+          hasFlowVerifierCookie: null,
+          hasLegacyVerifierCookie: false,
+        }),
+    callbackHostMatchesAppOrigin: request.nextUrl.host === appBaseUrl.host,
+  };
 }
 
 /**
@@ -143,7 +190,9 @@ export async function GET(request: NextRequest) {
   // start (see startOAuthSignIn). Passing it selects the verifier created by
   // that exact flow, instead of the shared legacy key — which mirrors only the
   // most recently started flow and breaks when two flows overlap.
-  const flowId = parsePkceFlowId(request.nextUrl.searchParams.get("sb_flow_id"));
+  const rawFlowId = request.nextUrl.searchParams.get("sb_flow_id");
+  const flowId = parsePkceFlowId(rawFlowId);
+  const invalidFlowId = rawFlowId !== null && flowId === undefined;
   // GoTrue answers a failed round-trip either by redirecting back here with
   // `?error=&error_code=` (the visitor declined, the link expired) or by an
   // error from `exchangeCodeForSession` below. Both are reduced to a closed
@@ -173,26 +222,31 @@ export async function GET(request: NextRequest) {
     return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
   }
 
+  // A present but malformed flow id must not silently degrade to the shared
+  // legacy verifier. That would discard the flow-isolation boundary.
+  if (invalidFlowId) {
+    console.warn("Auth callback rejected an invalid PKCE flow id.", { flow });
+    failurePath = resolveAuthFailurePath(
+      flow,
+      locale,
+      audience,
+      "flow_state_not_found",
+    );
+    return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
+  }
+
   const supabase = await createSupabaseServerClient({
     allowCookieWrites: true,
   });
-  let { error } = await supabase.auth.exchangeCodeForSession(
+  const { error } = await supabase.auth.exchangeCodeForSession(
     code,
     flowId ? { flowId } : undefined,
   );
 
-  // When the PKCE flow id is present but the exchange fails with a flow-state
-  // error, the verifier may have expired or been consumed. Retry without the
-  // flow id so the legacy shared verifier key gets a chance — this covers
-  // older clients and edge cases where the flow id was appended but the
-  // verifier storage was lost.
-  if (error && flowId && (error.code === "flow_state_not_found" || error.code === "flow_state_expired")) {
-    const { error: retryError } = await supabase.auth.exchangeCodeForSession(code);
-    if (!retryError) {
-      error = null;
-    }
-  }
-
+  // A flow id is an isolation boundary: if its verifier is missing, never retry
+  // with the shared legacy verifier. Supabase explicitly rejects this fallback
+  // because it can select another in-flight flow's verifier and consume the
+  // single-use auth code. Diagnose cookie presence without exposing its value.
   if (error) {
     // A PKCE code is single-use. When the same `/auth/callback` request is
     // delivered twice (an edge/proxy retry, a preflight, or the user reopening
@@ -212,6 +266,7 @@ export async function GET(request: NextRequest) {
       console.error("Supabase auth callback failed.", {
         code: error.code,
         flow,
+        ...getPkceCookieDiagnostics(request, flowId, appBaseUrl),
       });
       failurePath = resolveAuthFailurePath(flow, locale, audience, error.code);
       return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
