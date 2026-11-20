@@ -185,8 +185,8 @@ test("the service worker never stores authenticated navigation HTML for offline 
     sw,
     /networkFirstNavigation\(event, !isPrivateNavigation\(url\)\)/,
   );
-  assert.match(sw, /if \(cache && isCacheableNavigationResponse\(preload\)\)/);
-  assert.match(sw, /if \(cache && isCacheableNavigationResponse\(response\)\)/);
+  assert.match(sw, /if \(isCacheableNavigationResponse\(preload\)\)/);
+  assert.match(sw, /if \(isCacheableNavigationResponse\(response\)\)/);
   assert.match(sw, /await cache\.delete\(event\.request\)/);
   assert.match(sw, /if \(cache\) \{\s*const cached = await cache\.match/);
 
