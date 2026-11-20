@@ -4,11 +4,34 @@ import createMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
 import type { Database } from "@/types/database";
 import { isCorruptedSupabaseAuthError } from "@/server/auth/supabase-guards";
+import {
+  isAllowedMailIngressRequest,
+  isMailIngressHost,
+} from "@/server/email/mail-ingress-host";
 
 const handleI18nRouting = createMiddleware(routing);
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  // The DNS-only mail-ingress hostname bypasses Cloudflare by design so
+  // provider callbacks are not challenged. Keep that alternate origin narrow:
+  // only the authenticated server-to-server POST routes may reach handlers.
+  // This host-specific matcher also runs for /api and static paths, unlike the
+  // normal application matcher below.
+  if (isMailIngressHost(request.nextUrl.hostname)) {
+    if (!isAllowedMailIngressRequest(request.method, pathname)) {
+      return new NextResponse(null, {
+        status: 404,
+        headers: {
+          "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+          "X-Robots-Tag": "noindex, nofollow",
+        },
+      });
+    }
+
+    return NextResponse.next();
+  }
 
   // Next's route resolver can throw before a handler gets control when an API
   // separator is percent-encoded. Catch only that malformed API shape here.
@@ -135,5 +158,12 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api(?!%2[fF])|trpc|_next|_vercel|.*\\..*).*)"],
+  matcher: [
+    "/((?!api(?!%2[fF])|trpc|_next|_vercel|.*\\..*).*)",
+    {
+      source: "/:path*",
+      locale: false,
+      has: [{ type: "host", value: "^hooks\\.isbulkktc\\.com\\.?$" }],
+    },
+  ],
 };
