@@ -173,9 +173,13 @@ async function networkFirstNavigation(event, allowOfflineCache = true) {
   if (preload) {
     // Only a public, cache-safe HTML document is worth storing; an error page,
     // private response or redirect must not become an offline copy of the route.
-    if (cache && isCacheableNavigationResponse(preload)) {
-      await cache.put(event.request, preload.clone());
-      await trimCache(PAGES, MAX_PAGE_ENTRIES);
+    if (cache) {
+      if (isCacheableNavigationResponse(preload)) {
+        await cache.put(event.request, preload.clone());
+        await trimCache(PAGES, MAX_PAGE_ENTRIES);
+      } else {
+        await cache.delete(event.request);
+      }
     }
     return preload;
   }
@@ -189,9 +193,15 @@ async function networkFirstNavigation(event, allowOfflineCache = true) {
     } finally {
       clearTimeout(timer);
     }
-    if (cache && isCacheableNavigationResponse(response)) {
-      await cache.put(event.request, response.clone());
-      await trimCache(PAGES, MAX_PAGE_ENTRIES);
+    if (cache) {
+      if (isCacheableNavigationResponse(response)) {
+        await cache.put(event.request, response.clone());
+        await trimCache(PAGES, MAX_PAGE_ENTRIES);
+      } else {
+        // If a formerly public route becomes private, do not leave its older
+        // cacheable HTML available as the offline fallback.
+        await cache.delete(event.request);
+      }
     }
     return response;
   } catch {
