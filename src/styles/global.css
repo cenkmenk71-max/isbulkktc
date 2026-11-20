@@ -14511,3 +14511,25 @@ body:has(.pwa-update-toast) .support-widget {
   padding: 0;
   border: 0;
 }
+
+.admin-job-review-full-details {
+  padding-block: 0.75rem;
+  border-block: 1px solid var(--border);
+}
+
+.admin-job-review-full-details > summary {
+  width: fit-content;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.admin-job-review-full-details h3 {
+  margin: 1rem 0 0.35rem;
+  font-size: var(--type-heading-4);
+}
+
+.admin-job-review-full-details p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
