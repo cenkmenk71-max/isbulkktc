@@ -427,7 +427,17 @@ export async function fetchIskibrisJobs(
       );
     }
     const payload = result.data;
-    if (!payload.data || payload.data.length === 0) break;
+    if (
+      !Array.isArray(payload.data) ||
+      payload.data.some(
+        (item) => !item || !Number.isSafeInteger(item.id) || item.id <= 0,
+      )
+    ) {
+      throw new Error(
+        `iskibris ilan listesi geçersiz biçimde döndü (sayfa ${page}).`,
+      );
+    }
+    if (payload.data.length === 0) break;
     listItems.push(...payload.data);
     if (!payload.next_page_url) break;
   }
@@ -477,7 +487,21 @@ export async function fetchIsbulkibrisJobs(
       );
     }
     const payload = result.data;
-    if (!payload.items || payload.items.length === 0) break;
+    if (
+      !Array.isArray(payload.items) ||
+      payload.items.some(
+        (item) =>
+          !item ||
+          typeof item.id !== "string" ||
+          item.id.trim().length === 0 ||
+          item.id.length > 128,
+      )
+    ) {
+      throw new Error(
+        `isbulkibris ilan listesi geçersiz biçimde döndü (sayfa ${page}).`,
+      );
+    }
+    if (payload.items.length === 0) break;
     listIds.push(...payload.items.map((item) => item.id));
     if (payload.items.length < 100) break;
   }
