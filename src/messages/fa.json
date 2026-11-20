@@ -1685,7 +1685,7 @@
       "pendingNote": "آگهی شما در انتظار بررسی مدیر است.",
       "publishedNote": "آگهی‌های منتشرشده از این صفحه قابل ویرایش نیستند.",
       "activeJobs": "ظرفیت آگهی فعال",
-      "activeJobCount": "{count} آگهی فعال",
+      "activeJobCount": "آگهی فعال: {count, number}",
       "idle": "",
       "packageRequired": "برای انتشار، بسته آگهی فعال لازم است.",
       "packageLimit": "ظرفیت آگهی‌های فعال شما تکمیل شده است.",
