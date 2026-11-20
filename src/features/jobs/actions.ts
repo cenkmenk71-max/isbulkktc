@@ -156,36 +156,62 @@ export async function submitJobForReview(
   const accountError = activeUserError(user.status);
   if (accountError) return { ...initialJobFormState, ...accountError };
 
-  const result = jobIdSchema.safeParse({ jobId: formData.get("jobId") });
-  if (!result.success) {
-    return { ...initialJobFormState, status: "error", message: "invalid" };
-  }
+  // Submit the values currently visible in the form, not a previously saved
+  // snapshot. Persist first; the database RPC then performs the pending-review
+  // transition. If the transition fails, preserve the saved id so the employer
+  // can correct/retry without creating a duplicate draft.
+  const saved = await saveJobDraft(_previousState, formData);
+  if (saved.status !== "success" || !saved.jobId) return saved;
 
-  const companyId = await getJobCompanyId(result.data.jobId);
+  const companyId = await getJobCompanyId(saved.jobId);
   if (!companyId || !(await isJobCompanyMember(companyId))) {
-    return { ...initialJobFormState, status: "error", message: "unauthorized" };
+    return {
+      ...initialJobFormState,
+      status: "error",
+      message: "unauthorized",
+      jobId: saved.jobId,
+    };
   }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("submit_job_for_review", {
-    _job_id: result.data.jobId,
+    _job_id: saved.jobId,
   });
   if (error) {
     if (error.code === "42501") {
-      return { ...initialJobFormState, status: "error", message: "unauthorized" };
+      return {
+        ...initialJobFormState,
+        status: "error",
+        message: "unauthorized",
+        jobId: saved.jobId,
+      };
     }
     if (error.code === "22023") {
-      return { ...initialJobFormState, status: "error", message: "submitFailed" };
+      return {
+        ...initialJobFormState,
+        status: "error",
+        message: "submitFailed",
+        jobId: saved.jobId,
+      };
     }
     console.error("Job moderation submission failed.", { code: error.code });
-    return { ...initialJobFormState, status: "error", message: "submitFailed" };
+    return {
+      ...initialJobFormState,
+      status: "error",
+      message: "submitFailed",
+      jobId: saved.jobId,
+    };
   }
 
   const prefix = getLocalePrefix(user.locale);
   revalidatePath(`${prefix}/company/jobs`);
   revalidatePath(`${prefix}/company/dashboard`);
   revalidatePath(`${prefix}/admin/jobs`);
-  return { status: "success", message: "submitted", jobId: result.data.jobId };
+  return {
+    status: "success",
+    message: "submitted",
+    jobId: saved.jobId,
+  };
 }
 
 export async function publishApprovedJob(
