@@ -883,7 +883,8 @@
     "companyLabel": "ΕΡΓΟΔΟΤΗΣ",
     "companyLocation": "Τοποθεσία εταιρείας",
     "companyWebsite": "Ιστότοπος",
-    "companyDirectoryLink": "Προβολή στον κατάλογο εταιρειών"
+    "companyDirectoryLink": "Προβολή στον κατάλογο εταιρειών",
+    "sourceAttributionLink": "Άνοιγμα στον ιστότοπο δημοσίευσης"
   },
   "JobApplication": {
     "title": "Υποβάλετε αίτηση για τη θέση",
