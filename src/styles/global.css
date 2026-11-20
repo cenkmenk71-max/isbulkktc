@@ -14417,7 +14417,7 @@ body:has(.pwa-update-toast) .support-widget {
 .job-authoring-actions [data-status="error"],
 .job-authoring-submit [data-status="error"],
 .job-review-form [data-status="error"] {
-  color: var(--color-danger, #a33);
+  color: var(--color-status-error);
 }
 
 .admin-job-review-heading {
