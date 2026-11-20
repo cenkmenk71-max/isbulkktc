@@ -49,22 +49,6 @@ function form(values: Record<string, string> = {}): FormData {
   return data;
 }
 
-function validDraftForm(jobId = JOB, title = "Senior Operations Manager"): FormData {
-  return form({
-    jobId,
-    companyId: COMPANY,
-    title,
-    slug: "senior-operations-manager",
-    summary: "Lead the daily operations of a growing team.",
-    description: "Own operational planning, team coordination and measurable delivery outcomes.",
-    requirements: "Five years of relevant experience.",
-    responsibilities: "Coordinate teams and improve operational processes.",
-    jobType: "full_time",
-    workplaceMode: "on_site",
-    district: "Lefkoşa",
-  });
-}
-
 const actions = () => import("@/features/jobs/actions");
 
 /** RPC calls by name, in order. */
@@ -239,7 +223,7 @@ test("saveJobDraft maps a row-level refusal to unauthorized and a generic one to
 test("submitJobForReview refuses an unknown job or a non-member before the review RPC", async () => {
   signedIn({ rpcs: memberRpc(true), tables: { jobs: { data: null, error: null } } });
   const { submitJobForReview } = await actions();
-  let state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm(JOB));
+  let state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm({ jobId: JOB }));
   assert.equal(state.message, "unauthorized");
   assert.deepEqual(rpcCalls("submit_job_for_review"), []);
 
@@ -247,7 +231,7 @@ test("submitJobForReview refuses an unknown job or a non-member before the revie
     rpcs: memberRpc(false),
     tables: { jobs: { data: { company_id: COMPANY }, error: null } },
   });
-  state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm(JOB));
+  state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm({ jobId: JOB }));
   assert.equal(state.message, "unauthorized");
   assert.deepEqual(rpcCalls("submit_job_for_review"), []);
 });
@@ -265,7 +249,7 @@ test("submitJobForReview persists the current form values before the review RPC"
   const { submitJobForReview } = await actions();
   const state = await submitJobForReview(
     { status: "idle", message: "idle" },
-    validDraftForm(JOB, "Updated Senior Operations Manager"),
+    validDraftForm({ jobId: JOB, title: "Updated Senior Operations Manager" }),
   );
 
   assert.deepEqual(state, { status: "success", message: "submitted", jobId: JOB });
@@ -286,7 +270,7 @@ test("submitJobForReview preserves a newly created draft id when review submissi
   });
 
   const { submitJobForReview } = await actions();
-  const state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm(""));
+  const state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm({ jobId: "" }));
   assert.equal(state.status, "error");
   assert.equal(state.message, "submitFailed");
   assert.equal(state.jobId, JOB);
@@ -305,7 +289,7 @@ test("submitJobForReview maps review RPC errors after persisting the draft", asy
       },
     });
     const { submitJobForReview } = await actions();
-    const state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm(JOB));
+    const state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm({ jobId: JOB }));
     assert.equal(state.message, expected, "RPC code " + code);
     assert.equal(state.jobId, JOB);
   }
