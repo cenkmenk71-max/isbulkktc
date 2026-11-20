@@ -693,3 +693,19 @@ test("moderation queue uses stable keyset pagination and excludes imported sourc
     ),
   );
 });
+
+test("getJobCompanyId refuses source-site imports as employer-owned records", async () => {
+  resetBoundary({ tables: { jobs: { data: null, error: null } } });
+
+  const { getJobCompanyId } = await import("../../src/server/dal/jobs");
+  assert.equal(await getJobCompanyId(JOB), null);
+
+  const query = fromCalls("jobs").at(-1);
+  assert.ok(query);
+  assert.ok(
+    query.ops.some((operation) =>
+      operation.includes("publication_source") && operation.includes("platform"),
+    ),
+    "write actions must re-derive ownership only from platform-created jobs",
+  );
+});
