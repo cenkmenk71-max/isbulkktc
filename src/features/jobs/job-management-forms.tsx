@@ -178,6 +178,7 @@ export function JobReviewForm({ jobId }: { jobId: string }) {
         <textarea
           maxLength={1000}
           name="reviewNote"
+          required
           placeholder={copy("reviewNotePlaceholder")}
           rows={3}
         />
@@ -186,6 +187,7 @@ export function JobReviewForm({ jobId }: { jobId: string }) {
         <button
           className="button button-dark"
           disabled={pending}
+          formNoValidate
           name="decision"
           type="submit"
           value="approved"
