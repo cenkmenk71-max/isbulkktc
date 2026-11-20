@@ -8,7 +8,7 @@ delete from public.job_source_imports;
 delete from public.jobs where publication_source = 'source_site';
 delete from public.companies where slug like 'source-%';
 
-select plan(70);
+select plan(78);
 
 insert into auth.users (id, email, raw_user_meta_data)
 values
@@ -429,6 +429,20 @@ select throws_ok(
 set local "request.jwt.claims" =
   '{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated"}';
 
+select lives_ok(
+  $update public.jobs
+    set title = 'Updated Draft Accountant'
+    where id = '30000000-0000-4000-8000-000000000002'$,
+  'a company owner can update a platform-owned draft'
+);
+
+select is(
+  (select title from public.jobs
+   where id = '30000000-0000-4000-8000-000000000002'),
+  'Updated Draft Accountant',
+  'the platform-owned draft update is persisted'
+);
+
 select set_config(
   'test.application_owner_id',
   public.apply_to_job(
@@ -502,6 +516,52 @@ select is(
 );
 
 set local "request.jwt.claims" =
+  '{"sub":"10000000-0000-4000-8000-000000000005","role":"authenticated","aal":"aal1"}';
+
+select throws_ok(
+  $select public.review_job(
+      (select id from public.jobs where slug = 'operations-coordinator'),
+      'approved',
+      null
+    )$,
+  '42501',
+  null,
+  'an AAL1 platform administrator cannot call the moderation RPC directly'
+);
+
+select is(
+  (select status from public.jobs where slug = 'operations-coordinator'),
+  'pending_review',
+  'an AAL1 moderation rejection leaves the job pending'
+);
+
+select is(
+  (select count(*)::integer
+   from public.audit_logs
+   where action = 'job.moderated'
+     and resource_type = 'job'
+     and resource_id = (
+       select id from public.jobs where slug = 'operations-coordinator'
+     )),
+  0,
+  'an AAL1 moderation rejection writes no moderation audit record'
+);
+
+set local "request.jwt.claims" =
+  '{"sub":"10000000-0000-4000-8000-000000000004","role":"authenticated","aal":"aal2"}';
+
+select throws_ok(
+  $select public.review_job(
+      (select id from public.jobs where slug = 'operations-coordinator'),
+      'approved',
+      null
+    )$,
+  '42501',
+  null,
+  'an AAL2 non-admin cannot call the moderation RPC'
+);
+
+set local "request.jwt.claims" =
   '{"sub":"10000000-0000-4000-8000-000000000005","role":"authenticated","aal":"aal2"}';
 
 select is(
@@ -525,6 +585,31 @@ select is(
   (select status from public.jobs where slug = 'operations-coordinator'),
   'approved',
   'moderation records approval without bypassing publication and credit gates'
+);
+
+select ok(
+  exists (
+    select 1
+    from pg_catalog.pg_policies
+    where schemaname = 'public'
+      and tablename = 'jobs'
+      and policyname = 'jobs_company_update_editable'
+      and position('publication_source' in coalesce(qual, '')) > 0
+      and position('platform' in coalesce(qual, '')) > 0
+      and position('publication_source' in coalesce(with_check, '')) > 0
+      and position('platform' in coalesce(with_check, '')) > 0
+  ),
+  'the employer update policy enforces platform ownership in USING and WITH CHECK'
+);
+
+select ok(
+  not has_column_privilege(
+    'authenticated',
+    'public.jobs',
+    'publication_source',
+    'UPDATE'
+  ),
+  'employers cannot directly reassign job publication provenance'
 );
 
 reset role;
