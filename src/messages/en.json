@@ -1023,6 +1023,17 @@
     "save": "Save changes",
     "saving": "Saving…",
     "signOut": "Sign out securely",
+    "deleteAccount": {
+      "title": "Account deletion",
+      "description": "Account deletion is checked against related records. Existing applications, job history, or administrative records that must be retained may prevent completion.",
+      "buttonLabel": "Delete my account",
+      "confirmLabel": "Delete my account permanently",
+      "warningText": "This action cannot be undone. Retained application, job, or administrative records may block deletion. If deletion is blocked, your account and its data will remain.",
+      "pending": "Deleting…",
+      "cancel": "Cancel",
+      "rateLimited": "Too many deletion attempts. Please try again later.",
+      "failed": "Your account could not be deleted. Existing records may have blocked the operation. Please contact the support team."
+    },
     "employerWorkspaceLink": "Employer workspace",
     "messages": {
       "invalid": "Check the information and try again.",

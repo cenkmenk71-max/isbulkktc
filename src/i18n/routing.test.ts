@@ -6,11 +6,11 @@ import createMiddleware from "next-intl/middleware";
 /**
  * `NEXT_LOCALE` must be `Secure` in production (issue #469, cookie audit §6).
  *
- * The locale middleware writes this cookie on every document navigation. The
- * `tests/security/locale-cookie-flags.test.ts` gate for it is a `todo`, and a
- * `todo` test that fails is reported as todo — not a failure — so it would not
- * catch a regression. This test is a plain gate: it fails loudly if `secure`
- * leaves `src/i18n/routing.ts`.
+ * The locale middleware writes this cookie on every document navigation.
+ * The separate `tests/security/locale-cookie-flags.test.ts` suite also pins
+ * the production invariant through the real middleware. This unit-level test
+ * independently exercises the routing export under production and non-production
+ * environments, so the flag is checked at both boundaries.
  *
  * `defineRouting` bakes environment-conditional options into the object at
  * import time, so each case is imported fresh with a cache-busting query while

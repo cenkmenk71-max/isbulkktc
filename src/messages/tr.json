@@ -1033,6 +1033,17 @@
     "save": "Değişiklikleri kaydet",
     "saving": "Kaydediliyor…",
     "signOut": "Güvenli çıkış",
+    "deleteAccount": {
+      "title": "Hesap silme",
+      "description": "Hesap silme işlemi, ilişkili kayıtlar denetlenerek gerçekleştirilir. Geçmiş başvuru, ilan veya yönetim kayıtları gibi korunması gereken ilişkiler işlemin tamamlanmasını engelleyebilir.",
+      "buttonLabel": "Hesabımı sil",
+      "confirmLabel": "Hesabımı kalıcı olarak sil",
+      "warningText": "Bu işlem geri alınamaz. Geçmiş başvuru ve işlem kayıtları silmeyi engelleyebilir. Silme engellenirse hesabınız ve verileriniz silinmez.",
+      "pending": "Siliniyor…",
+      "cancel": "Vazgeç",
+      "rateLimited": "Çok fazla silme denemesi. Lütfen daha sonra tekrar deneyin.",
+      "failed": "Hesabınız silinemedi. Geçmiş kayıtlar nedeniyle işlem engellenmiş olabilir. Lütfen destek ekibiyle iletişime geçin."
+    },
     "employerWorkspaceLink": "İşveren alanı",
     "messages": {
       "invalid": "Bilgileri kontrol edip tekrar deneyin.",

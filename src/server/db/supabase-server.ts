@@ -19,7 +19,9 @@ function getSupabaseEnv() {
 /**
  * Service-role client. Bypasses RLS, so it must only ever be used from a server
  * task that has already established its own authority (the engagement cron and
- * the signed unsubscribe route) — never from a request whose actor is a user.
+ * signed unsubscribe route), or a session-verified self-service account-delete
+ * action that derives the target id only from the authenticated user. Never use
+ * it for user-scoped reads or writes whose authority comes from client input.
  * Returns null when the key is absent so callers can degrade instead of throwing.
  */
 export function createSupabaseServiceClient() {
