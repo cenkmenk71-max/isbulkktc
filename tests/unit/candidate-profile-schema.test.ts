@@ -23,6 +23,7 @@ test("candidate profile trims text and normalizes a unique skills list", () => {
       languages: [],
       certifications: [],
       summary: null,
+      cvFullText: null,
       links: [],
     },
   );
@@ -69,6 +70,7 @@ test("candidate profile accepts blank optional fields without storing whitespace
       languages: [],
       certifications: [],
       summary: null,
+      cvFullText: null,
       links: [],
     },
   );
@@ -122,6 +124,7 @@ test("candidate profile trims structured sections and drops blank entries", () =
       languages: [{ name: "Turkish", proficiency: "Native" }],
       certifications: [],
       summary: null,
+      cvFullText: null,
       links: [],
     },
   );
@@ -194,31 +197,36 @@ test("candidate profile rejects database-overflowing values and excessive skills
 });
 
 
-test("candidate profile persistence rejects raw CV text", () => {
+test("raw CV text stays available to transient parsing but is rejected by the profile write schema", () => {
   const profile = {
-    headline: "Product designer",
-    location: "Girne",
-    skillsText: "Figma, Research",
+    headline: "",
+    location: "",
+    skillsText: "",
     experience: [],
     education: [],
     languages: [],
     certifications: [],
-    summary: "Product designer with accessible product experience.",
+    summary: "",
     links: [],
-    cvFullText: "PRIVATE RAW CV TEXT",
   };
 
+  const localDraft = candidateProfileSchema.safeParse({
+    ...profile,
+    cvFullText: "PRIVATE RAW CV CONTENT",
+  });
+  assert.equal(localDraft.success, true);
+  if (localDraft.success) {
+    assert.equal(localDraft.data.cvFullText, "PRIVATE RAW CV CONTENT");
+  }
+
+  const writeInput = {
+    ...profile,
+    fullName: "Ada Lovelace",
+    cvFullText: "PRIVATE RAW CV CONTENT",
+  };
   assert.equal(
-    candidateProfileSchema.safeParse(profile).success,
+    candidateProfileUpdateSchema.safeParse(writeInput).success,
     false,
-    "read DTOs must not silently accept raw CV text",
-  );
-  assert.equal(
-    candidateProfileUpdateSchema.safeParse({
-      ...profile,
-      fullName: "Ada Lovelace",
-    }).success,
-    false,
-    "profile writes must not persist the raw CV document",
+    "the server-action schema must not accept raw CV text",
   );
 });

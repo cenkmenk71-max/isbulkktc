@@ -83,6 +83,53 @@ function activeCandidate() {
   });
 }
 
+test("candidate workspace reads only deployed profile columns and keeps raw CV text transient", async () => {
+  resetBoundary({
+    user: fakeAuthUser({ id: ID }),
+    tables: {
+      profiles: { data: fakeProfileRow({ id: ID }), error: null },
+      candidate_profiles: {
+        data: {
+          user_id: ID,
+          headline: "Backend developer",
+          location: "Girne",
+          skills: ["TypeScript"],
+          experience: [],
+          education: [],
+          languages: [],
+          certifications: [],
+          summary: "Backend and API development",
+          links: [{ label: "Portfolio", url: "https://example.com" }],
+        },
+        error: null,
+      },
+    },
+  });
+
+  const { getCandidateWorkspace } = await import("../../src/server/dal/user");
+  const workspace = await getCandidateWorkspace();
+
+  assert.equal(workspace.profile.headline, "Backend developer");
+  assert.equal(workspace.profile.summary, "Backend and API development");
+  assert.deepEqual(workspace.profile.links, [
+    { label: "Portfolio", url: "https://example.com" },
+  ]);
+  assert.equal(workspace.profile.cvFullText, null);
+
+  const [profileLookup] = fromCalls("candidate_profiles");
+  assert.ok(profileLookup, "the candidate profile lookup must execute");
+  assert.ok(
+    profileLookup.ops.includes(
+      "select:headline, location, skills, experience, education, languages, certifications, summary, links",
+    ),
+    "the DAL must select only columns present in the deployed table",
+  );
+  assert.ok(
+    !profileLookup.ops.some((operation) => /cv_full_text/i.test(operation)),
+    "the database must not be queried for transient CV text",
+  );
+});
+
 // ---------------------------------------------------------------------------
 // 1. The write goes to the right table, bound to the session's own id.
 // ---------------------------------------------------------------------------
@@ -97,8 +144,6 @@ test("saving a candidate profile upserts the caller's own row", async () => {
       fullName: "Ada Lovelace",
       headline: "Yazılım geliştirici",
       skillsText: "TypeScript, React",
-      // Simulate a forged client attempting to persist the local-only raw CV.
-      cvFullText: "PRIVATE RAW CV TEXT",
     }),
   );
 
@@ -107,8 +152,29 @@ test("saving a candidate profile upserts the caller's own row", async () => {
   const upserts = fromCalls("candidate_profiles").flatMap((call) => call.ops.filter((op) => op.startsWith("upsert:")));
   assert.equal(upserts.length, 1, "exactly one upsert is expected");
   assert.ok(upserts[0].includes(`"user_id":"${ID}"`), `the row must be bound to the session id: ${upserts[0]}`);
-  assert.ok(!upserts[0].includes("cv_full_text"), "the raw CV column must never be written");
-  assert.ok(!upserts[0].includes("PRIVATE RAW CV TEXT"), "raw CV content must not reach persistence");
+});
+
+test("saving a candidate profile never persists raw CV text", async () => {
+  activeCandidate();
+
+  const { saveCandidateProfile } = await import("../../src/features/candidates/actions");
+  const submittedForm = candidateProfileForm({
+    fullName: "Ada Lovelace",
+    headline: "",
+    skillsText: "",
+    cvFullText: "PRIVATE RAW CV CONTENT MUST NOT BE STORED",
+  });
+  const state = await saveCandidateProfile(
+    { status: "idle", message: "idle" } as never,
+    submittedForm,
+  );
+
+  assert.equal(state.status, "success");
+  const upserts = fromCalls("candidate_profiles").flatMap((call) =>
+    call.ops.filter((op) => op.startsWith("upsert:")),
+  );
+  assert.equal(upserts.length, 1);
+  assert.doesNotMatch(upserts[0], /cv_full_text|PRIVATE RAW CV CONTENT/i);
 });
 
 test("the display name is written to profiles only when it changed", async () => {

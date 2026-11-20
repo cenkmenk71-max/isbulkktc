@@ -196,6 +196,8 @@ export async function getCandidateWorkspace(): Promise<{
     languages: data?.languages ?? [],
     certifications: data?.certifications ?? [],
     summary: data?.summary ?? "",
+    // Raw CV text is transient and is deliberately never read from the database.
+    cvFullText: null,
     links: data?.links ?? [],
   });
 
@@ -216,6 +218,7 @@ export async function getCandidateWorkspace(): Promise<{
       languages: profile.data.languages,
       certifications: profile.data.certifications,
       summary: profile.data.summary,
+      cvFullText: profile.data.cvFullText ?? null,
       links: profile.data.links,
     },
   };

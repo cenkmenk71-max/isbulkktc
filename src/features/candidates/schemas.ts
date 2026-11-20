@@ -125,12 +125,17 @@ export const candidateProfileSchema = z.object({
     .trim()
     .max(2000)
     .transform((value) => value || null),
+  cvFullText: z
+    .string()
+    .max(100_000)
+    .nullish()
+    .transform((value) => value?.trim() || null),
   links: z
     .array(linksEntrySchema)
     .max(12)
     .default([])
     .transform(removeBlankEntries),
-}).strict();
+});
 
 export type CandidateExperience = z.infer<typeof experienceEntrySchema>;
 export type CandidateEducation = z.infer<typeof educationEntrySchema>;
@@ -146,22 +151,29 @@ export type CandidateProfileValues = {
   languages: CandidateLanguage[];
   certifications: CandidateCertification[];
   summary: string | null;
+  cvFullText: string | null;
   links: { label: string; url: string }[];
 };
 
 /**
  * The write shape for the profile form. `fullName` is not part of
- * `candidateProfileSchema` because that schema also validates what is *read*
- * back from `candidate_profiles`, which has no name column — the name lives on
- * `public.profiles.display_name`. Keeping it in a separate write-only schema
- * means the read path cannot start failing on a value it never selects.
+ * `candidateProfileSchema` because the name belongs to
+ * `public.profiles.display_name`, not `candidate_profiles`.
+ *
+ * Raw CV text is accepted only by the client-side parsing schema: it may be
+ * used transiently for extraction/AI assistance, but it is not part of a
+ * profile-save request or the persisted profile. The strict write schema makes
+ * that data boundary explicit.
  *
  * The bounds mirror the `display_name` CHECK (`char_length between 2 and 80`
  * and `display_name = btrim(display_name)`).
  */
-export const candidateProfileUpdateSchema = candidateProfileSchema.extend({
-  fullName: z.string().trim().min(2).max(80),
-}).strict();
+export const candidateProfileUpdateSchema = candidateProfileSchema
+  .omit({ cvFullText: true })
+  .extend({
+    fullName: z.string().trim().min(2).max(80),
+  })
+  .strict();
 
 export type CandidateProfileUpdate = z.infer<
   typeof candidateProfileUpdateSchema

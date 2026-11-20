@@ -5,14 +5,40 @@ import { useTranslations } from 'next-intl'
 import { buttonVariants } from '@/components/ui/button'
 import { Link } from '@/i18n/navigation'
 
+type LocaleErrorKey =
+  | 'eyebrow'
+  | 'title'
+  | 'body'
+  | 'retry'
+  | 'home'
+  | 'supportReference'
+
 type LocaleErrorProps = {
   error: Error & { digest?: string }
   retry: () => void
 }
 
 export default function LocaleError({ error, retry }: LocaleErrorProps) {
-  const t = useTranslations('AppError')
-  const supportReference = error.digest?.trim().slice(0, 80)
+  let t: (key: LocaleErrorKey, values?: { digest: string }) => string
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    t = useTranslations('AppError') as unknown as typeof t
+  } catch {
+    const fallback: Record<Exclude<LocaleErrorKey, 'supportReference'>, string> = {
+      eyebrow: 'HATA',
+      title: 'Bir hata oluştu.',
+      body: 'İstenen sayfa yüklenirken beklenmeyen bir hata meydana geldi.',
+      retry: 'Yeniden dene',
+      home: 'Ana sayfaya dön',
+    }
+    t = (key, values) =>
+      key === 'supportReference'
+        ? `Destek kodu: ${values?.digest ?? ''}`
+        : fallback[key] ?? key
+  }
+
+  const supportReference =
+    typeof error.digest === 'string' ? error.digest.trim().slice(0, 80) : ''
 
   return (
     <section className="page-container route-error" role="alert">

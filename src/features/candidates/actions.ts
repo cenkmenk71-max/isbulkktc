@@ -47,6 +47,8 @@ export async function saveCandidateProfile(
     return { status: "error", message: "invalid" };
   }
 
+  // Parsed fields are persisted on explicit save; the raw CV text remains
+  // transient and is never sent to or stored by this profile write.
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("candidate_profiles").upsert(
     {
