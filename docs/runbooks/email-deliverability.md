@@ -73,20 +73,37 @@ adresler. İstersen geleni gerçek bir kutuya yönlendir (Resend → Receiving �
 Forward to).
 
 ### 3. Üretim `RESEND_API_KEY` — TAMAM `[x]`
+
+**Resend webhook endpointini taşımıyoruz:** Canlı Resend yapılandırmasındaki endpoint
+`https://isbulkktc-prod.vercel.app/api/email/resend-webhook`. 20 Kasım 2026
+kontrolünde son 20 olayın tamamı başarılıydı; en yeni `email.delivered` teslimatı
+HTTP 200 ve beklenen `Ignored` yanıtını aldı. PR #725'teki DNS-only
+`hooks.isbulkktc.com` yalnızca iki Bearer korumalı GitHub cron rotası için
+kullanılır. Resend webhook URL'sini değiştirmek bu geçişin parçası değildir.
 Vercel `RESEND_API_KEY` **doğru ekibin** yeni `re_…` anahtarıyla değiştirildi
-(hedef: `production` + `preview`) ve üretim yeniden dağıtıldı. Doğrulama:
-`GET /api/email/resend-webhook` **503 → 401**, `POST /api/email/acquisition-campaign`
-`Bearer` ile **200** `{"message":"Acquisition campaign complete","sent":0,...}`.
+(hedef: `production` + `preview`) ve üretim yeniden dağıtıldı. Webhook GET
+yönteminde **401** döndürür; POST imza doğrulamasıyla çalışır.
+
+**Güncel kampanya güvenlik kapısı:** Canlı Supabase migration geçmişi
+`20261118000000` sürümünde bitiyor; `sales_leads` üzerinde
+`marketing_consent*` kolonları henüz yok. PR #725, gönderimden önce bu kolonları
+`limit(0)` şema sorgusuyla doğrular. Migration uygulanana kadar geçerli Bearer
+ile acquisition POST **503** döndürmeli ve workflow başarısız olmalıdır; bu
+beklenen fail-closed davranıştır.
 
 ### 4. Cron sırları — `MARKETING_CRON_SECRET` / `ENGAGEMENT_CRON_SECRET` — TAMAM `[x]`
 İki sır da `openssl rand -hex 32` ile üretildi ve **hem Vercel'e** (`production`,
 `preview`) **hem GitHub Actions'a** (repository secret) **aynı değerle** yazıldı.
-Dispatch origin değişkenleri de eklendi:
-`MARKETING_DISPATCH_ORIGIN` / `ENGAGEMENT_DISPATCH_ORIGIN` ilk test sırasında bir Vercel deployment alias'ına ayarlanmıştı; bu tarihsel değer güncel deployment protection ayarlarına göre yeniden doğrulanmalıdır.
+Tarihsel `MARKETING_DISPATCH_ORIGIN` / `ENGAGEMENT_DISPATCH_ORIGIN` repository
+değişkenleri artık kullanılmayacak. PR #725, DNS-only `https://hooks.isbulkktc.com`
+host'unu sabit ingress hedefi yapıyor; bu hedef ancak PR production'a dağıtılıp
+Vercel custom domain ve DNS kaydı doğrulandıktan sonra kullanılabilir.
 
-Doğrulama (uçtan uca): Actions → **Send acquisition campaign** → **Run workflow** →
-log `HTTP 200` + `{"message":"Acquisition campaign complete","sent":0,"failed":0}`.
-Her iki rota da bearer'sız **401** döner.
+Consent migration'ı güvenli şekilde uygulandıktan sonra uçtan uca doğrulama:
+Actions → **Send acquisition campaign** → **Run workflow** → log `HTTP 200` +
+`{"message":"Acquisition campaign complete","sent":0,"failed":0}`.
+Migration öncesinde geçerli Bearer ile **503** beklenir; Bearer'sız istekler
+her iki rotada da **401** döner.
 
 > Not: GitHub sırları **yazılınca bir daha okunamaz** (write-only). Üretilen değeri
 > güvenli bir yerde sakla; hem GitHub'a hem Vercel'e **aynı** değeri koy.
@@ -130,16 +147,15 @@ bozuk imza → **401** `{"message":"Invalid signature"}`.
 > 16:38 UTC'de başarılıydı; 20 Kasım koruma ayarı değişikliğinden sonraki bir
 > teslimat henüz doğrulanmadı (issue #719).
 
-> **Kalıcı topoloji kararı henüz verilmedi:** Webhook'u kanonik host'a taşımak
-> tek başına çözüm değildir. Canlı Cloudflare zone'unda Bot Fight Mode etkindir;
-> dar kapsamlı bir WAF skip/allow kuralının bu katmanı da aşacağı varsayılmamalı.
-> Genel bot korumasını veya Vercel SSO'yu kapatma. Önce projeye bağlanmış,
-> Cloudflare proxy'si kapalı ayrı bir Vercel custom hostname ya da Vercel'e
-> koruma bypass başlığı ekleyebilen dar kapsamlı güvenilir bir proxy seçeneğini
-> değerlendir. Her iki durumda da Svix imza, timestamp/replay ve bounded-body
-> doğrulaması zorunlu kalmalı. Resend test event'iyle 2xx teslimatı ve olayın
-> uygulamada işlendiğini; cron'lar için de Bearer ile HTTP 200'ü doğrulamadan
-> endpoint'i taşıma. DNS/Cloudflare/Vercel ayarları henüz değiştirilmedi.
+> **Kalıcı topoloji kararı (20 Kasım 2026):** Ayrı DNS-only Vercel custom hostname
+> `hooks.isbulkktc.com` kullanılacak. Cloudflare Bot Fight Mode ve Vercel deployment
+> SSO kapatılmayacak. Bu hostname yalnızca uygulama Proxy'sindeki kesin POST
+> allowlist'ine açık olacak: Resend webhook, acquisition campaign ve engagement
+> digest. Her rota kendi Svix imza/timestamp veya Bearer doğrulamasını korur.
+> Uygulama/iş akışı değişikliği PR ile hazırlanıyor; DNS kaydı, Vercel domain
+> bağlantısı ve Resend endpoint geçişi ancak PR production'a dağıtıldıktan sonra
+> yapılacak. Geçişten önce webhook için Resend 2xx teslimatı ve uygulama işlemesi,
+> iki cron için de Bearer ile HTTP 200 doğrulanmalı.
 
 ### 5b. Takım gelen kutusu env'leri — TAMAM `[x]` (2026-11-12 ikinci tur)
 Üretimde `SALES_INBOX_EMAIL` / `FEEDBACK_INBOX_EMAIL` / `COMPANY_REVIEW_INBOX_EMAIL`
@@ -342,7 +358,8 @@ order by opted_out_at desc;
 
 Not: tablo adı `email_engagement_optouts`'tur (`engagement_optouts` değil). Bu
 adı sorgularken `42P01 relation does not exist` alırsanız **yanlış ad** kullanıyorsunuz;
-migration eksiği yok.
+`email_engagement_optouts` tablosunun migration'ı uygulanmış. Bu not, ayrı
+`sales_leads` marketing-consent migration'ının üretimde bulunduğu anlamına gelmez.
 
 ### Dördüncü gönderim — DMARC `p=reject` sonrası (2026-11-12)
 
@@ -547,3 +564,9 @@ Vercel custom hostname veya Vercel korumasına kontrollü bypass sağlayan güve
 bir proxy değerlendirilmelidir. Genel Bot Fight Mode, WAF ya da Vercel SSO
 kapatılmamalı; uygulama katmanındaki Svix imza ve cron Bearer doğrulamaları
 korunmalıdır.
+
+## Acquisition campaign — affirmative-consent release gate
+
+The acquisition sender is promotional mail. A corporate quote request, a confirmed mailbox, or the absence of an unsubscribe record is not affirmative marketing permission. The route returns **503 before database access or sending** unless MARKETING_CAMPAIGN_CONSENT_READY=true.
+
+Keep this variable unset in every production environment until the versioned consent migration, double-opt-in confirmation flow, recipient RPC predicate, role/ACL protections and pgTAP/integration tests are deployed and verified against production. The flag is a release gate, not a replacement for the database predicate. The workflow treats 503 as a failed run rather than a successful empty campaign. Existing company-directory records are not an acquisition audience; only separately consented leads may enter the queue. See issues #722 and #728.

@@ -168,6 +168,7 @@ test("the promotional digest fails closed until explicit-consent enforcement is 
       message: "Engagement marketing consent enforcement is not ready",
     });
     assert.deepEqual(recorded.supabase, [], "must not query recipients before consent enforcement is ready");
+    assert.deepEqual(recorded.engagementMail, [], "must not send promotional email before consent enforcement is ready");
     assert.deepEqual(recorded.engagementMail, []);
   } finally {
     restore();

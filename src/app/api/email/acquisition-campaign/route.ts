@@ -57,6 +57,16 @@ export async function POST(request: Request) {
     return json({ message: "Unauthorized" }, { status: 401 });
   }
 
+  // A quote request is not affirmative permission for promotional email.
+  // Keep the sender closed until the consent migration, confirmation flow and
+  // live recipient predicate have all been deployed and independently verified.
+  if (process.env.MARKETING_CAMPAIGN_CONSENT_READY !== "true") {
+    return json(
+      { message: "Acquisition marketing consent enforcement is not ready" },
+      { status: 503 },
+    );
+  }
+
   const requestUrl = new URL(request.url);
   const after = requestUrl.searchParams.get("after");
   if (after !== null && !UUID_PATTERN.test(after)) {
@@ -84,6 +94,49 @@ export async function POST(request: Request) {
   if (!isUnsubscribeSigningConfigured()) {
     return json(
       { message: "Unsubscribe signing is not configured" },
+      { status: 503 },
+    );
+  }
+
+  // The promotional sender must fail closed until the explicit-consent
+  // migration is live. That migration adds these columns and replaces
+  // list_marketing_recipients in one transaction. A zero-row schema probe
+  // verifies the contract before the recipient RPC can ever lead to a send.
+  // This also protects production while its migration ledger is behind main.
+  const consentSchemaClient = supabase as unknown as {
+    from: (table: string) => {
+      select: (columns: string) => {
+        limit: (count: number) => PromiseLike<{
+          data: unknown;
+          error: { code?: string } | null;
+        }>;
+      };
+    };
+  };
+  try {
+    const { data: consentSchemaRows, error: consentSchemaError } =
+      await consentSchemaClient
+        .from("sales_leads")
+        .select(
+          "marketing_consent,marketing_consent_requested_at,marketing_consent_at,marketing_consent_version",
+        )
+        .limit(0);
+
+    if (consentSchemaError || !Array.isArray(consentSchemaRows)) {
+      console.error("Marketing consent schema is not ready.", {
+        code: consentSchemaError?.code ?? "invalid_schema_probe_result",
+      });
+      return json(
+        { message: "Marketing consent schema is not ready" },
+        { status: 503 },
+      );
+    }
+  } catch (error) {
+    console.error("Marketing consent schema probe failed.", {
+      error: error instanceof Error ? error.name : "unknown_error",
+    });
+    return json(
+      { message: "Marketing consent schema is not ready" },
       { status: 503 },
     );
   }

@@ -555,7 +555,10 @@ test("the HTML cache matcher stays aligned with Proxy (ratchet)", () => {
   // separators. The two sources live in different escaping contexts, so compare
   // the compiled regex that the server matches with.
   const proxySource = readFileSync(new URL("../../src/proxy.ts", import.meta.url), "utf8");
-  const matcher = /matcher:\s*\[\s*"((?:[^"\\]|\\.)+)"\s*\]/.exec(proxySource)?.[1];
+  // The first string matcher remains the page/i18n matcher. The second,
+  // host-conditioned object matcher deliberately extends Proxy coverage for
+  // the isolated mail ingress without changing the HTML cache route set.
+  const matcher = /matcher:\s*\[\s*"((?:[^"\\]|\\.)+)"/.exec(proxySource)?.[1];
   assert.ok(matcher, "could not read the middleware matcher from src/proxy.ts");
   const proxyRegex = buildCustomRoute("header", {
     source: JSON.parse(`"${matcher}"`),
