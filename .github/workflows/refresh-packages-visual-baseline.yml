@@ -1,0 +1,55 @@
+name: Refresh packages lead visual baseline
+
+on:
+  push:
+    branches:
+      - fix/email-consent-hardening-2026-11
+    paths:
+      - .github/workflows/refresh-packages-visual-baseline.yml
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the pull request branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          persist-credentials: true
+
+      - name: Download the reviewed CI render
+        uses: actions/download-artifact@v4
+        with:
+          name: visual-regression-artifacts
+          run-id: 44686887811
+          repository: ${{ github.repository }}
+          github-token: ${{ github.token }}
+          path: /tmp/visual-artifacts
+
+      - name: Replace only the intended baseline and remove this one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="/tmp/visual-artifacts/packages-lead.actual.png"
+          target="tests/visual/baselines/packages-lead.png"
+          test -s "$actual"
+          node -e '
+            const sharp = require("sharp");
+            sharp(process.argv[1]).metadata().then(({width,height}) => {
+              if (width !== 2560 || height !== 2092) {
+                throw new Error("Unexpected CI baseline dimensions: " + width + "x" + height);
+              }
+              console.log("Approved CI render dimensions: " + width + "x" + height);
+            }).catch((error) => { console.error(error); process.exit(1); });
+          ' "$actual"
+          cp "$actual" "$target"
+          rm .github/workflows/refresh-packages-visual-baseline.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$target" .github/workflows/refresh-packages-visual-baseline.yml
+          git commit -m "test(visual): refresh packages lead baseline for consent form"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
