@@ -62,7 +62,9 @@ export default async function CandidateDashboardPage() {
             <p>{copy("applicationsDescription")}</p>
           </div>
         </header>
-        {applicationData.applications.length ? (
+        {applicationData.error ? (
+          <p role="alert">{copy("applicationsLoadFailed")}</p>
+        ) : applicationData.applications.length ? (
           <ul className="candidate-application-list">
             {applicationData.applications.map((application) => (
               <li key={application.application_id}>
