@@ -11,7 +11,10 @@ import { companyDirectory } from "@/features/companies/directory-data";
 import { applyCompanyDirectoryOverrides, deduplicateCompanyDirectory } from "@/features/companies/directory";
 import { getPublicCompanyDirectoryOverrides } from "@/server/dal/companies";
 import { getManagedDirectoryEntries } from "@/server/dal/content";
-import { getPublicJobCompanies } from "@/server/dal/jobs";
+import {
+  PublicJobDataUnavailableError,
+  getPublicJobCompanies,
+} from "@/server/dal/jobs";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { buildCompaniesIndexStructuredData } from "@/content/ai-visibility/structured-data";
@@ -51,12 +54,19 @@ export default async function CompaniesPage({ params }: CompaniesPageProps) {
 
   setRequestLocale(locale);
   await connection();
-  const [t, overrides, jobCompanies, managedDirectory] = await Promise.all([
+  const [t, overrides, jobCompaniesResult, managedDirectory] = await Promise.all([
     getTranslations("CompanyDirectory"),
     getPublicCompanyDirectoryOverrides(),
-    getPublicJobCompanies(),
+    getPublicJobCompanies()
+      .then((companies) => ({ status: "available" as const, companies }))
+      .catch((error: unknown) => {
+        if (!(error instanceof PublicJobDataUnavailableError)) throw error;
+        return { status: "unavailable" as const, companies: [] };
+      }),
     getManagedDirectoryEntries(),
   ]);
+  const jobCompanies = jobCompaniesResult.companies;
+  const jobCompaniesUnavailable = jobCompaniesResult.status === "unavailable";
   // The managed directory already carries its logos; the bundled bundle is only
   // merged with the logo manifest on the fallback path.
   const publishedCompanies = managedDirectory
@@ -111,7 +121,11 @@ export default async function CompaniesPage({ params }: CompaniesPageProps) {
           </div>
         </header>
 
-        {jobCompanies.length > 0 ? (
+        {jobCompaniesUnavailable ? (
+          <p className="company-job-employers-note" role="alert">
+            {t("jobEmployersUnavailable")}
+          </p>
+        ) : jobCompanies.length > 0 ? (
           <section
             className="company-job-employers"
             aria-labelledby="company-job-employers-title"
