@@ -6,7 +6,7 @@ import { JobReviewForm } from "@/features/jobs/job-management-forms";
 import { getPendingJobsForReview } from "@/server/dal/jobs";
 import { getPlatformAdminMfaStatus } from "@/server/dal/user";
 import { Link } from "@/i18n/navigation";
-import { getLocalePrefix, routing } from "@/i18n/routing";
+import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +48,6 @@ export default async function AdminJobsPage({
     dateStyle: "medium",
     timeStyle: "short",
   });
-  const prefix = getLocalePrefix(locale);
 
   return (
     <main className="admin-job-review-page page-container">
@@ -101,7 +100,7 @@ export default async function AdminJobsPage({
         <nav aria-label={copy("nextPage")} className="admin-job-review-pagination">
           <Link
             className="button button-outline"
-            href={`${prefix}/admin/jobs?afterCreatedAt=${encodeURIComponent(nextCursor.createdAt)}&afterId=${encodeURIComponent(nextCursor.id)}`}
+            href={{ pathname: "/admin/jobs", query: { afterCreatedAt: nextCursor.createdAt, afterId: nextCursor.id } }}
           >
             {copy("nextPage")}
           </Link>
