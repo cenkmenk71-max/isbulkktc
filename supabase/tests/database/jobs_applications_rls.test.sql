@@ -388,7 +388,7 @@ select lives_ok(
 );
 
 select throws_ok(
-  $$$update public.jobs set status = 'published'
+  $$$$update public.jobs set status = 'published'
     where slug = 'operations-coordinator'$$,
   '42501',
   null,
@@ -416,7 +416,7 @@ select is(
 );
 
 select throws_ok(
-  $$$select public.review_job(
+  $$$$select public.review_job(
       (select id from public.jobs where slug = 'operations-coordinator'),
       'approved',
       null
@@ -430,7 +430,7 @@ set local "request.jwt.claims" =
   '{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated"}';
 
 select lives_ok(
-  $update public.jobs
+  $$update public.jobs
     set title = 'Updated Draft Accountant'
     where id = '30000000-0000-4000-8000-000000000002'$$,
   'a company owner can update a platform-owned draft'
@@ -444,7 +444,7 @@ select is(
 );
 
 select throws_ok(
-  $$update public.jobs
+  $$$update public.jobs
     set company_id = '20000000-0000-4000-8000-000000000002'
     where id = '30000000-0000-4000-8000-000000000002'$$,
   '42501',
@@ -528,7 +528,7 @@ set local "request.jwt.claims" =
   '{"sub":"10000000-0000-4000-8000-000000000005","role":"authenticated","aal":"aal1"}';
 
 select throws_ok(
-  $select public.review_job(
+  $$select public.review_job(
       (select id from public.jobs where slug = 'operations-coordinator'),
       'approved',
       null
@@ -560,7 +560,7 @@ set local "request.jwt.claims" =
   '{"sub":"10000000-0000-4000-8000-000000000004","role":"authenticated","aal":"aal2"}';
 
 select throws_ok(
-  $select public.review_job(
+  $$select public.review_job(
       (select id from public.jobs where slug = 'operations-coordinator'),
       'approved',
       null
@@ -574,7 +574,7 @@ set local "request.jwt.claims" =
   '{"sub":"10000000-0000-4000-8000-000000000005","role":"authenticated","aal":"aal2"}';
 
 select throws_ok(
-  $$select public.review_job(
+  $$$select public.review_job(
       (select id from public.jobs where slug = 'operations-coordinator'),
       null,
       null
@@ -593,7 +593,7 @@ select is(
 );
 
 select lives_ok(
-  $$select public.review_job(
+  $$$select public.review_job(
       (select id from public.jobs where slug = 'operations-coordinator'),
       'approved',
       null
