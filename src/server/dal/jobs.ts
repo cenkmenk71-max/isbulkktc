@@ -477,7 +477,11 @@ export async function getCompanyJobs(companyId: string): Promise<JobRow[]> {
     .from("jobs")
     .select("*")
     .eq("company_id", companyId)
-    .order("created_at", { ascending: false });
+    // Source-site imports are platform catalogue records, never employer-owned
+    // listings. Keep this invariant in the DAL as well as the write/RLS layer.
+    .eq("publication_source", "platform")
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
 
   if (error) {
     throw new Error("Company jobs could not be loaded.", { cause: error });
@@ -504,23 +508,61 @@ export async function getCompanyJobEntitlements(companyId: string) {
   return data;
 }
 
-export async function getPendingJobsForReview(): Promise<JobRow[]> {
+const moderationCursorSchema = z.object({
+  createdAt: z.string().datetime({ offset: true }),
+  id: z.string().uuid(),
+});
+
+export async function getPendingJobsForReview(input?: {
+  afterCreatedAt?: string;
+  afterId?: string;
+}): Promise<{ jobs: JobRow[]; nextCursor: { createdAt: string; id: string } | null }> {
   await requirePlatformRole("platform_admin");
+
+  const hasCursorPart = Boolean(input?.afterCreatedAt) || Boolean(input?.afterId);
+  const cursor = hasCursorPart
+    ? moderationCursorSchema.safeParse({
+        createdAt: input?.afterCreatedAt,
+        id: input?.afterId,
+      })
+    : null;
+  if (cursor && !cursor.success) {
+    throw new Error("The moderation queue cursor is invalid.");
+  }
+
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("jobs")
     .select("*")
     .eq("status", "pending_review")
+    .eq("publication_source", "platform")
     .order("created_at", { ascending: true })
-    .limit(50);
+    .order("id", { ascending: true });
 
+  if (cursor?.success) {
+    const { createdAt, id } = cursor.data;
+    query = query.or(
+      `created_at.gt.${createdAt},and(created_at.eq.${createdAt},id.gt.${id})`,
+    );
+  }
+
+  const { data, error } = await query.limit(51);
   if (error) {
     throw new Error("Pending jobs could not be loaded for review.", {
       cause: error,
     });
   }
 
-  return data;
+  const hasMore = data.length > 50;
+  const jobs = hasMore ? data.slice(0, 50) : data;
+  const last = jobs.at(-1);
+
+  return {
+    jobs,
+    nextCursor: hasMore && last
+      ? { createdAt: last.created_at, id: last.id }
+      : null,
+  };
 }
 
 export async function getMyApplications() {
