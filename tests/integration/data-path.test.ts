@@ -577,3 +577,94 @@ test("account deletion converts a session lookup exception into a controlled fai
     "a failed session lookup must not reach the service-role deletion",
   );
 });
+
+test("sales lead falls back to the legacy RPC only when marketing consent is false", async () => {
+  const { salesLeadRateLimiter } = await import("../../src/features/abuse/limits");
+  salesLeadRateLimiter.clear();
+  resetBoundary({
+    user: undefined,
+    rpcs: {
+      submit_sales_lead: (args) =>
+        "_marketing_consent" in args
+          ? {
+              data: null,
+              error: { code: "PGRST202", message: "consent-aware function is not in the schema cache" },
+            }
+          : { data: "00000000-0000-4000-8000-0000000000f3", error: null },
+    },
+  });
+
+  const { submitSalesLead } = await import("../../src/features/sales/actions");
+  const state = await submitSalesLead(
+    { status: "idle", message: "idle" } as never,
+    form({ companyName: "Acme", email: "lead@example.invalid", locale: "tr" }),
+  );
+
+  assert.deepEqual(state, { status: "success", message: "submitted" });
+  const calls = recorded.supabase.filter(
+    (call): call is Extract<RecordedCall, { kind: "rpc" }> =>
+      call.kind === "rpc" && call.name === "submit_sales_lead",
+  );
+  assert.equal(calls.length, 2, "the old signature is attempted only after PGRST202");
+  assert.equal(calls[0].args._marketing_consent, false);
+  assert.equal("_marketing_consent" in calls[1].args, false);
+  assert.ok(calls[1].headers?.["x-client-ip"], "the legacy call must preserve DB IP throttling");
+});
+
+test("sales lead never drops an affirmative marketing consent when the consent-aware RPC is missing", async () => {
+  const { salesLeadRateLimiter } = await import("../../src/features/abuse/limits");
+  salesLeadRateLimiter.clear();
+  resetBoundary({
+    user: undefined,
+    rpcs: {
+      submit_sales_lead: {
+        data: null,
+        error: { code: "PGRST202", message: "consent-aware function is not in the schema cache" },
+      },
+    },
+  });
+
+  const { submitSalesLead } = await import("../../src/features/sales/actions");
+  const state = await submitSalesLead(
+    { status: "idle", message: "idle" } as never,
+    form({
+      companyName: "Acme",
+      email: "lead@example.invalid",
+      locale: "tr",
+      marketingConsent: "true",
+    }),
+  );
+
+  assert.deepEqual(state, { status: "error", message: "consentUnavailable" });
+  const calls = recorded.supabase.filter(
+    (call) => call.kind === "rpc" && call.name === "submit_sales_lead",
+  );
+  assert.equal(calls.length, 1, "no legacy RPC may discard affirmative consent");
+  assert.deepEqual(recorded.mail, []);
+});
+
+test("sales lead does not retry a non-schema RPC error through the legacy signature", async () => {
+  const { salesLeadRateLimiter } = await import("../../src/features/abuse/limits");
+  salesLeadRateLimiter.clear();
+  resetBoundary({
+    user: undefined,
+    rpcs: {
+      submit_sales_lead: {
+        data: null,
+        error: { code: "23514", message: "validation constraint failed" },
+      },
+    },
+  });
+
+  const { submitSalesLead } = await import("../../src/features/sales/actions");
+  const state = await submitSalesLead(
+    { status: "idle", message: "idle" } as never,
+    form({ companyName: "Acme", email: "lead@example.invalid", locale: "tr" }),
+  );
+
+  assert.deepEqual(state, { status: "error", message: "failed" });
+  const calls = recorded.supabase.filter(
+    (call) => call.kind === "rpc" && call.name === "submit_sales_lead",
+  );
+  assert.equal(calls.length, 1, "only missing-function errors permit the compatibility fallback");
+});
