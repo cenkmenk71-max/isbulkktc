@@ -418,10 +418,10 @@ function serviceRoleOnlySignatures(sql: string = allSql): string[] {
   return [...grantedToService].filter((signature) => !grantedToClients.has(signature)).sort();
 }
 
-// Matches both `(select auth.role()) <> 'service_role'` (the raise form) and
-// `(select auth.role()) = 'service_role'` (a WHERE guard), with or without the
-// closing paren and any spacing.
-const serviceRoleGuard = /auth\.role\(\)\s*\)?\s*(?:<>|=)\s*'service_role'/;
+// Matches explicit JWT-role checks used by existing RPCs and current_user
+// checks used by SECURITY INVOKER worker functions.
+const serviceRoleGuard =
+  /(?:auth\.role\(\)\s*\)?\s*(?:<>|=)\s*'service_role'|current_user\s*(?:<>|=)\s*'service_role')/i;
 
 test("the service-role guard matcher reads the latest body and ignores comments (self-test)", () => {
   assert.equal(
@@ -430,6 +430,10 @@ test("the service-role guard matcher reads the latest body and ignores comments 
   );
   assert.equal(
     serviceRoleGuard.test(stripSqlComments("where (select auth.role()) = 'service_role' and p.status = 'active'")),
+    true,
+  );
+  assert.equal(
+    serviceRoleGuard.test(stripSqlComments("begin if current_user <> 'service_role' then raise; end if; end;")),
     true,
   );
   assert.equal(

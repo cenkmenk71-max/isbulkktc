@@ -22,6 +22,18 @@ kabul edilir ve yeni katalog anlık görüntüsüne alınmaz. Bu, tüm kaynak AP
 erişilememesi veya detay uç noktasının geçici olarak hata vermesiyle aynı
 durum değildir.
 
+Yazma aşaması da tek bir `replace_source_job_catalogue` PostgreSQL RPC çağrısıdır.
+Şirketler, ilanlar, kaynak eşlemeleri ve değişiklik defteri aynı transaction içinde
+değiştirilir. Herhangi bir doğrulama, foreign-key, check constraint veya yazma hatası
+tüm değişikliği geri alır; eski katalog ve eski değişiklik defteri birlikte korunur.
+RPC yalnızca `service_role` tarafından çağrılabilir ve kendi gövdesinde JWT rolünü
+yeniden doğrular.
+
+Atomik RPC isteği boyutunu güvenli tutmak için tek yenilemede en fazla 200 ilan kabul edilir; daha büyük bir katalog için staging/batch tasarımı gerekir.
+
+`--keep-existing` seçeneği artık desteklenmez; bu seçenek atomik tam-katalog
+yenilemesiyle çeliştiği için kullanılırsa işlem açık hata verir.
+
 ## Kritik: katalog bir üst sınırla kırpılır
 
 `refresh-source-jobs.yml` şu değişkeni geçirir:

@@ -16,7 +16,7 @@ begin;
 -- function that forgets to revoke `anon`/`authenticated` fails CI instead of
 -- shipping.
 
-select plan(13);
+select plan(16);
 
 -- ---------------------------------------------------------------------------
 -- The two engagement RPCs are service-role-only.
@@ -89,6 +89,33 @@ select ok(
 select ok(
   has_function_privilege('service_role', 'public.confirm_sales_lead_marketing_consent(uuid, text, text)', 'EXECUTE'),
   'only the server confirmation endpoint can activate marketing consent'
+);
+
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.replace_source_job_catalogue(jsonb, jsonb, jsonb)',
+    'EXECUTE'
+  ),
+  'anonymous visitors cannot replace the imported job catalogue'
+);
+
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.replace_source_job_catalogue(jsonb, jsonb, jsonb)',
+    'EXECUTE'
+  ),
+  'signed-in clients cannot replace the imported job catalogue'
+);
+
+select ok(
+  has_function_privilege(
+    'service_role',
+    'public.replace_source_job_catalogue(jsonb, jsonb, jsonb)',
+    'EXECUTE'
+  ),
+  'only the source catalogue worker can replace imported listings'
 );
 
 -- ---------------------------------------------------------------------------
