@@ -6,8 +6,9 @@ name: Send engagement digest
 # bearer secret.
 #
 # The route returns one bounded keyset page per HTTP request. This workflow
-# follows the cursor until every recipient was processed; a UTC-week idempotency
-# key makes same-week retries/replays safe. It is separate from the acquisition campaign on
+# follows the cursor until every recipient was processed. A UTC-week key keeps
+# request IDs stable, but Resend retains idempotency keys for only 24 hours, so
+# blind retries after that window can duplicate already-sent messages. It is separate from the acquisition campaign on
 # purpose: two `schedule` entries in one workflow fire *both* jobs on *every*
 # cron, which would send the weekly digest daily.
 #
@@ -104,6 +105,6 @@ jobs:
 
           echo "Engagement digest finished: pages=${page} sent=${total_sent} failed=${total_failed}"
           if [ "$total_failed" -gt 0 ]; then
-            echo "::error::Some engagement emails failed. Re-run this workflow in the same UTC week to retry with the same idempotency keys."
+            echo "::error::Some engagement emails failed. A retry is duplicate-safe only within Resend\x27s 24-hour idempotency window; after that, reconcile sends before retrying."
             exit 1
           fi

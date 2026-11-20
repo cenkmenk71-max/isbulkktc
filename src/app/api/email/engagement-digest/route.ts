@@ -83,49 +83,51 @@ export async function POST(request: Request) {
   }
 
   const siteUrl = getAppBaseUrl();
+  const campaignWeek = engagementWeekKey(new Date());
   let sent = 0;
   let failed = 0;
+
   const { data, error } = await supabase.rpc("list_engagement_recipients", {
     _after: after,
     _batch_size: BATCH_SIZE,
   });
-    if (error) {
-      console.error("Engagement recipients could not be listed.", {
-        code: error.code,
-      });
-      return jsonNoStore(
-        { message: "Recipient list is temporarily unavailable", sent, failed },
-        { status: 502 },
-      );
-    }
+  if (error) {
+    console.error("Engagement recipients could not be listed.", {
+      code: error.code,
+    });
+    return jsonNoStore(
+      { message: "Recipient list is temporarily unavailable", sent, failed },
+      { status: 502 },
+    );
+  }
+
   const recipients = (data ?? []) as EngagementRecipient[];
-
   for (const recipient of recipients) {
-      const unsubscribeUrl = unsubscribeUrlFor(recipient.email, siteUrl);
-      if (!unsubscribeUrl) {
-        failed += 1;
-        continue;
-      }
+    const unsubscribeUrl = unsubscribeUrlFor(recipient.email, siteUrl);
+    if (!unsubscribeUrl) {
+      failed += 1;
+      continue;
+    }
 
-      try {
-        const accepted = await sendEngagementEmail({
-          to: recipient.email,
-          locale: recipient.locale,
-          name: recipient.display_name,
-          jobs,
-          unsubscribeUrl,
-          campaignId: `${engagementWeekKey(new Date())}/${recipient.user_id}`,
-        });
-        // A Resend rejection comes back as `false`, not a throw, so the return
-        // value is the only place a rejected send is visible.
-        if (accepted) sent += 1;
-        else failed += 1;
-      } catch (error) {
-        failed += 1;
-        console.error("Engagement email could not be sent.", {
-          error: error instanceof Error ? error.name : "unknown_error",
-        });
-      }
+    try {
+      const accepted = await sendEngagementEmail({
+        to: recipient.email,
+        locale: recipient.locale,
+        name: recipient.display_name,
+        jobs,
+        unsubscribeUrl,
+        campaignId: `${campaignWeek}/${recipient.user_id}`,
+      });
+      // A Resend rejection comes back as `false`, so the return value is
+      // the only place a rejected send is visible.
+      if (accepted) sent += 1;
+      else failed += 1;
+    } catch (error) {
+      failed += 1;
+      console.error("Engagement email could not be sent.", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+    }
   }
 
   const complete = recipients.length < BATCH_SIZE;

@@ -398,3 +398,14 @@ test("a featured-job search failure answers 502 instead of masquerading as an em
     restore();
   }
 });
+
+
+test("the engagement campaign key is the UTC Monday and stays stable through that week", async () => {
+  const { engagementWeekKey } = await digestRoute();
+
+  assert.equal(engagementWeekKey(new Date("2026-11-16T00:00:00.000Z")), "2026-11-16");
+  assert.equal(engagementWeekKey(new Date("2026-11-20T22:59:00.000Z")), "2026-11-16");
+  assert.equal(engagementWeekKey(new Date("2026-11-22T23:59:00.000Z")), "2026-11-16");
+  assert.equal(engagementWeekKey(new Date("2026-11-23T00:00:00.000Z")), "2026-11-23");
+  assert.throws(() => engagementWeekKey(new Date(Number.NaN)), /valid date/);
+});
