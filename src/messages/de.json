@@ -1709,7 +1709,8 @@
       "reviewFailed": "Die Prüfentscheidung konnte nicht gespeichert werden.",
       "nextPage": "Nächste 50 Anzeigen",
       "mfaRequired": "Für den Zugriff auf die Prüfwarteschlange ist eine MFA-Verifizierung erforderlich.",
-      "backToPackages": "Zur Paketverwaltung"
+      "backToPackages": "Zur Paketverwaltung",
+      "idle": ""
     }
   }
 }
