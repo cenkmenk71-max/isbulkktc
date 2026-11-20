@@ -38,8 +38,10 @@ assignment snapshots one configured `job_duration_days` value.
 
 ## Not implemented / placeholder modules
 
-- `billing`, `credit-ledger`, `applications`, `ministry`, and `resumes`
-  currently contain placeholders rather than complete domain workflows.
+- `billing`, `credit-ledger`, `ministry`, and `resumes` currently contain
+  placeholders rather than complete domain workflows. The `applications/`
+  directory is also a placeholder; application domain code currently lives in
+  `jobs/`.
 - CV file upload/storage, public candidate discovery, external CV-AI processing,
   online checkout and payment reconciliation are not active product flows.
 - `chat` is a separately gated support integration; its presence does not
