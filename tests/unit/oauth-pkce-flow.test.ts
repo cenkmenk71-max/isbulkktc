@@ -184,11 +184,11 @@ test("a callback with an explicit flow id never retries against the shared legac
   const route = await read("src/app/[locale]/auth/callback/route.ts");
 
   assert.equal(
-    (route.match(/exchangeCodeForSession\\(/g) ?? []).length,
+    (route.match(/exchangeCodeForSession\(/g) ?? []).length,
     1,
     "the callback must make exactly one code-exchange attempt",
   );
-  assert.match(route, /inspectPkceVerifierCookies\\(/);
+  assert.match(route, /inspectPkceVerifierCookies\(/);
   assert.match(route, /hasFlowVerifierCookie/);
   assert.match(route, /callbackHostMatchesAppOrigin/);
 });
