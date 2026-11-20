@@ -223,7 +223,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient({
     allowCookieWrites: true,
   });
-  let { error } = await supabase.auth.exchangeCodeForSession(
+  const { error } = await supabase.auth.exchangeCodeForSession(
     code,
     flowId ? { flowId } : undefined,
   );
