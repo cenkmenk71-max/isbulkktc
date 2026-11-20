@@ -6,7 +6,10 @@ import { publicJobSearchSchema } from "@/features/jobs/schemas";
 import { resolveAuthErrorRedirect } from "@/features/identity/auth-routing";
 import { routing } from "@/i18n/routing";
 import { createLocalizedPageMetadata } from "@/lib/seo";
-import { searchPublicJobPreviews } from "@/server/dal/jobs";
+import {
+  PublicJobDataUnavailableError,
+  searchPublicJobPreviews,
+} from "@/server/dal/jobs";
 
 type HomePageProps = {
   params: Promise<{ locale: string }>;
@@ -61,9 +64,17 @@ export default async function HomePage({
     page: query.page,
   });
   const filters = search.success ? search.data : defaultFilters;
-  const results = search.success
-    ? await searchPublicJobPreviews(filters)
-    : null;
+  let results: Awaited<ReturnType<typeof searchPublicJobPreviews>> | null = null;
+  let resultsUnavailable = false;
+
+  if (search.success) {
+    try {
+      results = await searchPublicJobPreviews(filters);
+    } catch (error) {
+      if (!(error instanceof PublicJobDataUnavailableError)) throw error;
+      resultsUnavailable = true;
+    }
+  }
 
   return (
     <HomeExperience
@@ -72,6 +83,7 @@ export default async function HomePage({
         filters,
         results,
         invalidFilters: !search.success,
+        resultsUnavailable,
       }}
     />
   );

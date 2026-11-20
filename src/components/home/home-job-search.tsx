@@ -21,6 +21,7 @@ export type HomeJobSearchData = {
   filters: PublicJobSearchFilters;
   results: SearchResults | null;
   invalidFilters: boolean;
+  resultsUnavailable: boolean;
 };
 
 type HomeJobSearchProps = HomeJobSearchData & {
@@ -52,6 +53,7 @@ export async function HomeJobSearch({
   filters,
   results,
   invalidFilters,
+  resultsUnavailable,
 }: HomeJobSearchProps) {
   const copy = await getTranslations({ locale, namespace: "HomeJobSearch" });
 
@@ -130,6 +132,12 @@ export async function HomeJobSearch({
         {invalidFilters ? (
           <p className="home-job-search-error" role="alert">
             {copy("invalidFilters")}
+          </p>
+        ) : null}
+
+        {resultsUnavailable ? (
+          <p className="home-job-search-error" role="alert">
+            {copy("unavailable")}
           </p>
         ) : null}
 
