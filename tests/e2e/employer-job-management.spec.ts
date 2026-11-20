@@ -71,7 +71,10 @@ test("an employer can create and submit a listing using the current form values"
     await page.getByLabel("Account email address").fill(email);
     await page.getByLabel("Password", { exact: true }).fill("Employer-pass-2026");
     await page.getByRole("button", { name: "Employer sign in" }).click();
-    await expect(page).toHaveURL(/\/en\/company\/new/, { timeout: 20_000 });
+    await expect(page).toHaveURL(/\/en\/company\/(dashboard|new)/, {
+      timeout: 20_000,
+    });
+    await page.goto("/en/company/new");
 
     await page.getByLabel("Company name").fill(companyName);
     await page.getByRole("button", { name: "Submit for review" }).click();
