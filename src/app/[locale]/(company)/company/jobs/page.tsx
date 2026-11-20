@@ -67,9 +67,7 @@ export default async function EmployerJobsPage({
       {jobs.length > 0 ? (
         <ul className="employer-job-list">
           {jobs.map((job) => {
-            const status = job.status === "published" && job.expires_at && Date.parse(job.expires_at) <= Date.now()
-              ? "expired"
-              : job.status;
+            const status = job.status;
             const editable = status === "draft" || status === "rejected";
             return (
               <li key={job.id}>
@@ -86,7 +84,6 @@ export default async function EmployerJobsPage({
                     {status === "approved" ? <p role="status">{copy("approvedNote")}</p> : null}
                     {status === "rejected" ? <p role="status">{job.moderation_note || copy("rejectedNote")}</p> : null}
                     {status === "pending_review" ? <p role="status">{copy("pendingNote")}</p> : null}
-                    {status === "expired" ? <p role="status">{copy("publishedNote")}</p> : null}
                   </div>
                   {editable ? (
                     <Link
