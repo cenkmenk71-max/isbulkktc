@@ -12307,26 +12307,13 @@ html[dir="rtl"] input[name="slug"] {
     var(--color-shade-green-50)
   );
 }
-.job-detail-source-card {
-  display: grid;
-  gap: 8px;
-  padding: 18px 20px;
-  border: 1px solid rgba(34, 40, 39, 0.1);
-  border-radius: 14px;
-  background: var(--surface-raised);
+.job-detail-company-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
 }
-.job-detail-source-label {
-  color: var(--ink-4);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-.job-detail-source-card strong {
-  color: var(--ink);
-  font-size: 13px;
-  overflow-wrap: anywhere;
-}
-.job-detail-source-card a {
+.job-detail-company-links a {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -12336,9 +12323,12 @@ html[dir="rtl"] input[name="slug"] {
   font-weight: 650;
   text-decoration: none;
 }
-.job-detail-source-card a:hover {
+.job-detail-company-links a:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+.job-detail-source-link {
+  overflow-wrap: anywhere;
 }
 .job-application-card h2 {
   margin: 0 0 8px;
