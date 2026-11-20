@@ -249,6 +249,7 @@ export async function signUp(
 
   const supabase = await createSupabaseServerClient({
     allowCookieWrites: true,
+    experimental: { appendPkceFlowIdToRedirects: true },
   });
   const { data, error } = await supabase.auth.signUp({
     email: result.data.email,
@@ -359,6 +360,7 @@ export async function resendConfirmation(
 
   const supabase = await createSupabaseServerClient({
     allowCookieWrites: true,
+    experimental: { appendPkceFlowIdToRedirects: true },
   });
   const { error } = await supabase.auth.resend({
     type: "signup",
@@ -415,6 +417,7 @@ export async function requestPasswordReset(
 
   const supabase = await createSupabaseServerClient({
     allowCookieWrites: true,
+    experimental: { appendPkceFlowIdToRedirects: true },
   });
   const { error } = await supabase.auth.resetPasswordForEmail(
     result.data.email,
