@@ -8,6 +8,20 @@ import { reviewJob, saveJobDraft, submitJobForReview } from "./actions";
 import type { JobFormState, JobReviewFormState } from "./schemas";
 
 type JobRow = Database["public"]["Tables"]["jobs"]["Row"];
+type JobDraftValues = Pick<
+  JobRow,
+  | "id"
+  | "status"
+  | "title"
+  | "slug"
+  | "summary"
+  | "description"
+  | "requirements"
+  | "responsibilities"
+  | "job_type"
+  | "workplace_mode"
+  | "district"
+>;
 
 const initialJobState: JobFormState = { status: "idle", message: "idle" };
 const initialReviewState: JobReviewFormState = { status: "idle", message: "idle" };
@@ -17,7 +31,7 @@ export function JobDraftForm({
   job,
 }: {
   companyId: string;
-  job?: JobRow;
+  job?: JobDraftValues;
 }) {
   const copy = useTranslations("JobManagement.employer");
   const companyCopy = useTranslations("CompanyManagement");
