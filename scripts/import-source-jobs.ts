@@ -7,6 +7,7 @@ import {
 } from "../src/features/jobs/source-job-fetchers";
 import {
   buildSourceJobSlug,
+  collectCompleteSourceResults,
   sanitizeSourceJobRecord,
   selectDiverseSourceJobs,
   sourceJobContentHash,
@@ -443,28 +444,21 @@ async function main(): Promise<void> {
   const serviceRoleKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
 
   console.info("Kaynak ilanlar getiriliyor…");
-  // One source site going down must not fail the whole refresh. The two sources
-  // are independent upstreams, so a single outage is tolerated: the import
-  // continues with whichever source answered, and the per-source counts in the
-  // summary below make the degraded run visible.
+  // The catalogue is replaced as one complete snapshot. If either upstream
+  // fails, abort before touching Supabase; treating an outage as an empty source
+  // would purge every existing listing from that source.
   const [iskibrisResult, isbulkibrisResult] = await Promise.allSettled([
     fetchIskibrisJobs({ onProgress: (message) => console.info(`  · ${message}`) }),
     fetchIsbulkibrisJobs({ onProgress: (message) => console.info(`  · ${message}`) }),
   ]);
+  const sourceRecords = collectCompleteSourceResults([
+    { source: "iskibris", result: iskibrisResult },
+    { source: "isbulkibris", result: isbulkibrisResult },
+  ]);
 
-  const describeSource = (
-    name: string,
-    result: PromiseSettledResult<SourceJobRecord[]>,
-  ): SourceJobRecord[] => {
-    if (result.status === "fulfilled") return result.value;
-    console.warn(`  · ${name} kaynağına ulaşılamadı: ${String(result.reason)}`);
-    return [];
-  };
-
-  const iskibrisJobs = describeSource("iskibris", iskibrisResult);
-  const isbulkibrisJobs = describeSource("isbulkibris", isbulkibrisResult);
-
-  const records = dedupeRecords([...iskibrisJobs, ...isbulkibrisJobs])
+  const iskibrisJobs = sourceRecords.filter((record) => record.source === "iskibris");
+  const isbulkibrisJobs = sourceRecords.filter((record) => record.source === "isbulkibris");
+  const records = dedupeRecords(sourceRecords)
     .map(sanitizeSourceJobRecord)
     .filter((record) => record.title.length >= 5);
 
