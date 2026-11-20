@@ -1690,7 +1690,9 @@
       "packageRequired": "Yayınlamak için geçerli bir ilan paketi gerekir.",
       "packageLimit": "Aktif ilan kapasiteniz dolu.",
       "publishFailed": "İlan yayınlanamadı.",
-      "closed": "Kapatıldı"
+      "closed": "Kapatıldı",
+      "pageCount": "Bu sayfadaki ilanlar",
+      "nextPage": "Sonraki 50 ilan"
     },
     "admin": {
       "title": "İlan inceleme kuyruğu",
