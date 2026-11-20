@@ -11,14 +11,10 @@ import test from "node:test";
  * the account's kill switch. Two questions decide whether that switch is real:
  * can a client flip it, and does anything act on it at sign-in?
  *
- * The audit answered the first (no — the column grant is per-column and omits
- * `status`) and the second (no — `signIn` never reads the row), plus a third
- * the owner's brief named directly: there is no deletion path at all, so a
- * "closed" account is a status nobody can reach.
- *
- * The gates below pin what *is* enforced and record the two open gaps as
- * `todo`s against the owning modules, so a refactor cannot quietly widen the
- * column grant or drop the status re-checks that already exist.
+ * The gates below pin what *is* enforced and keep the still-open status-transition
+ * gap visible as a `todo`, so a refactor cannot quietly widen the column grant
+ * or drop the status re-checks that already exist. Account deletion has a
+ * separate positive gate below; its retention/FK limitations remain documented.
  */
 
 const repoRoot = new URL("../../", import.meta.url);
@@ -183,30 +179,27 @@ test("sign-in refuses an account whose profile is not active", () => {
 // 4. Open gap: there is no deletion path at all.
 // ---------------------------------------------------------------------------
 
-test(
-  "a self-service account-deletion path exists",
-  { todo: "no RPC, action or UI deletes a profile; KVKK/GDPR erasure is unmet (owner: the database layer + the auth layer, #400)" },
-  () => {
-    const deletionStatements = statements.filter(
-      (statement) =>
-        /\bdelete\s+from\s+auth\.users\b/i.test(statement) ||
-        /\bdelete\s+from\s+public\.profiles\b/i.test(statement),
-    );
-    assert.deepEqual(
-      deletionStatements.map((statement) => statement.slice(0, 60)),
-      [],
-    );
+test("account deletion is session-bound, rate-limited and uses the service role", () => {
+  const actionsPath = new URL("../../src/features/identity/actions.ts", import.meta.url);
+  const actions = readFileSync(actionsPath, "utf8");
+  const deletion = actions.match(/export async function deleteAccount\(\)[\s\S]*?\n\}/);
 
-    const deletionRpcs = [...source.matchAll(/rpc\(\s*["'`]([a-z0-9_]+)["'`]/gi)]
-      .map((match) => match[1])
-      .filter((name) =>
-        /^(?:delete_account|delete_my_account|erase_account|close_account|anonymize_account)$/i.test(
-          name,
-        ),
-      );
-    assert.deepEqual(deletionRpcs, []);
-  },
-);
+  assert.ok(deletion, "deleteAccount must remain a server action");
+  assert.match(deletion[0], /createSupabaseServerClient\(\{\s*allowCookieWrites:\s*true\s*\}\)/);
+  assert.match(deletion[0], /supabase\.auth\.getUser\(\)/);
+  assert.match(deletion[0], /deleteAccountThrottle\.address\.check/);
+  assert.match(deletion[0], /deleteAccountThrottle\.user\.check/);
+  assert.match(deletion[0], /createSupabaseServiceClient\(\)/);
+  assert.match(deletion[0], /auth\.admin\.deleteUser\(user\.id\)/);
+  assert.match(deletion[0], /supabase\.auth\.signOut\(\)/);
+  assert.match(deletion[0], /cookieStore\.delete\(cookie\.name\)/);
+  assert.doesNotMatch(deletion[0], /\bfetch\s*\(/, "the action must not create a second cookie-less HTTP request");
+
+  assert.ok(
+    !sourceFiles.some((path) => relative(path) === "src/app/api/account/delete/route.ts"),
+    "the unreferenced internal HTTP delete route should not remain exposed",
+  );
+});
 
 // ---------------------------------------------------------------------------
 // 5. API error responses must not be shared-cacheable (#424 M-03, #435).

@@ -45,7 +45,7 @@ export type SupabaseCall =
        */
       headers?: Record<string, string>;
     }
-  | { kind: "auth"; method: string };
+  | { kind: "auth"; method: string; userId?: string };
 
 export type MailCall = { template: string; payload: Record<string, unknown> };
 
@@ -272,6 +272,19 @@ export class FakeSupabase {
         data: { url: "https://example.invalid/oauth" },
         error: this.script.authError ?? null,
       };
+    },
+    admin: {
+      deleteUser: async (userId: string) => {
+        recorded.supabase.push({
+          kind: "auth",
+          method: "admin.deleteUser",
+          userId,
+        });
+        return {
+          data: { user: null },
+          error: this.script.authError ?? null,
+        };
+      },
     },
     mfa: {
       getAuthenticatorAssuranceLevel: async () => ({

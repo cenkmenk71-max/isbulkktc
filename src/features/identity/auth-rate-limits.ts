@@ -72,3 +72,22 @@ export const resendConfirmationThrottle = {
   /** Per submitted address. Keeps one victim mailbox from being flooded. */
   email: createRateLimiter({ limit: 5, windowMs }),
 };
+
+
+/**
+ * Self-service account erasure is irreversible and needs a dedicated budget.
+ * Both dimensions use the shared bounded limiter, so attacker-controlled IPs
+ * cannot grow an unbounded Map in each serverless instance.
+ */
+const accountDeletionWindowMs = 60 * 60 * 1000;
+
+export const deleteAccountThrottle = {
+  address: createRateLimiter({
+    limit: 3,
+    windowMs: accountDeletionWindowMs,
+  }),
+  user: createRateLimiter({
+    limit: 3,
+    windowMs: accountDeletionWindowMs,
+  }),
+};

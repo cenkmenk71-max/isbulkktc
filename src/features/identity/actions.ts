@@ -20,9 +20,10 @@ import {
   resolveAccountBlockedPath,
   resolveAuthDestination,
 } from "./auth-routing";
-import { createSupabaseServerClient } from "@/server/db/supabase-server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/server/db/supabase-server";
 import { clientIp } from "@/features/abuse/request-context";
 import {
+  deleteAccountThrottle,
   passwordResetThrottle,
   resendConfirmationThrottle,
   signInThrottle,
@@ -516,28 +517,66 @@ export type DeleteAccountResult = {
 };
 
 export async function deleteAccount(): Promise<DeleteAccountResult> {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  // A Server Action already has the caller's authenticated request context.
+  // Calling our own HTTP route would create a second request without forwarding
+  // that cookie, so the route would see an anonymous caller. Verify the session
+  // here and use the privileged client only for this caller's own id.
+  const supabase = await createSupabaseServerClient({ allowCookieWrites: true });
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
   if (authError || !user) {
     return { status: "error", message: "deletionFailed" };
   }
 
-  const response = await fetch(`${getAppBaseUrl()}/api/account/delete`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (response.status === 429) {
+  const ip = await clientIp();
+  if (
+    !deleteAccountThrottle.address.check(`ip:${ip}`).ok ||
+    !deleteAccountThrottle.user.check(`user:${user.id}`).ok
+  ) {
     return { status: "error", message: "rateLimited" };
   }
 
-  if (!response.ok) {
-    console.error("Account deletion API call failed.", {
-      status: response.status,
-      userId: user.id,
+  const serviceClient = createSupabaseServiceClient();
+  if (!serviceClient) {
+    console.error("Account deletion is unavailable: service role key is not configured.");
+    return { status: "error", message: "deletionFailed" };
+  }
+
+  // Never accept a user id from the browser. The target is derived exclusively
+  // from the verified Supabase session. FK RESTRICT is allowed to refuse the
+  // delete: historical applications, job authorship and admin attribution must
+  // not be erased or reassigned without an approved retention policy.
+  const { error: deleteError } = await serviceClient.auth.admin.deleteUser(user.id);
+  if (deleteError) {
+    console.error("Supabase account deletion failed.", {
+      code: deleteError.code,
     });
     return { status: "error", message: "deletionFailed" };
+  }
+
+  try {
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) {
+      console.error("Sign-out after account deletion failed.", {
+        code: signOutError.code,
+      });
+    }
+  } catch (error) {
+    console.error("Sign-out after account deletion threw.", {
+      error: error instanceof Error ? error.name : "unknown_error",
+    });
+  } finally {
+    // Clear every Supabase auth cookie chunk even if remote sign-out fails
+    // after the Auth user has already been deleted.
+    const cookieStore = await cookies();
+    for (const cookie of cookieStore.getAll()) {
+      if (/^(sb-|.*(auth|session|supabase)).*$/i.test(cookie.name)) {
+        cookieStore.delete(cookie.name);
+      }
+    }
   }
 
   return { status: "success", message: "success" };
