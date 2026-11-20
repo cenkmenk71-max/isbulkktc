@@ -14,9 +14,9 @@ const handleI18nRouting = createMiddleware(routing);
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // The DNS-only mail-ingress hostname bypasses Cloudflare by design so
-  // authenticated GitHub cron callbacks are not challenged. Keep that alternate origin narrow:
-  // only the authenticated server-to-server POST routes may reach handlers.
+  // The DNS-only mail-ingress hostname bypasses Cloudflare by design, and
+  // Vercel custom domains are excluded from deployment SSO. Keep this alternate
+  // origin narrow: only the exact cron POST routes may reach their Bearer-guarded handlers.
   // This host-specific matcher also runs for /api and static paths, unlike the
   // normal application matcher below.
   if (isMailIngressHost(request.nextUrl.hostname)) {
