@@ -73,6 +73,13 @@ adresler. İstersen geleni gerçek bir kutuya yönlendir (Resend → Receiving �
 Forward to).
 
 ### 3. Üretim `RESEND_API_KEY` — TAMAM `[x]`
+
+**Resend webhook endpointini taşımıyoruz:** Canlı Resend yapılandırmasındaki endpoint
+`https://isbulkktc-prod.vercel.app/api/email/resend-webhook`. 20 Kasım 2026
+kontrolünde son 20 olayın tamamı başarılıydı; en yeni `email.delivered` teslimatı
+HTTP 200 ve beklenen `Ignored` yanıtını aldı. PR #725'teki DNS-only
+`hooks.isbulkktc.com` yalnızca iki Bearer korumalı GitHub cron rotası için
+kullanılır. Resend webhook URL'sini değiştirmek bu geçişin parçası değildir.
 Vercel `RESEND_API_KEY` **doğru ekibin** yeni `re_…` anahtarıyla değiştirildi
 (hedef: `production` + `preview`) ve üretim yeniden dağıtıldı. Webhook GET
 yönteminde **401** döndürür; POST imza doğrulamasıyla çalışır.
