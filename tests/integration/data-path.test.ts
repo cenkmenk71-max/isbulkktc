@@ -377,7 +377,7 @@ test("a sales receipt failure does not turn a stored lead into an error", async 
 });
 
 // ---------------------------------------------------------------------------
-// 4. The RPC receives exactly the validated values (no caller id injection).
+// 5. The RPC receives exactly the validated values (no caller id injection).
 // ---------------------------------------------------------------------------
 
 test("the feedback RPC receives the caller's message, not a caller-supplied id", async () => {
@@ -406,7 +406,7 @@ test("the feedback RPC receives the caller's message, not a caller-supplied id",
 });
 
 // ---------------------------------------------------------------------------
-// 5. A malformed request is rejected at the boundary, before any call.
+// 6. A malformed request is rejected at the boundary, before any call.
 // ---------------------------------------------------------------------------
 
 test("an invalid feedback payload never reaches the database", async () => {
@@ -425,7 +425,7 @@ test("an invalid feedback payload never reaches the database", async () => {
 
 
 // ---------------------------------------------------------------------------
-// 6. Account deletion: session identity -> service-role delete, fail closed.
+// 7. Account deletion: session identity -> service-role delete, fail closed.
 // ---------------------------------------------------------------------------
 
 test("account deletion targets only the authenticated user and signs out", async () => {
