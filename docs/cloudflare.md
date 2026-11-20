@@ -1,67 +1,26 @@
 # Cloudflare denetimi — isbulkktc.com
 
-## Güncel hesap/API snapshot — 20 Kasım 2026 (read-only)
+## Güncel hesap/API doğrulaması — 20 Kasım 2026 (read-only)
 
-Bu bölüm, aşağıdaki **5 Kasım 2026 tarihli tarihsel token notunun yerine geçer**.
-Bu denetimde Cloudflare connector ile zone DNS, settings, Page Rules, custom
-firewall ve rate-limit ruleset'leri okundu. Hiçbir Cloudflare ayarı değiştirilmedi.
+Cloudflare, Vercel ve Resend hesapları salt-okunur incelendi. Bu denetim
+oturumunda aşağıdaki yüksek seviyeli durumlar doğrulandı:
 
-### Zone / DNS
+- Cloudflare zone aktif; DNSSEC etkin.
+- HTTPS strict, TLS 1.2 minimum, TLS 1.3, HTTP/2, HTTP/3, Brotli ve HSTS etkin.
+- Cloudflare managed/custom security ve rate-limiting kuralları mevcut.
+- Dinamik sitemap için cache davranışı ayrıca gözden geçirilmeli (issue #715).
+- Resend gönderim domaini ve DKIM doğrulanmış; yinelenen DNS kaydı ve rapor
+  alıcılarının izlenebilirliği takipte (issues #716, #718).
+- Vercel deployment protection, harici webhook ve cron callback erişimiyle
+  uyumluluk açısından doğrulanmalı (issue #719).
 
-- Zone: `isbulkktc.com`, active, Free plan.
-- DNSSEC: active (ECDSAP256SHA256 / DS digest SHA-256).
-- Vercel project `isbulkktc`: SSO protection enabled for all deployments except custom domains; Vercel `.vercel.app` aliases are therefore behind Vercel protection while apex/www remain public through Cloudflare. Password protection and trusted-IP restrictions are off. The direct origin alias bypasses Cloudflare rules, so its Vercel protection must remain enabled.
-- Apex A kaydı Vercel origin'ine proxied; `www` CNAME kaydı da proxied.
-- SSL mode: `strict`; Always Use HTTPS ve Automatic HTTPS Rewrites açık.
-- Minimum TLS 1.2; TLS 1.3, HTTP/2, HTTP/3, Brotli ve Early Hints açık.
-- HSTS: 31.536.000 saniye, `includeSubDomains`, `preload`, `nosniff` açık.
-- 0-RTT kapalı; Security Level `medium`; Development Mode kapalı.
-- Free managed WAF ruleset, custom firewall ruleset ve HTTP rate-limit ruleset mevcut.
+Güvenlik gerekçesiyle bu herkese açık dokümana özel firewall ifadeleri, rate
+limit eşikleri, deployment alias'ları, webhook URL'leri, inbox adresleri veya
+DNS public-key değerleri kopyalanmamıştır. Ayrıntılı yapılandırma incelemesi
+audit oturumunda tutulur; üretim ayarları değiştirilmemiştir.
 
-### Aktif edge kuralları
-
-- Auth brute-force rule: POST `/login`, `/register`, `/forgot-password`,
-  `/reset-password` yollarında IP + colo başına 10 saniyede 5 istek; 10 saniye
-  block. Confirmation-resend yolunun bu ifadeye girip girmediği ayrıca
-  doğrulanmalı (bkz. issue #714).
-- Custom WAF: TRACE/TRACK engeli, devtools/VCS/dotfile/CMS/exploit tarama yolları
-  engeli, sızdırılmış parola kontrolü ve backup/config artifact engeli.
-- Sitemap Page Rule: `*isbulkktc.com/sitemap*` için Cache Everything ve
-  Browser Cache TTL 3600 saniye. Dinamik sitemap için bu override'ın kaldırılması
-  veya açık bir kısa TTL/purge stratejisi seçilmesi gerekiyor (issue #715).
-- `*.woff2` ve `/_next/static/*`: browser TTL 1 yıl, edge TTL 30 gün.
-- Zone genelinde `cache_level=aggressive`, `edge_cache_ttl=7200`; bu nedenle
-  origin cache header'ları ve Page Rule önceliği canlı HTTP ile ayrıca
-  doğrulanmalı.
-
-### E-posta DNS / Resend
-
-- DMARC: `p=reject`; aggregate report URI `dmarc@isbulkktc.com`.
-- SMTP TLS reporting URI: `tlsrpt@isbulkktc.com`.
-- Resend domain verification ve DKIM status: verified; receiving enabled.
-- Resend hesabında yalnızca `info@isbulkktc.com` inbox'ı görünüyor; DMARC/TLS-RPT
-  alıcıları için ayrı inbox/forwarding tanımlı değil (issue #716).
-- `resend._domainkey.isbulkktc.com` altında iki ayrı TXT RR var; normalize
-  edilmiş içerikleri aynı 218 karakterlik public key. Resend doğrulaması başarılı
-  olsa da DKIM selector RRset'inde tek kayıt bırakılmalı (issue #718).
-
-### Kanıt sınırı
-
-Bu snapshot Cloudflare/Resend yönetim API'lerinden alınan salt-okunur hesap
-verisidir. Canlı origin'e HTTP erişimi bu denetim oturumunda başarısız olduğundan
-`Cache-Control`, `CF-Cache-Status`, HSTS ve sitemap yanıtları bu snapshot'ta
-yeniden ölçülmedi. API ayarlarının varlığı, kullanıcıya görünen davranışın
-kanıtlandığı anlamına gelmez.
-
-**Tarihsel kapsam notu:** `LANE-*` atamaları ve lane brief atıfları, 2026-11-10'da kaldırılan eski koordinasyon modeline (#602) aittir; güncel sahiplik veya işlem talimatı değildir. Canlı altyapıya yönelik bulguları işlemden önce yeniden doğrulayın.
-
-LANE-CLOUDFLARE (dalga 2) — **read-only** uç/edge denetimi. Bu dosya canlı
-kanıtla doğrulanmış bulguları ve onay bekleyen değişiklikleri tutar.
-
-- Alan: `isbulkktc.com`, `www.isbulkktc.com` — Cloudflare arkasında (NS: `lex.ns.cloudflare.com`, `serenity.ns.cloudflare.com`).
-- Origin: Vercel; alias `isbulkktc-amber.vercel.app` (bu adres CF'yi **atlar**, bkz. F-08).
-- Yöntem: her iddia canlı HTTP/DNS cevabıyla (`curl -D -`, `cf-ray`, `cf-cache-status`, DoH) doğrulandı. Yıkıcı hiçbir CF değişikliği yapılmadı.
-- Tarih: 2026-11-05.
+Canlı origin'e erişim bu oturumda doğrulanamadığından HTTP cache header'ları,
+CF cache durumu ve sitemap davranışı canlı yanıt üzerinden yeniden ölçülmedi.
 
 ## Token durumu (API tarafı denetlenemedi)
 
