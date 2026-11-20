@@ -884,8 +884,8 @@
     "companyLocation": "Τοποθεσία εταιρείας",
     "companyWebsite": "Ιστότοπος",
     "companyDirectoryLink": "Προβολή στον κατάλογο εταιρειών",
-    "sourceAttributionLabel": "ΑΡΧΙΚΗ ΠΗΓΗ",
-    "sourceAttributionLink": "Προβολή αρχικής αγγελίας"
+    "sourceAttributionLabel": "ΔΗΜΟΣΙΕΥΤΗΚΕ ΣΤΟ",
+    "sourceAttributionLink": "Άνοιγμα στον ιστότοπο δημοσίευσης"
   },
   "JobApplication": {
     "title": "Υποβάλετε αίτηση για τη θέση",
