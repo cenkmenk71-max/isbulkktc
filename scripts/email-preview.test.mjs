@@ -156,7 +156,7 @@ test("promotional families need a signing key; transactional ones never do", () 
 });
 
 test("a promotional send carries the recipient's real signed opt-out link", () => {
-  const recipient = "muhammedali.kahraman@outlook.com";
+  const recipient = "test-recipient-06@example.invalid";
   const plan = planSend({
     name: "marketing",
     recipient,
@@ -254,7 +254,7 @@ test("the body the send path renders carries the real link, never the placeholde
     email_change: "<!DOCTYPE html><html><body>email change</body></html>",
   });
 
-  const recipient = "letgodeneme97@outlook.com";
+  const recipient = "test-recipient-03@example.invalid";
   const plan = planSend({
     name: "marketing",
     recipient,

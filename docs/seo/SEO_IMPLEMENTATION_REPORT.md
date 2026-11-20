@@ -44,7 +44,7 @@ Başlangıç durumu (değişmeden önce kaydedildi):
 
 | # | Durum | Önem | Bulgu | Kanıt | Etki | Çözüm |
 |---|---|---|---|---|---|---|
-| 1 | CONFIRMED | P2 | `/companies` sunucu HTML'inde bir kişisel e-posta (`c.oztekiner@gmail.com`) ve bir mağaza telefonu, adres metnine gömülü yayımlanıyordu | `curl /companies` → RSC payload'da `"address":"59Q5+P64 c.oztekiner@gmail.com, Lefkoşa 99010"`; kaynak `company-directory.json` + `directory_locations` tablosu | Gizlilik: kimse yayımlamadığı bir kişisel mailbox'ı her crawler'a açma | `sanitizeDirectoryAddress` (import) + JSON/seed/DB temizliği |
+| 1 | CONFIRMED | P2 | `/companies` sunucu HTML'inde bir kişisel e-posta (`test-recipient-01@example.invalid`) ve bir mağaza telefonu, adres metnine gömülü yayımlanıyordu | `curl /companies` → RSC payload'da `"address":"59Q5+P64 test-recipient-01@example.invalid, Lefkoşa 99010"`; kaynak `company-directory.json` + `directory_locations` tablosu | Gizlilik: kimse yayımlamadığı bir kişisel mailbox'ı her crawler'a açma | `sanitizeDirectoryAddress` (import) + JSON/seed/DB temizliği |
 | 2 | CONFIRMED | P1 | Sitemap, 404 dönen bir ilan URL'i duyuruyordu | Sitemap 87 `<loc>` → 86×200, **1×404** (`source-isbulkibris-on-muhasebe-personeli-musteri-hizmeti`); canlı RPC bu slug'ı artık döndürmüyor | Google, çözülmeyen URL duyuran sitemap'i düşürür; bayat girdi katalog değişiminde tekrar oluşabilir | E2E testi (her sitemap ilanı 200) + sitemap DB hatasını logla |
 | 3 | CONFIRMED | P1 | İlan arama/detay DB hatası sessizce boş sonuç dönüyordu | `src/server/dal/jobs.ts` — `catch { return [] }` / `catch { ... return null }` | Canlı ilan 404 görünür; arıza "ilan yok"tan ayırt edilemez | `catch (error)` + `console.error` (davranış aynı) |
 | 4 | CONFIRMED | — | `/jobs?page=N` self-canonical (`/jobs`) | `curl /jobs?page=2` → `canonical=/jobs` | Yok (Google pagination için canonical kullanımını onaylıyor) | Değişiklik yok |
@@ -80,7 +80,7 @@ Canlı DB (repo dışı, tek seferlik): `directory_locations` içindeki 2 PII ad
 ## 4. Önce/sonra (gerçek gözlem)
 
 **PII (bulgu 1)**
-- Önce: `{"address":"59Q5+P64 c.oztekiner@gmail.com, Lefkoşa 99010"}` ve
+- Önce: `{"address":"59Q5+P64 test-recipient-01@example.invalid, Lefkoşa 99010"}` ve
   `{"address":"Birtek Oto Elektrik - 0392 2252776, Trachonas 99010"}`
 - Sonra: `{"address":"59Q5+P64, Lefkoşa 99010"}` ve
   `{"address":"Birtek Oto Elektrik -, Trachonas 99010"}`
