@@ -370,7 +370,10 @@ export async function searchPublicJobPreviews(input: unknown) {
     });
 
     return { previews, total, page, pageSize };
-  } catch {
+  } catch (error) {
+    console.error("Public job preview search failed; using the local fallback.", {
+      error: error instanceof Error ? error.message : "unknown_error",
+    });
     const jobs = await fetchFallbackPublicJobs();
     const query = filters.query.trim().toLocaleLowerCase("tr");
     const filtered = jobs.filter((job) => {
@@ -448,7 +451,10 @@ export async function getPublicJobCompanies(): Promise<PublicJobCompany[]> {
     }
 
     return mergeJobCompaniesByName(z.array(publicJobCompanySchema).parse(data));
-  } catch {
+  } catch (error) {
+    console.error("Public job companies lookup failed.", {
+      error: error instanceof Error ? error.message : "unknown_error",
+    });
     return [];
   }
 }
