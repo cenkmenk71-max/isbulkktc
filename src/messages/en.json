@@ -1711,7 +1711,9 @@
       "nextPage": "Next 50 listings",
       "mfaRequired": "MFA verification is required to access the moderation queue.",
       "backToPackages": "Back to package management",
-      "idle": ""
+      "idle": "",
+      "pageCount": "Listings on this page",
+      "viewDetails": "View full listing details"
     }
   }
 }
