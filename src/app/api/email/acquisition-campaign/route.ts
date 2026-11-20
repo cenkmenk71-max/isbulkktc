@@ -24,11 +24,13 @@ const BATCH_SIZE = 50;
  * unsubscribe link. Legacy quote requests remain transactional-only unless the
  * visitor separately ticks the optional marketing checkbox.
  *
- * The recipient source is opt-in `sales_leads` only (see
- * `list_marketing_recipients`): a company that submitted the quote form asked
- * to be contacted, so this is a consented follow-up rather than cold outreach.
- * A lead is marked `contacted` after its send, so the campaign advances instead
- * of re-mailing the same people on the next run.
+ * The recipient source is `sales_leads` only, but a quote request alone
+ * is not marketing permission. The service-role recipient RPC requires the
+ * separately requested, email-confirmed `marketing_consent` state, a matching
+ * consent timestamp, and absence from the shared suppression list. Legacy and
+ * pending-confirmation leads stay out of the campaign.
+ * A lead is marked `contacted` after an accepted send, so the campaign advances
+ * instead of intentionally re-mailing the same people on the next run.
  */
 
 type MarketingRecipient = {

@@ -19,6 +19,7 @@ test("marketing consent token is signed, scoped, and expires after the advertise
     version: 1,
     leadId: LEAD_ID,
     locale: "tr",
+    emailHash: createHash("sha256").update("person@example.test").digest("hex"),
     expiresAt: Math.floor(NOW / 1000) + MARKETING_CONSENT_TOKEN_TTL_SECONDS,
   });
 });
