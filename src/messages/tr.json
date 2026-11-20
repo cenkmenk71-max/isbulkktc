@@ -967,6 +967,7 @@
     "applicationsTitle": "Başvurularım",
     "applicationsDescription": "Başvurunuzun işverene iletilip iletilmediğini, durumunu ve işverenin başvuruyu ilk ne zaman görüntülediğini buradan takip edin.",
     "noApplications": "Henüz bir iş ilanına başvurmadınız.",
+    "applicationsLoadFailed": "Başvurularınız şu anda yüklenemedi. Lütfen sayfayı yenileyin.",
     "applicationSubmittedAt": "Başvuru tarihi",
     "applicationViewedAt": "İşverenin ilk görüntüleme zamanı",
     "applicationNotViewed": "İşveren başvurunuzu henüz görüntülemedi.",
