@@ -42,8 +42,8 @@ begin
   v_company_count := pg_catalog.jsonb_array_length(_companies);
   v_job_count := pg_catalog.jsonb_array_length(_jobs);
 
-  if v_company_count < 1 or v_company_count > 1000
-     or v_job_count < 1 or v_job_count > 1000
+  if v_company_count < 1 or v_company_count > 200
+     or v_job_count < 1 or v_job_count > 200
      or pg_catalog.jsonb_array_length(_snapshots) <> v_job_count then
     raise exception 'Source catalogue payload sizes are invalid.'
       using errcode = '22023';
