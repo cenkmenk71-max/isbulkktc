@@ -544,6 +544,8 @@ select is(
   'an AAL1 moderation rejection leaves the job pending'
 );
 
+reset role;
+
 select is(
   (select count(*)::integer
    from public.audit_logs
