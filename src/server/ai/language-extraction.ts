@@ -50,7 +50,9 @@ Return JSON:`;
 
   const parsed = LanguageExtractionResultSchema.safeParse(response);
   if (!parsed.success) {
-    console.error("Language extraction schema validation failed:", parsed.error);
+    console.error("Language extraction schema validation failed.", {
+      issues: parsed.error.issues.map(({ code, path }) => ({ code, path })),
+    });
     return fallbackLanguageExtraction(cvText);
   }
 
@@ -122,7 +124,7 @@ async function callLLMWithStructuredOutput(prompt: string): Promise<LanguageExtr
   });
 
   if (!response.ok) {
-    console.error("LLM call failed:", response.status, await response.text());
+    console.error("CV AI provider request failed.", { status: response.status });
     return null;
   }
 

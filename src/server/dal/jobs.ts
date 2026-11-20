@@ -370,7 +370,10 @@ export async function searchPublicJobPreviews(input: unknown) {
     });
 
     return { previews, total, page, pageSize };
-  } catch {
+  } catch (error) {
+    console.error("Public job preview search failed; using the local fallback.", {
+      error: error instanceof Error ? error.message : "unknown_error",
+    });
     const jobs = await fetchFallbackPublicJobs();
     const query = filters.query.trim().toLocaleLowerCase("tr");
     const filtered = jobs.filter((job) => {
@@ -448,7 +451,10 @@ export async function getPublicJobCompanies(): Promise<PublicJobCompany[]> {
     }
 
     return mergeJobCompaniesByName(z.array(publicJobCompanySchema).parse(data));
-  } catch {
+  } catch (error) {
+    console.error("Public job companies lookup failed.", {
+      error: error instanceof Error ? error.message : "unknown_error",
+    });
     return [];
   }
 }
@@ -520,24 +526,27 @@ export async function getPendingJobsForReview(): Promise<JobRow[]> {
 export async function getMyApplications() {
   const user = await getCurrentUser();
   if (!user || user.status !== "active") {
-    return { applications: [], notifications: [] };
+    return { applications: [], error: false };
   }
 
   try {
     const supabase = await createSupabaseServerClient();
-    const [{ data, error }, { data: notifications, error: notificationsError }] =
-      await Promise.all([
-        supabase.rpc("list_my_applications"),
-        supabase.rpc("list_my_application_notifications"),
-      ]);
+    const { data, error } = await supabase.rpc("list_my_applications");
 
-    if (error || notificationsError) {
-      return { applications: [], notifications: [] };
+    if (error) {
+      console.error("Candidate applications could not be loaded.", {
+        code: error.code,
+      });
+      return { applications: [], error: true };
     }
 
-    return { applications: data ?? [], notifications: notifications ?? [] };
-  } catch {
-    return { applications: [], notifications: [] };
+    return { applications: data ?? [], error: false };
+  } catch (caughtError) {
+    console.error("Candidate applications lookup failed.", {
+      error:
+        caughtError instanceof Error ? caughtError.message : "unknown_error",
+    });
+    return { applications: [], error: true };
   }
 }
 

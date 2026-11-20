@@ -1011,6 +1011,13 @@ yerel-ayar kopyalarını tekilleştirir (default `/tr` dahil); `compareFacetPari
 brief-fazlası'nda `onlyInLlms`, sitemap-fazlası'nda `onlyInSitemap`, facetsiz-belgede simetrik.
 **Toplam:** `test:unit` **1082/1082** (önceki 1076 + 6).
 
+**Ek cache doğrulaması (2026-11-20):** Her iki route da `force-dynamic` olsa da yanıt
+başlığı `Cache-Control: public, max-age=3600` idi. Bu, route yorumundaki "never cached"
+sözleşmesiyle çelişiyor ve CDN/HTTP katmanında son canlı ilan projeksiyonunun bir saate
+kadar eskimesine izin veriyordu. İki handler artık açıkça `Cache-Control: no-store`
+döndürüyor; `tests/unit/llms-brief-dynamic.test.ts` bu başlığı iki route için de
+denetliyor. Deploy sonrası canlı header ve facet-parity doğrulaması ayrıca yapılmalıdır.
+
 ## EK — Tur 11: Googlebot `<head>` metadata'sını kaybediyor — canonical `<body>`'ye düşüyor (P0) (2026-11-12)
 
 ### §64. Yönetici özeti (bu turun tek cümlesi)

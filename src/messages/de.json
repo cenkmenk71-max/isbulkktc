@@ -883,7 +883,8 @@
     "companyLabel": "ARBEITGEBER",
     "companyLocation": "Unternehmensstandort",
     "companyWebsite": "Website",
-    "companyDirectoryLink": "Im Unternehmensverzeichnis ansehen"
+    "companyDirectoryLink": "Im Unternehmensverzeichnis ansehen",
+    "sourceAttributionLink": "Auf der Veröffentlichungswebsite öffnen"
   },
   "JobApplication": {
     "title": "Auf diese Stelle bewerben",
@@ -967,6 +968,7 @@
     "applicationsTitle": "Meine Bewerbungen",
     "applicationsDescription": "Verfolgen Sie die Übermittlung, den Status und den Zeitpunkt, zu dem der Arbeitgeber Ihre Bewerbung erstmals angesehen hat.",
     "noApplications": "Sie haben sich noch nicht auf eine Stelle beworben.",
+    "applicationsLoadFailed": "Ihre Bewerbungen konnten gerade nicht geladen werden. Bitte laden Sie die Seite neu.",
     "applicationSubmittedAt": "Beworben am",
     "applicationViewedAt": "Erstmals vom Arbeitgeber angesehen",
     "applicationNotViewed": "Der Arbeitgeber hat Ihre Bewerbung noch nicht angesehen.",

@@ -208,7 +208,7 @@ issue açar.
   sabitliyor (ratchet). Kanıt: standalone sunucuda `/de/blog` hâlâ
   `x-nextjs-prerender: 1` (iç önbellek HIT) ama artık `private, no-cache,
   no-store` döner; `/robots.txt` (`public, max-age=0`), `/sitemap.xml`,
-  `/llms.txt` (`public, max-age=3600`) ve `/images/*` değişmemiştir. İç ISR
+  `/llms.txt` ve `/llms-full.txt` kendi route yanıtlarında `Cache-Control: no-store` döndürür; böylece `force-dynamic` canlı facet projeksiyonunun paylaşımlı HTTP cache tarafından bir saat tutulması engellenir. `/images/*` önbellek davranışı değişmemiştir. İç ISR
   önbelleği korunur, yalnız paylaşımlı katman (CDN/proxy) devre dışı kalır.
 - **Görsel optimizasyon allowlist'i:** `images.remotePatterns` sunucu tarafında
   `/ _next/image`'ın hangi host'lardan görsel çekebileceğini belirler; her desen

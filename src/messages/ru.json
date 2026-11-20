@@ -883,7 +883,8 @@
     "companyLabel": "РАБОТОДАТЕЛЬ",
     "companyLocation": "Местоположение компании",
     "companyWebsite": "Веб-сайт",
-    "companyDirectoryLink": "Открыть в каталоге компаний"
+    "companyDirectoryLink": "Открыть в каталоге компаний",
+    "sourceAttributionLink": "Открыть на сайте публикации"
   },
   "JobApplication": {
     "title": "Откликнуться на вакансию",
@@ -967,6 +968,7 @@
     "applicationsTitle": "Мои отклики",
     "applicationsDescription": "Отслеживайте передачу отклика работодателю, его статус и время первого просмотра.",
     "noApplications": "Вы ещё не откликались на вакансии.",
+    "applicationsLoadFailed": "Не удалось загрузить ваши отклики. Пожалуйста, обновите страницу.",
     "applicationSubmittedAt": "Дата отклика",
     "applicationViewedAt": "Первый просмотр работодателем",
     "applicationNotViewed": "Работодатель ещё не просмотрел ваш отклик.",

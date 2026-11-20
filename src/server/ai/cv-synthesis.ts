@@ -51,7 +51,9 @@ Return JSON:`;
 
   const parsed = CVSynthesisResultSchema.safeParse(response);
   if (!parsed.success) {
-    console.error("CV synthesis schema validation failed:", parsed.error);
+    console.error("CV synthesis schema validation failed.", {
+      issues: parsed.error.issues.map(({ code, path }) => ({ code, path })),
+    });
     return fallbackSynthesis(cvFullText);
   }
 
@@ -107,7 +109,7 @@ async function callLLMWithStructuredOutput(prompt: string): Promise<CVSynthesisR
   });
 
   if (!response.ok) {
-    console.error("LLM call failed:", response.status, await response.text());
+    console.error("CV AI provider request failed.", { status: response.status });
     return null;
   }
 

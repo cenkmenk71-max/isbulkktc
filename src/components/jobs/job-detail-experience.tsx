@@ -27,6 +27,10 @@ export async function JobDetailExperience({
   ]);
 
   const summaryIsRedundant = isRedundantJobSummary(job.summary, job.description);
+  const sourceListingHost =
+    job.publication_source === "source_site" && job.source_listing_url
+      ? new URL(job.source_listing_url).hostname
+      : null;
 
   return (
     <div className="job-detail-page">
@@ -126,10 +130,24 @@ export async function JobDetailExperience({
                     {t("companyLocation")}: {job.company.municipality}
                   </p>
                 ) : null}
-                <Link href="/companies">
-                  {t("companyDirectoryLink")}
-                  <ArrowUpRight size={14} aria-hidden="true" />
-                </Link>
+                <div className="job-detail-company-links">
+                  <Link className="job-detail-company-link" href="/companies">
+                    {t("companyDirectoryLink")}
+                    <ArrowUpRight size={14} aria-hidden="true" />
+                  </Link>
+                  {job.publication_source === "source_site" && job.source_listing_url ? (
+                    <a
+                      aria-label={`${sourceListingHost} — ${t("sourceAttributionLink")}`}
+                      className="job-detail-source-link"
+                      href={job.source_listing_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {sourceListingHost}
+                      <ArrowUpRight size={14} aria-hidden="true" />
+                    </a>
+                  ) : null}
+                </div>
               </section>
             </aside>
           </div>

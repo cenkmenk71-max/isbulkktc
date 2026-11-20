@@ -272,7 +272,73 @@ test("a 42501 from the RPC is mapped to unauthorized, not to a generic failure",
 });
 
 // ---------------------------------------------------------------------------
-// 3. Mail is best-effort: a delivery failure never fails the stored write.
+// 3. Candidate application history is independent of the unused notification
+//    feed. A notification outage must never erase a successfully loaded list.
+// ---------------------------------------------------------------------------
+
+test("candidate applications load even when the unused notification RPC fails", async () => {
+  resetBoundary({
+    user: fakeAuthUser({ id: ID }),
+    tables: {
+      profiles: { data: fakeProfileRow({ id: ID }), error: null },
+    },
+    rpcs: {
+      list_my_applications: {
+        data: [
+          {
+            application_id: ID,
+            job_id: "00000000-0000-4000-8000-000000000002",
+            job_title: "Backend Developer",
+            job_slug: "backend-developer",
+            application_status: "submitted",
+            submitted_at: "2026-11-20T08:00:00.000Z",
+            first_viewed_at: null,
+          },
+        ],
+        error: null,
+      },
+      list_my_application_notifications: {
+        data: null,
+        error: { code: "XX000", message: "notification feed unavailable" },
+      },
+    },
+  });
+
+  const { getMyApplications } = await import("../../src/server/dal/jobs");
+  const result = await getMyApplications();
+
+  assert.equal(result.error, false);
+  assert.equal(result.applications.length, 1);
+  assert.equal(result.applications[0].job_title, "Backend Developer");
+  assert.deepEqual(
+    rpcNames(),
+    ["list_my_applications"],
+    "the dashboard must not query an unused notification feed",
+  );
+});
+
+test("candidate application query failures are distinguishable from an empty history", async () => {
+  resetBoundary({
+    user: fakeAuthUser({ id: ID }),
+    tables: {
+      profiles: { data: fakeProfileRow({ id: ID }), error: null },
+    },
+    rpcs: {
+      list_my_applications: {
+        data: null,
+        error: { code: "XX000", message: "application query unavailable" },
+      },
+    },
+  });
+
+  const { getMyApplications } = await import("../../src/server/dal/jobs");
+  const result = await getMyApplications();
+
+  assert.deepEqual(result, { applications: [], error: true });
+});
+
+// ---------------------------------------------------------------------------
+// 4. Mail is best-effort: a delivery failure never fails the stored write.
 // ---------------------------------------------------------------------------
 
 test("a feedback receipt failure does not turn a stored submission into an error", async () => {
@@ -311,7 +377,7 @@ test("a sales receipt failure does not turn a stored lead into an error", async 
 });
 
 // ---------------------------------------------------------------------------
-// 4. The RPC receives exactly the validated values (no caller id injection).
+// 5. The RPC receives exactly the validated values (no caller id injection).
 // ---------------------------------------------------------------------------
 
 test("the feedback RPC receives the caller's message, not a caller-supplied id", async () => {
@@ -340,7 +406,7 @@ test("the feedback RPC receives the caller's message, not a caller-supplied id",
 });
 
 // ---------------------------------------------------------------------------
-// 5. A malformed request is rejected at the boundary, before any call.
+// 6. A malformed request is rejected at the boundary, before any call.
 // ---------------------------------------------------------------------------
 
 test("an invalid feedback payload never reaches the database", async () => {
@@ -359,7 +425,7 @@ test("an invalid feedback payload never reaches the database", async () => {
 
 
 // ---------------------------------------------------------------------------
-// 6. Account deletion: session identity -> service-role delete, fail closed.
+// 7. Account deletion: session identity -> service-role delete, fail closed.
 // ---------------------------------------------------------------------------
 
 test("account deletion targets only the authenticated user and signs out", async () => {

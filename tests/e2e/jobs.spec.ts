@@ -132,9 +132,13 @@ test("source employer details stay separate and link back to their public source
   await expect(page.getByText("İşKıbrıs")).toHaveCount(0);
   await expect(page.locator(".jobs-source-note")).toHaveCount(0);
   await expect(page.locator(".jobs-source-application-note")).toHaveCount(0);
-  await expect(
-    page.locator('.job-detail-aside a[href^="https://"]'),
-  ).toHaveCount(0);
+  const iskibrisSourceLink = page.locator(".job-detail-source-link");
+  await expect(iskibrisSourceLink).toHaveAttribute(
+    "href",
+    "https://www.iskibris.com/jobs/25822",
+  );
+  await expect(iskibrisSourceLink).toHaveAttribute("target", "_blank");
+  await expect(iskibrisSourceLink).toHaveAttribute("rel", "noopener noreferrer");
 
   await page.goto("/tr/jobs/source-isbulkibris-muhasebe-denetim-personeli");
   await expect(
@@ -145,9 +149,13 @@ test("source employer details stay separate and link back to their public source
   await expect(
     page.locator(".jobs-source-note, .jobs-source-application-note"),
   ).toHaveCount(0);
-  await expect(
-    page.locator('.job-detail-aside a[href^="https://"]'),
-  ).toHaveCount(0);
+  const isbulkibrisSourceLink = page.locator(".job-detail-source-link");
+  await expect(isbulkibrisSourceLink).toHaveAttribute(
+    "href",
+    "https://isbulkibris.com/jobs/548e245b-2c28-46e0-8b9a-63f2e99ab51b",
+  );
+  await expect(isbulkibrisSourceLink).toHaveAttribute("target", "_blank");
+  await expect(isbulkibrisSourceLink).toHaveAttribute("rel", "noopener noreferrer");
 });
 
 test("every employer logo tile centres its artwork without distortion", async ({

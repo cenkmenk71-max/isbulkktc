@@ -883,7 +883,8 @@
     "companyLabel": "İŞVEREN",
     "companyLocation": "Şirket konumu",
     "companyWebsite": "Web sitesi",
-    "companyDirectoryLink": "Şirket rehberinde görüntüle"
+    "companyDirectoryLink": "Şirket rehberinde görüntüle",
+    "sourceAttributionLink": "İlanı yayımlayan sitede aç"
   },
   "JobApplication": {
     "title": "Bu ilana başvurun",
@@ -967,6 +968,7 @@
     "applicationsTitle": "Başvurularım",
     "applicationsDescription": "Başvurunuzun işverene iletilip iletilmediğini, durumunu ve işverenin başvuruyu ilk ne zaman görüntülediğini buradan takip edin.",
     "noApplications": "Henüz bir iş ilanına başvurmadınız.",
+    "applicationsLoadFailed": "Başvurularınız şu anda yüklenemedi. Lütfen sayfayı yenileyin.",
     "applicationSubmittedAt": "Başvuru tarihi",
     "applicationViewedAt": "İşverenin ilk görüntüleme zamanı",
     "applicationNotViewed": "İşveren başvurunuzu henüz görüntülemedi.",
