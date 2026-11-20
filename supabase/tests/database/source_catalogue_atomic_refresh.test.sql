@@ -1,6 +1,6 @@
 begin;
 
-select plan(19);
+select plan(20);
 
 set local "request.jwt.claims" = '{"role":"service_role","iss":"supabase"}';
 
@@ -131,7 +131,7 @@ select throws_ok(
           'logo_url', null
         ),
         pg_catalog.jsonb_build_object(
-          'name', 'Atomic Retained Co',
+          'name', 'Upstream Retained Co',
           'slug', 'source-atomic-retained-co',
           'profile_description', '',
           'categories', '[]'::jsonb,
@@ -222,7 +222,7 @@ select is(
         'logo_url', null
       ),
       pg_catalog.jsonb_build_object(
-        'name', 'Atomic Retained Co',
+        'name', 'Upstream Retained Co',
         'slug', 'source-atomic-retained-co',
         'profile_description', '',
         'categories', '[]'::jsonb,
@@ -343,6 +343,15 @@ select ok(
     where slug = 'source-atomic-retained-co'
   ),
   'a source company verification decision is not reset during refresh'
+);
+
+select ok(
+  (
+    select name = 'Atomic Retained Co'
+    from public.companies
+    where slug = 'source-atomic-retained-co'
+  ),
+  'upstream refresh does not overwrite a claimed company profile'
 );
 
 -- The privilege grant is the first line of defence; the function body must
