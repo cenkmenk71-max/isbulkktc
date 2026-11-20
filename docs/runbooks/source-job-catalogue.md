@@ -29,6 +29,8 @@ tüm değişikliği geri alır; eski katalog ve eski değişiklik defteri birlik
 RPC yalnızca `service_role` tarafından çağrılabilir ve kendi gövdesinde JWT rolünü
 yeniden doğrular.
 
+Atomik RPC isteği boyutunu güvenli tutmak için tek yenilemede en fazla 200 ilan kabul edilir; daha büyük bir katalog için staging/batch tasarımı gerekir.
+
 `--keep-existing` seçeneği artık desteklenmez; bu seçenek atomik tam-katalog
 yenilemesiyle çeliştiği için kullanılırsa işlem açık hata verir.
 
