@@ -1,6 +1,6 @@
 begin;
 
-select plan(18);
+select plan(19);
 
 set local "request.jwt.claims" = '{"role":"service_role","iss":"supabase"}';
 
@@ -49,7 +49,7 @@ insert into public.companies (
   'a1000000-0000-4000-8000-000000000002',
   'Atomic Retained Co',
   'source-atomic-retained-co',
-  'pending',
+  'verified',
   '',
   '{}'::text[]
 );
@@ -119,16 +119,28 @@ insert into public.job_source_snapshots (
 select throws_ok(
   $$
     select public.replace_source_job_catalogue(
-      pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
-        'name', 'Atomic New Co',
-        'slug', 'source-atomic-new-co',
-        'profile_description', '',
-        'categories', '[]'::jsonb,
-        'website', null,
-        'municipality', null,
-        'source_profile_url', null,
-        'logo_url', null
-      )),
+      pg_catalog.jsonb_build_array(
+        pg_catalog.jsonb_build_object(
+          'name', 'Atomic New Co',
+          'slug', 'source-atomic-new-co',
+          'profile_description', '',
+          'categories', '[]'::jsonb,
+          'website', null,
+          'municipality', null,
+          'source_profile_url', null,
+          'logo_url', null
+        ),
+        pg_catalog.jsonb_build_object(
+          'name', 'Atomic Retained Co',
+          'slug', 'source-atomic-retained-co',
+          'profile_description', '',
+          'categories', '[]'::jsonb,
+          'website', null,
+          'municipality', null,
+          'source_profile_url', null,
+          'logo_url', null
+        )
+      ),
       pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
         'company_slug', 'source-atomic-new-co',
         'title', 'Atomic New Role',
@@ -198,16 +210,28 @@ select ok(
 -- company, listing, provenance row and change-ledger snapshot.
 select is(
   public.replace_source_job_catalogue(
-    pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
-      'name', 'Atomic New Co',
-      'slug', 'source-atomic-new-co',
-      'profile_description', '',
-      'categories', '[]'::jsonb,
-      'website', null,
-      'municipality', null,
-      'source_profile_url', null,
-      'logo_url', null
-    )),
+    pg_catalog.jsonb_build_array(
+      pg_catalog.jsonb_build_object(
+        'name', 'Atomic New Co',
+        'slug', 'source-atomic-new-co',
+        'profile_description', '',
+        'categories', '[]'::jsonb,
+        'website', null,
+        'municipality', null,
+        'source_profile_url', null,
+        'logo_url', null
+      ),
+      pg_catalog.jsonb_build_object(
+        'name', 'Atomic Retained Co',
+        'slug', 'source-atomic-retained-co',
+        'profile_description', '',
+        'categories', '[]'::jsonb,
+        'website', null,
+        'municipality', null,
+        'source_profile_url', null,
+        'logo_url', null
+      )
+      ),
     pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
       'company_slug', 'source-atomic-new-co',
       'title', 'Atomic New Role',
@@ -310,6 +334,15 @@ select ok(
     where slug = 'source-atomic-retained-co'
   ),
   'an otherwise orphaned source company with a member is retained'
+);
+
+select ok(
+  (
+    select verification_status = 'verified'
+    from public.companies
+    where slug = 'source-atomic-retained-co'
+  ),
+  'a source company verification decision is not reset during refresh'
 );
 
 -- The privilege grant is the first line of defence; the function body must
