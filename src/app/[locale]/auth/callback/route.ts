@@ -14,6 +14,7 @@ import {
   resolveAuthFailurePath,
 } from "@/features/identity/auth-routing";
 import { isAccountBlocked } from "@/features/identity/account-status";
+import { inspectPkceVerifierCookies } from "@/features/identity/pkce-cookie-diagnostics";
 import {
   isNewOAuthAccount,
   mergeLocaleIntoUserMetadata,
@@ -109,19 +110,12 @@ function getPkceCookieDiagnostics(
 
   return {
     hasFlowId: Boolean(flowId),
-    hasFlowVerifierCookie:
-      storageKey && flowId
-        ? hasCookieValueOrChunk(
-            cookieNames,
-            `${storageKey}-flow-${flowId}-code-verifier`,
-          )
-        : null,
-    hasLegacyVerifierCookie: storageKey
-      ? hasCookieValueOrChunk(
-          cookieNames,
-          `${storageKey}-code-verifier`,
-        )
-      : null,
+    ...(storageKey
+      ? inspectPkceVerifierCookies(cookieNames, storageKey, flowId)
+      : {
+          hasFlowVerifierCookie: null,
+          hasLegacyVerifierCookie: false,
+        }),
     callbackHostMatchesAppOrigin: request.nextUrl.host === appBaseUrl.host,
   };
 }
