@@ -547,3 +547,12 @@ Vercel custom hostname veya Vercel korumasına kontrollü bypass sağlayan güve
 bir proxy değerlendirilmelidir. Genel Bot Fight Mode, WAF ya da Vercel SSO
 kapatılmamalı; uygulama katmanındaki Svix imza ve cron Bearer doğrulamaları
 korunmalıdır.
+
+
+## Acquisition campaign — affirmative-consent release gate
+
+The acquisition sender is promotional mail. A corporate quote request, a confirmed mailbox, or the absence of an unsubscribe record is not affirmative marketing permission. The production recipient RPC must require a separately requested and email-confirmed consent record, a matching consent timestamp/version, and absence from the shared suppression list.
+
+The acquisition route therefore returns **503 before database access or sending** unless `MARKETING_CAMPAIGN_CONSENT_READY=true`. Do not set this variable until the consent migration, double-opt-in confirmation flow, recipient RPC predicate, role/ACL protections, and integration/pgTAP tests are deployed and verified against production. The flag is a release gate, not a replacement for the database predicate. The GitHub Actions workflow treats missing secrets and all 503 responses as failed runs rather than green no-op successes.
+
+Existing company-directory records are not acquisition recipients. Do not cold-email the directory; only separately consented leads may enter the campaign queue.
