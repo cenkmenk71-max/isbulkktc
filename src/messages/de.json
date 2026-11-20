@@ -857,7 +857,8 @@
       "on_site": "Vor Ort",
       "hybrid": "Hybrid",
       "remote": "Remote"
-    }
+    },
+    "unavailable": "Stellenanzeigen sind vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut."
   },
   "JobsPage": {
     "eyebrow": "İŞBUL KKTC · KARRIERECHANCEN",
@@ -954,7 +955,8 @@
     "previous": "Zurück",
     "next": "Weiter",
     "pageCount": "Seite {current} von {total}",
-    "sourceNote": "Die hier gezeigte geografische Abdeckung ist ungefähr und stellt keine offizielle Grenze dar. Ein Eintrag bedeutet nicht, dass das Unternehmen registriert oder geprüft ist."
+    "sourceNote": "Die hier gezeigte geografische Abdeckung ist ungefähr und stellt keine offizielle Grenze dar. Ein Eintrag bedeutet nicht, dass das Unternehmen registriert oder geprüft ist.",
+    "jobEmployersUnavailable": "Arbeitgeber mit aktiven Stellenanzeigen sind vorübergehend nicht verfügbar. Das übrige Unternehmensverzeichnis bleibt verfügbar."
   },
   "CandidateDashboard": {
     "eyebrow": "BEWERBERPROFIL",
