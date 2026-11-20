@@ -15,6 +15,10 @@ jobs:
           node-version: 22
       - name: Render every email template
         run: node --experimental-strip-types scripts/email-preview.mjs
+      - name: Include the real brand logo in the preview bundle
+        run: |
+          mkdir -p .artifacts/email-preview/assets
+          cp public/images/isbul-logo-mark-white.png .artifacts/email-preview/assets/isbul-logo-mark-white.png
       - name: Upload rendered HTML gallery
         uses: actions/upload-artifact@v4
         with:
