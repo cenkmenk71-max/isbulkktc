@@ -388,7 +388,7 @@ select lives_ok(
 );
 
 select throws_ok(
-  $$update public.jobs set status = 'published'
+  $$$update public.jobs set status = 'published'
     where slug = 'operations-coordinator'$$,
   '42501',
   null,
@@ -416,7 +416,7 @@ select is(
 );
 
 select throws_ok(
-  $$select public.review_job(
+  $$$select public.review_job(
       (select id from public.jobs where slug = 'operations-coordinator'),
       'approved',
       null
@@ -432,7 +432,7 @@ set local "request.jwt.claims" =
 select lives_ok(
   $update public.jobs
     set title = 'Updated Draft Accountant'
-    where id = '30000000-0000-4000-8000-000000000002'$,
+    where id = '30000000-0000-4000-8000-000000000002'$$,
   'a company owner can update a platform-owned draft'
 );
 
@@ -523,7 +523,7 @@ select throws_ok(
       (select id from public.jobs where slug = 'operations-coordinator'),
       'approved',
       null
-    )$,
+    )$$,
   '42501',
   null,
   'an AAL1 platform administrator cannot call the moderation RPC directly'
@@ -555,7 +555,7 @@ select throws_ok(
       (select id from public.jobs where slug = 'operations-coordinator'),
       'approved',
       null
-    )$,
+    )$$,
   '42501',
   null,
   'an AAL2 non-admin cannot call the moderation RPC'
