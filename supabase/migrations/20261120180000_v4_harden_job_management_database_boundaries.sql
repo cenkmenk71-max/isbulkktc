@@ -31,7 +31,8 @@ begin
       using errcode = '42501';
   end if;
 
-  if _decision not in ('approved', 'rejected')
+  if _decision is null
+     or _decision not in ('approved', 'rejected')
      or (_review_note is not null and pg_catalog.char_length(_review_note) > 1000)
      or (_decision = 'rejected' and pg_catalog.btrim(coalesce(_review_note, '')) = '') then
     raise exception 'The moderation decision or review note is invalid.'
