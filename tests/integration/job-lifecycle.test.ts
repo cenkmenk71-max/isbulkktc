@@ -597,6 +597,7 @@ test("reviewJob rejects a rejection without a reason before the RPC", async () =
 test("reviewJob refuses an AAL1 platform admin before the moderation RPC", async () => {
   signedIn({
     assuranceLevel: "aal1",
+    tables: { user_roles: { data: { role: "platform_admin" }, error: null } },
     rpcs: {
       has_platform_role: { data: true, error: null },
     },
@@ -615,6 +616,7 @@ test("reviewJob refuses an AAL1 platform admin before the moderation RPC", async
 test("reviewJob sends the decision and note to the RPC for an MFA-verified admin", async () => {
   signedIn({
     assuranceLevel: "aal2",
+    tables: { user_roles: { data: { role: "platform_admin" }, error: null } },
     rpcs: {
       has_platform_role: { data: true, error: null },
       review_job: { data: null, error: null },
@@ -640,6 +642,7 @@ test("reviewJob sends the decision and note to the RPC for an MFA-verified admin
 test("reviewJob maps 22023 to reviewFailed", async () => {
   signedIn({
     assuranceLevel: "aal2",
+    tables: { user_roles: { data: { role: "platform_admin" }, error: null } },
     rpcs: {
       has_platform_role: { data: true, error: null },
       review_job: { data: null, error: { code: "22023" } },
