@@ -332,13 +332,13 @@ test("CV AI diagnostics never log provider response bodies or invalid CV-derived
     for (const args of calls) {
       assert.doesNotMatch(
         args,
-        /response\\.text\\s*\\(\\)|parsed\\.error(?!\\.issues)/,
+        /response\.text\s*\(\)|parsed\.error(?!\.issues)/,
         `${file} must not log provider response bodies or Zod issue values`,
       );
     }
     assert.match(
       code,
-      /issues: parsed\\.error\\.issues\\.map\\(\\(\\{ code, path \\}\\)/,
+      /issues: parsed\.error\.issues\.map\(\(\{ code, path \}\)/,
       `${file} should retain only non-value schema diagnostics`,
     );
   }
