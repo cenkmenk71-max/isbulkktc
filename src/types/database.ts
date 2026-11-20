@@ -686,6 +686,17 @@ export type Database = {
           _note: string | null;
           _locale: string;
           _marketing_consent: boolean;
+        } | {
+          // Temporary production compatibility: the pre-consent migration
+          // signature remains deployed until the schema rollout is complete.
+          _company_name: string | null;
+          _contact_name: string | null;
+          _email: string;
+          _phone: string | null;
+          _plan: string | null;
+          _duration_days: number | null;
+          _note: string | null;
+          _locale: string;
         };
         Returns: string;
       };
