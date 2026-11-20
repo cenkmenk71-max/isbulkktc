@@ -5,7 +5,7 @@ begin;
 -- The importer previously deleted all source jobs, then updated the snapshot
 -- ledger, companies, jobs and provenance through separate PostgREST requests.
 -- Any network/constraint failure after the delete could leave production with
--- an empty or partially rebuilt catalogue. A single SECURITY DEFINER RPC makes
+-- an empty or partially rebuilt catalogue. A single SECURITY INVOKER RPC makes
 -- the replacement all-or-nothing; the caller must be the service-role worker.
 
 create or replace function public.replace_source_job_catalogue(
@@ -15,7 +15,7 @@ create or replace function public.replace_source_job_catalogue(
 )
 returns jsonb
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $$
 declare
@@ -26,8 +26,7 @@ declare
   v_deleted_job_count integer;
   v_deleted_company_count integer;
 begin
-  if (select auth.role()) is null
-     or (select auth.role()) <> 'service_role' then
+  if current_user <> 'service_role' then
     raise exception 'The source catalogue worker role is required.'
       using errcode = '42501';
   end if;
