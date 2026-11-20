@@ -1483,7 +1483,8 @@
     "messages": {
       "invalid": "Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
       "submitted": "Ihre Anfrage ist eingegangen! Wir melden uns in Kürze.",
-      "failed": "Die Anfrage konnte gerade nicht gesendet werden. Bitte später erneut versuchen."
+      "failed": "Die Anfrage konnte gerade nicht gesendet werden. Bitte später erneut versuchen.",
+      "consentUnavailable": "Ihre Marketingeinwilligung kann derzeit nicht gespeichert werden. Deaktivieren Sie das Kontrollkästchen und versuchen Sie erneut, Ihre Angebotsanfrage ohne Marketingeinwilligung zu senden."
     },
     "marketingConsentLabel": "Ich möchte gelegentlich Werbe-E-Mails zu Diensten und Neuigkeiten von İşBul KKTC erhalten. Die Einwilligung ist freiwillig und jederzeit widerrufbar."
   },

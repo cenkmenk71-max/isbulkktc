@@ -1504,7 +1504,8 @@
     "messages": {
       "invalid": "Please check the form and try again.",
       "submitted": "Your request reached us! Our team will get back to you shortly.",
-      "failed": "The request could not be sent right now. Please try again later."
+      "failed": "The request could not be sent right now. Please try again later.",
+      "consentUnavailable": "Your marketing consent cannot be recorded right now. Uncheck the box and try again to send your quote request without marketing consent."
     },
     "marketingConsentLabel": "I agree to receive occasional promotional emails about İşBul KKTC services and updates. This consent is optional, and I can unsubscribe at any time."
   },

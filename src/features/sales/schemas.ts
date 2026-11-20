@@ -29,5 +29,5 @@ export const salesLeadSchema = z.object({
 
 export type SalesLeadFormState = {
   status: "idle" | "success" | "error";
-  message: "idle" | "invalid" | "submitted" | "failed";
+  message: "idle" | "invalid" | "submitted" | "failed" | "consentUnavailable";
 };

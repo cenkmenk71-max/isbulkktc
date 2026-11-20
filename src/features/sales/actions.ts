@@ -57,20 +57,41 @@ export async function submitSalesLead(
   const supabase = await createSupabaseServerClient();
   // Forward the visitor address so the DB throttle keys on it (#206); see the
   // note in `src/features/feedback/actions.ts`.
-  const { data, error } = await supabase
+  const legacyArgs = {
+    _company_name: result.data.companyName || null,
+    _contact_name: result.data.contactName || null,
+    _email: result.data.email,
+    _phone: result.data.phone || null,
+    _plan: result.data.plan || null,
+    _duration_days: durationDays,
+    _note: result.data.note || null,
+    _locale: result.data.locale,
+  };
+
+  let submission = await supabase
     .rpc("submit_sales_lead", {
-      _company_name: result.data.companyName || null,
-      _contact_name: result.data.contactName || null,
-      _email: result.data.email,
-      _phone: result.data.phone || null,
-      _plan: result.data.plan || null,
-      _duration_days: durationDays,
-      _note: result.data.note || null,
-      _locale: result.data.locale,
+      ...legacyArgs,
       _marketing_consent: result.data.marketingConsent,
     })
     .setHeader("x-client-ip", ip);
 
+  // Production may briefly lag the application migration. The legacy 8-argument
+  // RPC is still present there. It is safe to use only when the visitor did not
+  // opt into marketing: that function stores no consent, so never silently drop
+  // an affirmative consent choice.
+  if (submission.error?.code === "PGRST202") {
+    if (result.data.marketingConsent) {
+      console.error("Sales lead consent could not be recorded because the consent-aware RPC is unavailable.");
+      return { status: "error", message: "consentUnavailable" };
+    }
+
+    console.warn("Sales lead used the legacy no-consent RPC while the consent-aware migration is pending.");
+    submission = await supabase
+      .rpc("submit_sales_lead", legacyArgs)
+      .setHeader("x-client-ip", ip);
+  }
+
+  const { data, error } = submission;
   if (error || typeof data !== "string") {
     console.error("Sales lead submission failed.", { code: error?.code });
     return { status: "error", message: "failed" };

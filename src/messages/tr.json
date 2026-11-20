@@ -1483,7 +1483,8 @@
     "messages": {
       "invalid": "Lütfen formu kontrol edip tekrar deneyin.",
       "submitted": "Talebiniz bize ulaştı! Ekibimiz en kısa sürede dönecek.",
-      "failed": "Talep şu anda gönderilemedi. Lütfen daha sonra tekrar deneyin."
+      "failed": "Talep şu anda gönderilemedi. Lütfen daha sonra tekrar deneyin.",
+      "consentUnavailable": "Pazarlama izniniz şu anda kaydedilemiyor. Teklif talebinizi izinsiz göndermek için onay kutusunu kaldırıp yeniden deneyin."
     },
     "marketingConsentLabel": "İşBul KKTC hizmetleri ve yenilikleri hakkında ara sıra tanıtım e-postaları almak istiyorum. Bu onay isteğe bağlıdır; dilediğim zaman abonelikten çıkabilirim."
   },
