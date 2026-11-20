@@ -491,6 +491,107 @@ export async function getCompanyJobs(companyId: string): Promise<JobRow[]> {
   return data;
 }
 
+const employerJobsCursorSchema = z.object({
+  createdAt: z.string().datetime({ offset: true }),
+  id: z.string().uuid(),
+});
+
+export async function getCompanyJobsPage(
+  companyId: string,
+  input?: { afterCreatedAt?: string; afterId?: string },
+): Promise<{ jobs: JobRow[]; nextCursor: { createdAt: string; id: string } | null }> {
+  const user = await getCurrentUser();
+  if (!user || user.status !== "active") {
+    throw new Error("An active user session is required to read company jobs.");
+  }
+  if (!z.string().uuid().safeParse(companyId).success) {
+    throw new Error("A valid company identifier is required.");
+  }
+  if (!(await isJobCompanyMember(companyId))) {
+    throw new Error("The current user is not authorized for this company's jobs.");
+  }
+
+  const hasCursorPart = Boolean(input?.afterCreatedAt) || Boolean(input?.afterId);
+  const cursor = hasCursorPart
+    ? employerJobsCursorSchema.safeParse({
+        createdAt: input?.afterCreatedAt,
+        id: input?.afterId,
+      })
+    : null;
+  if (cursor && !cursor.success) {
+    throw new Error("The employer jobs cursor is invalid.");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  let query = supabase
+    .from("jobs")
+    .select("*")
+    .eq("company_id", companyId)
+    .eq("publication_source", "platform")
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
+
+  if (cursor?.success) {
+    const { createdAt, id } = cursor.data;
+    query = query.or(
+      `created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${id})`,
+    );
+  }
+
+  const { data, error } = await query.limit(51);
+  if (error) {
+    throw new Error("Company jobs could not be loaded.", { cause: error });
+  }
+
+  const hasMore = data.length > 50;
+  const jobs = hasMore ? data.slice(0, 50) : data;
+  const last = jobs.at(-1);
+
+  return {
+    jobs,
+    nextCursor: hasMore && last
+      ? { createdAt: last.created_at, id: last.id }
+      : null,
+  };
+}
+
+export async function getCompanyJobForEdit(
+  companyId: string,
+  jobId: string,
+): Promise<JobRow | null> {
+  const user = await getCurrentUser();
+  if (!user || user.status !== "active") {
+    throw new Error("An active user session is required to edit company jobs.");
+  }
+  if (
+    !z.string().uuid().safeParse(companyId).success ||
+    !z.string().uuid().safeParse(jobId).success
+  ) {
+    throw new Error("Valid company and job identifiers are required.");
+  }
+  if (!(await isJobCompanyMember(companyId))) {
+    throw new Error("The current user is not authorized for this company's jobs.");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("*")
+    .eq("id", jobId)
+    .eq("company_id", companyId)
+    .eq("publication_source", "platform")
+    .in("status", ["draft", "rejected"])
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("The requested editable company job could not be loaded.", {
+      cause: error,
+    });
+  }
+
+  return data;
+}
+
 export async function getCompanyJobEntitlements(companyId: string) {
   if (!z.string().uuid().safeParse(companyId).success) {
     throw new Error("A valid company identifier is required.");
