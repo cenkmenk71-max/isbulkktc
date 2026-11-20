@@ -3,6 +3,7 @@ import { jsonNoStore } from "@/server/http/no-store-response";
 import {
   classifyResendEvent,
   eventRecipients,
+  readResendWebhookPayload,
   verifyResendWebhook,
 } from "@/server/email/resend-webhook-core";
 
@@ -18,10 +19,10 @@ export const dynamic = "force-dynamic";
  * same service-role RPC the unsubscribe link uses and drops the address from
  * every later batch.
  *
- * Trust comes entirely from the Svix signature over the raw body; a missing,
- * forged or replayed request is a 401 before the body is read. A transient
- * failure to store the suppression answers 5xx on purpose so Resend retries
- * instead of the event being lost.
+ * Trust comes entirely from the Svix signature over the raw body. The body is
+ * read with a strict 1 MiB streaming bound before verification; forged or
+ * replayed requests never reach the database. A transient failure to store the
+ * suppression answers 5xx so Resend retries instead of the event being lost.
  */
 export async function POST(request: Request) {
   const secret = process.env.RESEND_WEBHOOK_SECRET?.trim();
@@ -32,7 +33,16 @@ export async function POST(request: Request) {
     );
   }
 
-  const payload = await request.text();
+  let payload: string | null;
+  try {
+    payload = await readResendWebhookPayload(request);
+  } catch {
+    return jsonNoStore({ message: "Invalid payload" }, { status: 400 });
+  }
+  if (payload === null) {
+    return jsonNoStore({ message: "Payload too large" }, { status: 413 });
+  }
+
   let event: { type?: string; data?: { to?: unknown } };
   try {
     event = verifyResendWebhook(

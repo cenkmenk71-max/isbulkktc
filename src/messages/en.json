@@ -1482,7 +1482,8 @@
     "noteLabel": "Briefly describe what you need",
     "submit": "Send quote request",
     "sending": "Sending…",
-    "privacyNote": "Your details are used only for the quote process and never shared with third parties.",
+    "marketingConsentLabel": "I agree to receive occasional promotional emails about İşBul KKTC services and updates. This consent is optional, and I can unsubscribe at any time.",
+    "privacyNote": "Your details are used to handle your quote request. Promotional emails are sent only with the separate optional consent below; you can unsubscribe at any time.",
     "durations": {
       "oneDay": "1 day",
       "sevenDays": "7 days",

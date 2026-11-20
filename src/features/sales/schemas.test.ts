@@ -45,3 +45,18 @@ test("the upper bound still rejects an over-long phone", () => {
   });
   assert.equal(result.success, false);
 });
+
+
+test("marketing consent is explicit and defaults to off", () => {
+  const omitted = salesLeadSchema.safeParse({ email: "a@example.com", locale: "tr" });
+  assert.ok(omitted.success);
+  assert.equal(omitted.data.marketingConsent, false);
+
+  const optedIn = salesLeadSchema.safeParse({
+    email: "a@example.com",
+    locale: "tr",
+    marketingConsent: true,
+  });
+  assert.ok(optedIn.success);
+  assert.equal(optedIn.data.marketingConsent, true);
+});

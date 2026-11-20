@@ -36,3 +36,24 @@ test("the Resend webhook error response forbids shared caching", async () => {
     restore();
   }
 });
+
+
+test("an oversized webhook payload is rejected before verification or database access", async () => {
+  resetBoundary({}, { rpcs: {} });
+  const restore = withEnv("RESEND_WEBHOOK_SECRET", "test-webhook-secret");
+  try {
+    const { POST } = await webhookRoute();
+    const response = await POST(
+      new Request("https://isbulkktc.test/api/email/resend-webhook", {
+        method: "POST",
+        body: "x".repeat(1_048_577),
+      }),
+    );
+
+    assert.equal(response.status, 413);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.deepEqual(recorded.supabase, []);
+  } finally {
+    restore();
+  }
+});
