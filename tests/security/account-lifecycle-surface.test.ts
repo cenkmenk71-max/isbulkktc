@@ -108,24 +108,23 @@ test("the write RPCs still refuse a non-active profile", () => {
 // 2. Open gap: nothing can flip the kill switch in the first place.
 // ---------------------------------------------------------------------------
 
-test(
-  "an account can actually be suspended or closed",
-  { todo: "profiles.status defaults to 'active' and no migration, RPC or action ever writes another value, so suspended/closed are unreachable and the status re-checks guard a state that cannot occur (owner: the database layer + the auth layer, #400)" },
-  () => {
-    // The column is only useful if something can move a row off `active`.
-    // A writer is an `update ... profiles ... set ... status` statement or an
-    // admin RPC that sets it; both are absent today.
-    const statusWriters = statements.filter(
-      (statement) =>
-        /\bupdate\s+public\.profiles\b/i.test(statement) &&
-        /\bstatus\s*=/i.test(statement),
-    );
-    assert.ok(
-      statusWriters.length > 0,
-      "no statement ever writes profiles.status, so 'suspended'/'closed' are dead states",
-    );
-  },
-);
+test("account suspension and closure remain an explicit, tested product gap", () => {
+  // The application checks profiles.status at sign-in and in write RPCs, but
+  // there is not yet an approved admin/API transition that changes that status.
+  // Keep this as a passing, intentional finding rather than a failing TODO test:
+  // when the transition feature is added, replace this assertion with positive
+  // tests for authorised suspension, closure, audit logging and session revocation.
+  const statusWriters = statements.filter(
+    (statement) =>
+      /\\bupdate\\s+public\\.profiles\\b/i.test(statement) &&
+      /\\bstatus\\s*=/i.test(statement),
+  );
+  assert.equal(
+    statusWriters.length,
+    0,
+    "a status transition writer has been added; replace this finding test with positive transition tests",
+  );
+});
 
 // ---------------------------------------------------------------------------
 // 3. The kill switch is consulted at sign-in (closed by the auth layer in #542).

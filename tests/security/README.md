@@ -55,7 +55,7 @@ a boundary regression is attributable at a glance.
 
 ## Findings
 
-Tests whose assertion documents an **open** finding are marked `{ todo: "…" }`.
+Open findings are recorded as passing assertions that verify the gap still exists; they do not intentionally fail the CI run.
 `node:test` reports them as `# TODO` and they do **not** fail the run, so the
 suite stays green while the gap is tracked. When the owner ships the fix
 the test passes on its own — remove the `todo` option to promote it to a gate.
