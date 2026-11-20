@@ -192,3 +192,20 @@ test("a callback with an explicit flow id never retries against the shared legac
   assert.match(route, /hasFlowVerifierCookie/);
   assert.match(route, /callbackHostMatchesAppOrigin/);
 });
+
+test("email confirmation and recovery flows opt into per-flow PKCE ids", async () => {
+  const actions = await read("src/features/identity/actions.ts");
+
+  for (const method of ["signUp", "resendConfirmation", "requestPasswordReset"]) {
+    const start = actions.indexOf(`export async function ${method}(`);
+    assert.ok(start >= 0, `${method} action must exist`);
+    const nextAction = actions.indexOf("\nexport async function ", start + 10);
+    const body = actions.slice(start, nextAction < 0 ? actions.length : nextAction);
+
+    assert.match(
+      body,
+      /experimental:\s*\{\s*appendPkceFlowIdToRedirects:\s*true\s*\}/,
+      `${method} must carry a unique flow id through the email redirect`,
+    );
+  }
+});
