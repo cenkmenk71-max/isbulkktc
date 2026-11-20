@@ -124,6 +124,8 @@ export type FakeSupabaseScript = {
   adminDeleteThrows?: boolean;
   /** Simulate a thrown session lookup, not just an auth error response. */
   getUserThrows?: boolean;
+  /** Current Supabase MFA assurance level for privileged-action tests. */
+  assuranceLevel?: "aal1" | "aal2";
 };
 
 export class FakeSupabase {
@@ -300,7 +302,10 @@ export class FakeSupabase {
     },
     mfa: {
       getAuthenticatorAssuranceLevel: async () => ({
-        data: { currentLevel: "aal1", nextLevel: "aal2" },
+        data: {
+          currentLevel: this.script.assuranceLevel ?? "aal1",
+          nextLevel: this.script.assuranceLevel ?? "aal2",
+        },
         error: null,
       }),
       listFactors: async () => ({ data: { totp: [] }, error: null }),
