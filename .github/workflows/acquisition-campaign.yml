@@ -5,8 +5,11 @@ name: Send acquisition campaign
 # nothing ever presented the bearer secret: the acquisition family had no
 # traffic at all, which is the whole point of this workflow.
 #
-# The route is idempotent (it claims a batch, sends, and marks each lead
-# `contacted`), so a missed or repeated run is safe.
+# The route returns one bounded keyset page per request. This workflow follows
+# the cursor until the queue is empty; successful leads are marked `contacted`,
+# while send/state-update failures remain visible as a failed run. Resend
+# idempotency keys are stable within the selected UTC campaign date (24-hour
+# provider retention), not a permanent delivery ledger.
 #
 # Requires two repository secrets: the production origin and the bearer secret
 # the route checks. Until both exist the job stays green and warns, so the
@@ -19,6 +22,11 @@ on:
     # re-mailing it.
     - cron: "0 6 * * *"
   workflow_dispatch:
+    inputs:
+      campaign_date:
+        description: "UTC campaign date. Reuse the original date for a retry within Resend's 24-hour idempotency window."
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -31,6 +39,7 @@ jobs:
   send:
     name: Send acquisition campaign
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     steps:
       - name: Check configuration
         id: config
@@ -50,6 +59,7 @@ jobs:
         env:
           APP_URL: ${{ secrets.APP_URL || vars.APP_URL || secrets.NEXT_PUBLIC_APP_URL }}
           CRON_SECRET: ${{ secrets.MARKETING_CRON_SECRET }}
+          INPUT_CAMPAIGN_DATE: ${{ inputs.campaign_date }}
           # Call the Vercel deployment alias, not the canonical host: the latter
           # sits behind Cloudflare, whose bot protection challenges GitHub's
           # datacenter egress before the request reaches the app. The alias
@@ -57,15 +67,66 @@ jobs:
           # the alias ever changes (same trick push-dispatch.yml uses).
           DISPATCH_ORIGIN: ${{ vars.MARKETING_DISPATCH_ORIGIN || 'https://isbulkktc-amber.vercel.app' }}
         run: |
-          set -o pipefail
-          status=$(curl -sS -o /tmp/acquisition-response.txt -w '%{http_code}' \
-            -X POST -H "Authorization: Bearer ${CRON_SECRET}" \
-            "${DISPATCH_ORIGIN%/}/api/email/acquisition-campaign")
-          echo "HTTP ${status}"
-          cat /tmp/acquisition-response.txt
-          # 503 means the sender is not configured on the server (no service-role
-          # key or no unsubscribe signing), which is a valid deployment state
-          # rather than a failure.
-          if [ "$status" != "200" ] && [ "$status" != "503" ]; then
+          set -euo pipefail
+          campaign_date="${INPUT_CAMPAIGN_DATE:-$(date -u +%F)}"
+          if ! [[ "$campaign_date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || \
+             [ "$(date -u -d "$campaign_date" +%F 2>/dev/null || true)" != "$campaign_date" ]; then
+            echo "::error::campaign_date must be a real YYYY-MM-DD UTC date."
+            exit 1
+          fi
+
+          cursor=""
+          total_sent=0
+          total_failed=0
+          page=0
+
+          while true; do
+            page=$((page + 1))
+            url="${DISPATCH_ORIGIN%/}/api/email/acquisition-campaign?campaignDate=${campaign_date}"
+            if [ -n "$cursor" ]; then
+              url="${url}&after=${cursor}"
+            fi
+
+            status=$(curl -sS --connect-timeout 10 --max-time 75 \
+              -o /tmp/acquisition-response.txt -w '%{http_code}' \
+              -X POST -H "Authorization: Bearer ${CRON_SECRET}" "$url")
+            echo "Page ${page}: HTTP ${status}"
+            cat /tmp/acquisition-response.txt
+
+            if [ "$status" = "503" ] && [ "$page" -eq 1 ]; then
+              echo "::warning title=Acquisition campaign unavailable::No recipients were processed because the production sender is not configured."
+              exit 0
+            fi
+            if [ "$status" != "200" ]; then
+              echo "::error::Acquisition campaign page ${page} failed with HTTP ${status}."
+              exit 1
+            fi
+
+            complete=$(jq -er '.complete | tostring' /tmp/acquisition-response.txt)
+            next_cursor=$(jq -r '.nextCursor // ""' /tmp/acquisition-response.txt)
+            response_date=$(jq -er '.campaignDate' /tmp/acquisition-response.txt)
+            sent=$(jq -er '.sent | numbers' /tmp/acquisition-response.txt)
+            failed=$(jq -er '.failed | numbers' /tmp/acquisition-response.txt)
+            if [ "$response_date" != "$campaign_date" ]; then
+              echo "::error::The server changed the campaign idempotency date between pages."
+              exit 1
+            fi
+            total_sent=$((total_sent + sent))
+            total_failed=$((total_failed + failed))
+            echo "Page ${page}: sent=${sent} failed=${failed} complete=${complete}"
+
+            if [ "$complete" = "true" ]; then
+              break
+            fi
+            if [ -z "$next_cursor" ] || [ "$next_cursor" = "$cursor" ]; then
+              echo "::error::The recipient cursor did not advance; refusing an infinite workflow loop."
+              exit 1
+            fi
+            cursor="$next_cursor"
+          done
+
+          echo "Acquisition campaign finished: pages=${page} sent=${total_sent} failed=${total_failed}"
+          if [ "$total_failed" -gt 0 ]; then
+            echo "::error::Some sends or lead-state updates failed. The affected leads remain queued; reconcile within the 24-hour idempotency window before retrying with campaign_date=${campaign_date}."
             exit 1
           fi

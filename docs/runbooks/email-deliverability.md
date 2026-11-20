@@ -278,6 +278,14 @@ yeniden deneme de yalnız bu 24 saat içinde duplicate-safe kabul edilmelidir. B
 süre geçtikten sonra workflow'u körlemesine yeniden çalıştırma; önce Resend
 gönderim kayıtlarını uzlaştır. Kalıcı gönderim defteri/checkpoint'i hâlâ açık
 ölçek/güvenilirlik işidir.
+
+Edinim kampanyası da 25 alıcılık keyset sayfaları döndürür; GitHub cron cursor'ı
+ayrı Vercel çağrılarında izler. Başarılı gönderimden sonra lead `contacted` olur;
+gönderim veya durum güncelleme hatası workflow'u başarısız kılar ve lead'i
+kuyrukta bırakır. Manuel retry, aynı Resend idempotency anahtarını kullanmak için
+ilk çalıştırmadaki `campaign_date` değerini vermelidir ve yalnız 24 saat içinde
+duplicate-safe kabul edilmelidir. Bu süreden sonra önce Resend gönderim
+kayıtlarını ve lead durumunu uzlaştır. Kalıcı gönderim defteri hâlâ açık.
 Aynı gün üç adres için ölçülen **gönderim uygunluğu**:
 
 | Adres | `eligible_for_send` | Neden |

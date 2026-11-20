@@ -9,7 +9,9 @@ import {
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const BATCH_SIZE = 50;
+const BATCH_SIZE = 25;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UTC_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Acquisition-campaign sender. Intended to run on a schedule (a cron entry
@@ -25,8 +27,10 @@ const BATCH_SIZE = 50;
  * The recipient source is opt-in `sales_leads` only (see
  * `list_marketing_recipients`): a company that submitted the quote form asked
  * to be contacted, so this is a consented follow-up rather than cold outreach.
- * A lead is marked `contacted` after its send, so the campaign advances instead
- * of re-mailing the same people on the next run.
+ * A lead is marked `contacted` after its send. The route processes one bounded
+ * keyset page per invocation; the workflow follows the returned cursor so a
+ * large queue cannot exceed the Vercel function execution ceiling. A failed send
+ * or failed status update is counted and leaves the lead eligible for reconciliation.
  */
 
 type MarketingRecipient = {
@@ -51,6 +55,23 @@ export async function POST(request: Request) {
     return json({ message: "Unauthorized" }, { status: 401 });
   }
 
+  const requestUrl = new URL(request.url);
+  const after = requestUrl.searchParams.get("after");
+  if (after !== null && !UUID_PATTERN.test(after)) {
+    return json({ message: "Invalid recipient cursor" }, { status: 400 });
+  }
+
+  const requestedCampaignDate = requestUrl.searchParams.get("campaignDate");
+  const campaignDate = requestedCampaignDate ?? new Date().toISOString().slice(0, 10);
+  const parsedCampaignDate = new Date(campaignDate + "T00:00:00.000Z");
+  if (
+    !UTC_DATE_PATTERN.test(campaignDate) ||
+    !Number.isFinite(parsedCampaignDate.getTime()) ||
+    parsedCampaignDate.toISOString().slice(0, 10) !== campaignDate
+  ) {
+    return json({ message: "Invalid campaign date" }, { status: 400 });
+  }
+
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
     return json(
@@ -66,75 +87,91 @@ export async function POST(request: Request) {
   }
 
   const siteUrl = getAppBaseUrl();
-  const day = new Date().toISOString().slice(0, 10);
   let sent = 0;
   let failed = 0;
-  let cursor: string | null = null;
 
-  for (;;) {
-    const { data, error } = await supabase.rpc("list_marketing_recipients", {
-      _after: cursor,
-      _batch_size: BATCH_SIZE,
+  const { data, error } = await supabase.rpc("list_marketing_recipients", {
+    _after: after,
+    _batch_size: BATCH_SIZE,
+  });
+  if (error) {
+    console.error("Marketing recipients could not be listed.", {
+      code: error.code,
     });
-    if (error) {
-      console.error("Marketing recipients could not be listed.", {
-        code: error.code,
-      });
-      return json(
-        { message: "Recipient list is temporarily unavailable", sent, failed },
-        { status: 502 },
-      );
-    }
-    const recipients = (data ?? []) as MarketingRecipient[];
-    if (recipients.length === 0) break;
-
-    for (const recipient of recipients) {
-      cursor = recipient.lead_id;
-      const unsubscribeUrl = unsubscribeUrlFor(recipient.email, siteUrl);
-      if (!unsubscribeUrl) {
-        failed += 1;
-        continue;
-      }
-
-      try {
-        const accepted = await sendMarketingEmail({
-          to: recipient.email,
-          locale: recipient.locale,
-          unsubscribeUrl,
-          campaignId: `${day}/${recipient.lead_id}`,
-        });
-        if (!accepted) {
-          // `deliver` reports a Resend rejection as a value, not a throw, so a
-          // rejected send is only visible through the return value. Counting it
-          // as `sent` would also mark the lead `contacted` and silently drop it
-          // from every future run — a lost recipient, the one thing this worker
-          // must not do.
-          failed += 1;
-          continue;
-        }
-        sent += 1;
-        // Advance the lead out of the `new` queue so the next run does not
-        // re-mail it. Best-effort: a failed status write leaves the lead `new`,
-        // so the worst case is one duplicate on the next run, never a lost send.
-        const { error: markError } = await supabase.rpc(
-          "mark_marketing_lead_contacted",
-          { _lead_id: recipient.lead_id },
-        );
-        if (markError) {
-          console.warn("Marketing lead could not be marked contacted.", {
-            code: markError.code,
-          });
-        }
-      } catch (error) {
-        failed += 1;
-        console.error("Marketing email could not be sent.", {
-          error: error instanceof Error ? error.name : "unknown_error",
-        });
-      }
-    }
-
-    if (recipients.length < BATCH_SIZE) break;
+    return json(
+      { message: "Recipient list is temporarily unavailable", sent, failed },
+      { status: 502 },
+    );
   }
 
-  return json({ message: "Acquisition campaign complete", sent, failed });
+  const recipients = (data ?? []) as MarketingRecipient[];
+  for (const recipient of recipients) {
+    const unsubscribeUrl = unsubscribeUrlFor(recipient.email, siteUrl);
+    if (!unsubscribeUrl) {
+      failed += 1;
+      continue;
+    }
+
+    let accepted = false;
+    try {
+      accepted = await sendMarketingEmail({
+        to: recipient.email,
+        locale: recipient.locale,
+        unsubscribeUrl,
+        campaignId: campaignDate + "/" + recipient.lead_id,
+      });
+    } catch (error) {
+      failed += 1;
+      console.error("Marketing email could not be sent.", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      continue;
+    }
+
+    if (!accepted) {
+      // A rejected send must stay queued; do not advance the lead status.
+      failed += 1;
+      continue;
+    }
+
+    sent += 1;
+    try {
+      const { error: markError } = await supabase.rpc(
+        "mark_marketing_lead_contacted",
+        { _lead_id: recipient.lead_id },
+      );
+      if (markError) {
+        // Provider accepted the mail, but the DB did not advance the lead.
+        // Surface this as a failed run so the operator can reconcile/retry it.
+        failed += 1;
+        console.warn("Marketing lead could not be marked contacted.", {
+          code: markError.code,
+        });
+      }
+    } catch (error) {
+      failed += 1;
+      console.error("Marketing lead status update threw.", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+    }
+  }
+
+  const complete = recipients.length < BATCH_SIZE;
+  const nextCursor = complete ? null : recipients[recipients.length - 1]?.lead_id ?? null;
+  if (!complete && (!nextCursor || nextCursor === after)) {
+    console.error("Marketing recipient cursor did not advance.");
+    return json(
+      { message: "Recipient cursor did not advance", sent, failed },
+      { status: 502 },
+    );
+  }
+
+  return json({
+    message: complete ? "Acquisition campaign complete" : "Acquisition campaign page complete",
+    sent,
+    failed,
+    complete,
+    nextCursor,
+    campaignDate,
+  });
 }
