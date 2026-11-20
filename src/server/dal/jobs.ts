@@ -61,6 +61,7 @@ export async function getJobCompanyId(jobId: string): Promise<string | null> {
     .from("jobs")
     .select("company_id")
     .eq("id", jobId)
+    .eq("publication_source", "platform")
     .maybeSingle();
 
   if (error) {
@@ -418,10 +419,115 @@ export async function getCompanyJobs(companyId: string): Promise<JobRow[]> {
     .from("jobs")
     .select("*")
     .eq("company_id", companyId)
-    .order("created_at", { ascending: false });
+    // Source-site imports are platform catalogue records, never employer-owned
+    // listings. Keep this invariant in the DAL as well as the write/RLS layer.
+    .eq("publication_source", "platform")
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
 
   if (error) {
     throw new Error("Company jobs could not be loaded.", { cause: error });
+  }
+
+  return data;
+}
+
+const employerJobsCursorSchema = z.object({
+  createdAt: z.string().datetime({ offset: true }),
+  id: z.string().uuid(),
+});
+
+export async function getCompanyJobsPage(
+  companyId: string,
+  input?: { afterCreatedAt?: string; afterId?: string },
+): Promise<{ jobs: JobRow[]; nextCursor: { createdAt: string; id: string } | null }> {
+  const user = await getCurrentUser();
+  if (!user || user.status !== "active") {
+    throw new Error("An active user session is required to read company jobs.");
+  }
+  if (!z.string().uuid().safeParse(companyId).success) {
+    throw new Error("A valid company identifier is required.");
+  }
+  if (!(await isJobCompanyMember(companyId))) {
+    throw new Error("The current user is not authorized for this company's jobs.");
+  }
+
+  const hasCursorPart = Boolean(input?.afterCreatedAt) || Boolean(input?.afterId);
+  const cursor = hasCursorPart
+    ? employerJobsCursorSchema.safeParse({
+        createdAt: input?.afterCreatedAt,
+        id: input?.afterId,
+      })
+    : null;
+  if (cursor && !cursor.success) {
+    throw new Error("The employer jobs cursor is invalid.");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  let query = supabase
+    .from("jobs")
+    .select("*")
+    .eq("company_id", companyId)
+    .eq("publication_source", "platform")
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
+
+  if (cursor?.success) {
+    const { createdAt, id } = cursor.data;
+    query = query.or(
+      `created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${id})`,
+    );
+  }
+
+  const { data, error } = await query.limit(51);
+  if (error) {
+    throw new Error("Company jobs could not be loaded.", { cause: error });
+  }
+
+  const hasMore = data.length > 50;
+  const jobs = hasMore ? data.slice(0, 50) : data;
+  const last = jobs.at(-1);
+
+  return {
+    jobs,
+    nextCursor: hasMore && last
+      ? { createdAt: last.created_at, id: last.id }
+      : null,
+  };
+}
+
+export async function getCompanyJobForEdit(
+  companyId: string,
+  jobId: string,
+): Promise<JobRow | null> {
+  const user = await getCurrentUser();
+  if (!user || user.status !== "active") {
+    throw new Error("An active user session is required to edit company jobs.");
+  }
+  if (
+    !z.string().uuid().safeParse(companyId).success ||
+    !z.string().uuid().safeParse(jobId).success
+  ) {
+    throw new Error("Valid company and job identifiers are required.");
+  }
+  if (!(await isJobCompanyMember(companyId))) {
+    throw new Error("The current user is not authorized for this company's jobs.");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("*")
+    .eq("id", jobId)
+    .eq("company_id", companyId)
+    .eq("publication_source", "platform")
+    .in("status", ["draft", "rejected"])
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("The requested editable company job could not be loaded.", {
+      cause: error,
+    });
   }
 
   return data;
@@ -445,23 +551,83 @@ export async function getCompanyJobEntitlements(companyId: string) {
   return data;
 }
 
-export async function getPendingJobsForReview(): Promise<JobRow[]> {
+const moderationCursorSchema = z.object({
+  createdAt: z.string().datetime({ offset: true }),
+  id: z.string().uuid(),
+});
+
+export async function getPendingJobsForReview(input?: {
+  afterCreatedAt?: string;
+  afterId?: string;
+}): Promise<{
+  jobs: JobRow[];
+  companyNames: Record<string, string>;
+  nextCursor: { createdAt: string; id: string } | null;
+}> {
   await requirePlatformRole("platform_admin");
+
+  const hasCursorPart = Boolean(input?.afterCreatedAt) || Boolean(input?.afterId);
+  const cursor = hasCursorPart
+    ? employerJobsCursorSchema.safeParse({
+        createdAt: input?.afterCreatedAt,
+        id: input?.afterId,
+      })
+    : null;
+  if (cursor && !cursor.success) {
+    throw new Error("The moderation queue cursor is invalid.");
+  }
+
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("jobs")
     .select("*")
     .eq("status", "pending_review")
+    .eq("publication_source", "platform")
     .order("created_at", { ascending: true })
-    .limit(50);
+    .order("id", { ascending: true });
 
+  if (cursor?.success) {
+    const { createdAt, id } = cursor.data;
+    query = query.or(
+      `created_at.gt.${createdAt},and(created_at.eq.${createdAt},id.gt.${id})`,
+    );
+  }
+
+  const { data, error } = await query.limit(51);
   if (error) {
     throw new Error("Pending jobs could not be loaded for review.", {
       cause: error,
     });
   }
 
-  return data;
+  const hasMore = data.length > 50;
+  const jobs = hasMore ? data.slice(0, 50) : data;
+  const last = jobs.at(-1);
+  const companyIds = [...new Set(jobs.map(({ company_id }) => company_id))];
+  const companyNames: Record<string, string> = {};
+
+  if (companyIds.length > 0) {
+    const { data: companies, error: companiesError } = await supabase
+      .from("companies")
+      .select("id, name")
+      .in("id", companyIds);
+
+    if (companiesError) {
+      throw new Error("Moderation queue company names could not be loaded.", {
+        cause: companiesError,
+      });
+    }
+
+    for (const company of companies) companyNames[company.id] = company.name;
+  }
+
+  return {
+    jobs,
+    companyNames,
+    nextCursor: hasMore && last
+      ? { createdAt: last.created_at, id: last.id }
+      : null,
+  };
 }
 
 export async function getMyApplications() {

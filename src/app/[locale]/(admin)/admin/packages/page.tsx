@@ -31,9 +31,10 @@ export default async function AdminPackagesPage({
 
   setRequestLocale(locale);
   const mfa = await getPlatformAdminMfaStatus();
-  const [copy, contentCopy] = await Promise.all([
+  const [copy, contentCopy, jobCopy] = await Promise.all([
     getTranslations("AdminPackages"),
     getTranslations("AdminContent"),
+    getTranslations("JobManagement.admin"),
   ]);
 
   if (!mfa.aal2) {
@@ -58,6 +59,7 @@ export default async function AdminPackagesPage({
         <div className="admin-packages-links">
           <span><ShieldCheck size={15} aria-hidden="true" />{copy("mfaVerified")}</span>
           <Link href="/admin/company-profiles">{copy("companyReviews")}</Link>
+          <Link href="/admin/jobs">{jobCopy("title")}</Link>
           <Link href="/admin/content">{contentCopy("title")}</Link>
         </div>
       </header>

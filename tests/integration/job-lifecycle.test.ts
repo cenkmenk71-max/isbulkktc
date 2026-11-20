@@ -220,77 +220,78 @@ test("saveJobDraft maps a row-level refusal to unauthorized and a generic one to
 // submitJobForReview — the re-derived company and the RPC mapping
 // ---------------------------------------------------------------------------
 
-test("submitJobForReview refuses when the job's company is unknown or the caller is not a member", async () => {
-  // (a) the job resolves to no company at all.
-  signedIn({ tables: { jobs: { data: null, error: null } } });
+test("submitJobForReview refuses an unknown job or a non-member before the review RPC", async () => {
+  signedIn({ rpcs: memberRpc(true), tables: { jobs: { data: null, error: null } } });
   const { submitJobForReview } = await actions();
-  let state = await submitJobForReview(
-    { status: "idle", message: "idle" },
-    form({ jobId: JOB }),
-  );
+  let state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm({ jobId: JOB }));
   assert.equal(state.message, "unauthorized");
   assert.deepEqual(rpcCalls("submit_job_for_review"), []);
 
-  // (b) the company exists but the caller is not a member.
   signedIn({
-    tables: { jobs: { data: { company_id: COMPANY }, error: null } },
     rpcs: memberRpc(false),
+    tables: { jobs: { data: { company_id: COMPANY }, error: null } },
   });
-  state = await submitJobForReview(
-    { status: "idle", message: "idle" },
-    form({ jobId: JOB }),
-  );
+  state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm({ jobId: JOB }));
   assert.equal(state.message, "unauthorized");
   assert.deepEqual(rpcCalls("submit_job_for_review"), []);
 });
 
-test("submitJobForReview sends the job id to the RPC for a member", async () => {
+test("submitJobForReview persists the current form values before the review RPC", async () => {
   signedIn({
-    tables: { jobs: { data: { company_id: COMPANY }, error: null } },
-    rpcs: {
-      ...memberRpc(true),
-      submit_job_for_review: { data: null, error: null },
+    rpcs: { ...memberRpc(true), submit_job_for_review: { data: null, error: null } },
+    tables: {
+      jobs: (ops) => ops.some((operation) => operation.startsWith("update:"))
+        ? { data: { id: JOB }, error: null }
+        : { data: { company_id: COMPANY }, error: null },
     },
   });
 
   const { submitJobForReview } = await actions();
   const state = await submitJobForReview(
     { status: "idle", message: "idle" },
-    form({ jobId: JOB }),
+    validDraftForm({ jobId: JOB, title: "Updated Senior Operations Manager" }),
   );
 
-  assert.deepEqual(state, {
-    status: "success",
-    message: "submitted",
-    jobId: JOB,
-  });
-  const calls = rpcCalls("submit_job_for_review");
-  assert.equal(calls.length, 1);
-  assert.deepEqual(calls[0].args, { _job_id: JOB });
+  assert.deepEqual(state, { status: "success", message: "submitted", jobId: JOB });
+  const update = fromCalls("jobs").find((call) => call.ops.some((operation) => operation.startsWith("update:")));
+  assert.ok(update);
+  assert.ok(update.ops.some((operation) => operation.includes("Updated Senior Operations Manager")));
+  assert.deepEqual(rpcCalls("submit_job_for_review")[0].args, { _job_id: JOB });
 });
 
-test("submitJobForReview maps 42501 to unauthorized and 22023 to submitFailed", async () => {
-  const cases: [string, string][] = [
-    ["42501", "unauthorized"],
-    ["22023", "submitFailed"],
-    ["XX000", "submitFailed"],
-  ];
+test("submitJobForReview preserves a newly created draft id when review submission fails", async () => {
+  signedIn({
+    rpcs: { ...memberRpc(true), submit_job_for_review: { data: null, error: { code: "22023" } } },
+    tables: {
+      jobs: (ops) => ops.some((operation) => operation.startsWith("insert:"))
+        ? { data: { id: JOB }, error: null }
+        : { data: { company_id: COMPANY }, error: null },
+    },
+  });
 
+  const { submitJobForReview } = await actions();
+  const state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm({ jobId: "" }));
+  assert.equal(state.status, "error");
+  assert.equal(state.message, "submitFailed");
+  assert.equal(state.jobId, JOB);
+  assert.equal(fromCalls("jobs").filter((call) => call.ops.some((operation) => operation.startsWith("insert:"))).length, 1);
+});
+
+test("submitJobForReview maps review RPC errors after persisting the draft", async () => {
+  const cases: [string, string][] = [["42501", "unauthorized"], ["22023", "submitFailed"], ["XX000", "submitFailed"]];
   for (const [code, expected] of cases) {
     signedIn({
-      tables: { jobs: { data: { company_id: COMPANY }, error: null } },
-      rpcs: {
-        ...memberRpc(true),
-        submit_job_for_review: { data: null, error: { code } },
+      rpcs: { ...memberRpc(true), submit_job_for_review: { data: null, error: { code } } },
+      tables: {
+        jobs: (ops) => ops.some((operation) => operation.startsWith("update:"))
+          ? { data: { id: JOB }, error: null }
+          : { data: { company_id: COMPANY }, error: null },
       },
     });
-
     const { submitJobForReview } = await actions();
-    const state = await submitJobForReview(
-      { status: "idle", message: "idle" },
-      form({ jobId: JOB }),
-    );
-    assert.equal(state.message, expected, `RPC code ${code}`);
+    const state = await submitJobForReview({ status: "idle", message: "idle" }, validDraftForm({ jobId: JOB }));
+    assert.equal(state.message, expected, "RPC code " + code);
+    assert.equal(state.jobId, JOB);
   }
 });
 
@@ -593,8 +594,29 @@ test("reviewJob rejects a rejection without a reason before the RPC", async () =
   assert.deepEqual(rpcCalls("review_job"), []);
 });
 
-test("reviewJob sends the decision and note to the RPC for an admin", async () => {
+test("reviewJob refuses an AAL1 platform admin before the moderation RPC", async () => {
   signedIn({
+    assuranceLevel: "aal1",
+    tables: { user_roles: { data: { role: "platform_admin" }, error: null } },
+    rpcs: {
+      has_platform_role: { data: true, error: null },
+    },
+  });
+
+  const { reviewJob } = await actions();
+  const state = await reviewJob(
+    { status: "idle", message: "idle" },
+    form({ jobId: JOB, decision: "approved" }),
+  );
+
+  assert.equal(state.message, "unauthorized");
+  assert.deepEqual(rpcCalls("review_job"), []);
+});
+
+test("reviewJob sends the decision and note to the RPC for an MFA-verified admin", async () => {
+  signedIn({
+    assuranceLevel: "aal2",
+    tables: { user_roles: { data: { role: "platform_admin" }, error: null } },
     rpcs: {
       has_platform_role: { data: true, error: null },
       review_job: { data: null, error: null },
@@ -619,6 +641,8 @@ test("reviewJob sends the decision and note to the RPC for an admin", async () =
 
 test("reviewJob maps 22023 to reviewFailed", async () => {
   signedIn({
+    assuranceLevel: "aal2",
+    tables: { user_roles: { data: { role: "platform_admin" }, error: null } },
     rpcs: {
       has_platform_role: { data: true, error: null },
       review_job: { data: null, error: { code: "22023" } },
@@ -632,4 +656,118 @@ test("reviewJob maps 22023 to reviewFailed", async () => {
   );
 
   assert.equal(state.message, "reviewFailed");
+});
+
+
+// ---------------------------------------------------------------------------
+// Employer ownership and moderation queue boundaries
+// ---------------------------------------------------------------------------
+
+test("employer listing page filters imports and uses stable descending keyset pagination", async () => {
+  const rows = Array.from({ length: 51 }, (_, index) => ({
+    id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    company_id: COMPANY,
+    created_at: new Date(Date.parse("2026-11-20T10:00:00.000Z") - index * 1000).toISOString(),
+  }));
+  signedIn({
+    rpcs: memberRpc(true),
+    tables: { jobs: { data: rows, error: null } },
+  });
+
+  const { getCompanyJobsPage } = await import("../../src/server/dal/jobs");
+  const firstPage = await getCompanyJobsPage(COMPANY);
+
+  assert.equal(firstPage.jobs.length, 50);
+  assert.deepEqual(firstPage.nextCursor, {
+    createdAt: rows[49].created_at,
+    id: rows[49].id,
+  });
+
+  const jobsQuery = fromCalls("jobs").at(-1);
+  assert.ok(jobsQuery);
+  assert.ok(
+    jobsQuery.ops.some((operation) =>
+      operation.includes("publication_source") && operation.includes("platform"),
+    ),
+    "source-site imports must never appear in an employer's editable listing collection",
+  );
+  assert.ok(jobsQuery.ops.some((operation) => operation.includes("limit:51")));
+
+  await getCompanyJobsPage(COMPANY, {
+    afterCreatedAt: firstPage.nextCursor!.createdAt,
+    afterId: firstPage.nextCursor!.id,
+  });
+  const nextPageQuery = fromCalls("jobs").at(-1);
+  assert.ok(nextPageQuery);
+  assert.ok(
+    nextPageQuery.ops.some((operation) =>
+      operation.includes("created_at.lt") && operation.includes("id.lt"),
+    ),
+    "descending pagination must resume strictly before the previous page cursor",
+  );
+});
+
+test("moderation queue uses stable keyset pagination and excludes imported source listings", async () => {
+  const timestamp = "2026-11-20T10:00:00.000Z";
+  const rows = Array.from({ length: 51 }, (_, index) => ({
+    id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    company_id: COMPANY,
+    created_at: new Date(Date.parse(timestamp) + index * 1000).toISOString(),
+  }));
+  signedIn({
+    rpcs: { has_platform_role: { data: true, error: null } },
+    tables: {
+      user_roles: { data: { role: "platform_admin" }, error: null },
+      jobs: { data: rows, error: null },
+      companies: { data: [{ id: COMPANY, name: "Acme" }], error: null },
+    },
+  });
+
+  const { getPendingJobsForReview } = await import("../../src/server/dal/jobs");
+  const firstPage = await getPendingJobsForReview();
+
+  assert.equal(firstPage.jobs.length, 50);
+  assert.deepEqual(firstPage.nextCursor, {
+    createdAt: rows[49].created_at,
+    id: rows[49].id,
+  });
+  assert.equal(firstPage.companyNames[COMPANY], "Acme");
+
+  const query = fromCalls("jobs").at(-1);
+  assert.ok(query);
+  assert.ok(query.ops.some((operation) => operation.includes("limit:51")));
+  assert.ok(
+    query.ops.some((operation) =>
+      operation.includes("publication_source") && operation.includes("platform"),
+    ),
+  );
+
+  await getPendingJobsForReview({
+    afterCreatedAt: firstPage.nextCursor!.createdAt,
+    afterId: firstPage.nextCursor!.id,
+  });
+  const secondPageQuery = fromCalls("jobs").at(-1);
+  assert.ok(secondPageQuery);
+  assert.ok(
+    secondPageQuery.ops.some((operation) =>
+      operation.includes("created_at.gt") && operation.includes("id.gt"),
+    ),
+    "the next page must resume strictly after the last stable cursor",
+  );
+});
+
+test("getJobCompanyId refuses source-site imports as employer-owned records", async () => {
+  resetBoundary({ tables: { jobs: { data: null, error: null } } });
+
+  const { getJobCompanyId } = await import("../../src/server/dal/jobs");
+  assert.equal(await getJobCompanyId(JOB), null);
+
+  const query = fromCalls("jobs").at(-1);
+  assert.ok(query);
+  assert.ok(
+    query.ops.some((operation) =>
+      operation.includes("publication_source") && operation.includes("platform"),
+    ),
+    "write actions must re-derive ownership only from platform-created jobs",
+  );
 });

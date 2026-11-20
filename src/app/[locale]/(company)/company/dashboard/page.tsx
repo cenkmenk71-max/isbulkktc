@@ -61,11 +61,13 @@ export default async function CompanyDashboardPage({
     copy,
     deleteCopy,
     managedDirectory,
+    jobCopy,
   ] = await Promise.all([
     getEmployerWorkspace(query.company),
     getTranslations("CompanyManagement"),
     getTranslations("CandidateDashboard.deleteAccount"),
     getManagedDirectoryEntries(),
+    getTranslations("JobManagement.employer"),
   ]);
   const directoryEntries = managedDirectory ?? companyDirectory;
   const submittedProfile =
@@ -221,6 +223,7 @@ export default async function CompanyDashboardPage({
         <a href="#overview">{copy("workspace.overview")}</a>
         <a href="#company-profile">{copy("workspace.companyProfile")}</a>
         <a href="#directory-listing">{copy("workspace.directoryListing")}</a>
+        <Link href={{ pathname: "/company/jobs", query: { company: company.id } }}>{jobCopy("title")}</Link>
       </nav>
 
       {canReviewApplications ? (
