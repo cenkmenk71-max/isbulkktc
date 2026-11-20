@@ -857,7 +857,8 @@
       "on_site": "On-site",
       "hybrid": "Hybrid",
       "remote": "Remote"
-    }
+    },
+    "unavailable": "Job listings are temporarily unavailable. Please try again shortly."
   },
   "JobsPage": {
     "eyebrow": "İŞBUL KKTC · CAREER OPPORTUNITIES",
@@ -954,7 +955,8 @@
     "previous": "Previous",
     "next": "Next",
     "pageCount": "Page {current} of {total}",
-    "sourceNote": "The geographic coverage shown here is approximate and not an official boundary. A listing does not mean the company is registered or verified."
+    "sourceNote": "The geographic coverage shown here is approximate and not an official boundary. A listing does not mean the company is registered or verified.",
+    "jobEmployersUnavailable": "Employers with active listings are temporarily unavailable. The rest of the company directory remains available."
   },
   "CandidateDashboard": {
     "eyebrow": "CANDIDATE PROFILE",
@@ -1504,7 +1506,8 @@
     "messages": {
       "invalid": "Please check the form and try again.",
       "submitted": "Your request reached us! Our team will get back to you shortly.",
-      "failed": "The request could not be sent right now. Please try again later."
+      "failed": "The request could not be sent right now. Please try again later.",
+      "consentUnavailable": "Your marketing consent cannot be recorded right now. Uncheck the box and try again to send your quote request without marketing consent."
     },
     "marketingConsentLabel": "I agree to receive occasional promotional emails about İşBul KKTC services and updates. This consent is optional, and I can unsubscribe at any time."
   },
