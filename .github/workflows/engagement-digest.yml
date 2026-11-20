@@ -12,9 +12,9 @@ name: Send engagement digest
 # purpose: two `schedule` entries in one workflow fire *both* jobs on *every*
 # cron, which would send the weekly digest daily.
 #
-# Requires two repository secrets: the production origin and the bearer secret
-# the route checks. Until both exist the job stays green and warns (same
-# contract as push-dispatch.yml).
+# Requires the route's bearer secret as a repository secret. The ingress origin
+# is a dedicated DNS-only Vercel custom hostname and is intentionally fixed here
+# rather than read from an editable repository variable.
 on:
   schedule:
     # Mondays at 07:00 UTC (10:00 KKTC), a low-traffic window for a weekly digest.
@@ -37,24 +37,21 @@ jobs:
       - name: Check configuration
         id: config
         env:
-          APP_URL: ${{ secrets.APP_URL || vars.APP_URL || secrets.NEXT_PUBLIC_APP_URL }}
           CRON_SECRET: ${{ secrets.ENGAGEMENT_CRON_SECRET }}
         run: |
-          if [ -n "${APP_URL:-}" ] && [ -n "${CRON_SECRET:-}" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=Engagement digest not configured::Add the ENGAGEMENT_CRON_SECRET secret and the APP_URL variable to enable the engagement digest. Skipping this run."
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error title=Engagement digest misconfigured::ENGAGEMENT_CRON_SECRET is required."
+            exit 1
           fi
+          echo "configured=true" >> "$GITHUB_OUTPUT"
 
       - name: Send the engagement digest
         if: steps.config.outputs.configured == 'true'
         env:
-          APP_URL: ${{ secrets.APP_URL || vars.APP_URL || secrets.NEXT_PUBLIC_APP_URL }}
           CRON_SECRET: ${{ secrets.ENGAGEMENT_CRON_SECRET }}
-          # Vercel alias rather than the Cloudflare-fronted canonical host, for
-          # the same reason as the acquisition workflow.
-          DISPATCH_ORIGIN: ${{ vars.ENGAGEMENT_DISPATCH_ORIGIN || 'https://isbulkktc-amber.vercel.app' }}
+          # Dedicated DNS-only Vercel custom hostname. The application Proxy
+          # restricts this host to the exact authenticated mail POST routes.
+          DISPATCH_ORIGIN: https://hooks.isbulkktc.com
         run: |
           set -euo pipefail
           cursor=""
@@ -75,10 +72,8 @@ jobs:
             echo "Page ${page}: HTTP ${status}"
             cat /tmp/engagement-response.txt
 
-            if [ "$status" = "503" ] && [ "$page" -eq 1 ]; then
-              echo "::warning title=Engagement digest unavailable::The production sender is not configured; no recipients were processed."
-              exit 0
-            fi
+            # A 503 indicates a production configuration or availability
+            # failure. An empty recipient page is a successful HTTP 200.
             if [ "$status" != "200" ]; then
               echo "::error::Engagement digest page ${page} failed with HTTP ${status}."
               exit 1
