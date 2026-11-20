@@ -593,8 +593,27 @@ test("reviewJob rejects a rejection without a reason before the RPC", async () =
   assert.deepEqual(rpcCalls("review_job"), []);
 });
 
-test("reviewJob sends the decision and note to the RPC for an admin", async () => {
+test("reviewJob refuses an AAL1 platform admin before the moderation RPC", async () => {
   signedIn({
+    assuranceLevel: "aal1",
+    rpcs: {
+      has_platform_role: { data: true, error: null },
+    },
+  });
+
+  const { reviewJob } = await actions();
+  const state = await reviewJob(
+    { status: "idle", message: "idle" },
+    form({ jobId: JOB, decision: "approved" }),
+  );
+
+  assert.equal(state.message, "unauthorized");
+  assert.deepEqual(rpcCalls("review_job"), []);
+});
+
+test("reviewJob sends the decision and note to the RPC for an MFA-verified admin", async () => {
+  signedIn({
+    assuranceLevel: "aal2",
     rpcs: {
       has_platform_role: { data: true, error: null },
       review_job: { data: null, error: null },
@@ -619,6 +638,7 @@ test("reviewJob sends the decision and note to the RPC for an admin", async () =
 
 test("reviewJob maps 22023 to reviewFailed", async () => {
   signedIn({
+    assuranceLevel: "aal2",
     rpcs: {
       has_platform_role: { data: true, error: null },
       review_job: { data: null, error: { code: "22023" } },
