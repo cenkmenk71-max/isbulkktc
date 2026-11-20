@@ -967,6 +967,7 @@
     "applicationsTitle": "درخواست‌های من",
     "applicationsDescription": "تحویل درخواست به کارفرما، وضعیت آن و زمان نخستین مشاهده توسط کارفرما را پیگیری کنید.",
     "noApplications": "هنوز برای هیچ موقعیت شغلی درخواست نداده‌اید.",
+    "applicationsLoadFailed": "در حال حاضر بارگذاری درخواست‌های شما ممکن نیست. لطفاً صفحه را تازه‌سازی کنید.",
     "applicationSubmittedAt": "تاریخ درخواست",
     "applicationViewedAt": "نخستین مشاهده توسط کارفرما",
     "applicationNotViewed": "کارفرما هنوز درخواست شما را مشاهده نکرده است.",
