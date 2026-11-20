@@ -692,6 +692,19 @@ test("moderation queue uses stable keyset pagination and excludes imported sourc
       operation.includes("publication_source") && operation.includes("platform"),
     ),
   );
+
+  await getPendingJobsForReview({
+    afterCreatedAt: firstPage.nextCursor!.createdAt,
+    afterId: firstPage.nextCursor!.id,
+  });
+  const secondPageQuery = fromCalls("jobs").at(-1);
+  assert.ok(secondPageQuery);
+  assert.ok(
+    secondPageQuery.ops.some((operation) =>
+      operation.includes("created_at.gt") && operation.includes("id.gt"),
+    ),
+    "the next page must resume strictly after the last stable cursor",
+  );
 });
 
 test("getJobCompanyId refuses source-site imports as employer-owned records", async () => {
