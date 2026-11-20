@@ -74,7 +74,7 @@ export default async function EmployerJobsPage({
                 <article className="employer-job-card">
                   <div className="employer-job-card-main">
                     <p className="employer-job-card-status" data-status={status}>
-                      {copy(status as "draft" | "pending_review" | "approved" | "rejected" | "published" | "expired")}
+                      {copy(status as "draft" | "pending_review" | "approved" | "rejected" | "published" | "closed" | "expired")}
                     </p>
                     <h2>{job.title}</h2>
                     <p>{job.summary}</p>
