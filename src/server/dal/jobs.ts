@@ -550,6 +550,11 @@ export async function getCompanyJobEntitlements(companyId: string) {
   return data;
 }
 
+const moderationCursorSchema = z.object({
+  createdAt: z.string().datetime({ offset: true }),
+  id: z.string().uuid(),
+});
+
 export async function getPendingJobsForReview(input?: {
   afterCreatedAt?: string;
   afterId?: string;
