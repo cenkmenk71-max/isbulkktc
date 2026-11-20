@@ -26,9 +26,10 @@ export default async function AdminJobsPage({
   if (!locale) notFound();
   setRequestLocale(locale);
 
-  const [mfa, copy] = await Promise.all([
+  const [mfa, copy, listingCopy] = await Promise.all([
     getPlatformAdminMfaStatus(),
     getTranslations("JobManagement.admin"),
+    getTranslations("JobManagement.employer"),
   ]);
 
   if (!mfa.aal2) {
@@ -52,7 +53,7 @@ export default async function AdminJobsPage({
   return (
     <main className="admin-job-review-page page-container">
       <header className="admin-job-review-heading">
-        <p className="eyebrow"><span className="eyebrow-rule" /><ShieldCheck size={15} aria-hidden="true" />{copy("pendingCount")}: {jobs.length}</p>
+        <p className="eyebrow"><span className="eyebrow-rule" /><ShieldCheck size={15} aria-hidden="true" />{copy("pageCount")}: {jobs.length}</p>
         <h1>{copy("title")}</h1>
         <p>{copy("description")}</p>
         <Link href="/admin/packages">{copy("backToPackages")}</Link>
@@ -65,7 +66,7 @@ export default async function AdminJobsPage({
               <article className="admin-job-review-card">
                 <header>
                   <div>
-                    <p className="admin-job-review-company">{companyNames[job.company_id] ?? job.company_id}</p>
+                    <p className="admin-job-review-company">{copy("company")}: {companyNames[job.company_id] ?? job.company_id}</p>
                     <h2>{job.title}</h2>
                     <p>{job.slug}</p>
                   </div>
@@ -73,9 +74,20 @@ export default async function AdminJobsPage({
                 </header>
                 <p className="admin-job-review-summary">{job.summary}</p>
                 <dl className="admin-job-review-details">
-                  <div><dt>{copy("company")}</dt><dd>{companyNames[job.company_id] ?? job.company_id}</dd></div>
                   <div><dt>{copy("createdAt")}</dt><dd>{dateFormatter.format(new Date(job.created_at))}</dd></div>
                 </dl>
+                <details className="admin-job-review-full-details">
+                  <summary>{copy("viewDetails")}</summary>
+                  <dl className="admin-job-review-details">
+                    <div><dt>{listingCopy("jobType")}</dt><dd>{listingCopy(job.job_type as "full_time" | "part_time" | "contract" | "temporary" | "internship" | "freelance")}</dd></div>
+                    <div><dt>{listingCopy("workplaceMode")}</dt><dd>{listingCopy(job.workplace_mode as "on_site" | "hybrid" | "remote")}</dd></div>
+                    <div><dt>{listingCopy("district")}</dt><dd>{job.district ?? "—"}</dd></div>
+                  </dl>
+                  <h3>{listingCopy("descriptionLabel")}</h3>
+                  <p>{job.description}</p>
+                  {job.requirements ? <><h3>{listingCopy("requirements")}</h3><p>{job.requirements}</p></> : null}
+                  {job.responsibilities ? <><h3>{listingCopy("responsibilities")}</h3><p>{job.responsibilities}</p></> : null}
+                </details>
                 <JobReviewForm jobId={job.id} />
               </article>
             </li>
