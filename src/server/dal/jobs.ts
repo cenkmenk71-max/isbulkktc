@@ -517,7 +517,11 @@ const moderationCursorSchema = z.object({
 export async function getPendingJobsForReview(input?: {
   afterCreatedAt?: string;
   afterId?: string;
-}): Promise<{ jobs: JobRow[]; nextCursor: { createdAt: string; id: string } | null }> {
+}): Promise<{
+  jobs: JobRow[];
+  companyNames: Record<string, string>;
+  nextCursor: { createdAt: string; id: string } | null;
+}> {
   await requirePlatformRole("platform_admin");
 
   const hasCursorPart = Boolean(input?.afterCreatedAt) || Boolean(input?.afterId);
