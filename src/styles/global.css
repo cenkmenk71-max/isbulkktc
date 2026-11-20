@@ -14261,15 +14261,15 @@ body:has(.pwa-update-toast) .support-widget {
 .employer-job-editor header > p:last-child,
 .admin-job-review-heading > p {
   max-width: 46rem;
-  color: var(--text-muted);
+  color: var(--ink-4);
 }
 
 .employer-jobs-capacity {
   width: fit-content;
   padding: 0.65rem 0.9rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 0.75rem;
-  color: var(--text-muted);
+  color: var(--ink-4);
   font-size: var(--type-caption);
 }
 
@@ -14287,7 +14287,7 @@ body:has(.pwa-update-toast) .support-widget {
   display: grid;
   gap: 1rem;
   padding: clamp(1rem, 2vw, 1.5rem);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 1rem;
   background: var(--surface);
 }
@@ -14300,7 +14300,7 @@ body:has(.pwa-update-toast) .support-widget {
 .employer-job-card h2,
 .admin-job-review-card h2 {
   margin: 0.35rem 0;
-  font-size: var(--type-heading-3);
+  font-size: clamp(1.05rem, 1.8vw, 1.3rem);
 }
 
 .employer-job-card p,
@@ -14310,7 +14310,7 @@ body:has(.pwa-update-toast) .support-widget {
 
 .employer-job-card-status,
 .admin-job-review-company {
-  color: var(--text-muted);
+  color: var(--ink-4);
   font-size: var(--type-caption);
   font-weight: 700;
 }
@@ -14325,7 +14325,7 @@ body:has(.pwa-update-toast) .support-widget {
 
 .employer-job-card-date,
 .admin-job-review-card time {
-  color: var(--text-muted);
+  color: var(--ink-4);
   font-size: var(--type-caption);
 }
 
@@ -14334,9 +14334,9 @@ body:has(.pwa-update-toast) .support-widget {
   justify-items: center;
   gap: 1rem;
   padding: 3rem 1.5rem;
-  border: 1px dashed var(--border);
+  border: 1px dashed var(--line);
   border-radius: 1rem;
-  color: var(--text-muted);
+  color: var(--ink-4);
   text-align: center;
 }
 
@@ -14357,7 +14357,7 @@ body:has(.pwa-update-toast) .support-widget {
 .job-authoring-form {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: clamp(1rem, 2vw, 1.5rem);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 1rem;
   background: var(--surface);
 }
@@ -14366,7 +14366,7 @@ body:has(.pwa-update-toast) .support-widget {
 .job-review-form > label {
   display: grid;
   gap: 0.45rem;
-  color: var(--text-primary);
+  color: var(--ink);
   font-size: var(--type-caption);
   font-weight: 650;
 }
@@ -14378,10 +14378,10 @@ body:has(.pwa-update-toast) .support-widget {
   width: 100%;
   min-width: 0;
   padding: 0.75rem 0.85rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 0.65rem;
   background: var(--surface);
-  color: var(--text-primary);
+  color: var(--ink);
   font: inherit;
 }
 
@@ -14442,7 +14442,7 @@ body:has(.pwa-update-toast) .support-widget {
 }
 
 .admin-job-review-summary {
-  color: var(--text-muted);
+  color: var(--ink-4);
 }
 
 .admin-job-review-details {
@@ -14458,7 +14458,7 @@ body:has(.pwa-update-toast) .support-widget {
 }
 
 .admin-job-review-details dt {
-  color: var(--text-muted);
+  color: var(--ink-4);
   font-size: var(--type-caption);
 }
 
@@ -14469,14 +14469,14 @@ body:has(.pwa-update-toast) .support-widget {
 
 .job-review-form {
   padding-top: 1rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
 }
 
 .admin-job-review-empty {
   padding: 2rem;
-  border: 1px dashed var(--border);
+  border: 1px dashed var(--line);
   border-radius: 1rem;
-  color: var(--text-muted);
+  color: var(--ink-4);
   text-align: center;
 }
 
@@ -14514,19 +14514,19 @@ body:has(.pwa-update-toast) .support-widget {
 
 .admin-job-review-full-details {
   padding-block: 0.75rem;
-  border-block: 1px solid var(--border);
+  border-block: 1px solid var(--line);
 }
 
 .admin-job-review-full-details > summary {
   width: fit-content;
-  color: var(--text-primary);
+  color: var(--ink);
   cursor: pointer;
   font-weight: 650;
 }
 
 .admin-job-review-full-details h3 {
   margin: 1rem 0 0.35rem;
-  font-size: var(--type-heading-4);
+  font-size: var(--type-supporting);
 }
 
 .admin-job-review-full-details p {
