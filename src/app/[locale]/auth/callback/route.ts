@@ -84,7 +84,7 @@ function hasCookieValueOrChunk(
   return cookieNames.some((name) => {
     if (name === baseName) return true;
     if (!name.startsWith(`${baseName}.`)) return false;
-    return /^\\d+$/.test(name.slice(baseName.length + 1));
+    return /^\d+$/.test(name.slice(baseName.length + 1));
   });
 }
 
