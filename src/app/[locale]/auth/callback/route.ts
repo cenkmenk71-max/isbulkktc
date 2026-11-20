@@ -190,7 +190,9 @@ export async function GET(request: NextRequest) {
   // start (see startOAuthSignIn). Passing it selects the verifier created by
   // that exact flow, instead of the shared legacy key — which mirrors only the
   // most recently started flow and breaks when two flows overlap.
-  const flowId = parsePkceFlowId(request.nextUrl.searchParams.get("sb_flow_id"));
+  const rawFlowId = request.nextUrl.searchParams.get("sb_flow_id");
+  const flowId = parsePkceFlowId(rawFlowId);
+  const invalidFlowId = rawFlowId !== null && flowId === undefined;
   // GoTrue answers a failed round-trip either by redirecting back here with
   // `?error=&error_code=` (the visitor declined, the link expired) or by an
   // error from `exchangeCodeForSession` below. Both are reduced to a closed
@@ -217,6 +219,19 @@ export async function GET(request: NextRequest) {
       flow,
       hasCode: Boolean(code),
     });
+    return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
+  }
+
+  // A present but malformed flow id must not silently degrade to the shared
+  // legacy verifier. That would discard the flow-isolation boundary.
+  if (invalidFlowId) {
+    console.warn("Auth callback rejected an invalid PKCE flow id.", { flow });
+    failurePath = resolveAuthFailurePath(
+      flow,
+      locale,
+      audience,
+      "flow_state_not_found",
+    );
     return redirectAndClearOAuthIntent(new URL(failurePath, appBaseUrl));
   }
 
