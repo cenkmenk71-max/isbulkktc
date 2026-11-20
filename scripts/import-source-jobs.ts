@@ -26,7 +26,6 @@ function loadLocalEnv(): void {
 
 type ImportOptions = {
   dryRun: boolean;
-  purge: boolean;
   limit: number | null;
 };
 
@@ -42,9 +41,14 @@ function parseLimit(argv: string[]): number | null {
 }
 
 function parseOptions(argv: string[]): ImportOptions {
+  if (argv.includes("--keep-existing")) {
+    throw new Error(
+      "--keep-existing is no longer supported; source catalogues are now replaced atomically.",
+    );
+  }
+
   return {
     dryRun: argv.includes("--dry-run"),
-    purge: !argv.includes("--keep-existing"),
     limit: parseLimit(argv),
   };
 }
@@ -157,63 +161,6 @@ function assert(
   }
 }
 
-async function purgeSourceData(client: SupabaseClient): Promise<void> {
-  // Delete every imported listing, not only the ones currently mapped in
-  // job_source_imports: a row can lose its mapping (or predate the mapping
-  // table) and would otherwise survive every refresh forever.
-  const { error: importsDeleteError } = await client
-    .from("job_source_imports")
-    .delete()
-    .not("job_id", "is", null);
-  assert(importsDeleteError, "Eski kaynak eşlemeleri silinemedi");
-
-  const { data: sourceJobs, error: jobsSelectError } = await client
-    .from("jobs")
-    .select("id")
-    .eq("publication_source", "source_site");
-  assert(jobsSelectError, "Eski kaynak ilanlar okunamadı");
-
-  const jobIds = (sourceJobs ?? []).map((row) => row.id as string);
-  if (jobIds.length > 0) {
-    const { error: deleteError } = await client.from("jobs").delete().in("id", jobIds);
-    assert(deleteError, "Eski kaynak ilanlar silinemedi");
-  }
-
-  const { data: sourceCompanies, error: companySelectError } = await client
-    .from("companies")
-    .select("id")
-    .like("slug", "source-%");
-  assert(companySelectError, "Eski kaynak işverenler okunamadı");
-
-  const companyIds = (sourceCompanies ?? []).map((row) => row.id as string);
-  let removedCompanies = 0;
-  if (companyIds.length > 0) {
-    const { data: stillReferenced, error: referencedError } = await client
-      .from("jobs")
-      .select("company_id")
-      .in("company_id", companyIds);
-    assert(referencedError, "İşveren referansları okunamadı");
-
-    const referencedIds = new Set(
-      (stillReferenced ?? []).map((row) => row.company_id as string),
-    );
-    const deletableIds = companyIds.filter((id) => !referencedIds.has(id));
-
-    if (deletableIds.length > 0) {
-      const { error: companyDeleteError } = await client
-        .from("companies")
-        .delete()
-        .in("id", deletableIds);
-      assert(companyDeleteError, "Eski kaynak işverenler silinemedi");
-      removedCompanies = deletableIds.length;
-    }
-  }
-
-  console.info(
-    `  · ${jobIds.length} eski kaynak ilan ve ${removedCompanies} bağlantısız işveren temizlendi.`,
-  );
-}
-
 async function upsertEmployers(
   client: SupabaseClient,
   employers: Map<string, SourceEmployerRecord>,
@@ -254,10 +201,19 @@ async function upsertEmployers(
  * re-stamping it on every refresh. A first-seen listing starts at its
  * publication date so it never looks modified before it was posted.
  */
-async function syncSourceSnapshots(
+async function prepareSourceSnapshots(
   client: SupabaseClient,
   records: SourceJobRecord[],
-): Promise<Map<string, string | null>> {
+): Promise<{
+  modifiedAtByKey: Map<string, string | null>;
+  snapshotRows: Array<{
+    source: string;
+    source_job_id: string;
+    content_hash: string;
+    first_seen_at: string;
+    last_changed_at: string;
+  }>;
+}> {
   const hashes = new Map<string, string>();
   for (const record of records) {
     hashes.set(
@@ -362,79 +318,7 @@ async function syncSourceSnapshots(
     modifiedAtByKey.set(key, prior.last_changed_at);
   }
 
-  for (let start = 0; start < snapshotRows.length; start += 200) {
-    const { error } = await client
-      .from("job_source_snapshots")
-      .upsert(snapshotRows.slice(start, start + 200), {
-        onConflict: "source,source_job_id",
-      });
-    assert(error, "Kaynak anlık görüntüleri yazılamadı");
-  }
-
-  return modifiedAtByKey;
-}
-
-async function insertJobs(
-  client: SupabaseClient,
-  records: SourceJobRecord[],
-  companyIdBySlug: Map<string, string>,
-  modifiedAtByKey: Map<string, string | null>,
-): Promise<void> {
-  const jobRows = records.map((record) => {
-    const companyId = companyIdBySlug.get(record.employer.slug);
-    if (!companyId) {
-      throw new Error(`İşveren eşleşmedi: ${record.employer.slug}`);
-    }
-    return {
-      company_id: companyId,
-      created_by: null,
-      title: record.title.slice(0, 140),
-      slug: record.slug,
-      summary: record.summary,
-      description: record.description,
-      requirements: record.requirements,
-      responsibilities: record.responsibilities,
-      job_type: record.jobType,
-      workplace_mode: record.workplaceMode,
-      district: record.district,
-      status: "published" as const,
-      published_at: record.publishedAt,
-      expires_at: record.expiresAt,
-      publication_source: "source_site" as const,
-    };
-  });
-
-  const { data, error } = await client
-    .from("jobs")
-    .insert(jobRows)
-    .select("id, slug");
-  assert(error, "İlanlar yazılamadı");
-
-  const jobIdBySlug = new Map<string, string>();
-  for (const row of data ?? []) {
-    jobIdBySlug.set(row.slug as string, row.id as string);
-  }
-
-  const importRows = records.map((record) => {
-    const jobId = jobIdBySlug.get(record.slug);
-    if (!jobId) {
-      throw new Error(`İlan kimliği eşleşmedi: ${record.slug}`);
-    }
-    return {
-      job_id: jobId,
-      source: record.source,
-      source_job_id: record.sourceJobId,
-      source_published_at: record.publishedAt,
-      source_expires_at: record.expiresAt,
-      source_updated_at:
-        modifiedAtByKey.get(`${record.source}:${record.sourceJobId}`) ?? null,
-    };
-  });
-
-  const { error: importError } = await client
-    .from("job_source_imports")
-    .upsert(importRows, { onConflict: "job_id" });
-  assert(importError, "Kaynak ilan eşlemesi yazılamadı");
+  return { modifiedAtByKey, snapshotRows };
 }
 
 async function main(): Promise<void> {
@@ -504,26 +388,66 @@ async function main(): Promise<void> {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  if (options.purge) {
-    console.info("Eski kaynak veriler temizleniyor…");
-    await purgeSourceData(client);
-  }
-
-  console.info("Değişiklik defteri güncelleniyor…");
-  const modifiedAtByKey = await syncSourceSnapshots(client, selected);
-
-  console.info("İşverenler yazılıyor…");
   const droppedLogos = await dropUnreachableLogos(employers);
   if (droppedLogos > 0) {
     console.info(`  · ${droppedLogos} erişilemeyen logo monograma düşürüldü.`);
   }
-  const companyIdBySlug = await upsertEmployers(client, employers);
 
-  console.info("İlanlar yazılıyor…");
-  await insertJobs(client, selected, companyIdBySlug, modifiedAtByKey);
+  console.info("Değişiklik defteri hazırlanıyor…");
+  const { modifiedAtByKey, snapshotRows } = await prepareSourceSnapshots(
+    client,
+    selected,
+  );
+
+  const companyRows = [...employers.values()].map((employer) => ({
+    name: employer.name.slice(0, 120),
+    slug: employer.slug,
+    profile_description: employer.profileDescription,
+    categories: employer.categories,
+    website: employer.website,
+    municipality: employer.municipality,
+    source_profile_url: employer.sourceProfileUrl,
+    logo_url: employer.logoUrl,
+  }));
+
+  const jobRows = selected.map((record) => ({
+    company_slug: record.employer.slug,
+    title: record.title.slice(0, 140),
+    slug: record.slug,
+    summary: record.summary,
+    description: record.description,
+    requirements: record.requirements,
+    responsibilities: record.responsibilities,
+    job_type: record.jobType,
+    workplace_mode: record.workplaceMode,
+    district: record.district,
+    published_at: record.publishedAt,
+    expires_at: record.expiresAt,
+    source: record.source,
+    source_job_id: record.sourceJobId,
+    source_published_at: record.publishedAt,
+    source_expires_at: record.expiresAt,
+    source_updated_at:
+      modifiedAtByKey.get(`${record.source}:${record.sourceJobId}`) ?? null,
+  }));
+
+  console.info("Kaynak katalog tek veritabanı işlemiyle yenileniyor…");
+  const { data, error } = await client.rpc("replace_source_job_catalogue", {
+    _companies: companyRows,
+    _jobs: jobRows,
+    _snapshots: snapshotRows,
+  });
+  assert(error, "Kaynak katalog atomik olarak yenilenemedi");
+
+  const result = data as { jobs?: number } | null;
+  if (!result || result.jobs !== selected.length) {
+    throw new Error(
+      `Kaynak katalog RPC beklenmeyen sonuç döndürdü: ${JSON.stringify(result)}`,
+    );
+  }
 
   console.info(
-    `Tamamlandı: ${selected.length} ilan canlı Supabase veritabanına yazıldı.`,
+    `Tamamlandı: ${result.jobs} ilan tek transaction içinde canlı Supabase kataloğuna yazıldı.`,
   );
 }
 
