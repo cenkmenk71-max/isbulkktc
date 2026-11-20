@@ -56,7 +56,13 @@ function assertWellFormed(email: RenderedEmail, label: string) {
   const tdCloses = (email.html.match(/<\/td>/g) ?? []).length;
   assert.equal(tdOpens, tdCloses, `${label}: unbalanced <td> (${tdOpens}/${tdCloses})`);
   assert.ok(email.text.length > 0, `${label}: text alternative empty`);
-  assert.ok(!email.text.includes("<"), `${label}: text alternative contains tags`);
+  assert.doesNotMatch(
+    email.text,
+    /<!doctype html|<\/?(?:html|head|body|table|thead|tbody|tr|td|th|div|span|p|a|h[1-6]|ul|ol|li|style)\b/i,
+    `${label}: text alternative contains generated HTML markup`,
+  );
+  assert.equal((email.html.match(/<h1\b/g) ?? []).length, 1, `${label}: exactly one primary heading`);
+  assert.match(email.html, /<body\b[^>]*>\s*<div lang="[a-z]{2}" dir="(?:ltr|rtl)">/, `${label}: body content carries language and direction`);
 }
 
 function contrastRatio(foreground: string, background: string): number {
@@ -90,6 +96,13 @@ test("every locale has a complete, non-empty catalog", () => {
     assert.ok(copy.auth.confirmationLead.includes("{") === false, `${locale}: stray template token`);
     assert.ok(copy.welcome.candidateSteps.length >= 3, `${locale}: candidate steps`);
     assert.ok(copy.welcome.employerSteps.length >= 3, `${locale}: employer steps`);
+    assert.ok(copy.welcome.candidateEyebrow.length > 0, `${locale}: candidate eyebrow`);
+    assert.ok(copy.welcome.employerEyebrow.length > 0, `${locale}: employer eyebrow`);
+    assert.ok(copy.welcome.candidateSecondaryCta.length > 0, `${locale}: candidate secondary CTA`);
+    assert.ok(copy.welcome.employerSecondaryCta.length > 0, `${locale}: employer secondary CTA`);
+    assert.ok(copy.welcome.candidateStepsHeading.length > 0, `${locale}: candidate steps heading`);
+    assert.ok(copy.welcome.employerStepsHeading.length > 0, `${locale}: employer steps heading`);
+    assert.ok(copy.feedback.teamReplyCta.length > 0, `${locale}: feedback reply CTA`);
     assert.ok(copy.notification.statusChanged.includes("{status}"), `${locale}: status placeholder`);
     assert.equal(Object.keys(copy.statuses).length, 6, `${locale}: status labels`);
   }
@@ -397,6 +410,7 @@ test("feedback acknowledgement and team email carry the message safely", () => {
   assert.ok(team.subject.includes("Öneri"));
   assert.ok(team.html.includes("mehmet@example.com"));
   assert.ok(team.html.includes("5/5"));
+  assert.ok(team.html.includes("mailto:mehmet@example.com?subject="), "feedback team mail has a real reply action");
   assert.ok(!team.html.includes("<script>alert(1)</script>"));
   assert.ok(team.html.includes("&lt;script&gt;"));
   assert.ok(team.html.includes("&lt;b&gt;K&lt;/b&gt;"));
@@ -425,6 +439,7 @@ test("every locale has a complete, non-empty extras catalog", () => {
     assert.ok(extras.resume.updateSubject.length > 0, `${locale}: resume updateSubject`);
     assert.ok(extras.sales.ackSubject.length > 0, `${locale}: sales ackSubject`);
     assert.ok(extras.sales.teamSubject.length > 0, `${locale}: sales teamSubject`);
+    assert.ok(extras.sales.replyCta.length > 0, `${locale}: sales reply CTA`);
     assert.ok(extras.engagement.subject.length > 0, `${locale}: engagement subject`);
     assert.ok(
       extras.engagement.jobRow.includes("{title}") &&
@@ -492,6 +507,7 @@ test("sales acknowledgement and team email carry the lead safely", () => {
   assertWellFormed(team, "sales/team");
   assert.ok(team.html.includes("Acme KKTC"));
   assert.ok(team.html.includes("mehmet@example.com"));
+  assert.ok(team.html.includes("mailto:mehmet@example.com?subject="), "sales team mail has a real reply action");
   assert.ok(!team.html.includes("<script>alert(1)</script>"));
   assert.ok(team.html.includes("&lt;script&gt;"));
 });
@@ -550,128 +566,129 @@ function renderMarketing(locale: string) {
   });
 }
 
-test("every marketing locale has a complete, non-empty catalog", () => {
+test("every marketing locale has complete, proof-checked package copy", () => {
   for (const locale of EMAIL_LOCALES) {
     const copy = MARKETING_COPY[locale];
     assert.ok(copy.subject.length > 0, `${locale}: subject`);
-    assert.ok(copy.heading.length > 0, `${locale}: heading`);
-    assert.ok(copy.greeting.length > 0, `${locale}: greeting`);
-    assert.ok(copy.paragraphs.length >= 2, `${locale}: opening paragraphs`);
-    assert.ok(copy.features.length >= 3, `${locale}: feature list`);
+    assert.ok(copy.heroHook.length > 0, `${locale}: hero`);
+    assert.ok(copy.heroSubhook.length > 0, `${locale}: hero subhook`);
+    assert.equal(copy.packages && Object.keys(copy.packages).length, 4, `${locale}: all four packages`);
+    assert.equal(copy.features.length, 4, `${locale}: four verified features`);
     for (const feature of copy.features) {
-      assert.ok(feature.title.length > 0, `${locale}: feature title`);
-      assert.ok(feature.body.length > 0, `${locale}: feature body`);
+      assert.ok(feature.title.length > 0 && feature.body.length > 0, `${locale}: feature copy`);
     }
-    assert.ok(copy.primaryCta.length > 0, `${locale}: primary CTA`);
-    assert.ok(copy.secondaryCta.length > 0, `${locale}: secondary CTA`);
-    assert.ok(copy.signOff.length > 0, `${locale}: sign-off`);
+    for (const id of ["singleListing", "growth", "professional", "enterprise"] as const) {
+      const item = copy.packages[id];
+      assert.ok(item.name && item.audience && item.description && item.scope, `${locale}/${id}: complete package`);
+    }
+    assert.ok(copy.durationLabel.length > 0, `${locale}: durations`);
+    assert.ok(copy.packageCta.length > 0, `${locale}: package CTA`);
+    assert.ok(copy.whatsappCta.length > 0, `${locale}: WhatsApp CTA`);
     assert.ok(copy.unsubscribeLabel.length > 0, `${locale}: unsubscribe label`);
     assert.ok(copy.footerNote.length > 0, `${locale}: footer reason`);
   }
 });
 
-test("the acquisition footer does not claim the recipient has an account", () => {
-  // The transactional families say "because of activity on your account"; a
-  // prospect has none, so that line would be false on this family.
+test("the acquisition email does not make unverified ranking, translation or scale claims", () => {
+  const tr = renderMarketing("tr");
+  for (const unsupported of [
+    "Google'da zirve",
+    "en üst sıraya",
+    "otomatik olarak 6 dile",
+    "binlerce aday",
+    "sınırsız",
+    "yıllık paket",
+  ]) {
+    assert.equal(tr.html.toLocaleLowerCase("tr").includes(unsupported.toLocaleLowerCase("tr")), false, unsupported);
+  }
+  assert.ok(tr.html.includes("ödeme web sitesinde alınmaz"));
+  assert.ok(tr.html.includes("İlan adedi yazılı teklifte netleştirilir"));
+});
+
+test("the acquisition footer describes a real quote/contact follow-up, not an assumed account", () => {
   for (const locale of EMAIL_LOCALES) {
     const email = renderMarketing(locale);
     assert.ok(
       email.html.includes(escapeHtml(MARKETING_COPY[locale].footerNote)),
       `${locale}: marketing footer reason`,
     );
-    assert.ok(
-      !email.html.includes(getEmailCopy(locale).footer.reason),
-      `${locale}: no account-activity claim`,
-    );
+    assert.ok(!email.html.includes(getEmailCopy(locale).footer.reason), `${locale}: no account-activity claim`);
   }
 });
 
-test("the Turkish marketing copy keeps the owner's verbatim wording", () => {
-  const tr = MARKETING_COPY.tr;
-  assert.equal(tr.greeting, "Sayın Yetkili,");
-  assert.ok(tr.paragraphs[0].includes("Kuzey Kıbrıs'ta doğru adaya ulaşmak"));
-  assert.ok(tr.paragraphs[1].includes("İşBul KKTC"));
-  assert.ok(tr.features.some((feature) => feature.title.includes("6 dilde ilan yayınlayın")));
-  assert.equal(tr.primaryCta, "WhatsApp'tan Hemen Başlayın");
-  assert.equal(tr.secondaryCta, "E-posta ile Bilgi Alın");
-});
-
-test("marketing email renders in every locale with both CTAs and contacts", () => {
+test("marketing email has functional links for every package and contact action in all locales", () => {
+  const packageTargets = [
+    "https://isbulkktc.com/packages#package-tek-ilan",
+    "https://isbulkktc.com/packages#package-buyume",
+    "https://isbulkktc.com/packages#package-profesyonel",
+    "https://isbulkktc.com/packages#packages-lead-title",
+  ];
   for (const locale of EMAIL_LOCALES) {
     const email = renderMarketing(locale);
+    const copy = MARKETING_COPY[locale];
     assertWellFormed(email, `marketing/${locale}`);
-    const copy = MARKETING_COPY[locale];
     assert.equal(email.subject, copy.subject);
-
-    // Both actions, in the owner's order, each with its lead-in line.
-    // CTA labels are HTML-escaped in the rendered output, so escape them for the search.
-    const primaryEscaped = escapeHtml(copy.primaryCta);
-    const secondaryEscaped = escapeHtml(copy.secondaryCta);
-    const primary = email.html.indexOf(primaryEscaped);
-    const secondary = email.html.indexOf(secondaryEscaped);
-    assert.ok(primary !== -1 && secondary !== -1, `${locale}: both CTAs present`);
-    assert.ok(primary < secondary, `${locale}: primary CTA precedes secondary`);
-    assert.ok(email.html.includes(escapeHtml(copy.paragraphs[1])), `${locale}: primary lead-in`);
-    assert.ok(email.html.includes(copy.registerLead), `${locale}: secondary lead-in`);
-    // Primary CTA links to WhatsApp, secondary CTA links to mailto:destek@isbulkktc.com
-    assert.ok(email.html.includes(MARKETING_CONTACTS.whatsapp), `${locale}: primary CTA whatsapp link`);
-    assert.ok(email.html.includes(`mailto:${MARKETING_CONTACTS.email}`), `${locale}: secondary CTA mailto link`);
-
-    // The three reachable contact channels, each as a real link.
-    assert.ok(email.html.includes(`mailto:${MARKETING_CONTACTS.email}`), `${locale}: email link`);
-    assert.ok(email.html.includes(`tel:${MARKETING_CONTACTS.phoneTel}`), `${locale}: tel link`);
-    assert.ok(email.html.includes(MARKETING_CONTACTS.whatsapp), `${locale}: whatsapp link`);
-    // The heading is uppercased in the sender with the message locale (see the
-    // casing test below), so expect the locale-cased form.
-    assert.ok(
-      email.html.includes(copy.contactHeading.toLocaleUpperCase(locale)),
-      `${locale}: contact heading`,
-    );
-
-    // Promotional: the opt-out is present in the body (HTML-escaped) and the
-    // text alternative (raw). The URL in HTML has & for the ampersand.
-    assert.ok(
-      email.html.includes(`${SITE}api/email/unsubscribe?e=x&amp;s=y`),
-      `${locale}: unsubscribe link`,
-    );
-    assert.ok(
-      email.text.includes(`${SITE}api/email/unsubscribe?e=x&s=y`),
-      `${locale}: text unsubscribe`,
-    );
-    assert.ok(email.text.includes(copy.greeting), `${locale}: text greeting`);
+    assert.ok(email.html.includes("https://isbulkktc.com/packages#packages-current"), `${locale}: hero package catalogue`);
+    for (const target of packageTargets) {
+      assert.ok(email.html.includes(target), `${locale}: working package target ${target}`);
+    }
+    assert.ok(email.html.includes("https://wa.me/905391316421?text="), `${locale}: WhatsApp deep link`);
+    assert.ok(email.html.includes("mailto:info@isbulkktc.com"), `${locale}: canonical mail address`);
+    assert.ok(email.html.includes("tel:+905391316421"), `${locale}: telephone link`);
+    assert.ok(email.html.includes("0539 131 64 21"), `${locale}: displayed telephone`);
+    assert.ok(email.html.includes("info@isbulkktc.com"), `${locale}: support mailbox`);
+    assert.ok(email.html.includes(copy.unsubscribeLabel), `${locale}: unsubscribe action`);
+    assert.ok(email.html.includes(`${SITE}api/email/unsubscribe?e=x&amp;s=y`), `${locale}: unsubscribe URL`);
+    assert.ok(email.text.includes(`${SITE}api/email/unsubscribe?e=x&s=y`), `${locale}: text opt-out URL`);
+    assert.ok(email.text.includes("https://isbulkktc.com/packages#package-buyume"), `${locale}: text package links`);
+    assert.ok(email.text.includes(MARKETING_CONTACTS.email), `${locale}: text support email`);
+    assert.ok(email.text.includes(MARKETING_CONTACTS.phoneDisplay), `${locale}: text phone`);
+    assert.ok(email.text.includes(copy.primaryCta), `${locale}: text primary CTA`);
+    assert.ok(!email.html.includes("₺1.290") && !email.html.includes("₺2.790") && !email.html.includes("₺3.990"), `${locale}: no stale hard-coded prices`);
   }
 });
 
-test("headings uppercase with the recipient's language rules, not the client's", () => {
-  // The owner reported "başlıklarda i yerine ı kullanılmış": the section and
-  // contact headings were uppercased by CSS `text-transform`, which resolves
-  // with the *client's* locale and turned Turkish dotted `i` into dotless `I`.
-  // Casing now happens in the sender, so the Turkish dotted `i` survives.
-  const tr = renderMarketing("tr");
-  assert.ok(
-    tr.html.includes("İŞBUL KKTC İLE İŞLETMENİZ ŞUNLARI KAZANIR:"),
-    "the Turkish features heading keeps its dotted capital İ",
-  );
-  assert.ok(tr.html.includes("HIZLI İLETİŞİM — KARAR VERMEK İSTİYORSANIZ:"), "the Turkish contact heading keeps its dotted İ");
-  // The dotless form is exactly the regression; it must not appear anywhere.
-  assert.ok(!tr.html.includes("IŞLETMENİZ"), "no dotless capital I in the Turkish heading");
-  assert.ok(!tr.html.includes("HIZLI ILETISIM"), "no dotless capital I in the Turkish contact heading");
-
-  // Casing no longer depends on a CSS property the client may drop (Outlook),
-  // and it never lowercases a heading that the sender already cased.
-  assert.ok(!tr.html.includes("text-transform"), "casing is pre-applied, not delegated to CSS");
+test("candidate and employer welcome emails are genuinely different journeys", () => {
   for (const locale of EMAIL_LOCALES) {
-    const copy = MARKETING_COPY[locale];
-    const email = renderMarketing(locale);
-    assert.ok(
-      email.html.includes(copy.featuresHeading.toLocaleUpperCase(locale)),
-      `${locale}: features heading cased with the message locale`,
-    );
-    assert.ok(
-      email.html.includes(copy.contactHeading.toLocaleUpperCase(locale)),
-      `${locale}: contact heading cased with the message locale`,
-    );
+    const candidate = renderWelcomeEmail({
+      locale,
+      siteUrl: SITE,
+      audience: "candidate",
+      name: "Esra Kapli",
+      actionUrl: `${SITE}profile/dashboard`,
+    });
+    const employer = renderWelcomeEmail({
+      locale,
+      siteUrl: SITE,
+      audience: "employer",
+      name: "Mehmet Demir",
+      actionUrl: `${SITE}company/dashboard`,
+    });
+    assertWellFormed(candidate, `welcome/candidate/${locale}`);
+    assertWellFormed(employer, `welcome/employer/${locale}`);
+    assert.ok(candidate.html.includes(MARKETING_CONTACTS.email));
+    assert.ok(candidate.html.includes(`${SITE}profile/dashboard`));
+    assert.ok(candidate.html.includes(`${SITE}jobs`));
+    assert.ok(candidate.html.includes(getEmailCopy(locale).welcome.candidateEyebrow));
+    assert.ok(candidate.html.includes(getEmailCopy(locale).welcome.candidateSecondaryCta));
+    assert.ok(employer.html.includes(`${SITE}company/dashboard`));
+    assert.ok(employer.html.includes(`${SITE}packages`));
+    assert.ok(employer.html.includes(getEmailCopy(locale).welcome.employerEyebrow));
+    assert.ok(employer.html.includes(getEmailCopy(locale).welcome.employerSecondaryCta));
+    assert.notEqual(candidate.subject, employer.subject);
+    assert.notEqual(candidate.html, employer.html);
   }
+});
+
+test("password-change security mail provides a working localized sign-in destination", () => {
+  const email = renderAuthPasswordChanged({
+    locale: "tr",
+    siteUrl: SITE,
+    email: "esra@example.com",
+  });
+  assertWellFormed(email, "auth/password-changed");
+  assert.ok(email.html.includes("https://isbulkktc.com/login"));
+  assert.ok(email.html.includes("Giriş ekranını aç"));
 });
 
 test("the promotional families carry no redundant unsubscribe sentence", () => {
@@ -714,16 +731,24 @@ test("the marketing contact rows only admit mailto:, tel: and https:", () => {
   assert.ok(html.includes("mailto:info@isbulkktc.com"));
 });
 
-test("the text alternative carries no tags and lists every contact", () => {
+test("the text alternative keeps entity decoding, paragraph breaks and contact details", () => {
   const email = renderMarketing("tr");
-  assert.ok(!email.text.includes("<"), "no markup in the text alternative");
-  // The escaped HTML entities must be decoded back for the text part, or a
-  // recipient of the text alternative reads `Kuzey Kıbrıs&#39;ta`.
-  assert.ok(!email.text.includes("&#39;"), "no escaped apostrophe in the text part");
-  assert.ok(email.text.includes("Kuzey Kıbrıs'ta"), "the apostrophe is decoded");
+  assert.ok(!email.text.includes("<"), "marketing copy has no markup-like text");
   assert.ok(email.text.includes(MARKETING_CONTACTS.email));
   assert.ok(email.text.includes(MARKETING_CONTACTS.phoneDisplay));
   assert.ok(email.text.includes(MARKETING_CONTACTS.whatsapp));
   assert.ok(email.text.includes(MARKETING_COPY.tr.primaryCta));
   assert.ok(email.text.includes(MARKETING_COPY.tr.secondaryCta));
+
+  const plain = renderEmailText({
+    locale: "tr",
+    preheader: "Ön izleme",
+    heading: "Düz metin testi",
+    introHtml: "<p>Kuzey Kıbrıs&#39;ta çalışmak.</p><p>İkinci paragraf.</p>",
+    footerNote: "Bilgilendirme",
+    siteUrl: SITE,
+  });
+  assert.ok(!plain.includes("&#39;"), "apostrophe entity is decoded");
+  assert.ok(plain.includes("Kuzey Kıbrıs'ta"), "the apostrophe is preserved");
+  assert.ok(plain.includes("çalışmak.\nİkinci paragraf."), "paragraph boundaries are preserved");
 });

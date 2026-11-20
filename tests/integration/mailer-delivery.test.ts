@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test, { mock } from "node:test";
+import { MARKETING_COPY } from "../../supabase/functions/_shared/email-copy-marketing";
 
 /**
  * The Node-side transactional mailer (`src/server/email/mailer.ts`), driven
@@ -398,8 +399,8 @@ test("the acquisition email sends from info@ with the one-click unsubscribe pair
 // The owner's verbatim Turkish copy and both actions reach the body.
     // HTML escapes apostrophes as '
     assert.ok(payload.html?.includes("Sayın Yetkili,"));
-    assert.ok(payload.html?.includes("WhatsApp&#39;tan Hemen Başlayın"));
-    assert.ok(payload.html?.includes("E-posta ile Bilgi Alın"));
+    assert.ok(payload.html?.includes(MARKETING_COPY.tr.whatsappCta));
+    assert.ok(payload.html?.includes(MARKETING_COPY.tr.secondaryCta));
   } finally {
     restoreInbox();
     restore();

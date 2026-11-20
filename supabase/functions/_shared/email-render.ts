@@ -127,6 +127,10 @@ export function renderAuthPasswordChanged(input: SiteContext & {
       heading: copy.auth.passwordChangedHeading,
       introHtml: paragraph(`${copy.auth.passwordChangedLead} (${input.email})`),
       note: copy.auth.passwordChangedWarning,
+      button: {
+        label: locale === "tr" ? "Giriş ekranını aç" : locale === "de" ? "Anmeldeseite öffnen" : locale === "ru" ? "Открыть вход" : locale === "el" ? "Άνοιγμα σύνδεσης" : locale === "fa" ? "رفتن به صفحه ورود" : "Open sign in",
+        url: new URL("login", input.siteUrl.endsWith("/") ? input.siteUrl : `${input.siteUrl}/`).toString(),
+      },
       footerNote: copy.footer.legal,
       siteUrl: input.siteUrl,
     };
@@ -148,20 +152,48 @@ export function renderWelcomeEmail(input: SiteContext & {
   return render(input, (copy, locale) => {
     const isCandidate = input.audience === "candidate";
     const subject = isCandidate ? copy.welcome.candidateSubject : copy.welcome.employerSubject;
-    const heading = isCandidate ? copy.welcome.candidateHeading : copy.welcome.employerHeading;
+    const hook = isCandidate ? copy.welcome.candidateHeading : copy.welcome.employerHeading;
     const lead = isCandidate ? copy.welcome.candidateLead : copy.welcome.employerLead;
     const steps = isCandidate ? copy.welcome.candidateSteps : copy.welcome.employerSteps;
-    const cta = isCandidate ? copy.welcome.candidateCta : copy.welcome.employerCta;
+    const primaryCta = isCandidate ? copy.welcome.candidateCta : copy.welcome.employerCta;
+    const secondaryCta = isCandidate
+      ? copy.welcome.candidateSecondaryCta
+      : copy.welcome.employerSecondaryCta;
+    const eyebrow = isCandidate
+      ? copy.welcome.candidateEyebrow
+      : copy.welcome.employerEyebrow;
+    const stepsHeading = isCandidate
+      ? copy.welcome.candidateStepsHeading
+      : copy.welcome.employerStepsHeading;
     const greeting = input.name?.trim()
       ? `<p style="margin:0 0 12px;">${escapeHtml(input.name.trim())},</p>`
       : "";
+    const siteRoot = input.siteUrl.endsWith("/") ? input.siteUrl : `${input.siteUrl}/`;
+    const secondaryUrl = new URL(isCandidate ? "jobs" : "packages", siteRoot).toString();
+    const title = locale === "tr"
+      ? (isCandidate ? "Profilinizi tamamlayarak başlayın" : "Şirketinizi işe alıma hazırlayın")
+      : locale === "de"
+        ? (isCandidate ? "Vervollständigen Sie zuerst Ihr Profil" : "Bereiten Sie Ihr Unternehmen auf die Personalsuche vor")
+        : locale === "ru"
+          ? (isCandidate ? "Начните с заполнения профиля" : "Подготовьте компанию к найму")
+          : locale === "el"
+            ? (isCandidate ? "Ξεκινήστε συμπληρώνοντας το προφίλ σας" : "Προετοιμάστε την εταιρεία σας για προσλήψεις")
+            : locale === "fa"
+              ? (isCandidate ? "با تکمیل نمایه خود شروع کنید" : "شرکت خود را برای استخدام آماده کنید")
+              : (isCandidate ? "Start by completing your profile" : "Prepare your company to hire");
     const opts = {
       locale,
       preheader: lead,
-      heading,
-      introHtml: `${greeting}${paragraph(lead)}`,
-      sections: [{ heading: isCandidate ? "İlk adımlar" : "İlk adımlar", html: listHtml(steps) }],
-      button: { label: cta, url: input.actionUrl },
+      heading: title,
+      hero: {
+        eyebrow,
+        hook,
+        subhook: lead,
+        cta: { label: primaryCta, url: input.actionUrl },
+      },
+      introHtml: greeting,
+      sections: [{ heading: stepsHeading, html: listHtml(steps) }],
+      button: { label: secondaryCta, url: secondaryUrl, secondary: true },
       footerNote: copy.footer.reason,
       siteUrl: input.siteUrl,
     };
@@ -280,6 +312,12 @@ export function renderFeedbackTeamEmail(input: FeedbackInput): RenderedEmail {
           html: `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">${rows.join("")}</table>`,
         },
       ],
+      button: input.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)
+        ? {
+            label: copy.feedback.teamReplyCta,
+            url: `mailto:${input.email}?subject=${encodeURIComponent(copy.feedback.teamSubject)}`,
+          }
+        : undefined,
       footerNote: copy.footer.reason,
       siteUrl: input.siteUrl,
     };
@@ -416,6 +454,12 @@ export function renderSalesTeamEmail(input: SalesLeadInput): RenderedEmail {
         html: `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">${rows.join("")}</table>`,
       },
     ],
+    button: input.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)
+      ? {
+          label: extras.sales.replyCta,
+          url: `mailto:${input.email}?subject=${encodeURIComponent(extras.sales.teamSubject)}`,
+        }
+      : undefined,
     footerNote: copy.footer.reason,
     siteUrl: input.siteUrl,
   };
@@ -477,131 +521,111 @@ export function renderEngagementEmail(input: SiteContext & {
 }
 
 export type MarketingInput = SiteContext & {
-  /** Opt-out URL; the family is promotional, so it always carries one. */
+  /** A signed recipient-specific opt-out URL is mandatory for promotional mail. */
   unsubscribeUrl: string;
 };
 
 /**
- * The acquisition message: the one email that has to work on someone who has
- * never heard of İşBul KKTC. It is the only family built from
- * `email-copy-marketing.ts` (its own copy module, like `email-copy-extras.ts`)
- * and the only one that pairs a primary and a secondary action with a lead-in
- * line above each, then lists the reachable contact channels.
- *
- * `unsubscribeUrl` is required: unlike the transactional families, this message
- * is marketing, so every send must offer a one-click opt-out (RFC 8058).
+ * Acquisition email. Package limits and durations mirror the public package
+ * catalogue; prices are intentionally never embedded because operators can
+ * change them in the admin console. Every package CTA deep-links to its own
+ * catalogue card, while WhatsApp, email and telephone actions use real channels.
  */
 export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
+  if (!input.unsubscribeUrl || !/^https:\/\//i.test(input.unsubscribeUrl)) {
+    throw new Error("marketing_email_requires_https_unsubscribe_url");
+  }
+
   const locale = resolveEmailLocale(input.locale);
   const copy = getMarketingCopy(locale);
+  const baseUrl = new URL(input.siteUrl);
+  if (!baseUrl.pathname.endsWith("/")) baseUrl.pathname += "/";
+  const packagePageUrl = new URL("packages#packages-current", baseUrl).toString();
+  const packageUrl = (anchor: string) => new URL("packages#" + anchor, baseUrl).toString();
 
-  const _paragraphs = copy.paragraphs.map((text) => paragraph(text)).join("");
+  const whatsappUrl = new URL(MARKETING_CONTACTS.whatsapp);
+  whatsappUrl.searchParams.set("text", copy.whatsappMessage);
+  const emailUrl = new URL("mailto:" + MARKETING_CONTACTS.email);
+  emailUrl.searchParams.set("subject", copy.subject);
+  emailUrl.searchParams.set("body", copy.whatsappMessage + "\n\n" + packagePageUrl);
 
-  const primaryCtaUrl = MARKETING_CONTACTS.whatsapp;
-  const secondaryCtaUrl = `mailto:${MARKETING_CONTACTS.email}`;
+  const tierConfig = [
+    { id: "singleListing", anchor: "package-tek-ilan", accent: "#4b8066" },
+    { id: "growth", anchor: "package-buyume", accent: "#c6a46a" },
+    { id: "professional", anchor: "package-profesyonel", accent: "#326c54" },
+    { id: "enterprise", anchor: "packages-lead-title", accent: "#9cbba7" },
+  ] as const;
 
-  const hero = {
-    hook: copy.paragraphs[0],
-    subhook: copy.paragraphs[1],
-    cta: { label: copy.primaryCta, url: primaryCtaUrl },
-  };
-
-  const features = copy.features.map((f) => ({
-    icon: f.title.match(/^([🌍🔍⚡✅📦])/)?.[1] || "✨",
-    title: f.title.replace(/^([🌍🔍⚡✅📦])\s*/, ""),
-    body: f.body,
-  }));
-
-  const packages = [
-    {
-      name: "Tek İlan",
-      price: "₺1.290",
-      period: "ay (30 gün)",
-      highlights: [
-        "1 ilan hakkı",
-        "6 dilde otomatik yayın",
-        "Google Jobs indeksleme",
-        "Aday havuzu erişimi",
-        "Doğrulanmış şirket rozeti",
-      ],
-      cta: { label: "Bu Paketi Seç", url: primaryCtaUrl },
-    },
-    {
-      name: "Büyüme",
-      price: "₺2.790",
-      period: "ay (30 gün)",
-      highlights: [
-        "En fazla 3 ilan hakkı",
-        "Tüm Tek İlan özellikleri",
-        "Google Jobs indeksleme",
-        "Aday havuzu erişimi",
-        "Doğrulanmış şirket rozeti",
-      ],
-      cta: { label: "En Popüler — Başla", url: primaryCtaUrl },
-      popular: true,
-    },
-    {
-      name: "Profesyonel",
-      price: "₺3.990",
-      period: "ay (30 gün)",
-      highlights: [
-        "En fazla 5 ilan hakkı",
-        "Tüm Büyüme özellikleri",
-        "Google Jobs indeksleme",
-        "Aday havuzu erişimi",
-        "Doğrulanmış şirket rozeti",
-        "Öncelikli destek",
-      ],
-      cta: { label: "Bu Paketi Seç", url: primaryCtaUrl },
-    },
-    {
-      name: "Kurumsal",
-      price: "Özel teklif",
-      period: "yazılı teklifle",
-      highlights: [
-        "İlan adedi yazılı teklifte netleştirilir",
-        "Her ilan için 1, 7 veya 30 gün",
-        "Kapsam ve süre teklif öncesi onaylanır",
-        "Tüm Profesyonel özellikleri",
-        "Özel hesap yöneticisi",
-        "API erişimi",
-      ],
-      cta: { label: "Kurumsal İletişim", url: secondaryCtaUrl },
-    },
-  ];
+  const packages = tierConfig.map(({ id, anchor, accent }) => {
+    const item = copy.packages[id];
+    return {
+      name: item.name,
+      audience: item.audience,
+      description: item.description,
+      scope: item.scope,
+      durationLabel: copy.durationLabel,
+      accent,
+      cta: { label: copy.packageCta, url: packageUrl(anchor) },
+    };
+  });
 
   const opts = {
     locale,
     preheader: copy.preheader,
     heading: copy.heading,
-    introHtml: paragraph(copy.greeting),
+    introHtml: [paragraph(copy.greeting), ...copy.paragraphs.map(paragraph)].join(""),
     sections: [
+      { heading: copy.featuresHeading, html: "" },
       {
-        heading: copy.featuresHeading,
-        html: "", // Features rendered via featuresBlock
+        heading: copy.packagesHeading,
+        html: paragraph(copy.packagesLead) + paragraph(copy.pricingNote),
       },
     ],
     outroHtml: paragraph(copy.closing),
     buttons: [
-    { label: copy.primaryCta, url: primaryCtaUrl, lead: copy.packagesLead },
-    { label: copy.secondaryCta, url: secondaryCtaUrl, lead: copy.registerLead },
-      { label: copy.secondaryCta, url: secondaryCtaUrl, lead: copy.registerLead },
+      {
+        label: copy.whatsappCta,
+        url: whatsappUrl.toString(),
+        lead: copy.whatsappLead,
+      },
+      {
+        label: copy.secondaryCta,
+        url: emailUrl.toString(),
+        lead: copy.contactHeading,
+      },
     ],
     signatureHtml: paragraph(copy.signOff),
     contacts: [
-      { label: copy.contactLabels.email, value: MARKETING_CONTACTS.email, url: `mailto:${MARKETING_CONTACTS.email}` },
-      { label: copy.contactLabels.phone, value: MARKETING_CONTACTS.phoneDisplay, url: `tel:${MARKETING_CONTACTS.phoneTel}` },
-      { label: copy.contactLabels.whatsapp, value: MARKETING_CONTACTS.phoneDisplay, url: MARKETING_CONTACTS.whatsapp },
+      {
+        label: copy.contactLabels.email,
+        value: MARKETING_CONTACTS.email,
+        url: "mailto:" + MARKETING_CONTACTS.email,
+      },
+      {
+        label: copy.contactLabels.phone,
+        value: MARKETING_CONTACTS.phoneDisplay,
+        url: "tel:" + MARKETING_CONTACTS.phoneTel,
+      },
+      {
+        label: copy.contactLabels.whatsapp,
+        value: MARKETING_CONTACTS.phoneDisplay,
+        url: whatsappUrl.toString(),
+      },
     ],
     contactsHeading: copy.contactHeading,
     footerNote: copy.footerNote,
-    siteUrl: input.siteUrl,
+    siteUrl: baseUrl.toString(),
     unsubscribeUrl: input.unsubscribeUrl,
     unsubscribeLabel: copy.unsubscribeLabel,
-    hero,
-    features,
+    hero: {
+      hook: copy.heroHook,
+      subhook: copy.heroSubhook,
+      cta: { label: copy.primaryCta, url: packagePageUrl },
+    },
+    features: copy.features,
     packages,
   };
+
   return {
     subject: copy.subject,
     html: renderEmailLayout(opts),
