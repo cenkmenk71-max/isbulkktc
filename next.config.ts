@@ -222,6 +222,16 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
       {
+        // The dedicated DNS-only mail-ingress hostname must never be indexed or
+        // cached. Proxy restricts it to authenticated server-to-server POSTs.
+        source: "/(.*)",
+        has: [{ type: "host", value: "^hooks\\.isbulkktc\\.com\\.?$" }],
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Cache-Control", value: "no-store" },
+        ],
+      },
+      {
         // The Vercel deployment aliases serve the same app outside Cloudflare,
         // so they must not be indexed: the canonical host is isbulkktc.com.
         source: "/(.*)",
