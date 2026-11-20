@@ -37,15 +37,9 @@ jobs:
           actual="/tmp/visual-artifacts/packages-lead.actual.png"
           target="tests/visual/baselines/packages-lead.png"
           test -s "$actual"
-          node -e '
-            const sharp = require("sharp");
-            sharp(process.argv[1]).metadata().then(({width,height}) => {
-              if (width !== 2560 || height !== 2092) {
-                throw new Error("Unexpected CI baseline dimensions: " + width + "x" + height);
-              }
-              console.log("Approved CI render dimensions: " + width + "x" + height);
-            }).catch((error) => { console.error(error); process.exit(1); });
-          ' "$actual"
+          dimensions="$(file "$actual")"
+          echo "$dimensions"
+          [[ "$dimensions" == *"2560 x 2092"* ]]
           cp "$actual" "$target"
           rm .github/workflows/refresh-packages-visual-baseline.yml
           git config user.name "github-actions[bot]"
