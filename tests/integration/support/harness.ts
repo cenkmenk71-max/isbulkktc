@@ -186,6 +186,10 @@ export class FakeSupabase {
         ops.push(`filter:${column}${operator}${JSON.stringify(value)}`);
         return builder;
       },
+      or: (filters: string) => {
+        ops.push(`or:${filters}`);
+        return builder;
+      },
       maybeSingle: () => Promise.resolve(settle()),
       single: () => Promise.resolve(settle()),
       // Some call sites await the builder itself (`await …insert({…})`), so the
