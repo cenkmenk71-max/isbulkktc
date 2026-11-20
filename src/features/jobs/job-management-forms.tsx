@@ -33,7 +33,7 @@ export function JobDraftForm({
     <div className="job-authoring">
       <form action={action} className="job-authoring-form">
         <input name="companyId" type="hidden" value={companyId} />
-        <input name="jobId" type="hidden" value={job?.id ?? ""} />
+        <input name="jobId" type="hidden" value={savedJobId ?? ""} />
 
         <label>
           {copy("jobTitle")}
