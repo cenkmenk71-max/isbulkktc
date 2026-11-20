@@ -883,7 +883,9 @@
     "companyLabel": "EMPLOYER",
     "companyLocation": "Company location",
     "companyWebsite": "Website",
-    "companyDirectoryLink": "View in company directory"
+    "companyDirectoryLink": "View in company directory",
+    "sourceAttributionLabel": "ORIGINAL SOURCE",
+    "sourceAttributionLink": "View original listing"
   },
   "JobApplication": {
     "title": "Apply for this role",
