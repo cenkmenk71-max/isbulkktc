@@ -91,6 +91,25 @@ Her iki rota da bearer'sız **401** döner.
 > Not: GitHub sırları **yazılınca bir daha okunamaz** (write-only). Üretilen değeri
 > güvenli bir yerde sakla; hem GitHub'a hem Vercel'e **aynı** değeri koy.
 
+### Engagement digest — FAIL-CLOSED consent gate
+
+The engagement digest is promotional email. The current production
+`list_engagement_recipients` RPC selects active, email-confirmed, non-deleted
+accounts and excludes opt-outs, but it has **no affirmative marketing-consent
+predicate**. Email verification and the absence of an unsubscribe record are
+not proof of marketing permission.
+
+The route therefore returns **503 before any database read or send** unless
+`ENGAGEMENT_MARKETING_CONSENT_READY=true`. Do not set this Vercel variable
+until a versioned consent source, user-facing opt-in/withdrawal flow, SQL
+recipient predicate, role/ACL protections and integration/pgTAP coverage have
+all shipped and have been verified in production. The flag is a release gate,
+not a replacement for the database predicate. The GitHub Actions workflow must
+treat this 503 as a failed run.
+
+Tracked in issue #728. Transactional mail remains separate and is not blocked
+by this promotional-mail gate.
+
 ### 5. Resend webhook — `RESEND_WEBHOOK_SECRET` — TAMAM `[x]`
 Webhook oluşturuldu (6 olay: `email.sent/delivered/delivery_delayed/bounced/complained/suppressed`),
 `whsec_…` imza sırrı Vercel'e yazıldı (`production`+`preview`) ve yeniden dağıtıldı.

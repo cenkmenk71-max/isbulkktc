@@ -113,6 +113,10 @@ function configured(): () => void {
   return withEnv({
     ENGAGEMENT_CRON_SECRET: CRON_SECRET,
     ENGAGEMENT_UNSUBSCRIBE_SECRET: UNSUB_SECRET,
+    // Test-only release-gate override: route behavior is exercised only after
+    // tests install a mock recipient RPC. Production must not set this until
+    // the real database predicate requires explicit affirmative consent.
+    ENGAGEMENT_MARKETING_CONSENT_READY: "true",
   });
 }
 
@@ -141,6 +145,29 @@ test("an unauthenticated POST is refused before any work", async () => {
       [],
       "authentication must precede the service client, so no call is recorded",
     );
+    assert.deepEqual(recorded.engagementMail, []);
+  } finally {
+    restore();
+  }
+});
+
+test("the promotional digest fails closed until explicit-consent enforcement is deployed", async () => {
+  resetBoundary({}, { rpcs: {} });
+  const restore = withEnv({
+    ENGAGEMENT_CRON_SECRET: CRON_SECRET,
+    ENGAGEMENT_UNSUBSCRIBE_SECRET: UNSUB_SECRET,
+    ENGAGEMENT_MARKETING_CONSENT_READY: undefined,
+  });
+  try {
+    const { POST } = await digestRoute();
+    const res = await POST(request(`Bearer ${CRON_SECRET}`));
+
+    assert.equal(res.status, 503);
+    assertNoStore(res);
+    assert.deepEqual(await res.json(), {
+      message: "Engagement marketing consent enforcement is not ready",
+    });
+    assert.deepEqual(recorded.supabase, [], "must not query recipients before consent enforcement is ready");
     assert.deepEqual(recorded.engagementMail, []);
   } finally {
     restore();
