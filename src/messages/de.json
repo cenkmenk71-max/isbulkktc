@@ -857,7 +857,8 @@
       "on_site": "Vor Ort",
       "hybrid": "Hybrid",
       "remote": "Remote"
-    }
+    },
+    "unavailable": "Stellenanzeigen sind vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut."
   },
   "JobsPage": {
     "eyebrow": "İŞBUL KKTC · KARRIERECHANCEN",
@@ -954,7 +955,8 @@
     "previous": "Zurück",
     "next": "Weiter",
     "pageCount": "Seite {current} von {total}",
-    "sourceNote": "Die hier gezeigte geografische Abdeckung ist ungefähr und stellt keine offizielle Grenze dar. Ein Eintrag bedeutet nicht, dass das Unternehmen registriert oder geprüft ist."
+    "sourceNote": "Die hier gezeigte geografische Abdeckung ist ungefähr und stellt keine offizielle Grenze dar. Ein Eintrag bedeutet nicht, dass das Unternehmen registriert oder geprüft ist.",
+    "jobEmployersUnavailable": "Arbeitgeber mit aktiven Stellenanzeigen sind vorübergehend nicht verfügbar. Das übrige Unternehmensverzeichnis bleibt verfügbar."
   },
   "CandidateDashboard": {
     "eyebrow": "BEWERBERPROFIL",
@@ -1483,7 +1485,8 @@
     "messages": {
       "invalid": "Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
       "submitted": "Ihre Anfrage ist eingegangen! Wir melden uns in Kürze.",
-      "failed": "Die Anfrage konnte gerade nicht gesendet werden. Bitte später erneut versuchen."
+      "failed": "Die Anfrage konnte gerade nicht gesendet werden. Bitte später erneut versuchen.",
+      "consentUnavailable": "Ihre Marketingeinwilligung kann derzeit nicht gespeichert werden. Deaktivieren Sie das Kontrollkästchen und versuchen Sie erneut, Ihre Angebotsanfrage ohne Marketingeinwilligung zu senden."
     },
     "marketingConsentLabel": "Ich möchte gelegentlich Werbe-E-Mails zu Diensten und Neuigkeiten von İşBul KKTC erhalten. Die Einwilligung ist freiwillig und jederzeit widerrufbar."
   },
