@@ -562,7 +562,7 @@ export async function getPendingJobsForReview(input?: {
 
   const hasCursorPart = Boolean(input?.afterCreatedAt) || Boolean(input?.afterId);
   const cursor = hasCursorPart
-    ? moderationCursorSchema.safeParse({
+    ? employerJobsCursorSchema.safeParse({
         createdAt: input?.afterCreatedAt,
         id: input?.afterId,
       })
