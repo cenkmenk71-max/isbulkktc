@@ -137,6 +137,9 @@ test("an employer can create and submit a listing using the current form values"
       await request.delete(`${supabaseUrl}/rest/v1/jobs?company_id=eq.${companyId}`, {
         headers: serviceHeaders,
       });
+      await request.delete(`${supabaseUrl}/rest/v1/company_members?company_id=eq.${companyId}`, {
+        headers: serviceHeaders,
+      });
       await request.delete(`${supabaseUrl}/rest/v1/companies?id=eq.${companyId}`, {
         headers: serviceHeaders,
       });
