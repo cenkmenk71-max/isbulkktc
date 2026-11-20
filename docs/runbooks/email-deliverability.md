@@ -105,6 +105,22 @@ Cloudflare'i tamamen atlar.
 Doğrulama: doğru Svix imzasıyla POST → **200** `{"message":"Ignored",...}`;
 bozuk imza → **401** `{"message":"Invalid signature"}`.
 
+> **20 Kasım 2026 yeniden doğrulama uyarısı:** Yukarıdaki 12 Kasım testleri
+> Vercel SSO koruması etkinleştirilmeden önce yapıldı. Güncel Vercel proje
+> ayarında SSO koruması `all_except_custom_domains`; bu nedenle
+> `isbulkktc-prod.vercel.app` alias'ının artık harici Resend webhook isteklerine
+> açık olduğu varsayılamaz. Son görülen Resend webhook teslimatları 19 Kasım
+> 16:38 UTC'de başarılıydı; 20 Kasım koruma ayarı değişikliğinden sonraki bir
+> teslimat henüz doğrulanmadı (issue #719).
+
+> **Önerilen kalıcı topoloji:** Webhook'u `https://isbulkktc.com/api/email/resend-webhook`
+> üzerinden al. Cloudflare bot/WAF bunu engelliyorsa yalnızca
+> `POST /api/email/resend-webhook` için dar kapsamlı bir skip/allow kuralı
+> tanımla; uygulamadaki Svix imza, timestamp/replay ve bounded-body doğrulaması
+> zorunlu kalmalı. WAF'ı veya Vercel SSO'yu genel olarak kapatma. Değişiklikten
+> sonra Resend'den test event gönderip 2xx teslimat ve uygulama tarafındaki
+> event işlenmesini doğrula. DNS/Cloudflare/Vercel ayarları henüz değiştirilmedi.
+
 ### 5b. Takım gelen kutusu env'leri — TAMAM `[x]` (2026-11-12 ikinci tur)
 Üretimde `SALES_INBOX_EMAIL` / `FEEDBACK_INBOX_EMAIL` / `COMPANY_REVIEW_INBOX_EMAIL`
 **hiçbiri yoktu**. `mailer.ts` bunları şöyle çözüyor:
