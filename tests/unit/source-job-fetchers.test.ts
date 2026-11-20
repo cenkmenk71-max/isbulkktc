@@ -159,6 +159,26 @@ test("a permanent 4xx is not retried", async () => {
   assert.equal(attempts, 1, "a non-transient 4xx must fail fast");
 });
 
+test("a successful HTTP response with an invalid list shape aborts both source snapshots", async () => {
+  await assert.rejects(
+    () =>
+      withFetch(
+        () => json({ unexpected: [] }),
+        () => fetchIskibrisJobs({ now: NOW, concurrency: 1 }),
+      ),
+    /iskibris ilan listesi geçersiz biçimde döndü/,
+  );
+
+  await assert.rejects(
+    () =>
+      withFetch(
+        () => json({ unexpected: [] }),
+        () => fetchIsbulkibrisJobs({ now: NOW, concurrency: 1 }),
+      ),
+    /isbulkibris ilan listesi geçersiz biçimde döndü/,
+  );
+});
+
 test("an empty first page is a real zero, not an abort", async () => {
   const jobs = await withFetch(
     () => json({ data: [], next_page_url: null }),
