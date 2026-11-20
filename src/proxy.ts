@@ -15,7 +15,7 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // The DNS-only mail-ingress hostname bypasses Cloudflare by design so
-  // provider callbacks are not challenged. Keep that alternate origin narrow:
+  // authenticated GitHub cron callbacks are not challenged. Keep that alternate origin narrow:
   // only the authenticated server-to-server POST routes may reach handlers.
   // This host-specific matcher also runs for /api and static paths, unlike the
   // normal application matcher below.
