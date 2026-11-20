@@ -82,7 +82,7 @@ Vercel `RESEND_API_KEY` **doğru ekibin** yeni `re_…` anahtarıyla değiştiri
 İki sır da `openssl rand -hex 32` ile üretildi ve **hem Vercel'e** (`production`,
 `preview`) **hem GitHub Actions'a** (repository secret) **aynı değerle** yazıldı.
 Dispatch origin değişkenleri de eklendi:
-`MARKETING_DISPATCH_ORIGIN` / `ENGAGEMENT_DISPATCH_ORIGIN` were set to a Vercel deployment alias at the time of the original test; this historical value must be revalidated against current deployment protection.
+`MARKETING_DISPATCH_ORIGIN` / `ENGAGEMENT_DISPATCH_ORIGIN` ilk test sırasında bir Vercel deployment alias'ına ayarlanmıştı; bu tarihsel değer güncel deployment protection ayarlarına göre yeniden doğrulanmalıdır.
 
 Doğrulama (uçtan uca): Actions → **Send acquisition campaign** → **Run workflow** →
 log `HTTP 200` + `{"message":"Acquisition campaign complete","sent":0,"failed":0}`.
@@ -111,13 +111,16 @@ bozuk imza → **401** `{"message":"Invalid signature"}`.
 > 16:38 UTC'de başarılıydı; 20 Kasım koruma ayarı değişikliğinden sonraki bir
 > teslimat henüz doğrulanmadı (issue #719).
 
-> **Önerilen kalıcı topoloji:** Webhook'u `https://isbulkktc.com/api/email/resend-webhook`
-> üzerinden al. Cloudflare bot/WAF bunu engelliyorsa yalnızca
-> `POST /api/email/resend-webhook` için dar kapsamlı bir skip/allow kuralı
-> tanımla; uygulamadaki Svix imza, timestamp/replay ve bounded-body doğrulaması
-> zorunlu kalmalı. WAF'ı veya Vercel SSO'yu genel olarak kapatma. Değişiklikten
-> sonra Resend'den test event gönderip 2xx teslimat ve uygulama tarafındaki
-> event işlenmesini doğrula. DNS/Cloudflare/Vercel ayarları henüz değiştirilmedi.
+> **Kalıcı topoloji kararı henüz verilmedi:** Webhook'u kanonik host'a taşımak
+> tek başına çözüm değildir. Canlı Cloudflare zone'unda Bot Fight Mode etkindir;
+> dar kapsamlı bir WAF skip/allow kuralının bu katmanı da aşacağı varsayılmamalı.
+> Genel bot korumasını veya Vercel SSO'yu kapatma. Önce projeye bağlanmış,
+> Cloudflare proxy'si kapalı ayrı bir Vercel custom hostname ya da Vercel'e
+> koruma bypass başlığı ekleyebilen dar kapsamlı güvenilir bir proxy seçeneğini
+> değerlendir. Her iki durumda da Svix imza, timestamp/replay ve bounded-body
+> doğrulaması zorunlu kalmalı. Resend test event'iyle 2xx teslimatı ve olayın
+> uygulamada işlendiğini; cron'lar için de Bearer ile HTTP 200'ü doğrulamadan
+> endpoint'i taşıma. DNS/Cloudflare/Vercel ayarları henüz değiştirilmedi.
 
 ### 5b. Takım gelen kutusu env'leri — TAMAM `[x]` (2026-11-12 ikinci tur)
 Üretimde `SALES_INBOX_EMAIL` / `FEEDBACK_INBOX_EMAIL` / `COMPANY_REVIEW_INBOX_EMAIL`
@@ -516,10 +519,12 @@ Tam adımlar için yukarıdaki **"Kalan altyapı maddeleri"** bölümüne bak.
 
 ### Cloudflare 1010 bot-koruması notu (2026-11-12)
 
-`https://isbulkktc.com` Cloudflare arkasında ve bot koruması bazı istemci UA'larını
-**403 error 1010** ile bloklar (ör. Python `urllib`). Bu nedenle webhook ve cron çağrıları tarihsel olarak Cloudflare'i atlayan bir
-deployment alias'ı üzerinden yapılandırılmıştı. Vercel deployment protection
-sonradan değiştiği için eski 200/401 testleri güncel erişimi kanıtlamaz. Kalıcı
-çözüm, public custom domain üzerinden çağrı yapmak ve gerekiyorsa yalnızca ilgili
-POST endpoint'leri için dar kapsamlı Cloudflare kuralı eklemektir. Uygulama
-katmanındaki Svix ve cron Bearer doğrulamaları korunmalıdır.
+`https://isbulkktc.com` Cloudflare arkasındadır; geçmiş testlerde bazı istemci
+UA'ları **403 error 1010** almıştır. Canlı zone'da Bot Fight Mode etkin olduğu
+için, yalnızca custom WAF skip/allow kuralı eklemek webhook veya cron erişimini
+garanti etmez. Deployment alias'ları da Vercel SSO koruması kapsamındadır; eski
+200/401 testleri güncel erişimi kanıtlamaz. Kalıcı çözüm için ayrı bir DNS-only
+Vercel custom hostname veya Vercel korumasına kontrollü bypass sağlayan güvenilir
+bir proxy değerlendirilmelidir. Genel Bot Fight Mode, WAF ya da Vercel SSO
+kapatılmamalı; uygulama katmanındaki Svix imza ve cron Bearer doğrulamaları
+korunmalıdır.
