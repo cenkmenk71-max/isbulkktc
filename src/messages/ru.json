@@ -967,6 +967,7 @@
     "applicationsTitle": "Мои отклики",
     "applicationsDescription": "Отслеживайте передачу отклика работодателю, его статус и время первого просмотра.",
     "noApplications": "Вы ещё не откликались на вакансии.",
+    "applicationsLoadFailed": "Не удалось загрузить ваши отклики. Пожалуйста, обновите страницу.",
     "applicationSubmittedAt": "Дата отклика",
     "applicationViewedAt": "Первый просмотр работодателем",
     "applicationNotViewed": "Работодатель ещё не просмотрел ваш отклик.",
