@@ -426,6 +426,10 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      replace_source_job_catalogue: {
+        Args: { _companies: Json; _jobs: Json; _snapshots: Json };
+        Returns: Json;
+      };
       create_company: {
         Args: { company_name: string; company_slug: string };
         Returns: string;
