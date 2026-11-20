@@ -1690,7 +1690,9 @@
       "packageRequired": "Zum Veröffentlichen ist ein aktives Anzeigenpaket erforderlich.",
       "packageLimit": "Die Kapazität aktiver Anzeigen ist ausgeschöpft.",
       "publishFailed": "Die Anzeige konnte nicht veröffentlicht werden.",
-      "closed": "Geschlossen"
+      "closed": "Geschlossen",
+      "pageCount": "Anzeigen auf dieser Seite",
+      "nextPage": "Nächste 50 Anzeigen"
     },
     "admin": {
       "title": "Prüfwarteschlange für Stellenanzeigen",
