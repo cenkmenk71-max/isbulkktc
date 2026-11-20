@@ -884,8 +884,8 @@
     "companyLocation": "Company location",
     "companyWebsite": "Website",
     "companyDirectoryLink": "View in company directory",
-    "sourceAttributionLabel": "ORIGINAL SOURCE",
-    "sourceAttributionLink": "View original listing"
+    "sourceAttributionLabel": "PUBLISHED ON",
+    "sourceAttributionLink": "Open on the publishing site"
   },
   "JobApplication": {
     "title": "Apply for this role",
