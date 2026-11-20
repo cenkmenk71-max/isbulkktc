@@ -344,6 +344,14 @@ async function main(): Promise<void> {
     return;
   }
 
+  // The RPC accepts a bounded JSON snapshot so an accidental unbounded
+  // manual import cannot create an oversized PostgREST request.
+  if (selected.length > 1000) {
+    throw new Error(
+      `Seçilen ${selected.length} ilan atomik içe aktarma sınırını (1000) aşıyor; --limit=1000 veya daha düşük bir değer kullanın.`,
+    );
+  }
+
   // Never let a transient source outage wipe the live catalogue. With a limit we
   // expect exactly that many listings, so an under-filled selection signals a
   // source failure rather than a legitimately small board.
