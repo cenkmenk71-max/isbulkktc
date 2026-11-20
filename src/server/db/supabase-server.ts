@@ -5,15 +5,18 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
 
-function getSupabaseEnv() {
-  return {
-    url:
-      process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      "https://placeholder-isbulkktc.supabase.co",
-    key:
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder",
-  };
+function getSupabaseEnv(): { url: string; key: string } {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!url || !key) {
+    throw new Error(
+      "Supabase environment variables are not configured. " +
+        "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.",
+    );
+  }
+
+  return { url, key };
 }
 
 /**
@@ -27,6 +30,25 @@ function getSupabaseEnv() {
 export function createSupabaseServiceClient() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceKey) return null;
+  const { url } = getSupabaseEnv();
+  return createClient<Database>(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+/**
+ * Service-role client that throws if the service role key is not configured.
+ * Use this when the operation absolutely requires service-role privileges
+ * and cannot degrade gracefully.
+ */
+export function createSupabaseServiceClientOrThrow() {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) {
+    throw new Error(
+      "Supabase service role key is not configured. " +
+        "Set SUPABASE_SERVICE_ROLE_KEY to enable privileged operations.",
+    );
+  }
   const { url } = getSupabaseEnv();
   return createClient<Database>(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },

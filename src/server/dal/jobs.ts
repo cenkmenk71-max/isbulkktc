@@ -21,6 +21,23 @@ type PlatformRole = Database["public"]["Enums"]["platform_role"];
 export type PublicJobListing = z.infer<typeof publicJobListingSchema>;
 
 /**
+ * Internal helper: verify the caller has an active session and is an
+ * owner/recruiter member of the given company. Throws on any failure.
+ */
+async function assertCompanyJobAccess(companyId: string) {
+  const user = await getCurrentUser();
+  if (!user || user.status !== "active") {
+    throw new Error("An active user session is required.");
+  }
+  if (!z.string().uuid().safeParse(companyId).success) {
+    throw new Error("A valid company identifier is required.");
+  }
+  if (!(await isJobCompanyMember(companyId))) {
+    throw new Error("The current user is not authorized for this company's jobs.");
+  }
+}
+
+/**
  * A public catalogue outage is not an empty catalogue and must never be
  * translated into a successful empty state or a genuine not-found response.
  * Route boundaries may render a retryable error page; valid empty RPC results
@@ -402,17 +419,7 @@ export async function getPublicJobCompanies(): Promise<PublicJobCompany[]> {
 }
 
 export async function getCompanyJobs(companyId: string): Promise<JobRow[]> {
-  const user = await getCurrentUser();
-  if (!user || user.status !== "active") {
-    throw new Error("An active user session is required to read company jobs.");
-  }
-  if (!z.string().uuid().safeParse(companyId).success) {
-    throw new Error("A valid company identifier is required.");
-  }
-
-  if (!(await isJobCompanyMember(companyId))) {
-    throw new Error("The current user is not authorized for this company's jobs.");
-  }
+  await assertCompanyJobAccess(companyId);
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -441,16 +448,7 @@ export async function getCompanyJobsPage(
   companyId: string,
   input?: { afterCreatedAt?: string; afterId?: string },
 ): Promise<{ jobs: JobRow[]; nextCursor: { createdAt: string; id: string } | null }> {
-  const user = await getCurrentUser();
-  if (!user || user.status !== "active") {
-    throw new Error("An active user session is required to read company jobs.");
-  }
-  if (!z.string().uuid().safeParse(companyId).success) {
-    throw new Error("A valid company identifier is required.");
-  }
-  if (!(await isJobCompanyMember(companyId))) {
-    throw new Error("The current user is not authorized for this company's jobs.");
-  }
+  await assertCompanyJobAccess(companyId);
 
   const hasCursorPart = Boolean(input?.afterCreatedAt) || Boolean(input?.afterId);
   const cursor = hasCursorPart
@@ -500,18 +498,10 @@ export async function getCompanyJobForEdit(
   companyId: string,
   jobId: string,
 ): Promise<JobRow | null> {
-  const user = await getCurrentUser();
-  if (!user || user.status !== "active") {
-    throw new Error("An active user session is required to edit company jobs.");
-  }
-  if (
-    !z.string().uuid().safeParse(companyId).success ||
-    !z.string().uuid().safeParse(jobId).success
-  ) {
-    throw new Error("Valid company and job identifiers are required.");
-  }
-  if (!(await isJobCompanyMember(companyId))) {
-    throw new Error("The current user is not authorized for this company's jobs.");
+  await assertCompanyJobAccess(companyId);
+
+  if (!z.string().uuid().safeParse(jobId).success) {
+    throw new Error("A valid job identifier is required.");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -658,17 +648,7 @@ export async function getMyApplications() {
 }
 
 export async function getCompanyApplications(companyId: string) {
-  const user = await getCurrentUser();
-  if (!user || user.status !== "active") {
-    throw new Error("An active user session is required to read applications.");
-  }
-  if (!z.string().uuid().safeParse(companyId).success) {
-    throw new Error("A valid company identifier is required.");
-  }
-
-  if (!(await isJobCompanyMember(companyId))) {
-    throw new Error("The current user is not authorized for this company's jobs.");
-  }
+  await assertCompanyJobAccess(companyId);
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("list_company_applications", {

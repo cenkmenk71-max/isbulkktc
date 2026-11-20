@@ -5,6 +5,7 @@ import { planSupportReply } from "@/features/support/answer";
 import { answerFromKnowledge } from "@/features/support/knowledge";
 import { aiSupportReply } from "@/server/support/ai";
 import { readBoundedTextBody } from "@/server/http/bounded-text-body";
+import { jsonNoStore } from "@/server/http/no-store-response";
 
 export const dynamic = "force-dynamic";
 
@@ -29,14 +30,14 @@ const MAX_MESSAGE_LENGTH = 1000;
 export async function POST(request: Request): Promise<Response> {
   const ip = clientIpFromHeaders((name) => request.headers.get(name));
   if (!supportChatRateLimiter.check(`ip:${ip}`).ok) {
-    return json({ error: "rate_limited" }, 429);
+    return jsonNoStore({ error: "rate_limited" }, { status: 429 });
   }
 
   const body = await readBoundedTextBody(request, 8 * 1024);
   if (!body.ok) {
-    return json(
+    return jsonNoStore(
       { error: body.reason === "too_large" ? "request_too_large" : "invalid_json" },
-      body.reason === "too_large" ? 413 : 400,
+      { status: body.reason === "too_large" ? 413 : 400 },
     );
   }
 
@@ -44,7 +45,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     payload = JSON.parse(body.text);
   } catch {
-    return json({ error: "invalid_json" }, 400);
+    return jsonNoStore({ error: "invalid_json" }, { status: 400 });
   }
 
   const { message, locale } = (payload ?? {}) as {
@@ -53,10 +54,10 @@ export async function POST(request: Request): Promise<Response> {
   };
 
   if (typeof message !== "string" || message.trim().length === 0) {
-    return json({ error: "empty_message" }, 400);
+    return jsonNoStore({ error: "empty_message" }, { status: 400 });
   }
   if (message.length > MAX_MESSAGE_LENGTH) {
-    return json({ error: "message_too_long" }, 400);
+    return jsonNoStore({ error: "message_too_long" }, { status: 400 });
   }
 
   const resolvedLocale =
@@ -68,16 +69,5 @@ export async function POST(request: Request): Promise<Response> {
   const grounded = answerFromKnowledge(trimmed, resolvedLocale);
   const aiReply = grounded ? null : await aiSupportReply(trimmed, resolvedLocale);
 
-  return json(planSupportReply({ grounded, aiReply, locale: resolvedLocale }));
-}
-
-/**
- * Every response — success or error — forbids shared caching, so a CDN rule can
- * never pin a stale answer (or a stale rate-limit rejection) to an address.
- */
-function json(body: unknown, status = 200): Response {
-  return Response.json(body, {
-    status,
-    headers: { "Cache-Control": "no-store" },
-  });
+  return jsonNoStore(planSupportReply({ grounded, aiReply, locale: resolvedLocale }));
 }

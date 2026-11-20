@@ -5,6 +5,7 @@ import {
   isUnsubscribeSigningConfigured,
   unsubscribeUrlFor,
 } from "@/server/email/unsubscribe-token-core";
+import { jsonNoStore } from "@/server/http/no-store-response";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -45,23 +46,18 @@ type MarketingRecipient = {
 // and an error response carrying no `Cache-Control` of its own inherits Vercel's
 // shared-cacheable default. Every response from this route is a per-request
 // worker result, so none of them may be cached.
-function json(body: unknown, init?: ResponseInit): Response {
-  const headers = new Headers(init?.headers);
-  headers.set("Cache-Control", "no-store");
-  return Response.json(body, { ...init, headers });
-}
 
 export async function POST(request: Request) {
   const secret = process.env.MARKETING_CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return json({ message: "Unauthorized" }, { status: 401 });
+    return jsonNoStore({ message: "Unauthorized" }, { status: 401 });
   }
 
   // A quote request is not affirmative permission for promotional email.
   // Keep the sender closed until the consent migration, confirmation flow and
   // live recipient predicate have all been deployed and independently verified.
   if (process.env.MARKETING_CAMPAIGN_CONSENT_READY !== "true") {
-    return json(
+    return jsonNoStore(
       { message: "Acquisition marketing consent enforcement is not ready" },
       { status: 503 },
     );
@@ -70,7 +66,7 @@ export async function POST(request: Request) {
   const requestUrl = new URL(request.url);
   const after = requestUrl.searchParams.get("after");
   if (after !== null && !UUID_PATTERN.test(after)) {
-    return json({ message: "Invalid recipient cursor" }, { status: 400 });
+    return jsonNoStore({ message: "Invalid recipient cursor" }, { status: 400 });
   }
 
   const requestedCampaignDate = requestUrl.searchParams.get("campaignDate");
@@ -81,18 +77,18 @@ export async function POST(request: Request) {
     !Number.isFinite(parsedCampaignDate.getTime()) ||
     parsedCampaignDate.toISOString().slice(0, 10) !== campaignDate
   ) {
-    return json({ message: "Invalid campaign date" }, { status: 400 });
+    return jsonNoStore({ message: "Invalid campaign date" }, { status: 400 });
   }
 
   const supabase = createSupabaseServiceClient();
   if (!supabase) {
-    return json(
+    return jsonNoStore(
       { message: "Marketing delivery is not configured" },
       { status: 503 },
     );
   }
   if (!isUnsubscribeSigningConfigured()) {
-    return json(
+    return jsonNoStore(
       { message: "Unsubscribe signing is not configured" },
       { status: 503 },
     );
@@ -126,7 +122,7 @@ export async function POST(request: Request) {
       console.error("Marketing consent schema is not ready.", {
         code: consentSchemaError?.code ?? "invalid_schema_probe_result",
       });
-      return json(
+      return jsonNoStore(
         { message: "Marketing consent schema is not ready" },
         { status: 503 },
       );
@@ -135,7 +131,7 @@ export async function POST(request: Request) {
     console.error("Marketing consent schema probe failed.", {
       error: error instanceof Error ? error.name : "unknown_error",
     });
-    return json(
+    return jsonNoStore(
       { message: "Marketing consent schema is not ready" },
       { status: 503 },
     );
@@ -153,7 +149,7 @@ export async function POST(request: Request) {
     console.error("Marketing recipients could not be listed.", {
       code: error.code,
     });
-    return json(
+    return jsonNoStore(
       { message: "Recipient list is temporarily unavailable", sent, failed },
       { status: 502 },
     );
@@ -215,13 +211,13 @@ export async function POST(request: Request) {
   const nextCursor = complete ? null : recipients[recipients.length - 1]?.lead_id ?? null;
   if (!complete && (!nextCursor || nextCursor === after)) {
     console.error("Marketing recipient cursor did not advance.");
-    return json(
+    return jsonNoStore(
       { message: "Recipient cursor did not advance", sent, failed },
       { status: 502 },
     );
   }
 
-  return json({
+  return jsonNoStore({
     message: complete ? "Acquisition campaign complete" : "Acquisition campaign page complete",
     sent,
     failed,
