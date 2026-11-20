@@ -446,7 +446,7 @@ select is(
 select throws_ok(
   $$update public.jobs
     set company_id = '20000000-0000-4000-8000-000000000002'
-    where id = '30000000-0000-4000-8000-000000000002'$,
+    where id = '30000000-0000-4000-8000-000000000002'$$,
   '42501',
   null,
   'company members cannot reassign a job to another company'
@@ -578,7 +578,7 @@ select throws_ok(
       (select id from public.jobs where slug = 'operations-coordinator'),
       null,
       null
-    )$,
+    )$$,
   '22023',
   null,
   'the moderation RPC rejects a null decision with a validation error'
