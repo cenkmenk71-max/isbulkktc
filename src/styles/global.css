@@ -12307,6 +12307,29 @@ html[dir="rtl"] input[name="slug"] {
     var(--color-shade-green-50)
   );
 }
+.job-detail-company-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.job-detail-company-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  color: var(--brand-green-vivid);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+}
+.job-detail-company-links a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.job-detail-source-link {
+  overflow-wrap: anywhere;
+}
 .job-application-card h2 {
   margin: 0 0 8px;
   font-size: 18px;

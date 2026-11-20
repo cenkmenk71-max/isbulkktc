@@ -883,7 +883,8 @@
     "companyLabel": "کارفرما",
     "companyLocation": "موقعیت شرکت",
     "companyWebsite": "وب‌سایت",
-    "companyDirectoryLink": "مشاهده در فهرست شرکت‌ها"
+    "companyDirectoryLink": "مشاهده در فهرست شرکت‌ها",
+    "sourceAttributionLink": "باز کردن در وب‌سایت منتشرکننده"
   },
   "JobApplication": {
     "title": "برای این موقعیت درخواست دهید",
