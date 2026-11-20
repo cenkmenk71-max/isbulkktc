@@ -1645,7 +1645,7 @@
       "pending_review": "In Prüfung",
       "approved": "Genehmigt",
       "rejected": "Änderungen erforderlich",
-      "published": "Veröffentlicht",
+      "published": "Die Anzeige wurde veröffentlicht.",
       "expired": "Abgelaufen",
       "saveDraft": "Entwurf speichern",
       "submitReview": "Zur Prüfung einreichen",
@@ -1685,7 +1685,11 @@
       "pendingNote": "Ihre Anzeige wartet auf die Prüfung durch einen Administrator.",
       "publishedNote": "Veröffentlichte Anzeigen können auf diesem Bildschirm nicht bearbeitet werden.",
       "activeJobs": "Kapazität aktiver Anzeigen",
-      "activeJobCount": "{count} aktive Anzeigen"
+      "activeJobCount": "{count} aktive Anzeigen",
+      "idle": "",
+      "packageRequired": "Zum Veröffentlichen ist ein aktives Anzeigenpaket erforderlich.",
+      "packageLimit": "Die Kapazität aktiver Anzeigen ist ausgeschöpft.",
+      "publishFailed": "Die Anzeige konnte nicht veröffentlicht werden."
     },
     "admin": {
       "title": "Prüfwarteschlange für Stellenanzeigen",
