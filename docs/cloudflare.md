@@ -1,14 +1,26 @@
 # Cloudflare denetimi — isbulkktc.com
 
-**Tarihsel kapsam notu:** `LANE-*` atamaları ve lane brief atıfları, 2026-11-10'da kaldırılan eski koordinasyon modeline (#602) aittir; güncel sahiplik veya işlem talimatı değildir. Canlı altyapıya yönelik bulguları işlemden önce yeniden doğrulayın.
+## Güncel hesap/API doğrulaması — 20 Kasım 2026 (read-only)
 
-LANE-CLOUDFLARE (dalga 2) — **read-only** uç/edge denetimi. Bu dosya canlı
-kanıtla doğrulanmış bulguları ve onay bekleyen değişiklikleri tutar.
+Cloudflare, Vercel ve Resend hesapları salt-okunur incelendi. Bu denetim
+oturumunda aşağıdaki yüksek seviyeli durumlar doğrulandı:
 
-- Alan: `isbulkktc.com`, `www.isbulkktc.com` — Cloudflare arkasında (NS: `lex.ns.cloudflare.com`, `serenity.ns.cloudflare.com`).
-- Origin: Vercel; alias `isbulkktc-amber.vercel.app` (bu adres CF'yi **atlar**, bkz. F-08).
-- Yöntem: her iddia canlı HTTP/DNS cevabıyla (`curl -D -`, `cf-ray`, `cf-cache-status`, DoH) doğrulandı. Yıkıcı hiçbir CF değişikliği yapılmadı.
-- Tarih: 2026-11-05.
+- Cloudflare zone aktif; DNSSEC etkin.
+- HTTPS strict, TLS 1.2 minimum, TLS 1.3, HTTP/2, HTTP/3, Brotli ve HSTS etkin.
+- Cloudflare managed/custom security ve rate-limiting kuralları mevcut.
+- Dinamik sitemap için cache davranışı ayrıca gözden geçirilmeli (issue #715).
+- Resend gönderim domaini ve DKIM doğrulanmış; yinelenen DNS kaydı ve rapor
+  alıcılarının izlenebilirliği takipte (issues #716, #718).
+- Vercel deployment protection, harici webhook ve cron callback erişimiyle
+  uyumluluk açısından doğrulanmalı (issue #719).
+
+Güvenlik gerekçesiyle bu herkese açık dokümana özel firewall ifadeleri, rate
+limit eşikleri, deployment alias'ları, webhook URL'leri, inbox adresleri veya
+DNS public-key değerleri kopyalanmamıştır. Ayrıntılı yapılandırma incelemesi
+audit oturumunda tutulur; üretim ayarları değiştirilmemiştir.
+
+Canlı origin'e erişim bu oturumda doğrulanamadığından HTTP cache header'ları,
+CF cache durumu ve sitemap davranışı canlı yanıt üzerinden yeniden ölçülmedi.
 
 ## Token durumu (API tarafı denetlenemedi)
 

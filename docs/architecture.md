@@ -72,14 +72,23 @@ iskeletlerin “hazır” gösterilmesiyle taklit edilmez. Sonraki her dikey ak�
 kendi şema/migration'ı, grant'leri, pozitif-negatif RLS testleri, transaction
 ve runbook'u ile eklenir.
 
-Şu an çalışan dikey akışlar; kayıt/giriş/çıkış, doğrulanmış kullanıcıya ait
-sunucu DAL'i, şirket kurma formu ve atomik güvenli RPC'si ile aday profili
-oluşturma/güncellemedir. İlan ve başvuru backend'inde şirket taslakları,
-moderasyon, arama ve aday başvuruları bulunur. Onaylanmış ilan, aktif paketi
-olan doğrulanmış şirketin yetkili üyesi tarafından yayımlanabilir; eşzamanlı
-aktif ilan sınırı ve ilan süresi veritabanında paket snapshot'ıyla atomik
-denetlenir. Varsayılan paket eklenmediği için katalog boşken yeni yayınlama
-kapalı kalır. Paket ataması sona erse veya paket devre dışı bırakılsa da
+20 Kasım 2026 itibarıyla çalışan kullanıcı arayüzü akışları; kayıt/giriş/
+çıkış ve parola kurtarma, şirket oluşturma ve şirket çalışma alanı, aday profili
+oluşturma/güncelleme (CV dosyasını sunucuya yüklemeden tarayıcıda metin çıkarımı
+dahil), herkese açık ilan arama/detay, adayın ilana başvurması ve başvuru
+durumunu izlemesi, doğrulanmış şirket üyesinin kendi başvurularını incelemesi
+ve başvuru detayını açmasıdır. Yönetici arayüzünde şirket doğrulama, içerik ve
+paket konsolları vardır; admin işlemleri AAL2 ile korunur.
+
+İlan yaşam döngüsünün şirket taslağı, incelemeye gönderim, admin karar ve
+yayınlama Server Action/DAL/PostgreSQL RPC temeli mevcuttur; ancak işverenin
+ilan oluşturup düzenleyebileceği/listeleyebileceği sayfalar ve admin ilan
+moderasyon kuyruğu arayüzü henüz yoktur. Bu nedenle bu iki akış backend
+kabiliyetidir, tamamlanmış kullanıcı arayüzü değildir. Onaylanmış ilan, aktif
+paketi olan doğrulanmış şirketin yetkili üyesi tarafından yayımlanabilir;
+eşzamanlı aktif ilan sınırı ve ilan süresi veritabanında paket snapshot'ıyla
+atomik denetlenir. Varsayılan paket eklenmediği için katalog boşken yeni
+yayınlama kapalı kalır. Paket ataması sona erse veya paket devre dışı bırakılsa da
 yayımlanmış ilanlar kendi ilan süreleri dolana kadar açık kalır; yeni yayınlar
 engellenir.
 Herkese açık `/packages` sayfası, 1/3/5 ilan ve kurumsal teklif seçeneklerini
@@ -253,7 +262,7 @@ seçilmiş herkese açık alanları döndüren, güvenli `search_public_jobs` ve
 `get_public_job_details` RPC'lerini kullanır. Platform ilanları yayında, süresi
 geçmemiş ve doğrulanmış şirketlere ait olmalıdır. Kaynak sitelerden içe aktarılan
 ilanlar ayrıca `job_source_imports` provenans kaydı ve kaynak yayın aralığıyla
-filtrelenir; kaynak adı kamu RPC yanıtında belirtilir, kaynak şirketleri
+filtrelenir; kaynak adı ve doğrulanmış kaynak ilan URL'si kamu RPC yanıtında belirtilir; iş ilanı detayında kaynak siteye görünür atıf bağlantısı sunulur. Kaynak şirketleri
 `pending` kalır ve doğrulanmış İşBul şirketi gibi gösterilmez. Bu ilanlarda
 İşBul başvuru formu sunulmaz; `apply_to_job` veritabanı doğrulanmış şirket şartını
 korur. Kaynak seed'i iki belirtilen siteden alınmış 21 ilanın Türkçe
