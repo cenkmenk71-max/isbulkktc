@@ -14316,7 +14316,7 @@ body:has(.pwa-update-toast) .support-widget {
 }
 
 .employer-job-card-status[data-status="rejected"] {
-  color: var(--color-danger, #a33);
+  color: var(--color-status-error);
 }
 
 .employer-job-card-status[data-status="approved"] {
