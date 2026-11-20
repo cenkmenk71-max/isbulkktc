@@ -13,6 +13,7 @@ export const maxDuration = 60;
 
 const BATCH_SIZE = 50;
 const DIGEST_JOB_COUNT = 5;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
  * Engagement-digest sender. Intended to run on a schedule (a cron entry hitting
@@ -22,7 +23,9 @@ const DIGEST_JOB_COUNT = 5;
  * opt-out-aware: recipients come from `list_engagement_recipients`, which
  * already excludes opted-out addresses and unconfirmed mailboxes, and every
  * message carries a signed unsubscribe link. The featured jobs come from the
- * public job search, so a stale or private row can never leak.
+ * public job search, so a stale or private row can never leak. The route sends
+ * one bounded keyset page per invocation; the cron workflow follows the returned
+ * cursor, keeping each Vercel request below its 60-second execution ceiling.
  */
 
 type EngagementRecipient = {
@@ -36,6 +39,11 @@ export async function POST(request: Request) {
   const secret = process.env.ENGAGEMENT_CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
     return jsonNoStore({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const after = new URL(request.url).searchParams.get("after");
+  if (after !== null && !UUID_PATTERN.test(after)) {
+    return jsonNoStore({ message: "Invalid recipient cursor" }, { status: 400 });
   }
 
   const supabase = createSupabaseServiceClient();
@@ -65,19 +73,22 @@ export async function POST(request: Request) {
     );
   }
   if (jobs.length === 0) {
-    return jsonNoStore({ message: "No jobs to feature", sent: 0 });
+    return jsonNoStore({
+      message: "No jobs to feature",
+      sent: 0,
+      failed: 0,
+      complete: true,
+      nextCursor: null,
+    });
   }
 
   const siteUrl = getAppBaseUrl();
   let sent = 0;
   let failed = 0;
-  let cursor: string | null = null;
-
-  for (;;) {
-    const { data, error } = await supabase.rpc("list_engagement_recipients", {
-      _after: cursor,
-      _batch_size: BATCH_SIZE,
-    });
+  const { data, error } = await supabase.rpc("list_engagement_recipients", {
+    _after: after,
+    _batch_size: BATCH_SIZE,
+  });
     if (error) {
       console.error("Engagement recipients could not be listed.", {
         code: error.code,
@@ -87,11 +98,9 @@ export async function POST(request: Request) {
         { status: 502 },
       );
     }
-    const recipients = (data ?? []) as EngagementRecipient[];
-    if (recipients.length === 0) break;
+  const recipients = (data ?? []) as EngagementRecipient[];
 
-    for (const recipient of recipients) {
-      cursor = recipient.user_id;
+  for (const recipient of recipients) {
       const unsubscribeUrl = unsubscribeUrlFor(recipient.email, siteUrl);
       if (!unsubscribeUrl) {
         failed += 1;
@@ -105,7 +114,7 @@ export async function POST(request: Request) {
           name: recipient.display_name,
           jobs,
           unsubscribeUrl,
-          campaignId: `${new Date().toISOString().slice(0, 10)}/${recipient.user_id}`,
+          campaignId: `${engagementWeekKey(new Date())}/${recipient.user_id}`,
         });
         // A Resend rejection comes back as `false`, not a throw, so the return
         // value is the only place a rejected send is visible.
@@ -117,12 +126,41 @@ export async function POST(request: Request) {
           error: error instanceof Error ? error.name : "unknown_error",
         });
       }
-    }
-
-    if (recipients.length < BATCH_SIZE) break;
   }
 
-  return jsonNoStore({ message: "Engagement digest complete", sent, failed });
+  const complete = recipients.length < BATCH_SIZE;
+  const nextCursor = complete ? null : recipients[recipients.length - 1]?.user_id ?? null;
+  if (!complete && (!nextCursor || nextCursor === after)) {
+    console.error("Engagement recipient cursor did not advance.");
+    return jsonNoStore(
+      { message: "Recipient cursor did not advance", sent, failed },
+      { status: 502 },
+    );
+  }
+
+  return jsonNoStore({
+    message: complete ? "Engagement digest complete" : "Engagement digest page complete",
+    sent,
+    failed,
+    complete,
+    nextCursor,
+  });
+}
+
+/**
+ * Stable campaign identity for the UTC week, so retries or workflow replays on
+ * another day of the same week reuse the same provider idempotency key.
+ */
+export function engagementWeekKey(value: Date): string {
+  if (!Number.isFinite(value.getTime())) {
+    throw new RangeError("value must be a valid date");
+  }
+  const monday = new Date(
+    Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()),
+  );
+  const daysSinceMonday = (monday.getUTCDay() + 6) % 7;
+  monday.setUTCDate(monday.getUTCDate() - daysSinceMonday);
+  return monday.toISOString().slice(0, 10);
 }
 
 async function loadDigestJobs(

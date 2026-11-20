@@ -84,8 +84,10 @@ function serviceScript(
   };
 }
 
-function request(authorization?: string): Request {
-  return new Request("https://isbulkktc.test/api/email/engagement-digest", {
+function request(authorization?: string, after?: string): Request {
+  const url = new URL("https://isbulkktc.test/api/email/engagement-digest");
+  if (after !== undefined) url.searchParams.set("after", after);
+  return new Request(url, {
     method: "POST",
     headers: authorization ? { authorization } : {},
   });
@@ -205,11 +207,12 @@ test("a configured digest sends one signed, opt-out-aware email per recipient", 
     const res = await POST(request(`Bearer ${CRON_SECRET}`));
 
     assert.equal(res.status, 200);
-    assert.deepEqual(await res.json(), {
-      message: "Engagement digest complete",
-      sent: 1,
-      failed: 0,
-    });
+    const body = await res.json();
+    assert.equal(body.message, "Engagement digest complete");
+    assert.equal(body.sent, 1);
+    assert.equal(body.failed, 0);
+    assert.equal(body.complete, true);
+    assert.equal(body.nextCursor, null);
 
     assert.equal(recorded.engagementMail.length, 1);
     const mail = recorded.engagementMail[0];
@@ -237,6 +240,8 @@ test("a configured digest sends one signed, opt-out-aware email per recipient", 
     // One campaign id per recipient per day: the idempotency key that stops a
     // retried cron run from double-sending.
     assert.match(mail.campaignId, /^\d{4}-\d{2}-\d{2}\/00000000-0000-4000-8000-0000000000a1$/);
+    const campaignMonday = new Date(`${mail.campaignId.split("/")[0]}T00:00:00.000Z`);
+    assert.equal(campaignMonday.getUTCDay(), 1, "the campaign key must be the UTC Monday of the week");
   } finally {
     restore();
   }
@@ -251,7 +256,13 @@ test("with no featured jobs the digest sends nothing", async () => {
 
     assert.equal(res.status, 200);
     assertNoStore(res);
-    assert.deepEqual(await res.json(), { message: "No jobs to feature", sent: 0 });
+    assert.deepEqual(await res.json(), {
+      message: "No jobs to feature",
+      sent: 0,
+      failed: 0,
+      complete: true,
+      nextCursor: null,
+    });
     assert.deepEqual(recorded.engagementMail, []);
     assert.deepEqual(
       rpcCalls("list_engagement_recipients"),
@@ -296,13 +307,15 @@ test("a per-recipient send failure is counted, not thrown", async () => {
       message: "Engagement digest complete",
       sent: 0,
       failed: 1,
+      complete: true,
+      nextCursor: null,
     });
   } finally {
     restore();
   }
 });
 
-test("a full batch advances the cursor to the last recipient and stops", async () => {
+test("a full page returns a cursor and the next HTTP request resumes without repeating recipients", async () => {
   const firstPage = Array.from({ length: 50 }, (_, index) =>
     recipient({
       user_id: `00000000-0000-4000-8000-000000000${String(index).padStart(3, "0")}`,
@@ -311,31 +324,52 @@ test("a full batch advances the cursor to the last recipient and stops", async (
       locale: "tr",
     }),
   );
-  const secondPage = [recipient({ user_id: "last-recipient", email: "last@example.com" })];
+  const secondPage = [recipient({ user_id: "00000000-0000-4000-8000-000000000099", email: "last@example.com" })];
   resetBoundary({}, serviceScript([firstPage, secondPage]));
   const restore = configured();
   try {
     const { POST } = await digestRoute();
-    const res = await POST(request(`Bearer ${CRON_SECRET}`));
+    const firstResponse = await POST(request(`Bearer ${CRON_SECRET}`));
+    assert.equal(firstResponse.status, 200);
+    const firstBody = await firstResponse.json();
+    assert.equal(firstBody.message, "Engagement digest page complete");
+    assert.equal(firstBody.sent, 50);
+    assert.equal(firstBody.failed, 0);
+    assert.equal(firstBody.complete, false);
+    assert.equal(firstBody.nextCursor, firstPage[49].user_id);
 
-    assert.equal(res.status, 200);
-    assert.deepEqual(await res.json(), {
-      message: "Engagement digest complete",
-      sent: 51,
-      failed: 0,
-    });
+    const secondResponse = await POST(request(`Bearer ${CRON_SECRET}`, firstBody.nextCursor));
+    assert.equal(secondResponse.status, 200);
+    const secondBody = await secondResponse.json();
+    assert.equal(secondBody.message, "Engagement digest complete");
+    assert.equal(secondBody.sent, 1);
+    assert.equal(secondBody.failed, 0);
+    assert.equal(secondBody.complete, true);
+    assert.equal(secondBody.nextCursor, null);
 
     const calls = rpcCalls("list_engagement_recipients");
-    assert.equal(calls.length, 2, "a full batch must be followed by another page");
+    assert.equal(calls.length, 2, "each HTTP request must fetch exactly one page");
     assert.equal(calls[0].args._after, null);
-    // The cursor is the *last* user_id of the batch; if it stayed at the first
-    // (or advanced by one), the next page would repeat or skip recipients.
     assert.equal(calls[1].args._after, firstPage[49].user_id);
-
     assert.equal(recorded.engagementMail.length, 51);
-    // Each recipient gets their own signature — not one shared link.
     const links = new Set(recorded.engagementMail.map((mail) => mail.unsubscribeUrl));
     assert.equal(links.size, 51);
+  } finally {
+    restore();
+  }
+});
+
+test("an invalid recipient cursor is rejected before any service-role work", async () => {
+  resetBoundary({}, { rpcs: {} });
+  const restore = configured();
+  try {
+    const { POST } = await digestRoute();
+    const response = await POST(request(`Bearer ${CRON_SECRET}`, "not-a-uuid"));
+
+    assert.equal(response.status, 400);
+    assertNoStore(response);
+    assert.deepEqual(await response.json(), { message: "Invalid recipient cursor" });
+    assert.deepEqual(recorded.supabase, []);
   } finally {
     restore();
   }

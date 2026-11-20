@@ -5,8 +5,9 @@ name: Send engagement digest
 # deployed, and answered 401 to everyone because nothing ever presented the
 # bearer secret.
 #
-# The route is idempotent (it claims a batch and sends), so a missed or repeated
-# run is safe. It is a separate workflow from the acquisition campaign on
+# The route returns one bounded keyset page per HTTP request. This workflow
+# follows the cursor until every recipient was processed; a UTC-week idempotency
+# key makes same-week retries/replays safe. It is separate from the acquisition campaign on
 # purpose: two `schedule` entries in one workflow fire *both* jobs on *every*
 # cron, which would send the weekly digest daily.
 #
@@ -30,6 +31,7 @@ jobs:
   send:
     name: Send engagement digest
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     steps:
       - name: Check configuration
         id: config
@@ -53,12 +55,55 @@ jobs:
           # the same reason as the acquisition workflow.
           DISPATCH_ORIGIN: ${{ vars.ENGAGEMENT_DISPATCH_ORIGIN || 'https://isbulkktc-amber.vercel.app' }}
         run: |
-          set -o pipefail
-          status=$(curl -sS -o /tmp/engagement-response.txt -w '%{http_code}' \
-            -X POST -H "Authorization: Bearer ${CRON_SECRET}" \
-            "${DISPATCH_ORIGIN%/}/api/email/engagement-digest")
-          echo "HTTP ${status}"
-          cat /tmp/engagement-response.txt
-          if [ "$status" != "200" ] && [ "$status" != "503" ]; then
+          set -euo pipefail
+          cursor=""
+          total_sent=0
+          total_failed=0
+          page=0
+
+          while true; do
+            page=$((page + 1))
+            url="${DISPATCH_ORIGIN%/}/api/email/engagement-digest"
+            if [ -n "$cursor" ]; then
+              url="${url}?after=${cursor}"
+            fi
+
+            status=$(curl -sS --connect-timeout 10 --max-time 75 \
+              -o /tmp/engagement-response.txt -w '%{http_code}' \
+              -X POST -H "Authorization: Bearer ${CRON_SECRET}" "$url")
+            echo "Page ${page}: HTTP ${status}"
+            cat /tmp/engagement-response.txt
+
+            if [ "$status" = "503" ] && [ "$page" -eq 1 ]; then
+              echo "::warning title=Engagement digest unavailable::The production sender is not configured; no recipients were processed."
+              exit 0
+            fi
+            if [ "$status" != "200" ]; then
+              echo "::error::Engagement digest page ${page} failed with HTTP ${status}."
+              exit 1
+            fi
+
+            complete=$(jq -er '.complete | tostring' /tmp/engagement-response.txt)
+            next_cursor=$(jq -r '.nextCursor // ""' /tmp/engagement-response.txt)
+            sent=$(jq -er '.sent | numbers' /tmp/engagement-response.txt)
+            failed=$(jq -er '.failed | numbers' /tmp/engagement-response.txt)
+            total_sent=$((total_sent + sent))
+            total_failed=$((total_failed + failed))
+
+            echo "Page ${page}: sent=${sent} failed=${failed} complete=${complete}"
+
+            if [ "$complete" = "true" ]; then
+              break
+            fi
+            if [ -z "$next_cursor" ] || [ "$next_cursor" = "$cursor" ]; then
+              echo "::error::The recipient cursor did not advance; refusing an infinite workflow loop."
+              exit 1
+            fi
+            cursor="$next_cursor"
+          done
+
+          echo "Engagement digest finished: pages=${page} sent=${total_sent} failed=${total_failed}"
+          if [ "$total_failed" -gt 0 ]; then
+            echo "::error::Some engagement emails failed. Re-run this workflow in the same UTC week to retry with the same idempotency keys."
             exit 1
           fi

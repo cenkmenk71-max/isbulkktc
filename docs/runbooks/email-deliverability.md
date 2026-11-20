@@ -270,7 +270,11 @@ Yani bounce → opt-out hattı **uçtan uca çalışıyor**; geçersiz adres art
 gönderimlerinden otomatik düşecek. Hem edinim hem etkileşim yolu bu tabloyu
 filtreler: `list_marketing_recipients` (edinim) ve `list_engagement_recipients`
 (etkileşim) `not exists (select 1 from email_engagement_optouts where email = lower(...))`
-koşulunu taşır. Aynı gün üç adres için ölçülen **gönderim uygunluğu**:
+koşulunu taşır. Etkileşim digest'i 50 alıcılık keyset sayfaları döndürür; GitHub cron
+cursor'ı takip ederek sayfaları ayrı Vercel çağrılarında tüketir. Cursor kalıcı DB
+checkpoint'i değildir; workflow yarıda kesilirse aynı UTC hafta içinde yeniden
+çalıştırma, aynı haftalık Resend idempotency anahtarlarıyla baştan başlayabilir.
+Aynı gün üç adres için ölçülen **gönderim uygunluğu**:
 
 | Adres | `eligible_for_send` | Neden |
 |---|---|---|
