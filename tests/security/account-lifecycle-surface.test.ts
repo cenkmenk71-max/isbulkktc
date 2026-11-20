@@ -114,11 +114,24 @@ test("account suspension and closure remain an explicit, tested product gap", ()
   // Keep this as a passing, intentional finding rather than a failing TODO test:
   // when the transition feature is added, replace this assertion with positive
   // tests for authorised suspension, closure, audit logging and session revocation.
+  const updateProfiles = /\bupdate\s+public\.profiles\b/i;
+  const writesStatus = /\bstatus\s*=/i;
   const statusWriters = statements.filter(
-    (statement) =>
-      /\\bupdate\\s+public\\.profiles\\b/i.test(statement) &&
-      /\\bstatus\\s*=/i.test(statement),
+    (statement) => updateProfiles.test(statement) && writesStatus.test(statement),
   );
+
+  // Prove the detector itself recognises the exact SQL shape before relying on
+  // it to record that no production migration currently writes this column.
+  const representativeWriter =
+    "update public.profiles set status = 'suspended' where id = auth.uid();";
+  assert.equal(updateProfiles.test(representativeWriter), true);
+  assert.equal(writesStatus.test(representativeWriter), true);
+  assert.equal(
+    updateProfiles.test("-- update public.profiles is mentioned in a comment"),
+    true,
+    "the scanner operates on SQL statements, so comment handling must be explicit",
+  );
+
   assert.equal(
     statusWriters.length,
     0,
