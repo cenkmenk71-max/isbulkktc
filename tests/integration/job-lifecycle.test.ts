@@ -61,7 +61,7 @@ function validDraftForm(jobId = JOB, title = "Senior Operations Manager"): FormD
     responsibilities: "Coordinate teams and improve operational processes.",
     jobType: "full_time",
     workplaceMode: "on_site",
-    district: "Lefkosa",
+    district: "Lefkoşa",
   });
 }
 
