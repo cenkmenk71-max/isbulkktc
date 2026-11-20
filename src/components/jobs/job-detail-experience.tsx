@@ -115,6 +115,25 @@ export async function JobDetailExperience({
               {job.publication_source === "platform" ? (
                 <JobApplicationForm contact={viewerContact} jobId={job.id} />
               ) : null}
+              {job.publication_source === "source_site" && job.source_listing_url ? (
+                <section
+                  className="job-detail-source-card"
+                  aria-label={t("sourceAttributionLabel")}
+                >
+                  <span className="job-detail-source-label">
+                    {t("sourceAttributionLabel")}
+                  </span>
+                  <strong>{new URL(job.source_listing_url).hostname}</strong>
+                  <a
+                    href={job.source_listing_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t("sourceAttributionLink")}
+                    <ArrowUpRight size={14} aria-hidden="true" />
+                  </a>
+                </section>
+              ) : null}
               <section className="job-detail-company-card">
                 <span>{t("companyLabel")}</span>
                 <strong>{job.company.name}</strong>
