@@ -111,3 +111,42 @@ self-test that both the known subject is found and a near-miss is rejected.
   impact, and a suggested fix — "could be" is not a finding.
 - Never write outside `tests/security/**`, `docs/threat-model.md` and
   `docs/data-retention.md`.
+
+
+### Live Supabase Security Advisor baseline — 2026-11-20
+
+The production project's advisor snapshot was checked against live PostgreSQL
+catalogs on 2026-11-20. Findings are not all equivalent to exploitable access:
+
+- **19 RLS-enabled tables have no policies**. The same 19 tables were checked
+  with `has_table_privilege`: neither `anon` nor `authenticated` has
+  SELECT/INSERT/UPDATE/DELETE. This is an intentional deny-by-default pattern;
+  public reads and writes go through reviewed RPCs rather than direct table grants.
+- The advisor reports **12 anon-callable SECURITY DEFINER functions**:
+  eight public read/form helpers, three intended anonymous submission RPCs,
+  and `rls_auto_enable()`. The latter is an internal `event_trigger` pseudo-type
+  function, not an ordinary REST RPC; it was nevertheless left in the default
+  client EXECUTE ACL and is now source-controlled, search-path pinned, fail-closed
+  and revoked from client/service roles by
+  `20261120100000_v4_harden_rls_auto_enable_event_trigger.sql`.
+- The advisor reports **51 authenticated-callable SECURITY DEFINER functions**.
+  These are an explicit full-signature allowlist in
+  `supabase/tests/database/function_privileges.test.sql`; the source security
+  gates also require admin RPCs to check the platform-admin/AAL2 helper in their
+  own bodies and service-only RPCs to check the service role.
+- **Four multiple-permissive SELECT policy warnings** remain on
+  `applications`, `companies`, `company_members` and `jobs`. These combine
+  distinct candidate/company/admin/public read paths. They are a performance
+  review item; consolidation was not attempted without an equivalent policy
+  truth-table and EXPLAIN comparison.
+- **17 unused-index INFO findings** remain. They may reflect a small/early
+  production workload; no index was removed based only on a cold usage counter.
+- **Leaked Password Protection is disabled** in Supabase Auth. This is a
+  project-level setting, not a SQL migration; Supabase documents it under
+  Authentication → Sign In / Providers → Email and makes it available on Pro
+  plans and above. The deployment plan/permission must be checked before it can
+  be enabled. No Auth dashboard setting was changed during this repository PR.
+- The health advisor returned no lint findings.
+
+Re-run the live advisors after deployment. A migration's local pgTAP pass is not
+proof that the production Auth configuration or advisor snapshot has changed.
