@@ -56,12 +56,17 @@ export default async function CompanyDashboardPage({
   if (!locale) notFound();
 
   setRequestLocale(locale);
-  const [{ user, companies, company, latestSubmission }, copy, managedDirectory] =
-    await Promise.all([
-      getEmployerWorkspace(query.company),
-      getTranslations("CompanyManagement"),
-      getManagedDirectoryEntries(),
-    ]);
+  const [
+    { user, companies, company, latestSubmission },
+    copy,
+    deleteCopy,
+    managedDirectory,
+  ] = await Promise.all([
+    getEmployerWorkspace(query.company),
+    getTranslations("CompanyManagement"),
+    getTranslations("CandidateDashboard.deleteAccount"),
+    getManagedDirectoryEntries(),
+  ]);
   const directoryEntries = managedDirectory ?? companyDirectory;
   const submittedProfile =
     latestSubmission && latestSubmission.status !== "approved"
@@ -545,12 +550,12 @@ export default async function CompanyDashboardPage({
             aria-labelledby="company-danger-zone-title"
             className="company-workspace-danger"
           >
-            <h2 id="company-danger-zone-title">Hesap Silme</h2>
-            <p>Bu işlem geri alınamaz. Tüm verileriniz kalıcı olarak silinecektir.</p>
+            <h2 id="company-danger-zone-title">{deleteCopy("title")}</h2>
+            <p>{deleteCopy("description")}</p>
             <DeleteAccountButton
-              confirmLabel="Evet, hesabımı sil"
-              buttonLabel="Hesabımı Sil"
-              warningText="Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+              confirmLabel={deleteCopy("confirmLabel")}
+              buttonLabel={deleteCopy("buttonLabel")}
+              warningText={deleteCopy("warningText")}
             />
           </section>
         </aside>
