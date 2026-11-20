@@ -12307,6 +12307,39 @@ html[dir="rtl"] input[name="slug"] {
     var(--color-shade-green-50)
   );
 }
+.job-detail-source-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px 20px;
+  border: 1px solid rgba(34, 40, 39, 0.1);
+  border-radius: 14px;
+  background: var(--surface-raised);
+}
+.job-detail-source-label {
+  color: var(--ink-4);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.job-detail-source-card strong {
+  color: var(--ink);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.job-detail-source-card a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  color: var(--brand-green-vivid);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+}
+.job-detail-source-card a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .job-application-card h2 {
   margin: 0 0 8px;
   font-size: 18px;
