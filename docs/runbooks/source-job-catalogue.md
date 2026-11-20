@@ -70,9 +70,36 @@ Limit bir **repo değişkenidir**, koda gömülü değildir:
    yeni limiti kullanır.
 4. Yayından sonra sitemap bir sonraki `revalidate` (≤ 1 saat) ile büyür.
 
-Öneri: ilan sayısı indekslenebilir sayfa sayısını doğrudan artırdığı için
-limitin yükseltilmesi arama görünürlüğüne yardımcı olur. Üst sınır 303 civarı
-canlı ilandır; 50.000 URL'lik sitemap protokol sınırının çok altındadır.
+**SEO ve içerik kalitesi kapısı:** `SOURCE_JOB_LIMIT` değerini yükseltmek
+yalnızca URL sayısını artırır; sıralama veya organik görünürlük artışı garanti
+etmez. Limit, içerik kalitesi ve yayın hakkı doğrulanmadan artırılmamalıdır.
+
+Google Search Central, başka sitelerden alınan ilanları özgün değer eklemeden
+yeniden yayımlamayı; yalnızca eş anlamlılarla veya küçük biçim değişiklikleriyle
+dönüştürmeyi ve değer katmayan otomatik feed kopyalarını scraping/spam örnekleri
+arasında sayar. Kaynak bağlantısı eklemek tek başına özgün değer veya yayın izni
+yerine geçmez.
+
+Limit artırılmadan önce:
+- Her kaynak için yeniden yayımlama izni/lisansı veya yazılı veri paylaşım
+  anlaşması doğrulanmalı.
+- İlan detayında kaynak site ve gerçek başvuru yolu görünür olmalı.
+- Sayfaya aday için somut ek değer eklenmeli: doğrulanmış yerel bağlam,
+  normalize edilmiş iş koşulları, güncellik kontrolü ve anlamlı özgün özet.
+- Süresi dolan veya kaynaktan kaldırılan ilanlar zamanında katalogdan düşmeli.
+- Özgün değer veya yayın hakkı bulunmayan sayfalar indeksleme kapsamına
+  alınmamalı; yalnız URL sayısını büyütmek için yayınlanmamalı.
+
+Bu kapılar geçildikten sonra limit kademeli yükseltilmeli; Search Console'da
+keşfedilen/dizine eklenen URL, gösterim, tıklama ve "tarandı - dizine eklenmedi"
+oranları izlenmelidir. Üst sınır 303 civarı canlı ilandır; 50.000 URL'lik
+sitemap protokol sınırının çok altındadır.
+
+Referanslar:
+- Google Search Central — Spam policies (Scraping):
+  https://developers.google.com/search/docs/essentials/spam-policies
+- Google Search Central — Creating helpful, reliable, people-first content:
+  https://developers.google.com/search/docs/fundamentals/creating-helpful-content
 
 > Bu değişken yalnızca `refresh-source-jobs.yml`'i etkiler; `ci.yml` ve
 > `test:e2e` etkilenmez.
