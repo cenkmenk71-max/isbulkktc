@@ -1689,7 +1689,8 @@
       "idle": "",
       "packageRequired": "Yayınlamak için geçerli bir ilan paketi gerekir.",
       "packageLimit": "Aktif ilan kapasiteniz dolu.",
-      "publishFailed": "İlan yayınlanamadı."
+      "publishFailed": "İlan yayınlanamadı.",
+      "closed": "Kapatıldı"
     },
     "admin": {
       "title": "İlan inceleme kuyruğu",
