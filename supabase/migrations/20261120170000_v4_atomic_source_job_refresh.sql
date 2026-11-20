@@ -207,7 +207,9 @@ begin
   )
   on conflict (slug) do update
     set name = excluded.name,
-        verification_status = excluded.verification_status,
+        -- A source company may have been claimed and verified since its first
+        -- import. Refresh upstream profile fields without demoting that trust
+        -- decision back to pending.
         profile_description = excluded.profile_description,
         categories = excluded.categories,
         website = excluded.website,
