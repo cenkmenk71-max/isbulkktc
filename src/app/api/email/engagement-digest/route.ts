@@ -19,10 +19,11 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * Engagement-digest sender. Intended to run on a schedule (a cron entry hitting
  * this path with `Authorization: Bearer $ENGAGEMENT_CRON_SECRET`).
  *
- * Promotional mail is the one family that requires consent, so this route is
- * opt-out-aware: recipients come from `list_engagement_recipients`, which
- * already excludes opted-out addresses and unconfirmed mailboxes, and every
- * message carries a signed unsubscribe link. The featured jobs come from the
+ * Promotional mail requires affirmative consent as well as opt-out suppression.
+ * The live recipient RPC currently has no positive-consent predicate, so the
+ * route fails closed unless the consent rollout gate is enabled after the
+ * versioned consent source and SQL predicate are deployed and verified. Every
+ * sent message carries a signed unsubscribe link. The featured jobs come from the
  * public job search, so a stale or private row can never leak. The route sends
  * one bounded keyset page per invocation; the cron workflow follows the returned
  * cursor, keeping each Vercel request below its 60-second execution ceiling.
@@ -39,6 +40,19 @@ export async function POST(request: Request) {
   const secret = process.env.ENGAGEMENT_CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
     return jsonNoStore({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  // An unsubscribe list is not affirmative marketing consent. The live
+  // recipient RPC currently filters only active + confirmed + non-deleted
+  // accounts and opt-outs. Keep this promotional sender disabled until a
+  // versioned consent source and an explicit-consent SQL predicate are deployed
+  // and verified together. The flag is a release gate, not a substitute for
+  // those database controls.
+  if (process.env.ENGAGEMENT_MARKETING_CONSENT_READY !== "true") {
+    return jsonNoStore(
+      { message: "Engagement marketing consent enforcement is not ready" },
+      { status: 503 },
+    );
   }
 
   const after = new URL(request.url).searchParams.get("after");
