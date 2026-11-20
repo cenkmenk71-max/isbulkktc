@@ -1689,7 +1689,8 @@
       "idle": "",
       "packageRequired": "Zum Veröffentlichen ist ein aktives Anzeigenpaket erforderlich.",
       "packageLimit": "Die Kapazität aktiver Anzeigen ist ausgeschöpft.",
-      "publishFailed": "Die Anzeige konnte nicht veröffentlicht werden."
+      "publishFailed": "Die Anzeige konnte nicht veröffentlicht werden.",
+      "closed": "Geschlossen"
     },
     "admin": {
       "title": "Prüfwarteschlange für Stellenanzeigen",
