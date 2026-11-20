@@ -639,14 +639,25 @@ test("reviewJob maps 22023 to reviewFailed", async () => {
 // Employer ownership and moderation queue boundaries
 // ---------------------------------------------------------------------------
 
-test("getCompanyJobs exposes only platform-owned employer listings", async () => {
+test("employer listing page filters imports and uses stable descending keyset pagination", async () => {
+  const rows = Array.from({ length: 51 }, (_, index) => ({
+    id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    company_id: COMPANY,
+    created_at: new Date(Date.parse("2026-11-20T10:00:00.000Z") - index * 1000).toISOString(),
+  }));
   signedIn({
     rpcs: memberRpc(true),
-    tables: { jobs: { data: [], error: null } },
+    tables: { jobs: { data: rows, error: null } },
   });
 
-  const { getCompanyJobs } = await import("../../src/server/dal/jobs");
-  assert.deepEqual(await getCompanyJobs(COMPANY), []);
+  const { getCompanyJobsPage } = await import("../../src/server/dal/jobs");
+  const firstPage = await getCompanyJobsPage(COMPANY);
+
+  assert.equal(firstPage.jobs.length, 50);
+  assert.deepEqual(firstPage.nextCursor, {
+    createdAt: rows[49].created_at,
+    id: rows[49].id,
+  });
 
   const jobsQuery = fromCalls("jobs").at(-1);
   assert.ok(jobsQuery);
@@ -655,6 +666,20 @@ test("getCompanyJobs exposes only platform-owned employer listings", async () =>
       operation.includes("publication_source") && operation.includes("platform"),
     ),
     "source-site imports must never appear in an employer's editable listing collection",
+  );
+  assert.ok(jobsQuery.ops.some((operation) => operation.includes("limit:51")));
+
+  await getCompanyJobsPage(COMPANY, {
+    afterCreatedAt: firstPage.nextCursor!.createdAt,
+    afterId: firstPage.nextCursor!.id,
+  });
+  const nextPageQuery = fromCalls("jobs").at(-1);
+  assert.ok(nextPageQuery);
+  assert.ok(
+    nextPageQuery.ops.some((operation) =>
+      operation.includes("created_at.lt") && operation.includes("id.lt"),
+    ),
+    "descending pagination must resume strictly before the previous page cursor",
   );
 });
 
