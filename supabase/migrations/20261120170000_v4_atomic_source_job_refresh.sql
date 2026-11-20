@@ -207,15 +207,31 @@ begin
   )
   on conflict (slug) do update
     set name = excluded.name,
-        -- A source company may have been claimed and verified since its first
-        -- import. Refresh upstream profile fields without demoting that trust
-        -- decision back to pending.
         profile_description = excluded.profile_description,
         categories = excluded.categories,
         website = excluded.website,
         municipality = excluded.municipality,
         source_profile_url = excluded.source_profile_url,
-        logo_url = excluded.logo_url;
+        logo_url = excluded.logo_url
+    -- Once a source company is verified, claimed by a member, assigned a
+    -- package, or has a profile submission in review, its curated data belongs
+    -- to the platform/company workflow rather than the upstream scraper.
+    where public.companies.verification_status = 'pending'
+      and not exists (
+        select 1
+        from public.company_members as member_row
+        where member_row.company_id = public.companies.id
+      )
+      and not exists (
+        select 1
+        from public.company_job_package_assignments as assignment_row
+        where assignment_row.company_id = public.companies.id
+      )
+      and not exists (
+        select 1
+        from public.company_profile_submissions as submission_row
+        where submission_row.company_id = public.companies.id
+      );
 
   -- This delete, the subsequent inserts, and the snapshot update all commit or
   -- roll back together because the caller invokes this function in one SQL
