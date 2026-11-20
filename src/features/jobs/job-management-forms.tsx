@@ -40,8 +40,8 @@ export function JobDraftForm({
     submitJobForReview,
     initialJobState,
   );
-  const savedJobId = state.jobId ?? job?.id;
-  const canSubmit = savedJobId && submission.status !== "success" && (!job || job.status === "draft" || job.status === "rejected");
+  const savedJobId = state.jobId ?? submission.jobId ?? job?.id;
+  const canSubmit = submission.status !== "success" && (!job || job.status === "draft" || job.status === "rejected");
 
   return (
     <div className="job-authoring">
@@ -151,31 +151,32 @@ export function JobDraftForm({
         </label>
 
         <div className="job-authoring-actions">
-          <button className="button button-dark" disabled={pending} type="submit">
+          <button className="button button-dark" disabled={pending || submitting} type="submit">
             {pending ? copy("saving") : copy("saveDraft")}
           </button>
+          {canSubmit ? (
+            <button
+              className="button button-outline"
+              disabled={pending || submitting}
+              formAction={submitAction}
+              type="submit"
+            >
+              {submitting ? copy("submitting") : copy("submitReview")}
+            </button>
+          ) : null}
           {state.status !== "idle" ? (
             <p aria-live="polite" data-status={state.status} role={state.status === "error" ? "alert" : "status"}>
               {copy(state.message)}
             </p>
           ) : null}
-        </div>
-        </fieldset>
-      </form>
-
-      {canSubmit ? (
-        <form action={submitAction} className="job-authoring-submit">
-          <input name="jobId" type="hidden" value={savedJobId ?? ""} />
-          <button className="button button-outline" disabled={submitting} type="submit">
-            {submitting ? copy("submitting") : copy("submitReview")}
-          </button>
           {submission.status !== "idle" ? (
             <p aria-live="polite" data-status={submission.status} role={submission.status === "error" ? "alert" : "status"}>
               {copy(submission.message)}
             </p>
           ) : null}
-        </form>
-      ) : null}
+        </div>
+        </fieldset>
+      </form>
     </div>
   );
 }
