@@ -1709,7 +1709,8 @@
       "reviewFailed": "İnceleme kararı kaydedilemedi.",
       "nextPage": "Sonraki 50 ilan",
       "mfaRequired": "İlan inceleme kuyruğuna erişmek için MFA doğrulaması gereklidir.",
-      "backToPackages": "Paket yönetimine dön"
+      "backToPackages": "Paket yönetimine dön",
+      "idle": ""
     }
   }
 }
