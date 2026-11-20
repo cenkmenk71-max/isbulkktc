@@ -34,7 +34,7 @@ test("the live Proxy guard rejects pages, unrelated APIs, the Resend webhook and
     new NextRequest("https://hooks.isbulkktc.com/login"),
     new NextRequest("https://hooks.isbulkktc.com/api/push/dispatch", { method: "POST" }),
     new NextRequest("https://hooks.isbulkktc.com/api/email/resend-webhook", { method: "GET" }),
-    new NextRequest("https://hooks.isbulkktc.com/api/email/acquisition-campaign", { method: "POST" }),
+    new NextRequest("https://hooks.isbulkktc.com/api/email/resend-webhook", { method: "POST" }),
   ];
 
   for (const request of requests) {
@@ -46,7 +46,7 @@ test("the live Proxy guard rejects pages, unrelated APIs, the Resend webhook and
 
 test("the live Proxy guard forwards an allowlisted POST to its authenticated route handler", async () => {
   const response = await proxy(
-    new NextRequest("https://hooks.isbulkktc.com/api/email/resend-webhook", { method: "POST" }),
+    new NextRequest("https://hooks.isbulkktc.com/api/email/acquisition-campaign", { method: "POST" }),
   );
 
   assert.equal(response.status, 200);
