@@ -22,7 +22,7 @@ test("localized route error gives recovery actions without exposing server error
     );
     const markup = renderToStaticMarkup(
       <NextIntlClientProvider locale={locale} messages={messages}>
-        <LocaleError error={error} retry={() => undefined} />
+        <LocaleError error={error} reset={() => undefined} />
       </NextIntlClientProvider>,
     );
 
