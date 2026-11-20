@@ -3,6 +3,7 @@
 import { salesLeadSchema, type SalesLeadFormState } from "./schemas";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { sendSalesLeadEmails } from "@/server/email/mailer";
+import { marketingConsentConfirmationUrlFor } from "@/server/email/marketing-consent-token";
 import { salesLeadRateLimiter } from "@/features/abuse/limits";
 import { clientIp } from "@/features/abuse/request-context";
 
@@ -76,6 +77,9 @@ export async function submitSalesLead(
   }
 
   try {
+    const marketingConsentConfirmationUrl = result.data.marketingConsent
+      ? marketingConsentConfirmationUrlFor(data, result.data.locale, result.data.email)
+      : null;
     await sendSalesLeadEmails({
       companyName: result.data.companyName || null,
       contactName: result.data.contactName || null,
@@ -85,6 +89,7 @@ export async function submitSalesLead(
       durationDays,
       note: result.data.note || null,
       leadId: data,
+      marketingConsentConfirmationUrl,
     });
   } catch (mailError) {
     console.error("Sales lead email could not be sent.", {

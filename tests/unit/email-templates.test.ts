@@ -22,6 +22,7 @@ import {
   renderFeedbackAcknowledgement,
   renderFeedbackTeamEmail,
   renderJobPublishedEmail,
+  renderMarketingConsentConfirmation,
   renderMarketingEmail,
   renderNotificationEmail,
   renderResumeReceivedEmail,
@@ -31,6 +32,7 @@ import {
   type RenderedEmail,
 } from "../../supabase/functions/_shared/email-render";
 import { EMAIL_COPY_EXTRAS } from "../../supabase/functions/_shared/email-copy-extras";
+import { MARKETING_CONSENT_COPY } from "../../supabase/functions/_shared/email-copy";
 import {
   MARKETING_CONTACTS,
   MARKETING_COPY,
@@ -751,4 +753,21 @@ test("the text alternative keeps entity decoding, paragraph breaks and contact d
   assert.ok(!plain.includes("&#39;"), "apostrophe entity is decoded");
   assert.ok(plain.includes("Kuzey Kıbrıs'ta"), "the apostrophe is preserved");
   assert.ok(plain.includes("çalışmak.\nİkinci paragraf."), "paragraph boundaries are preserved");
+});
+
+test("marketing consent confirmation emails are localized and transactional in all six locales", () => {
+  for (const locale of EMAIL_LOCALES) {
+    const confirmationUrl = "https://isbulkktc.com/api/email/confirm-marketing?token=sample.signature";
+    const email = renderMarketingConsentConfirmation({
+      locale,
+      siteUrl: SITE,
+      confirmationUrl,
+    });
+    assertWellFormed(email, "marketing-consent/" + locale);
+    assert.equal(email.subject, MARKETING_CONSENT_COPY[locale].subject);
+    assert.ok(email.html.includes(confirmationUrl), locale + ": confirmation link in HTML");
+    assert.ok(email.text.includes(confirmationUrl), locale + ": confirmation link in text");
+    assert.ok(email.html.includes(MARKETING_CONSENT_COPY[locale].cta), locale + ": localized action");
+    assert.ok(email.html.includes(MARKETING_CONSENT_COPY[locale].ignore), locale + ": no-request warning");
+  }
 });

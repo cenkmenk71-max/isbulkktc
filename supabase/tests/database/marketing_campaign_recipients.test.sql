@@ -68,16 +68,22 @@ select ok(
 
 insert into public.sales_leads (
   id, company_name, email, locale, status,
-  marketing_consent, marketing_consent_at, marketing_consent_version
+  marketing_consent, marketing_consent_requested_at, marketing_consent_at,
+  marketing_consent_version
 ) values
-  ('84000000-0000-4000-8000-000000000001', 'Alpha', 'alpha@example.test', 'tr', 'new', true, pg_catalog.now(), 'sales-lead-marketing-v1'),
-  ('84000000-0000-4000-8000-000000000002', 'Beta', 'beta@example.test', 'en', 'new', true, pg_catalog.now(), 'sales-lead-marketing-v1'),
-  ('84000000-0000-4000-8000-000000000003', 'Gamma', 'gamma@example.test', 'ru', 'quoted', true, pg_catalog.now(), 'sales-lead-marketing-v1');
+  ('84000000-0000-4000-8000-000000000001', 'Alpha', 'alpha@example.test', 'tr', 'new', true, pg_catalog.now(), pg_catalog.now(), 'sales-lead-marketing-v1'),
+  ('84000000-0000-4000-8000-000000000002', 'Beta', 'beta@example.test', 'en', 'new', true, pg_catalog.now(), pg_catalog.now(), 'sales-lead-marketing-v1'),
+  ('84000000-0000-4000-8000-000000000003', 'Gamma', 'gamma@example.test', 'ru', 'quoted', true, pg_catalog.now(), pg_catalog.now(), 'sales-lead-marketing-v1');
 
--- A lead without affirmative permission represents both legacy records and
--- visitors who leave the optional checkbox unticked; it must never enter a batch.
-insert into public.sales_leads (id, company_name, email, locale, status)
-values ('84000000-0000-4000-8000-000000000004', 'Delta', 'delta@example.test', 'de', 'new');
+-- A pending request and a legacy row must never enter the campaign batch.
+insert into public.sales_leads (
+  id, company_name, email, locale, status,
+  marketing_consent_requested_at, marketing_consent_version
+) values (
+  '84000000-0000-4000-8000-000000000004',
+  'Delta', 'delta@example.test', 'de', 'new',
+  pg_catalog.now(), 'sales-lead-marketing-v1'
+);
 
 select is(
   (select count(*)::integer from public.list_marketing_recipients(null, 100)),
@@ -90,7 +96,7 @@ select is(
    from public.list_marketing_recipients(null, 100)
    where lead_id = '84000000-0000-4000-8000-000000000004'),
   0,
-  'a lead with no consent (including a legacy lead) is not a recipient'
+  'a lead with a pending request but no confirmation is not a recipient'
 );
 
 select ok(

@@ -663,6 +663,14 @@ export type Database = {
         };
         Returns: string;
       };
+      confirm_sales_lead_marketing_consent: {
+        Args: {
+          _lead_id: string;
+          _consent_version: string;
+          _email_hash: string;
+        };
+        Returns: boolean;
+      };
       submit_sales_lead: {
         Args: {
           _company_name: string | null;

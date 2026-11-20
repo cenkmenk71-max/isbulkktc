@@ -3,8 +3,9 @@
  *
  * Kept free of Deno and Node globals so both the Edge Function worker and the
  * Node-side sender (server actions) can import the same strings, and so it is
- * unit testable with plain `node --test`. Each supported locale has a complete
- * typed catalog; unknown locale values resolve to Turkish at the boundary.
+ * unit testable with plain `node --test`. Only the `tr` catalog is fully
+ * maintained; the other five mirror the app's `localePrefix` set and fall back
+ * to `tr` when a key is missing.
  */
 
 export const EMAIL_LOCALES = ["tr", "en", "ru", "el", "fa", "de"] as const;
@@ -720,3 +721,58 @@ export const EMAIL_COPY: Record<EmailLocale, EmailCopy> = {
 export function getEmailCopy(locale: string | null | undefined): EmailCopy {
   return EMAIL_COPY[resolveEmailLocale(locale)];
 }
+
+/** Double-opt-in confirmation: these messages only verify a requested preference. */
+export const MARKETING_CONSENT_COPY: Record<
+  EmailLocale,
+  { subject: string; heading: string; lead: string; cta: string; fallback: string; ignore: string }
+> = {
+  tr: {
+    subject: "Tanıtım e-postası tercihinizi doğrulayın",
+    heading: "E-posta tercihinizi doğrulayın",
+    lead: "İşBul KKTC'den ara sıra tanıtım e-postaları almak istediğinizi belirttiniz. Bu tercihi etkinleştirmek için e-posta adresinizi aşağıdaki düğmeyle doğrulayın.",
+    cta: "E-posta tercihini onayla",
+    fallback: "Düğme çalışmazsa bu bağlantıyı tarayıcınıza kopyalayın:",
+    ignore: "Bu isteği siz başlatmadıysanız e-postayı yok sayabilirsiniz. Onay vermediğiniz sürece tanıtım e-postası almazsınız.",
+  },
+  en: {
+    subject: "Confirm your promotional email preference",
+    heading: "Confirm your email preference",
+    lead: "You asked to receive occasional promotional emails from İşBul KKTC. Confirm your email address below to activate this preference.",
+    cta: "Confirm email preference",
+    fallback: "If the button does not work, copy this link into your browser:",
+    ignore: "If you did not make this request, you can ignore this email. No promotional email will be sent unless you confirm.",
+  },
+  ru: {
+    subject: "Подтвердите настройку рекламных писем",
+    heading: "Подтвердите настройку электронной почты",
+    lead: "Вы указали, что хотите иногда получать рекламные письма от İşBul KKTC. Подтвердите свой адрес электронной почты ниже, чтобы включить эту настройку.",
+    cta: "Подтвердить настройку",
+    fallback: "Если кнопка не работает, скопируйте эту ссылку в браузер:",
+    ignore: "Если вы не отправляли этот запрос, просто проигнорируйте письмо. Рекламные письма не будут отправляться без подтверждения.",
+  },
+  el: {
+    subject: "Επιβεβαιώστε την προτίμησή σας για προωθητικά email",
+    heading: "Επιβεβαιώστε την προτίμησή σας",
+    lead: "Ζητήσατε να λαμβάνετε περιστασιακά προωθητικά email από το İşBul KKTC. Επιβεβαιώστε παρακάτω τη διεύθυνση email σας για να ενεργοποιήσετε αυτή την επιλογή.",
+    cta: "Επιβεβαίωση προτίμησης email",
+    fallback: "Αν το κουμπί δεν λειτουργεί, αντιγράψτε αυτόν τον σύνδεσμο στο πρόγραμμα περιήγησής σας:",
+    ignore: "Αν δεν υποβάλατε αυτό το αίτημα, μπορείτε να αγνοήσετε το email. Δεν θα σταλούν προωθητικά email χωρίς επιβεβαίωση.",
+  },
+  fa: {
+    subject: "ترجیح دریافت ایمیل تبلیغاتی خود را تأیید کنید",
+    heading: "ترجیح ایمیل خود را تأیید کنید",
+    lead: "درخواست کرده‌اید گاهی ایمیل‌های تبلیغاتی İşBul KKTC را دریافت کنید. برای فعال شدن این ترجیح، نشانی ایمیل خود را در زیر تأیید کنید.",
+    cta: "تأیید ترجیح ایمیل",
+    fallback: "اگر دکمه کار نمی‌کند، این پیوند را در مرورگر خود کپی کنید:",
+    ignore: "اگر این درخواست را شما ثبت نکرده‌اید، می‌توانید این ایمیل را نادیده بگیرید. بدون تأیید شما ایمیل تبلیغاتی ارسال نخواهد شد.",
+  },
+  de: {
+    subject: "Bestätigen Sie Ihre Einwilligung für Werbe-E-Mails",
+    heading: "Bestätigen Sie Ihre E-Mail-Einstellung",
+    lead: "Sie haben angegeben, gelegentlich Werbe-E-Mails von İşBul KKTC erhalten zu möchten. Bestätigen Sie unten Ihre E-Mail-Adresse, um diese Einstellung zu aktivieren.",
+    cta: "E-Mail-Einstellung bestätigen",
+    fallback: "Falls die Schaltfläche nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:",
+    ignore: "Wenn Sie diese Anfrage nicht gestellt haben, können Sie diese E-Mail ignorieren. Ohne Ihre Bestätigung werden keine Werbe-E-Mails versendet.",
+  },
+};

@@ -16,7 +16,7 @@ begin;
 -- function that forgets to revoke `anon`/`authenticated` fails CI instead of
 -- shipping.
 
-select plan(10);
+select plan(13);
 
 -- ---------------------------------------------------------------------------
 -- The two engagement RPCs are service-role-only.
@@ -74,6 +74,21 @@ select ok(
     'EXECUTE'
   ),
   'the unsubscribe route may still record an opt-out'
+);
+
+select ok(
+  not has_function_privilege('anon', 'public.confirm_sales_lead_marketing_consent(uuid, text, text)', 'EXECUTE'),
+  'anonymous visitors cannot confirm marketing consent directly'
+);
+
+select ok(
+  not has_function_privilege('authenticated', 'public.confirm_sales_lead_marketing_consent(uuid, text, text)', 'EXECUTE'),
+  'signed-in clients cannot confirm marketing consent directly'
+);
+
+select ok(
+  has_function_privilege('service_role', 'public.confirm_sales_lead_marketing_consent(uuid, text, text)', 'EXECUTE'),
+  'only the server confirmation endpoint can activate marketing consent'
 );
 
 -- ---------------------------------------------------------------------------
