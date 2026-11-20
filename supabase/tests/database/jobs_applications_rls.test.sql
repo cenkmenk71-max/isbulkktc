@@ -8,7 +8,7 @@ delete from public.job_source_imports;
 delete from public.jobs where publication_source = 'source_site';
 delete from public.companies where slug like 'source-%';
 
-select plan(78);
+select plan(81);
 
 insert into auth.users (id, email, raw_user_meta_data)
 values
@@ -443,6 +443,15 @@ select is(
   'the platform-owned draft update is persisted'
 );
 
+select throws_ok(
+  $update public.jobs
+    set company_id = '20000000-0000-4000-8000-000000000002'
+    where id = '30000000-0000-4000-8000-000000000002'$,
+  '42501',
+  null,
+  'company members cannot reassign a job to another company'
+);
+
 select set_config(
   'test.application_owner_id',
   public.apply_to_job(
@@ -564,6 +573,17 @@ select throws_ok(
 set local "request.jwt.claims" =
   '{"sub":"10000000-0000-4000-8000-000000000005","role":"authenticated","aal":"aal2"}';
 
+select throws_ok(
+  $select public.review_job(
+      (select id from public.jobs where slug = 'operations-coordinator'),
+      null,
+      null
+    )$,
+  '22023',
+  null,
+  'the moderation RPC rejects a null decision with a validation error'
+);
+
 select is(
   (select count(*)::integer
    from public.jobs
@@ -610,6 +630,16 @@ select ok(
     'UPDATE'
   ),
   'employers cannot directly reassign job publication provenance'
+);
+
+select ok(
+  not has_column_privilege(
+    'authenticated',
+    'public.jobs',
+    'company_id',
+    'UPDATE'
+  ),
+  'employers cannot directly reassign job company ownership'
 );
 
 reset role;
