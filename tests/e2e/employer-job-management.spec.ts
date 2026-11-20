@@ -2,7 +2,7 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-const isLocalStack = /(127\\.0\\.0\\.1|localhost|\\[::1\\])/.test(supabaseUrl);
+const isLocalStack = /(127\.0\.0\.1|localhost|\[::1\])/.test(supabaseUrl);
 
 const serviceHeaders = {
   apikey: serviceRoleKey,
@@ -40,7 +40,7 @@ test("anonymous visitors cannot open employer job management or admin moderation
   page,
 }) => {
   await page.goto("/en/company/jobs");
-  await expect(page).toHaveURL(/\\/en\\/login\\?audience=employer/);
+  await expect(page).toHaveURL(/\/en\/login\?audience=employer/);
   await expect(page.locator(".employer-jobs-page")).toHaveCount(0);
 
   await page.goto("/en/admin/jobs");
@@ -71,11 +71,11 @@ test("an employer can create and submit a listing using the current form values"
     await page.getByLabel("Account email address").fill(email);
     await page.getByLabel("Password", { exact: true }).fill("Employer-pass-2026");
     await page.getByRole("button", { name: "Employer sign in" }).click();
-    await expect(page).toHaveURL(/\\/en\\/company\\/new/, { timeout: 20_000 });
+    await expect(page).toHaveURL(/\/en\/company\/new/, { timeout: 20_000 });
 
     await page.getByLabel("Company name").fill(companyName);
     await page.getByRole("button", { name: "Submit for review" }).click();
-    await expect(page).toHaveURL(/\\/en\\/company\\/dashboard\\?company=/, {
+    await expect(page).toHaveURL(/\/en\/company\/dashboard\?company=/, {
       timeout: 20_000,
     });
     companyId = new URL(page.url()).searchParams.get("company");
@@ -97,7 +97,7 @@ test("an employer can create and submit a listing using the current form values"
       page.getByRole("heading", { name: "My job listings" }),
     ).toBeVisible();
     await page.getByRole("link", { name: "Create a listing" }).click();
-    await expect(page).toHaveURL(/\\/en\\/company\\/jobs\\/new/);
+    await expect(page).toHaveURL(/\/en\/company\/jobs\/new/);
 
     await page.getByLabel("Job title").fill(jobTitle);
     await page.getByLabel("Listing URL slug").fill(`e2e-operations-manager-${stamp}`);
