@@ -1,10 +1,12 @@
 /**
- * Dedicated DNS-only hostname for authenticated GitHub cron callbacks. The Vercel project uses SSO protection for deployment URLs, while
- * Cloudflare Bot Fight Mode can challenge server-to-server cron requests.
+ * Dedicated DNS-only hostname for authenticated GitHub cron callbacks.
+ * Custom domains bypass Vercel deployment SSO, and DNS-only traffic bypasses
+ * Cloudflare's proxy protections. The Proxy therefore allows only the two
+ * exact cron POST routes below; each handler still requires Bearer auth.
  *
- * This host is intentionally not a second public application origin: the
- * Next.js Proxy permits only the exact POST routes below. Each route still
- * enforces its own Bearer authentication.
+ * This host is not a second public application origin. Consent readiness
+ * gates in both handlers remain closed until the database consent controls
+ * are deployed and verified.
  */
 export const MAIL_INGRESS_HOST = "hooks.isbulkktc.com";
 
