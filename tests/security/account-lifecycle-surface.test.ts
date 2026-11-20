@@ -222,7 +222,34 @@ test("account deletion is session-bound, rate-limited and uses the service role"
 });
 
 // ---------------------------------------------------------------------------
-// 5. API error responses must not be shared-cacheable (#424 M-03, #435).
+// 5. Employer account deletion uses the same localized copy as the candidate
+//    workspace; the company dashboard must not regress to hard-coded Turkish.
+// ---------------------------------------------------------------------------
+
+test("employer account deletion copy is localized", () => {
+  const pagePath = new URL(
+    "../../src/app/[locale]/(company)/company/dashboard/page.tsx",
+    import.meta.url,
+  );
+  const page = readFileSync(pagePath, "utf8");
+
+  assert.match(
+    page,
+    /getTranslations\(["']CandidateDashboard\.deleteAccount["']\)/,
+    "the employer dashboard must load the existing localized deletion messages",
+  );
+  for (const key of ["title", "description", "confirmLabel", "buttonLabel", "warningText"]) {
+    assert.match(page, new RegExp(`deleteCopy\\(["']${key}["']\\)`));
+  }
+  assert.doesNotMatch(
+    page,
+    /Hesap Silme|Bu işlem geri alınamaz|Evet, hesabımı sil|Hesabımı Sil/,
+    "the employer dashboard must not hard-code Turkish deletion copy",
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 6. API error responses must not be shared-cacheable (#424 M-03, #435).
 // ---------------------------------------------------------------------------
 
 test("an API route that can answer an error forbids shared caching", () => {
