@@ -23,7 +23,7 @@
 - The homepage gives candidates a direct route to candidate registration and sends employers to the employer-selected account registration step before the authenticated company-details form. Reference navigation labels remain in place; the job-listings and packages labels do not render fictional listing results or package purchase controls.
 - The candidate workspace loads only the signed-in user's profile through the server DAL. Its Server Action validates headline, location, and up to 40 skills, takes the user ID from the verified session, and writes with the user's Supabase client. PostgreSQL RLS restricts access to the owner; profile visibility is kept private.
 - The independent-work page explains how the same working candidate profile can present a professional headline, location, and skills. Its calls to action lead to registration or sign-in; it does not present fictional providers, projects, filters, or earnings.
-- Candidate/company actions lead to implemented registration entry points. Job publishing/search, package purchasing, payment, and application processing remain unimplemented and are not simulated with demo data.
+- Candidate/company actions lead to implemented registration entry points. Public job search, job details, candidate applications, candidate application tracking, and employer application review are implemented. Employer job authoring/list management remains a backend-only workflow until its UI is built. Package purchasing and payment processing are not implemented and are not simulated with demo data.
 
 ## Search and sharing metadata
 
@@ -32,13 +32,13 @@
 - The package scene uses the site's Geist type family with a clear display/body hierarchy, accessible 13–15 px control and supporting copy, and restrained emerald/mineral gradients on the selector, can labels, and machine signage. Ambient light drift and a slow selected-marker glint use transform/opacity animation and are disabled for reduced-motion users.
 - The employer profiles (Starter, Professional, Premium, and Corporate) retain their audience messaging and profile-specific scope headings. The DOM selector mirrors 3D selection for keyboard and assistive-technology users. The employer-registration CTA leads to the existing employer-selected registration flow. No package entitlement, price, quantity, duration, purchase action, or payment flow is invented; terms remain explicitly unpublished.
 - `NEXT_PUBLIC_APP_URL` is the canonical public origin; set it to the deployed HTTPS origin before building for production. The same origin is used by `sitemap.xml`, `robots.txt`, and secure auth callbacks. No production domain is assumed in source.
-- The sitemap lists the homepage, freelance, and package-information pages in the two implemented locales. Sign-in, registration, password recovery, candidate dashboard, and company registration carry `noindex`; `robots.txt` does not block them so crawlers can read that directive.
+- The sitemap lists eligible localized public pages, live job listings, and other indexable landing content across the six configured locales; authentication and private dashboard routes remain excluded/noindex. Sign-in, registration, password recovery, candidate dashboard, and company registration carry `noindex`; `robots.txt` does not block them so crawlers can read that directive.
 
 ## Product boundary
 
-The current candidate profile is not a complete CV builder or a public résumé. File upload, résumé parsing, public candidate discovery, job records, search, applications, employer directories, and payments remain outside the implemented slice. The interface does not claim these are available and contains no synthetic listings, example employers, salaries, regional counts, or simulated application success.
+The current candidate profile is not a complete CV builder or a public résumé. Browser-local CV text extraction can suggest editable profile fields, but CV file upload/storage and public candidate discovery are not implemented. Job records, public search, candidate applications, employer application review, and the employer directory are implemented; employer job authoring/list management remains backend-only. Online checkout and payment processing are not implemented. The interface must not imply unavailable capabilities or simulate purchase/application success.
 
-The project uses Turkish and English. Other V4 target languages, RTL layouts, the homepage Three.js scene, and external integrations remain unimplemented. The package-page Three.js display is decorative: it does not set package terms, grant entitlements, or replace the accessible DOM controls.
+The application currently configures six locales (Turkish, English, German, Greek, Persian, and Russian). Persian uses RTL presentation. External integrations and production activation remain subject to their individual configuration and operational gates. The package-page Three.js display is decorative: it does not set package terms, grant entitlements, or replace the accessible DOM controls.
 
 ## Verification
 
