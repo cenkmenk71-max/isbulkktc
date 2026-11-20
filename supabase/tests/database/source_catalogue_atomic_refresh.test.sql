@@ -1,6 +1,6 @@
 begin;
 
-select plan(17);
+select plan(18);
 
 set local "request.jwt.claims" = '{"role":"service_role","iss":"supabase"}';
 
@@ -41,6 +41,31 @@ insert into public.companies (
   'pending',
   '',
   '{}'::text[]
+);
+
+insert into public.companies (
+  id, name, slug, verification_status, profile_description, categories
+) values (
+  'a1000000-0000-4000-8000-000000000002',
+  'Atomic Retained Co',
+  'source-atomic-retained-co',
+  'pending',
+  '',
+  '{}'::text[]
+);
+
+insert into auth.users (id, email, raw_user_meta_data)
+values (
+  'a3000000-0000-4000-8000-000000000001',
+  'atomic-retained-owner@example.test',
+  '{"display_name":"Atomic Retained Owner"}'
+);
+
+insert into public.company_members (company_id, user_id, membership_role)
+values (
+  'a1000000-0000-4000-8000-000000000002',
+  'a3000000-0000-4000-8000-000000000001',
+  'owner'
 );
 
 insert into public.jobs (
@@ -277,6 +302,14 @@ select ok(
       and source_job_id = '990001'
   ),
   'stale change-ledger rows are removed only after successful replacement'
+);
+
+select ok(
+  exists (
+    select 1 from public.companies
+    where slug = 'source-atomic-retained-co'
+  ),
+  'an otherwise orphaned source company with a member is retained'
 );
 
 -- The privilege grant is the first line of defence; the function body must
