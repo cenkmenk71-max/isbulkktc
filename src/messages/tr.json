@@ -883,7 +883,9 @@
     "companyLabel": "İŞVEREN",
     "companyLocation": "Şirket konumu",
     "companyWebsite": "Web sitesi",
-    "companyDirectoryLink": "Şirket rehberinde görüntüle"
+    "companyDirectoryLink": "Şirket rehberinde görüntüle",
+    "sourceAttributionLabel": "İLAN KAYNAĞI",
+    "sourceAttributionLink": "Kaynak ilanda görüntüle"
   },
   "JobApplication": {
     "title": "Bu ilana başvurun",
