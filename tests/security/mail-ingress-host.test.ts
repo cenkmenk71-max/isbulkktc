@@ -28,12 +28,13 @@ test("the dedicated mail host is noindex and uncacheable", () => {
   assert.ok(nextConfigSource.includes('{ key: "Cache-Control", value: "no-store" }'));
 });
 
-test("the live Proxy guard rejects pages, unrelated APIs and non-POST methods on the ingress host", async () => {
+test("the live Proxy guard rejects pages, unrelated APIs, the Resend webhook and non-POST methods", async () => {
   const requests = [
     new NextRequest("https://hooks.isbulkktc.com/"),
     new NextRequest("https://hooks.isbulkktc.com/login"),
     new NextRequest("https://hooks.isbulkktc.com/api/push/dispatch", { method: "POST" }),
     new NextRequest("https://hooks.isbulkktc.com/api/email/resend-webhook", { method: "GET" }),
+    new NextRequest("https://hooks.isbulkktc.com/api/email/acquisition-campaign", { method: "POST" }),
   ];
 
   for (const request of requests) {
