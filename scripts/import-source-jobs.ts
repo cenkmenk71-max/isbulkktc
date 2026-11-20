@@ -161,35 +161,6 @@ function assert(
   }
 }
 
-async function upsertEmployers(
-  client: SupabaseClient,
-  employers: Map<string, SourceEmployerRecord>,
-): Promise<Map<string, string>> {
-  const rows = [...employers.values()].map((employer) => ({
-    name: employer.name.slice(0, 120),
-    slug: employer.slug,
-    verification_status: "pending" as const,
-    profile_description: employer.profileDescription,
-    categories: employer.categories,
-    website: employer.website,
-    municipality: employer.municipality,
-    source_profile_url: employer.sourceProfileUrl,
-    logo_url: employer.logoUrl,
-  }));
-
-  const { data, error } = await client
-    .from("companies")
-    .upsert(rows, { onConflict: "slug" })
-    .select("id, slug");
-  assert(error, "İşverenler yazılamadı");
-
-  const idBySlug = new Map<string, string>();
-  for (const row of data ?? []) {
-    idBySlug.set(row.slug as string, row.id as string);
-  }
-  return idBySlug;
-}
-
 /**
  * Records the change ledger for every imported listing and returns the
  * modification instant to store per source/job id.
