@@ -105,9 +105,8 @@ Doğrulama: doğru Svix imzasıyla POST → **200** `{"message":"Ignored",...}`;
 bozuk imza → **401** `{"message":"Invalid signature"}`.
 
 > **20 Kasım 2026 yeniden doğrulama uyarısı:** Yukarıdaki 12 Kasım testleri
-> Vercel SSO koruması etkinleştirilmeden önce yapıldı. Güncel Vercel proje
-> ayarında SSO koruması `all_except_custom_domains`; bu nedenle
-> `isbulkktc-prod.vercel.app` alias'ının artık harici Resend webhook isteklerine
+> Vercel SSO koruması etkinleştirilmeden önce yapıldı. Güncel Vercel proje ayarında SSO koruması non-custom deployment URL'lerini
+> kapsıyor; bu nedenle deployment alias'larının harici Resend webhook isteklerine
 > açık olduğu varsayılamaz. Son görülen Resend webhook teslimatları 19 Kasım
 > 16:38 UTC'de başarılıydı; 20 Kasım koruma ayarı değişikliğinden sonraki bir
 > teslimat henüz doğrulanmadı (issue #719).
