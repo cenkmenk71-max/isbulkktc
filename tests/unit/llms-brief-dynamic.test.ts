@@ -1,6 +1,7 @@
 import "./support/server-only-hook";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 
 /**
  * `/llms.txt` and `/llms-full.txt` must be rendered per request, never cached.
@@ -16,8 +17,11 @@ import test from "node:test";
  * neutralised by the shared hook) rather than grepping the source, so it asserts
  * the config the server will actually read.
  */
-for (const path of ["../../src/app/llms.txt/route", "../../src/app/llms-full.txt/route"]) {
-  test(`${path} is force-dynamic so the facet links cannot drift`, async () => {
+for (const [path, sourcePath] of [
+  ["../../src/app/llms.txt/route", "../../src/app/llms.txt/route.ts"],
+  ["../../src/app/llms-full.txt/route", "../../src/app/llms-full.txt/route.ts"],
+] as const) {
+  test(`${path} is force-dynamic and sends a no-store response`, async () => {
     const route = (await import(path)) as {
       dynamic?: unknown;
       revalidate?: unknown;
@@ -35,5 +39,12 @@ for (const path of ["../../src/app/llms.txt/route", "../../src/app/llms-full.txt
       "a revalidate window re-introduces the stale snapshot the dynamic export removes",
     );
     assert.equal(typeof route.GET, "function", "the route must export a GET handler");
+    const source = readFileSync(new URL(sourcePath, import.meta.url), "utf8");
+    assert.match(
+      source,
+      /"Cache-Control":\s*"no-store"/,
+      "dynamic rendering alone does not prevent shared HTTP caches from retaining a stale facet list",
+    );
+    assert.doesNotMatch(source, /"Cache-Control":\s*"public,\s*max-age=/);
   });
 }
