@@ -538,13 +538,13 @@ select throws_ok(
   'an AAL1 platform administrator cannot call the moderation RPC directly'
 );
 
+reset role;
+
 select is(
   (select status from public.jobs where slug = 'operations-coordinator'),
   'pending_review',
   'an AAL1 moderation rejection leaves the job pending'
 );
-
-reset role;
 
 select is(
   (select count(*)::integer
@@ -558,6 +558,7 @@ select is(
   'an AAL1 moderation rejection writes no moderation audit record'
 );
 
+set local role authenticated;
 set local "request.jwt.claims" =
   '{"sub":"10000000-0000-4000-8000-000000000004","role":"authenticated","aal":"aal2"}';
 
