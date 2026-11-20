@@ -105,6 +105,7 @@ begin
     where job_row.company_slug is null
        or job_row.company_slug !~ '^source-[a-z0-9]+(-[a-z0-9]+)*$'
        or job_row.slug is null
+       or job_row.source is null
        or job_row.source not in ('iskibris', 'isbulkibris')
        or job_row.source_job_id is null
        or pg_catalog.char_length(job_row.source_job_id) not between 1 and 128
