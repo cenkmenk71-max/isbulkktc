@@ -57,6 +57,17 @@ export async function POST(request: Request) {
     return json({ message: "Unauthorized" }, { status: 401 });
   }
 
+  // A quote request is not affirmative permission for promotional email.
+  // Keep the acquisition sender closed until the consent migration, confirmation
+  // flow, and live recipient predicate have all been deployed and verified.
+  // This release gate is not a substitute for the database consent predicate.
+  if (process.env.MARKETING_CAMPAIGN_CONSENT_READY !== "true") {
+    return json(
+      { message: "Acquisition marketing consent enforcement is not ready" },
+      { status: 503 },
+    );
+  }
+
   const requestUrl = new URL(request.url);
   const after = requestUrl.searchParams.get("after");
   if (after !== null && !UUID_PATTERN.test(after)) {
