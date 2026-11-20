@@ -427,9 +427,10 @@ sahte kırmızı yok):
 - `MARKETING_CRON_SECRET` — sunucudaki `MARKETING_CRON_SECRET` ile **aynı** değer.
 - `ENGAGEMENT_CRON_SECRET` — sunucudaki `ENGAGEMENT_CRON_SECRET` ile **aynı** değer.
 
-Workflow, Cloudflare'in bot korumasının GitHub'ın veri merkezi çıkışını
-engellememesi için **Vercel alias**'ını çağırır (`vars.MARKETING_DISPATCH_ORIGIN`,
-varsayılan `https://isbulkktc-amber.vercel.app`). Aynı derlemeyi sunar.
+Workflow, Cloudflare bot koruması nedeniyle tarihsel olarak bir deployment alias'ı
+kullanıyordu (`vars.MARKETING_DISPATCH_ORIGIN` / `vars.ENGAGEMENT_DISPATCH_ORIGIN`).
+Güncel Vercel deployment protection bu alias'ları engelleyebilir; 20 Kasım
+uyarısındaki yeniden doğrulama yapılmadan bu rotaya güvenilmemelidir.
 
 Her iki rota da Resend idempotency key kullanır; bu, sağlayıcının sınırlı
 idempotency saklama penceresi içinde tekrarları azaltır ancak kalıcı exactly-once
