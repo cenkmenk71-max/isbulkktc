@@ -9,6 +9,19 @@ Zamanlanmış workflow `.github/workflows/refresh-source-jobs.yml` günde iki ke
 (`04:17` ve `16:17` UTC) çalışır ve `scripts/import-source-jobs.ts`'i çağırır.
 Kaynak sitelerden (iskibris, isbulkibris) ilanları çeker, süzer, yazar.
 
+## Kaynak hatasında güvenli yenileme
+
+İçe aktarma iki kaynağın listesini ve gerekli ilan detaylarını **tamamlanmış bir
+anlık görüntü** olarak toplar. Kaynaklardan biri erişilemiyorsa, sayfalardan
+biri eksik kalıyorsa veya geçici 429/5xx hataları detay yeniden denemelerinden
+sonra sürüyorsa işlem Supabase'e yazmadan başarısız olur. Mevcut canlı katalog
+korunur; sonraki zamanlanmış çalışma tekrar dener.
+
+Kaynağın tek bir ilan için verdiği kesin 404 ise o ilanın artık mevcut olmadığı
+kabul edilir ve yeni katalog anlık görüntüsüne alınmaz. Bu, tüm kaynak API'sinin
+erişilememesi veya detay uç noktasının geçici olarak hata vermesiyle aynı
+durum değildir.
+
 ## Kritik: katalog bir üst sınırla kırpılır
 
 `refresh-source-jobs.yml` şu değişkeni geçirir:
