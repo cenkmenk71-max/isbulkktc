@@ -64,7 +64,7 @@ export default async function HomePage({
     page: query.page,
   });
   const filters = search.success ? search.data : defaultFilters;
-  let results = null;
+  let results: Awaited<ReturnType<typeof searchPublicJobPreviews>> | null = null;
   let resultsUnavailable = false;
 
   if (search.success) {
