@@ -149,7 +149,7 @@ export function JobDraftForm({
 
       {canSubmit ? (
         <form action={submitAction} className="job-authoring-submit">
-          <input name="jobId" type="hidden" value={savedJobId} />
+          <input name="jobId" type="hidden" value={savedJobId ?? ""} />
           <button className="button button-outline" disabled={submitting} type="submit">
             {submitting ? copy("submitting") : copy("submitReview")}
           </button>
