@@ -17,9 +17,8 @@ test("the mail ingress hostname is an exact, case-insensitive host match", () =>
   assert.equal(isMailIngressHost("isbulkktc-prod.vercel.app"), false);
 });
 
-test("only the three authenticated mail ingress POST routes are allowed", () => {
+test("only the two authenticated cron POST routes are allowed", () => {
   const allowed = [
-    "/api/email/resend-webhook",
     "/api/email/acquisition-campaign",
     "/api/email/engagement-digest",
   ];
@@ -37,6 +36,7 @@ test("the mail ingress rejects every other route and path variant", () => {
     "/login",
     "/api/auth/callback",
     "/api/push/dispatch",
+    "/api/email/resend-webhook",
     "/api/email/resend-webhook/",
     "/api/email/resend-webhook/extra",
     "/api%2Femail/resend-webhook",
