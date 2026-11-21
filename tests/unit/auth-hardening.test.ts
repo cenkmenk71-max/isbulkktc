@@ -679,20 +679,20 @@ test("every template shares one stylesheet", () => {
 test("auth fallback and footer colors stay dark only in dark mode", () => {
   for (const name of readdirSync(templateDirectory)) {
     const html = readTemplate(name);
-    const style = /<style>([\\s\\S]*?)<\\/style>/.exec(html)?.[1] ?? "";
+    const style = /<style>([\s\S]*?)<\/style>/.exec(html)?.[1] ?? "";
 
     // Light mode uses the original dark ink on white/cream surfaces.
-    assert.match(style, /\\.fallback \\{[^}]*color:\\s*#414846/i, `${name}: fallback must retain its light-mode ink`);
-    assert.match(style, /\\.footer \\{[^}]*color:\\s*#414846/i, `${name}: footer must retain its light-mode ink`);
+    assert.match(style, /\.fallback \{[^}]*color:\s*#414846/i, `${name}: fallback must retain its light-mode ink`);
+    assert.match(style, /\.footer \{[^}]*color:\s*#414846/i, `${name}: footer must retain its light-mode ink`);
 
     // The pale text is valid only when the dark canvas is also active.
-    assert.match(style, /@media \\(prefers-color-scheme:dark\\)[\\s\\S]*\\.code-label, \\.fallback \\{\\s*color:#C5CEC8 !important;/i, `${name}: dark-mode fallback override missing`);
-    assert.match(style, /@media \\(prefers-color-scheme:dark\\)[\\s\\S]*\\.footer \\{[\\s\\S]*?color:#C5CEC8 !important;/i, `${name}: dark-mode footer override missing`);
+    assert.match(style, /@media \(prefers-color-scheme:dark\)[\s\S]*\.code-label, \.fallback \{\s*color:#C5CEC8 !important;/i, `${name}: dark-mode fallback override missing`);
+    assert.match(style, /@media \(prefers-color-scheme:dark\)[\s\S]*\.footer \{[\s\S]*?color:#C5CEC8 !important;/i, `${name}: dark-mode footer override missing`);
 
     // Catch an unconditional override after the media query, which would wash
     // out these text elements in light-mode clients.
-    assert.doesNotMatch(style, /(?:^|\\})\\s*\\.fallback\\s*\\{\\s*color:#C5CEC8 !important;/i, `${name}: fallback dark color leaked into light mode`);
-    assert.doesNotMatch(style, /(?:^|\\})\\s*\\.footer\\s*\\{\\s*color:#C5CEC8 !important;/i, `${name}: footer dark color leaked into light mode`);
+    assert.doesNotMatch(style, /(?:^|\})\s*\.fallback\s*\{\s*color:#C5CEC8 !important;/i, `${name}: fallback dark color leaked into light mode`);
+    assert.doesNotMatch(style, /(?:^|\})\s*\.footer\s*\{\s*color:#C5CEC8 !important;/i, `${name}: footer dark color leaked into light mode`);
   }
 });
 
