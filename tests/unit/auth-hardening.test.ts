@@ -148,8 +148,13 @@ function hexOf(value: string): string | null {
 function styleRules(html: string): Map<string, Record<string, string>> {
   const block = /<style>([\s\S]*?)<\/style>/.exec(html)?.[1] ?? "";
   const rules = new Map<string, Record<string, string>>();
+  // The auth stylesheets use grouped selectors (for example
+  // ".code-label, .fallback"). Treat each selector as its own rule so the
+  // contrast check evaluates every element covered by the CSS declaration.
+  // Strip comments first; otherwise comment text can become part of a selector.
+  const css = block.replace(/\/\*[\s\S]*?\*\//g, "");
 
-  for (const [, selector, body] of block.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+  for (const [, selectorList, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
     const declarations: Record<string, string> = {};
     for (const declaration of body.split(";")) {
       const colon = declaration.indexOf(":");
@@ -160,7 +165,10 @@ function styleRules(html: string): Map<string, Record<string, string>> {
         .replace(/!important/gi, "")
         .trim();
     }
-    rules.set(selector.trim(), declarations);
+    for (const selector of selectorList.split(",")) {
+      const normalized = selector.trim();
+      if (normalized) rules.set(normalized, declarations);
+    }
   }
 
   return rules;

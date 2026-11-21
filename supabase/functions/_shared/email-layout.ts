@@ -233,12 +233,12 @@ function heroBlock(hero: EmailLayoutOptions["hero"], locale: string): string {
     : "";
   const cta = hero.cta && isSafeUrl(hero.cta.url)
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:${SPACE.lg}px 0 0;">
-       <tr><td align="center" bgcolor="#FFFFFF" style="border-radius:${RADIUS.pill}px;">
-         <a href="${escapeHtml(hero.cta.url)}" style="display:inline-block;background:#FFFFFF;color:${BRAND.green};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.pill}px;padding:${SPACE.md}px ${SPACE.xl}px;">${escapeHtml(hero.cta.label)}</a>
+       <tr><td align="center" bgcolor="#FFFFFF" class="ibk-button-secondary-cell" style="border-radius:${RADIUS.pill}px;">
+         <a href="${escapeHtml(hero.cta.url)}" class="ibk-button-secondary" style="display:inline-block;background:#FFFFFF;color:${BRAND.green};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.pill}px;padding:${SPACE.md}px ${SPACE.xl}px;">${escapeHtml(hero.cta.label)}</a>
        </td></tr></table>`
     : "";
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 ${SPACE.xl}px;">
-    <tr><td style="background:${BRAND.green};border-radius:${RADIUS.card}px;padding:${SPACE.xxl}px ${SPACE.xl}px;text-align:left;">
+    <tr><td class="ibk-brand-bg" bgcolor="${BRAND.green}" style="background:${BRAND.green};border-radius:${RADIUS.card}px;padding:${SPACE.xxl}px ${SPACE.xl}px;text-align:left;">
       <p style="margin:0 0 ${SPACE.sm}px;font-size:${TYPE.micro}px;font-weight:700;letter-spacing:0.12em;color:#C9D9CF;">${escapeHtml(eyebrow)}</p>
       <h1 class="ibk-h1" style="margin:0;font-size:${TYPE.h1}px;line-height:${LEADING.tight};font-weight:800;letter-spacing:-0.5px;color:#FFFFFF;">${escapeHtml(hero.hook)}</h1>
       ${subhook}
@@ -283,7 +283,7 @@ function featuresBlock(
       (feature) => `
     <tr>
       <td width="48" valign="top" style="padding:${SPACE.md}px ${SPACE.md}px ${SPACE.lg}px 0;">
-        <table role="presentation" cellpadding="0" cellspacing="0" style="width:40px;height:40px;background:${BRAND.greenSoft};border-radius:${RADIUS.control}px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" class="ibk-icon-bg" bgcolor="${BRAND.greenSoft}" style="width:40px;height:40px;background:${BRAND.greenSoft};border-radius:${RADIUS.control}px;">
           <tr><td align="center" valign="middle" style="font-size:18px;line-height:1;color:${BRAND.green};font-weight:700;" aria-hidden="true">${escapeHtml(feature.icon)}</td></tr>
         </table>
       </td>
@@ -312,13 +312,13 @@ function packagesBlock(
       const accent = /^#[0-9a-f]{6}$/i.test(pkg.accent) ? pkg.accent : BRAND.green;
       const cta = isSafeUrl(pkg.cta.url)
         ? `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:${SPACE.lg}px 0 0;width:100%;">
-            <tr><td align="center" bgcolor="${BRAND.green}" style="border-radius:${RADIUS.control}px;">
-              <a href="${escapeHtml(pkg.cta.url)}" class="ibk-btn" style="display:block;padding:${SPACE.md}px ${SPACE.lg}px;color:${BRAND.white};text-decoration:none;font-weight:700;font-size:${TYPE.small}px;line-height:${LEADING.normal};border-radius:${RADIUS.control}px;text-align:center;">${escapeHtml(pkg.cta.label)}</a>
+            <tr><td align="center" bgcolor="${BRAND.green}" class="ibk-button-primary-cell" style="border-radius:${RADIUS.control}px;">
+              <a href="${escapeHtml(pkg.cta.url)}" class="ibk-btn ibk-button-primary" style="display:block;padding:${SPACE.md}px ${SPACE.lg}px;color:${BRAND.white};text-decoration:none;font-weight:700;font-size:${TYPE.small}px;line-height:${LEADING.normal};border-radius:${RADIUS.control}px;text-align:center;">${escapeHtml(pkg.cta.label)}</a>
             </td></tr>
           </table>`
         : "";
       return `<td class="ibk-package-cell" width="50%" valign="top" style="width:50%;padding:6px;vertical-align:top;">
-        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;background:${BRAND.white};border:1px solid ${BRAND.line};border-top:4px solid ${accent};border-radius:${RADIUS.card}px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="ibk-package-card" bgcolor="${BRAND.white}" style="width:100%;background:${BRAND.white};border:1px solid ${BRAND.line};border-top:4px solid ${accent};border-radius:${RADIUS.card}px;">
           <tr><td style="padding:${SPACE.lg}px;">
             <p style="margin:0 0 ${SPACE.sm}px;font-size:${TYPE.micro}px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:${BRAND.green};">${escapeHtml(pkg.audience)}</p>
             <${titleTag} style="margin:0;font-size:${TYPE.h2}px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:${BRAND.ink};">${escapeHtml(pkg.name)}</${titleTag}>
@@ -350,8 +350,8 @@ function buttonCell(button: EmailButton, secondary: boolean): string {
     : "";
   return `<tr><td style="padding:${SPACE.md}px 0 0;">
 ${lead}<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
-<td align="center" bgcolor="${bg}" style="border-radius:${RADIUS.control}px;${border}">
-<a href="${escapeHtml(button.url)}" class="ibk-btn" style="display:block;padding:${SPACE.md}px ${SPACE.lg}px;color:${fg};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.control}px;text-align:center;">${escapeHtml(
+<td align="center" bgcolor="${bg}" class="${secondary ? "ibk-button-secondary-cell" : "ibk-button-primary-cell"}" style="border-radius:${RADIUS.control}px;${border}">
+<a href="${escapeHtml(button.url)}" class="ibk-btn ${secondary ? "ibk-button-secondary" : "ibk-button-primary"}" style="display:block;padding:${SPACE.md}px ${SPACE.lg}px;color:${fg};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.control}px;text-align:center;">${escapeHtml(
     button.label,
   )}</a>
 </td></tr></table>
@@ -374,8 +374,8 @@ function buttonBlock(button: EmailButton | undefined, secondary = false): string
   const fg = secondary ? BRAND.green : BRAND.white;
   const border = secondary ? `border:2px solid ${BRAND.green};` : "";
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:${SPACE.lg}px 0 0;">
-<tr><td align="center" bgcolor="${bg}" style="border-radius:${RADIUS.control}px;${border}">
-<a href="${escapeHtml(button.url)}" class="ibk-btn" style="display:inline-block;padding:${SPACE.md}px ${SPACE.xl}px;color:${fg};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.control}px;">${escapeHtml(
+<tr><td align="center" bgcolor="${bg}" class="${secondary ? "ibk-button-secondary-cell" : "ibk-button-primary-cell"}" style="border-radius:${RADIUS.control}px;${border}">
+<a href="${escapeHtml(button.url)}" class="ibk-btn ${secondary ? "ibk-button-secondary" : "ibk-button-primary"}" style="display:inline-block;padding:${SPACE.md}px ${SPACE.xl}px;color:${fg};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.control}px;">${escapeHtml(
     button.label,
   )}</a>
 </td></tr>
@@ -384,7 +384,7 @@ function buttonBlock(button: EmailButton | undefined, secondary = false): string
 
 function codeBlock(code: string | undefined): string {
   if (!code) return "";
-  return `<div style="margin:${SPACE.lg}px 0 0;background:${BRAND.muted};border:1px solid ${BRAND.line};border-radius:${RADIUS.control}px;padding:${SPACE.lg}px;text-align:center;">
+  return `<div class="ibk-panel" style="margin:${SPACE.lg}px 0 0;background:${BRAND.muted};border:1px solid ${BRAND.line};border-radius:${RADIUS.control}px;padding:${SPACE.lg}px;text-align:center;">
 <span class="ibk-code" style="font-size:${TYPE.display}px;font-weight:700;letter-spacing:6px;color:${BRAND.ink};">${escapeHtml(
     code,
   )}</span>
@@ -402,7 +402,7 @@ function linkFallbackBlock(text: string | undefined, url: string | undefined): s
 
 function noteBlock(note: string | undefined): string {
   if (!note) return "";
-  return `<div style="margin:${SPACE.lg}px 0 0;background:${BRAND.greenSoft};border:1px solid ${BRAND.green};border-radius:${RADIUS.control}px;padding:${SPACE.md}px ${SPACE.lg}px;font-size:${TYPE.small}px;line-height:${LEADING.normal};color:${BRAND.green};">
+  return `<div class="ibk-soft-panel" style="margin:${SPACE.lg}px 0 0;background:${BRAND.greenSoft};border:1px solid ${BRAND.green};border-radius:${RADIUS.control}px;padding:${SPACE.md}px ${SPACE.lg}px;font-size:${TYPE.small}px;line-height:${LEADING.normal};color:${BRAND.green};">
 ${escapeHtml(note)}
 </div>`;
 }
@@ -429,7 +429,7 @@ function contactBlock(
         uppercaseHeading(heading, locale),
       )}</p>`
     : "";
-  return `<div style="margin:${SPACE.xl}px 0 0;background:${BRAND.muted};border:1px solid ${BRAND.line};border-radius:${RADIUS.card}px;padding:${SPACE.lg}px ${SPACE.xl}px;">
+  return `<div class="ibk-panel" style="margin:${SPACE.xl}px 0 0;background:${BRAND.muted};border:1px solid ${BRAND.line};border-radius:${RADIUS.card}px;padding:${SPACE.lg}px ${SPACE.xl}px;">
 ${title}<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">${rows}</table>
 </div>`;
 }
@@ -467,7 +467,7 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
   
   const body = [
     heroHtml,
-    `<div style="padding:${SPACE.xl}px;">`,
+    `<div class="ibk-content" style="padding:${SPACE.xl}px;">`,
     headingBlock(options.heading, hasHero),
     introBlock(options.introHtml),
     sectionsHtml,
@@ -502,13 +502,66 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
     .ibk-h1 { font-size:${TYPE.h2}px !important; }
     .ibk-package-cell { display:block !important; width:100% !important; padding:0 0 12px !important; }
   }
+  /* Dark mode is component-scoped. A global p/div/td colour override creates
+     white-on-white text in package cards and secondary actions. */
   @media (prefers-color-scheme:dark) {
-    .ibk-bg { background:#171B1A !important; }
-    .ibk-card { background:#1E2423 !important; }
-    .ibk-h1, .ibk-code { color:#F3F1EC !important; }
-    .ibk-foot { background:#171B1A !important; }
+    .ibk-bg { background-color:#171B1A !important; }
+    .ibk-card, .ibk-content-bg { background-color:#1E2423 !important; }
+    .ibk-brand-bg { background-color:#123128 !important; }
+    .ibk-content, .ibk-content p, .ibk-content div, .ibk-content td,
+    .ibk-content span, .ibk-content strong, .ibk-content h1, .ibk-content h2,
+    .ibk-content h3, .ibk-content h4, .ibk-content li, .ibk-content a {
+      color:#F3F1EC !important;
+    }
+    .ibk-package-card, .ibk-panel, .ibk-soft-panel {
+      background-color:#2A3430 !important;
+      border-color:#46544D !important;
+    }
+    .ibk-icon-bg { background-color:#2C4037 !important; }
+    .ibk-button-secondary-cell, .ibk-button-secondary {
+      background-color:#2A3430 !important;
+      border-color:#6FAA92 !important;
+      color:#F3F1EC !important;
+    }
+    .ibk-button-primary-cell { background-color:#123128 !important; }
+    .ibk-button-primary { color:#FFFFFF !important; }
+    .ibk-foot { background-color:#171B1A !important; color:#C5CEC8 !important; }
+    .ibk-foot a { color:#A9CBBB !important; }
   }
-  [data-ogsc] .ibk-card { background:#1E2423 !important; }
+
+  /* Outlook.com / Outlook on the web exposes these attributes when its
+     dark-theme engine rewrites an element. Repeat the scoped palette so the
+     foreground and the surface always move together. */
+  [data-ogsc] .ibk-content,
+  [data-ogsc] .ibk-content p, [data-ogsc] .ibk-content div,
+  [data-ogsc] .ibk-content td, [data-ogsc] .ibk-content span,
+  [data-ogsc] .ibk-content strong, [data-ogsc] .ibk-content h1,
+  [data-ogsc] .ibk-content h2, [data-ogsc] .ibk-content h3,
+  [data-ogsc] .ibk-content h4, [data-ogsc] .ibk-content li,
+  [data-ogsc] .ibk-content a,
+  p[data-ogsc], div[data-ogsc], td[data-ogsc], span[data-ogsc],
+  strong[data-ogsc], h1[data-ogsc], h2[data-ogsc], h3[data-ogsc],
+  h4[data-ogsc], li[data-ogsc], a[data-ogsc] {
+    color:#F3F1EC !important;
+  }
+  [data-ogsb] .ibk-card, [data-ogsb] .ibk-content-bg {
+    background-color:#1E2423 !important;
+  }
+  [data-ogsb] .ibk-brand-bg { background-color:#123128 !important; }
+  [data-ogsb] .ibk-package-card, [data-ogsb] .ibk-panel,
+  [data-ogsb] .ibk-soft-panel {
+    background-color:#2A3430 !important;
+    border-color:#46544D !important;
+  }
+  [data-ogsb] .ibk-icon-bg { background-color:#2C4037 !important; }
+  [data-ogsb] .ibk-button-secondary-cell {
+    background-color:#2A3430 !important;
+    border-color:#6FAA92 !important;
+  }
+  [data-ogsb] .ibk-button-primary-cell { background-color:#123128 !important; }
+  [data-ogsb] .ibk-foot { background-color:#171B1A !important; }
+  [data-ogsc] .ibk-foot { color:#C5CEC8 !important; }
+  [data-ogsc] .ibk-foot a { color:#A9CBBB !important; }
 </style>
 </head>
 <body style="margin:0;padding:0;background:${BRAND.surface};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND.ink};">
@@ -518,7 +571,7 @@ ${preheaderBlock(options.preheader)}
 <tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="ibk-card" style="max-width:600px;width:100%;background:${BRAND.white};border-radius:${RADIUS.card}px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.08);">
 ${heroHtml ? `
-<tr><td class="ibk-pad" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
+<tr><td class="ibk-pad ibk-brand-bg" bgcolor="${BRAND.green}" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
 <td style="vertical-align:middle;">
 <a href="${escapeHtml(options.siteUrl)}" style="display:inline-block;text-decoration:none;"><img src="${LOGO_URL}" width="56" height="33" alt="${BRAND.name}" style="display:block;border:0;outline:none;text-decoration:none;" /></a>
@@ -530,7 +583,7 @@ ${heroHtml ? `
 </tr></table>
 </td></tr>
 ` : `
-<tr><td class="ibk-pad" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
+<tr><td class="ibk-pad ibk-brand-bg" bgcolor="${BRAND.green}" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
 <td style="vertical-align:middle;">
 <a href="${escapeHtml(options.siteUrl)}" style="display:inline-block;text-decoration:none;"><img src="${LOGO_URL}" width="56" height="33" alt="${BRAND.name}" style="display:block;border:0;outline:none;text-decoration:none;" /></a>
@@ -542,7 +595,7 @@ ${heroHtml ? `
 </tr></table>
 </td></tr>
 `}
-<tr><td class="ibk-pad" style="padding:0;">
+<tr><td class="ibk-pad ibk-content-bg" bgcolor="${BRAND.white}" style="padding:0;background:${BRAND.white};">
 ${body}
 </td></tr>
 ${footerBlock(options)}

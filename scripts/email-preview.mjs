@@ -19,14 +19,17 @@
  * refuses to send one when no signing key is configured.
  *
  * Usage:
- *   node scripts/email-preview.mjs                    # render to .artifacts
- *   node scripts/email-preview.mjs --send me@mail.com # render + send all
- *   node scripts/email-preview.mjs --only welcome     # one template
+ *   node scripts/email-preview.mjs                         # render Turkish
+ *   node scripts/email-preview.mjs --locale en              # one locale
+ *   node scripts/email-preview.mjs --all-locales            # all 6 locales
+ *   node scripts/email-preview.mjs --locale en --send me@mail.com
+ *   node scripts/email-preview.mjs --only welcome-candidate # one template
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { getEmailCopy } from '../supabase/functions/_shared/email-copy.ts';
 
 import {
   buildUnsubscribeUrl,
@@ -83,20 +86,76 @@ export const PREVIEW_ONLY_TEMPLATES = new Set([
   ...STATIC_GOTRUE_TEMPLATES,
 ]);
 
-/** Resolve the Turkish GoTrue branch and substitute safe, inert preview values. */
-export function renderGoTrueTemplatePreview(source) {
+/** Supported locales rendered by the full email preview matrix. */
+export const EMAIL_PREVIEW_LOCALES = Object.freeze(["tr", "en", "ru", "el", "fa", "de"]);
+
+/**
+ * Select the correct branch from the constrained GoTrue locale-template grammar
+ * used by the native auth templates. This is not a general Go template runtime.
+ */
+function resolveLocaleBranches(source, locale) {
+  const openingPattern = /\{\{\s*if eq \$locale "tr"\s*\}\}/g;
+  let output = "";
+  let cursor = 0;
+  let opening;
+
+  while ((opening = openingPattern.exec(source))) {
+    output += source.slice(cursor, opening.index);
+    const branchStart = openingPattern.lastIndex;
+    const markerPattern = /\{\{\s*(else if eq \$locale "([^"]+)"|else|end)\s*\}\}/g;
+    markerPattern.lastIndex = branchStart;
+
+    let activeLocale = "tr";
+    let segmentStart = branchStart;
+    let selected = null;
+    let fallback = null;
+    let closing = -1;
+    let marker;
+
+    while ((marker = markerPattern.exec(source))) {
+      const segment = source.slice(segmentStart, marker.index);
+      if (activeLocale === locale) selected = segment;
+      if (activeLocale === "__fallback__") fallback = segment;
+
+      if (marker[1] === "end") {
+        closing = markerPattern.lastIndex;
+        break;
+      }
+
+      activeLocale = marker[1] === "else" ? "__fallback__" : marker[2];
+      segmentStart = markerPattern.lastIndex;
+    }
+
+    if (closing < 0) {
+      throw new Error("GoTrue locale branch is missing its closing template end");
+    }
+    output += selected ?? fallback ?? "";
+    cursor = closing;
+    openingPattern.lastIndex = closing;
+  }
+
+  return output + source.slice(cursor);
+}
+
+/** Resolve one GoTrue template into a safe, inert preview for a supported locale. */
+export function renderGoTrueTemplatePreview(source, locale = "tr") {
   if (typeof source !== "string") {
     throw new TypeError("GoTrue template source must be a string");
   }
+  if (!EMAIL_PREVIEW_LOCALES.includes(locale)) {
+    throw new Error("unsupported_email_preview_locale");
+  }
 
-  const html = source
-    .replace(
-      /\{\{\s*if eq \$locale "tr"\s*\}\}([\s\S]*?)\{\{\s*else if eq \$locale "[^"]+"\s*\}\}[\s\S]*?\{\{\s*end\s*\}\}/g,
-      (_match, turkish) => turkish,
-    )
-    .replace(/\{\{\s*if \$rtl\s*\}\}padding-right\{\{\s*else\s*\}\}padding-left\{\{\s*end\s*\}\}/g, "padding-left")
-    .replace(/\{\{\s*\.ConfirmationURL\s*\}\}/g, "https://isbulkktc.com/tr/auth/callback?code=SAMPLE")
-    .replace(/\{\{\s*\.SiteURL\s*\}\}/g, "https://isbulkktc.com/tr/")
+  const localePrefix = locale === "tr" ? "" : "/" + locale;
+  const siteUrl = "https://isbulkktc.com" + localePrefix + "/";
+  const callbackUrl = "https://isbulkktc.com" + localePrefix + "/auth/callback?code=SAMPLE";
+
+  const html = resolveLocaleBranches(source, locale)
+    .replace(/\{\{\s*\$locale\s*\}\}/g, locale)
+    .replace(/\{\{\s*if \$rtl\s*\}\}rtl\{\{\s*else\s*\}\}ltr\{\{\s*end\s*\}\}/g, locale === "fa" ? "rtl" : "ltr")
+    .replace(/\{\{\s*if \$rtl\s*\}\}padding-right\{\{\s*else\s*\}\}padding-left\{\{\s*end\s*\}\}/g, locale === "fa" ? "padding-right" : "padding-left")
+    .replace(/\{\{\s*\.ConfirmationURL\s*\}\}/g, callbackUrl)
+    .replace(/\{\{\s*\.SiteURL\s*\}\}/g, siteUrl)
     .replace(/\{\{\s*\.NewEmail\s*\}\}/g, "yeni.adres@isbulkktc.com")
     .replace(/\{\{\s*\.Email\s*\}\}/g, "ornek@isbulkktc.com")
     .replace(/\{\{\s*\.Token\s*\}\}/g, "482913")
@@ -109,18 +168,22 @@ export function renderGoTrueTemplatePreview(source) {
 }
 
 export function buildTemplates(render, site, companyProfileRender = render, goTrue = {}) {
+  const siteRoot = site.siteUrl.endsWith("/") ? site.siteUrl : site.siteUrl + "/";
+  const route = (pathname = "") => new URL(pathname.replace(/^\/+/, ""), siteRoot).toString();
+  const copy = getEmailCopy(site.locale);
+
   const templates = {
     "auth-confirmation": () =>
       render.renderAuthConfirmation({
         ...site,
         email: "aday@example.com",
-        confirmationUrl: "https://isbulkktc.com/tr/auth/callback?code=SAMPLE",
+        confirmationUrl: route("auth/callback") + "?code=SAMPLE",
       }),
     "auth-recovery": () =>
       render.renderAuthRecovery({
         ...site,
         email: "aday@example.com",
-        confirmationUrl: "https://isbulkktc.com/tr/auth/callback?code=SAMPLE",
+        confirmationUrl: route("auth/callback") + "?code=SAMPLE",
       }),
     "auth-reauthentication": () =>
       render.renderAuthReauthentication({ ...site, token: "482913" }),
@@ -131,14 +194,14 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         ...site,
         audience: "candidate",
         name: "Esra Kapli",
-        actionUrl: "https://isbulkktc.com/tr/profile/dashboard",
+        actionUrl: route("profile/dashboard"),
       }),
     "welcome-employer": () =>
       render.renderWelcomeEmail({
         ...site,
         audience: "employer",
         name: "Mehmet Demir",
-        actionUrl: "https://isbulkktc.com/tr/company/dashboard",
+        actionUrl: route("company/dashboard"),
       }),
     "notification-candidate-applied": () =>
       render.renderNotificationEmail({
@@ -146,7 +209,7 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         eventType: "submitted",
         isCandidate: true,
         jobTitle: "Kıdemli Frontend Geliştirici",
-        dashboardUrl: "https://isbulkktc.com/tr/profile/dashboard#my-applications",
+        dashboardUrl: route("profile/dashboard#my-applications"),
       }),
     "notification-employer-applied": () =>
       render.renderNotificationEmail({
@@ -154,7 +217,7 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         eventType: "submitted",
         isCandidate: false,
         jobTitle: "Kıdemli Frontend Geliştirici",
-        dashboardUrl: "https://isbulkktc.com/tr/company/dashboard",
+        dashboardUrl: route("company/dashboard"),
       }),
     "notification-viewed": () =>
       render.renderNotificationEmail({
@@ -162,7 +225,7 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         eventType: "viewed",
         isCandidate: true,
         jobTitle: "Kıdemli Frontend Geliştirici",
-        dashboardUrl: "https://isbulkktc.com/tr/profile/dashboard#my-applications",
+        dashboardUrl: route("profile/dashboard#my-applications"),
       }),
     "notification-status": () =>
       render.renderNotificationEmail({
@@ -171,14 +234,14 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         isCandidate: true,
         jobTitle: "Kıdemli Frontend Geliştirici",
         status: "shortlisted",
-        dashboardUrl: "https://isbulkktc.com/tr/profile/dashboard#my-applications",
+        dashboardUrl: route("profile/dashboard#my-applications"),
       }),
     "feedback-ack": () =>
       render.renderFeedbackAcknowledgement({
         ...site,
         name: "Esra",
         message: "İlan filtreleri çok kullanışlı, teşekkürler.",
-        actionUrl: "https://isbulkktc.com/tr/jobs",
+        actionUrl: route("jobs"),
       }),
     "feedback-team": () =>
       render.renderFeedbackTeamEmail({
@@ -188,27 +251,27 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         category: "Öneri",
         rating: 5,
         message: "İlan filtreleri çok kullanışlı, teşekkürler.",
-        actionUrl: "https://isbulkktc.com/tr/",
+        actionUrl: route(),
       }),
     "job-published": () =>
       render.renderJobPublishedEmail({
         ...site,
         jobTitle: "Kıdemli Frontend Geliştirici",
-        jobUrl: "https://isbulkktc.com/tr/jobs/ornek",
+        jobUrl: route("jobs/ornek"),
       }),
     "resume-received": () =>
       render.renderResumeReceivedEmail({
         ...site,
         name: "Esra Kapli",
         isUpdate: false,
-        profileUrl: "https://isbulkktc.com/tr/profile/dashboard",
+        profileUrl: route("profile/dashboard"),
       }),
     "resume-updated": () =>
       render.renderResumeReceivedEmail({
         ...site,
         name: "Esra Kapli",
         isUpdate: true,
-        profileUrl: "https://isbulkktc.com/tr/profile/dashboard",
+        profileUrl: route("profile/dashboard"),
       }),
     "sales-ack": () =>
       render.renderSalesAcknowledgement({
@@ -219,7 +282,7 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         plan: "Büyüme",
         durationDays: 30,
         note: "Üç pozisyon için ilan yayınlamak istiyoruz.",
-        actionUrl: "https://isbulkktc.com/tr/packages",
+        actionUrl: route("packages"),
       }),
     "sales-team": () =>
       render.renderSalesTeamEmail({
@@ -230,13 +293,13 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         plan: "Büyüme",
         durationDays: 30,
         note: "Üç pozisyon için ilan yayınlamak istiyoruz.",
-        actionUrl: "https://isbulkktc.com/tr/admin/sales-leads",
+        actionUrl: route("admin/sales-leads"),
       }),
     "company-profile-ack": () =>
       companyProfileRender.renderCompanyProfileAcknowledgement({
         ...site,
         companyName: "Örnek Teknoloji Ltd.",
-        actionUrl: "https://isbulkktc.com/tr/company/dashboard",
+        actionUrl: route("company/dashboard"),
       }),
     "company-profile-team": () =>
       companyProfileRender.renderCompanyProfileTeamEmail({
@@ -248,7 +311,7 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         publicEmail: "ik@example.com",
         address: "Girne",
         submittedBy: "mehmet@example.com",
-        actionUrl: "https://isbulkktc.com/tr/admin/company-profiles",
+        actionUrl: route("admin/company-profiles"),
       }),
     engagement: (unsubscribeUrl) =>
       render.renderEngagementEmail({
@@ -258,15 +321,15 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
           {
             title: "Kıdemli Frontend Geliştirici",
             company: "Örnek Teknoloji Ltd.",
-            url: "https://isbulkktc.com/tr/jobs/ornek-frontend",
+            url: route("jobs/ornek-frontend"),
           },
           {
             title: "Ürün Yöneticisi",
             company: "Kıbrıs Dijital",
-            url: "https://isbulkktc.com/tr/jobs/ornek-urun",
+            url: route("jobs/ornek-urun"),
           },
         ],
-        jobsUrl: "https://isbulkktc.com/tr/jobs",
+        jobsUrl: route("jobs"),
         unsubscribeUrl,
       }),
     marketing: (unsubscribeUrl) =>
@@ -277,18 +340,19 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
   };
 
   const sourceSubjects = {
-    confirmation: "İşBul KKTC e-posta adresinizi doğrulayın",
-    recovery: "İşBul KKTC şifre yenileme bağlantınız",
-    invite: "İşBul KKTC'ye davet edildiniz",
-    magic_link: "İşBul KKTC giriş bağlantınız",
-    email_change: "Yeni e-posta adresinizi doğrulayın",
-    reauthentication: "İşBul KKTC kimlik doğrulama kodunuz",
-    "password-changed": "İşBul KKTC şifreniz değiştirildi",
+    confirmation: copy.auth.confirmationSubject,
+    recovery: copy.auth.recoverySubject,
+    reauthentication: copy.auth.reauthenticationSubject,
+    "password-changed": copy.auth.passwordChangedSubject,
   };
+
   for (const [name, html] of Object.entries(goTrue)) {
     const templateName = "auth-source-" + name.replace(/_/g, "-");
     templates[templateName] = () => ({
-      subject: sourceSubjects[name] || "İşBul KKTC hesap e-postası",
+      // GoTrue notification subjects are configured independently in
+      // supabase/config.toml. The localized document title is the most useful
+      // language-correct label for this offline visual preview.
+      subject: sourceSubjects[name] || /<title>([\s\S]*?)<\/title>/i.exec(html)?.[1]?.trim() || "İşBul KKTC hesap e-postası",
       html,
       text: html
         .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -354,66 +418,110 @@ export function assertNoPreviewLink(name, email) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const sendIdx = args.indexOf('--send');
+  const sendIdx = args.indexOf("--send");
   const sendTo = sendIdx !== -1 ? args[sendIdx + 1] : null;
-  const onlyIdx = args.indexOf('--only');
+  const onlyIdx = args.indexOf("--only");
   const only = onlyIdx !== -1 ? args[onlyIdx + 1] : null;
+  const localeIdx = args.indexOf("--locale");
+  const requestedLocale = localeIdx !== -1 ? args[localeIdx + 1] : null;
+  const allLocales = args.includes("--all-locales");
 
-  const render = await import('../supabase/functions/_shared/email-render.ts');
-  const companyProfileRender = await import('../src/server/email/company-profile-render.ts');
-  const site = { locale: 'tr', siteUrl: 'https://isbulkktc.com/tr/' };
-  const goTrue = {};
-  for (const { name, filename } of NATIVE_GOTRUE_TEMPLATES) {
-    const source = readFileSync(resolve("supabase", "templates", filename), "utf8");
-    goTrue[name] = renderGoTrueTemplatePreview(source);
+  if (allLocales && requestedLocale) {
+    throw new Error("--all-locales and --locale cannot be used together");
   }
-  const templates = buildTemplates(render, site, companyProfileRender, goTrue);
+  if (allLocales && sendTo) {
+    throw new Error("Sending is disabled in --all-locales mode; use --locale <locale> --send <address> for a single-locale inbox test");
+  }
 
-  const names = only ? [only] : Object.keys(templates);
-  for (const name of names) {
-    if (!templates[name]) {
-      console.error(`Unknown template "${name}". Known: ${Object.keys(templates).join(', ')}`);
-      process.exit(1);
+  const locales = allLocales ? EMAIL_PREVIEW_LOCALES : [requestedLocale ?? "tr"];
+  for (const locale of locales) {
+    if (!EMAIL_PREVIEW_LOCALES.includes(locale)) {
+      throw new Error("unsupported_email_preview_locale: " + locale);
     }
   }
 
-  mkdirSync(OUT, { recursive: true });
+  const render = await import("../supabase/functions/_shared/email-render.ts");
+  const companyProfileRender = await import("../src/server/email/company-profile-render.ts");
+  const sourceTemplates = Object.fromEntries(
+    NATIVE_GOTRUE_TEMPLATES.map(({ name, filename }) => [
+      name,
+      readFileSync(resolve("supabase", "templates", filename), "utf8"),
+    ]),
+  );
 
-  const rendered = [];
-  const byName = new Map();
-  for (const name of names) {
-    try {
+  const rootRendered = [];
+  for (const locale of locales) {
+    const siteUrl = locale === "tr"
+      ? "https://isbulkktc.com/"
+      : "https://isbulkktc.com/" + locale + "/";
+    const site = { locale, siteUrl };
+    const goTrue = Object.fromEntries(
+      Object.entries(sourceTemplates).map(([name, source]) => [
+        name,
+        renderGoTrueTemplatePreview(source, locale),
+      ]),
+    );
+    const templates = buildTemplates(render, site, companyProfileRender, goTrue);
+
+    const names = only ? [only] : Object.keys(templates);
+    for (const name of names) {
+      if (!templates[name]) {
+        throw new Error("Unknown template " + name + " for " + locale + ". Known: " + Object.keys(templates).join(", "));
+      }
+    }
+
+    const outputDir = allLocales || (requestedLocale && requestedLocale !== "tr")
+      ? resolve(OUT, locale)
+      : OUT;
+    mkdirSync(outputDir, { recursive: true });
+
+    const rendered = [];
+    const byName = new Map();
+    for (const name of names) {
       const out = renderTemplate(templates, name, previewUnsubscribeUrl(name));
-      writeFileSync(resolve(OUT, `${name}.html`), out.html);
-      writeFileSync(resolve(OUT, `${name}.txt`), out.text, "utf8");
+      writeFileSync(resolve(outputDir, name + ".html"), out.html, "utf8");
+      writeFileSync(resolve(outputDir, name + ".txt"), out.text, "utf8");
       rendered.push({ name, ...out });
       byName.set(name, out);
       console.log(
-        `  ${name.padEnd(24)} html ${String(out.html.length).padStart(6)}  text ${String(out.text.length).padStart(5)}  "${out.subject}"`,
+        "  " + locale + "  " + name.padEnd(24) + " html " +
+        String(out.html.length).padStart(6) + "  text " +
+        String(out.text.length).padStart(5) + "  " + JSON.stringify(out.subject),
       );
-    } catch (error) {
-      console.error(`  ${name.padEnd(24)} FAILED: ${error.message}`);
+    }
+
+    const index = '<!doctype html><meta charset="utf-8"><title>İşBul KKTC e-posta şablonları — ' + locale + '</title>\n' +
+      '<style>body{font:15px/1.5 system-ui;margin:24px;max-width:900px}h1{font-size:20px}li{margin:6px 0}a{color:#194435}small{color:#414846}</style>\n' +
+      '<h1>İşBul KKTC e-posta şablonları (' + locale.toUpperCase() + ') — ' + rendered.length + '</h1>\n' +
+      '<ul>' + rendered.map((item) =>
+        '<li><a href="./' + item.name + '.html">' + item.name + '</a> — <small>' + item.subject + '</small></li>'
+      ).join("") + '</ul>';
+    writeFileSync(resolve(outputDir, "index.html"), index, "utf8");
+    rootRendered.push({ locale, count: rendered.length });
+
+    if (sendTo) {
+      await sendAll({ templates, byName, names, sendTo, site });
     }
   }
 
-  // An index so every template is one click away in a browser.
-  const index = `<!doctype html><meta charset="utf-8"><title>E-posta şablonları</title>
-<style>body{font:15px/1.5 system-ui;margin:24px;max-width:900px}h1{font-size:20px}
-li{margin:6px 0}a{color:#194435}small{color:#414846}</style>
-<h1>E-posta şablonları (${rendered.length})</h1>
-<ul>${rendered
-    .map(
-      (r) =>
-        `<li><a href="./${r.name}.html">${r.name}</a> — <small>${r.subject}</small></li>`,
-    )
-    .join('')}</ul>`;
-  writeFileSync(resolve(OUT, 'index.html'), index);
+  if (allLocales) {
+    const rootIndex = '<!doctype html><meta charset="utf-8"><title>İşBul KKTC — E-posta önizleme</title>\n' +
+      '<style>body{font:15px/1.5 system-ui;margin:24px;max-width:900px}h1{font-size:20px}li{margin:8px 0}a{color:#194435}</style>\n' +
+      '<h1>İşBul KKTC — Altı dilde e-posta şablonları</h1>\n' +
+      '<ul>' + rootRendered.map((item) =>
+        '<li><a href="./' + item.locale + '/index.html">' + item.locale.toUpperCase() + '</a> — ' + item.count + ' şablon</li>'
+      ).join("") + '</ul>';
+    writeFileSync(resolve(OUT, "index.html"), rootIndex, "utf8");
+  }
 
-  console.log(`\n${rendered.length} template(s) written to ${OUT}`);
-  console.log(`Open: ${resolve(OUT, 'index.html')}`);
+  console.log(
+    "\n" + rootRendered.reduce((sum, item) => sum + item.count, 0) +
+    " email render(s) written to " + OUT,
+  );
+  console.log("Open: " + resolve(OUT, "index.html"));
 
-  if (sendTo) {
-    await sendAll({ templates, byName, names, sendTo, site });
+  if (allLocales) {
+    console.log("Six-locale previews are offline-only. Use --locale <locale> --send <address> for a single-locale inbox test.");
   }
 }
 

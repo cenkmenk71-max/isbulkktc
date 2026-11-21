@@ -568,6 +568,44 @@ function renderMarketing(locale: string) {
   });
 }
 
+test("marketing email logo and dark-mode surfaces remain email-client safe", () => {
+  const email = renderMarketing("tr");
+
+  // Email clients do not resolve root-relative image paths against the website.
+  assert.match(
+    email.html,
+    /<img src="https:\/\/isbulkktc\.com\/images\/isbul-logo-mark-white\.png"/,
+    "brand logo must use an absolute HTTPS URL",
+  );
+  assert.doesNotMatch(
+    email.html,
+    /<img[^>]+src=["']\/images\//i,
+    "root-relative logo URLs are invalid in email clients",
+  );
+
+  // Keep foreground and surface treatments paired instead of globally forcing
+  // every paragraph, cell and heading to white.
+  for (const token of [
+    'class="ibk-content"',
+    'ibk-content-bg',
+    'class="ibk-package-card"',
+    'class="ibk-panel"',
+    'class="ibk-icon-bg"',
+    'class="ibk-button-secondary-cell"',
+    '@media (prefers-color-scheme:dark)',
+    '[data-ogsc]',
+    '[data-ogsb]',
+  ]) {
+    assert.ok(email.html.includes(token), `missing dark-mode contract: ${token}`);
+  }
+
+  assert.doesNotMatch(
+    email.html,
+    /(?:^|\n)\s*(?:p|div|td|span|h1|h2|h3|h4|strong|b|th|li)\s*,\s*(?:div|td|span|h1)/i,
+    "dark mode must not use the previous global text-colour override",
+  );
+});
+
 test("every marketing locale has complete, proof-checked package copy", () => {
   for (const locale of EMAIL_LOCALES) {
     const copy = MARKETING_COPY[locale];
