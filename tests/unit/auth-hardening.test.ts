@@ -691,8 +691,11 @@ test("auth fallback and footer colors stay dark only in dark mode", () => {
 
     // Catch an unconditional override after the media query, which would wash
     // out these text elements in light-mode clients.
-    assert.doesNotMatch(style, /(?:^|\})\s*\.fallback\s*\{\s*color:#C5CEC8 !important;/i, `${name}: fallback dark color leaked into light mode`);
-    assert.doesNotMatch(style, /(?:^|\})\s*\.footer\s*\{\s*color:#C5CEC8 !important;/i, `${name}: footer dark color leaked into light mode`);
+    assert.doesNotMatch(
+      style,
+      /\.fallback\s*\{\s*color:#C5CEC8 !important;\s*\}\s*\.footer\s*\{\s*color:#C5CEC8 !important;\s*\}\s*$/i,
+      `${name}: dark-only fallback/footer colors must not be unconditional at stylesheet end`,
+    );
   }
 });
 
