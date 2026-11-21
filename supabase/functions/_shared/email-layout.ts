@@ -238,7 +238,7 @@ function heroBlock(hero: EmailLayoutOptions["hero"], locale: string): string {
        </td></tr></table>`
     : "";
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 ${SPACE.xl}px;">
-    <tr><td style="background:${BRAND.green};border-radius:${RADIUS.card}px;padding:${SPACE.xxl}px ${SPACE.xl}px;text-align:left;">
+    <tr><td class="ibk-brand-bg" bgcolor="${BRAND.green}" style="background:${BRAND.green};border-radius:${RADIUS.card}px;padding:${SPACE.xxl}px ${SPACE.xl}px;text-align:left;">
       <p style="margin:0 0 ${SPACE.sm}px;font-size:${TYPE.micro}px;font-weight:700;letter-spacing:0.12em;color:#C9D9CF;">${escapeHtml(eyebrow)}</p>
       <h1 class="ibk-h1" style="margin:0;font-size:${TYPE.h1}px;line-height:${LEADING.tight};font-weight:800;letter-spacing:-0.5px;color:#FFFFFF;">${escapeHtml(hero.hook)}</h1>
       ${subhook}
@@ -374,8 +374,8 @@ function buttonBlock(button: EmailButton | undefined, secondary = false): string
   const fg = secondary ? BRAND.green : BRAND.white;
   const border = secondary ? `border:2px solid ${BRAND.green};` : "";
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:${SPACE.lg}px 0 0;">
-<tr><td align="center" bgcolor="${bg}" style="border-radius:${RADIUS.control}px;${border}">
-<a href="${escapeHtml(button.url)}" class="ibk-btn" style="display:inline-block;padding:${SPACE.md}px ${SPACE.xl}px;color:${fg};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.control}px;">${escapeHtml(
+<tr><td align="center" bgcolor="${bg}" class="${secondary ? "ibk-button-secondary-cell" : "ibk-button-primary-cell"}" style="border-radius:${RADIUS.control}px;${border}">
+<a href="${escapeHtml(button.url)}" class="ibk-btn ${secondary ? "ibk-button-secondary" : "ibk-button-primary"}" style="display:inline-block;padding:${SPACE.md}px ${SPACE.xl}px;color:${fg};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.control}px;">${escapeHtml(
     button.label,
   )}</a>
 </td></tr>
@@ -507,6 +507,7 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
   @media (prefers-color-scheme:dark) {
     .ibk-bg { background-color:#171B1A !important; }
     .ibk-card, .ibk-content-bg { background-color:#1E2423 !important; }
+    .ibk-brand-bg { background-color:#123128 !important; }
     .ibk-content, .ibk-content p, .ibk-content div, .ibk-content td,
     .ibk-content span, .ibk-content strong, .ibk-content h1, .ibk-content h2,
     .ibk-content h3, .ibk-content h4, .ibk-content li, .ibk-content a {
@@ -546,6 +547,7 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
   [data-ogsb] .ibk-card, [data-ogsb] .ibk-content-bg {
     background-color:#1E2423 !important;
   }
+  [data-ogsb] .ibk-brand-bg { background-color:#123128 !important; }
   [data-ogsb] .ibk-package-card, [data-ogsb] .ibk-panel,
   [data-ogsb] .ibk-soft-panel {
     background-color:#2A3430 !important;
@@ -569,7 +571,7 @@ ${preheaderBlock(options.preheader)}
 <tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="ibk-card" style="max-width:600px;width:100%;background:${BRAND.white};border-radius:${RADIUS.card}px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.08);">
 ${heroHtml ? `
-<tr><td class="ibk-pad" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
+<tr><td class="ibk-pad ibk-brand-bg" bgcolor="${BRAND.green}" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
 <td style="vertical-align:middle;">
 <a href="${escapeHtml(options.siteUrl)}" style="display:inline-block;text-decoration:none;"><img src="${LOGO_URL}" width="56" height="33" alt="${BRAND.name}" style="display:block;border:0;outline:none;text-decoration:none;" /></a>
@@ -581,7 +583,7 @@ ${heroHtml ? `
 </tr></table>
 </td></tr>
 ` : `
-<tr><td class="ibk-pad" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
+<tr><td class="ibk-pad ibk-brand-bg" bgcolor="${BRAND.green}" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
 <table role="presentation" cellpadding="0" cellspacing="0"><tr>
 <td style="vertical-align:middle;">
 <a href="${escapeHtml(options.siteUrl)}" style="display:inline-block;text-decoration:none;"><img src="${LOGO_URL}" width="56" height="33" alt="${BRAND.name}" style="display:block;border:0;outline:none;text-decoration:none;" /></a>
