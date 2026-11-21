@@ -17,6 +17,7 @@ import {
   renderGoTrueTemplatePreview,
   renderTemplate,
 } from "./email-preview.mjs";
+import { getNativeAuthExtraCopy } from "../supabase/functions/_shared/email-copy-auth-extra.ts";
 import { verifyUnsubscribeSignatureWithKey } from "../src/server/email/unsubscribe-signature.ts";
 
 const KEY = "test-signing-key-0123456789";
@@ -85,6 +86,36 @@ test("the preview catalog covers the complete email pack", async () => {
       "auth-source-password-changed",
     ]),
   );
+});
+
+test("preview catalog uses each locale for routes and auth subjects", async () => {
+  const renderer = await render();
+  const companyProfileRenderer = await import("../src/server/email/company-profile-render.ts");
+
+  for (const locale of EMAIL_PREVIEW_LOCALES) {
+    const siteUrl = locale === "tr" ? SITE_URL + "/" : SITE_URL + "/" + locale + "/";
+    const goTrue = Object.fromEntries(
+      NATIVE_GOTRUE_TEMPLATES.map(({ name }) => [
+        name,
+        "<!DOCTYPE html><html lang=" + locale + "><body>" + name + "</body></html>",
+      ]),
+    );
+    const templates = buildTemplates(
+      renderer,
+      { locale, siteUrl },
+      companyProfileRenderer,
+      goTrue,
+    );
+    const welcome = templates["welcome-candidate"]();
+    const route = "https://isbulkktc.com" + (locale === "tr" ? "" : "/" + locale) + "/profile/dashboard";
+    assert.ok(welcome.html.includes(route), locale + ": route uses the recipient locale");
+    const invite = templates["auth-source-invite"]();
+    assert.equal(invite.subject, getNativeAuthExtraCopy(locale).invite.subject, locale + ": invite subject locale");
+    const magic = templates["auth-source-magic-link"]();
+    assert.equal(magic.subject, getNativeAuthExtraCopy(locale).magicLink.subject, locale + ": magic-link subject locale");
+    const emailChange = templates["auth-source-email-change"]();
+    assert.equal(emailChange.subject, getNativeAuthExtraCopy(locale).emailChange.subject, locale + ": email-change subject locale");
+  }
 });
 
 test("all auth previews with sample data are blocked from sending", () => {
