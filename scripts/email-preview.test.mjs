@@ -122,7 +122,7 @@ test("native GoTrue templates resolve correctly in all six locales", () => {
     assert.ok(html.includes(invitations[locale]), locale + ": localized invitation copy");
     assert.ok(html.includes("https://isbulkktc.com" + (locale === "tr" ? "" : "/" + locale) + "/auth/callback?code=SAMPLE"), locale + ": localized callback URL");
     assert.ok(html.includes("padding-" + (locale === "fa" ? "right" : "left") + ":14px"), locale + ": RTL-aware brand lockup");
-    assert.doesNotMatch(html, /\\{\\{[\\s\\S]*?\\}\\}/, locale + ": unresolved GoTrue expression");
+    assert.doesNotMatch(html, /\{\{[\s\S]*?\}\}/, locale + ": unresolved GoTrue expression");
     assert.ok(html.includes("https://isbulkktc.com/images/isbul-logo-mark-white.png"), locale + ": hosted brand mark");
     assert.ok(html.includes("prefers-color-scheme:dark"), locale + ": dark theme");
   }
@@ -145,7 +145,7 @@ test("all native auth sources preserve the common brand palette for all locales"
       assert.ok(html.includes("isbul-logo-mark-white.png"), name + "/" + locale + ": logo");
       assert.ok(html.includes("prefers-color-scheme:dark"), name + "/" + locale + ": dark mode");
       assert.ok(html.includes("data-ogsc") && html.includes("data-ogsb"), name + "/" + locale + ": Outlook selectors");
-      assert.doesNotMatch(html, /\\{\\{[\\s\\S]*?\\}\\}/, name + "/" + locale + ": unresolved GoTrue expression");
+      assert.doesNotMatch(html, /\{\{[\s\S]*?\}\}/, name + "/" + locale + ": unresolved GoTrue expression");
     }
   }
 });
