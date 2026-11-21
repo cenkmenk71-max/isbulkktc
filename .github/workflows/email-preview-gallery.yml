@@ -3,6 +3,14 @@ on:
   push:
     branches:
       - preview/email-gallery-2026-11-20
+  pull_request:
+    paths:
+      - "supabase/functions/_shared/email-layout.ts"
+      - "supabase/templates/**"
+      - "supabase/functions/_shared/email-render.ts"
+      - "supabase/functions/_shared/email-copy*.ts"
+      - "src/server/email/**"
+      - "scripts/email-preview.mjs"
 permissions:
   contents: read
 jobs:
@@ -12,9 +20,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - name: Render every email template
-        run: node --experimental-strip-types scripts/email-preview.mjs
+        run: node --experimental-strip-types scripts/email-preview.mjs --all-locales
       - name: Include the real brand logo in the preview bundle
         run: |
           mkdir -p .artifacts/email-preview/assets
@@ -25,4 +33,4 @@ jobs:
           name: isbulkktc-email-previews
           path: .artifacts/email-preview/
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
