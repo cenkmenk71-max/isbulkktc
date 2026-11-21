@@ -163,6 +163,14 @@ test("welcome CTAs keep both Outlook and HTML actions in every locale", () => {
  * token never held, so the brand repainted with no test failing. Pin each
  * `BRAND` colour to the token it claims, resolving one alias level.
  */
+test("the shared email shell keeps mobile padding inside its fluid table and constrains the brand header", () => {
+  const html = renderEmailLayout({ preheader: "p", heading: "h", footerNote: "f", siteUrl: SITE });
+  assert.match(html, /class="ibk-bg" style="width:100%;background:#FFFFFF"/, "outer table must not add padding beyond its 100% width");
+  assert.match(html, /<td align="center" style="padding:32px 8px;">/, "outer spacing belongs on the containing cell");
+  assert.match(html, /class="ibk-brand-table" style="width:100%;table-layout:fixed"/, "brand header table must be constrained to the card width");
+  assert.match(html, /class="ibk-brand-name"/, "brand name must use the mobile typography hook");
+  assert.match(html, /class="ibk-brand-tagline"/, "brand tagline must use the mobile typography hook");
+});
 test("the email shell palette matches the app design tokens", () => {
   const css = readFileSync(
     new URL("../../src/styles/global.css", import.meta.url),
