@@ -172,7 +172,13 @@ test("the shared email shell keeps mobile padding inside its fluid table and con
   assert.match(html, /class="ibk-brand-name"/, "brand name must use the mobile typography hook");
   assert.match(html, /class="ibk-brand-tagline"/, "brand tagline must use the mobile typography hook");
 });
-test("numbered step badges use the shared dark-mode surface in every locale", () => {\n  for (const locale of EMAIL_LOCALES) {\n    const email = renderWelcomeEmail({ locale, siteUrl: SITE, audience: "candidate", actionUrl: "https://isbulkktc.com/profile/dashboard" });\n    assert.match(email.html, /<span class="ibk-icon-bg" style="[^"]*background:/, locale + ": numbered badges must opt into the dark-mode surface token");\n  }\n});\ntest("the email shell palette matches the app design tokens", () => {
+test("numbered step badges use the shared dark-mode surface in every locale", () => {
+  for (const locale of EMAIL_LOCALES) {
+    const email = renderWelcomeEmail({ locale, siteUrl: SITE, audience: "candidate", actionUrl: "https://isbulkktc.com/profile/dashboard" });
+    assert.match(email.html, /<span class="ibk-icon-bg" style="[^"]*background:/, locale + ": numbered badges must opt into the dark-mode surface token");
+  }
+});
+test("the email shell palette matches the app design tokens", () => {
   const css = readFileSync(
     new URL("../../src/styles/global.css", import.meta.url),
     "utf8",
