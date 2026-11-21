@@ -437,66 +437,110 @@ export function assertNoPreviewLink(name, email) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const sendIdx = args.indexOf('--send');
+  const sendIdx = args.indexOf("--send");
   const sendTo = sendIdx !== -1 ? args[sendIdx + 1] : null;
-  const onlyIdx = args.indexOf('--only');
+  const onlyIdx = args.indexOf("--only");
   const only = onlyIdx !== -1 ? args[onlyIdx + 1] : null;
+  const localeIdx = args.indexOf("--locale");
+  const requestedLocale = localeIdx !== -1 ? args[localeIdx + 1] : null;
+  const allLocales = args.includes("--all-locales");
 
-  const render = await import('../supabase/functions/_shared/email-render.ts');
-  const companyProfileRender = await import('../src/server/email/company-profile-render.ts');
-  const site = { locale: 'tr', siteUrl: 'https://isbulkktc.com/tr/' };
-  const goTrue = {};
-  for (const { name, filename } of NATIVE_GOTRUE_TEMPLATES) {
-    const source = readFileSync(resolve("supabase", "templates", filename), "utf8");
-    goTrue[name] = renderGoTrueTemplatePreview(source);
+  if (allLocales && requestedLocale) {
+    throw new Error("--all-locales and --locale cannot be used together");
   }
-  const templates = buildTemplates(render, site, companyProfileRender, goTrue);
+  if (allLocales && sendTo) {
+    throw new Error("Sending is disabled in --all-locales mode; use --locale <locale> --send <address> for a single-locale inbox test");
+  }
 
-  const names = only ? [only] : Object.keys(templates);
-  for (const name of names) {
-    if (!templates[name]) {
-      console.error(`Unknown template "${name}". Known: ${Object.keys(templates).join(', ')}`);
-      process.exit(1);
+  const locales = allLocales ? EMAIL_PREVIEW_LOCALES : [requestedLocale ?? "tr"];
+  for (const locale of locales) {
+    if (!EMAIL_PREVIEW_LOCALES.includes(locale)) {
+      throw new Error("unsupported_email_preview_locale: " + locale);
     }
   }
 
-  mkdirSync(OUT, { recursive: true });
+  const render = await import("../supabase/functions/_shared/email-render.ts");
+  const companyProfileRender = await import("../src/server/email/company-profile-render.ts");
+  const sourceTemplates = Object.fromEntries(
+    NATIVE_GOTRUE_TEMPLATES.map(({ name, filename }) => [
+      name,
+      readFileSync(resolve("supabase", "templates", filename), "utf8"),
+    ]),
+  );
 
-  const rendered = [];
-  const byName = new Map();
-  for (const name of names) {
-    try {
+  const rootRendered = [];
+  for (const locale of locales) {
+    const siteUrl = locale === "tr"
+      ? "https://isbulkktc.com/"
+      : "https://isbulkktc.com/" + locale + "/";
+    const site = { locale, siteUrl };
+    const goTrue = Object.fromEntries(
+      Object.entries(sourceTemplates).map(([name, source]) => [
+        name,
+        renderGoTrueTemplatePreview(source, locale),
+      ]),
+    );
+    const templates = buildTemplates(render, site, companyProfileRender, goTrue);
+
+    const names = only ? [only] : Object.keys(templates);
+    for (const name of names) {
+      if (!templates[name]) {
+        throw new Error("Unknown template " + name + " for " + locale + ". Known: " + Object.keys(templates).join(", "));
+      }
+    }
+
+    const outputDir = allLocales || (requestedLocale && requestedLocale !== "tr")
+      ? resolve(OUT, locale)
+      : OUT;
+    mkdirSync(outputDir, { recursive: true });
+
+    const rendered = [];
+    const byName = new Map();
+    for (const name of names) {
       const out = renderTemplate(templates, name, previewUnsubscribeUrl(name));
-      writeFileSync(resolve(OUT, `${name}.html`), out.html);
-      writeFileSync(resolve(OUT, `${name}.txt`), out.text, "utf8");
+      writeFileSync(resolve(outputDir, name + ".html"), out.html, "utf8");
+      writeFileSync(resolve(outputDir, name + ".txt"), out.text, "utf8");
       rendered.push({ name, ...out });
       byName.set(name, out);
       console.log(
-        `  ${name.padEnd(24)} html ${String(out.html.length).padStart(6)}  text ${String(out.text.length).padStart(5)}  "${out.subject}"`,
+        "  " + locale + "  " + name.padEnd(24) + " html " +
+        String(out.html.length).padStart(6) + "  text " +
+        String(out.text.length).padStart(5) + "  " + JSON.stringify(out.subject),
       );
-    } catch (error) {
-      console.error(`  ${name.padEnd(24)} FAILED: ${error.message}`);
+    }
+
+    const index = '<!doctype html><meta charset="utf-8"><title>İşBul KKTC e-posta şablonları — ' + locale + '</title>\n' +
+      '<style>body{font:15px/1.5 system-ui;margin:24px;max-width:900px}h1{font-size:20px}li{margin:6px 0}a{color:#194435}small{color:#414846}</style>\n' +
+      '<h1>İşBul KKTC e-posta şablonları (' + locale.toUpperCase() + ') — ' + rendered.length + '</h1>\n' +
+      '<ul>' + rendered.map((item) =>
+        '<li><a href="./' + item.name + '.html">' + item.name + '</a> — <small>' + item.subject + '</small></li>'
+      ).join("") + '</ul>';
+    writeFileSync(resolve(outputDir, "index.html"), index, "utf8");
+    rootRendered.push({ locale, count: rendered.length });
+
+    if (sendTo) {
+      await sendAll({ templates, byName, names, sendTo, site });
     }
   }
 
-  // An index so every template is one click away in a browser.
-  const index = `<!doctype html><meta charset="utf-8"><title>E-posta şablonları</title>
-<style>body{font:15px/1.5 system-ui;margin:24px;max-width:900px}h1{font-size:20px}
-li{margin:6px 0}a{color:#194435}small{color:#414846}</style>
-<h1>E-posta şablonları (${rendered.length})</h1>
-<ul>${rendered
-    .map(
-      (r) =>
-        `<li><a href="./${r.name}.html">${r.name}</a> — <small>${r.subject}</small></li>`,
-    )
-    .join('')}</ul>`;
-  writeFileSync(resolve(OUT, 'index.html'), index);
+  if (allLocales) {
+    const rootIndex = '<!doctype html><meta charset="utf-8"><title>İşBul KKTC — E-posta önizleme</title>\n' +
+      '<style>body{font:15px/1.5 system-ui;margin:24px;max-width:900px}h1{font-size:20px}li{margin:8px 0}a{color:#194435}</style>\n' +
+      '<h1>İşBul KKTC — Altı dilde e-posta şablonları</h1>\n' +
+      '<ul>' + rootRendered.map((item) =>
+        '<li><a href="./' + item.locale + '/index.html">' + item.locale.toUpperCase() + '</a> — ' + item.count + ' şablon</li>'
+      ).join("") + '</ul>';
+    writeFileSync(resolve(OUT, "index.html"), rootIndex, "utf8");
+  }
 
-  console.log(`\n${rendered.length} template(s) written to ${OUT}`);
-  console.log(`Open: ${resolve(OUT, 'index.html')}`);
+  console.log(
+    "\n" + rootRendered.reduce((sum, item) => sum + item.count, 0) +
+    " email render(s) written to " + OUT,
+  );
+  console.log("Open: " + resolve(OUT, "index.html"));
 
-  if (sendTo) {
-    await sendAll({ templates, byName, names, sendTo, site });
+  if (allLocales) {
+    console.log("Six-locale previews are offline-only. Use --locale <locale> --send <address> for a single-locale inbox test.");
   }
 }
 
