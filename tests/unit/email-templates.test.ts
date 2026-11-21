@@ -147,7 +147,7 @@ test("shared CTA variants include a classic Outlook VML button and an HTML fallb
   const vmlHrefs = [...html.matchAll(/<v:roundrect\b[^>]*href="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(vmlHrefs.length, urls.length, "every CTA variant must emit one VML button");
   assert.deepEqual(vmlHrefs.sort(), [...urls].sort(), "VML actions must preserve their original destinations");
-  const longButton = html.match(/<v:roundrect\\b[^>]*href="https:\/\/isbulkktc\\.com\/long"[^>]*width:(\\d+)px/);
+  const longButton = html.match(/<v:roundrect[^>]*href="https:\/\/isbulkktc\.com\/long"[^>]*width:(\d+)px/);
   assert.ok(longButton && Number(longButton[1]) > 300, "long translated CTA must receive a wider VML button");
   const htmlFallbackHrefs = [...html.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*class="(?:ibk-button-primary|ibk-button-secondary)"/g)].map((match) => match[1]);
   assert.equal(htmlFallbackHrefs.length, urls.length, "every VML button must retain an HTML fallback");
