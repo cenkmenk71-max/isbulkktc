@@ -15,6 +15,9 @@ import {
 } from "../../supabase/functions/_shared/email-copy";
 import {
   renderAuthConfirmation,
+  renderAuthEmailChange,
+  renderAuthInvite,
+  renderAuthMagicLink,
   renderAuthPasswordChanged,
   renderAuthReauthentication,
   renderAuthRecovery,
@@ -32,6 +35,7 @@ import {
   type RenderedEmail,
 } from "../../supabase/functions/_shared/email-render";
 import { EMAIL_COPY_EXTRAS } from "../../supabase/functions/_shared/email-copy-extras";
+import { getNativeAuthExtraCopy } from "../../supabase/functions/_shared/email-copy-auth-extra";
 import { MARKETING_CONSENT_COPY } from "../../supabase/functions/_shared/email-copy";
 import {
   MARKETING_CONTACTS,
@@ -323,6 +327,55 @@ test("all auth templates render in all six locales", () => {
     );
     assertWellFormed(renderAuthReauthentication({ ...ctx, token: "123456" }), `${locale}/reauth`);
     assertWellFormed(renderAuthPasswordChanged({ ...ctx, email: "a@b.com" }), `${locale}/password-changed`);
+    assertWellFormed(
+      renderAuthInvite({ ...ctx, email: "a@b.com", confirmationUrl: "https://isbulkktc.com/auth/callback?token=x" }),
+      `${locale}/invite`,
+    );
+    assertWellFormed(
+      renderAuthMagicLink({ ...ctx, email: "a@b.com", confirmationUrl: "https://isbulkktc.com/auth/callback?token=x" }),
+      `${locale}/magic-link`,
+    );
+    assertWellFormed(
+      renderAuthEmailChange({ ...ctx, newEmail: "new@example.com", confirmationUrl: "https://isbulkktc.com/auth/callback?token=x" }),
+      `${locale}/email-change`,
+    );
+  }
+});
+
+test("native auth extra copy and renderers are complete in all six locales", () => {
+  for (const locale of EMAIL_LOCALES) {
+    const copy = getNativeAuthExtraCopy(locale);
+    for (const family of [copy.invite, copy.magicLink, copy.emailChange]) {
+      for (const value of Object.values(family)) {
+        assert.ok(value.length > 0, `${locale}: native auth copy must not be empty`);
+      }
+      assert.ok(family.lead.includes("{email}"), `${locale}: email placeholder`);
+    }
+
+    const ctx = { locale, siteUrl: SITE };
+    const invite = renderAuthInvite({
+      ...ctx,
+      email: "<invite@example.com>",
+      confirmationUrl: "https://isbulkktc.com/auth/callback?token=x",
+    });
+    const magic = renderAuthMagicLink({
+      ...ctx,
+      email: "candidate@example.com",
+      confirmationUrl: "https://isbulkktc.com/auth/callback?token=x",
+    });
+    const emailChange = renderAuthEmailChange({
+      ...ctx,
+      newEmail: "new@example.com",
+      confirmationUrl: "https://isbulkktc.com/auth/callback?token=x",
+    });
+
+    assert.ok(invite.html.includes("&lt;invite@example.com&gt;"), `${locale}: invite email escaped`);
+    assert.ok(!invite.html.includes("<invite@example.com>"), `${locale}: no raw email markup`);
+    assert.ok(magic.html.includes("candidate@example.com"), `${locale}: magic-link recipient`);
+    assert.ok(emailChange.html.includes("new@example.com"), `${locale}: new email address`);
+    assert.ok(invite.html.includes(copy.invite.cta), `${locale}: invite CTA localized`);
+    assert.ok(magic.html.includes(copy.magicLink.cta), `${locale}: magic-link CTA localized`);
+    assert.ok(emailChange.html.includes(copy.emailChange.cta), `${locale}: email-change CTA localized`);
   }
 });
 
