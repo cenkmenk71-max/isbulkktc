@@ -19,9 +19,11 @@
  * refuses to send one when no signing key is configured.
  *
  * Usage:
- *   node scripts/email-preview.mjs                    # render to .artifacts
- *   node scripts/email-preview.mjs --send me@mail.com # render + send all
- *   node scripts/email-preview.mjs --only welcome     # one template
+ *   node scripts/email-preview.mjs                         # render Turkish
+ *   node scripts/email-preview.mjs --locale en              # one locale
+ *   node scripts/email-preview.mjs --all-locales            # all 6 locales
+ *   node scripts/email-preview.mjs --locale en --send me@mail.com
+ *   node scripts/email-preview.mjs --only welcome-candidate # one template
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
