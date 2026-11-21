@@ -134,6 +134,33 @@ test("renderEmailLayout builds a branded, responsive shell", () => {
  * token never held, so the brand repainted with no test failing. Pin each
  * `BRAND` colour to the token it claims, resolving one alias level.
  */
+test("shared CTA variants include a classic Outlook VML button and an HTML fallback", () => {
+  const urls = ["https://isbulkktc.com/hero", "https://isbulkktc.com/package", "https://isbulkktc.com/button", "https://isbulkktc.com/first", "https://isbulkktc.com/second"];
+  const html = renderEmailLayout({
+    preheader: "CTA compatibility", heading: "CTA compatibility",
+    hero: { hook: "Start here", cta: { label: "Open profile", url: urls[0] } },
+    packages: [{ name: "Starter", audience: "Candidate", description: "A short description", scope: "One listing", durationLabel: "30 days", accent: BRAND.green, cta: { label: "Choose package", url: urls[1] } }],
+    button: { label: "Open dashboard", url: urls[2] },
+    buttons: [{ label: "Primary action", url: urls[3] }, { label: "Secondary action", url: urls[4], secondary: true }],
+    footerNote: "Footer", siteUrl: SITE,
+  });
+  const vmlHrefs = [...html.matchAll(/<v:roundrect\b[^>]*href="([^"]+)"/g)].map((match) => match[1]);
+  assert.equal(vmlHrefs.length, urls.length, "every CTA variant must emit one VML button");
+  assert.deepEqual(vmlHrefs.sort(), [...urls].sort(), "VML actions must preserve their original destinations");
+  const htmlFallbackHrefs = [...html.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*class="(?:ibk-button-primary|ibk-button-secondary)"/g)].map((match) => match[1]);
+  assert.equal(htmlFallbackHrefs.length, urls.length, "every VML button must retain an HTML fallback");
+  assert.match(html, /<!--\[if mso\]>/, "classic Outlook conditional block missing");
+  assert.match(html, /<!--\[if !mso\]><!-- -->/, "non-MSO fallback conditional missing");
+});
+
+test("welcome CTAs keep both Outlook and HTML actions in every locale", () => {
+  for (const locale of EMAIL_LOCALES) {
+    const email = renderWelcomeEmail({ locale, siteUrl: SITE, audience: "candidate", actionUrl: "https://isbulkktc.com/profile/dashboard" });
+    assert.equal((email.html.match(/<v:roundrect\b/g) ?? []).length, 2, locale + ": hero and secondary CTA need VML");
+    assert.equal((email.html.match(/class="ibk-button-(?:primary|secondary)"/g) ?? []).length, 2, locale + ": HTML fallback CTA missing");
+    assert.ok(email.html.includes("https://isbulkktc.com/profile/dashboard"), locale + ": action URL missing");
+  }
+});
 test("the email shell palette matches the app design tokens", () => {
   const css = readFileSync(
     new URL("../../src/styles/global.css", import.meta.url),
