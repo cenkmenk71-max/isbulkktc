@@ -30,7 +30,6 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { getEmailCopy } from '../supabase/functions/_shared/email-copy.ts';
-import { getNativeAuthExtraCopy } from '../supabase/functions/_shared/email-copy-auth-extra.ts';
 
 import {
   buildUnsubscribeUrl,
@@ -172,7 +171,6 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
   const siteRoot = site.siteUrl.endsWith("/") ? site.siteUrl : site.siteUrl + "/";
   const route = (pathname = "") => new URL(pathname.replace(/^\/+/, ""), siteRoot).toString();
   const copy = getEmailCopy(site.locale);
-  const extraCopy = getNativeAuthExtraCopy(site.locale);
 
   const templates = {
     "auth-confirmation": () =>
@@ -344,9 +342,6 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
   const sourceSubjects = {
     confirmation: copy.auth.confirmationSubject,
     recovery: copy.auth.recoverySubject,
-    invite: extraCopy.invite.subject,
-    magic_link: extraCopy.magicLink.subject,
-    email_change: extraCopy.emailChange.subject,
     reauthentication: copy.auth.reauthenticationSubject,
     "password-changed": copy.auth.passwordChangedSubject,
   };
@@ -354,7 +349,10 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
   for (const [name, html] of Object.entries(goTrue)) {
     const templateName = "auth-source-" + name.replace(/_/g, "-");
     templates[templateName] = () => ({
-      subject: sourceSubjects[name] || "İşBul KKTC hesap e-postası",
+      // GoTrue notification subjects are configured independently in
+      // supabase/config.toml. The localized document title is the most useful
+      // language-correct label for this offline visual preview.
+      subject: sourceSubjects[name] || /<title>([\\s\\S]*?)<\\/title>/i.exec(html)?.[1]?.trim() || "İşBul KKTC hesap e-postası",
       html,
       text: html
         .replace(/<style[\s\S]*?<\/style>/gi, " ")
