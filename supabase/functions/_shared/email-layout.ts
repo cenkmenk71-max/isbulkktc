@@ -589,9 +589,9 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
 <body style="margin:0;padding:0;background:${BRAND.surface};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND.ink};">
 <div lang="${lang}" dir="${dir}">
 ${preheaderBlock(options.preheader)}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-bg" style="width:100%;background:${BRAND.surface};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-bg" style="width:100%;table-layout:fixed;background:${BRAND.surface};">
 <tr><td align="center" style="padding:${SPACE.xl}px ${SPACE.sm}px;">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="ibk-card" style="max-width:600px;width:100%;background:${BRAND.white};border-radius:${RADIUS.card}px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.08);">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="ibk-card" style="max-width:600px;width:100%;table-layout:fixed;background:${BRAND.white};border-radius:${RADIUS.card}px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.08);">
 ${heroHtml ? `
 <tr><td class="ibk-pad ibk-brand-bg" bgcolor="${BRAND.green}" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-brand-table" style="width:100%;table-layout:fixed;"><tr>
