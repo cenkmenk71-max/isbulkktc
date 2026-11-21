@@ -599,6 +599,23 @@ test("every actionable template builds its link from .ConfirmationURL", () => {
   }
 });
 
+test("every actionable GoTrue email has a VML Outlook button and HTML fallback", () => {
+  const actionable = ["confirmation.html", "recovery.html", "invite.html", "magic_link.html", "email_change.html", "password-changed.html"];
+  for (const file of actionable) {
+    for (const locale of locales) {
+      const html = renderFor(readTemplate(file), locale);
+      const vmlHrefs = [...html.matchAll(/<v:roundrect\b[^>]*href="([^"]+)"/g)].map((match) => match[1]);
+      const anchorHrefs = [...html.matchAll(/<a class="btn"[^>]*href="([^"]+)"/g)].map((match) => match[1]);
+      assert.equal(vmlHrefs.length, 1, file + "/" + locale + ": expected one classic Outlook button");
+      assert.equal(anchorHrefs.length, 1, file + "/" + locale + ": expected one non-MSO HTML button");
+      assert.equal(vmlHrefs[0], anchorHrefs[0], file + "/" + locale + ": VML and HTML destinations differ");
+      assert.match(html, /<!--\[if mso\]>/, file + "/" + locale + ": MSO conditional missing");
+      assert.match(html, /<!--\[if !mso\]><!-- -->/, file + "/" + locale + ": HTML fallback conditional missing");
+    }
+  }
+  const codeOnly = renderFor(readTemplate("reauthentication.html"), "en");
+  assert.doesNotMatch(codeOnly, /<v:roundrect\b/, "the code-only reauthentication email must not gain a fake CTA");
+});
 test("every link in a rendered email is an absolute https URL", () => {
   for (const file of templateFiles) {
     for (const locale of locales) {
