@@ -223,6 +223,29 @@ function preheaderBlock(text: string): string {
   )}${padding}</div>`;
 }
 
+function bulletproofButton(
+  button: EmailButton,
+  secondary: boolean,
+  options: { width?: number; height?: number; fontSize?: number; radius?: string } = {},
+): string {
+  if (!isSafeUrl(button.url)) return "";
+  const background = secondary ? BRAND.white : BRAND.green;
+  const foreground = secondary ? BRAND.green : BRAND.white;
+  const width = options.width ?? 260;
+  const height = options.height ?? 48;
+  const fontSize = options.fontSize ?? TYPE.body;
+  const radius = options.radius ?? "12%";
+  const className = secondary ? "ibk-button-secondary" : "ibk-button-primary";
+  const padding = secondary ? SPACE.md + "px " + SPACE.xl + "px" : SPACE.md + "px " + SPACE.lg + "px";
+  const border = secondary ? "2px solid " + BRAND.green : "0";
+  return '<!--[if mso]>\n' +
+    '<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="' + escapeHtml(button.url) + '" style="height:' + height + 'px;v-text-anchor:middle;width:' + width + 'px;" arcsize="' + radius + '" strokecolor="' + BRAND.green + '" fillcolor="' + background + '">\n' +
+    '<w:anchorlock/>\n' +
+    '<center style="color:' + foreground + ';font-family:Arial,sans-serif;font-size:' + fontSize + 'px;font-weight:700;">' + escapeHtml(button.label) + '</center>\n' +
+    '</v:roundrect>\n<![endif]--><!--[if !mso]><!-- -->\n' +
+    '<a href="' + escapeHtml(button.url) + '" class="' + className + '" style="display:inline-block;padding:' + padding + ';background:' + background + ';color:' + foreground + ';text-decoration:none;font-weight:700;font-size:' + fontSize + 'px;line-height:' + LEADING.normal + ';border:' + border + ';border-radius:' + RADIUS.control + 'px;text-align:center;">' + escapeHtml(button.label) + '</a>' +
+    '\n<!--<![endif]-->';
+}
 function heroBlock(hero: EmailLayoutOptions["hero"], locale: string): string {
   if (!hero) return "";
   const eyebrow = hero.eyebrow?.trim()
@@ -234,7 +257,7 @@ function heroBlock(hero: EmailLayoutOptions["hero"], locale: string): string {
   const cta = hero.cta && isSafeUrl(hero.cta.url)
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:${SPACE.lg}px 0 0;">
        <tr><td align="center" bgcolor="#FFFFFF" class="ibk-button-secondary-cell" style="border-radius:${RADIUS.pill}px;">
-         <a href="${escapeHtml(hero.cta.url)}" class="ibk-button-secondary" style="display:inline-block;background:#FFFFFF;color:${BRAND.green};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.pill}px;padding:${SPACE.md}px ${SPACE.xl}px;">${escapeHtml(hero.cta.label)}</a>
+         ${bulletproofButton(hero.cta, true, { width: 260, height: 48, radius: "50%" })}
        </td></tr></table>`
     : "";
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 ${SPACE.xl}px;">
@@ -313,7 +336,7 @@ function packagesBlock(
       const cta = isSafeUrl(pkg.cta.url)
         ? `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:${SPACE.lg}px 0 0;width:100%;">
             <tr><td align="center" bgcolor="${BRAND.green}" class="ibk-button-primary-cell" style="border-radius:${RADIUS.control}px;">
-              <a href="${escapeHtml(pkg.cta.url)}" class="ibk-btn ibk-button-primary" style="display:block;padding:${SPACE.md}px ${SPACE.lg}px;color:${BRAND.white};text-decoration:none;font-weight:700;font-size:${TYPE.small}px;line-height:${LEADING.normal};border-radius:${RADIUS.control}px;text-align:center;">${escapeHtml(pkg.cta.label)}</a>
+              ${bulletproofButton(pkg.cta, false, { width: 200, height: 44, fontSize: TYPE.small })}
             </td></tr>
           </table>`
         : "";
@@ -351,9 +374,7 @@ function buttonCell(button: EmailButton, secondary: boolean): string {
   return `<tr><td style="padding:${SPACE.md}px 0 0;">
 ${lead}<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
 <td align="center" bgcolor="${bg}" class="${secondary ? "ibk-button-secondary-cell" : "ibk-button-primary-cell"}" style="border-radius:${RADIUS.control}px;${border}">
-<a href="${escapeHtml(button.url)}" class="ibk-btn ${secondary ? "ibk-button-secondary" : "ibk-button-primary"}" style="display:block;padding:${SPACE.md}px ${SPACE.lg}px;color:${fg};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.control}px;text-align:center;">${escapeHtml(
-    button.label,
-  )}</a>
+${bulletproofButton(button, secondary, { width: 220, height: 48 })}
 </td></tr></table>
 </td></tr>`;
 }
@@ -375,9 +396,7 @@ function buttonBlock(button: EmailButton | undefined, secondary = false): string
   const border = secondary ? `border:2px solid ${BRAND.green};` : "";
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:${SPACE.lg}px 0 0;">
 <tr><td align="center" bgcolor="${bg}" class="${secondary ? "ibk-button-secondary-cell" : "ibk-button-primary-cell"}" style="border-radius:${RADIUS.control}px;${border}">
-<a href="${escapeHtml(button.url)}" class="ibk-btn ${secondary ? "ibk-button-secondary" : "ibk-button-primary"}" style="display:inline-block;padding:${SPACE.md}px ${SPACE.xl}px;color:${fg};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.control}px;">${escapeHtml(
-    button.label,
-  )}</a>
+${bulletproofButton(button, secondary, { width: 260, height: 48 })}
 </td></tr>
 </table>`;
 }
