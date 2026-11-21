@@ -10,7 +10,6 @@ import { BRAND, escapeHtml, renderEmailLayout, renderEmailText } from "./email-l
 import { getEmailCopy, MARKETING_CONSENT_COPY, resolveEmailLocale, type EmailLocale } from "./email-copy.ts";
 import { getEmailCopyExtras } from "./email-copy-extras.ts";
 import { getMarketingCopy, MARKETING_CONTACTS } from "./email-copy-marketing.ts";
-import { getNativeAuthExtraCopy } from "./email-copy-auth-extra.ts";
 
 export type RenderedEmail = { subject: string; html: string; text: string };
 
@@ -44,81 +43,6 @@ function render(
 ): RenderedEmail {
   const locale: EmailLocale = resolveEmailLocale(ctx.locale);
   return build(getEmailCopy(locale), locale);
-}
-
-export function renderAuthInvite(input: SiteContext & {
-  email: string;
-  confirmationUrl: string;
-}): RenderedEmail {
-  return render(input, (copy, locale) => {
-    const content = getNativeAuthExtraCopy(locale).invite;
-    const opts = {
-      locale,
-      preheader: content.lead.replace("{email}", input.email),
-      heading: content.heading,
-      introHtml: paragraph(content.lead.replace("{email}", input.email)),
-      button: { label: content.cta, url: input.confirmationUrl },
-      linkFallback: content.fallback,
-      note: content.note,
-      footerNote: copy.footer.legal,
-      siteUrl: input.siteUrl,
-    };
-    return {
-      subject: content.subject,
-      html: renderEmailLayout(opts),
-      text: renderEmailText(opts),
-    };
-  });
-}
-
-export function renderAuthMagicLink(input: SiteContext & {
-  email: string;
-  confirmationUrl: string;
-}): RenderedEmail {
-  return render(input, (copy, locale) => {
-    const content = getNativeAuthExtraCopy(locale).magicLink;
-    const opts = {
-      locale,
-      preheader: content.lead.replace("{email}", input.email),
-      heading: content.heading,
-      introHtml: paragraph(content.lead.replace("{email}", input.email)),
-      button: { label: content.cta, url: input.confirmationUrl },
-      linkFallback: content.fallback,
-      note: content.note,
-      footerNote: copy.footer.legal,
-      siteUrl: input.siteUrl,
-    };
-    return {
-      subject: content.subject,
-      html: renderEmailLayout(opts),
-      text: renderEmailText(opts),
-    };
-  });
-}
-
-export function renderAuthEmailChange(input: SiteContext & {
-  newEmail: string;
-  confirmationUrl: string;
-}): RenderedEmail {
-  return render(input, (copy, locale) => {
-    const content = getNativeAuthExtraCopy(locale).emailChange;
-    const opts = {
-      locale,
-      preheader: content.lead.replace("{email}", input.newEmail),
-      heading: content.heading,
-      introHtml: paragraph(content.lead.replace("{email}", input.newEmail)),
-      button: { label: content.cta, url: input.confirmationUrl },
-      linkFallback: content.fallback,
-      note: content.note,
-      footerNote: copy.footer.legal,
-      siteUrl: input.siteUrl,
-    };
-    return {
-      subject: content.subject,
-      html: renderEmailLayout(opts),
-      text: renderEmailText(opts),
-    };
-  });
 }
 
 export function renderAuthConfirmation(input: SiteContext & {
