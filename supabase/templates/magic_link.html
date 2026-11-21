@@ -87,6 +87,15 @@
         .footer { padding:20px !important; }
         .container { width:100% !important; }
       }
+
+      @media (prefers-color-scheme:dark) {
+        .footer p, .footer td, .footer span { color:#C5CEC8 !important; }
+        .footer a { color:#A9CBBB !important; }
+      }
+      [data-ogsc] .footer p, [data-ogsc] .footer td,
+      [data-ogsc] .footer span { color:#C5CEC8 !important; }
+      [data-ogsc] .footer a { color:#A9CBBB !important; }
+
       /* Outlook may stamp the attributes onto the individual nodes instead
          of a wrapping element; cover both transformation shapes. */
       p[data-ogsc], div[data-ogsc], td[data-ogsc], span[data-ogsc],
