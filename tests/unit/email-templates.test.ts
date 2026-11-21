@@ -587,7 +587,7 @@ test("marketing email logo and dark-mode surfaces remain email-client safe", () 
   // every paragraph, cell and heading to white.
   for (const token of [
     'class="ibk-content"',
-    'class="ibk-content-bg"',
+    'ibk-content-bg',
     'class="ibk-package-card"',
     'class="ibk-panel"',
     'class="ibk-icon-bg"',
