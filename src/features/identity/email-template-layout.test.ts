@@ -66,6 +66,18 @@ test("the brand header, button and body carry inline styles", () => {
   }
 });
 
+test("every native auth template uses the shared light/dark brand palette", () => {
+  for (const { name, source } of templates()) {
+    assert.match(source, /class="page"/, `${name} has no themeable page surface`);
+    assert.match(source, /bgcolor="#FFFFFF"/, `${name} page background has no email-client fallback`);
+    assert.match(source, /@media \\(prefers-color-scheme:dark\\)/, `${name} has no dark-mode palette`);
+    assert.match(source, /\\[data-ogsc\\]/, `${name} has no Outlook foreground override`);
+    assert.match(source, /\\[data-ogsb\\]/, `${name} has no Outlook background override`);
+    assert.match(source, /#2A3430/, `${name} has no dark surface colour for callouts`);
+    assert.match(source, /#F3F1EC/, `${name} has no high-contrast dark-mode text`);
+  }
+});
+
 test("the stylesheet stays progressive enhancement, one shared copy", () => {
   const styles = templates().map(({ name, source }) => {
     const style = /<style>([\s\S]*?)<\/style>/.exec(source)?.[1];
