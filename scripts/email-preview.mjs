@@ -28,6 +28,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { getEmailCopy } from '../supabase/functions/_shared/email-copy.ts';
+import { getNativeAuthExtraCopy } from '../supabase/functions/_shared/email-copy-auth-extra.ts';
 
 import {
   buildUnsubscribeUrl,
@@ -169,6 +170,7 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
   const siteRoot = site.siteUrl.endsWith("/") ? site.siteUrl : site.siteUrl + "/";
   const route = (pathname = "") => new URL(pathname.replace(/^\/+/, ""), siteRoot).toString();
   const copy = getEmailCopy(site.locale);
+  const extraCopy = getNativeAuthExtraCopy(site.locale);
 
   const templates = {
     "auth-confirmation": () =>
@@ -340,30 +342,9 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
   const sourceSubjects = {
     confirmation: copy.auth.confirmationSubject,
     recovery: copy.auth.recoverySubject,
-    invite: ({
-      tr: "İşBul KKTC davetiniz",
-      en: "İşBul KKTC — You have been invited to İşBul KKTC",
-      ru: "İşBul KKTC — Вас пригласили в İşBul KKTC",
-      el: "İşBul KKTC — Σας προσκάλεσαν στο İşBul KKTC",
-      fa: "İşBul KKTC — دعوت‌نامه شما",
-      de: "İşBul KKTC — Sie wurden eingeladen",
-    })[site.locale],
-    magic_link: ({
-      tr: "İşBul KKTC giriş bağlantınız",
-      en: "İşBul KKTC — Your sign-in link",
-      ru: "İşBul KKTC — Ваша ссылка для входа",
-      el: "İşBul KKTC — Ο σύνδεσμος σύνδεσής σας",
-      fa: "İşBul KKTC — پیوند ورود شما",
-      de: "İşBul KKTC — Ihr Anmeldelink",
-    })[site.locale],
-    email_change: ({
-      tr: "İşBul KKTC yeni e-posta adresinizi doğrulayın",
-      en: "İşBul KKTC — Confirm your new email address",
-      ru: "İşBul KKTC — Подтвердите новый адрес электронной почты",
-      el: "İşBul KKTC — Επιβεβαιώστε τη νέα διεύθυνση email σας",
-      fa: "İşBul KKTC — نشانی ایمیل جدید خود را تأیید کنید",
-      de: "İşBul KKTC — Bestätigen Sie Ihre neue E-Mail-Adresse",
-    })[site.locale],
+    invite: extraCopy.invite.subject,
+    magic_link: extraCopy.magicLink.subject,
+    email_change: extraCopy.emailChange.subject,
     reauthentication: copy.auth.reauthenticationSubject,
     "password-changed": copy.auth.passwordChangedSubject,
   };
