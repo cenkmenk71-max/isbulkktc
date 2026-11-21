@@ -126,14 +126,6 @@ test("renderEmailLayout builds a branded, responsive shell", () => {
   assert.ok(html.includes("https://isbulkktc.com/profile/dashboard"));
 });
 
-/**
- * The shell's palette is copied, not imported, from `src/styles/global.css`
- * because the email renders in a Deno worker and a Node action, neither of
- * which can read the app stylesheet. #191 is the drift that copy invites: the
- * shell carried a "matches the app's --green token" comment over a value the
- * token never held, so the brand repainted with no test failing. Pin each
- * `BRAND` colour to the token it claims, resolving one alias level.
- */
 test("shared CTA variants include a classic Outlook VML button and an HTML fallback", () => {
   const urls = ["https://isbulkktc.com/hero", "https://isbulkktc.com/package", "https://isbulkktc.com/button", "https://isbulkktc.com/first", "https://isbulkktc.com/second", "https://isbulkktc.com/long"];
   const html = renderEmailLayout({
@@ -163,6 +155,14 @@ test("welcome CTAs keep both Outlook and HTML actions in every locale", () => {
     assert.ok(email.html.includes("https://isbulkktc.com/profile/dashboard"), locale + ": action URL missing");
   }
 });
+/**
+ * The shell's palette is copied, not imported, from `src/styles/global.css`
+ * because the email renders in a Deno worker and a Node action, neither of
+ * which can read the app stylesheet. #191 is the drift that copy invites: the
+ * shell carried a "matches the app's --green token" comment over a value the
+ * token never held, so the brand repainted with no test failing. Pin each
+ * `BRAND` colour to the token it claims, resolving one alias level.
+ */
 test("the email shell palette matches the app design tokens", () => {
   const css = readFileSync(
     new URL("../../src/styles/global.css", import.meta.url),
