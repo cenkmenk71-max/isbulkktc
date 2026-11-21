@@ -27,6 +27,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { getEmailCopy } from '../supabase/functions/_shared/email-copy.ts';
 
 import {
   buildUnsubscribeUrl,
@@ -165,18 +166,22 @@ export function renderGoTrueTemplatePreview(source, locale = "tr") {
 }
 
 export function buildTemplates(render, site, companyProfileRender = render, goTrue = {}) {
+  const siteRoot = site.siteUrl.endsWith("/") ? site.siteUrl : site.siteUrl + "/";
+  const route = (pathname = "") => new URL(pathname.replace(/^\/+/, ""), siteRoot).toString();
+  const copy = getEmailCopy(site.locale);
+
   const templates = {
     "auth-confirmation": () =>
       render.renderAuthConfirmation({
         ...site,
         email: "aday@example.com",
-        confirmationUrl: "https://isbulkktc.com/tr/auth/callback?code=SAMPLE",
+        confirmationUrl: route("auth/callback") + "?code=SAMPLE",
       }),
     "auth-recovery": () =>
       render.renderAuthRecovery({
         ...site,
         email: "aday@example.com",
-        confirmationUrl: "https://isbulkktc.com/tr/auth/callback?code=SAMPLE",
+        confirmationUrl: route("auth/callback") + "?code=SAMPLE",
       }),
     "auth-reauthentication": () =>
       render.renderAuthReauthentication({ ...site, token: "482913" }),
@@ -187,14 +192,14 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         ...site,
         audience: "candidate",
         name: "Esra Kapli",
-        actionUrl: "https://isbulkktc.com/tr/profile/dashboard",
+        actionUrl: route("profile/dashboard"),
       }),
     "welcome-employer": () =>
       render.renderWelcomeEmail({
         ...site,
         audience: "employer",
         name: "Mehmet Demir",
-        actionUrl: "https://isbulkktc.com/tr/company/dashboard",
+        actionUrl: route("company/dashboard"),
       }),
     "notification-candidate-applied": () =>
       render.renderNotificationEmail({
@@ -202,7 +207,7 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         eventType: "submitted",
         isCandidate: true,
         jobTitle: "Kıdemli Frontend Geliştirici",
-        dashboardUrl: "https://isbulkktc.com/tr/profile/dashboard#my-applications",
+        dashboardUrl: route("profile/dashboard#my-applications"),
       }),
     "notification-employer-applied": () =>
       render.renderNotificationEmail({
@@ -210,7 +215,7 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         eventType: "submitted",
         isCandidate: false,
         jobTitle: "Kıdemli Frontend Geliştirici",
-        dashboardUrl: "https://isbulkktc.com/tr/company/dashboard",
+        dashboardUrl: route("company/dashboard"),
       }),
     "notification-viewed": () =>
       render.renderNotificationEmail({
@@ -218,7 +223,7 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         eventType: "viewed",
         isCandidate: true,
         jobTitle: "Kıdemli Frontend Geliştirici",
-        dashboardUrl: "https://isbulkktc.com/tr/profile/dashboard#my-applications",
+        dashboardUrl: route("profile/dashboard#my-applications"),
       }),
     "notification-status": () =>
       render.renderNotificationEmail({
@@ -227,14 +232,14 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         isCandidate: true,
         jobTitle: "Kıdemli Frontend Geliştirici",
         status: "shortlisted",
-        dashboardUrl: "https://isbulkktc.com/tr/profile/dashboard#my-applications",
+        dashboardUrl: route("profile/dashboard#my-applications"),
       }),
     "feedback-ack": () =>
       render.renderFeedbackAcknowledgement({
         ...site,
         name: "Esra",
         message: "İlan filtreleri çok kullanışlı, teşekkürler.",
-        actionUrl: "https://isbulkktc.com/tr/jobs",
+        actionUrl: route("jobs"),
       }),
     "feedback-team": () =>
       render.renderFeedbackTeamEmail({
@@ -244,27 +249,27 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         category: "Öneri",
         rating: 5,
         message: "İlan filtreleri çok kullanışlı, teşekkürler.",
-        actionUrl: "https://isbulkktc.com/tr/",
+        actionUrl: route(),
       }),
     "job-published": () =>
       render.renderJobPublishedEmail({
         ...site,
         jobTitle: "Kıdemli Frontend Geliştirici",
-        jobUrl: "https://isbulkktc.com/tr/jobs/ornek",
+        jobUrl: route("jobs/ornek"),
       }),
     "resume-received": () =>
       render.renderResumeReceivedEmail({
         ...site,
         name: "Esra Kapli",
         isUpdate: false,
-        profileUrl: "https://isbulkktc.com/tr/profile/dashboard",
+        profileUrl: route("profile/dashboard"),
       }),
     "resume-updated": () =>
       render.renderResumeReceivedEmail({
         ...site,
         name: "Esra Kapli",
         isUpdate: true,
-        profileUrl: "https://isbulkktc.com/tr/profile/dashboard",
+        profileUrl: route("profile/dashboard"),
       }),
     "sales-ack": () =>
       render.renderSalesAcknowledgement({
@@ -275,7 +280,7 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         plan: "Büyüme",
         durationDays: 30,
         note: "Üç pozisyon için ilan yayınlamak istiyoruz.",
-        actionUrl: "https://isbulkktc.com/tr/packages",
+        actionUrl: route("packages"),
       }),
     "sales-team": () =>
       render.renderSalesTeamEmail({
@@ -286,13 +291,13 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         plan: "Büyüme",
         durationDays: 30,
         note: "Üç pozisyon için ilan yayınlamak istiyoruz.",
-        actionUrl: "https://isbulkktc.com/tr/admin/sales-leads",
+        actionUrl: route("admin/sales-leads"),
       }),
     "company-profile-ack": () =>
       companyProfileRender.renderCompanyProfileAcknowledgement({
         ...site,
         companyName: "Örnek Teknoloji Ltd.",
-        actionUrl: "https://isbulkktc.com/tr/company/dashboard",
+        actionUrl: route("company/dashboard"),
       }),
     "company-profile-team": () =>
       companyProfileRender.renderCompanyProfileTeamEmail({
@@ -304,7 +309,7 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
         publicEmail: "ik@example.com",
         address: "Girne",
         submittedBy: "mehmet@example.com",
-        actionUrl: "https://isbulkktc.com/tr/admin/company-profiles",
+        actionUrl: route("admin/company-profiles"),
       }),
     engagement: (unsubscribeUrl) =>
       render.renderEngagementEmail({
@@ -314,15 +319,15 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
           {
             title: "Kıdemli Frontend Geliştirici",
             company: "Örnek Teknoloji Ltd.",
-            url: "https://isbulkktc.com/tr/jobs/ornek-frontend",
+            url: route("jobs/ornek-frontend"),
           },
           {
             title: "Ürün Yöneticisi",
             company: "Kıbrıs Dijital",
-            url: "https://isbulkktc.com/tr/jobs/ornek-urun",
+            url: route("jobs/ornek-urun"),
           },
         ],
-        jobsUrl: "https://isbulkktc.com/tr/jobs",
+        jobsUrl: route("jobs"),
         unsubscribeUrl,
       }),
     marketing: (unsubscribeUrl) =>
@@ -333,14 +338,36 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
   };
 
   const sourceSubjects = {
-    confirmation: "İşBul KKTC e-posta adresinizi doğrulayın",
-    recovery: "İşBul KKTC şifre yenileme bağlantınız",
-    invite: "İşBul KKTC'ye davet edildiniz",
-    magic_link: "İşBul KKTC giriş bağlantınız",
-    email_change: "Yeni e-posta adresinizi doğrulayın",
-    reauthentication: "İşBul KKTC kimlik doğrulama kodunuz",
-    "password-changed": "İşBul KKTC şifreniz değiştirildi",
+    confirmation: copy.auth.confirmationSubject,
+    recovery: copy.auth.recoverySubject,
+    invite: ({
+      tr: "İşBul KKTC davetiniz",
+      en: "İşBul KKTC — You have been invited to İşBul KKTC",
+      ru: "İşBul KKTC — Вас пригласили в İşBul KKTC",
+      el: "İşBul KKTC — Σας προσκάλεσαν στο İşBul KKTC",
+      fa: "İşBul KKTC — دعوت‌نامه شما",
+      de: "İşBul KKTC — Sie wurden eingeladen",
+    })[site.locale],
+    magic_link: ({
+      tr: "İşBul KKTC giriş bağlantınız",
+      en: "İşBul KKTC — Your sign-in link",
+      ru: "İşBul KKTC — Ваша ссылка для входа",
+      el: "İşBul KKTC — Ο σύνδεσμος σύνδεσής σας",
+      fa: "İşBul KKTC — پیوند ورود شما",
+      de: "İşBul KKTC — Ihr Anmeldelink",
+    })[site.locale],
+    email_change: ({
+      tr: "İşBul KKTC yeni e-posta adresinizi doğrulayın",
+      en: "İşBul KKTC — Confirm your new email address",
+      ru: "İşBul KKTC — Подтвердите новый адрес электронной почты",
+      el: "İşBul KKTC — Επιβεβαιώστε τη νέα διεύθυνση email σας",
+      fa: "İşBul KKTC — نشانی ایمیل جدید خود را تأیید کنید",
+      de: "İşBul KKTC — Bestätigen Sie Ihre neue E-Mail-Adresse",
+    })[site.locale],
+    reauthentication: copy.auth.reauthenticationSubject,
+    "password-changed": copy.auth.passwordChangedSubject,
   };
+
   for (const [name, html] of Object.entries(goTrue)) {
     const templateName = "auth-source-" + name.replace(/_/g, "-");
     templates[templateName] = () => ({
