@@ -17,7 +17,6 @@ import {
   renderGoTrueTemplatePreview,
   renderTemplate,
 } from "./email-preview.mjs";
-import { getNativeAuthExtraCopy } from "../supabase/functions/_shared/email-copy-auth-extra.ts";
 import { verifyUnsubscribeSignatureWithKey } from "../src/server/email/unsubscribe-signature.ts";
 
 const KEY = "test-signing-key-0123456789";
@@ -97,7 +96,7 @@ test("preview catalog uses each locale for routes and auth subjects", async () =
     const goTrue = Object.fromEntries(
       NATIVE_GOTRUE_TEMPLATES.map(({ name }) => [
         name,
-        "<!DOCTYPE html><html lang=" + locale + "><body>" + name + "</body></html>",
+        "<!DOCTYPE html><html lang=" + locale + "><head><title>" + name + "-" + locale + "</title></head><body>" + name + "</body></html>",
       ]),
     );
     const templates = buildTemplates(
@@ -110,11 +109,11 @@ test("preview catalog uses each locale for routes and auth subjects", async () =
     const route = "https://isbulkktc.com" + (locale === "tr" ? "" : "/" + locale) + "/profile/dashboard";
     assert.ok(welcome.html.includes(route), locale + ": route uses the recipient locale");
     const invite = templates["auth-source-invite"]();
-    assert.equal(invite.subject, getNativeAuthExtraCopy(locale).invite.subject, locale + ": invite subject locale");
+    assert.equal(invite.subject, "invite-" + locale, locale + ": invite title locale");
     const magic = templates["auth-source-magic-link"]();
-    assert.equal(magic.subject, getNativeAuthExtraCopy(locale).magicLink.subject, locale + ": magic-link subject locale");
+    assert.equal(magic.subject, "magic_link-" + locale, locale + ": magic-link title locale");
     const emailChange = templates["auth-source-email-change"]();
-    assert.equal(emailChange.subject, getNativeAuthExtraCopy(locale).emailChange.subject, locale + ": email-change subject locale");
+    assert.equal(emailChange.subject, "email_change-" + locale, locale + ": email-change title locale");
   }
 });
 
