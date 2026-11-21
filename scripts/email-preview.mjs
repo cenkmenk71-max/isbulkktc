@@ -83,20 +83,76 @@ export const PREVIEW_ONLY_TEMPLATES = new Set([
   ...STATIC_GOTRUE_TEMPLATES,
 ]);
 
-/** Resolve the Turkish GoTrue branch and substitute safe, inert preview values. */
-export function renderGoTrueTemplatePreview(source) {
+/** Supported locales rendered by the full email preview matrix. */
+export const EMAIL_PREVIEW_LOCALES = Object.freeze(["tr", "en", "ru", "el", "fa", "de"]);
+
+/**
+ * Select the correct branch from the constrained GoTrue locale-template grammar
+ * used by the native auth templates. This is not a general Go template runtime.
+ */
+function resolveLocaleBranches(source, locale) {
+  const openingPattern = /\{\{\s*if eq \$locale "tr"\s*\}\}/g;
+  let output = "";
+  let cursor = 0;
+  let opening;
+
+  while ((opening = openingPattern.exec(source))) {
+    output += source.slice(cursor, opening.index);
+    const branchStart = openingPattern.lastIndex;
+    const markerPattern = /\{\{\s*(else if eq \$locale "([^"]+)"|else|end)\s*\}\}/g;
+    markerPattern.lastIndex = branchStart;
+
+    let activeLocale = "tr";
+    let segmentStart = branchStart;
+    let selected = null;
+    let fallback = null;
+    let closing = -1;
+    let marker;
+
+    while ((marker = markerPattern.exec(source))) {
+      const segment = source.slice(segmentStart, marker.index);
+      if (activeLocale === locale) selected = segment;
+      if (activeLocale === "__fallback__") fallback = segment;
+
+      if (marker[1] === "end") {
+        closing = markerPattern.lastIndex;
+        break;
+      }
+
+      activeLocale = marker[1] === "else" ? "__fallback__" : marker[2];
+      segmentStart = markerPattern.lastIndex;
+    }
+
+    if (closing < 0) {
+      throw new Error("GoTrue locale branch is missing its closing template end");
+    }
+    output += selected ?? fallback ?? "";
+    cursor = closing;
+    openingPattern.lastIndex = closing;
+  }
+
+  return output + source.slice(cursor);
+}
+
+/** Resolve one GoTrue template into a safe, inert preview for a supported locale. */
+export function renderGoTrueTemplatePreview(source, locale = "tr") {
   if (typeof source !== "string") {
     throw new TypeError("GoTrue template source must be a string");
   }
+  if (!EMAIL_PREVIEW_LOCALES.includes(locale)) {
+    throw new Error("unsupported_email_preview_locale");
+  }
 
-  const html = source
-    .replace(
-      /\{\{\s*if eq \$locale "tr"\s*\}\}([\s\S]*?)\{\{\s*else if eq \$locale "[^"]+"\s*\}\}[\s\S]*?\{\{\s*end\s*\}\}/g,
-      (_match, turkish) => turkish,
-    )
-    .replace(/\{\{\s*if \$rtl\s*\}\}padding-right\{\{\s*else\s*\}\}padding-left\{\{\s*end\s*\}\}/g, "padding-left")
-    .replace(/\{\{\s*\.ConfirmationURL\s*\}\}/g, "https://isbulkktc.com/tr/auth/callback?code=SAMPLE")
-    .replace(/\{\{\s*\.SiteURL\s*\}\}/g, "https://isbulkktc.com/tr/")
+  const localePrefix = locale === "tr" ? "" : "/" + locale;
+  const siteUrl = "https://isbulkktc.com" + localePrefix + "/";
+  const callbackUrl = "https://isbulkktc.com" + localePrefix + "/auth/callback?code=SAMPLE";
+
+  const html = resolveLocaleBranches(source, locale)
+    .replace(/\{\{\s*\$locale\s*\}\}/g, locale)
+    .replace(/\{\{\s*if \$rtl\s*\}\}rtl\{\{\s*else\s*\}\}ltr\{\{\s*end\s*\}\}/g, locale === "fa" ? "rtl" : "ltr")
+    .replace(/\{\{\s*if \$rtl\s*\}\}padding-right\{\{\s*else\s*\}\}padding-left\{\{\s*end\s*\}\}/g, locale === "fa" ? "padding-right" : "padding-left")
+    .replace(/\{\{\s*\.ConfirmationURL\s*\}\}/g, callbackUrl)
+    .replace(/\{\{\s*\.SiteURL\s*\}\}/g, siteUrl)
     .replace(/\{\{\s*\.NewEmail\s*\}\}/g, "yeni.adres@isbulkktc.com")
     .replace(/\{\{\s*\.Email\s*\}\}/g, "ornek@isbulkktc.com")
     .replace(/\{\{\s*\.Token\s*\}\}/g, "482913")
