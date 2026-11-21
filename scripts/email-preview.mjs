@@ -352,7 +352,7 @@ export function buildTemplates(render, site, companyProfileRender = render, goTr
       // GoTrue notification subjects are configured independently in
       // supabase/config.toml. The localized document title is the most useful
       // language-correct label for this offline visual preview.
-      subject: sourceSubjects[name] || /<title>([\\s\\S]*?)<\\/title>/i.exec(html)?.[1]?.trim() || "İşBul KKTC hesap e-postası",
+      subject: sourceSubjects[name] || /<title>([\s\S]*?)<\/title>/i.exec(html)?.[1]?.trim() || "İşBul KKTC hesap e-postası",
       html,
       text: html
         .replace(/<style[\s\S]*?<\/style>/gi, " ")
