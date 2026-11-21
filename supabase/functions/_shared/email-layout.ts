@@ -231,9 +231,10 @@ function bulletproofButton(
   if (!isSafeUrl(button.url)) return "";
   const background = secondary ? BRAND.white : BRAND.green;
   const foreground = secondary ? BRAND.green : BRAND.white;
-  const width = options.width ?? 260;
-  const height = options.height ?? 48;
   const fontSize = options.fontSize ?? TYPE.body;
+  const textWidth = Array.from(button.label).length * fontSize * 0.62;
+  const width = Math.min(options.width ?? 440, Math.max(160, Math.ceil(textWidth + 48)));
+  const height = options.height ?? (textWidth + 48 > width ? 64 : 48);
   const radius = options.radius ?? "12%";
   const className = secondary ? "ibk-button-secondary" : "ibk-button-primary";
   const padding = secondary ? SPACE.md + "px " + SPACE.xl + "px" : SPACE.md + "px " + SPACE.lg + "px";
@@ -257,7 +258,7 @@ function heroBlock(hero: EmailLayoutOptions["hero"], locale: string): string {
   const cta = hero.cta && isSafeUrl(hero.cta.url)
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:${SPACE.lg}px 0 0;">
        <tr><td align="center" bgcolor="#FFFFFF" class="ibk-button-secondary-cell" style="border-radius:${RADIUS.pill}px;">
-         ${bulletproofButton(hero.cta, true, { width: 260, height: 48, radius: "50%" })}
+         ${bulletproofButton(hero.cta, true, { width: 360, radius: "50%" })}
        </td></tr></table>`
     : "";
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 ${SPACE.xl}px;">
@@ -374,7 +375,7 @@ function buttonCell(button: EmailButton, secondary: boolean): string {
   return `<tr><td style="padding:${SPACE.md}px 0 0;">
 ${lead}<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
 <td align="center" bgcolor="${bg}" class="${secondary ? "ibk-button-secondary-cell" : "ibk-button-primary-cell"}" style="border-radius:${RADIUS.control}px;${border}">
-${bulletproofButton(button, secondary, { width: 220, height: 48 })}
+${bulletproofButton(button, secondary, { width: 440 })}
 </td></tr></table>
 </td></tr>`;
 }
@@ -396,7 +397,7 @@ function buttonBlock(button: EmailButton | undefined, secondary = false): string
   const border = secondary ? `border:2px solid ${BRAND.green};` : "";
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:${SPACE.lg}px 0 0;">
 <tr><td align="center" bgcolor="${bg}" class="${secondary ? "ibk-button-secondary-cell" : "ibk-button-primary-cell"}" style="border-radius:${RADIUS.control}px;${border}">
-${bulletproofButton(button, secondary, { width: 260, height: 48 })}
+${bulletproofButton(button, secondary, { width: 440 })}
 </td></tr>
 </table>`;
 }
