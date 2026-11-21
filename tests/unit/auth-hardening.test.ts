@@ -599,6 +599,23 @@ test("every actionable template builds its link from .ConfirmationURL", () => {
   }
 });
 
+test("every actionable GoTrue email has a VML Outlook button and HTML fallback", () => {
+  const actionable = ["confirmation.html", "recovery.html", "invite.html", "magic_link.html", "email_change.html", "password-changed.html"];
+  for (const file of actionable) {
+    for (const locale of locales) {
+      const html = renderFor(readTemplate(file), locale);
+      const vmlHrefs = [...html.matchAll(/<v:roundrect\b[^>]*href="([^"]+)"/g)].map((match) => match[1]);
+      const anchorHrefs = [...html.matchAll(/<a class="btn"[^>]*href="([^"]+)"/g)].map((match) => match[1]);
+      assert.equal(vmlHrefs.length, 1, file + "/" + locale + ": expected one classic Outlook button");
+      assert.equal(anchorHrefs.length, 1, file + "/" + locale + ": expected one non-MSO HTML button");
+      assert.equal(vmlHrefs[0], anchorHrefs[0], file + "/" + locale + ": VML and HTML destinations differ");
+      assert.match(html, /<!--\[if mso\]>/, file + "/" + locale + ": MSO conditional missing");
+      assert.match(html, /<!--\[if !mso\]><!-- -->/, file + "/" + locale + ": HTML fallback conditional missing");
+    }
+  }
+  const codeOnly = renderFor(readTemplate("reauthentication.html"), "en");
+  assert.doesNotMatch(codeOnly, /<v:roundrect\b/, "the code-only reauthentication email must not gain a fake CTA");
+});
 test("every link in a rendered email is an absolute https URL", () => {
   for (const file of templateFiles) {
     for (const locale of locales) {
@@ -672,6 +689,29 @@ test("every template shares one stylesheet", () => {
       first[1],
       `${name} has drifted from ${first[0]}; keep one stylesheet so the palette and ` +
         "the contrast floors stay true for every email",
+    );
+  }
+});
+
+test("auth fallback and footer colors stay dark only in dark mode", () => {
+  for (const name of readdirSync(templateDirectory)) {
+    const html = readTemplate(name);
+    const style = /<style>([\s\S]*?)<\/style>/.exec(html)?.[1] ?? "";
+
+    // Light mode uses the original dark ink on white/cream surfaces.
+    assert.match(style, /\.fallback \{[^}]*color:\s*#414846/i, `${name}: fallback must retain its light-mode ink`);
+    assert.match(style, /\.footer \{[^}]*color:\s*#414846/i, `${name}: footer must retain its light-mode ink`);
+
+    // The pale text is valid only when the dark canvas is also active.
+    assert.match(style, /@media \(prefers-color-scheme:dark\)[\s\S]*\.code-label, \.fallback \{\s*color:#C5CEC8 !important;/i, `${name}: dark-mode fallback override missing`);
+    assert.match(style, /@media \(prefers-color-scheme:dark\)[\s\S]*\.footer \{[\s\S]*?color:#C5CEC8 !important;/i, `${name}: dark-mode footer override missing`);
+
+    // Catch an unconditional override after the media query, which would wash
+    // out these text elements in light-mode clients.
+    assert.doesNotMatch(
+      style,
+      /\.fallback\s*\{\s*color:#C5CEC8 !important;\s*\}\s*\.footer\s*\{\s*color:#C5CEC8 !important;\s*\}\s*$/i,
+      `${name}: dark-only fallback/footer colors must not be unconditional at stylesheet end`,
     );
   }
 });

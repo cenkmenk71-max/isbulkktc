@@ -223,6 +223,30 @@ function preheaderBlock(text: string): string {
   )}${padding}</div>`;
 }
 
+function bulletproofButton(
+  button: EmailButton,
+  secondary: boolean,
+  options: { width?: number; height?: number; fontSize?: number; radius?: string } = {},
+): string {
+  if (!isSafeUrl(button.url)) return "";
+  const background = secondary ? BRAND.white : BRAND.green;
+  const foreground = secondary ? BRAND.green : BRAND.white;
+  const fontSize = options.fontSize ?? TYPE.body;
+  const textWidth = Array.from(button.label).length * fontSize * 0.62;
+  const width = Math.min(options.width ?? 440, Math.max(160, Math.ceil(textWidth + 48)));
+  const height = options.height ?? (textWidth + 48 > width ? 64 : 48);
+  const radius = options.radius ?? "12%";
+  const className = secondary ? "ibk-button-secondary" : "ibk-button-primary";
+  const padding = secondary ? SPACE.md + "px " + SPACE.xl + "px" : SPACE.md + "px " + SPACE.lg + "px";
+  const border = secondary ? "2px solid " + BRAND.green : "0";
+  return '<!--[if mso]>\n' +
+    '<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="' + escapeHtml(button.url) + '" style="height:' + height + 'px;v-text-anchor:middle;width:' + width + 'px;" arcsize="' + radius + '" strokecolor="' + BRAND.green + '" fillcolor="' + background + '">\n' +
+    '<w:anchorlock/>\n' +
+    '<center style="color:' + foreground + ';font-family:Arial,sans-serif;font-size:' + fontSize + 'px;font-weight:700;">' + escapeHtml(button.label) + '</center>\n' +
+    '</v:roundrect>\n<![endif]--><!--[if !mso]><!-- -->\n' +
+    '<a href="' + escapeHtml(button.url) + '" class="' + className + '" style="display:inline-block;padding:' + padding + ';background:' + background + ';color:' + foreground + ';text-decoration:none;font-weight:700;font-size:' + fontSize + 'px;line-height:' + LEADING.normal + ';border:' + border + ';border-radius:' + RADIUS.control + 'px;text-align:center;">' + escapeHtml(button.label) + '</a>' +
+    '\n<!--<![endif]-->';
+}
 function heroBlock(hero: EmailLayoutOptions["hero"], locale: string): string {
   if (!hero) return "";
   const eyebrow = hero.eyebrow?.trim()
@@ -234,7 +258,7 @@ function heroBlock(hero: EmailLayoutOptions["hero"], locale: string): string {
   const cta = hero.cta && isSafeUrl(hero.cta.url)
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:${SPACE.lg}px 0 0;">
        <tr><td align="center" bgcolor="#FFFFFF" class="ibk-button-secondary-cell" style="border-radius:${RADIUS.pill}px;">
-         <a href="${escapeHtml(hero.cta.url)}" class="ibk-button-secondary" style="display:inline-block;background:#FFFFFF;color:${BRAND.green};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.pill}px;padding:${SPACE.md}px ${SPACE.xl}px;">${escapeHtml(hero.cta.label)}</a>
+         ${bulletproofButton(hero.cta, true, { width: 360, radius: "50%" })}
        </td></tr></table>`
     : "";
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 ${SPACE.xl}px;">
@@ -313,7 +337,7 @@ function packagesBlock(
       const cta = isSafeUrl(pkg.cta.url)
         ? `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:${SPACE.lg}px 0 0;width:100%;">
             <tr><td align="center" bgcolor="${BRAND.green}" class="ibk-button-primary-cell" style="border-radius:${RADIUS.control}px;">
-              <a href="${escapeHtml(pkg.cta.url)}" class="ibk-btn ibk-button-primary" style="display:block;padding:${SPACE.md}px ${SPACE.lg}px;color:${BRAND.white};text-decoration:none;font-weight:700;font-size:${TYPE.small}px;line-height:${LEADING.normal};border-radius:${RADIUS.control}px;text-align:center;">${escapeHtml(pkg.cta.label)}</a>
+              ${bulletproofButton(pkg.cta, false, { width: 200, height: 44, fontSize: TYPE.small })}
             </td></tr>
           </table>`
         : "";
@@ -351,9 +375,7 @@ function buttonCell(button: EmailButton, secondary: boolean): string {
   return `<tr><td style="padding:${SPACE.md}px 0 0;">
 ${lead}<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
 <td align="center" bgcolor="${bg}" class="${secondary ? "ibk-button-secondary-cell" : "ibk-button-primary-cell"}" style="border-radius:${RADIUS.control}px;${border}">
-<a href="${escapeHtml(button.url)}" class="ibk-btn ${secondary ? "ibk-button-secondary" : "ibk-button-primary"}" style="display:block;padding:${SPACE.md}px ${SPACE.lg}px;color:${fg};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.control}px;text-align:center;">${escapeHtml(
-    button.label,
-  )}</a>
+${bulletproofButton(button, secondary, { width: 440 })}
 </td></tr></table>
 </td></tr>`;
 }
@@ -375,9 +397,7 @@ function buttonBlock(button: EmailButton | undefined, secondary = false): string
   const border = secondary ? `border:2px solid ${BRAND.green};` : "";
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:${SPACE.lg}px 0 0;">
 <tr><td align="center" bgcolor="${bg}" class="${secondary ? "ibk-button-secondary-cell" : "ibk-button-primary-cell"}" style="border-radius:${RADIUS.control}px;${border}">
-<a href="${escapeHtml(button.url)}" class="ibk-btn ${secondary ? "ibk-button-secondary" : "ibk-button-primary"}" style="display:inline-block;padding:${SPACE.md}px ${SPACE.xl}px;color:${fg};text-decoration:none;font-weight:700;font-size:${TYPE.body}px;border-radius:${RADIUS.control}px;">${escapeHtml(
-    button.label,
-  )}</a>
+${bulletproofButton(button, secondary, { width: 440 })}
 </td></tr>
 </table>`;
 }
@@ -501,6 +521,8 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
     .ibk-pad { padding-left:20px !important; padding-right:20px !important; }
     .ibk-h1 { font-size:${TYPE.h2}px !important; }
     .ibk-package-cell { display:block !important; width:100% !important; padding:0 0 12px !important; }
+    .ibk-brand-name { font-size:24px !important; }
+    .ibk-brand-tagline { font-size:10px !important; line-height:1.35 !important; }
   }
   /* Dark mode is component-scoped. A global p/div/td colour override creates
      white-on-white text in package cards and secondary actions. */
@@ -567,30 +589,30 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
 <body style="margin:0;padding:0;background:${BRAND.surface};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND.ink};">
 <div lang="${lang}" dir="${dir}">
 ${preheaderBlock(options.preheader)}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-bg" style="background:${BRAND.surface};padding:${SPACE.xl}px ${SPACE.sm}px;">
-<tr><td align="center">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="ibk-card" style="max-width:600px;width:100%;background:${BRAND.white};border-radius:${RADIUS.card}px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.08);">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-bg" style="width:100%;table-layout:fixed;background:${BRAND.surface};">
+<tr><td align="center" style="padding:${SPACE.xl}px ${SPACE.sm}px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="ibk-card" style="max-width:600px;width:100%;table-layout:fixed;background:${BRAND.white};border-radius:${RADIUS.card}px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.08);">
 ${heroHtml ? `
 <tr><td class="ibk-pad ibk-brand-bg" bgcolor="${BRAND.green}" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
-<table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td style="vertical-align:middle;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-brand-table" style="width:100%;table-layout:fixed;"><tr>
+<td width="56" style="width:56px;vertical-align:middle;">
 <a href="${escapeHtml(options.siteUrl)}" style="display:inline-block;text-decoration:none;"><img src="${LOGO_URL}" width="56" height="33" alt="${BRAND.name}" style="display:block;border:0;outline:none;text-decoration:none;" /></a>
 </td>
-<td style="vertical-align:middle;padding-${dir === "rtl" ? "right" : "left"}:14px;">
-<div style="color:${BRAND.white};font-size:${TYPE.h1}px;font-weight:800;letter-spacing:-0.4px;line-height:1.1;">${BRAND.name}</div>
-<div style="color:rgba(255,255,255,0.85);font-size:${TYPE.micro}px;margin-top:3px;">${BRAND.tagline}</div>
+<td class="ibk-brand-copy" style="vertical-align:middle;padding-${dir === "rtl" ? "right" : "left"}:14px;word-wrap:break-word;">
+<div class="ibk-brand-name" style="color:${BRAND.white};font-size:${TYPE.h1}px;font-weight:800;letter-spacing:-0.4px;line-height:1.1;">${BRAND.name}</div>
+<div class="ibk-brand-tagline" style="color:rgba(255,255,255,0.85);font-size:${TYPE.micro}px;margin-top:3px;">${BRAND.tagline}</div>
 </td>
 </tr></table>
 </td></tr>
 ` : `
 <tr><td class="ibk-pad ibk-brand-bg" bgcolor="${BRAND.green}" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
-<table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td style="vertical-align:middle;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-brand-table" style="width:100%;table-layout:fixed;"><tr>
+<td width="56" style="width:56px;vertical-align:middle;">
 <a href="${escapeHtml(options.siteUrl)}" style="display:inline-block;text-decoration:none;"><img src="${LOGO_URL}" width="56" height="33" alt="${BRAND.name}" style="display:block;border:0;outline:none;text-decoration:none;" /></a>
 </td>
-<td style="vertical-align:middle;padding-${dir === "rtl" ? "right" : "left"}:14px;">
-<div style="color:${BRAND.white};font-size:${TYPE.h1}px;font-weight:800;letter-spacing:-0.4px;line-height:1.1;">${BRAND.name}</div>
-<div style="color:rgba(255,255,255,0.85);font-size:${TYPE.micro}px;margin-top:3px;">${BRAND.tagline}</div>
+<td class="ibk-brand-copy" style="vertical-align:middle;padding-${dir === "rtl" ? "right" : "left"}:14px;word-wrap:break-word;">
+<div class="ibk-brand-name" style="color:${BRAND.white};font-size:${TYPE.h1}px;font-weight:800;letter-spacing:-0.4px;line-height:1.1;">${BRAND.name}</div>
+<div class="ibk-brand-tagline" style="color:rgba(255,255,255,0.85);font-size:${TYPE.micro}px;margin-top:3px;">${BRAND.tagline}</div>
 </td>
 </tr></table>
 </td></tr>

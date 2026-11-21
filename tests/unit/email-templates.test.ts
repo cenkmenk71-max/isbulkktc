@@ -126,6 +126,35 @@ test("renderEmailLayout builds a branded, responsive shell", () => {
   assert.ok(html.includes("https://isbulkktc.com/profile/dashboard"));
 });
 
+test("shared CTA variants include a classic Outlook VML button and an HTML fallback", () => {
+  const urls = ["https://isbulkktc.com/hero", "https://isbulkktc.com/package", "https://isbulkktc.com/button", "https://isbulkktc.com/first", "https://isbulkktc.com/second", "https://isbulkktc.com/long"];
+  const html = renderEmailLayout({
+    preheader: "CTA compatibility", heading: "CTA compatibility",
+    hero: { hook: "Start here", cta: { label: "Open profile", url: urls[0] } },
+    packages: [{ name: "Starter", audience: "Candidate", description: "A short description", scope: "One listing", durationLabel: "30 days", accent: BRAND.green, cta: { label: "Choose package", url: urls[1] } }],
+    button: { label: "Open dashboard", url: urls[2] },
+    buttons: [{ label: "Primary action", url: urls[3] }, { label: "Secondary action", url: urls[4], secondary: true }, { label: "Reply to the quote request by email", url: urls[5] }],
+    footerNote: "Footer", siteUrl: SITE,
+  });
+  const vmlHrefs = [...html.matchAll(/<v:roundrect\b[^>]*href="([^"]+)"/g)].map((match) => match[1]);
+  assert.equal(vmlHrefs.length, urls.length, "every CTA variant must emit one VML button");
+  assert.deepEqual(vmlHrefs.sort(), [...urls].sort(), "VML actions must preserve their original destinations");
+  const longButton = html.match(/<v:roundrect[^>]*href="https:\/\/isbulkktc\.com\/long"[^>]*width:(\d+)px/);
+  assert.ok(longButton && Number(longButton[1]) > 300, "long translated CTA must receive a wider VML button");
+  const htmlFallbackHrefs = [...html.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*class="(?:ibk-button-primary|ibk-button-secondary)"/g)].map((match) => match[1]);
+  assert.equal(htmlFallbackHrefs.length, urls.length, "every VML button must retain an HTML fallback");
+  assert.match(html, /<!--\[if mso\]>/, "classic Outlook conditional block missing");
+  assert.match(html, /<!--\[if !mso\]><!-- -->/, "non-MSO fallback conditional missing");
+});
+
+test("welcome CTAs keep both Outlook and HTML actions in every locale", () => {
+  for (const locale of EMAIL_LOCALES) {
+    const email = renderWelcomeEmail({ locale, siteUrl: SITE, audience: "candidate", actionUrl: "https://isbulkktc.com/profile/dashboard" });
+    assert.equal((email.html.match(/<v:roundrect\b/g) ?? []).length, 2, locale + ": hero and secondary CTA need VML");
+    assert.equal((email.html.match(/class="ibk-button-(?:primary|secondary)"/g) ?? []).length, 2, locale + ": HTML fallback CTA missing");
+    assert.ok(email.html.includes("https://isbulkktc.com/profile/dashboard"), locale + ": action URL missing");
+  }
+});
 /**
  * The shell's palette is copied, not imported, from `src/styles/global.css`
  * because the email renders in a Deno worker and a Node action, neither of
@@ -134,6 +163,21 @@ test("renderEmailLayout builds a branded, responsive shell", () => {
  * token never held, so the brand repainted with no test failing. Pin each
  * `BRAND` colour to the token it claims, resolving one alias level.
  */
+test("the shared email shell keeps mobile padding inside its fluid table and constrains the brand header", () => {
+  const html = renderEmailLayout({ preheader: "p", heading: "h", footerNote: "f", siteUrl: SITE });
+  assert.match(html, /class="ibk-bg" style="width:100%;table-layout:fixed;background:#FFFFFF;"/, "outer table must not add padding beyond its 100% width");
+  assert.match(html, /<td align="center" style="padding:32px 8px;">/, "outer spacing belongs on the containing cell");
+  assert.match(html, /class="ibk-card" style="max-width:600px;width:100%;table-layout:fixed/, "card table must obey its mobile width");
+  assert.match(html, /class="ibk-brand-table" style="width:100%;table-layout:fixed;"/, "brand header table must be constrained to the card width");
+  assert.match(html, /class="ibk-brand-name"/, "brand name must use the mobile typography hook");
+  assert.match(html, /class="ibk-brand-tagline"/, "brand tagline must use the mobile typography hook");
+});
+test("numbered step badges use the shared dark-mode surface in every locale", () => {
+  for (const locale of EMAIL_LOCALES) {
+    const email = renderWelcomeEmail({ locale, siteUrl: SITE, audience: "candidate", actionUrl: "https://isbulkktc.com/profile/dashboard" });
+    assert.match(email.html, /<span class="ibk-icon-bg" style="[^"]*background:/, locale + ": numbered badges must opt into the dark-mode surface token");
+  }
+});
 test("the email shell palette matches the app design tokens", () => {
   const css = readFileSync(
     new URL("../../src/styles/global.css", import.meta.url),

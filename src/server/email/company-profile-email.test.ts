@@ -35,6 +35,13 @@ test("the acknowledgement renders the company name, steps and a dashboard CTA", 
   assert.match(email.text, /company\/dashboard/);
 });
 
+test("the acknowledgement step badges use the shared dark-mode surface in every locale", () => {
+  for (const locale of LOCALES) {
+    const email = renderCompanyProfileAcknowledgement({ ...SITE, locale, companyName: "Acme", actionUrl: "https://isbulkktc.com/company/dashboard" });
+    const badges = email.html.match(/<span class="ibk-icon-bg"/g) ?? [];
+    assert.equal(badges.length, getCompanyProfileCopy(locale).ackSteps.length, locale + ": each step badge must use the dark-mode surface token");
+  }
+});
 test("the team alert lists the submitted fields", () => {
   const email = renderCompanyProfileTeamEmail({
     ...SITE,
