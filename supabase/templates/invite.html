@@ -80,6 +80,34 @@
       }
       [data-ogsc] .body .btn { color:#FFFFFF !important; }
 
+
+      @media (max-width:600px) {
+        .header { padding:22px 20px !important; }
+        .body { padding:24px 20px !important; }
+        .footer { padding:20px !important; }
+        .container { width:100% !important; }
+      }
+      /* Outlook may stamp the attributes onto the individual nodes instead
+         of a wrapping element; cover both transformation shapes. */
+      p[data-ogsc], div[data-ogsc], td[data-ogsc], span[data-ogsc],
+      strong[data-ogsc], h1[data-ogsc], h2[data-ogsc], a[data-ogsc] {
+        color:#F3F1EC !important;
+      }
+      .footer[data-ogsb], .page[data-ogsb] {
+        background-color:#171B1A !important;
+      }
+      .header[data-ogsb] { background-color:#194435 !important; }
+      .body[data-ogsb], .container[data-ogsb] {
+        background-color:#1E2423 !important;
+      }
+      .note[data-ogsb], .code[data-ogsb] {
+        background-color:#2A3430 !important;
+        border-color:#46544D !important;
+      }
+      .body .btn[data-ogsb] {
+        background-color:#123128 !important;
+        color:#FFFFFF !important;
+      }
     </style>
   </head>
   <body style="margin:0;padding:0;background-color:#FFFFFF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#171B1A;">
