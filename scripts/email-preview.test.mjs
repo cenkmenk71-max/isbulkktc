@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  EMAIL_PREVIEW_LOCALES,
   NATIVE_GOTRUE_TEMPLATES,
   PREVIEW_ONLY_TEMPLATES,
   PREVIEW_SIGNATURE,
@@ -96,6 +97,56 @@ test("all auth previews with sample data are blocked from sending", () => {
     });
     assert.equal(decision.send, false, name);
     assert.match(decision.reason, /sample authentication data/);
+  }
+});
+
+test("native GoTrue templates resolve correctly in all six locales", () => {
+  const invitations = {
+    tr: "İşBul KKTC'ye davet edildiniz",
+    en: "You have been invited to İşBul KKTC",
+    ru: "Вас пригласили в İşBul KKTC",
+    el: "Σας προσκάλεσαν στο İşBul KKTC",
+    fa: "شما به İşBul KKTC دعوت شده‌اید",
+    de: "Sie wurden zu İşBul KKTC eingeladen",
+  };
+
+  const inviteSource = readFileSync(
+    new URL("../supabase/templates/invite.html", import.meta.url),
+    "utf8",
+  );
+
+  for (const locale of EMAIL_PREVIEW_LOCALES) {
+    const html = renderGoTrueTemplatePreview(inviteSource, locale);
+    const direction = locale === "fa" ? "rtl" : "ltr";
+    assert.ok(html.includes('<html lang="' + locale + '" dir="' + direction + '">'), locale + ": lang/dir");
+    assert.ok(html.includes(invitations[locale]), locale + ": localized invitation copy");
+    assert.ok(html.includes("https://isbulkktc.com" + (locale === "tr" ? "" : "/" + locale) + "/auth/callback?code=SAMPLE"), locale + ": localized callback URL");
+    assert.ok(html.includes("padding-" + (locale === "fa" ? "right" : "left") + ":14px"), locale + ": RTL-aware brand lockup");
+    assert.doesNotMatch(html, /\\{\\{[\\s\\S]*?\\}\\}/, locale + ": unresolved GoTrue expression");
+    assert.ok(html.includes("https://isbulkktc.com/images/isbul-logo-mark-white.png"), locale + ": hosted brand mark");
+    assert.ok(html.includes("prefers-color-scheme:dark"), locale + ": dark theme");
+  }
+
+  assert.throws(
+    () => renderGoTrueTemplatePreview(inviteSource, "fr"),
+    /unsupported_email_preview_locale/,
+  );
+});
+
+test("all native auth sources preserve the common brand palette for all locales", () => {
+  for (const { name, filename } of NATIVE_GOTRUE_TEMPLATES) {
+    const source = readFileSync(
+      new URL("../supabase/templates/" + filename, import.meta.url),
+      "utf8",
+    );
+    for (const locale of EMAIL_PREVIEW_LOCALES) {
+      const html = renderGoTrueTemplatePreview(source, locale);
+      assert.ok(html.includes('lang="' + locale + '"'), name + "/" + locale + ": lang");
+      assert.ok(html.includes("isbul-logo-mark-white.png"), name + "/" + locale + ": logo");
+      assert.ok(html.includes("prefers-color-scheme:dark"), name + "/" + locale + ": dark mode");
+      assert.ok(html.includes("data-ogsc") && html.includes("data-ogsb"), name + "/" + locale + ": Outlook selectors");
+      assert.doesNotMatch(html, /\\{\\{[\\s\\S]*?\\}\\}/, name + "/" + locale + ": unresolved GoTrue expression");
+    }
   }
 });
 
