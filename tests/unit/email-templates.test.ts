@@ -135,18 +135,20 @@ test("renderEmailLayout builds a branded, responsive shell", () => {
  * `BRAND` colour to the token it claims, resolving one alias level.
  */
 test("shared CTA variants include a classic Outlook VML button and an HTML fallback", () => {
-  const urls = ["https://isbulkktc.com/hero", "https://isbulkktc.com/package", "https://isbulkktc.com/button", "https://isbulkktc.com/first", "https://isbulkktc.com/second"];
+  const urls = ["https://isbulkktc.com/hero", "https://isbulkktc.com/package", "https://isbulkktc.com/button", "https://isbulkktc.com/first", "https://isbulkktc.com/second", "https://isbulkktc.com/long"];
   const html = renderEmailLayout({
     preheader: "CTA compatibility", heading: "CTA compatibility",
     hero: { hook: "Start here", cta: { label: "Open profile", url: urls[0] } },
     packages: [{ name: "Starter", audience: "Candidate", description: "A short description", scope: "One listing", durationLabel: "30 days", accent: BRAND.green, cta: { label: "Choose package", url: urls[1] } }],
     button: { label: "Open dashboard", url: urls[2] },
-    buttons: [{ label: "Primary action", url: urls[3] }, { label: "Secondary action", url: urls[4], secondary: true }],
+    buttons: [{ label: "Primary action", url: urls[3] }, { label: "Secondary action", url: urls[4], secondary: true }, { label: "Reply to the quote request by email", url: urls[5] }],
     footerNote: "Footer", siteUrl: SITE,
   });
   const vmlHrefs = [...html.matchAll(/<v:roundrect\b[^>]*href="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(vmlHrefs.length, urls.length, "every CTA variant must emit one VML button");
   assert.deepEqual(vmlHrefs.sort(), [...urls].sort(), "VML actions must preserve their original destinations");
+  const longButton = html.match(/<v:roundrect\\b[^>]*href="https:\/\/isbulkktc\\.com\/long"[^>]*width:(\\d+)px/);
+  assert.ok(longButton && Number(longButton[1]) > 300, "long translated CTA must receive a wider VML button");
   const htmlFallbackHrefs = [...html.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*class="(?:ibk-button-primary|ibk-button-secondary)"/g)].map((match) => match[1]);
   assert.equal(htmlFallbackHrefs.length, urls.length, "every VML button must retain an HTML fallback");
   assert.match(html, /<!--\[if mso\]>/, "classic Outlook conditional block missing");
