@@ -165,7 +165,7 @@ test("welcome CTAs keep both Outlook and HTML actions in every locale", () => {
  */
 test("the shared email shell keeps mobile padding inside its fluid table and constrains the brand header", () => {
   const html = renderEmailLayout({ preheader: "p", heading: "h", footerNote: "f", siteUrl: SITE });
-  assert.match(html, /class="ibk-bg" style="width:100%;table-layout:fixed;background:#FFFFFF"/, "outer table must not add padding beyond its 100% width");
+  assert.match(html, /class="ibk-bg" style="width:100%;table-layout:fixed;background:#FFFFFF;"/, "outer table must not add padding beyond its 100% width");
   assert.match(html, /<td align="center" style="padding:32px 8px;">/, "outer spacing belongs on the containing cell");
   assert.match(html, /class="ibk-card" style="max-width:600px;width:100%;table-layout:fixed/, "card table must obey its mobile width");
   assert.match(html, /class="ibk-brand-table" style="width:100%;table-layout:fixed"/, "brand header table must be constrained to the card width");
