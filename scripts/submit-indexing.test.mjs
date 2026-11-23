@@ -123,7 +123,7 @@ test("isDirectRun matches only the launched script, never a bare file:// path", 
 const workflowYaml = readFileSync(
   new URL("../.github/workflows/submit-indexing.yml", import.meta.url),
   "utf8",
-);
+).replace(/\r\n/g, "\n");
 
 test("the indexing workflow submits the canonical origin, reading the sitemap from the alias", () => {
   // `--origin` must be the canonical host so the notified URLs match the

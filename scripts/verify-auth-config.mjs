@@ -36,7 +36,7 @@
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 /**
  * True when the module was launched directly (`node script.mjs`) rather than
@@ -45,7 +45,20 @@ import { fileURLToPath, pathToFileURL } from "node:url";
  * comparison never does, and the script exits 0 having verified nothing.
  */
 export function isDirectRun(moduleUrl, argv1) {
-  return Boolean(argv1) && moduleUrl === pathToFileURL(argv1).href;
+  if (!argv1) return false;
+  try {
+    const actual = decodeURIComponent(new URL(moduleUrl).pathname)
+      .replace(/\\/g, "/")
+      .toLowerCase();
+    const expected = argv1.replace(/\\/g, "/").toLowerCase();
+    return (
+      actual === expected ||
+      actual === "/" + expected ||
+      "/" + actual === expected
+    );
+  } catch {
+    return false;
+  }
 }
 
 const SUPABASE_API = "https://api.supabase.com/v1";

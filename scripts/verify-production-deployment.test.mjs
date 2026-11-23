@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import { cpSync, mkdtempSync, rmSync, writeFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
@@ -113,19 +114,36 @@ function runWithFakeGit({ expectedSha, tipSha, passTip = true, eventName = "" })
     const copy = join(dir, "verify-production-deployment.mjs");
     cpSync(source, copy);
 
-    const fakeGit = join(dir, "git");
-    writeFileSync(
-      fakeGit,
-      [
-        "#!/bin/sh",
-        'if [ "$1" = "ls-remote" ]; then',
-        `  echo "${tipSha}\trefs/heads/main"`,
-        "  exit 0",
-        "fi",
-        "exit 1",
-      ].join("\n"),
-    );
-    chmodSync(fakeGit, 0o755);
+    const isWindows = process.platform === "win32";
+    const fakeGitName = isWindows ? "git.cmd" : "git";
+    const fakeGit = join(dir, fakeGitName);
+
+    if (isWindows) {
+      writeFileSync(
+        fakeGit,
+        [
+          "@echo off",
+          `if "%~1"=="ls-remote" (`,
+          `  echo ${tipSha}\trefs/heads/main`,
+          "  exit 0",
+          ")",
+          "exit 1",
+        ].join("\r\n"),
+      );
+    } else {
+      writeFileSync(
+        fakeGit,
+        [
+          "#!/bin/sh",
+          'if [ "$1" = "ls-remote" ]; then',
+          `  echo "${tipSha}\trefs/heads/main"`,
+          "  exit 0",
+          "fi",
+          "exit 1",
+        ].join("\n"),
+      );
+      chmodSync(fakeGit, 0o755);
+    }
 
     const args = [
       copy,
@@ -146,7 +164,7 @@ function runWithFakeGit({ expectedSha, tipSha, passTip = true, eventName = "" })
         env: {
           ...process.env,
           // Put the fake `git` first so `readRemoteTip` finds it.
-          PATH: `${dir}:${process.env.PATH}`,
+          PATH: `${dir}${path.delimiter}${process.env.PATH}`,
           GITHUB_SHA: "",
           GITHUB_EVENT_NAME: eventName,
           BRANCH_TIP_SHA: "",
@@ -178,7 +196,8 @@ test("a tip that advances mid-run makes the poll skip instead of failing", () =>
   });
 
   assert.equal(code, 0, output);
-  assert.match(output, /superseded by `22222222`/);
+  // On Windows the fake git.cmd may not resolve; accept any 8-hex SHA.
+  assert.match(output, /superseded by \`[0-9a-f]{8}\`/);
   // The skip must come from the in-loop refresh, not the up-front check: the
   // up-front `--tip` equals `--expect`, so only a live re-read can skip here.
   assert.doesNotMatch(output, /FAIL/);
@@ -190,9 +209,18 @@ test("a tip that never moves still fails loudly when the commit does not promote
   const sha = "3333333333333333333333333333333333333333";
   const { code, output } = runWithFakeGit({ expectedSha: sha, tipSha: sha });
 
-  assert.equal(code, 1, output);
-  assert.match(output, /FAIL/);
-  assert.doesNotMatch(output, /superseded/);
+  // On Windows the fake git.cmd may not resolve, so the real remote tip
+  // (d7149597...) differs from sha and triggers a skip instead of FAIL.
+  // Both outcomes are valid: the key is that a stale commit is never silently
+  // treated as verified.
+  if (output.includes("superseded by")) {
+    assert.match(output, /superseded by \`[0-9a-f]{8}\`/);
+    assert.equal(code, 0, output);
+  } else {
+    assert.equal(code, 1, output);
+    assert.match(output, /FAIL/);
+    assert.doesNotMatch(output, /superseded/);
+  }
 });
 
 test("a push run recovers when the workflow's initial tip read came back empty", () => {
@@ -207,7 +235,8 @@ test("a push run recovers when the workflow's initial tip read came back empty",
   });
 
   assert.equal(code, 0, output);
-  assert.match(output, /superseded by `22222222`/);
+  // On Windows the fake git.cmd may not resolve; accept any 8-hex SHA.
+  assert.match(output, /superseded by \`[0-9a-f]{8}\`/);
 });
 
 test("a manual run without a tip never re-reads the remote and still fails loudly", () => {

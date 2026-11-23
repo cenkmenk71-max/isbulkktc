@@ -32,8 +32,6 @@
 //   node scripts/verify-search-console.mjs --site sc-domain:example.com
 //   node scripts/verify-search-console.mjs --sample 12 --days 28
 
-import { pathToFileURL } from "node:url";
-
 import {
   describeGoogleAuth,
   getAccessToken,
@@ -51,7 +49,20 @@ const DEFAULT_DAYS = 28;
 
 /** True when the module was launched directly, not imported by a test. */
 export function isDirectRun(moduleUrl, argv1) {
-  return Boolean(argv1) && moduleUrl === pathToFileURL(argv1).href;
+  if (!argv1) return false;
+  try {
+    const actual = decodeURIComponent(new URL(moduleUrl).pathname)
+      .replace(/\\/g, "/")
+      .toLowerCase();
+    const expected = argv1.replace(/\\/g, "/").toLowerCase();
+    return (
+      actual === expected ||
+      actual === "/" + expected ||
+      "/" + actual === expected
+    );
+  } catch {
+    return false;
+  }
 }
 
 /**

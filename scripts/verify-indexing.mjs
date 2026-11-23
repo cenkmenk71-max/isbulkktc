@@ -29,7 +29,7 @@
 // Exit code is non-zero only on a real `fail`. `warn` and `skip` are notes.
 
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import { readIndexNowKey } from "./indexnow-key.mjs";
 
@@ -40,7 +40,20 @@ import { readIndexNowKey } from "./indexnow-key.mjs";
  * comparison never does, and the script exits 0 having verified nothing.
  */
 export function isDirectRun(moduleUrl, argv1) {
-  return Boolean(argv1) && moduleUrl === pathToFileURL(argv1).href;
+  if (!argv1) return false;
+  try {
+    const actual = decodeURIComponent(new URL(moduleUrl).pathname)
+      .replace(/\\/g, "/")
+      .toLowerCase();
+    const expected = argv1.replace(/\\/g, "/").toLowerCase();
+    return (
+      actual === expected ||
+      actual === "/" + expected ||
+      "/" + actual === expected
+    );
+  } catch {
+    return false;
+  }
 }
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");

@@ -26,7 +26,6 @@
  */
 
 import { promises as dns } from "node:dns";
-import { pathToFileURL } from "node:url";
 
 /**
  * True when the module was launched directly (`node script.mjs`) rather than
@@ -35,7 +34,20 @@ import { pathToFileURL } from "node:url";
  * comparison never does, and the script exits 0 having verified nothing.
  */
 export function isDirectRun(moduleUrl, argv1) {
-  return Boolean(argv1) && moduleUrl === pathToFileURL(argv1).href;
+  if (!argv1) return false;
+  try {
+    const actual = decodeURIComponent(new URL(moduleUrl).pathname)
+      .replace(/\\/g, "/")
+      .toLowerCase();
+    const expected = argv1.replace(/\\/g, "/").toLowerCase();
+    return (
+      actual === expected ||
+      actual === "/" + expected ||
+      "/" + actual === expected
+    );
+  } catch {
+    return false;
+  }
 }
 
 const args = process.argv.slice(2);

@@ -28,7 +28,6 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { getEmailCopy } from '../supabase/functions/_shared/email-copy.ts';
 
 import {
@@ -44,7 +43,24 @@ const OUT = resolve('.artifacts', 'email-preview');
  * directory name holding a space or `#` still matches.
  */
 export function isDirectRun(moduleUrl, argv1) {
-  return Boolean(argv1) && moduleUrl === pathToFileURL(argv1).href;
+  if (!argv1) return false;
+  try {
+    // Normalize both sides to plain pathnames for comparison:
+    //   - decode %23/%20 etc. from the file: URL so they match raw argv1
+    //   - normalise Windows backslashes to forward slashes
+    //   - compare case-insensitively (drive-letter case differs on Windows)
+    const actual = decodeURIComponent(new URL(moduleUrl).pathname)
+      .replace(/\\/g, "/")
+      .toLowerCase();
+    const expected = argv1.replace(/\\/g, "/").toLowerCase();
+    return (
+      actual === expected ||
+      actual === "/" + expected ||
+      "/" + actual === expected
+    );
+  } catch {
+    return false;
+  }
 }
 
 /**
