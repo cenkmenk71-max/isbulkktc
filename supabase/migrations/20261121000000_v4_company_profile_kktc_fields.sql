@@ -9,7 +9,7 @@
 
 -- Helper: validate that a text[] contains only non-null strings each <= max_len chars
 create or replace function public.is_valid_string_array(arr text[], max_len integer)
-returns boolean language plpgsql as $$
+returns boolean language plpgsql as $func$
 declare
   i integer;
 begin
@@ -23,7 +23,7 @@ begin
   end loop;
   return true;
 end;
-$$;
+$func$;
 
 alter table public.companies
   add column trade_title text
