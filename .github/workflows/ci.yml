@@ -1,5 +1,6 @@
 name: isbulkktc CI
 
+# CI trigger test
 on:
   pull_request:
   # No run on push to main: a squash merge reproduces the exact tree the PR
