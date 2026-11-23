@@ -31,7 +31,8 @@ export async function saveCandidateProfile(
   };
 
   const result = candidateProfileUpdateSchema.safeParse({
-    fullName: formData.get("fullName"),
+    firstName: formData.get("firstName"),
+    lastName: formData.get("lastName"),
     headline: formData.get("headline"),
     location: formData.get("location"),
     skillsText: formData.get("skillsText"),
@@ -75,10 +76,14 @@ export async function saveCandidateProfile(
   // trigger auto-fills from the provider), not on `candidate_profiles`, so it is
   // written separately. Only `display_name` and `locale` are in the
   // `authenticated` UPDATE grant, which is exactly this column.
-  if (result.data.fullName !== user.displayName) {
+  const fullName = [result.data.firstName, result.data.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  if (fullName !== user.displayName) {
     const { error: nameError } = await supabase
       .from("profiles")
-      .update({ display_name: result.data.fullName })
+      .update({ display_name: fullName })
       .eq("id", user.id);
 
     if (nameError) {

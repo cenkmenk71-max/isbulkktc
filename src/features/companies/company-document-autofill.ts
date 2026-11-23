@@ -7,14 +7,51 @@ export type CompanyDocumentConflict = {
   value: string;
 };
 
+/** Belge çıkarıcısıyla doldurulabilen firma alanları (KKTC yapısına uygun). */
 const documentFields = [
-  "companyName",
-  "website",
+  "tradeName",
+  "tradeTitle",
+  "taxNumber",
+  "tradeRegistryNumber",
+  "mersisNo",
+  "establishmentDate",
+  "capital",
+  "registeredAddress",
+  "registeredDistrict",
+  "registeredMunicipality",
+  "registeredPostalCode",
+  "workplaceAddress",
+  "workplaceDistrict",
+  "workplaceMunicipality",
+  "workplacePostalCode",
   "phone",
-  "publicEmail",
-  "address",
-  "municipality",
+  "fax",
+  "email",
+  "website",
+  "naceCode",
+  "sector",
+  "subSector",
+  "keywords",
+  "bankName",
+  "iban",
+  "insuranceNumber",
+  "employeeCount",
+  "annualTurnoverRange",
+  "linkedIn",
+  "instagram",
+  "facebook",
+  "twitter",
+  "youtube",
+  "profileDescription",
+  "categoriesText",
 ] as const satisfies readonly (keyof CompanyDocumentSuggestions)[];
+
+function parseKeywords(value: string): string[] {
+  return value
+    .split(/[,;\n]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 export function applyCompanyDocumentAutofill(
   current: CompanyProfileFields,
@@ -29,21 +66,37 @@ export function applyCompanyDocumentAutofill(
   let filled = 0;
 
   for (const field of documentFields) {
-    const suggestion =
-      field === "municipality"
-        ? getNorthernCyprusDistrictForLocation({
-            address: suggestions.address,
-            municipality: suggestions.municipality,
-          }) ?? ""
-        : suggestions[field]?.trim();
+    const rawSuggestion = suggestions[field];
+    let suggestion: string;
+
+    if (
+      field === "registeredDistrict" ||
+      field === "workplaceDistrict" ||
+      field === "registeredMunicipality" ||
+      field === "workplaceMunicipality"
+    ) {
+      const computed = getNorthernCyprusDistrictForLocation({
+        address: suggestions.registeredAddress ?? "",
+        municipality: suggestions.registeredMunicipality ?? "",
+      });
+      suggestion = computed ?? (rawSuggestion ?? "").trim();
+    } else if (field === "keywords" || field === "categoriesText") {
+      suggestion = parseKeywords(rawSuggestion ?? "").join(", ");
+    } else {
+      suggestion = (rawSuggestion ?? "").trim();
+    }
+
     if (!suggestion) continue;
 
-    const currentValue = fields[field].trim();
-    if (!currentValue) {
+    const currentValue = fields[field];
+    const currentStr =
+      typeof currentValue === "string" ? currentValue : JSON.stringify(currentValue);
+
+    if (!currentStr.trim()) {
       fields[field] = suggestion;
       filled += 1;
     } else if (
-      currentValue.normalize("NFKC").toLocaleLowerCase() !==
+      currentStr.normalize("NFKC").toLocaleLowerCase() !==
       suggestion.normalize("NFKC").toLocaleLowerCase()
     ) {
       conflicts.push({ field, value: suggestion });

@@ -1,21 +1,53 @@
 import type { CompanyProfileFields } from "./company-directory-autofill";
 
-export type CompanyDocumentSuggestions = Partial<
-  Pick<
-    CompanyProfileFields,
-    | "companyName"
-    | "website"
-    | "phone"
-    | "publicEmail"
-    | "address"
-    | "municipality"
-  >
->;
+const companyDocumentFields = [
+  "tradeName",
+  "tradeTitle",
+  "companyType",
+  "taxNumber",
+  "tradeRegistryNumber",
+  "mersisNo",
+  "establishmentDate",
+  "capital",
+  "currency",
+  "registeredAddress",
+  "registeredDistrict",
+  "registeredMunicipality",
+  "registeredPostalCode",
+  "workplaceAddress",
+  "workplaceDistrict",
+  "workplaceMunicipality",
+  "workplacePostalCode",
+  "phone",
+  "fax",
+  "email",
+  "website",
+  "authorizedSignatories",
+  "naceCode",
+  "sector",
+  "subSector",
+  "keywords",
+  "bankName",
+  "iban",
+  "insuranceNumber",
+  "employeeCount",
+  "annualTurnoverRange",
+  "linkedIn",
+  "instagram",
+  "facebook",
+  "twitter",
+  "youtube",
+  "profileDescription",
+  "categoriesText",
+  "directoryTarget",
+] as const;
 
-type CompanyDocumentField = keyof CompanyDocumentSuggestions;
+type CompanyDocumentField = (typeof companyDocumentFields)[number];
+
+export type CompanyDocumentSuggestions = Partial<Record<CompanyDocumentField, string>>;
 
 const fieldLabels: Record<CompanyDocumentField, string[]> = {
-  companyName: [
+  tradeName: [
     "company name",
     "registered company name",
     "legal company name",
@@ -36,7 +68,73 @@ const fieldLabels: Record<CompanyDocumentField, string[]> = {
     "firmenname",
     "unternehmensname",
   ],
-  address: [
+  tradeTitle: [
+    "trade title",
+    "commercial title",
+    "ticaret adi",
+    "ticaret adı",
+    "ticari unvan",
+    "ticari ünvan",
+  ],
+  companyType: [
+    "company type",
+    "legal form",
+    "sirket turu",
+    "şirket türü",
+    "ltd",
+    "anonim",
+    "kollektif",
+    "komandit",
+    "sahis",
+    "sahıs",
+  ],
+  taxNumber: [
+    "tax number",
+    "tax id",
+    "vat number",
+    "vergi no",
+    "vergi numarası",
+    "vergı no",
+    "vergı numarası",
+  ],
+  tradeRegistryNumber: [
+    "trade registry number",
+    "commercial registry number",
+    "registry number",
+    "ticaret sicil no",
+    "ticaret sicil numarası",
+    "sicil no",
+    "sicil numarası",
+  ],
+  mersisNo: [
+    "mersis",
+    "mersis no",
+    "mersis numarası",
+    "mersis no.",
+  ],
+  establishmentDate: [
+    "establishment date",
+    "foundation date",
+    "incorporation date",
+    "kurulus tarihi",
+    "kuruluş tarihi",
+    "kuruldugu tarih",
+    "kurulduğu tarih",
+  ],
+  capital: [
+    "capital",
+    "share capital",
+    "registered capital",
+    "sermaye",
+    "kayitli sermaye",
+    "kaydedilmiş sermaye",
+  ],
+  currency: [
+    "currency",
+    "para birimi",
+    "currency code",
+  ],
+  registeredAddress: [
     "registered address",
     "registered office address",
     "company address",
@@ -54,14 +152,15 @@ const fieldLabels: Record<CompanyDocumentField, string[]> = {
     "geschäftsanschrift",
     "unternehmensadresse",
   ],
-  municipality: [
-    "municipality",
-    "city",
-    "town",
-    "district",
+  registeredDistrict: [
+    "registered district",
+    "registered ilce",
+    "kayitli ilce",
+    "kayıtlı ilçe",
     "belediye",
     "ilce",
     "sehir",
+    "şehir",
     "город",
     "муниципалитет",
     "δήμος",
@@ -71,15 +170,51 @@ const fieldLabels: Record<CompanyDocumentField, string[]> = {
     "gemeinde",
     "stadt",
   ],
-  website: [
-    "company website",
-    "business website",
-    "company web address",
-    "sirket web sitesi",
-    "isletme web sitesi",
-    "ιστοσελίδα εταιρείας",
-    "وب‌سایت شرکت",
-    "unternehmenswebsite",
+  registeredMunicipality: [
+    "municipality",
+    "belediye",
+    "city",
+    "town",
+    "district",
+    "sehir",
+    "şehir",
+  ],
+  registeredPostalCode: [
+    "postal code",
+    "zip code",
+    "posta kodu",
+    "posta kodu",
+    "zip",
+    "postcode",
+  ],
+  workplaceAddress: [
+    "workplace address",
+    "business address",
+    "office address",
+    "is yeri adresi",
+    "işyeri adresi",
+    "calisma yeri adresi",
+    "çalışma yeri adresi",
+  ],
+  workplaceDistrict: [
+    "workplace district",
+    "workplace ilce",
+    "is yeri ilcesi",
+    "işyeri ilçesi",
+    "is ilcesi",
+    "iş ilçesi",
+  ],
+  workplaceMunicipality: [
+    "workplace municipality",
+    "workplace belediye",
+    "is yeri belediyesi",
+    "işyeri belediyesi",
+  ],
+  workplacePostalCode: [
+    "workplace postal code",
+    "workplace zip code",
+    "is yeri posta kodu",
+    "işyeri posta kodu",
   ],
   phone: [
     "company phone",
@@ -90,21 +225,185 @@ const fieldLabels: Record<CompanyDocumentField, string[]> = {
     "sirket telefonu",
     "isletme telefonu",
     "ofis telefonu",
+    "işletme telefonu",
+    "ofis telefonu",
+    "cep telefonu",
+    "telefon",
+    "phone",
+    "tel",
+    "tlf",
     "τηλέφωνο εταιρείας",
     "تلفن شرکت",
     "unternehmenstelefon",
     "geschäftstelefon",
   ],
-  publicEmail: [
+  fax: [
+    "fax",
+    "faks",
+    "faks numarası",
+    "fakstelefon",
+  ],
+  email: [
     "company email",
     "business email",
     "company e-mail",
     "business e-mail",
     "sirket e-posta",
     "isletme e-posta",
+    "e-posta",
+    "eposta",
+    "email",
+    "e-mail",
     "ηλεκτρονικό ταχυδρομείο εταιρείας",
     "ایمیل شرکت",
     "unternehmens-e-mail",
+  ],
+  website: [
+    "company website",
+    "business website",
+    "company web address",
+    "sirket web sitesi",
+    "isletme web sitesi",
+    "web sitesi",
+    "web site",
+    "site",
+    "http",
+    "https",
+    "www",
+    "ιστοσελίδα εταιρείας",
+    "وب‌سایت شرکت",
+    "unternehmenswebsite",
+  ],
+  authorizedSignatories: [
+    "authorized signatory",
+    "authorized signatories",
+    "signatory",
+    "imza yetkilisi",
+    "imza yetkilileri",
+    "yetkili kisi",
+    "yetkili kişi",
+    "yetkili temsilci",
+  ],
+  naceCode: [
+    "nace code",
+    "nace",
+    "nace kodu",
+    "nace code",
+    "activity code",
+    "faaliyet kodu",
+  ],
+  sector: [
+    "sector",
+    "industry",
+    "sektor",
+    "sirket sektoru",
+    "faaliyet alani",
+    "faaliyet alanı",
+  ],
+  subSector: [
+    "sub sector",
+    "subsector",
+    "alt sektör",
+    "alt sektor",
+    "sub-sector",
+  ],
+  keywords: [
+    "keywords",
+    "anahtar kelime",
+    "anahtar kelimeler",
+    "tags",
+    "etiketler",
+  ],
+  bankName: [
+    "bank name",
+    "banka adi",
+    "banka adı",
+    "bank",
+  ],
+  iban: [
+    "iban",
+    "iban no",
+    "iban numarası",
+    "bank account",
+    "hesap numarası",
+  ],
+  insuranceNumber: [
+    "insurance number",
+    "insurance no",
+    "sigorta no",
+    "sigorta numarası",
+    "sgk",
+  ],
+  employeeCount: [
+    "employee count",
+    "number of employees",
+    "staff count",
+    "calisan sayisi",
+    "çalışan sayısı",
+    "personel sayısı",
+    "employee",
+    "staff",
+  ],
+  annualTurnoverRange: [
+    "annual turnover",
+    "turnover",
+    "revenue",
+    "ciro",
+    "yıllık ciro",
+    "yıllık ciro araligi",
+    "yıllık ciro aralığı",
+  ],
+  linkedIn: [
+    "linkedin",
+    "linkedin url",
+    "linkedin link",
+  ],
+  instagram: [
+    "instagram",
+    "instagram url",
+    "instagram link",
+  ],
+  facebook: [
+    "facebook",
+    "facebook url",
+    "facebook link",
+  ],
+  twitter: [
+    "twitter",
+    "x",
+    "twitter url",
+    "twitter link",
+  ],
+  youtube: [
+    "youtube",
+    "youtube url",
+    "youtube link",
+    "kanal",
+  ],
+  profileDescription: [
+    "profile description",
+    "company description",
+    "about company",
+    "hakkinda",
+    "hakkımızda",
+    "sirket hakkında",
+    "firma hakkında",
+    "description",
+    "aciklama",
+    "açıklama",
+  ],
+  categoriesText: [
+    "categories",
+    "category",
+    "kategori",
+    "kategoriler",
+    "sektor kategorisi",
+    "business category",
+  ],
+  directoryTarget: [
+    "directory target",
+    "dizin hedefi",
+    "rehber hedefi",
   ],
 };
 
@@ -134,24 +433,76 @@ function normalizeValue(field: CompanyDocumentField, value: string): string {
     .replace(/^[\s"'“”‘’]+|[\s"'“”‘’]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();
-  const maximumLength = {
-    companyName: 120,
-    website: 2_048,
-    phone: 80,
-    publicEmail: 254,
-    address: 240,
-    municipality: 120,
-  }[field];
 
-  if (!cleaned || cleaned.length > maximumLength) return "";
+  const maximumLength: Record<CompanyDocumentField, number> = {
+    tradeName: 120,
+    tradeTitle: 120,
+    companyType: 20,
+    taxNumber: 10,
+    tradeRegistryNumber: 60,
+    mersisNo: 16,
+    establishmentDate: 10,
+    capital: 50,
+    currency: 3,
+    registeredAddress: 500,
+    registeredDistrict: 120,
+    registeredMunicipality: 120,
+    registeredPostalCode: 5,
+    workplaceAddress: 500,
+    workplaceDistrict: 120,
+    workplaceMunicipality: 120,
+    workplacePostalCode: 5,
+    phone: 80,
+    fax: 80,
+    email: 254,
+    website: 2_048,
+    authorizedSignatories: 1_000,
+    naceCode: 4,
+    sector: 80,
+    subSector: 80,
+    keywords: 1_000,
+    bankName: 120,
+    iban: 30,
+    insuranceNumber: 60,
+    employeeCount: 20,
+    annualTurnoverRange: 20,
+    linkedIn: 2_048,
+    instagram: 2_048,
+    facebook: 2_048,
+    twitter: 2_048,
+    youtube: 2_048,
+    profileDescription: 2_000,
+    categoriesText: 1_000,
+    directoryTarget: 160,
+  };
+
+  if (!cleaned || cleaned.length > maximumLength[field]) return "";
   if (field === "website" && !/^https?:\/\/\S+$/i.test(cleaned)) return "";
   if (
-    field === "publicEmail" &&
+    field === "email" &&
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned)
   ) {
     return "";
   }
   if (field === "phone" && cleaned.replace(/\D/g, "").length < 5) return "";
+  if (
+    field === "taxNumber" &&
+    !/^\d{10}$/.test(cleaned.replace(/\D/g, ""))
+  ) {
+    return "";
+  }
+  if (field === "mersisNo" && !/^\d{16}$/.test(cleaned.replace(/\D/g, ""))) {
+    return "";
+  }
+  if (field === "registeredPostalCode" && !/^\d{5}$/.test(cleaned)) return "";
+  if (field === "workplacePostalCode" && !/^\d{5}$/.test(cleaned)) return "";
+  if (field === "capital" && !/^\d[\d.,]*$/.test(cleaned)) return "";
+  if (
+    field === "establishmentDate" &&
+    !/^\d{4}-\d{2}-\d{2}$/.test(cleaned)
+  ) {
+    return "";
+  }
   return cleaned;
 }
 

@@ -15,7 +15,7 @@ import { Link } from "@/i18n/navigation";
 import { signOut } from "@/features/identity/actions";
 import { DeleteAccountButton } from "@/features/identity/delete-account-button";
 import { AccountPanel } from "@/features/identity/account-panel";
-import { CompanyProfileForm } from "@/features/companies/company-profile-form";
+import { CompanyProfileForm } from "@/features/companies/company-profile-form-v2";
 import { markApplicationViewed } from "@/features/jobs/actions";
 import { companyDirectory } from "@/features/companies/directory-data";
 import { getManagedDirectoryEntries } from "@/server/dal/content";
@@ -426,22 +426,7 @@ export default async function CompanyDashboardPage({
           className="company-workspace-profile"
           id="company-profile"
         >
-          <CompanyProfileForm
-            address={submittedProfile.address}
-            categories={submittedProfile.categories}
-            companyId={company.id}
-            companyName={submittedCompanyName}
-            directoryTarget={directoryTarget}
-            directoryTargets={directoryTargets}
-            municipality={submittedProfile.municipality}
-            phone={submittedProfile.phone}
-            profileDescription={submittedProfile.profile_description}
-            publicEmail={submittedProfile.public_email}
-            reviewNote={latestSubmission?.review_note ?? null}
-            submissionStatus={latestSubmission?.status ?? null}
-            verificationStatus={company.verification_status}
-            website={submittedProfile.website}
-          />
+          <CompanyProfileForm />
         </section>
 
         <aside

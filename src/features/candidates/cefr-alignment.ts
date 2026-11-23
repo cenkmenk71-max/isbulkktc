@@ -221,12 +221,12 @@ const PROFICIENCY_MAPPING_MATRIX: ProficiencyMappingEntry[] = [
 function normalizeForMatching(value: string): string {
   return value
     .normalize("NFKC")
-    .toLocaleLowerCase("tr-TR")
     .replace(/[ıİ]/g, "i")
     .normalize("NFKD")
     .replace(/\p{Diacritic}/gu, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
+    .trim()
+    .toLowerCase();
 }
 
 const normalizedProficiencyCache = new Map<string, ProficiencyCode>();

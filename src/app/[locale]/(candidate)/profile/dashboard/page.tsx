@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { CandidateProfileForm } from "@/features/candidates/candidate-profile-form";
+import { CandidateProfileForm } from "@/features/candidates/candidate-profile-form-v2";
 import { signOut } from "@/features/identity/actions";
 import { DeleteAccountButton } from "@/features/identity/delete-account-button";
 import { getCandidateWorkspace } from "@/server/dal/user";
@@ -113,18 +113,7 @@ export default async function CandidateDashboardPage() {
           <p role="status">{copy("noApplications")}</p>
         )}
       </section>
-      <CandidateProfileForm
-        account={{
-          displayName: user.displayName,
-          email: user.email,
-          avatarUrl: user.avatarUrl,
-          givenName: user.givenName,
-          familyName: user.familyName,
-          signInMethods: user.signInMethods,
-          emailConfirmed: user.emailConfirmed,
-        }}
-        profile={profile}
-      />
+      <CandidateProfileForm />
       <section
         aria-labelledby="candidate-notifications-title"
         className="candidate-dashboard-notifications"

@@ -1,12 +1,20 @@
 import type {
   CandidateCertification,
+  CandidateCourse,
   CandidateEducation,
   CandidateExperience,
   CandidateLanguage,
+  CandidateInternship,
+  CandidateProject,
+  CandidatePublication,
+  CandidateAward,
+  CandidateVolunteer,
+  CandidateReference,
 } from "./schemas";
 import { resolveNorthernCyprusDistrict } from "@/features/locations/northern-cyprus-districts";
 import { mapLanguageNameToCode } from "./language-mapping";
 import { mapProficiencyToCEFR } from "./cefr-alignment";
+import { trLowercase } from "@/lib/tr-lowercase";
 
 export type CandidateLink = {
   label: string;
@@ -18,9 +26,16 @@ export type CandidateResumeDraft = {
   location?: string;
   skills?: string[];
   experience?: CandidateExperience[];
+  internships?: CandidateInternship[];
   education?: CandidateEducation[];
   languages?: CandidateLanguage[];
   certifications?: CandidateCertification[];
+  courses?: CandidateCourse[];
+  projects?: CandidateProject[];
+  publications?: CandidatePublication[];
+  awards?: CandidateAward[];
+  volunteer?: CandidateVolunteer[];
+  references?: CandidateReference[];
   summary?: string;
   cvFullText?: string;
   links?: CandidateLink[];
@@ -465,8 +480,7 @@ function isPersonalDataToken(word: string): boolean {
 }
 
 function wordsOf(value: string): string[] {
-  return value
-    .toLocaleLowerCase("tr-TR")
+  return trLowercase(value)
     .split(/[^\p{L}\p{N}]+/u)
     .filter(Boolean);
 }
@@ -883,12 +897,15 @@ function parseExperience(lines: string[]): CandidateExperience[] {
         .slice(0, 1_800);
 
       return {
+        company: organization.slice(0, 160),
         role: role.slice(0, 140),
-        organization: organization.slice(0, 160),
-        location: location.slice(0, 120),
-        startDate: block.dates?.startDate ?? "",
-        endDate: block.dates?.endDate ?? "",
+        district: (((location && location.slice(0, 120)) || "") as CandidateExperience["district"]),
+        startDate: block.dates?.startDate || null,
+        endDate: block.dates?.endDate || null,
+        isCurrent: false,
         description,
+        achievements: [],
+        sector: undefined,
       };
     })
     .filter((entry) => Object.values(entry).some(Boolean))
@@ -934,12 +951,15 @@ function parseEducation(lines: string[]): CandidateEducation[] {
         .slice(0, 1_200);
 
       return {
+        level: ("other" as CandidateEducation["level"]),
         institution: institution.slice(0, 160),
-        qualification: qualification.slice(0, 140),
-        field: field.slice(0, 140),
-        startDate: block.dates?.startDate ?? "",
-        endDate: block.dates?.endDate ?? "",
-        description,
+        department: field.slice(0, 140),
+        degree: qualification.slice(0, 140) || null,
+        startYear: block.dates?.startDate?.slice(0, 4) || null,
+        endYear: block.dates?.endDate?.slice(0, 4) || null,
+        gpa: undefined,
+        isOngoing: false,
+        location: null,
       };
     })
     .filter((entry) => Object.values(entry).some(Boolean))
@@ -966,7 +986,11 @@ function parseLanguages(lines: string[]): CandidateLanguage[] {
       ? mapProficiencyToCEFR(proficiencyMatch[1])
       : "B1";
     const standardName = mapped?.standardNameTr ?? name.slice(0, 80);
-    return { name: standardName, proficiency };
+    return {
+      language: (mapped?.code ?? "other") as CandidateLanguage["language"],
+      proficiency: (proficiency as CandidateLanguage["proficiency"]),
+      language_name_localized: undefined,
+    };
   });
 }
 

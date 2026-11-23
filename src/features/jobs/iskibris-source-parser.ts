@@ -1,4 +1,5 @@
 import { decodeHtmlEntities } from "./source-job-import";
+import { trLowercase } from "@/lib/tr-lowercase";
 
 export type IskibrisSourceCard = {
   id: string;
@@ -179,7 +180,7 @@ function getWorkplaceMode(
   const value = getString(job.workplace_mode) ?? getString(job.work_mode);
   if (!value) return null;
 
-  const normalized = value.toLocaleLowerCase("tr");
+  const normalized = trLowercase(value);
   if (/remote|uzaktan/.test(normalized)) return "remote";
   if (/hybrid|hibrit/.test(normalized)) return "hybrid";
   if (/on.site|office|iş yerinde|yerinde/.test(normalized)) return "on_site";

@@ -1,6 +1,8 @@
 const maximumSlugLength = 80;
 const fallbackSlug = "sirket";
 
+import { trLowercase } from "@/lib/tr-lowercase";
+
 /**
  * Builds the public identifier of a company from its display name.
  *
@@ -9,8 +11,7 @@ const fallbackSlug = "sirket";
  * "Şahin İnşaat" produces a stable, ASCII-only identifier.
  */
 export function slugifyCompanyName(value: string): string {
-  const base = value
-    .toLocaleLowerCase("tr-TR")
+  const base = trLowercase(value)
     .replace(/[ıİ]/g, "i")
     .normalize("NFKD")
     .replace(/\p{Diacritic}/gu, "")
@@ -36,8 +37,7 @@ export function slugifyCompanyName(value: string): string {
  * ASCII and any other character becomes a single hyphen.
  */
 export function normalizeSlugInput(value: string): string {
-  return value
-    .toLocaleLowerCase("tr-TR")
+  return trLowercase(value)
     .replace(/[ıİ]/g, "i")
     .normalize("NFKD")
     .replace(/\p{Diacritic}/gu, "")

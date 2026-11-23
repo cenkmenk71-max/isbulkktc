@@ -14,6 +14,7 @@ import {
   publicJobSlugSchema,
 } from "@/features/jobs/schemas";
 import type { Database } from "@/types/database";
+import { trLowercase } from "@/lib/tr-lowercase";
 
 type JobRow = Database["public"]["Tables"]["jobs"]["Row"];
 type PlatformRole = Database["public"]["Enums"]["platform_role"];
@@ -368,7 +369,7 @@ function mergeJobCompaniesByName(
   const merged = new Map<string, PublicJobCompany>();
 
   for (const company of companies) {
-    const key = company.company_slug.trim().toLocaleLowerCase("tr");
+    const key = trLowercase(company.company_slug.trim());
     const existing = merged.get(key);
 
     if (!existing) {

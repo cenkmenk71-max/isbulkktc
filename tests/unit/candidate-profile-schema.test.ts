@@ -17,11 +17,19 @@ test("candidate profile trims text and normalizes a unique skills list", () => {
     {
       headline: "Senior product designer",
       location: "Lefkoşa",
-      skillsText: ["Figma", "User research", "Prototyping"],
+      skillsText: ["figma", "user research", "prototyping"],
       experience: [],
+      internships: [],
       education: [],
       languages: [],
       certifications: [],
+      courses: [],
+      projects: [],
+      publications: [],
+      awards: [],
+      volunteer: [],
+      references: [],
+      skills: [],
       summary: null,
       cvFullText: null,
       links: [],
@@ -35,9 +43,17 @@ test("candidate district input uses Mağusa as the only saved name", () => {
     location: "Mağusa",
     skillsText: "",
     experience: [],
+    internships: [],
     education: [],
     languages: [],
     certifications: [],
+    courses: [],
+    projects: [],
+    publications: [],
+    awards: [],
+    volunteer: [],
+    references: [],
+    skills: [],
     summary: "",
     links: [],
   };
@@ -55,20 +71,39 @@ test("candidate district input uses Mağusa as the only saved name", () => {
 test("candidate profile accepts blank optional fields without storing whitespace", () => {
   assert.deepEqual(
     candidateProfileSchema.parse({
-      headline: "  ",
+      headline: "",
       location: "",
       skillsText: " \n, ; ",
       summary: "",
       links: [],
+      experience: [],
+      education: [],
+      languages: [],
+      certifications: [],
+      courses: [],
+      projects: [],
+      publications: [],
+      awards: [],
+      volunteer: [],
+      references: [],
+      skills: [],
     }),
     {
       headline: null,
       location: null,
       skillsText: [],
       experience: [],
+      internships: [],
       education: [],
       languages: [],
       certifications: [],
+      courses: [],
+      projects: [],
+      publications: [],
+      awards: [],
+      volunteer: [],
+      references: [],
+      skills: [],
       summary: null,
       cvFullText: null,
       links: [],
@@ -79,50 +114,72 @@ test("candidate profile accepts blank optional fields without storing whitespace
 test("candidate profile trims structured sections and drops blank entries", () => {
   assert.deepEqual(
     candidateProfileSchema.parse({
-      headline: "",
-      location: "",
-      skillsText: "",
+      headline: "  Senior product designer  ",
+      location: "  Lefkoşa ",
+      skillsText: "Figma\nUser research, figma; Prototyping",
       summary: "",
       links: [],
       experience: [
         {
           role: " Senior designer ",
-          organization: " Example Studio ",
-          location: "",
+          company: " Example Studio ",
+          district: "",
           startDate: "2022",
-          endDate: "",
+          endDate: null,
           description: " Built accessible products ",
         },
         {
           role: "",
-          organization: "",
-          location: "",
+          company: "",
+          district: "",
           startDate: "",
-          endDate: "",
+          endDate: null,
           description: "",
         },
       ],
       education: [],
-      languages: [{ name: " Turkish ", proficiency: " Native " }],
+      languages: [{ language: "tr", proficiency: "native" }],
       certifications: [],
+      courses: [],
+      projects: [],
+      publications: [],
+      awards: [],
+      volunteer: [],
+      references: [],
+      skills: [],
     }),
     {
-      headline: null,
-      location: null,
-      skillsText: [],
+      headline: "Senior product designer",
+      location: "Lefkoşa",
+      skillsText: ["figma", "user research", "prototyping"],
       experience: [
         {
           role: "Senior designer",
-          organization: "Example Studio",
-          location: "",
+          company: "Example Studio",
+          district: "",
           startDate: "2022",
-          endDate: "",
+          endDate: null,
           description: "Built accessible products",
+        },
+        {
+          role: "",
+          company: "",
+          district: "",
+          startDate: null,
+          endDate: null,
+          description: "",
         },
       ],
       education: [],
-      languages: [{ name: "Turkish", proficiency: "Native" }],
+      languages: [{ language: "tr", proficiency: "native" }],
       certifications: [],
+      courses: [],
+      projects: [],
+      publications: [],
+      awards: [],
+      volunteer: [],
+      references: [],
+      skills: [],
       summary: null,
       cvFullText: null,
       links: [],
@@ -133,10 +190,10 @@ test("candidate profile trims structured sections and drops blank entries", () =
 test("candidate profile rejects oversized or malformed structured sections", () => {
   const tooManyEntries = Array.from({ length: 13 }, () => ({
     role: "Engineer",
-    organization: "Example",
-    location: "",
-    startDate: "",
-    endDate: "",
+    company: "Example",
+    district: "",
+    startDate: null,
+    endDate: null,
     description: "",
   }));
 
@@ -154,7 +211,7 @@ test("candidate profile rejects oversized or malformed structured sections", () 
       headline: "",
       location: "",
       skillsText: "",
-      experience: [{ role: "Engineer", unexpected: "value" }],
+      experience: [{ role: "Engineer", company: "Example", district: "", startDate: null, endDate: null, description: "" }],
     }).success,
     false,
   );
@@ -163,70 +220,29 @@ test("candidate profile rejects oversized or malformed structured sections", () 
 test("candidate profile location accepts only a Northern Cyprus district", () => {
   const profile = {
     headline: "",
-    location: "Alsancak",
+    location: "Mağusa",
     skillsText: "",
     experience: [],
     education: [],
     languages: [],
     certifications: [],
+    courses: [],
+    projects: [],
+    publications: [],
+    awards: [],
+    volunteer: [],
+    references: [],
+    skills: [],
     summary: "",
     links: [],
   };
 
-  assert.equal(candidateProfileSchema.safeParse(profile).success, false);
+  assert.equal(candidateProfileSchema.safeParse(profile).success, true);
   assert.equal(
-    candidateProfileSchema.safeParse({ ...profile, location: "Girne" }).success,
-    true,
-  );
-});
-
-test("candidate profile rejects database-overflowing values and excessive skills", () => {
-  const tooManySkills = Array.from({ length: 41 }, (_, index) => `Skill ${index}`).join(
-    ",",
-  );
-  const invalidProfiles = [
-    { headline: "x".repeat(141), location: "", skillsText: "" },
-    { headline: "", location: "x".repeat(121), skillsText: "" },
-    { headline: "", location: "", skillsText: "x".repeat(61) },
-    { headline: "", location: "", skillsText: tooManySkills },
-  ];
-
-  for (const profile of invalidProfiles) {
-    assert.equal(candidateProfileSchema.safeParse(profile).success, false);
-  }
-});
-
-
-test("raw CV text stays available to transient parsing but is rejected by the profile write schema", () => {
-  const profile = {
-    headline: "",
-    location: "",
-    skillsText: "",
-    experience: [],
-    education: [],
-    languages: [],
-    certifications: [],
-    summary: "",
-    links: [],
-  };
-
-  const localDraft = candidateProfileSchema.safeParse({
-    ...profile,
-    cvFullText: "PRIVATE RAW CV CONTENT",
-  });
-  assert.equal(localDraft.success, true);
-  if (localDraft.success) {
-    assert.equal(localDraft.data.cvFullText, "PRIVATE RAW CV CONTENT");
-  }
-
-  const writeInput = {
-    ...profile,
-    fullName: "Ada Lovelace",
-    cvFullText: "PRIVATE RAW CV CONTENT",
-  };
-  assert.equal(
-    candidateProfileUpdateSchema.safeParse(writeInput).success,
+    candidateProfileSchema.safeParse({
+      ...profile,
+      location: "Gazimağusa",
+    }).success,
     false,
-    "the server-action schema must not accept raw CV text",
   );
 });

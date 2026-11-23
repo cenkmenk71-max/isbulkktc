@@ -28,20 +28,26 @@ test("keeps role, employer and dates together when each sits on its own line", (
 
   assert.deepEqual(draft.experience, [
     {
+      company: "Acme Corp",
       role: "Senior Software Engineer",
-      organization: "Acme Corp",
-      location: "",
+      district: "",
       startDate: "2019",
       endDate: "2023",
+      isCurrent: false,
       description: "Led the platform team.",
+      achievements: [],
+      sector: undefined,
     },
     {
+      company: "Beta Ltd",
       role: "Software Engineer",
-      organization: "Beta Ltd",
-      location: "",
+      district: "",
       startDate: "2016",
       endDate: "2019",
+      isCurrent: false,
       description: "",
+      achievements: [],
+      sector: undefined,
     },
   ]);
 });
@@ -59,11 +65,14 @@ test("groups a multi-line education entry and keeps its dates with it", () => {
   assert.deepEqual(draft.education, [
     {
       institution: "University of Cyprus",
-      qualification: "BSc Computer Science",
-      field: "",
-      startDate: "2012",
-      endDate: "2016",
-      description: "",
+      department: "",
+      degree: "BSc Computer Science",
+      startYear: "2012",
+      endYear: "2016",
+      gpa: undefined,
+      isOngoing: false,
+      location: null,
+      level: "other",
     },
   ]);
 });
@@ -79,12 +88,15 @@ test("does not repeat the location inside the experience description", () => {
 
   assert.deepEqual(draft.experience, [
     {
+      company: "Example Studio",
       role: "Product Designer",
-      organization: "Example Studio",
-      location: "Berlin",
+      district: "Berlin",
       startDate: "2020",
       endDate: "2022",
+      isCurrent: false,
       description: "Shipped the design system.",
+      achievements: [],
+      sector: undefined,
     },
   ]);
 });
@@ -130,7 +142,7 @@ test("attaches a trailing date to the entry above it, not the one below", () => 
   assert.deepEqual(
     draft.experience?.map((entry) => [
       entry.role,
-      entry.organization,
+      entry.company,
       entry.startDate,
       entry.endDate,
     ]),

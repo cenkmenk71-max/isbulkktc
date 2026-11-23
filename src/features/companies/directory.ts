@@ -103,9 +103,10 @@ export function applyCompanyDirectoryOverrides(
   });
 }
 
+import { trLowercase } from "@/lib/tr-lowercase";
+
 export function normalizeCompanySearchText(value: string): string {
-  return value
-    .toLocaleLowerCase("tr")
+  return trLowercase(value)
     .replace(/ı/g, "i")
     .normalize("NFKD")
     .replace(/\p{Diacritic}/gu, "")

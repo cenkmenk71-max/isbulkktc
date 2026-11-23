@@ -10,6 +10,7 @@
  */
 
 import type { CSSProperties } from "react";
+import { trLowercase } from "@/lib/tr-lowercase";
 
 export type CompanyBrandTone = {
   /** Upper-left gradient stop. */
@@ -50,8 +51,7 @@ function hashName(value: string): number {
 }
 
 function normalizeName(value: string): string {
-  return value
-    .toLocaleLowerCase("tr")
+  return trLowercase(value)
     .normalize("NFKD")
     .replace(/\p{Diacritic}/gu, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ")

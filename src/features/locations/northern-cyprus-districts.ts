@@ -7,6 +7,8 @@ export const northernCyprusDistrictValues = [
   "Lefke",
 ] as const;
 
+import { trLowercase } from "@/lib/tr-lowercase";
+
 export type NorthernCyprusDistrict =
   (typeof northernCyprusDistrictValues)[number];
 
@@ -23,8 +25,7 @@ export const northernCyprusDistricts = [
 }[];
 
 function normalizeLocation(value: string): string {
-  return value
-    .toLocaleLowerCase("tr-TR")
+  return trLowercase(value)
     .replace(/[ıİ]/g, "i")
     .normalize("NFKD")
     .replace(/\p{Diacritic}/gu, "")
@@ -281,8 +282,7 @@ export function getNorthernCyprusDistrictForLocation(location: {
  * route and the sitemap can never disagree about a district's URL.
  */
 export function districtSlug(value: string): string {
-  return value
-    .toLocaleLowerCase("tr-TR")
+  return trLowercase(value)
     .replace(/[ıİ]/g, "i")
     .replace(/ş/g, "s")
     .replace(/ğ/g, "g")

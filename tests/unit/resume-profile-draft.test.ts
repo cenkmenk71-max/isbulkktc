@@ -6,13 +6,40 @@ import {
 } from "../../src/features/candidates/resume-profile-draft";
 
 const emptyProfile: CandidateProfileDraft = {
+  firstName: "",
+  middleName: "",
+  lastName: "",
+  dateOfBirth: "",
+  gender: "",
+  nationality: "",
+  tcNo: "",
+  passportNo: "",
+  maritalStatus: "",
+  drivingLicense: "",
+  addressLine: "",
+  district: "",
+  municipality: "",
+  postalCode: "",
+  phone: "",
+  email: "",
+  linkedIn: "",
+  github: "",
+  portfolio: "",
   headline: "",
   location: "",
-  skills: [],
+  skillsText: [],
   experience: [],
+  internships: [],
   education: [],
+  skills: [],
   languages: [],
   certifications: [],
+  courses: [],
+  projects: [],
+  publications: [],
+  awards: [],
+  volunteer: [],
+  references: [],
   summary: "",
   cvFullText: "",
   links: [],
@@ -28,23 +55,29 @@ test("adds CV details without replacing existing profile values", () => {
     links: [],
     experience: [
       {
+        company: "Current Studio",
         role: "Product designer",
-        organization: "Current Studio",
-        location: "",
+        district: undefined,
         startDate: "2023",
         endDate: "",
+        isCurrent: false,
         description: "",
+        achievements: [],
+        sector: undefined,
       },
     ],
   };
   const originalProfile = structuredClone(currentProfile);
   const experience = {
+    company: "Current Studio",
     role: "Product designer",
-    organization: "Current Studio",
-    location: "",
+    district: undefined,
     startDate: "2023",
     endDate: "",
+    isCurrent: false,
     description: "",
+    achievements: [],
+    sector: undefined,
   };
   const result = mergeResumeDraft(
     currentProfile,
@@ -55,15 +88,18 @@ test("adds CV details without replacing existing profile values", () => {
       experience: [
         experience,
         {
+          company: "New Studio",
           role: "Designer",
-          organization: "New Studio",
-          location: "",
+          district: undefined,
           startDate: "2021",
           endDate: "2022",
+          isCurrent: false,
           description: "",
+          achievements: [],
+          sector: undefined,
         },
       ],
-      languages: [{ name: "Turkish", proficiency: "Native" }],
+      languages: [{ language: "tr", proficiency: "native" }],
     },
   );
 
@@ -72,17 +108,20 @@ test("adds CV details without replacing existing profile values", () => {
   assert.deepEqual(result.profile.skills, ["TypeScript", "Research"]);
   assert.deepEqual(result.profile.experience, [
     experience,
-    {
-      role: "Designer",
-      organization: "New Studio",
-      location: "",
-      startDate: "2021",
-      endDate: "2022",
-      description: "",
-    },
+      {
+        company: "New Studio",
+        role: "Designer",
+        district: undefined,
+        startDate: "2021",
+        endDate: "2022",
+        isCurrent: false,
+        description: "",
+        achievements: [],
+        sector: undefined,
+      },
   ]);
   assert.deepEqual(result.profile.languages, [
-    { name: "Turkish", proficiency: "Native" },
+    { language: "tr", proficiency: "native" },
   ]);
   assert.equal(result.added, 3);
   assert.equal(result.skipped, 0);
@@ -127,12 +166,15 @@ test("imports a CV location only when it maps to a supported district", () => {
 
 test("deduplicates imported entries and reports entries beyond profile limits", () => {
   const currentExperience = Array.from({ length: 12 }, (_, index) => ({
+    company: `Company ${index}`,
     role: `Role ${index}`,
-    organization: `Company ${index}`,
-    location: "",
+    district: undefined,
     startDate: "",
     endDate: "",
+    isCurrent: false,
     description: "",
+    achievements: [],
+    sector: undefined,
   }));
   const currentSkills = Array.from({ length: 40 }, (_, index) => `Skill ${index}`);
   const duplicateExperience = currentExperience[0];
@@ -150,12 +192,15 @@ test("deduplicates imported entries and reports entries beyond profile limits", 
       experience: [
         duplicateExperience,
         {
+          company: "New company",
           role: "New role",
-          organization: "New company",
-          location: "",
+          district: undefined,
           startDate: "",
           endDate: "",
+          isCurrent: false,
           description: "",
+          achievements: [],
+          sector: undefined,
         },
       ],
       skills: ["New skill"],

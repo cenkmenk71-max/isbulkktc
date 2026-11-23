@@ -9,20 +9,15 @@ import {
 } from "@/server/dal/user";
 import { getOwnedCompany } from "@/server/dal/companies";
 import { getLocalePrefix } from "@/i18n/routing";
-import { companyDirectory } from "./directory-data";
-import type { CompanyDirectoryEntry } from "./directory";
 import { getManagedDirectoryEntries } from "@/server/dal/content";
-// Namespace import, not a named one: the integration harness replaces this
-// module with a recorder whose export list is written out by hand, and a named
-// import of a function that list omits fails at ESM link time — killing every
-// test that merely imports this action, not just the one that sends mail. The
-// send is best-effort behind a try/catch anyway, so a double that lacks it
-// degrades to a caught error exactly like a delivery failure.
+import type { CompanyDirectoryEntry } from "./directory";
+import { companyDirectory } from "./directory-data";
 import * as mailer from "@/server/email/mailer";
 import {
   companyProfileSchema,
   companyVerificationReviewSchema,
   createCompanySchema,
+  companySubmissionSchema,
   type CompanyProfileFormState,
   type CompanyProfileSubmissionReviewState,
   type CompanyVerificationReviewState,
@@ -38,43 +33,29 @@ export async function createCompany(
   if (user.status !== "active") return { status: "error", message: "unauthorized" };
 
   const result = createCompanySchema.safeParse({
-    name: formData.get("name"),
+    tradeName: formData.get("tradeName"),
     slug: formData.get("slug"),
   });
 
   if (!result.success) {
-    return {
-      status: "error",
-      message: "invalid",
-    };
+    return { status: "error", message: "invalid" };
   }
 
   const supabase = await createSupabaseServerClient({ allowCookieWrites: true });
   const { data: companyId, error } = await supabase.rpc("create_company", {
-    company_name: result.data.name,
+    company_name: result.data.tradeName,
     company_slug: result.data.slug,
   });
 
   if (error) {
     if (error.code === "23505") {
-      return {
-        status: "error",
-        message: "duplicate",
-      };
+      return { status: "error", message: "duplicate" };
     }
-
     if (error.code === "42501") {
-      return {
-        status: "error",
-        message: "unauthorized",
-      };
+      return { status: "error", message: "unauthorized" };
     }
-
     console.error("Company creation failed.", { code: error.code });
-    return {
-      status: "error",
-      message: "failed",
-    };
+    return { status: "error", message: "failed" };
   }
 
   if (!companyId) {
@@ -87,11 +68,6 @@ export async function createCompany(
   );
 }
 
-/**
- * Directory entries for branch validation. The managed table is authoritative;
- * the bundled bundle is the offline fallback. Logos are irrelevant here, so the
- * rows are used as-is.
- */
 async function getDirectoryEntries(): Promise<readonly CompanyDirectoryEntry[]> {
   return (await getManagedDirectoryEntries()) ?? companyDirectory;
 }
@@ -127,23 +103,57 @@ export async function submitCompanyProfile(
 
   const result = companyProfileSchema.safeParse({
     companyId: formData.get("companyId"),
-    companyName: formData.get("companyName"),
+    tradeName: formData.get("tradeName"),
+    tradeTitle: formData.get("tradeTitle"),
+    companyType: formData.get("companyType"),
+    taxNumber: formData.get("taxNumber"),
+    tradeRegistryNumber: formData.get("tradeRegistryNumber"),
+    mersisNo: formData.get("mersisNo"),
+    establishmentDate: formData.get("establishmentDate"),
+    capital: formData.get("capital") ? Number(formData.get("capital")) : null,
+    currency: formData.get("currency"),
+    registeredAddress: formData.get("registeredAddress"),
+    registeredDistrict: formData.get("registeredDistrict"),
+    registeredMunicipality: formData.get("registeredMunicipality"),
+    registeredPostalCode: formData.get("registeredPostalCode"),
+    workplaceAddress: formData.get("workplaceAddress"),
+    workplaceDistrict: formData.get("workplaceDistrict"),
+    workplaceMunicipality: formData.get("workplaceMunicipality"),
+    workplacePostalCode: formData.get("workplacePostalCode"),
+    phone: formData.get("phone"),
+    fax: formData.get("fax"),
+    email: formData.get("email"),
+    website: formData.get("website"),
+    authorizedSignatories: formData.get("authorizedSignatories"),
+    naceCode: formData.get("naceCode"),
+    sector: formData.get("sector"),
+    subSector: formData.get("subSector"),
+    keywords: formData.get("keywords"),
+    bankName: formData.get("bankName"),
+    iban: formData.get("iban"),
+    insuranceNumber: formData.get("insuranceNumber"),
+    employeeCount: formData.get("employeeCount") ? Number(formData.get("employeeCount")) : null,
+    annualTurnoverRange: formData.get("annualTurnoverRange"),
+    linkedIn: formData.get("linkedIn"),
+    instagram: formData.get("instagram"),
+    facebook: formData.get("facebook"),
+    twitter: formData.get("twitter"),
+    youtube: formData.get("youtube"),
     profileDescription: formData.get("profileDescription"),
     categoriesText: formData.get("categoriesText"),
-    website: formData.get("website"),
-    phone: formData.get("phone"),
-    publicEmail: formData.get("publicEmail"),
-    address: formData.get("address"),
-    municipality: formData.get("municipality"),
     directoryTarget: formData.get("directoryTarget"),
   });
-  if (!result.success) return { status: "error", message: "invalid" };
+
+  if (!result.success) {
+    console.error("Company profile validation failed:", result.error.flatten());
+    return { status: "error", message: "invalid" };
+  }
 
   const company = await getOwnedCompany(user.id, result.data.companyId);
   if (!company) return { status: "error", message: "unauthorized" };
 
   const directoryTarget = getDirectoryTarget(
-    result.data.directoryTarget,
+    result.data.directoryTarget ?? "",
     await getDirectoryEntries(),
   );
   if (result.data.directoryTarget && !directoryTarget) {
@@ -151,17 +161,47 @@ export async function submitCompanyProfile(
   }
 
   const profile = {
-    company_name: result.data.companyName,
-    profile_description: result.data.profileDescription,
-    categories: result.data.categoriesText,
-    website: result.data.website,
-    phone: result.data.phone,
-    public_email: result.data.publicEmail,
-    address: result.data.address,
-    municipality: result.data.municipality,
+    company_name: result.data.tradeName,
+    trade_title: result.data.tradeTitle ?? undefined,
+    company_type: result.data.companyType ?? undefined,
+    tax_number: result.data.taxNumber ?? undefined,
+    trade_registry_number: result.data.tradeRegistryNumber ?? undefined,
+    mersis_no: result.data.mersisNo ?? undefined,
+    establishment_date: result.data.establishmentDate ?? undefined,
+    capital: result.data.capital ?? undefined,
+    currency: result.data.currency ?? undefined,
+    registered_address: result.data.registeredAddress ?? undefined,
+    registered_district: result.data.registeredDistrict ?? undefined,
+    registered_municipality: result.data.registeredMunicipality ?? undefined,
+    registered_postal_code: result.data.registeredPostalCode ?? undefined,
+    workplace_address: result.data.workplaceAddress ?? undefined,
+    workplace_district: result.data.workplaceDistrict ?? undefined,
+    workplace_municipality: result.data.workplaceMunicipality ?? undefined,
+    workplace_postal_code: result.data.workplacePostalCode ?? undefined,
+    phone: result.data.phone ?? undefined,
+    fax: result.data.fax ?? undefined,
+    public_email: result.data.email ?? undefined,
+    website: result.data.website ?? undefined,
+    authorized_signatories: result.data.authorizedSignatories ?? undefined,
+    nace_code: result.data.naceCode ?? undefined,
+    sub_sector: result.data.subSector ?? undefined,
+    keywords: result.data.keywords ?? undefined,
+    bank_name: result.data.bankName ?? undefined,
+    iban: result.data.iban ?? undefined,
+    insurance_number: result.data.insuranceNumber ?? undefined,
+    employee_count: result.data.employeeCount ?? undefined,
+    annual_turnover_range: result.data.annualTurnoverRange ?? undefined,
+    linked_in: result.data.linkedIn ?? undefined,
+    instagram: result.data.instagram ?? undefined,
+    facebook: result.data.facebook ?? undefined,
+    twitter: result.data.twitter ?? undefined,
+    youtube: result.data.youtube ?? undefined,
+    profile_description: result.data.profileDescription ?? undefined,
+    categories: result.data.categoriesText ?? undefined,
     directory_entry_id: directoryTarget?.directoryEntryId ?? null,
     directory_location_index: directoryTarget?.directoryLocationIndex ?? null,
   };
+
   const supabase = await createSupabaseServerClient();
   const { data: pendingSubmission, error: lookupError } = await supabase
     .from("company_profile_submissions")
@@ -180,14 +220,18 @@ export async function submitCompanyProfile(
   const { data: submissionId, error } = pendingSubmission
     ? await supabase
         .from("company_profile_submissions")
-        .update(profile)
+        .update(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          profile as any,
+        )
         .eq("id", pendingSubmission.id)
         .select("id")
         .single()
     : await supabase
         .from("company_profile_submissions")
         .insert({
-          ...profile,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ...(profile as any),
           company_id: company.id,
           submitted_by: user.id,
         })
@@ -205,25 +249,17 @@ export async function submitCompanyProfile(
     return { status: "error", message: "saveFailed" };
   }
 
-  // The submission is now queued, so nobody is looking at it until an admin
-  // happens to open the queue (#465). Tell the employer it arrived and alert the
-  // review inbox. Best-effort: `deliver` reports its own failures under
-  // `email_health`, and a mail problem must never undo the stored submission.
   try {
     await mailer.sendCompanyProfileEmails({
       to: user.email,
       locale: user.locale,
-      // The submission row's own id is the idempotency key. Using the company
-      // id here would suppress a *second* acknowledgement after a rejected
-      // submission is resubmitted within Resend's idempotency window — the
-      // "I submitted and heard nothing" symptom #465 is about.
       submissionId: submissionId.id,
-      companyName: result.data.companyName,
+      companyName: result.data.tradeName,
       categories: result.data.categoriesText.join(", ") || null,
       website: result.data.website,
       phone: result.data.phone,
-      publicEmail: result.data.publicEmail,
-      address: result.data.address,
+      publicEmail: result.data.email,
+      address: result.data.registeredAddress,
       submittedBy: user.email,
     });
   } catch (mailError) {
@@ -338,7 +374,6 @@ export async function reviewCompanyVerification(
     if (error.code === "42501") {
       return { status: "error", message: "unauthorized" };
     }
-
     console.error("Company verification review failed.", {
       code: error.code,
     });

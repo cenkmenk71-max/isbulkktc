@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { rewriteImportedJobText } from "./job-copy-rewrite";
+import { trLowercase } from "@/lib/tr-lowercase";
 
 import { northernCyprusDistrictValues } from "@/features/locations/northern-cyprus-districts";
 
@@ -104,8 +105,7 @@ const districtAliases = new Map<string, SourceDistrict>([
 ]);
 
 export function slugifySourceText(value: string): string {
-  const base = value
-    .toLocaleLowerCase("tr-TR")
+  const base = trLowercase(value)
     .replace(/[ıİ]/g, "i")
     .normalize("NFKD")
     .replace(/\p{Diacritic}/gu, "")
@@ -176,8 +176,7 @@ export function buildSourceJobSlug(
 
 export function normalizeSourceDistrict(value: unknown): SourceDistrict | null {
   if (typeof value !== "string" || !value.trim()) return null;
-  const key = value
-    .toLocaleLowerCase("tr-TR")
+  const key = trLowercase(value)
     .replace(/[ıİ]/g, "i")
     .normalize("NFKD")
     .replace(/\p{Diacritic}/gu, "")
@@ -263,7 +262,7 @@ export function normalizeSourceWorkplaceMode(
   onSiteHint: unknown,
 ): SourceWorkplaceMode {
   if (remote === true || remote === 1 || remote === "1") return "remote";
-  const hint = typeof onSiteHint === "string" ? onSiteHint.toLocaleLowerCase("tr") : "";
+  const hint = typeof onSiteHint === "string" ? trLowercase(onSiteHint) : "";
   if (/remote|uzaktan/.test(hint)) return "remote";
   if (/hybrid|hibrit/.test(hint)) return "hybrid";
   return "on_site";
@@ -484,7 +483,7 @@ export function selectDiverseSourceJobs(
   const usedTypes = new Set<string>();
 
   const sectorOf = (record: SourceJobRecord): string =>
-    (record.employer.categories[0] ?? "diger").trim().toLocaleLowerCase("tr-TR");
+    trLowercase((record.employer.categories[0] ?? "diger").trim());
 
   const add = (record: SourceJobRecord): void => {
     chosen.add(record);

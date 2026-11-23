@@ -31,25 +31,31 @@ test("resume parser extracts supported English headings without guessing persona
   assert.deepEqual(draft.skills, ["Figma", "user research", "Prototyping"]);
   assert.deepEqual(draft.experience, [
     {
+      company: "Example Studio",
       role: "Product Designer",
-      organization: "Example Studio",
-      location: "",
-      startDate: "",
-      endDate: "",
+      district: "",
+      startDate: null,
+      endDate: null,
+      isCurrent: false,
       description: "Designed accessible digital products.",
+      achievements: [],
+      sector: undefined,
     },
   ]);
   assert.deepEqual(draft.education?.[0], {
     institution: "Example University",
-    qualification: "Bachelor of Design",
-    field: "",
-    startDate: "",
-    endDate: "",
-    description: "",
+    department: "",
+    degree: "Bachelor of Design",
+    startYear: null,
+    endYear: null,
+    gpa: undefined,
+    isOngoing: false,
+    location: null,
+    level: "other",
   });
   assert.deepEqual(draft.languages, [
-    { name: "İngilizce", proficiency: "B1" },
-    { name: "Türkçe", proficiency: "B1" },
+    { language: "en", proficiency: "B1", language_name_localized: undefined },
+    { language: "tr", proficiency: "B1", language_name_localized: undefined },
   ]);
   assert.deepEqual(draft.certifications, [
     {
@@ -125,24 +131,30 @@ test("infers every section from a Turkish CV that has no headings", () => {
   assert.deepEqual(draft.skills, ["React", "Node.js", "PostgreSQL", "Docker"]);
   assert.deepEqual(draft.experience, [
     {
+      company: "ABC Yazılım",
       role: "Kıdemli Geliştirici",
-      organization: "ABC Yazılım",
-      location: "",
+      district: "",
       startDate: "2020",
       endDate: "2024",
+      isCurrent: false,
       description: "",
+      achievements: [],
+      sector: undefined,
     },
     {
+      company: "XYZ Ltd",
       role: "Geliştirici",
-      organization: "XYZ Ltd",
-      location: "",
+      district: "",
       startDate: "2017",
       endDate: "2020",
+      isCurrent: false,
       description: "",
+      achievements: [],
+      sector: undefined,
     },
   ]);
   assert.equal(draft.education?.[0]?.institution, "Doğu Akdeniz Üniversitesi");
-  assert.equal(draft.education?.[0]?.qualification, "Bilgisayar Mühendisliği");
+  assert.equal(draft.education?.[0]?.degree, "Bilgisayar Mühendisliği");
 });
 
 test("infers sections from an English CV that has no headings", () => {
@@ -165,20 +177,26 @@ test("infers sections from an English CV that has no headings", () => {
   assert.deepEqual(draft.skills, ["Python", "Django", "AWS"]);
   assert.deepEqual(draft.experience, [
     {
+      company: "Acme Corp",
       role: "Senior Engineer",
-      organization: "Acme Corp",
-      location: "",
+      district: "",
       startDate: "2019",
       endDate: "Present",
+      isCurrent: false,
       description: "",
+      achievements: [],
+      sector: undefined,
     },
     {
+      company: "Beta Ltd",
       role: "Engineer",
-      organization: "Beta Ltd",
-      location: "",
+      district: "",
       startDate: "2016",
       endDate: "2019",
+      isCurrent: false,
       description: "",
+      achievements: [],
+      sector: undefined,
     },
   ]);
   assert.equal(draft.education?.[0]?.institution, "University of Cyprus");
@@ -202,7 +220,7 @@ test("splits a multi-job experience section into one entry per job", () => {
   assert.deepEqual(
     draft.experience?.map((entry) => [
       entry.role,
-      entry.organization,
+      entry.company,
       entry.startDate,
       entry.endDate,
     ]),
@@ -227,7 +245,7 @@ test("does not treat a date range as a phone number", () => {
 
   assert.equal(draft.experience?.length, 1);
   assert.equal(draft.experience?.[0]?.role, "Tasarımcı");
-  assert.equal(draft.experience?.[0]?.organization, "ABC Yazılım");
+  assert.equal(draft.experience?.[0]?.company, "ABC Yazılım");
   assert.equal(draft.experience?.[0]?.startDate, "2019");
   assert.equal(draft.experience?.[0]?.endDate, "2023");
 });

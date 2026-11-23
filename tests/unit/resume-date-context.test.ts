@@ -68,17 +68,17 @@ function experienceOf(...lines: string[]) {
 test("a dated experience line keeps its start and end date on the entry", () => {
   // The formats a real CV mixes. Each was confirmed to round-trip on main.
   assert.deepEqual(experienceOf("A - Dev - 03/2019 - 07/2022"), [
-    { role: "A", organization: "Dev", location: "", startDate: "03/2019", endDate: "07/2022", description: "" },
+    { company: "Dev", role: "A", district: "", startDate: "03/2019", endDate: "07/2022", isCurrent: false, description: "", achievements: [], sector: undefined },
   ]);
   assert.deepEqual(experienceOf("B - Dev - Mart 2019 - Halen"), [
-    { role: "B", organization: "Dev", location: "", startDate: "Mart 2019", endDate: "Halen", description: "" },
+    { company: "Dev", role: "B", district: "", startDate: "Mart 2019", endDate: "Halen", isCurrent: false, description: "", achievements: [], sector: undefined },
   ]);
   assert.deepEqual(experienceOf("C - Dev - Ocak 2019 - Aralık 2020"), [
-    { role: "C", organization: "Dev", location: "", startDate: "Ocak 2019", endDate: "Aralık 2020", description: "" },
+    { company: "Dev", role: "C", district: "", startDate: "Ocak 2019", endDate: "Aralık 2020", isCurrent: false, description: "", achievements: [], sector: undefined },
   ]);
   // En dash, the character Word substitutes for a hyphen.
   assert.deepEqual(experienceOf("D - Dev - 2019\u20132022"), [
-    { role: "D", organization: "Dev", location: "", startDate: "2019", endDate: "2022", description: "" },
+    { company: "Dev", role: "D", district: "", startDate: "2019", endDate: "2022", isCurrent: false, description: "", achievements: [], sector: undefined },
   ]);
 });
 
@@ -137,22 +137,28 @@ test("parse then merge puts each extracted field in its own profile box", () => 
   assert.equal(merged.profile.headline, "Senior Software Engineer");
   assert.deepEqual(merged.profile.experience, [
     {
+      company: "Acme Corp",
       role: "Senior Engineer",
-      organization: "Acme Corp",
-      location: "",
+      district: "",
       startDate: "2019",
       endDate: "Present",
+      isCurrent: false,
       description: "",
+      achievements: [],
+      sector: undefined,
     },
   ]);
   assert.deepEqual(merged.profile.education, [
     {
       institution: "University of Cyprus",
-      qualification: "BSc Computer Science",
-      field: "",
-      startDate: "2016",
-      endDate: "",
-      description: "",
+      department: "",
+      degree: "BSc Computer Science",
+      startYear: "2016",
+      endYear: "",
+      gpa: undefined,
+      isOngoing: false,
+      location: null,
+      level: "other",
     },
   ]);
   assert.deepEqual(merged.profile.skills, ["Python", "Django"]);
@@ -212,8 +218,8 @@ test("a personal-data line is dropped without disturbing its neighbours", () => 
   );
 
   assert.deepEqual(draft.experience, [
-    { role: "Acme", organization: "Dev", location: "", startDate: "2019", endDate: "2022", description: "" },
-    { role: "Beta", organization: "QA", location: "", startDate: "2020", endDate: "2022", description: "" },
+    { company: "Dev", role: "Acme", district: "", startDate: "2019", endDate: "2022", isCurrent: false, description: "", achievements: [], sector: undefined },
+    { company: "QA", role: "Beta", district: "", startDate: "2020", endDate: "2022", isCurrent: false, description: "", achievements: [], sector: undefined },
   ]);
 });
 
@@ -239,7 +245,7 @@ test("a real role whose title carries a personal-data word is kept", () => {
 
 test("a range whose start is after its end is rejected", () => {
   assert.deepEqual(experienceOf("Acme - Dev - 2022 - 2019"), [
-    { role: "Acme", organization: "Dev", location: "", startDate: "", endDate: "", description: "" },
+    { company: "Dev", role: "Acme", district: "", startDate: null, endDate: null, isCurrent: false, description: "", achievements: [], sector: undefined },
   ]);
 });
 
@@ -250,8 +256,8 @@ test("a year-only span up to sixty years is accepted, beyond it is rejected", ()
   assert.equal(atLimit?.endDate, "2025");
 
   const overLimit = experienceOf("Acme - Dev - 1965 - 2026")[0];
-  assert.equal(overLimit?.startDate, "", "a 61-year span must be rejected");
-  assert.equal(overLimit?.endDate, "");
+  assert.equal(overLimit?.startDate, null, "a 61-year span must be rejected");
+  assert.equal(overLimit?.endDate, null);
 });
 
 test("a university named 'Doğu Akdeniz' is not filtered as a birth line", () => {
@@ -261,8 +267,8 @@ test("a university named 'Doğu Akdeniz' is not filtered as a birth line", () =>
     ["EĞİTİM", "Doğu Akdeniz Üniversitesi - Bilgisayar Mühendisliği - 2012 - 2016"].join("\n"),
   );
   assert.equal(draft.education?.[0]?.institution, "Doğu Akdeniz Üniversitesi");
-  assert.equal(draft.education?.[0]?.startDate, "2012");
-  assert.equal(draft.education?.[0]?.endDate, "2016");
+  assert.equal(draft.education?.[0]?.startYear, "2012");
+  assert.equal(draft.education?.[0]?.endYear, "2016");
 });
 
 // ---------------------------------------------------------------------------
@@ -289,17 +295,17 @@ test("an ongoing marker keeps its full phrase and no stray location", () => {
   // ediyor" no longer stops at "devam" and leaves "ediyor" as the location.
   const [entry] = experienceOf("Acme - Dev - 2019 - Devam ediyor");
   assert.equal(entry?.endDate, "Devam ediyor");
-  assert.equal(entry?.location, "");
+  assert.equal(entry?.district, "");
 });
 
 test("a tabular pipe layout keeps the trailing date on the entry", () => {
   // #331 made `|` a date-range separator, so the fourth field is the end year.
   const [entry] = experienceOf("Acme Corp | Senior Engineer | 2019 | 2023");
-  assert.equal(entry?.organization, "Acme Corp");
+  assert.equal(entry?.company, "Acme Corp");
   assert.equal(entry?.role, "Senior Engineer");
   assert.equal(entry?.startDate, "2019");
   assert.equal(entry?.endDate, "2023");
-  assert.equal(entry?.location, "");
+  assert.equal(entry?.district, "");
 });
 
 // ---------------------------------------------------------------------------
@@ -318,7 +324,7 @@ test("ongoing markers and year-only hyphens keep both dates and no stray locatio
   for (const [span, startDate, endDate] of shapes) {
     const [entry] = experienceOf(`Acme - Dev - ${span}`);
     assert.deepEqual(
-      [entry?.startDate, entry?.endDate, entry?.location],
+      [entry?.startDate, entry?.endDate, entry?.district],
       [startDate, endDate, ""],
       `${span} must keep both dates and no location`,
     );

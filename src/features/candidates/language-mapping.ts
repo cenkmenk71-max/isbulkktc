@@ -1014,12 +1014,12 @@ const LANGUAGE_MAPPING_MATRIX: LanguageMappingEntry[] = [
 function normalizeForMatching(value: string): string {
   return value
     .normalize("NFKC")
-    .toLocaleLowerCase("tr-TR")
     .replace(/[ıİ]/g, "i")
     .normalize("NFKD")
     .replace(/\p{Diacritic}/gu, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
+    .trim()
+    .toLowerCase();
 }
 
 const normalizedMappingCache = new Map<string, LanguageMappingEntry>();

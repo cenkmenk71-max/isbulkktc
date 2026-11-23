@@ -3,6 +3,7 @@
 import { Search, X } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
+import { trLowercase } from "@/lib/tr-lowercase";
 import {
   SectorCard,
   type SectorCardData,
@@ -28,10 +29,9 @@ type SectorExplorerProps = {
 };
 
 function normalizeSearchText(value: string) {
-  return value
+  return trLowercase(value)
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
-    .toLocaleLowerCase("tr")
     .replace(/ı/g, "i")
     .trim();
 }

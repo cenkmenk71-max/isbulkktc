@@ -8,15 +8,54 @@ import {
 } from "../../src/features/companies/company-document-parser";
 import type { CompanyProfileFields } from "../../src/features/companies/company-directory-autofill";
 
-const emptyFields: CompanyProfileFields = {
-  companyName: "",
+const completeEmptyFields: CompanyProfileFields = {
+  tradeName: "",
+  tradeTitle: "",
+  companyType: "",
+  taxNumber: "",
+  tradeRegistryNumber: "",
+  mersisNo: "",
+  establishmentDate: "",
+  capital: "",
+  currency: "",
+  registeredAddress: "",
+  registeredDistrict: "",
+  registeredMunicipality: "",
+  registeredPostalCode: "",
+  workplaceAddress: "",
+  workplaceDistrict: "",
+  workplaceMunicipality: "",
+  workplacePostalCode: "",
+  phone: "",
+  fax: "",
+  email: "",
+  website: "",
+  authorizedSignatories: "",
+  naceCode: "",
+  sector: "",
+  subSector: "",
+  keywords: "",
+  bankName: "",
+  iban: "",
+  insuranceNumber: "",
+  employeeCount: "",
+  annualTurnoverRange: "",
+  linkedIn: "",
+  instagram: "",
+  facebook: "",
+  twitter: "",
+  youtube: "",
   profileDescription: "",
   categoriesText: "",
-  website: "",
-  phone: "",
-  publicEmail: "",
-  address: "",
-  municipality: "",
+  directoryTarget: "",
+};
+
+const emptyFields: CompanyProfileFields = {
+  ...completeEmptyFields,
+  tradeName: "",
+  email: "",
+  registeredAddress: "",
+  registeredMunicipality: "",
 };
 
 test("extracts only explicitly labeled company fields from a Turkish document", () => {
@@ -32,11 +71,11 @@ test("extracts only explicitly labeled company fields from a Turkish document", 
   );
 
   assert.deepEqual(suggestions, {
-    companyName: "Ada Teknoloji Ltd.",
-    address: "12 Liman Sokak",
-    municipality: "Girne",
+    tradeName: "Ada Teknoloji Ltd.",
+    registeredAddress: "12 Liman Sokak",
+    registeredMunicipality: "Girne",
     phone: "+90 392 123 4567",
-    publicEmail: "info@ada.example",
+    email: "info@ada.example",
     website: "https://ada.example",
   });
 });
@@ -55,8 +94,10 @@ test("supports label-on-one-line documents and ignores ambiguous personal fields
   );
 
   assert.deepEqual(suggestions, {
-    companyName: "Northstar Limited",
-    address: "22 Harbour Road",
+    tradeName: "Northstar Limited",
+    registeredAddress: "22 Harbour Road",
+    email: "director@northstar.example",
+    phone: "+90 392 111 1111",
   });
 });
 
@@ -64,22 +105,22 @@ test("fills blank company fields without replacing existing values", () => {
   const result = applyCompanyDocumentAutofill(
     {
       ...emptyFields,
-      companyName: "Existing Company Ltd.",
+      tradeName: "Existing Company Ltd.",
       phone: "Manually confirmed phone",
     },
     {
-      companyName: "Registered Name Ltd.",
+      tradeName: "Registered Name Ltd.",
       phone: "+90 392 123 4567",
-      address: "12 Liman Sokak",
+      registeredAddress: "12 Liman Sokak",
     },
   );
 
-  assert.equal(result.fields.companyName, "Existing Company Ltd.");
+  assert.equal(result.fields.tradeName, "Existing Company Ltd.");
   assert.equal(result.fields.phone, "Manually confirmed phone");
-  assert.equal(result.fields.address, "12 Liman Sokak");
+  assert.equal(result.fields.registeredAddress, "12 Liman Sokak");
   assert.equal(result.filled, 1);
   assert.deepEqual(result.conflicts, [
-    { field: "companyName", value: "Registered Name Ltd." },
+    { field: "tradeName", value: "Registered Name Ltd." },
     { field: "phone", value: "+90 392 123 4567" },
   ]);
 });

@@ -560,6 +560,32 @@ export type MarketingInput = SiteContext & {
  * change them in the admin console. Every package CTA deep-links to its own
  * catalogue card, while WhatsApp, email and telephone actions use real channels.
  */
+/**
+ * Mailto satır sonu. RFC 6068'e uygun olarak CRLF (%0D%0A) kullanılır; tek %0A
+ * bazı istemcilerde (Outlook, Apple Mail) satır atlamayı anlamayabilir.
+ */
+const MAILTO_LINE_BREAK = "%0D%0A";
+
+export { MAILTO_LINE_BREAK };
+
+/**
+ * mailto: URL'si için pratiğe göre güvenli üst sınır. Aşılırsa konsola uyarı
+ * yazılır ve link sessizce kırılmadan erken tespit edilir.
+ */
+const MAILTO_MAX_URL_LENGTH = 1900;
+
+/**
+ * mailto: şeması için percent-encode eder. `URLSearchParams` yerine kullanılır
+ * çünkü `URLSearchParams` boşlukları `+` olarak kodlar (form-urlencoded
+ * standardı), mailde ise `%20` beklenir. Türkçe karakterler doğru UTF-8
+ * percent-sırasıyla dönüştürülür.
+ */
+function encodeMailto(value: string): string {
+  return encodeURIComponent(value);
+}
+
+export { encodeMailto };
+
 export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
   if (!input.unsubscribeUrl || !/^https:\/\//i.test(input.unsubscribeUrl)) {
     throw new Error("marketing_email_requires_https_unsubscribe_url");
@@ -573,10 +599,22 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
   const packageUrl = (anchor: string) => new URL("packages#" + anchor, baseUrl).toString();
 
   const whatsappUrl = new URL(MARKETING_CONTACTS.whatsapp);
-  whatsappUrl.searchParams.set("text", copy.whatsappMessage);
-  const emailUrl = new URL("mailto:" + MARKETING_CONTACTS.email);
-  emailUrl.searchParams.set("subject", copy.subject);
-  emailUrl.searchParams.set("body", copy.whatsappMessage + "\n\n" + packagePageUrl);
+  whatsappUrl.searchParams.set("text", encodeURIComponent(copy.whatsappMessage));
+
+  const bodyLines = [copy.whatsappMessage, "", packagePageUrl];
+  const bodyText = bodyLines.join(MAILTO_LINE_BREAK);
+  const emailUrl =
+    `mailto:${MARKETING_CONTACTS.email}` +
+    `?subject=${encodeMailto(copy.subject)}` +
+    `&body=${encodeMailto(bodyText)}`;
+
+  if (emailUrl.length > MAILTO_MAX_URL_LENGTH) {
+    console.warn("mailto URL exceeds safe length", {
+      length: emailUrl.length,
+      max: MAILTO_MAX_URL_LENGTH,
+      recipient: MARKETING_CONTACTS.email,
+    });
+  }
 
   const tierConfig = [
     { id: "singleListing", anchor: "package-tek-ilan", accent: "#4b8066" },

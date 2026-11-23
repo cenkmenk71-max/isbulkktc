@@ -20,9 +20,10 @@ import { getArticles } from "@/content/editorial";
 import { FeedbackForm } from "@/features/feedback/feedback-form";
 import { FaqSection } from "@/content/ai-visibility/faq-section";
 import type { FaqEntry } from "@/content/ai-visibility/faq";
+import { trLowercase } from "@/lib/tr-lowercase";
 
 function getArticleImage(title: string): string {
-  const normalized = title.toLocaleLowerCase("tr");
+  const normalized = trLowercase(title);
   if (/üniversite|eğitim|öğrenci|okul|akademi/.test(normalized)) {
     return "/images/news-education.webp";
   }

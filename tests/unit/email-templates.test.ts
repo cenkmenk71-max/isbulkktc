@@ -685,7 +685,7 @@ test("the acquisition email does not make unverified ranking, translation or sca
   ]) {
     assert.equal(tr.html.toLocaleLowerCase("tr").includes(unsupported.toLocaleLowerCase("tr")), false, unsupported);
   }
-  assert.ok(tr.html.includes("ödeme web sitesinde alınmaz"));
+  assert.ok(tr.html.toLocaleLowerCase("tr").includes("ödeme web sitesinde alınmaz"), "Turkish email states payment is not taken on the website");
   assert.ok(tr.html.includes("İlan adedi yazılı teklifte netleştirilir"));
 });
 

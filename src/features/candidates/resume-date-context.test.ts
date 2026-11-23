@@ -38,7 +38,7 @@ test("an address year is not read as a period", () => {
   );
 
   assert.equal(draft.experience?.length, 1);
-  assert.equal(draft.experience?.[0]?.organization, "Acme Yazılım");
+  assert.equal(draft.experience?.[0]?.company, "Acme Yazılım");
 });
 
 test("an English birth line is filtered too", () => {
@@ -77,7 +77,7 @@ test("a legitimate period still parses (no regression)", () => {
 
   assert.equal(draft.experience?.[0]?.startDate, "2019");
   assert.equal(draft.experience?.[0]?.endDate, "2023");
-  assert.equal(draft.experience?.[0]?.organization, "Acme Yazılım");
+  assert.equal(draft.experience?.[0]?.company, "Acme Yazılım");
 });
 
 test("a university named 'Doğu Akdeniz' is not filtered as a birth line", () => {
@@ -87,8 +87,8 @@ test("a university named 'Doğu Akdeniz' is not filtered as a birth line", () =>
   );
 
   assert.equal(draft.education?.[0]?.institution, "Doğu Akdeniz Üniversitesi");
-  assert.equal(draft.education?.[0]?.startDate, "2012");
-  assert.equal(draft.education?.[0]?.endDate, "2016");
+  assert.equal(draft.education?.[0]?.startYear, "2012");
+  assert.equal(draft.education?.[0]?.endYear, "2016");
 });
 
 // A job title can contain a personal-data word. Before #367's fix the whole
@@ -109,7 +109,7 @@ test("a real title containing a personal-data word keeps its dates", () => {
     const draft = parseResumeText(
       ["DENEYİM", `${employer} - ${title} - 2019 - 2022`].join("\n"),
     );
-    assert.equal(draft.experience?.[0]?.organization, title, `${title} must survive`);
+    assert.equal(draft.experience?.[0]?.company, title, `${title} must survive`);
     assert.equal(draft.experience?.[0]?.startDate, "2019", `${title} must keep its start`);
     assert.equal(draft.experience?.[0]?.endDate, "2022", `${title} must keep its end`);
   }
@@ -120,7 +120,7 @@ test("a role-first record whose title carries the word keeps its dates too", () 
     ["DENEYİM", "Adres Doğrulama Uzmanı - Acme - 2019 - 2022"].join("\n"),
   );
   assert.equal(draft.experience?.[0]?.role, "Adres Doğrulama Uzmanı");
-  assert.equal(draft.experience?.[0]?.organization, "Acme");
+  assert.equal(draft.experience?.[0]?.company, "Acme");
   assert.equal(draft.experience?.[0]?.startDate, "2019");
   assert.equal(draft.experience?.[0]?.endDate, "2022");
 });
@@ -169,7 +169,7 @@ test("a year-month range is read whole, in either order", () => {
       .experience?.[0];
     assert.equal(entry?.startDate, start, `${range} start`);
     assert.equal(entry?.endDate, end, `${range} end`);
-    assert.equal(entry?.location, "", `${range} must not leak a month into location`);
+    assert.equal(entry?.district, "", `${range} must not leak a month into district`);
     assert.equal(entry?.description, "", `${range} must not leak a month into description`);
   }
 });
@@ -179,7 +179,7 @@ test("a bare year range is not split into year plus month", () => {
   const entry = parseResumeText("DENEYİM\nAcme - Dev - 1999-2000").experience?.[0];
   assert.equal(entry?.startDate, "1999");
   assert.equal(entry?.endDate, "2000");
-  assert.equal(entry?.location, "");
+  assert.equal(entry?.district, "");
 });
 
 test("a certification issue date keeps its month", () => {
@@ -212,7 +212,7 @@ test("a description line above a self-contained entry is not read as its role", 
   assert.deepEqual(
     draft.experience?.map((entry) => [
       entry.role,
-      entry.organization,
+      entry.company,
       entry.startDate,
       entry.endDate,
       entry.description,
@@ -249,7 +249,7 @@ test("a bare prose line above a self-contained entry is attached to the previous
   );
 
   assert.deepEqual(
-    draft.experience?.map((entry) => [entry.role, entry.organization, entry.description]),
+    draft.experience?.map((entry) => [entry.role, entry.company, entry.description]),
     [
       ["Senior Engineer", "Acme Corp", "Shipped the design system"],
       ["Engineer", "Beta Ltd", ""],
@@ -274,9 +274,9 @@ test("a degree-first education entry still puts the institution in its own box",
   );
 
   assert.equal(draft.education?.[0]?.institution, "Doğu Akdeniz Üniversitesi");
-  assert.equal(draft.education?.[0]?.qualification, "Bilgisayar Mühendisliği");
-  assert.equal(draft.education?.[0]?.startDate, "2012");
-  assert.equal(draft.education?.[0]?.endDate, "2016");
+  assert.equal(draft.education?.[0]?.degree, "Bilgisayar Mühendisliği");
+  assert.equal(draft.education?.[0]?.startYear, "2012");
+  assert.equal(draft.education?.[0]?.endYear, "2016");
 });
 
 test("an English degree-first education entry is ordered too", () => {
@@ -285,7 +285,7 @@ test("an English degree-first education entry is ordered too", () => {
   );
 
   assert.equal(draft.education?.[0]?.institution, "University of Cyprus");
-  assert.equal(draft.education?.[0]?.qualification, "BSc Computer Science");
+  assert.equal(draft.education?.[0]?.degree, "BSc Computer Science");
 });
 
 test("the institution-first order is unchanged (no regression)", () => {
@@ -297,5 +297,5 @@ test("the institution-first order is unchanged (no regression)", () => {
   );
 
   assert.equal(draft.education?.[0]?.institution, "Doğu Akdeniz Üniversitesi");
-  assert.equal(draft.education?.[0]?.qualification, "Bilgisayar Mühendisliği");
+  assert.equal(draft.education?.[0]?.degree, "Bilgisayar Mühendisliği");
 });

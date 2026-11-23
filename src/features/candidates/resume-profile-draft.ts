@@ -4,6 +4,7 @@ import {
   resolveNorthernCyprusDistrict,
   type NorthernCyprusDistrict,
 } from "@/features/locations/northern-cyprus-districts";
+import { trLowercase } from "@/lib/tr-lowercase";
 
 export type CandidateProfileDraft = Omit<CandidateProfileValues, "skills"> & {
   headline: string;
@@ -47,10 +48,9 @@ function resolveFirstDistrict(
   return null;
 }
 
-function normalize(value: string): string {
-  return value
-    .normalize("NFKC")
-    .toLocaleLowerCase("tr-TR")
+function normalize(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return trLowercase(value)
     .replace(/[ıİ]/g, "i")
     .normalize("NFKD")
     .replace(/\p{Diacritic}/gu, "")
@@ -58,11 +58,11 @@ function normalize(value: string): string {
     .replace(/\s+/g, " ");
 }
 
-function mergeEntries<T extends Record<string, string>>(
-  current: T[],
+function mergeEntries<T extends Record<string, unknown>>(
+  current: T[] | undefined,
   imported: T[] | undefined,
 ): { entries: T[]; skipped: number } {
-  const entries = [...current];
+  const entries = [...(current ?? [])];
   const seen = new Set(
     entries.map((entry) =>
       Object.values(entry)
@@ -74,10 +74,10 @@ function mergeEntries<T extends Record<string, string>>(
   let skipped = 0;
 
   for (const entry of imported ?? []) {
-    if (!Object.values(entry).some((value) => value.trim())) continue;
+    if (!Object.values(entry).some((value) => (value as string)?.trim())) continue;
 
     const key = Object.values(entry)
-      .map(normalize)
+      .map((value) => normalize(value as string))
       .filter(Boolean)
       .join("|");
     if (seen.has(key)) continue;
@@ -115,9 +115,16 @@ export function mergeResumeDraft(
   }
 
   const experience = mergeEntries(current.experience, draft.experience);
+  const internships = mergeEntries(current.internships, draft.internships);
   const education = mergeEntries(current.education, draft.education);
   const languages = mergeEntries(current.languages, draft.languages);
   const certifications = mergeEntries(current.certifications, draft.certifications);
+  const courses = mergeEntries(current.courses, draft.courses);
+  const projects = mergeEntries(current.projects, draft.projects);
+  const publications = mergeEntries(current.publications, draft.publications);
+  const awards = mergeEntries(current.awards, draft.awards);
+  const volunteer = mergeEntries(current.volunteer, draft.volunteer);
+  const references = mergeEntries(current.references, draft.references);
   const headline = current.headline.trim() ? current.headline : draft.headline ?? "";
   const location =
     resolveFirstDistrict(current.location) ??
@@ -131,13 +138,40 @@ export function mergeResumeDraft(
 
   return {
     profile: {
+      firstName: current.firstName,
+      middleName: current.middleName,
+      lastName: current.lastName,
+      dateOfBirth: current.dateOfBirth,
+      gender: current.gender,
+      nationality: current.nationality,
+      tcNo: current.tcNo,
+      passportNo: current.passportNo,
+      maritalStatus: current.maritalStatus,
+      drivingLicense: current.drivingLicense,
+      addressLine: current.addressLine,
+      district: current.district,
+      municipality: current.municipality,
+      postalCode: current.postalCode,
+      phone: current.phone,
+      email: current.email,
+      linkedIn: current.linkedIn,
+      github: current.github,
+      portfolio: current.portfolio,
       headline,
       location,
-      skills,
+      skillsText: current.skillsText,
       experience: experience.entries,
+      internships: internships.entries,
       education: education.entries,
+      skills,
       languages: languages.entries,
       certifications: certifications.entries,
+      courses: courses.entries,
+      projects: projects.entries,
+      publications: publications.entries,
+      awards: awards.entries,
+      volunteer: volunteer.entries,
+      references: references.entries,
       summary,
       cvFullText,
       links: links.entries,

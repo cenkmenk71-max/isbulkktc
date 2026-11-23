@@ -22,37 +22,37 @@ import {
 
 test("company creation trims names and canonicalizes ASCII slugs", () => {
   assert.deepEqual(
-    createCompanySchema.parse({ name: " Örnek Şirket ", slug: "Ornek-Sirket" }),
-    { name: "Örnek Şirket", slug: "ornek-sirket" },
+    createCompanySchema.parse({ tradeName: " Örnek Şirket ", slug: "Ornek-Sirket" }),
+    { tradeName: "Örnek Şirket", slug: "ornek-sirket" },
   );
 });
 
 test("company profile submissions accept only the six supported districts", () => {
   const profile = {
     companyId: "00000000-0000-4000-8000-000000000001",
-    companyName: "Example Ltd.",
+    tradeName: "Example Ltd.",
     profileDescription: "",
     categoriesText: "",
-    website: "",
-    phone: "",
-    publicEmail: "",
-    address: "",
-    municipality: "Mağusa",
-    directoryTarget: "",
+    website: undefined,
+    phone: undefined,
+    email: undefined,
+    registeredAddress: undefined,
+    registeredMunicipality: "Mağusa",
+    directoryTarget: undefined,
   };
 
   assert.equal(companyProfileSchema.safeParse(profile).success, true);
   assert.equal(
     companyProfileSchema.safeParse({
       ...profile,
-      municipality: "Gazimağusa",
+      registeredDistrict: "Gazimağusa",
     }).success,
     false,
   );
   assert.equal(
     companyProfileSchema.safeParse({
       ...profile,
-      municipality: "Küçük Kaymaklı",
+      registeredDistrict: "Küçük Kaymaklı",
     }).success,
     false,
   );

@@ -16,12 +16,15 @@ import type { Database } from "@/types/database";
  * budget at the form layer), so this client needs no throttle state of its own.
  */
 export function createSupabaseBrowserClient() {
-  const url =
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    "https://placeholder-isbulkktc.supabase.co";
-  const key =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder";
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!url || !key) {
+    throw new Error(
+      "Supabase environment variables are not configured. " +
+        "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.",
+    );
+  }
 
   return createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },

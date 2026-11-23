@@ -8,6 +8,7 @@ node_modules/
 .playwright-cli/
 .playwright-mcp/
 test-results/
+test-output/
 *.tsbuildinfo
 .env.local
 .vscode/

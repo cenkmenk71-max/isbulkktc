@@ -74,7 +74,7 @@ const dashboard = await read(
   "src/app/[locale]/(candidate)/profile/dashboard/page.tsx",
 );
 const profileForm = await read(
-  "src/features/candidates/candidate-profile-form.tsx",
+  "src/features/candidates/candidate-profile-form-v2.tsx",
 );
 const profileAction = await read("src/features/candidates/actions.ts");
 const profileSchema = await read("src/features/candidates/schemas.ts");
