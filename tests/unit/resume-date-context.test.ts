@@ -154,7 +154,7 @@ test("parse then merge puts each extracted field in its own profile box", () => 
       department: "",
       degree: "BSc Computer Science",
       startYear: "2016",
-      endYear: "",
+      endYear: null,
       gpa: undefined,
       isOngoing: false,
       location: null,

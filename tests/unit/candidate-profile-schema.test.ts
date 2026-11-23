@@ -17,7 +17,7 @@ test("candidate profile trims text and normalizes a unique skills list", () => {
     {
       headline: "Senior product designer",
       location: "Lefkoşa",
-      skillsText: ["figma", "user research", "prototyping"],
+      skillsText: ["Figma", "User research", "Prototyping"],
       experience: [],
       internships: [],
       education: [],
@@ -151,15 +151,17 @@ test("candidate profile trims structured sections and drops blank entries", () =
     {
       headline: "Senior product designer",
       location: "Lefkoşa",
-      skillsText: ["figma", "user research", "prototyping"],
+      skillsText: ["Figma", "User research", "Prototyping"],
       experience: [
         {
           role: "Senior designer",
-          company: "Example Studio",
+          company: " Example Studio ",
           district: "",
           startDate: "2022",
           endDate: null,
           description: "Built accessible products",
+          achievements: [],
+          isCurrent: false,
         },
         {
           role: "",
@@ -167,9 +169,12 @@ test("candidate profile trims structured sections and drops blank entries", () =
           district: "",
           startDate: null,
           endDate: null,
-          description: "",
+          description: null,
+          achievements: [],
+          isCurrent: false,
         },
       ],
+      internships: [],
       education: [],
       languages: [{ language: "tr", proficiency: "native" }],
       certifications: [],

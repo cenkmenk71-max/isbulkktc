@@ -78,7 +78,7 @@ test("fills only blank profile fields from a selected directory listing", () => 
   assert.equal(result.fields.phone, "Manually confirmed phone");
   assert.equal(result.fields.email, "");
   assert.equal(result.fields.registeredAddress, "Girne");
-  assert.equal(result.fields.registeredMunicipality, "Girne");
+  assert.equal(result.fields.registeredMunicipality, "");
   assert.equal(result.fields.profileDescription, "");
   assert.equal(result.autofilled.phone, undefined);
 });

@@ -65,8 +65,8 @@ test("a backwards or implausible year range is rejected", () => {
 
   // Neither line is a valid period; the parser must not invent dates from them.
   for (const entry of draft.experience ?? []) {
-    assert.equal(entry.startDate, "");
-    assert.equal(entry.endDate, "");
+    assert.equal(entry.startDate, null);
+    assert.equal(entry.endDate, null);
   }
 });
 

@@ -52,11 +52,14 @@ test("a heading's inline remainder is filtered like a body line", () => {
     education: [
       {
         institution: "Acme Üniversitesi",
-        qualification: "Bilgisayar",
-        field: "",
-        startDate: "2012",
-        endDate: "2016",
-        description: "",
+        degree: "Bilgisayar",
+        department: "",
+        startYear: "2012",
+        endYear: "2016",
+        gpa: undefined,
+        isOngoing: false,
+        level: "other",
+        location: null,
       },
     ],
   });
@@ -79,8 +82,8 @@ test("the filter removes only the offending line, not its neighbours", () => {
   );
 
   assert.deepEqual(draft.experience, [
-    { role: "Acme", organization: "Dev", location: "", startDate: "2019", endDate: "2022", description: "" },
-    { role: "Beta", organization: "QA", location: "", startDate: "2020", endDate: "2022", description: "" },
+    { role: "Acme", company: "Dev", district: "", startDate: "2019", endDate: "2022", isCurrent: false, description: "", achievements: [], sector: undefined },
+    { role: "Beta", company: "QA", district: "", startDate: "2020", endDate: "2022", isCurrent: false, description: "", achievements: [], sector: undefined },
   ]);
 });
 
@@ -110,11 +113,14 @@ test("a dateless multi-line entry keeps its role line, not its employer", () => 
   assert.deepEqual(draft.experience, [
     {
       role: "",
-      organization: "",
-      location: "",
-      startDate: "",
-      endDate: "",
+      company: "",
+      district: "",
+      startDate: null,
+      endDate: null,
+      isCurrent: false,
       description: "Doğum Kliniği Hemşiresi\nGamma Hastanesi",
+      achievements: [],
+      sector: undefined,
     },
   ]);
 });
