@@ -7,6 +7,24 @@
 -- signatories, NACE code, sector, sub-sector, keywords, bank name, IBAN, insurance
 -- number, employee count, annual turnover range, and social media links.
 
+-- Helper: validate that a text[] contains only non-null strings each <= max_len chars
+create or replace function public.is_valid_string_array(arr text[], max_len integer)
+returns boolean language plpgsql as $$
+declare
+  i integer;
+begin
+  if arr is null then
+    return true;
+  end if;
+  for i in 1..cardinality(arr) loop
+    if arr[i] is null or char_length(arr[i]) > max_len then
+      return false;
+    end if;
+  end loop;
+  return true;
+end;
+$$;
+
 alter table public.companies
   add column trade_title text
     check (trade_title is null or char_length(trade_title) <= 120),
