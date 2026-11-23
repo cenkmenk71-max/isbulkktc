@@ -1,12 +1,13 @@
 import test from "node:test";
 import { renderMarketingEmail } from "../../supabase/functions/_shared/email-render";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
 const locales = ["tr", "en", "ru", "el", "fa", "de"];
 
 test("render all marketing emails for visual inspection", async () => {
   const outputDir = join(process.cwd(), "test-output", "marketing-emails");
+  mkdirSync(outputDir, { recursive: true });
   
   for (const locale of locales) {
     const email = renderMarketingEmail({
