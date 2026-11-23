@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+export const dynamic = "force-static";
 
 // Baked in at build time, so a response identifies exactly which commit this
 // deployment was built from. Vercel exposes these variables to the build; the
