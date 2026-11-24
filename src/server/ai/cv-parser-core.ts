@@ -70,6 +70,7 @@ type ProviderConfiguration = {
   geminiFallbackModel?: string;
   groqApiKey?: string;
   groqModel?: string;
+  groqVisionModel?: string;
 };
 
 type ProviderFailureReason =
@@ -288,6 +289,63 @@ async function requestGroq(
   }
 }
 
+async function requestGroqVision(
+  pageImages: string[],
+  apiKey: string,
+  model: string,
+): Promise<ProviderAttempt> {
+  try {
+    const messages = [
+      {
+        role: "system",
+        content: systemPrompt,
+      },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Extract the profile data from this CV. The PDF is scanned/image-based so no text could be extracted. Use the images below." },
+          ...pageImages.map((image) => ({
+            type: "image_url",
+            image_url: { url: image },
+          })),
+        ],
+      },
+    ];
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: 0.1,
+        max_tokens: 4_000,
+        response_format: { type: "json_object" },
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "<unreadable>");
+      console.error("[cv-parser] Groq Vision HTTP error", {
+        status: response.status,
+        model,
+        error: errorBody.slice(0, 500),
+      });
+      return { ok: false, reason: "http_error" };
+    }
+    return parseJSONContent(groqResponseText(await response.json()));
+  } catch (error) {
+    console.error("[cv-parser] Groq Vision network error", {
+      model,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { ok: false, reason: "network_error" };
+  }
+}
+
 function cleanText(value: string | null | undefined, maximum: number): string {
   return value?.trim().slice(0, maximum) ?? "";
 }
@@ -393,6 +451,7 @@ export async function parseResumeWithFallback(
   file: File,
   text: string,
   providers: ProviderConfiguration,
+  pageImages?: string[],
 ): Promise<CandidateResumeDraft | null> {
   if (providers.geminiApiKey) {
     const attempt = await requestGemini(
@@ -403,6 +462,16 @@ export async function parseResumeWithFallback(
       providers.geminiFallbackModel,
     );
     if (attempt.ok) return toDraft(attempt.output, text);
+  }
+
+  // If Gemini failed and we have page images but no text, try Groq Vision
+  if (providers.groqApiKey && pageImages && pageImages.length > 0 && !text.trim()) {
+    const visionAttempt = await requestGroqVision(
+      pageImages,
+      providers.groqApiKey,
+      providers.groqVisionModel ?? "meta-llama/llama-4-scout-17b-16e-instruct",
+    );
+    if (visionAttempt.ok) return toDraft(visionAttempt.output, "");
   }
 
   if (providers.groqApiKey) {

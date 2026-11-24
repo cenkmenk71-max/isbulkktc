@@ -56,8 +56,11 @@ export async function importResumeFile(
   const file = formData.get("file");
   if (!(file instanceof File)) return { ok: false, code: "unsupported" };
 
+  const pageImagesRaw = formData.get("pageImages");
+  const pageImages = pageImagesRaw ? JSON.parse(pageImagesRaw as string) : undefined;
+
   try {
-    const draft = await parseResumeFile(file);
+    const draft = await parseResumeFile(file, pageImages);
     if (!draft) return { ok: false, code: "empty" };
     const { cvFullText: _cvFullText, ...preview } = draft;
     return { ok: true, draft: preview };
