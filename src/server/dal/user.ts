@@ -187,10 +187,13 @@ export async function getSignedInAuthDestination(
 }
 
 export const requireAuthenticatedUser = cache(
-  async (): Promise<CurrentUserDTO> => {
+  async (options?: { audience?: "employer" | "candidate" }): Promise<CurrentUserDTO> => {
     const user = await getCurrentUser();
 
-    if (!user) return redirectLocalized("/login");
+    if (!user) {
+      const path = options?.audience ? `/login?audience=${options.audience}` : "/login";
+      return redirectLocalized(path);
+    }
     if (user.status !== "active") {
       redirect(`${getLocalePrefix(user.locale)}/login?error=account`);
     }

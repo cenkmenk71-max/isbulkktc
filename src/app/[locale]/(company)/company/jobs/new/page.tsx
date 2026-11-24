@@ -24,7 +24,7 @@ export default async function NewEmployerJobPage({
   if (!locale) notFound();
   setRequestLocale(locale);
 
-  await requireAuthenticatedUser();
+  await requireAuthenticatedUser({ audience: "employer" });
   const [{ company }, copy] = await Promise.all([
     getEmployerWorkspace(query.company),
     getTranslations("JobManagement.employer"),

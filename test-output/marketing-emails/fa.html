@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="light dark">
 <meta name="supported-color-schemes" content="light dark">
 <meta name="x-apple-disable-message-reformatting">
-<title>بگذارید تا بهترین استعدادها به سراغ شما بیایند — شما فقط انتخاب کنید</title>
+<title>بسته آگهی متناسب با نیاز استخدام خود را انتخاب کنید</title>
 <style>
   body { margin:0 !important; padding:0 !important; width:100% !important; }
   a { -webkit-text-size-adjust:none; }
@@ -14,57 +14,286 @@
   @media (max-width:600px) {
     .ibk-pad { padding-left:20px !important; padding-right:20px !important; }
     .ibk-h1 { font-size:20px !important; }
+    .ibk-package-cell { display:block !important; width:100% !important; padding:0 0 12px !important; }
+    .ibk-brand-name { font-size:24px !important; }
+    .ibk-brand-tagline { font-size:10px !important; line-height:1.35 !important; }
   }
+  /* Dark mode is component-scoped. A global p/div/td colour override creates
+     white-on-white text in package cards and secondary actions. */
   @media (prefers-color-scheme:dark) {
-    .ibk-bg { background:#171B1A !important; }
-    .ibk-card { background:#222827 !important; }
-    .ibk-h1, .ibk-code { color:#F3F1EC !important; }
-    .ibk-foot { background:#171B1A !important; }
+    .ibk-bg { background-color:#171B1A !important; }
+    .ibk-card, .ibk-content-bg { background-color:#1E2423 !important; }
+    .ibk-brand-bg { background-color:#123128 !important; }
+    .ibk-content, .ibk-content p, .ibk-content div, .ibk-content td,
+    .ibk-content span, .ibk-content strong, .ibk-content h1, .ibk-content h2,
+    .ibk-content h3, .ibk-content h4, .ibk-content li, .ibk-content a {
+      color:#F3F1EC !important;
+    }
+    .ibk-package-card, .ibk-panel, .ibk-soft-panel {
+      background-color:#2A3430 !important;
+      border-color:#46544D !important;
+    }
+    .ibk-icon-bg { background-color:#2C4037 !important; }
+    .ibk-button-secondary-cell, .ibk-button-secondary {
+      background-color:#2A3430 !important;
+      border-color:#6FAA92 !important;
+      color:#F3F1EC !important;
+    }
+    .ibk-button-primary-cell { background-color:#123128 !important; }
+    .ibk-button-primary { color:#FFFFFF !important; }
+    .ibk-foot { background-color:#171B1A !important; color:#C5CEC8 !important; }
+    .ibk-foot a { color:#A9CBBB !important; }
   }
-  [data-ogsc] .ibk-card { background:#222827 !important; }
+
+  /* Outlook.com / Outlook on the web exposes these attributes when its
+     dark-theme engine rewrites an element. Repeat the scoped palette so the
+     foreground and the surface always move together. */
+  [data-ogsc] .ibk-content,
+  [data-ogsc] .ibk-content p, [data-ogsc] .ibk-content div,
+  [data-ogsc] .ibk-content td, [data-ogsc] .ibk-content span,
+  [data-ogsc] .ibk-content strong, [data-ogsc] .ibk-content h1,
+  [data-ogsc] .ibk-content h2, [data-ogsc] .ibk-content h3,
+  [data-ogsc] .ibk-content h4, [data-ogsc] .ibk-content li,
+  [data-ogsc] .ibk-content a,
+  p[data-ogsc], div[data-ogsc], td[data-ogsc], span[data-ogsc],
+  strong[data-ogsc], h1[data-ogsc], h2[data-ogsc], h3[data-ogsc],
+  h4[data-ogsc], li[data-ogsc], a[data-ogsc] {
+    color:#F3F1EC !important;
+  }
+  [data-ogsb] .ibk-card, [data-ogsb] .ibk-content-bg {
+    background-color:#1E2423 !important;
+  }
+  [data-ogsb] .ibk-brand-bg { background-color:#123128 !important; }
+  [data-ogsb] .ibk-package-card, [data-ogsb] .ibk-panel,
+  [data-ogsb] .ibk-soft-panel {
+    background-color:#2A3430 !important;
+    border-color:#46544D !important;
+  }
+  [data-ogsb] .ibk-icon-bg { background-color:#2C4037 !important; }
+  [data-ogsb] .ibk-button-secondary-cell {
+    background-color:#2A3430 !important;
+    border-color:#6FAA92 !important;
+  }
+  [data-ogsb] .ibk-button-primary-cell { background-color:#123128 !important; }
+  [data-ogsb] .ibk-foot { background-color:#171B1A !important; }
+  [data-ogsc] .ibk-foot { color:#C5CEC8 !important; }
+  [data-ogsc] .ibk-foot a { color:#A9CBBB !important; }
 </style>
 </head>
 <body style="margin:0;padding:0;background:#FFFFFF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#171B1A;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">آگهی‌های شما به‌صورت خودکار به ۶ زبان ترجمه می‌شوند، با Google Jobs یکپارچه می‌شوند و دسترسی فوری به هزاران کارجوی را فراهم می‌کنند. بدون کارت اعتباری — مستقیماً از طریق واتس‌اپ آغاز کنید.‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ </div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-bg" style="background:#FFFFFF;padding:32px 8px;">
-<tr><td align="center">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="ibk-card" style="max-width:600px;width:100%;background:#FFFFFF;border-radius:14px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.07);">
-<tr><td class="ibk-pad" style="background:#194435;padding:24px 32px;">
-<table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td style="vertical-align:middle;">
-<img src="https://isbulkktc.com/images/isbul-logo-mark-white.png" width="56" height="33" alt="" style="display:block;border:0;outline:none;text-decoration:none;" />
+<div lang="fa" dir="rtl">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">گزینه‌های ۱، حداکثر ۳ و حداکثر ۵ آگهی را مقایسه کنید؛ مدت هر آگهی ۱، ۷ یا ۳۰ روز است. شرایط سازمانی در پیشنهاد کتبی تعیین می‌شود.‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ </div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-bg" style="width:100%;table-layout:fixed;background:#FFFFFF;">
+<tr><td align="center" style="padding:32px 8px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="ibk-card" style="max-width:600px;width:100%;table-layout:fixed;background:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.08);">
+
+<tr><td class="ibk-pad ibk-brand-bg" bgcolor="#194435" style="background:#194435;padding:24px 32px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-brand-table" style="width:100%;table-layout:fixed;"><tr>
+<td width="56" style="width:56px;vertical-align:middle;">
+<a href="https://isbulkktc.com/" style="display:inline-block;text-decoration:none;"><img src="https://isbulkktc.com/images/isbul-logo-mark-white.png" width="56" height="33" alt="İşBul KKTC" style="display:block;border:0;outline:none;text-decoration:none;" /></a>
 </td>
-<td style="vertical-align:middle;padding-right:14px;">
-<div style="color:#FFFFFF;font-size:26px;font-weight:700;letter-spacing:-0.4px;line-height:1.1;">İşBul KKTC</div>
-<div style="color:rgba(255,255,255,0.85);font-size:11px;margin-top:3px;">Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı</div>
+<td class="ibk-brand-copy" style="vertical-align:middle;padding-right:14px;word-wrap:break-word;">
+<div class="ibk-brand-name" style="color:#FFFFFF;font-size:28px;font-weight:800;letter-spacing:-0.4px;line-height:1.1;">İşBul KKTC</div>
+<div class="ibk-brand-tagline" style="color:rgba(255,255,255,0.85);font-size:11px;margin-top:3px;">Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı</div>
 </td>
 </tr></table>
 </td></tr>
-<tr><td class="ibk-pad" style="padding:32px;">
-<h1 style="margin:0 0 16px;font-size:26px;line-height:1.25;font-weight:700;letter-spacing:-0.4px;color:#171B1A;" class="ibk-h1">بگذارید تا بهترین استعدادها به سراغ شما بیایند — شما فقط انتخاب کنید</h1><div style="font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">مدیر محترم،</p><p style="margin:0 0 12px;">یافتن کارجوی مناسب در Kuzey Kıbrıs دیگر نیازی به جستجو در ده‌ها کانال مختلف و 엑سل‌های مضطرب ندارد.</p><p style="margin:0 0 12px;">İşBul KKTC قدرتمندترین شبکه کار و اشتغال منطقه است — آگهی‌های شما در ۶ زبان منتشر می‌شوند، در رتبه اول Google Jobs قرار می‌گیرند و مدیریت حرفه‌ای درخواست‌ها را با یک کلیک فراهم می‌کنند.</p></div><div style="margin:24px 0 0;">
-<p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.04em;color:#194435;">با İŞBUL KKTC، کسب‌وکار شما موارد زیر را بدست می‌آورد:</p>
-<div style="font-size:15px;line-height:1.6;color:#171B1A;"><table role="presentation" cellpadding="0" cellspacing="0" style="margin:0;width:100%;"><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>🌍 در ۶ زبان آگهی دهید — در رتبه اول Google قرار بگیرید</strong> — آگهی‌ها به‌صورت خودکار در tr، en، ru، el، fa، de منتشر می‌شوند. یکپارچه‌سازی با اسکیمای Google Jobs آگهی‌های شما را در نتایج جستجوی بالایی قرار می‌دهد و همزمان مخاطبین بین‌المللی و محلی را پوشش می‌دهد.</td></tr><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>🔍 مجموعه کارجویان را کاوش کنید — به درخواست‌های آگهی محدود نمانید</strong> — هزاران پروفایل کارجوی در پلتفرم را فیلتر کنید تا talentoهایی را پیدا کنید که اصلا به آگهی شما درخواست نداده‌اند. ابزارهای جستجو و فیلتر، فرد مناسب را در ثانیه‌ها شناسایی می‌کنند.</td></tr><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>⚡ مدیریت CV/درخواست‌ها را از یک داشبورد خودکار کنید</strong> — کارجویان CV بارگذاری می‌کنند، سیستم بلافاصله پروفایل ساختاریافته می‌سازد. درخواست‌ها را در بردهای kanban جابجا کنید، یادداشت اضافه کنید، با تیم به اشتراک بگذارید — زنجیره‌های ایمیل و اکسل‌ها گذشته می‌شوند.</td></tr><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>✅ نشانه تایید شرکت — اعتماد بسازید، درخواست‌ها را افزایش دهید</strong> — شرکت‌هایی که احراز هویت را می‌گذرند، نشانه «تایید شده» دریافت می‌کنند. شرکت‌های تایید شده در نظر کارجویان برجسته می‌شوند و نرخ درخواست‌ها به‌صورت قابل‌قياسی افزایش می‌یابد.</td></tr><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>📦 بسته‌های آگهی انعطاف‌پذیر — برای نیاز خود بپردازید</strong> — یک آگهی، نامحدود ماهانه، بسته سالانه سازمانی. هیچ تمدید خودکار شگفت‌انگیزی، هیچ هزینه مخفی. قیمت‌گذاری شفاف، کنترل بودجه را به دست شما می‌دهد.</td></tr></table></div>
-</div><div style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">فرایند استخدام خود را امروز در یک پلتفرم آغاز کنید.</p></div><table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 0;width:100%;"><tr><td style="padding:16px 0 0;">
-<p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#171B1A;">بسته‌های آگهی مناسب کسب‌وکار خود را ببینید و آغاز کنید:</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
-<td align="center" bgcolor="#194435" style="border-radius:8px;">
-<a href="https://wa.me/905391316421?text=Merhaba%20IsBul%20KKTC%2C%20ilan%20paketleri%20ve%20aday%20havuzu%20aktivasyonu%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." class="ibk-btn" style="display:block;padding:16px 24px;color:#FFFFFF;text-decoration:none;font-weight:600;font-size:15px;border-radius:8px;text-align:center;">از طریق واتس‌اپ آغاز کنید</a>
+
+<tr><td class="ibk-pad ibk-content-bg" bgcolor="#FFFFFF" style="padding:0;background:#FFFFFF;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 32px;">
+    <tr><td class="ibk-brand-bg" bgcolor="#194435" style="background:#194435;border-radius:16px;padding:48px 32px;text-align:left;">
+      <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:0.12em;color:#C9D9CF;">İŞBUL KKTC</p>
+      <h1 class="ibk-h1" style="margin:0;font-size:28px;line-height:1.25;font-weight:800;letter-spacing:-0.5px;color:#FFFFFF;">بسته آگهی متناسب با نیاز استخدام خود را انتخاب کنید</h1>
+      <p style="margin:8px 0 0;font-size:17px;line-height:1.6;color:#EAF1EC;font-weight:400;">تعداد آگهی را انتخاب کنید، سپس برای هر آگهی مدت ۱، ۷ یا ۳۰ روز را برگزینید.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 0;">
+       <tr><td align="center" bgcolor="#FFFFFF" class="ibk-button-secondary-cell" style="border-radius:999px;">
+         <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#packages-current" style="height:48px;v-text-anchor:middle;width:179px;" arcsize="50%" strokecolor="#194435" fillcolor="#FFFFFF">
+<w:anchorlock/>
+<center style="color:#194435;font-family:Arial,sans-serif;font-size:15px;font-weight:700;">مشاهده بسته‌ها</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#packages-current" class="ibk-button-secondary" style="display:inline-block;padding:16px 32px;background:#FFFFFF;color:#194435;text-decoration:none;font-weight:700;font-size:15px;line-height:1.6;border:2px solid #194435;border-radius:10px;text-align:center;">مشاهده بسته‌ها</a>
+<!--<![endif]-->
+       </td></tr></table>
+    </td></tr>
+  </table><div class="ibk-content" style="padding:32px;"><h2 class="ibk-h1" style="margin:0 0 16px;font-size:28px;line-height:1.25;font-weight:800;letter-spacing:-0.5px;color:#171B1A;">بسته آگهی متناسب با نیاز استخدام خود را انتخاب کنید</h2><div style="font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">کارفرمای گرامی،</p><p style="margin:0 0 12px;">بسته‌های کارفرمایان İşBul KKTC بر اساس تعداد موقعیت‌های شغلی بازی که می‌خواهید هم‌زمان منتشر کنید، ظرفیت‌های متفاوتی ارائه می‌کنند.</p><p style="margin:0 0 12px;">برای هر آگهی می‌توانید مدت ۱، ۷ یا ۳۰ روز را انتخاب کنید. تعداد آگهی‌ها و دامنه بسته سازمانی در پیشنهاد کتبی مشخص می‌شود.</p></div><div style="margin:24px 0 0;">
+  <h3 style="margin:0 0 8px;font-size:13px;line-height:1.6;font-weight:700;letter-spacing:0.06em;color:#194435;">تفاوت اصلی بسته‌ها</h3>
+  <div style="font-size:15px;line-height:1.6;color:#171B1A;"></div>
+</div><div style="margin:24px 0 0;">
+  <h3 style="margin:0 0 8px;font-size:13px;line-height:1.6;font-weight:700;letter-spacing:0.06em;color:#194435;">بسته‌ای متناسب با نیاز استخدام خود انتخاب کنید.</h3>
+  <div style="font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">بسته‌های کارفرمایان را از نظر تعداد آگهی و مدت انتشار مقایسه کنید.</p><p style="margin:0 0 12px;">بسته‌های آگهی را بررسی کنید. پرداخت از طریق انتقال IBAN و خارج از وب‌سایت انجام می‌شود؛ اطلاعات بانکی پس از گفتگو درباره شرایط بسته به‌صورت خصوصی ارسال می‌شود.</p></div>
+</div><div style="margin:24px 0 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
+    <tr>
+      <td width="48" valign="top" style="padding:16px 16px 24px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" class="ibk-icon-bg" bgcolor="#E2ECE5" style="width:40px;height:40px;background:#E2ECE5;border-radius:10px;">
+          <tr><td align="center" valign="middle" style="font-size:18px;line-height:1;color:#194435;font-weight:700;" aria-hidden="true">01</td></tr>
+        </table>
+      </td>
+      <td valign="top" style="padding:16px 0 24px;font-size:15px;line-height:1.6;color:#171B1A;">
+        <strong style="font-size:15px;font-weight:700;color:#171B1A;">یک موقعیت شغلی باز</strong>
+        <p style="margin:4px 0 0;font-weight:400;color:#414846;">بسته یک آگهی شامل یک آگهی برای یک موقعیت شغلی باز است.</p>
+      </td>
+    </tr>
+    <tr>
+      <td width="48" valign="top" style="padding:16px 16px 24px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" class="ibk-icon-bg" bgcolor="#E2ECE5" style="width:40px;height:40px;background:#E2ECE5;border-radius:10px;">
+          <tr><td align="center" valign="middle" style="font-size:18px;line-height:1;color:#194435;font-weight:700;" aria-hidden="true">03</td></tr>
+        </table>
+      </td>
+      <td valign="top" style="padding:16px 0 24px;font-size:15px;line-height:1.6;color:#171B1A;">
+        <strong style="font-size:15px;font-weight:700;color:#171B1A;">چند موقعیت شغلی</strong>
+        <p style="margin:4px 0 0;font-weight:400;color:#414846;">بسته رشد امکان انتشار هم‌زمان حداکثر سه آگهی را فراهم می‌کند.</p>
+      </td>
+    </tr>
+    <tr>
+      <td width="48" valign="top" style="padding:16px 16px 24px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" class="ibk-icon-bg" bgcolor="#E2ECE5" style="width:40px;height:40px;background:#E2ECE5;border-radius:10px;">
+          <tr><td align="center" valign="middle" style="font-size:18px;line-height:1;color:#194435;font-weight:700;" aria-hidden="true">05</td></tr>
+        </table>
+      </td>
+      <td valign="top" style="padding:16px 0 24px;font-size:15px;line-height:1.6;color:#171B1A;">
+        <strong style="font-size:15px;font-weight:700;color:#171B1A;">استخدام منظم</strong>
+        <p style="margin:4px 0 0;font-weight:400;color:#414846;">بسته حرفه‌ای امکان انتشار هم‌زمان حداکثر پنج آگهی را فراهم می‌کند.</p>
+      </td>
+    </tr>
+    <tr>
+      <td width="48" valign="top" style="padding:16px 16px 24px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" class="ibk-icon-bg" bgcolor="#E2ECE5" style="width:40px;height:40px;background:#E2ECE5;border-radius:10px;">
+          <tr><td align="center" valign="middle" style="font-size:18px;line-height:1;color:#194435;font-weight:700;" aria-hidden="true">✓</td></tr>
+        </table>
+      </td>
+      <td valign="top" style="padding:16px 0 24px;font-size:15px;line-height:1.6;color:#171B1A;">
+        <strong style="font-size:15px;font-weight:700;color:#171B1A;">دامنه سازمانی</strong>
+        <p style="margin:4px 0 0;font-weight:400;color:#414846;">تعداد، دامنه و مدت آگهی‌های سازمانی در پیشنهاد کتبی توافق می‌شود.</p>
+      </td>
+    </tr></table>
+  </div><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;margin:24px 0 0;"><tr><td class="ibk-package-cell" width="50%" valign="top" style="width:50%;padding:6px;vertical-align:top;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="ibk-package-card" bgcolor="#FFFFFF" style="width:100%;background:#FFFFFF;border:1px solid #D1D5D0;border-top:4px solid #4b8066;border-radius:16px;">
+          <tr><td style="padding:24px;">
+            <p style="margin:0 0 8px;font-size:11px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:#194435;">یک موقعیت شغلی باز</p>
+            <h4 style="margin:0;font-size:20px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:#171B1A;">یک آگهی</h4>
+            <p style="margin:8px 0 0;min-height:44px;font-size:13px;line-height:1.6;color:#414846;">یک موقعیت را برای مدت مناسب خود، یعنی ۱، ۷ یا ۳۰ روز منتشر کنید.</p>
+            <p style="margin:16px 0 0;padding:16px 0;border-top:1px solid #D1D5D0;border-bottom:1px solid #D1D5D0;font-size:13px;line-height:1.6;font-weight:700;color:#171B1A;">۱ آگهی شغلی · انتخاب ۱، ۷ یا ۳۰ روز برای هر آگهی · برای یک موقعیت شغلی باز</p>
+            <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#414846;">مدت انتشار آگهی: انتخاب ۱، ۷ یا ۳۰ روز برای هر آگهی</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0 0;width:100%;">
+            <tr><td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+              <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#package-tek-ilan" style="height:44px;v-text-anchor:middle;width:160px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:13px;font-weight:700;">مشاهده بسته</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#package-tek-ilan" class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:13px;line-height:1.6;border:0;border-radius:10px;text-align:center;">مشاهده بسته</a>
+<!--<![endif]-->
+            </td></tr>
+          </table>
+          </td></tr>
+        </table>
+      </td><td class="ibk-package-cell" width="50%" valign="top" style="width:50%;padding:6px;vertical-align:top;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="ibk-package-card" bgcolor="#FFFFFF" style="width:100%;background:#FFFFFF;border:1px solid #D1D5D0;border-top:4px solid #c6a46a;border-radius:16px;">
+          <tr><td style="padding:24px;">
+            <p style="margin:0 0 8px;font-size:11px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:#194435;">چند موقعیت شغلی باز</p>
+            <h4 style="margin:0;font-size:20px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:#171B1A;">رشد</h4>
+            <p style="margin:8px 0 0;min-height:44px;font-size:13px;line-height:1.6;color:#414846;">ظرفیت ساده برای انتشار هم‌زمان حداکثر سه موقعیت شغلی باز.</p>
+            <p style="margin:16px 0 0;padding:16px 0;border-top:1px solid #D1D5D0;border-bottom:1px solid #D1D5D0;font-size:13px;line-height:1.6;font-weight:700;color:#171B1A;">تا ۳ آگهی شغلی · انتخاب ۱، ۷ یا ۳۰ روز برای هر آگهی · برای چند موقعیت شغلی باز</p>
+            <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#414846;">مدت انتشار آگهی: انتخاب ۱، ۷ یا ۳۰ روز برای هر آگهی</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0 0;width:100%;">
+            <tr><td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+              <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#package-buyume" style="height:44px;v-text-anchor:middle;width:160px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:13px;font-weight:700;">مشاهده بسته</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#package-buyume" class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:13px;line-height:1.6;border:0;border-radius:10px;text-align:center;">مشاهده بسته</a>
+<!--<![endif]-->
+            </td></tr>
+          </table>
+          </td></tr>
+        </table>
+      </td></tr><tr><td class="ibk-package-cell" width="50%" valign="top" style="width:50%;padding:6px;vertical-align:top;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="ibk-package-card" bgcolor="#FFFFFF" style="width:100%;background:#FFFFFF;border:1px solid #D1D5D0;border-top:4px solid #326c54;border-radius:16px;">
+          <tr><td style="padding:24px;">
+            <p style="margin:0 0 8px;font-size:11px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:#194435;">استخدام منظم</p>
+            <h4 style="margin:0;font-size:20px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:#171B1A;">حرفه‌ای</h4>
+            <p style="margin:8px 0 0;min-height:44px;font-size:13px;line-height:1.6;color:#414846;">برای تیم‌هایی که هم‌زمان حداکثر پنج موقعیت شغلی باز منتشر می‌کنند.</p>
+            <p style="margin:16px 0 0;padding:16px 0;border-top:1px solid #D1D5D0;border-bottom:1px solid #D1D5D0;font-size:13px;line-height:1.6;font-weight:700;color:#171B1A;">تا ۵ آگهی شغلی · انتخاب ۱، ۷ یا ۳۰ روز برای هر آگهی · برای تیم‌هایی با استخدام منظم</p>
+            <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#414846;">مدت انتشار آگهی: انتخاب ۱، ۷ یا ۳۰ روز برای هر آگهی</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0 0;width:100%;">
+            <tr><td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+              <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#package-profesyonel" style="height:44px;v-text-anchor:middle;width:160px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:13px;font-weight:700;">مشاهده بسته</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#package-profesyonel" class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:13px;line-height:1.6;border:0;border-radius:10px;text-align:center;">مشاهده بسته</a>
+<!--<![endif]-->
+            </td></tr>
+          </table>
+          </td></tr>
+        </table>
+      </td><td class="ibk-package-cell" width="50%" valign="top" style="width:50%;padding:6px;vertical-align:top;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="ibk-package-card" bgcolor="#FFFFFF" style="width:100%;background:#FFFFFF;border:1px solid #D1D5D0;border-top:4px solid #9cbba7;border-radius:16px;">
+          <tr><td style="padding:24px;">
+            <p style="margin:0 0 8px;font-size:11px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:#194435;">استخدام سازمانی</p>
+            <h4 style="margin:0;font-size:20px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:#171B1A;">سازمانی</h4>
+            <p style="margin:8px 0 0;min-height:44px;font-size:13px;line-height:1.6;color:#414846;">برای سازمان‌هایی که پیشنهاد کتبی با تعداد و مدت مشخص آگهی نیاز دارند.</p>
+            <p style="margin:16px 0 0;padding:16px 0;border-top:1px solid #D1D5D0;border-bottom:1px solid #D1D5D0;font-size:13px;line-height:1.6;font-weight:700;color:#171B1A;">تعداد آگهی‌ها در پیشنهاد کتبی مشخص می‌شود · انتخاب ۱، ۷ یا ۳۰ روز برای هر آگهی · دامنه و مدت پیش از ارائه پیشنهاد توافق می‌شود</p>
+            <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#414846;">مدت انتشار آگهی: انتخاب ۱، ۷ یا ۳۰ روز برای هر آگهی</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0 0;width:100%;">
+            <tr><td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+              <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#packages-lead-title" style="height:44px;v-text-anchor:middle;width:160px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:13px;font-weight:700;">مشاهده بسته</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#packages-lead-title" class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:13px;line-height:1.6;border:0;border-radius:10px;text-align:center;">مشاهده بسته</a>
+<!--<![endif]-->
+            </td></tr>
+          </table>
+          </td></tr>
+        </table>
+      </td></tr></table><div style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">دامنه بسته‌ها را بررسی کنید و گزینه مناسب را با تیم ما نهایی کنید.</p></div><table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 0;width:100%;"><tr><td style="padding:16px 0 0;">
+<p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#171B1A;">درباره بسته انتخابی و دامنه آن با تیم ما گفتگو کنید.</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
+<td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://wa.me/905391316421?text=%D8%B3%D9%84%D8%A7%D9%85%D8%8C+%D9%85%D8%A7%DB%8C%D9%84+%D8%A8%D9%87+%D8%AF%D8%B1%DB%8C%D8%A7%D9%81%D8%AA+%D8%A7%D8%B7%D9%84%D8%A7%D8%B9%D8%A7%D8%AA+%D8%AF%D8%B1%D8%A8%D8%A7%D8%B1%D9%87+%D8%A8%D8%B3%D8%AA%D9%87%E2%80%8C%D9%87%D8%A7%DB%8C+%D8%A2%DA%AF%D9%87%DB%8C+%C4%B0%C5%9FBul+KKTC+%D9%87%D8%B3%D8%AA%D9%85.+%D9%84%D8%B7%D9%81%D8%A7%D9%8B+%D8%AF%D8%A7%D9%85%D9%86%D9%87+%D8%A8%D8%B3%D8%AA%D9%87%E2%80%8C%D9%87%D8%A7+%D9%88+%D9%85%D8%B1%D8%A7%D8%AD%D9%84+%D9%BE%D8%B1%D8%AF%D8%A7%D8%AE%D8%AA+%D8%B1%D8%A7+%D8%AA%D9%88%D8%B6%DB%8C%D8%AD+%D8%AF%D9%87%DB%8C%D8%AF." style="height:48px;v-text-anchor:middle;width:281px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:15px;font-weight:700;">باز کردن پیش‌نویس واتس‌اپ</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://wa.me/905391316421?text=%D8%B3%D9%84%D8%A7%D9%85%D8%8C+%D9%85%D8%A7%DB%8C%D9%84+%D8%A8%D9%87+%D8%AF%D8%B1%DB%8C%D8%A7%D9%81%D8%AA+%D8%A7%D8%B7%D9%84%D8%A7%D8%B9%D8%A7%D8%AA+%D8%AF%D8%B1%D8%A8%D8%A7%D8%B1%D9%87+%D8%A8%D8%B3%D8%AA%D9%87%E2%80%8C%D9%87%D8%A7%DB%8C+%D8%A2%DA%AF%D9%87%DB%8C+%C4%B0%C5%9FBul+KKTC+%D9%87%D8%B3%D8%AA%D9%85.+%D9%84%D8%B7%D9%81%D8%A7%D9%8B+%D8%AF%D8%A7%D9%85%D9%86%D9%87+%D8%A8%D8%B3%D8%AA%D9%87%E2%80%8C%D9%87%D8%A7+%D9%88+%D9%85%D8%B1%D8%A7%D8%AD%D9%84+%D9%BE%D8%B1%D8%AF%D8%A7%D8%AE%D8%AA+%D8%B1%D8%A7+%D8%AA%D9%88%D8%B6%DB%8C%D8%AD+%D8%AF%D9%87%DB%8C%D8%AF." class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:15px;line-height:1.6;border:0;border-radius:10px;text-align:center;">باز کردن پیش‌نویس واتس‌اپ</a>
+<!--<![endif]-->
 </td></tr></table>
 </td></tr><tr><td style="padding:16px 0 0;">
-<p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#171B1A;">یا مستقیماً با تیم پشتیبانی ما تماس بگیرید:</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
-<td align="center" bgcolor="#FFFFFF" style="border-radius:8px;border:1px solid #194435;">
-<a href="mailto:destek@isbulkktc.com" class="ibk-btn" style="display:block;padding:16px 24px;color:#194435;text-decoration:none;font-weight:600;font-size:15px;border-radius:8px;text-align:center;">دریافت اطلاعات از طریق ایمیل</a>
+<p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#171B1A;">درباره این بسته آگهی با تیم ما تماس بگیرید.</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
+<td align="center" bgcolor="#FFFFFF" class="ibk-button-secondary-cell" style="border-radius:10px;border:2px solid #194435;">
+<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="mailto:info@isbulkktc.com?subject=%D8%A8%D8%B3%D8%AA%D9%87%E2%80%8C%D9%87%D8%A7%DB%8C+%DA%A9%D8%A7%D8%B1%D9%81%D8%B1%D9%85%D8%A7%DB%8C%D8%A7%D9%86+%C4%B0%C5%9FBul+KKTC%3A+%D8%AF%D8%A7%D9%85%D9%86%D9%87+%D8%A7%D8%B3%D8%AA%D8%AE%D8%AF%D8%A7%D9%85+%D8%AE%D9%88%D8%AF+%D8%B1%D8%A7+%D8%A7%D9%86%D8%AA%D8%AE%D8%A7%D8%A8+%DA%A9%D9%86%DB%8C%D8%AF&amp;body=%D8%B3%D9%84%D8%A7%D9%85%D8%8C+%D9%85%D8%A7%DB%8C%D9%84+%D8%A8%D9%87+%D8%AF%D8%B1%DB%8C%D8%A7%D9%81%D8%AA+%D8%A7%D8%B7%D9%84%D8%A7%D8%B9%D8%A7%D8%AA+%D8%AF%D8%B1%D8%A8%D8%A7%D8%B1%D9%87+%D8%A8%D8%B3%D8%AA%D9%87%E2%80%8C%D9%87%D8%A7%DB%8C+%D8%A2%DA%AF%D9%87%DB%8C+%C4%B0%C5%9FBul+KKTC+%D9%87%D8%B3%D8%AA%D9%85.+%D9%84%D8%B7%D9%81%D8%A7%D9%8B+%D8%AF%D8%A7%D9%85%D9%86%D9%87+%D8%A8%D8%B3%D8%AA%D9%87%E2%80%8C%D9%87%D8%A7+%D9%88+%D9%85%D8%B1%D8%A7%D8%AD%D9%84+%D9%BE%D8%B1%D8%AF%D8%A7%D8%AE%D8%AA+%D8%B1%D8%A7+%D8%AA%D9%88%D8%B6%DB%8C%D8%AD+%D8%AF%D9%87%DB%8C%D8%AF.%0A%0Ahttps%3A%2F%2Fisbulkktc.com%2Fpackages%23packages-current" style="height:48px;v-text-anchor:middle;width:262px;" arcsize="12%" strokecolor="#194435" fillcolor="#FFFFFF">
+<w:anchorlock/>
+<center style="color:#194435;font-family:Arial,sans-serif;font-size:15px;font-weight:700;">باز کردن پیش‌نویس ایمیل</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="mailto:info@isbulkktc.com?subject=%D8%A8%D8%B3%D8%AA%D9%87%E2%80%8C%D9%87%D8%A7%DB%8C+%DA%A9%D8%A7%D8%B1%D9%81%D8%B1%D9%85%D8%A7%DB%8C%D8%A7%D9%86+%C4%B0%C5%9FBul+KKTC%3A+%D8%AF%D8%A7%D9%85%D9%86%D9%87+%D8%A7%D8%B3%D8%AA%D8%AE%D8%AF%D8%A7%D9%85+%D8%AE%D9%88%D8%AF+%D8%B1%D8%A7+%D8%A7%D9%86%D8%AA%D8%AE%D8%A7%D8%A8+%DA%A9%D9%86%DB%8C%D8%AF&amp;body=%D8%B3%D9%84%D8%A7%D9%85%D8%8C+%D9%85%D8%A7%DB%8C%D9%84+%D8%A8%D9%87+%D8%AF%D8%B1%DB%8C%D8%A7%D9%81%D8%AA+%D8%A7%D8%B7%D9%84%D8%A7%D8%B9%D8%A7%D8%AA+%D8%AF%D8%B1%D8%A8%D8%A7%D8%B1%D9%87+%D8%A8%D8%B3%D8%AA%D9%87%E2%80%8C%D9%87%D8%A7%DB%8C+%D8%A2%DA%AF%D9%87%DB%8C+%C4%B0%C5%9FBul+KKTC+%D9%87%D8%B3%D8%AA%D9%85.+%D9%84%D8%B7%D9%81%D8%A7%D9%8B+%D8%AF%D8%A7%D9%85%D9%86%D9%87+%D8%A8%D8%B3%D8%AA%D9%87%E2%80%8C%D9%87%D8%A7+%D9%88+%D9%85%D8%B1%D8%A7%D8%AD%D9%84+%D9%BE%D8%B1%D8%AF%D8%A7%D8%AE%D8%AA+%D8%B1%D8%A7+%D8%AA%D9%88%D8%B6%DB%8C%D8%AD+%D8%AF%D9%87%DB%8C%D8%AF.%0A%0Ahttps%3A%2F%2Fisbulkktc.com%2Fpackages%23packages-current" class="ibk-button-secondary" style="display:inline-block;padding:16px 32px;background:#FFFFFF;color:#194435;text-decoration:none;font-weight:700;font-size:15px;line-height:1.6;border:2px solid #194435;border-radius:10px;text-align:center;">باز کردن پیش‌نویس ایمیل</a>
+<!--<![endif]-->
 </td></tr></table>
-</td></tr></table><div style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">با احترام، İşBul KKTC — نقطه دیدار دیجیتال برای کار و اشتغال در قبرس شمالی</p></div><div style="margin:24px 0 0;background:#F0F1ED;border:1px solid #D1D5D0;border-radius:8px;padding:16px 24px;">
-<p style="margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:0.04em;color:#194435;">تماس سریع — اگر می‌خواهید سریع تصمیم بگیرید:</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr><td style="padding:6px 0;font-size:15px;line-height:1.6;color:#414846;">ایمیل: <a href="mailto:destek@isbulkktc.com" style="color:#194435;text-decoration:none;font-weight:600;">destek@isbulkktc.com</a></td></tr><tr><td style="padding:6px 0;font-size:15px;line-height:1.6;color:#414846;">تلفن: <a href="tel:+905391316421" style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></td></tr><tr><td style="padding:6px 0;font-size:15px;line-height:1.6;color:#414846;">واتس‌اپ: <a href="https://wa.me/905391316421?text=Merhaba%20IsBul%20KKTC%2C%20ilan%20paketleri%20ve%20aday%20havuzu%20aktivasyonu%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></td></tr></table>
-</div>
+</td></tr></table><div style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">با احترام، İşBul KKTC</p></div><div class="ibk-panel" style="margin:32px 0 0;background:#F0F1ED;border:1px solid #D1D5D0;border-radius:16px;padding:24px 32px;">
+<p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.06em;color:#194435;">درباره این بسته آگهی با تیم ما تماس بگیرید.</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr><td style="padding:8px 0;font-size:15px;line-height:1.6;color:#414846;">ایمیل: <a href="mailto:info@isbulkktc.com" style="color:#194435;text-decoration:none;font-weight:600;">info@isbulkktc.com</a></td></tr><tr><td style="padding:8px 0;font-size:15px;line-height:1.6;color:#414846;">تلفن: <a href="tel:+905391316421" style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></td></tr><tr><td style="padding:8px 0;font-size:15px;line-height:1.6;color:#414846;">WhatsApp: <a href="https://wa.me/905391316421?text=%D8%B3%D9%84%D8%A7%D9%85%D8%8C+%D9%85%D8%A7%DB%8C%D9%84+%D8%A8%D9%87+%D8%AF%D8%B1%DB%8C%D8%A7%D9%81%D8%AA+%D8%A7%D8%B7%D9%84%D8%A7%D8%B9%D8%A7%D8%AA+%D8%AF%D8%B1%D8%A8%D8%A7%D8%B1%D9%87+%D8%A8%D8%B3%D8%AA%D9%87%E2%80%8C%D9%87%D8%A7%DB%8C+%D8%A2%DA%AF%D9%87%DB%8C+%C4%B0%C5%9FBul+KKTC+%D9%87%D8%B3%D8%AA%D9%85.+%D9%84%D8%B7%D9%81%D8%A7%D9%8B+%D8%AF%D8%A7%D9%85%D9%86%D9%87+%D8%A8%D8%B3%D8%AA%D9%87%E2%80%8C%D9%87%D8%A7+%D9%88+%D9%85%D8%B1%D8%A7%D8%AD%D9%84+%D9%BE%D8%B1%D8%AF%D8%A7%D8%AE%D8%AA+%D8%B1%D8%A7+%D8%AA%D9%88%D8%B6%DB%8C%D8%AD+%D8%AF%D9%87%DB%8C%D8%AF." style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></td></tr></table>
+</div></div>
 </td></tr>
-<tr><td class="ibk-foot" style="padding:24px 32px;background:#FAF8F3;border-top:1px solid #D1D5D0;text-align:center;font-size:11px;line-height:1.75;color:#414846;">
-<p style="margin:0 0 6px;">این ایمیل را دریافت کردید چون فکر می‌کنیم İşBul KKTC می‌تواند برای کسب‌وکار شما مفید باشد.</p>
-<p style="margin:0 0 6px;">Alsancak, Girne · Kuzey Kıbrıs Türk Cumhuriyeti</p>
+<tr><td class="ibk-foot" style="padding:32px 32px;background:#FAF8F3;border-top:1px solid #D1D5D0;text-align:center;font-size:11px;line-height:1.75;color:#414846;">
+<p style="margin:0 0 8px;">این ایمیل برای ارائه اطلاعات درباره بسته‌های آگهی İşBul KKTC ویژه کارفرمایان ارسال شده است.</p>
+<p style="margin:0 0 8px;"><a href="mailto:info@isbulkktc.com" style="color:#194435;text-decoration:none;font-weight:600;">info@isbulkktc.com</a> <span aria-hidden="true">·</span> <a href="tel:+905391316421" style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></p>
+<p style="margin:0 0 8px;">Alsancak, Girne · Kuzey Kıbrıs Türk Cumhuriyeti</p>
 <p style="margin:0;">© 2026 İşBul KKTC · <a href="https://isbulkktc.com/" style="color:#194435;text-decoration:none;">isbulkktc.com</a> · <a href="https://isbulkktc.com/api/email/unsubscribe?e=x&amp;s=y" style="color:#414846;text-decoration:underline;">لغو اشتراک</a></p>
 </td></tr>
 </table>
 </td></tr>
 </table>
+</div>
 </body>
 </html>

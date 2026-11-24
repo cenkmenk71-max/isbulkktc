@@ -31,7 +31,7 @@ export default async function CompanyApplicationPage({
   if (!locale) notFound();
 
   setRequestLocale(locale);
-  await requireAuthenticatedUser();
+  await requireAuthenticatedUser({ audience: "employer" });
   if (!z.string().uuid().safeParse(applicationId).success) notFound();
 
   const { companies } = await getEmployerWorkspace();

@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="light dark">
 <meta name="supported-color-schemes" content="light dark">
 <meta name="x-apple-disable-message-reformatting">
-<title>Lassen Sie die richtigen Talente zu sich kommen — Sie wählen nur aus</title>
+<title>Wählen Sie ein Anzeigenpaket passend zu Ihrem Personalbedarf</title>
 <style>
   body { margin:0 !important; padding:0 !important; width:100% !important; }
   a { -webkit-text-size-adjust:none; }
@@ -14,57 +14,286 @@
   @media (max-width:600px) {
     .ibk-pad { padding-left:20px !important; padding-right:20px !important; }
     .ibk-h1 { font-size:20px !important; }
+    .ibk-package-cell { display:block !important; width:100% !important; padding:0 0 12px !important; }
+    .ibk-brand-name { font-size:24px !important; }
+    .ibk-brand-tagline { font-size:10px !important; line-height:1.35 !important; }
   }
+  /* Dark mode is component-scoped. A global p/div/td colour override creates
+     white-on-white text in package cards and secondary actions. */
   @media (prefers-color-scheme:dark) {
-    .ibk-bg { background:#171B1A !important; }
-    .ibk-card { background:#222827 !important; }
-    .ibk-h1, .ibk-code { color:#F3F1EC !important; }
-    .ibk-foot { background:#171B1A !important; }
+    .ibk-bg { background-color:#171B1A !important; }
+    .ibk-card, .ibk-content-bg { background-color:#1E2423 !important; }
+    .ibk-brand-bg { background-color:#123128 !important; }
+    .ibk-content, .ibk-content p, .ibk-content div, .ibk-content td,
+    .ibk-content span, .ibk-content strong, .ibk-content h1, .ibk-content h2,
+    .ibk-content h3, .ibk-content h4, .ibk-content li, .ibk-content a {
+      color:#F3F1EC !important;
+    }
+    .ibk-package-card, .ibk-panel, .ibk-soft-panel {
+      background-color:#2A3430 !important;
+      border-color:#46544D !important;
+    }
+    .ibk-icon-bg { background-color:#2C4037 !important; }
+    .ibk-button-secondary-cell, .ibk-button-secondary {
+      background-color:#2A3430 !important;
+      border-color:#6FAA92 !important;
+      color:#F3F1EC !important;
+    }
+    .ibk-button-primary-cell { background-color:#123128 !important; }
+    .ibk-button-primary { color:#FFFFFF !important; }
+    .ibk-foot { background-color:#171B1A !important; color:#C5CEC8 !important; }
+    .ibk-foot a { color:#A9CBBB !important; }
   }
-  [data-ogsc] .ibk-card { background:#222827 !important; }
+
+  /* Outlook.com / Outlook on the web exposes these attributes when its
+     dark-theme engine rewrites an element. Repeat the scoped palette so the
+     foreground and the surface always move together. */
+  [data-ogsc] .ibk-content,
+  [data-ogsc] .ibk-content p, [data-ogsc] .ibk-content div,
+  [data-ogsc] .ibk-content td, [data-ogsc] .ibk-content span,
+  [data-ogsc] .ibk-content strong, [data-ogsc] .ibk-content h1,
+  [data-ogsc] .ibk-content h2, [data-ogsc] .ibk-content h3,
+  [data-ogsc] .ibk-content h4, [data-ogsc] .ibk-content li,
+  [data-ogsc] .ibk-content a,
+  p[data-ogsc], div[data-ogsc], td[data-ogsc], span[data-ogsc],
+  strong[data-ogsc], h1[data-ogsc], h2[data-ogsc], h3[data-ogsc],
+  h4[data-ogsc], li[data-ogsc], a[data-ogsc] {
+    color:#F3F1EC !important;
+  }
+  [data-ogsb] .ibk-card, [data-ogsb] .ibk-content-bg {
+    background-color:#1E2423 !important;
+  }
+  [data-ogsb] .ibk-brand-bg { background-color:#123128 !important; }
+  [data-ogsb] .ibk-package-card, [data-ogsb] .ibk-panel,
+  [data-ogsb] .ibk-soft-panel {
+    background-color:#2A3430 !important;
+    border-color:#46544D !important;
+  }
+  [data-ogsb] .ibk-icon-bg { background-color:#2C4037 !important; }
+  [data-ogsb] .ibk-button-secondary-cell {
+    background-color:#2A3430 !important;
+    border-color:#6FAA92 !important;
+  }
+  [data-ogsb] .ibk-button-primary-cell { background-color:#123128 !important; }
+  [data-ogsb] .ibk-foot { background-color:#171B1A !important; }
+  [data-ogsc] .ibk-foot { color:#C5CEC8 !important; }
+  [data-ogsc] .ibk-foot a { color:#A9CBBB !important; }
 </style>
 </head>
 <body style="margin:0;padding:0;background:#FFFFFF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#171B1A;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">Ihre Anzeigen werden automatisch in 6 Sprachen übersetzt, in Google Jobs integriert und geben Ihnen sofortigen Zugriff auf Tausende Kandidaten. Keine Kreditkarte — starten Sie direkt per WhatsApp.‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ </div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-bg" style="background:#FFFFFF;padding:32px 8px;">
-<tr><td align="center">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="ibk-card" style="max-width:600px;width:100%;background:#FFFFFF;border-radius:14px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.07);">
-<tr><td class="ibk-pad" style="background:#194435;padding:24px 32px;">
-<table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td style="vertical-align:middle;">
-<img src="https://isbulkktc.com/images/isbul-logo-mark-white.png" width="56" height="33" alt="" style="display:block;border:0;outline:none;text-decoration:none;" />
+<div lang="de" dir="ltr">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">Vergleichen Sie Optionen für 1, bis zu 3 und bis zu 5 Anzeigen. Je Anzeige sind 1, 7 oder 30 Tage möglich; Unternehmensumfänge werden schriftlich vereinbart.‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ </div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-bg" style="width:100%;table-layout:fixed;background:#FFFFFF;">
+<tr><td align="center" style="padding:32px 8px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="ibk-card" style="max-width:600px;width:100%;table-layout:fixed;background:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.08);">
+
+<tr><td class="ibk-pad ibk-brand-bg" bgcolor="#194435" style="background:#194435;padding:24px 32px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-brand-table" style="width:100%;table-layout:fixed;"><tr>
+<td width="56" style="width:56px;vertical-align:middle;">
+<a href="https://isbulkktc.com/" style="display:inline-block;text-decoration:none;"><img src="https://isbulkktc.com/images/isbul-logo-mark-white.png" width="56" height="33" alt="İşBul KKTC" style="display:block;border:0;outline:none;text-decoration:none;" /></a>
 </td>
-<td style="vertical-align:middle;padding-left:14px;">
-<div style="color:#FFFFFF;font-size:26px;font-weight:700;letter-spacing:-0.4px;line-height:1.1;">İşBul KKTC</div>
-<div style="color:rgba(255,255,255,0.85);font-size:11px;margin-top:3px;">Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı</div>
+<td class="ibk-brand-copy" style="vertical-align:middle;padding-left:14px;word-wrap:break-word;">
+<div class="ibk-brand-name" style="color:#FFFFFF;font-size:28px;font-weight:800;letter-spacing:-0.4px;line-height:1.1;">İşBul KKTC</div>
+<div class="ibk-brand-tagline" style="color:rgba(255,255,255,0.85);font-size:11px;margin-top:3px;">Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı</div>
 </td>
 </tr></table>
 </td></tr>
-<tr><td class="ibk-pad" style="padding:32px;">
-<h1 style="margin:0 0 16px;font-size:26px;line-height:1.25;font-weight:700;letter-spacing:-0.4px;color:#171B1A;" class="ibk-h1">Lassen Sie die richtigen Talente zu sich kommen — Sie wählen nur aus</h1><div style="font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">Sehr geehrte Damen und Herren,</p><p style="margin:0 0 12px;">Die Suche nach dem richtigen Kandidaten in Nordzypern erfordert nicht mehr das Jonglieren zwischen Dutzenden Kanälen und chaotischen Tabellen.</p><p style="margin:0 0 12px;">İşBul KKTC ist das stärkste Karrierenetzwerk der Region — Ihre Anzeigen gehen in 6 Sprachen live, erreichen Top-Platzierungen bei Google Jobs und geben Ihnen professionelles Bewerbermanagement mit einem Klick.</p></div><div style="margin:24px 0 0;">
-<p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.04em;color:#194435;">MIT İŞBUL KKTC GEWINNT IHR UNTERNEHMEN:</p>
-<div style="font-size:15px;line-height:1.6;color:#171B1A;"><table role="presentation" cellpadding="0" cellspacing="0" style="margin:0;width:100%;"><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>🌍 In 6 Sprachen veröffentlichen — bei Google ganz oben stehen</strong> — Anzeigen gehen automatisch in tr, en, ru, el, fa, de live. Die Google-Jobs-Schema-Integration katapultiert Ihre Anzeigen an die Spitze der Suchergebnisse und erreicht internationale sowie lokale Talente gleichzeitig.</td></tr><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>🔍 Kandidatenpool durchsuchen — nicht auf Bewerbungen beschränkt</strong> — Filtern Sie tausende Kandidatenprofile auf der Plattform, um Talente zu finden, die sich gar nicht auf Ihre Anzeige beworben haben. Such- und Filtertools finden den perfekten Match in Sekunden.</td></tr><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>⚡ CV/Bewerbungs-Management aus einem Dashboard automatisieren</strong> — Kandidaten laden CVs hoch, das System erstellt sofort strukturierte Profile. Bewerbungen auf Kanban-Boards verschieben, Notizen hinzufügen, mit dem Team teilen — E-Mail-Ketten und Tabellen gehören der Vergangenheit an.</td></tr><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>✅ Verifiziertes Firmen-Badge — Vertrauen schaffen, Bewerbungen steigern</strong> — Unternehmen, die die Identitätsprüfung bestehen, erhalten ein &#39;Verifiziert&#39;-Badge. Verifizierte Unternehmen stechen Kandidaten ins Auge und erhöhen die Bewerbungsrate messbar.</td></tr><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>📦 Flexible Anzeigenpakete — zahlen Sie nur für das, was Sie brauchen</strong> — Einzelanzeige, monatlich unbegrenzt, jährliches Corporate-Paket. Keine automatischen Verlängerungen, keine versteckten Gebühren. Transparente Preise geben Ihnen die Budgetkontrolle.</td></tr></table></div>
-</div><div style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">Starten Sie Ihren Einstellungsprozess noch heute auf einer Plattform.</p></div><table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 0;width:100%;"><tr><td style="padding:16px 0 0;">
-<p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#171B1A;">Sehen Sie sich die Anzeigenpakete an, die zu Ihrem Unternehmen passen, und legen Sie los:</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
-<td align="center" bgcolor="#194435" style="border-radius:8px;">
-<a href="https://wa.me/905391316421?text=Merhaba%20IsBul%20KKTC%2C%20ilan%20paketleri%20ve%20aday%20havuzu%20aktivasyonu%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." class="ibk-btn" style="display:block;padding:16px 24px;color:#FFFFFF;text-decoration:none;font-weight:600;font-size:15px;border-radius:8px;text-align:center;">Per WhatsApp starten</a>
+
+<tr><td class="ibk-pad ibk-content-bg" bgcolor="#FFFFFF" style="padding:0;background:#FFFFFF;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 32px;">
+    <tr><td class="ibk-brand-bg" bgcolor="#194435" style="background:#194435;border-radius:16px;padding:48px 32px;text-align:left;">
+      <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:0.12em;color:#C9D9CF;">İŞBUL KKTC</p>
+      <h1 class="ibk-h1" style="margin:0;font-size:28px;line-height:1.25;font-weight:800;letter-spacing:-0.5px;color:#FFFFFF;">Wählen Sie ein Anzeigenpaket passend zu Ihrem Personalbedarf</h1>
+      <p style="margin:8px 0 0;font-size:17px;line-height:1.6;color:#EAF1EC;font-weight:400;">Legen Sie die Anzahl der Anzeigen fest und wählen Sie je Anzeige 1, 7 oder 30 Tage.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 0;">
+       <tr><td align="center" bgcolor="#FFFFFF" class="ibk-button-secondary-cell" style="border-radius:999px;">
+         <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#packages-current" style="height:48px;v-text-anchor:middle;width:179px;" arcsize="50%" strokecolor="#194435" fillcolor="#FFFFFF">
+<w:anchorlock/>
+<center style="color:#194435;font-family:Arial,sans-serif;font-size:15px;font-weight:700;">Pakete ansehen</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#packages-current" class="ibk-button-secondary" style="display:inline-block;padding:16px 32px;background:#FFFFFF;color:#194435;text-decoration:none;font-weight:700;font-size:15px;line-height:1.6;border:2px solid #194435;border-radius:10px;text-align:center;">Pakete ansehen</a>
+<!--<![endif]-->
+       </td></tr></table>
+    </td></tr>
+  </table><div class="ibk-content" style="padding:32px;"><h2 class="ibk-h1" style="margin:0 0 16px;font-size:28px;line-height:1.25;font-weight:800;letter-spacing:-0.5px;color:#171B1A;">Wählen Sie ein Anzeigenpaket passend zu Ihrem Personalbedarf</h2><div style="font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">Guten Tag,</p><p style="margin:0 0 12px;">Die Arbeitgeberpakete von İşBul KKTC bieten unterschiedliche Anzeigenkontingente, je nachdem, wie viele offene Stellen Sie gleichzeitig veröffentlichen möchten.</p><p style="margin:0 0 12px;">Für jede Anzeige können Sie 1, 7 oder 30 Tage wählen. Anzahl, Umfang und Laufzeit eines Unternehmenspakets werden in einem schriftlichen Angebot festgelegt.</p></div><div style="margin:24px 0 0;">
+  <h3 style="margin:0 0 8px;font-size:13px;line-height:1.6;font-weight:700;letter-spacing:0.06em;color:#194435;">DIE WICHTIGSTEN PAKETUNTERSCHIEDE</h3>
+  <div style="font-size:15px;line-height:1.6;color:#171B1A;"></div>
+</div><div style="margin:24px 0 0;">
+  <h3 style="margin:0 0 8px;font-size:13px;line-height:1.6;font-weight:700;letter-spacing:0.06em;color:#194435;">WÄHLEN SIE EIN STELLENPAKET PASSEND ZU IHREM BEDARF.</h3>
+  <div style="font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">Vergleichen Sie Arbeitgeberpakete nach Anzeigenkontingent und Laufzeit.</p><p style="margin:0 0 12px;">Entdecken Sie Anzeigenpakete. Die Zahlung erfolgt per IBAN-Überweisung außerhalb der Website; Bankdaten und Anweisungen werden nach Besprechung der Paketbedingungen privat mitgeteilt.</p></div>
+</div><div style="margin:24px 0 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
+    <tr>
+      <td width="48" valign="top" style="padding:16px 16px 24px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" class="ibk-icon-bg" bgcolor="#E2ECE5" style="width:40px;height:40px;background:#E2ECE5;border-radius:10px;">
+          <tr><td align="center" valign="middle" style="font-size:18px;line-height:1;color:#194435;font-weight:700;" aria-hidden="true">01</td></tr>
+        </table>
+      </td>
+      <td valign="top" style="padding:16px 0 24px;font-size:15px;line-height:1.6;color:#171B1A;">
+        <strong style="font-size:15px;font-weight:700;color:#171B1A;">Eine offene Stelle</strong>
+        <p style="margin:4px 0 0;font-weight:400;color:#414846;">Das Einzelanzeigenpaket umfasst eine Stellenanzeige für eine offene Stelle.</p>
+      </td>
+    </tr>
+    <tr>
+      <td width="48" valign="top" style="padding:16px 16px 24px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" class="ibk-icon-bg" bgcolor="#E2ECE5" style="width:40px;height:40px;background:#E2ECE5;border-radius:10px;">
+          <tr><td align="center" valign="middle" style="font-size:18px;line-height:1;color:#194435;font-weight:700;" aria-hidden="true">03</td></tr>
+        </table>
+      </td>
+      <td valign="top" style="padding:16px 0 24px;font-size:15px;line-height:1.6;color:#171B1A;">
+        <strong style="font-size:15px;font-weight:700;color:#171B1A;">Mehrere offene Stellen</strong>
+        <p style="margin:4px 0 0;font-weight:400;color:#414846;">Das Wachstumspaket umfasst bis zu drei gleichzeitig veröffentlichte Anzeigen.</p>
+      </td>
+    </tr>
+    <tr>
+      <td width="48" valign="top" style="padding:16px 16px 24px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" class="ibk-icon-bg" bgcolor="#E2ECE5" style="width:40px;height:40px;background:#E2ECE5;border-radius:10px;">
+          <tr><td align="center" valign="middle" style="font-size:18px;line-height:1;color:#194435;font-weight:700;" aria-hidden="true">05</td></tr>
+        </table>
+      </td>
+      <td valign="top" style="padding:16px 0 24px;font-size:15px;line-height:1.6;color:#171B1A;">
+        <strong style="font-size:15px;font-weight:700;color:#171B1A;">Regelmäßige Personalsuche</strong>
+        <p style="margin:4px 0 0;font-weight:400;color:#414846;">Das Professional-Paket umfasst bis zu fünf gleichzeitig veröffentlichte Anzeigen.</p>
+      </td>
+    </tr>
+    <tr>
+      <td width="48" valign="top" style="padding:16px 16px 24px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" class="ibk-icon-bg" bgcolor="#E2ECE5" style="width:40px;height:40px;background:#E2ECE5;border-radius:10px;">
+          <tr><td align="center" valign="middle" style="font-size:18px;line-height:1;color:#194435;font-weight:700;" aria-hidden="true">✓</td></tr>
+        </table>
+      </td>
+      <td valign="top" style="padding:16px 0 24px;font-size:15px;line-height:1.6;color:#171B1A;">
+        <strong style="font-size:15px;font-weight:700;color:#171B1A;">Unternehmensumfang</strong>
+        <p style="margin:4px 0 0;font-weight:400;color:#414846;">Anzahl, Umfang und Laufzeit der Unternehmensanzeigen werden schriftlich vereinbart.</p>
+      </td>
+    </tr></table>
+  </div><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;margin:24px 0 0;"><tr><td class="ibk-package-cell" width="50%" valign="top" style="width:50%;padding:6px;vertical-align:top;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="ibk-package-card" bgcolor="#FFFFFF" style="width:100%;background:#FFFFFF;border:1px solid #D1D5D0;border-top:4px solid #4b8066;border-radius:16px;">
+          <tr><td style="padding:24px;">
+            <p style="margin:0 0 8px;font-size:11px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:#194435;">EINE OFFENE STELLE</p>
+            <h4 style="margin:0;font-size:20px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:#171B1A;">Einzelanzeige</h4>
+            <p style="margin:8px 0 0;min-height:44px;font-size:13px;line-height:1.6;color:#414846;">Veröffentlichen Sie eine Stelle für 1, 7 oder 30 Tage – passend zu Ihrem Bedarf.</p>
+            <p style="margin:16px 0 0;padding:16px 0;border-top:1px solid #D1D5D0;border-bottom:1px solid #D1D5D0;font-size:13px;line-height:1.6;font-weight:700;color:#171B1A;">1 Stellenanzeige · Je Anzeige 1, 7 oder 30 Tage · Für eine offene Stelle</p>
+            <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#414846;">Anzeigendauer: Je Anzeige 1, 7 oder 30 Tage</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0 0;width:100%;">
+            <tr><td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+              <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#package-tek-ilan" style="height:44px;v-text-anchor:middle;width:160px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:13px;font-weight:700;">Paket ansehen</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#package-tek-ilan" class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:13px;line-height:1.6;border:0;border-radius:10px;text-align:center;">Paket ansehen</a>
+<!--<![endif]-->
+            </td></tr>
+          </table>
+          </td></tr>
+        </table>
+      </td><td class="ibk-package-cell" width="50%" valign="top" style="width:50%;padding:6px;vertical-align:top;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="ibk-package-card" bgcolor="#FFFFFF" style="width:100%;background:#FFFFFF;border:1px solid #D1D5D0;border-top:4px solid #c6a46a;border-radius:16px;">
+          <tr><td style="padding:24px;">
+            <p style="margin:0 0 8px;font-size:11px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:#194435;">MEHRERE OFFENE STELLEN</p>
+            <h4 style="margin:0;font-size:20px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:#171B1A;">Wachstum</h4>
+            <p style="margin:8px 0 0;min-height:44px;font-size:13px;line-height:1.6;color:#414846;">Einfacher Anzeigenumfang für bis zu drei gleichzeitig offene Stellen.</p>
+            <p style="margin:16px 0 0;padding:16px 0;border-top:1px solid #D1D5D0;border-bottom:1px solid #D1D5D0;font-size:13px;line-height:1.6;font-weight:700;color:#171B1A;">Bis zu 3 Stellenanzeigen · Je Anzeige 1, 7 oder 30 Tage · Für mehrere offene Stellen</p>
+            <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#414846;">Anzeigendauer: Je Anzeige 1, 7 oder 30 Tage</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0 0;width:100%;">
+            <tr><td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+              <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#package-buyume" style="height:44px;v-text-anchor:middle;width:160px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:13px;font-weight:700;">Paket ansehen</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#package-buyume" class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:13px;line-height:1.6;border:0;border-radius:10px;text-align:center;">Paket ansehen</a>
+<!--<![endif]-->
+            </td></tr>
+          </table>
+          </td></tr>
+        </table>
+      </td></tr><tr><td class="ibk-package-cell" width="50%" valign="top" style="width:50%;padding:6px;vertical-align:top;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="ibk-package-card" bgcolor="#FFFFFF" style="width:100%;background:#FFFFFF;border:1px solid #D1D5D0;border-top:4px solid #326c54;border-radius:16px;">
+          <tr><td style="padding:24px;">
+            <p style="margin:0 0 8px;font-size:11px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:#194435;">REGELMÄSSIGE PERSONALSUCHE</p>
+            <h4 style="margin:0;font-size:20px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:#171B1A;">Professionell</h4>
+            <p style="margin:8px 0 0;min-height:44px;font-size:13px;line-height:1.6;color:#414846;">Für Teams, die bis zu fünf offene Stellen gleichzeitig veröffentlichen.</p>
+            <p style="margin:16px 0 0;padding:16px 0;border-top:1px solid #D1D5D0;border-bottom:1px solid #D1D5D0;font-size:13px;line-height:1.6;font-weight:700;color:#171B1A;">Bis zu 5 Stellenanzeigen · Je Anzeige 1, 7 oder 30 Tage · Für Teams mit regelmäßigem Personalbedarf</p>
+            <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#414846;">Anzeigendauer: Je Anzeige 1, 7 oder 30 Tage</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0 0;width:100%;">
+            <tr><td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+              <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#package-profesyonel" style="height:44px;v-text-anchor:middle;width:160px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:13px;font-weight:700;">Paket ansehen</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#package-profesyonel" class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:13px;line-height:1.6;border:0;border-radius:10px;text-align:center;">Paket ansehen</a>
+<!--<![endif]-->
+            </td></tr>
+          </table>
+          </td></tr>
+        </table>
+      </td><td class="ibk-package-cell" width="50%" valign="top" style="width:50%;padding:6px;vertical-align:top;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="ibk-package-card" bgcolor="#FFFFFF" style="width:100%;background:#FFFFFF;border:1px solid #D1D5D0;border-top:4px solid #9cbba7;border-radius:16px;">
+          <tr><td style="padding:24px;">
+            <p style="margin:0 0 8px;font-size:11px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:#194435;">PERSONALSUCHE FÜR UNTERNEHMEN</p>
+            <h4 style="margin:0;font-size:20px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:#171B1A;">Unternehmen</h4>
+            <p style="margin:8px 0 0;min-height:44px;font-size:13px;line-height:1.6;color:#414846;">Für Organisationen, die ein schriftliches Angebot mit festgelegter Anzeigenzahl und Laufzeit benötigen.</p>
+            <p style="margin:16px 0 0;padding:16px 0;border-top:1px solid #D1D5D0;border-bottom:1px solid #D1D5D0;font-size:13px;line-height:1.6;font-weight:700;color:#171B1A;">Die Anzeigenzahl wird im schriftlichen Angebot festgelegt · Je Anzeige 1, 7 oder 30 Tage · Umfang und Laufzeit werden vor dem Angebot vereinbart</p>
+            <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#414846;">Anzeigendauer: Je Anzeige 1, 7 oder 30 Tage</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0 0;width:100%;">
+            <tr><td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+              <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#packages-lead-title" style="height:44px;v-text-anchor:middle;width:160px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:13px;font-weight:700;">Paket ansehen</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#packages-lead-title" class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:13px;line-height:1.6;border:0;border-radius:10px;text-align:center;">Paket ansehen</a>
+<!--<![endif]-->
+            </td></tr>
+          </table>
+          </td></tr>
+        </table>
+      </td></tr></table><div style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">Prüfen Sie den Paketumfang und besprechen Sie mit unserem Team die passende Option.</p></div><table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 0;width:100%;"><tr><td style="padding:16px 0 0;">
+<p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#171B1A;">Besprechen Sie das ausgewählte Anzeigenpaket und seinen Umfang mit unserem Team.</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
+<td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://wa.me/905391316421?text=Guten+Tag%2C+ich+h%C3%A4tte+gerne+Informationen+zu+den+Anzeigenpaketen+von+%C4%B0%C5%9FBul+KKTC.+Bitte+informieren+Sie+mich+%C3%BCber+Paketumfang+und+Zahlungsablauf." style="height:48px;v-text-anchor:middle;width:262px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:15px;font-weight:700;">WhatsApp-Entwurf öffnen</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://wa.me/905391316421?text=Guten+Tag%2C+ich+h%C3%A4tte+gerne+Informationen+zu+den+Anzeigenpaketen+von+%C4%B0%C5%9FBul+KKTC.+Bitte+informieren+Sie+mich+%C3%BCber+Paketumfang+und+Zahlungsablauf." class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:15px;line-height:1.6;border:0;border-radius:10px;text-align:center;">WhatsApp-Entwurf öffnen</a>
+<!--<![endif]-->
 </td></tr></table>
 </td></tr><tr><td style="padding:16px 0 0;">
-<p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#171B1A;">Oder kontaktieren Sie unser Support-Team direkt:</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
-<td align="center" bgcolor="#FFFFFF" style="border-radius:8px;border:1px solid #194435;">
-<a href="mailto:destek@isbulkktc.com" class="ibk-btn" style="display:block;padding:16px 24px;color:#194435;text-decoration:none;font-weight:600;font-size:15px;border-radius:8px;text-align:center;">Info per E-Mail anfordern</a>
+<p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#171B1A;">Kontaktieren Sie uns zu diesem Stellenanzeigenpaket.</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
+<td align="center" bgcolor="#FFFFFF" class="ibk-button-secondary-cell" style="border-radius:10px;border:2px solid #194435;">
+<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="mailto:info@isbulkktc.com?subject=%C4%B0%C5%9FBul+KKTC+Arbeitgeberpakete%3A+W%C3%A4hlen+Sie+Ihren+Personalbedarf&amp;body=Guten+Tag%2C+ich+h%C3%A4tte+gerne+Informationen+zu+den+Anzeigenpaketen+von+%C4%B0%C5%9FBul+KKTC.+Bitte+informieren+Sie+mich+%C3%BCber+Paketumfang+und+Zahlungsablauf.%0A%0Ahttps%3A%2F%2Fisbulkktc.com%2Fpackages%23packages-current" style="height:48px;v-text-anchor:middle;width:244px;" arcsize="12%" strokecolor="#194435" fillcolor="#FFFFFF">
+<w:anchorlock/>
+<center style="color:#194435;font-family:Arial,sans-serif;font-size:15px;font-weight:700;">E-Mail-Entwurf öffnen</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="mailto:info@isbulkktc.com?subject=%C4%B0%C5%9FBul+KKTC+Arbeitgeberpakete%3A+W%C3%A4hlen+Sie+Ihren+Personalbedarf&amp;body=Guten+Tag%2C+ich+h%C3%A4tte+gerne+Informationen+zu+den+Anzeigenpaketen+von+%C4%B0%C5%9FBul+KKTC.+Bitte+informieren+Sie+mich+%C3%BCber+Paketumfang+und+Zahlungsablauf.%0A%0Ahttps%3A%2F%2Fisbulkktc.com%2Fpackages%23packages-current" class="ibk-button-secondary" style="display:inline-block;padding:16px 32px;background:#FFFFFF;color:#194435;text-decoration:none;font-weight:700;font-size:15px;line-height:1.6;border:2px solid #194435;border-radius:10px;text-align:center;">E-Mail-Entwurf öffnen</a>
+<!--<![endif]-->
 </td></tr></table>
-</td></tr></table><div style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">Mit freundlichen Grüßen, İşBul KKTC — der digitale Treffpunkt für Arbeit und Beschäftigung in Nordzypern</p></div><div style="margin:24px 0 0;background:#F0F1ED;border:1px solid #D1D5D0;border-radius:8px;padding:16px 24px;">
-<p style="margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:0.04em;color:#194435;">SCHNELLER KONTAKT — WENN SIE SCHNELL ENTSCHEIDEN WOLLEN:</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr><td style="padding:6px 0;font-size:15px;line-height:1.6;color:#414846;">E-Mail: <a href="mailto:destek@isbulkktc.com" style="color:#194435;text-decoration:none;font-weight:600;">destek@isbulkktc.com</a></td></tr><tr><td style="padding:6px 0;font-size:15px;line-height:1.6;color:#414846;">Telefon: <a href="tel:+905391316421" style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></td></tr><tr><td style="padding:6px 0;font-size:15px;line-height:1.6;color:#414846;">WhatsApp: <a href="https://wa.me/905391316421?text=Merhaba%20IsBul%20KKTC%2C%20ilan%20paketleri%20ve%20aday%20havuzu%20aktivasyonu%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></td></tr></table>
+</td></tr></table><div style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">Mit freundlichen Grüßen, İşBul KKTC</p></div><div class="ibk-panel" style="margin:32px 0 0;background:#F0F1ED;border:1px solid #D1D5D0;border-radius:16px;padding:24px 32px;">
+<p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.06em;color:#194435;">KONTAKTIEREN SIE UNS ZU DIESEM STELLENANZEIGENPAKET.</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr><td style="padding:8px 0;font-size:15px;line-height:1.6;color:#414846;">E-Mail: <a href="mailto:info@isbulkktc.com" style="color:#194435;text-decoration:none;font-weight:600;">info@isbulkktc.com</a></td></tr><tr><td style="padding:8px 0;font-size:15px;line-height:1.6;color:#414846;">Telefon: <a href="tel:+905391316421" style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></td></tr><tr><td style="padding:8px 0;font-size:15px;line-height:1.6;color:#414846;">WhatsApp: <a href="https://wa.me/905391316421?text=Guten+Tag%2C+ich+h%C3%A4tte+gerne+Informationen+zu+den+Anzeigenpaketen+von+%C4%B0%C5%9FBul+KKTC.+Bitte+informieren+Sie+mich+%C3%BCber+Paketumfang+und+Zahlungsablauf." style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></td></tr></table>
+</div></div>
+</td></tr>
+<tr><td class="ibk-foot" style="padding:32px 32px;background:#FAF8F3;border-top:1px solid #D1D5D0;text-align:center;font-size:11px;line-height:1.75;color:#414846;">
+<p style="margin:0 0 8px;">Diese E-Mail informiert über die Anzeigenpakete von İşBul KKTC für Arbeitgeber.</p>
+<p style="margin:0 0 8px;"><a href="mailto:info@isbulkktc.com" style="color:#194435;text-decoration:none;font-weight:600;">info@isbulkktc.com</a> <span aria-hidden="true">·</span> <a href="tel:+905391316421" style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></p>
+<p style="margin:0 0 8px;">Alsancak, Girne · Kuzey Kıbrıs Türk Cumhuriyeti</p>
+<p style="margin:0;">© 2026 İşBul KKTC · <a href="https://isbulkktc.com/" style="color:#194435;text-decoration:none;">isbulkktc.com</a> · <a href="https://isbulkktc.com/api/email/unsubscribe?e=x&amp;s=y" style="color:#414846;text-decoration:underline;">Abbestellen</a></p>
+</td></tr>
+</table>
+</td></tr>
+</table>
 </div>
-</td></tr>
-<tr><td class="ibk-foot" style="padding:24px 32px;background:#FAF8F3;border-top:1px solid #D1D5D0;text-align:center;font-size:11px;line-height:1.75;color:#414846;">
-<p style="margin:0 0 6px;">Sie erhalten diese E-Mail, weil wir glauben, dass İşBul KKTC für Ihr Unternehmen nützlich sein könnte.</p>
-<p style="margin:0 0 6px;">Alsancak, Girne · Kuzey Kıbrıs Türk Cumhuriyeti</p>
-<p style="margin:0;">© 2026 İşBul KKTC · <a href="https://isbulkktc.com/" style="color:#194435;text-decoration:none;">isbulkktc.com</a> · <a href="https://isbulkktc.com/api/email/unsubscribe?e=x&amp;s=y" style="color:#414846;text-decoration:underline;">Abmelden</a></p>
-</td></tr>
-</table>
-</td></tr>
-</table>
 </body>
 </html>

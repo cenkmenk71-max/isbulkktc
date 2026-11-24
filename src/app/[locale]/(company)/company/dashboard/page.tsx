@@ -58,7 +58,7 @@ export default async function CompanyDashboardPage({
   if (!locale) notFound();
 
   setRequestLocale(locale);
-  await requireAuthenticatedUser();
+  await requireAuthenticatedUser({ audience: "employer" });
   const [
     { user, companies, company, latestSubmission },
     copy,

@@ -29,7 +29,7 @@ export default async function EditEmployerJobPage({
   if (!locale) notFound();
   setRequestLocale(locale);
 
-  await requireAuthenticatedUser();
+  await requireAuthenticatedUser({ audience: "employer" });
   if (!z.string().uuid().safeParse(jobId).success) notFound();
   const [{ company }, copy] = await Promise.all([
     getEmployerWorkspace(query.company),
