@@ -106,6 +106,116 @@ test("Gemini 429 falls back to Groq after retry with fallback model", async () =
   }
 });
 
+test("Gemini overload retries with the stable Flash fallback", async () => {
+  const originalFetch = globalThis.fetch;
+  const models: string[] = [];
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    const model = url.pathname.match(/models\/([^:]+)/)?.[1] ?? "";
+    models.push(model);
+    return model === "gemini-3.8-flash"
+      ? new Response("{}", { status: 503 })
+      : geminiResponse(output);
+  };
+
+  try {
+    const draft = await parseResumeWithFallback(
+      makeFile(),
+      "Профессиональная специализация: Инженер-программист",
+      {
+        geminiApiKey: "test-gemini-key",
+        geminiModel: "gemini-3.8-flash",
+      },
+    );
+
+    assert.deepEqual(models, ["gemini-3.8-flash", "gemini-3.6-flash"]);
+    assert.equal(draft?.headline, "Инженер-программист");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a missing Gemini model falls back to the configured model", async () => {
+  const originalFetch = globalThis.fetch;
+  const models: string[] = [];
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    const model = url.pathname.match(/models\/([^:]+)/)?.[1] ?? "";
+    models.push(model);
+    return model === "missing-model"
+      ? new Response("{}", { status: 404 })
+      : geminiResponse(output);
+  };
+
+  try {
+    const draft = await parseResumeWithFallback(
+      makeFile(),
+      "Professional title: Product manager",
+      {
+        geminiApiKey: "test-gemini-key",
+        geminiModel: "missing-model",
+        geminiFallbackModel: "gemini-3.6-flash",
+      },
+    );
+
+    assert.deepEqual(models, ["missing-model", "gemini-3.6-flash"]);
+    assert.equal(draft?.headline, "Инженер-программист");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("scanned PDFs use Qwen vision when Gemini and the configured Groq model fail", async () => {
+  const originalFetch = globalThis.fetch;
+  const models: string[] = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.includes("generativelanguage.googleapis.com")) {
+      return new Response("{}", { status: 503 });
+    }
+
+    const payload = JSON.parse(String(init?.body)) as {
+      model: string;
+      max_completion_tokens: number;
+      messages: { content: { image_url?: { url: string } }[] }[];
+    };
+    models.push(payload.model);
+    if (payload.model !== "qwen/qwen3.8-27b") {
+      return new Response("{}", { status: 404 });
+    }
+
+    assert.equal(payload.max_completion_tokens, 4_000);
+    assert.equal(
+      payload.messages[1]?.content[1]?.image_url?.url,
+      "data:image/jpeg;base64,dGVzdA==",
+    );
+    return groqResponse(output);
+  };
+
+  try {
+    const draft = await parseResumeWithFallback(
+      makeFile("resume.pdf"),
+      "",
+      {
+        geminiApiKey: "test-gemini-key",
+        geminiModel: "gemini-3.8-flash",
+        geminiFallbackModel: "gemini-3.8-flash",
+        groqApiKey: "test-groq-key",
+        groqVisionModel: "meta-llama/llama-4-scout-17b-16e-instruct",
+      },
+      ["data:image/jpeg;base64,dGVzdA=="],
+    );
+
+    assert.deepEqual(models, [
+      "meta-llama/llama-4-scout-17b-16e-instruct",
+      "qwen/qwen3.8-27b",
+    ]);
+    assert.equal(draft?.headline, "Инженер-программист");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("Gemini preserves Russian CV content and sends the multilingual instructions", async () => {
   const originalFetch = globalThis.fetch;
   let requestBody = "";

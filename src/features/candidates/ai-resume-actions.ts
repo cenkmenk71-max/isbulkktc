@@ -57,7 +57,30 @@ export async function importResumeFile(
   if (!(file instanceof File)) return { ok: false, code: "unsupported" };
 
   const pageImagesRaw = formData.get("pageImages");
-  const pageImages = pageImagesRaw ? JSON.parse(pageImagesRaw as string) : undefined;
+  let pageImages: string[] | undefined;
+  if (pageImagesRaw !== null) {
+    if (typeof pageImagesRaw !== "string") {
+      return { ok: false, code: "unsupported" };
+    }
+
+    try {
+      const parsed: unknown = JSON.parse(pageImagesRaw);
+      if (
+        !Array.isArray(parsed) ||
+        parsed.length > 2 ||
+        !parsed.every(
+          (image): image is string =>
+            typeof image === "string" &&
+            /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(image),
+        )
+      ) {
+        return { ok: false, code: "unsupported" };
+      }
+      pageImages = parsed;
+    } catch {
+      return { ok: false, code: "unsupported" };
+    }
+  }
 
   try {
     const draft = await parseResumeFile(file, pageImages);

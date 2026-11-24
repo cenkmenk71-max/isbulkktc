@@ -781,7 +781,7 @@
         },
         "resume": {
           "title": "CV’nizi seçin",
-          "description": "Metin tabanlı CV’niz sunucuda ayrıştırılır; Türkçe, İngilizce, Rusça ve diğer diller desteklenir."
+          "description": "CV’niz sunucuda işlenir; Türkçe, İngilizce, Rusça ve diğer diller desteklenir. Taranmış PDF’ler yapılandırılmış bir görüntü sağlayıcısıyla işlenebilir."
         },
         "profile": {
           "title": "Kontrol edin ve kaydedin",
@@ -1114,12 +1114,12 @@
     },
     "resumeImport": {
       "title": "CV’den içe aktar",
-      "description": "Metin tabanlı PDF, DOCX, RTF, ODT, TXT veya Markdown seçin. Türkçe, İngilizce, Rusça ve diğer dillerdeki CV’ler desteklenir; bilgiler formda öneri olarak gösterilir.",
+      "description": "Desteklenen PDF, DOCX, RTF, ODT, TXT veya Markdown CV’nizi seçin. Metin sunucuda çıkarılır; taranmış PDF’ler yapılandırılmış bir görüntü sağlayıcısıyla işlenebilir. Türkçe, İngilizce, Rusça ve diğer diller desteklenir.",
       "privacy": "Dosya ayrıştırma için sunucuya gönderilir ve yapılandırılmışsa Gemini veya Groq tarafından işlenebilir. İşBul KKTC dosyayı saklamaz; öneriler siz kontrol edip kaydedene kadar profilinize yazılmaz.",
       "chooseFile": "CV dosyası seç",
       "processing": "CV okunuyor…",
       "processingStatus": "CV’niz sunucuda işleniyor.",
-      "fileHint": "PDF, DOCX, RTF, ODT, TXT veya Markdown · en fazla 5 MB ve PDF’de 25 sayfa · metin tabanlı dosya",
+      "fileHint": "PDF, DOCX, RTF, ODT, TXT veya Markdown · en fazla 5 MB ve PDF’de 25 sayfa · taranmış PDF işleme sağlayıcı erişimine bağlıdır",
       "imported": "CV’den çıkarılan bilgiler forma öneri olarak eklendi; henüz kaydedilmedi. Kontrol edip düzenledikten sonra Değişiklikleri kaydet’i seçin.",
       "importedWithSkipped": "CV önerileri forma eklendi; henüz kaydedilmedi. Bölüm sınırı nedeniyle {count} kayıt eklenmedi. Önerileri kontrol edip Değişiklikleri kaydet’i seçin.",
       "noNewInformation": "CV okundu ancak eklenecek yeni bilgi bulunamadı. Profiliniz değiştirilmedi.",
@@ -1128,7 +1128,7 @@
         "unsupported": "Desteklenen bir PDF, DOCX, RTF, ODT, TXT veya Markdown dosyası seçin.",
         "tooLarge": "Dosya veya çıkarılan metin desteklenen sınırı aşıyor.",
         "tooManyPages": "PDF dosyaları en fazla 25 sayfa olabilir.",
-        "empty": "CV’den desteklenen profil bilgisi çıkarılamadı. Metin tabanlı başka bir dosya deneyin veya eksik bilgileri ekleyin.",
+        "empty": "CV’den desteklenen profil bilgisi çıkarılamadı. Taranmış PDF kullanıyorsanız görüntü destekli AI sağlayıcısının yapılandırıldığını kontrol edip yeniden deneyin; diğer dosyalarda desteklenen başka bir biçim deneyin veya bilgileri elle girin.",
         "unreadable": "Dosya okunamadı. Başka bir metin tabanlı dosya deneyin.",
         "legacyDoc": "Eski .doc formatını desteklemiyoruz. Lütfen PDF veya DOCX olarak kaydedin.",
         "parseFailed": "CV işlenemedi. Lütfen tekrar deneyin veya bilgileri elle girin.",
@@ -1563,9 +1563,9 @@
   },
   "resumeImport": {
     "chooseFile": "CV'den doldur",
-    "description": "Metin tabanlı CV dosyanızı sunucuda ayrıştırıp profil formuna öneri olarak aktarın.",
+    "description": "Desteklenen CV dosyanızı sunucuda ayrıştırıp profil formuna öneri olarak aktarın. Taranmış PDF’ler yapılandırılmış bir görüntü sağlayıcısıyla işlenebilir.",
     "errors": {
-      "empty": "CV'den desteklenen profil bilgisi çıkarılamadı. Metin tabanlı başka bir dosya deneyin veya eksik bilgileri ekleyin.",
+      "empty": "CV'den desteklenen profil bilgisi çıkarılamadı. Taranmış PDF kullanıyorsanız görüntü destekli AI sağlayıcısının yapılandırıldığını kontrol edip yeniden deneyin; diğer dosyalarda desteklenen başka bir biçim deneyin veya bilgileri elle girin.",
       "legacyDoc": "Eski .doc formatını desteklemiyoruz. Lütfen PDF veya DOCX olarak kaydedin.",
       "tooLarge": "Dosya veya çıkarılan metin desteklenen sınırı aşıyor.",
       "tooManyPages": "PDF dosyaları en fazla 25 sayfa olabilir.",
@@ -1575,7 +1575,7 @@
       "inactive": "Bu hesap şu anda CV içe aktaramıyor.",
       "unsupported": "Desteklenen bir PDF, DOCX, RTF, ODT, TXT veya Markdown dosyası seçin."
     },
-    "fileHint": "PDF, DOCX, RTF, ODT, TXT veya Markdown · en fazla 5 MB ve PDF’de 25 sayfa",
+    "fileHint": "PDF, DOCX, RTF, ODT, TXT veya Markdown · en fazla 5 MB ve PDF’de 25 sayfa · taranmış PDF işleme sağlayıcı erişimine bağlıdır",
     "imported": "boş alan formda dolduruldu ve henüz kaydedilmedi. Mevcut bilgiler korundu; kontrol edip kaydedin.",
     "importedWithSkipped": "{count} boş alan dolduruldu. Mevcut bilgiler korundu; kontrol edip kaydedin.",
     "noNewInformation": "Boş alan doldurmak için yeni bilgi bulunamadı. Mevcut bilgiler korundu.",

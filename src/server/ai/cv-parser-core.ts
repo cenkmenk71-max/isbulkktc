@@ -170,7 +170,13 @@ async function requestGemini(
   model: string,
   fallbackModel?: string,
 ): Promise<ProviderAttempt> {
-  const models = [model, fallbackModel ?? "gemini-3.5-flash-lite"].filter(Boolean);
+  const models = Array.from(
+    new Set(
+      [model, fallbackModel, "gemini-3.6-flash"].filter(
+        (candidate): candidate is string => Boolean(candidate),
+      ),
+    ),
+  );
   const retryableStatus = new Set([429, 503]);
 
   for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
@@ -216,8 +222,13 @@ async function requestGemini(
           model: currentModel,
           error: errorBody.slice(0, 500),
         });
-        if (retryableStatus.has(response.status) && modelIndex < models.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 1_200));
+        if (
+          (retryableStatus.has(response.status) || response.status === 404) &&
+          modelIndex < models.length - 1
+        ) {
+          if (retryableStatus.has(response.status)) {
+            await new Promise((resolve) => setTimeout(resolve, 1_200));
+          }
           continue;
         }
         return { ok: false, reason: "http_error" };
@@ -294,56 +305,77 @@ async function requestGroqVision(
   apiKey: string,
   model: string,
 ): Promise<ProviderAttempt> {
-  try {
-    const messages = [
-      {
-        role: "system",
-        content: systemPrompt,
-      },
-      {
-        role: "user",
-        content: [
-          { type: "text", text: "Extract the profile data from this CV. The PDF is scanned/image-based so no text could be extracted. Use the images below." },
-          ...pageImages.map((image) => ({
-            type: "image_url",
-            image_url: { url: image },
-          })),
-        ],
-      },
-    ];
+  const models = Array.from(new Set([model, "qwen/qwen3.8-27b"]));
+  const retryableStatus = new Set([429, 503]);
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature: 0.1,
-        max_tokens: 4_000,
-        response_format: { type: "json_object" },
-      }),
-      signal: AbortSignal.timeout(30_000),
-    });
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "<unreadable>");
-      console.error("[cv-parser] Groq Vision HTTP error", {
-        status: response.status,
-        model,
-        error: errorBody.slice(0, 500),
+  for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
+    const currentModel = models[modelIndex];
+    try {
+      const messages = [
+        {
+          role: "system",
+          content: systemPrompt,
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Extract the profile data from this CV. The PDF is scanned/image-based so no text could be extracted. Use the images below." },
+            ...pageImages.map((image) => ({
+              type: "image_url",
+              image_url: { url: image },
+            })),
+          ],
+        },
+      ];
+
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: currentModel,
+          messages,
+          temperature: 0.1,
+          max_completion_tokens: 4_000,
+          response_format: { type: "json_object" },
+        }),
+        signal: AbortSignal.timeout(30_000),
       });
-      return { ok: false, reason: "http_error" };
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => "<unreadable>");
+        console.error("[cv-parser] Groq Vision HTTP error", {
+          status: response.status,
+          model: currentModel,
+          error: errorBody.slice(0, 500),
+        });
+        if (
+          (response.status === 404 || retryableStatus.has(response.status)) &&
+          modelIndex < models.length - 1
+        ) {
+          if (retryableStatus.has(response.status)) {
+            await new Promise((resolve) => setTimeout(resolve, 1_200));
+          }
+          continue;
+        }
+        return { ok: false, reason: "http_error" };
+      }
+      return parseJSONContent(groqResponseText(await response.json()));
+    } catch (error) {
+      console.error("[cv-parser] Groq Vision network error", {
+        model: currentModel,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      if (modelIndex < models.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1_200));
+        continue;
+      }
+      return { ok: false, reason: "network_error" };
     }
-    return parseJSONContent(groqResponseText(await response.json()));
-  } catch (error) {
-    console.error("[cv-parser] Groq Vision network error", {
-      model,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return { ok: false, reason: "network_error" };
   }
+
+  return { ok: false, reason: "network_error" };
 }
 
 function cleanText(value: string | null | undefined, maximum: number): string {
@@ -469,7 +501,7 @@ export async function parseResumeWithFallback(
     const visionAttempt = await requestGroqVision(
       pageImages,
       providers.groqApiKey,
-      providers.groqVisionModel ?? "meta-llama/llama-4-scout-17b-16e-instruct",
+      providers.groqVisionModel ?? "qwen/qwen3.8-27b",
     );
     if (visionAttempt.ok) return toDraft(visionAttempt.output, "");
   }

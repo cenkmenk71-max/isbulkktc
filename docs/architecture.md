@@ -104,16 +104,18 @@ Yönetici tarafından etkinleştirilen hak kataloğu ayrıca listelenir; bu kata
 boşken de bilgilendirme amaçlı paket seçenekleri görünür kalır.
 Aday, metin tabanlı desteklenen CV dosyasını kimliği doğrulanmış Server Action'a
 gönderir. Sunucu dosya türünü, 5 MB boyutunu, PDF sayfa sayısını ve çıkarılan
-metin uzunluğunu sınırlar; ayrıştırma önce yapılandırılmış Gemini'yi, sonra
-Groq'u, en son yerel kural tabanlı ayrıştırıcıyı dener. Sağlayıcı anahtarları
-sunucu tarafında kalır. Dosya, ayrıştırma için sunucuya gönderilir ve ilgili
-sağlayıcı yapılandırılmışsa Gemini veya Groq'a aktarılabilir; İşBul KKTC dosya
+metin uzunluğunu sınırlar; ayrıştırma önce yapılandırılmış Gemini'yi dener.
+Metin çıkarılamayan PDF'lerde ilk iki sayfanın görseli yapılandırılmışsa Groq
+Vision'a gönderilir. Sonra Groq metin ayrıştırması ve yerel kural tabanlı
+ayrıştırıcı denenir. Sağlayıcı anahtarları sunucu tarafında kalır. Dosya ve
+sayfa görselleri ayrıştırma için sunucuya gönderilir; ilgili sağlayıcı
+yapılandırılmışsa Gemini veya Groq'a aktarılabilir. İşBul KKTC dosya, görsel
 ve ham CV metnini kalıcı olarak saklamaz. Sağlayıcıların kendi veri işleme
 kuralları ayrıca geçerlidir. Şemayla doğrulanmış öneriler formda gösterilir ve
 adayın açık kaydetme eylemine kadar profile yazılmaz. Öneriler mevcut değerlerle
 birleştirilir: tekil başlık ve konum yalnız boşsa doldurulur, mevcut kayıtlar
 silinmez, tekrarlar ayıklanır ve ilçe dışı konumlar kaydedilmez. Şema sınırına
-sığmayan kayıtların sayısı bildirilir. Taranmış PDF/OCR desteklenmez.
+sığmayan kayıtların sayısı bildirilir. Vision işleme sağlayıcı erişimine bağlıdır.
 Google ve LinkedIn OIDC OAuth girişleri yalnızca `AUTH_OAUTH_PROVIDERS`
 ile açıkça etkinleştirilen ve Supabase Auth'ta ayrıca yapılandırılan sağlayıcılar
 için kullanılabilir. Yeni hesap profil adı, Auth metadata'sındaki güvenilmeyen
