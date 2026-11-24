@@ -24,7 +24,10 @@ async function extractPdfText(file: File): Promise<string> {
   const header = new TextDecoder().decode(data.subarray(0, 1_024));
   const isValidPdf = header.includes("%PDF-");
 
-  const pdfjs = await import("pdfjs-dist");
+  const pdfjs =
+    typeof window === "undefined"
+      ? await import("pdfjs-dist/legacy/build/pdf.mjs")
+      : await import("pdfjs-dist");
   if (typeof window !== "undefined") {
     pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
   }

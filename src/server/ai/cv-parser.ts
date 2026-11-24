@@ -14,8 +14,10 @@ export async function parseResumeFile(file: File, pageImages?: string[]) {
   const draft = await parseResumeWithFallback(file, text, {
     geminiApiKey: process.env.GEMINI_API_KEY,
     geminiModel: process.env.GEMINI_CV_MODEL,
+    geminiFallbackModel: process.env.GEMINI_CV_FALLBACK_MODEL,
     groqApiKey: process.env.GROQ_API_KEY,
     groqModel: process.env.GROQ_CV_MODEL,
+    groqVisionModel: process.env.GROQ_CV_VISION_MODEL,
   }, pageImages);
 
   if (!draft) {
