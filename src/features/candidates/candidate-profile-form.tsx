@@ -242,13 +242,50 @@ export function CandidateProfileForm({
     ]);
   }
 
+  async function convertPdfToImages(file: File): Promise<string[]> {
+    try {
+      const pdfjs = await import("pdfjs-dist");
+      pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+      const data = new Uint8Array(await file.arrayBuffer());
+      const task = pdfjs.getDocument({ data, enableXfa: false, stopAtErrors: true });
+      const pdfDocument = await task.promise;
+      const maxPages = Math.min(2, pdfDocument.numPages);
+      const images: string[] = [];
+
+      for (let pageNumber = 1; pageNumber <= maxPages; pageNumber += 1) {
+        const page = await pdfDocument.getPage(pageNumber);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const maxWidth = 1200;
+        const scale = Math.min(1.5, maxWidth / viewport.width);
+        const scaledViewport = page.getViewport({ scale });
+        const canvas = globalThis.document.createElement("canvas");
+        canvas.width = scaledViewport.width;
+        canvas.height = scaledViewport.height;
+        const context = canvas.getContext("2d");
+        if (!context) continue;
+        await page.render({ canvas, viewport: scaledViewport }).promise;
+        const base64 = canvas.toDataURL("image/jpeg", 0.75);
+        images.push(base64);
+        await page.cleanup();
+      }
+      await task.destroy();
+      return images;
+    } catch {
+      return [];
+    }
+  }
+
   async function handleResumeFile(file: File) {
     setImporting(true);
     setImportStatus("idle");
     setImportSkipped(0);
     try {
+      const pageImages = file.type === "application/pdf" ? await convertPdfToImages(file) : [];
       const request = new FormData();
       request.set("file", file);
+      if (pageImages.length > 0) {
+        request.set("pageImages", JSON.stringify(pageImages));
+      }
       const importResult = await importResumeFile(request);
       if (!importResult.ok) {
         setImportStatus(importResult.code);
