@@ -781,14 +781,14 @@
         },
         "resume": {
           "title": "رزومه را انتخاب کنید",
-          "description": "متن PDF یا DOCX در مرورگر شما پردازش و به پیش‌نویس افزوده می‌شود."
+          "description": "CV متنی روی سرور پردازش می‌شود؛ زبان‌های فارسی، ترکی، انگلیسی، روسی و زبان‌های دیگر پشتیبانی می‌شوند."
         },
         "profile": {
           "title": "بررسی و ذخیره کنید",
           "description": "اطلاعات را ویرایش کنید. پروفایل فقط با انتخاب شما ذخیره می‌شود."
         }
       },
-      "privacy": "فایل رزومه در مرورگر شما می‌ماند و به سرور بارگذاری نمی‌شود.",
+      "privacy": "فایل برای پردازش به سرور ارسال می‌شود و در صورت پیکربندی ممکن است Gemini یا Groq آن را پردازش کنند. İşBul KKTC فایل را ذخیره نمی‌کند.",
       "action": "ساخت حساب کارجویی"
     },
     "employer": {
@@ -1104,11 +1104,11 @@
     },
     "resumeImport": {
       "title": "واردکردن اطلاعات از رزومه",
-      "description": "یک PDF یا DOCX متنی انتخاب کنید؛ اطلاعات استخراج‌شده به‌صورت پیشنهاد در فرم قابل ویرایش پروفایل نمایش داده می‌شود.",
-      "privacy": "فایل در همین مرورگر خوانده می‌شود و بارگذاری یا نگهداری نمی‌شود. پیشنهادها تا زمانی که آن‌ها را بررسی و «ذخیره تغییرات» را انتخاب نکنید، در پروفایل ذخیره نمی‌شوند.",
+      "description": "یک فایل متنی PDF، DOCX، RTF، ODT، TXT یا Markdown انتخاب کنید. رزومه‌های فارسی، ترکی، انگلیسی، روسی و زبان‌های دیگر پشتیبانی می‌شوند.",
+      "privacy": "فایل برای پردازش به سرور ارسال می‌شود و در صورت پیکربندی ممکن است Gemini یا Groq آن را پردازش کنند. İşBul KKTC فایل را ذخیره نمی‌کند؛ پیشنهادها فقط پس از بررسی و ذخیره شما به پروفایل افزوده می‌شوند.",
       "chooseFile": "انتخاب رزومه",
       "processing": "در حال خواندن رزومه…",
-      "processingStatus": "رزومه در همین مرورگر خوانده می‌شود.",
+      "processingStatus": "رزومه روی سرور در حال پردازش است.",
       "fileHint": "PDF یا DOCX · حداکثر ۵ مگابایت و ۲۵ صفحه · فایل اسکن‌شده پشتیبانی نمی‌شود",
       "imported": "اطلاعات رزومه به‌صورت پیشنهاد به فرم افزوده شد و هنوز ذخیره نشده است. آن را بررسی یا ویرایش کنید، سپس «ذخیره تغییرات» را بزنید.",
       "importedWithSkipped": "پیشنهادهای رزومه به فرم افزوده شده اما هنوز ذخیره نشده‌اند. به‌دلیل محدودیت بخش‌ها، {count, number} مورد اضافه نشد؛ اطلاعات را بررسی و ذخیره کنید.",
@@ -1120,7 +1120,10 @@
         "tooManyPages": "فایل PDF حداکثر می‌تواند ۲۵ صفحه داشته باشد.",
         "empty": "اطلاعات قابل استفاده‌ای از رزومه استخراج نشد. فایل متنی دیگری را امتحان کنید یا اطلاعات باقی‌مانده را اضافه کنید.",
         "unreadable": "خواندن فایل ممکن نشد. یک فایل متنی PDF یا DOCX دیگر را امتحان کنید.",
-        "legacyDoc": "فرمت قدیمی .doc پشتیبانی نمی‌شود. لطفاً به عنوان PDF یا DOCX ذخیره کنید."
+        "legacyDoc": "فرمت قدیمی .doc پشتیبانی نمی‌شود. فایل را به صورت PDF یا DOCX ذخیره کنید.",
+        "parseFailed": "پردازش رزومه ممکن نشد. دوباره تلاش کنید یا اطلاعات را دستی وارد کنید.",
+        "unauthorized": "برای واردکردن رزومه وارد حساب شوید.",
+        "inactive": "این حساب در حال حاضر نمی‌تواند رزومه وارد کند."
       }
     },
     "links": {
@@ -1559,24 +1562,27 @@
     "suggestion3": "ثبت آگهی یا درخواست هزینه دارد؟"
   },
   "resumeImport": {
-    "title": "Import from your CV",
-    "description": "Choose a text-based PDF or DOCX; extracted details appear as suggestions in your editable profile form.",
-    "privacy": "The file is read in this browser and is never uploaded or stored. Suggestions are not saved to your profile until you review them and select Save changes.",
-    "chooseFile": "Choose CV",
-    "processing": "Reading CV…",
-    "processingStatus": "Your CV is being read in this browser.",
-    "fileHint": "PDF or DOCX · up to 5 MB and 25 pages · scanned files are not supported",
-    "imported": "CV details were added as suggestions to the form and have not been saved. Review or edit them, then select Save changes.",
-    "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count, number} entries exceeded section limits. Review the suggestions and select Save changes.",
-    "noNewInformation": "The CV was read, but there were no new details to add. Your profile was not changed.",
-    "noNewInformationWithSkipped": "There were no new details to add; {count, number} entries exceeded profile limits. Your existing profile was not changed.",
+    "title": "واردکردن اطلاعات از رزومه",
+    "description": "یک فایل متنی رزومه انتخاب کنید تا روی سرور پردازش شود و اطلاعات آن به‌صورت پیشنهاد در فرم پروفایل نمایش داده شود.",
+    "privacy": "فایل برای پردازش به سرور ارسال می‌شود و در صورت پیکربندی ممکن است Gemini یا Groq آن را پردازش کنند. İşBul KKTC فایل را ذخیره نمی‌کند؛ پیشنهادها فقط پس از بررسی و ذخیره شما به پروفایل افزوده می‌شوند.",
+    "chooseFile": "انتخاب رزومه",
+    "processing": "در حال پردازش رزومه…",
+    "processingStatus": "رزومه روی سرور در حال پردازش است.",
+    "fileHint": "PDF، DOCX، RTF، ODT، TXT یا Markdown · حداکثر ۵ مگابایت و ۲۵ صفحه PDF",
+    "imported": "اطلاعات رزومه به‌صورت پیشنهاد به فرم افزوده شد و هنوز ذخیره نشده است. آن‌ها را بررسی کنید و سپس ذخیره را انتخاب کنید.",
+    "importedWithSkipped": "پیشنهادها به فرم افزوده شدند اما ذخیره نشده‌اند. {count, number} مورد به‌دلیل محدودیت بخش‌ها اضافه نشد؛ اطلاعات را بررسی و ذخیره کنید.",
+    "noNewInformation": "رزومه پردازش شد، اما اطلاعات تازه‌ای برای افزودن نداشت. پروفایل شما تغییر نکرد.",
+    "noNewInformationWithSkipped": "اطلاعات تازه‌ای برای افزودن نبود؛ {count, number} مورد از محدودیت پروفایل فراتر رفت. اطلاعات قبلی حفظ شد.",
     "errors": {
-      "unsupported": "Choose a PDF or DOCX file.",
+      "unsupported": "یک فایل پشتیبانی‌شده PDF، DOCX، RTF، ODT، TXT یا Markdown انتخاب کنید.",
       "tooLarge": "This file or its extracted text exceeds the supported limit.",
       "tooManyPages": "PDF files can contain up to 25 pages.",
       "empty": "No supported profile details could be extracted. Try another text-based file or add any missing details.",
-      "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
-      "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
+      "unreadable": "خواندن فایل ممکن نشد. یک فایل متنی دیگر را امتحان کنید.",
+      "legacyDoc": "فرمت قدیمی .doc پشتیبانی نمی‌شود. فایل را به صورت PDF یا DOCX ذخیره کنید.",
+      "parseFailed": "پردازش رزومه ممکن نشد. دوباره تلاش کنید یا اطلاعات را دستی وارد کنید.",
+      "unauthorized": "برای واردکردن رزومه وارد حساب شوید.",
+      "inactive": "این حساب در حال حاضر نمی‌تواند رزومه وارد کند."
     }
   },
   "CompanyCandidates": {

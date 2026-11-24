@@ -781,14 +781,14 @@
         },
         "resume": {
           "title": "Choose your CV",
-          "description": "Text in a PDF or DOCX is processed in your browser and added to a draft."
+          "description": "Your text-based CV is parsed on our server. Turkish, English, Russian, and other languages are supported."
         },
         "profile": {
           "title": "Review, then save",
           "description": "Edit what you need. Your profile changes only when you choose to save them."
         }
       },
-      "privacy": "Your CV file stays in your browser; it is not uploaded to the server.",
+      "privacy": "Your file is sent to our server for parsing and may be processed by Gemini or Groq when configured. İşBul KKTC does not store the file.",
       "action": "Create a candidate account"
     },
     "employer": {
@@ -1048,23 +1048,26 @@
     },
     "resumeImport": {
       "title": "Import from your CV",
-      "description": "Choose a text-based PDF or DOCX; extracted details appear as suggestions in your editable profile form.",
-      "privacy": "The file is read in this browser and is never uploaded or stored. Suggestions are not saved to your profile until you review them and select Save changes.",
+      "description": "Choose a text-based PDF, DOCX, RTF, ODT, TXT, or Markdown file. CVs in Turkish, English, Russian, and other languages are supported; details appear as editable suggestions.",
+      "privacy": "Your file is sent to our server for parsing and may be processed by Gemini or Groq when configured. İşBul KKTC does not store the file; suggestions are not saved to your profile until you review and save them.",
       "chooseFile": "Choose CV",
       "processing": "Reading CV…",
-      "processingStatus": "Your CV is being read in this browser.",
-      "fileHint": "PDF or DOCX · up to 5 MB and 25 pages · scanned files are not supported",
+      "processingStatus": "Your CV is being processed on our server.",
+      "fileHint": "PDF, DOCX, RTF, ODT, TXT, or Markdown · up to 5 MB and 25 PDF pages · text-based files",
       "imported": "CV details were added as suggestions to the form and have not been saved. Review or edit them, then select Save changes.",
       "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count} entries exceeded section limits. Review the suggestions and select Save changes.",
       "noNewInformation": "The CV was read, but there were no new details to add. Your profile was not changed.",
       "noNewInformationWithSkipped": "There were no new details to add; {count} entries exceeded profile limits. Your existing profile was not changed.",
       "errors": {
-        "unsupported": "Choose a PDF or DOCX file.",
+        "unsupported": "Choose a supported PDF, DOCX, RTF, ODT, TXT, or Markdown file.",
         "tooLarge": "This file or its extracted text exceeds the supported limit.",
         "tooManyPages": "PDF files can contain up to 25 pages.",
         "empty": "No supported profile details could be extracted. Try another text-based file or add any missing details.",
-        "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
-        "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
+        "unreadable": "This file could not be read. Try another text-based file.",
+        "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead.",
+        "parseFailed": "Your CV could not be processed. Try again or enter the details manually.",
+        "unauthorized": "Sign in to import a CV.",
+        "inactive": "This account cannot import a CV right now."
       }
     },
     "profileIndex": "PROFILE · 01",
@@ -1136,23 +1139,26 @@
   },
   "resumeImport": {
     "title": "Import from your CV",
-    "description": "Choose a text-based PDF or DOCX; extracted details appear as suggestions in your editable profile form.",
-    "privacy": "The file is read in this browser and is never uploaded or stored. Suggestions are not saved to your profile until you review them and select Save changes.",
+    "description": "Choose a text-based CV file to parse on our server and add its details as suggestions to your profile form.",
+    "privacy": "Your file is sent to our server for parsing and may be processed by Gemini or Groq when configured. İşBul KKTC does not store the file; suggestions are not saved to your profile until you review and save them.",
     "chooseFile": "Choose CV",
     "processing": "Reading CV…",
-    "processingStatus": "Your CV is being read in this browser.",
-    "fileHint": "PDF or DOCX · up to 5 MB and 25 pages · scanned files are not supported",
+    "processingStatus": "Your CV is being processed on our server.",
+    "fileHint": "PDF, DOCX, RTF, ODT, TXT, or Markdown · up to 5 MB and 25 PDF pages",
     "imported": "CV details were added as suggestions to the form and have not been saved. Review or edit them, then select Save changes.",
     "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count} entries exceeded section limits. Review the suggestions and select Save changes.",
     "noNewInformation": "The CV was read, but there were no new details to add. Your profile was not changed.",
     "noNewInformationWithSkipped": "There were no new details to add; {count} entries exceeded profile limits. Your existing profile was not changed.",
     "errors": {
-      "unsupported": "Choose a PDF or DOCX file.",
+      "unsupported": "Choose a supported PDF, DOCX, RTF, ODT, TXT, or Markdown file.",
       "tooLarge": "This file or its extracted text exceeds the supported limit.",
       "tooManyPages": "PDF files can contain up to 25 pages.",
       "empty": "No supported profile details could be extracted. Try another text-based file or add any missing details.",
-      "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
-      "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
+      "unreadable": "This file could not be read. Try another text-based file.",
+      "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead.",
+      "parseFailed": "Your CV could not be processed. Try again or enter the details manually.",
+      "unauthorized": "Sign in to import a CV.",
+      "inactive": "This account cannot import a CV right now."
     }
   },
   "AccountPanel": {

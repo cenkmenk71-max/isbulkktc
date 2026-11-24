@@ -12,8 +12,9 @@ never the final authorization decision.
 - **companies** — company creation, membership-scoped workspace, company profile
   submission/review and public employer directory.
 - **candidates** — private candidate profile editing, application history and
-  status tracking. CV text extraction runs in the browser and produces an
-  editable draft; the original file is not uploaded or stored.
+  status tracking. CVs are processed transiently on the server, may be sent to
+  configured Gemini or Groq providers, and produce an editable draft; the
+  original file is not stored.
 - **jobs / applications** — public job search/detail, imported source listings,
   candidate application submission and status transitions, employer application
   review/detail, plus server/database operations for job drafts, moderation,

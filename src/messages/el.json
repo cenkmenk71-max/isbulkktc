@@ -781,14 +781,14 @@
         },
         "resume": {
           "title": "Επιλέξτε το βιογραφικό σας",
-          "description": "Κείμενο από PDF ή DOCX επεξεργάζεται στο πρόγραμμα περιήγησής σας και προστίθεται σε προσχέδιο."
+          "description": "Το βιογραφικό σας σε μορφή κειμένου επεξεργάζεται στον διακομιστή. Υποστηρίζονται τα τουρκικά, τα αγγλικά, τα ρωσικά και άλλες γλώσσες."
         },
         "profile": {
           "title": "Ελέγξτε και αποθηκεύστε",
           "description": "Επεξεργαστείτε όσα χρειάζονται. Το προφίλ αλλάζει μόνο όταν επιλέξετε να το αποθηκεύσετε."
         }
       },
-      "privacy": "Το αρχείο βιογραφικού παραμένει στο πρόγραμμα περιήγησής σας· δεν ανεβαίνει στον διακομιστή.",
+      "privacy": "Το αρχείο αποστέλλεται στον διακομιστή για επεξεργασία και, αν είναι ρυθμισμένο, μπορεί να υποβληθεί σε επεξεργασία από το Gemini ή το Groq. Το İşBul KKTC δεν αποθηκεύει το αρχείο.",
       "action": "Δημιουργία λογαριασμού υποψηφίου"
     },
     "employer": {
@@ -1114,11 +1114,11 @@
     },
     "resumeImport": {
       "title": "Εισαγωγή από το βιογραφικό",
-      "description": "Επιλέξτε PDF ή DOCX με κείμενο· τα στοιχεία που εξάγονται εμφανίζονται ως προτάσεις στην επεξεργάσιμη φόρμα προφίλ.",
-      "privacy": "Το αρχείο διαβάζεται σε αυτό το πρόγραμμα περιήγησης και δεν μεταφορτώνεται ούτε αποθηκεύεται. Οι προτάσεις δεν αποθηκεύονται στο προφίλ μέχρι να τις ελέγξετε και να επιλέξετε «Αποθήκευση αλλαγών».",
+      "description": "Επιλέξτε αρχείο κειμένου PDF, DOCX, RTF, ODT, TXT ή Markdown. Υποστηρίζονται βιογραφικά στα τουρκικά, αγγλικά, ρωσικά και άλλες γλώσσες.",
+      "privacy": "Το αρχείο αποστέλλεται στον διακομιστή για επεξεργασία και, αν είναι ρυθμισμένο, μπορεί να υποβληθεί σε επεξεργασία από το Gemini ή το Groq. Το İşBul KKTC δεν αποθηκεύει το αρχείο· οι προτάσεις αποθηκεύονται στο προφίλ μόνο αφού τις ελέγξετε και τις αποθηκεύσετε.",
       "chooseFile": "Επιλογή βιογραφικού",
       "processing": "Ανάγνωση βιογραφικού…",
-      "processingStatus": "Το βιογραφικό διαβάζεται σε αυτό το πρόγραμμα περιήγησης.",
+      "processingStatus": "Το βιογραφικό σας επεξεργάζεται στον διακομιστή μας.",
       "fileHint": "PDF ή DOCX · έως 5 MB και 25 σελίδες · δεν υποστηρίζονται σαρωμένα αρχεία",
       "imported": "Τα στοιχεία του βιογραφικού προστέθηκαν ως προτάσεις στη φόρμα και δεν έχουν αποθηκευτεί. Ελέγξτε ή επεξεργαστείτε τα και επιλέξτε «Αποθήκευση αλλαγών».",
       "importedWithSkipped": "Οι προτάσεις του βιογραφικού προστέθηκαν στη φόρμα αλλά δεν έχουν αποθηκευτεί. {count} εγγραφές υπερέβησαν τα όρια ενοτήτων. Ελέγξτε και αποθηκεύστε τις αλλαγές.",
@@ -1130,7 +1130,10 @@
         "tooManyPages": "Τα αρχεία PDF μπορούν να έχουν έως 25 σελίδες.",
         "empty": "Δεν ήταν δυνατή η εξαγωγή κατάλληλων στοιχείων από το βιογραφικό. Δοκιμάστε άλλο αρχείο κειμένου ή προσθέστε όσα στοιχεία λείπουν.",
         "unreadable": "Δεν ήταν δυνατή η ανάγνωση του αρχείου. Δοκιμάστε άλλο PDF ή DOCX με κείμενο.",
-        "legacyDoc": "Η παλιά μορφή .doc δεν υποστηρίζεται. Αποθηκεύστε ως PDF ή DOCX."
+        "legacyDoc": "Η παλιά μορφή .doc δεν υποστηρίζεται. Αποθηκεύστε ως PDF ή DOCX.",
+        "parseFailed": "Δεν ήταν δυνατή η επεξεργασία του βιογραφικού. Δοκιμάστε ξανά ή εισαγάγετε τα στοιχεία χειροκίνητα.",
+        "unauthorized": "Συνδεθείτε για να εισαγάγετε βιογραφικό.",
+        "inactive": "Αυτός ο λογαριασμός δεν μπορεί να εισαγάγει βιογραφικό αυτήν τη στιγμή."
       }
     }
   },
@@ -1559,24 +1562,27 @@
     "suggestion3": "Υπάρχει χρέωση για δημοσίευση ή αίτηση;"
   },
   "resumeImport": {
-    "title": "Import from your CV",
-    "description": "Choose a text-based PDF or DOCX; extracted details appear as suggestions in your editable profile form.",
-    "privacy": "The file is read in this browser and is never uploaded or stored. Suggestions are not saved to your profile until you review them and select Save changes.",
-    "chooseFile": "Choose CV",
-    "processing": "Reading CV…",
-    "processingStatus": "Your CV is being read in this browser.",
-    "fileHint": "PDF or DOCX · up to 5 MB and 25 pages · scanned files are not supported",
-    "imported": "CV details were added as suggestions to the form and have not been saved. Review or edit them, then select Save changes.",
-    "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count} entries exceeded section limits. Review the suggestions and select Save changes.",
-    "noNewInformation": "The CV was read, but there were no new details to add. Your profile was not changed.",
-    "noNewInformationWithSkipped": "There were no new details to add; {count} entries exceeded profile limits. Your existing profile was not changed.",
+    "title": "Εισαγωγή από το βιογραφικό",
+    "description": "Επιλέξτε αρχείο βιογραφικού με κείμενο για επεξεργασία στον διακομιστή και εμφάνιση των στοιχείων ως προτάσεων στη φόρμα προφίλ.",
+    "privacy": "Το αρχείο αποστέλλεται στον διακομιστή για επεξεργασία και, αν είναι ρυθμισμένο, μπορεί να υποβληθεί σε επεξεργασία από το Gemini ή το Groq. Το İşBul KKTC δεν αποθηκεύει το αρχείο· οι προτάσεις αποθηκεύονται στο προφίλ μόνο αφού τις ελέγξετε και τις αποθηκεύσετε.",
+    "chooseFile": "Επιλογή βιογραφικού",
+    "processing": "Επεξεργασία βιογραφικού…",
+    "processingStatus": "Το βιογραφικό σας επεξεργάζεται στον διακομιστή μας.",
+    "fileHint": "PDF, DOCX, RTF, ODT, TXT ή Markdown · έως 5 MB και 25 σελίδες PDF",
+    "imported": "Τα στοιχεία προστέθηκαν στη φόρμα ως προτάσεις και δεν έχουν αποθηκευτεί. Ελέγξτε ή επεξεργαστείτε τα και αποθηκεύστε τα.",
+    "importedWithSkipped": "Οι προτάσεις προστέθηκαν αλλά δεν αποθηκεύτηκαν. {count} εγγραφές υπερέβησαν τα όρια των ενοτήτων. Ελέγξτε και αποθηκεύστε τα στοιχεία.",
+    "noNewInformation": "Το βιογραφικό επεξεργάστηκε, αλλά δεν περιείχε νέα στοιχεία. Το προφίλ δεν άλλαξε.",
+    "noNewInformationWithSkipped": "Δεν υπήρχαν νέα στοιχεία· {count} εγγραφές υπερέβησαν τα όρια προφίλ. Τα υπάρχοντα στοιχεία διατηρήθηκαν.",
     "errors": {
-      "unsupported": "Choose a PDF or DOCX file.",
+      "unsupported": "Επιλέξτε ένα υποστηριζόμενο αρχείο PDF, DOCX, RTF, ODT, TXT ή Markdown.",
       "tooLarge": "This file or its extracted text exceeds the supported limit.",
       "tooManyPages": "PDF files can contain up to 25 pages.",
       "empty": "No supported profile details could be extracted. Try another text-based file or add any missing details.",
-      "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
-      "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
+      "unreadable": "Δεν ήταν δυνατή η ανάγνωση του αρχείου. Δοκιμάστε ένα άλλο αρχείο κειμένου.",
+      "legacyDoc": "Η παλιά μορφή .doc δεν υποστηρίζεται. Αποθηκεύστε ως PDF ή DOCX.",
+      "parseFailed": "Δεν ήταν δυνατή η επεξεργασία του βιογραφικού. Δοκιμάστε ξανά ή εισαγάγετε τα στοιχεία χειροκίνητα.",
+      "unauthorized": "Συνδεθείτε για να εισαγάγετε βιογραφικό.",
+      "inactive": "Αυτός ο λογαριασμός δεν μπορεί να εισαγάγει βιογραφικό αυτήν τη στιγμή."
     }
   },
   "CompanyCandidates": {

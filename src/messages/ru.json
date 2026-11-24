@@ -781,14 +781,14 @@
         },
         "resume": {
           "title": "Выберите резюме",
-          "description": "Текст из PDF или DOCX обрабатывается в браузере и добавляется в черновик."
+          "description": "Текстовое резюме обрабатывается на сервере; поддерживаются турецкий, английский, русский и другие языки."
         },
         "profile": {
           "title": "Проверьте и сохраните",
           "description": "Отредактируйте данные. Профиль обновится только после вашего сохранения."
         }
       },
-      "privacy": "Файл резюме не загружается на сервер; обработка выполняется в браузере.",
+      "privacy": "Файл отправляется на сервер для разбора и при настроенной интеграции может обрабатываться Gemini или Groq. İşBul KKTC не хранит файл.",
       "action": "Создать аккаунт кандидата"
     },
     "employer": {
@@ -1048,23 +1048,26 @@
     },
     "resumeImport": {
       "title": "Import from your CV",
-      "description": "Choose a text-based PDF or DOCX; extracted details appear as suggestions in your editable profile form.",
-      "privacy": "The file is read in this browser and is never uploaded or stored. Suggestions are not saved to your profile until you review them and select Save changes.",
+      "description": "Выберите текстовый файл PDF, DOCX, RTF, ODT, TXT или Markdown. Поддерживаются резюме на турецком, английском, русском и других языках.",
+      "privacy": "Файл отправляется на сервер для разбора и при настроенной интеграции может обрабатываться Gemini или Groq. İşBul KKTC не хранит файл; предложения сохраняются в профиле только после проверки и сохранения.",
       "chooseFile": "Choose CV",
       "processing": "Reading CV…",
-      "processingStatus": "Your CV is being read in this browser.",
-      "fileHint": "PDF or DOCX · up to 5 MB and 25 pages · scanned files are not supported",
+      "processingStatus": "Резюме обрабатывается на сервере.",
+      "fileHint": "PDF, DOCX, RTF, ODT, TXT или Markdown · до 5 МБ и 25 страниц PDF · только текстовые файлы",
       "imported": "CV details were added as suggestions to the form and have not been saved. Review or edit them, then select Save changes.",
       "importedWithSkipped": "CV suggestions were added to the form but have not been saved. {count} entries exceeded section limits. Review the suggestions and select Save changes.",
       "noNewInformation": "The CV was read, but there were no new details to add. Your profile was not changed.",
       "noNewInformationWithSkipped": "There were no new details to add; {count} entries exceeded profile limits. Your existing profile was not changed.",
       "errors": {
-        "unsupported": "Choose a PDF or DOCX file.",
+        "unsupported": "Выберите поддерживаемый файл PDF, DOCX, RTF, ODT, TXT или Markdown.",
         "tooLarge": "This file or its extracted text exceeds the supported limit.",
         "tooManyPages": "PDF files can contain up to 25 pages.",
         "empty": "No supported profile details could be extracted. Try another text-based file or add any missing details.",
-        "unreadable": "This file could not be read. Try another text-based PDF or DOCX file.",
-        "legacyDoc": "We do not support legacy .doc format. Please save as PDF or DOCX instead."
+        "unreadable": "Не удалось прочитать файл. Попробуйте другой текстовый файл.",
+        "legacyDoc": "Формат .doc устарел и не поддерживается. Сохраните файл как PDF или DOCX.",
+        "parseFailed": "Не удалось обработать резюме. Повторите попытку или введите сведения вручную.",
+        "unauthorized": "Войдите в аккаунт, чтобы импортировать резюме.",
+        "inactive": "Сейчас этот аккаунт не может импортировать резюме."
       }
     },
     "profileIndex": "ПРОФИЛЬ · 01",
@@ -1136,23 +1139,26 @@
   },
   "resumeImport": {
     "title": "Импортировать данные из резюме",
-    "description": "Выберите текстовый PDF или DOCX: извлечённые сведения появятся как предложения в редактируемой форме профиля.",
-    "privacy": "Файл обрабатывается в браузере и не загружается и не хранится. Предложения не сохраняются в профиль, пока вы не проверите их и не нажмёте «Сохранить изменения».",
+    "description": "Выберите текстовый файл CV, чтобы обработать его на сервере и добавить сведения как предложения в форму профиля.",
+    "privacy": "Файл отправляется на сервер для разбора и при настроенной интеграции может обрабатываться Gemini или Groq. İşBul KKTC не хранит файл; предложения сохраняются в профиле только после проверки и сохранения.",
     "chooseFile": "Выбрать резюме",
     "processing": "Чтение резюме…",
-    "processingStatus": "Резюме обрабатывается в этом браузере.",
-    "fileHint": "PDF или DOCX · до 5 МБ и 25 страниц · сканы не поддерживаются",
+    "processingStatus": "Резюме обрабатывается на сервере.",
+    "fileHint": "PDF, DOCX, RTF, ODT, TXT или Markdown · до 5 МБ и 25 страниц PDF",
     "imported": "Данные из резюме добавлены в форму как предложения и ещё не сохранены. Проверьте или измените их, затем нажмите «Сохранить изменения».",
     "importedWithSkipped": "Предложения из резюме добавлены в форму, но ещё не сохранены. Из-за ограничений разделов не добавлено записей: {count}. Проверьте данные и нажмите «Сохранить изменения».",
     "noNewInformation": "Резюме прочитано, но новых сведений для добавления нет. Профиль не изменён.",
     "noNewInformationWithSkipped": "Новых сведений для добавления нет; {count} записей превышают лимит профиля. Существующий профиль не изменён.",
     "errors": {
-      "unsupported": "Выберите файл PDF или DOCX.",
+      "unsupported": "Выберите поддерживаемый файл PDF, DOCX, RTF, ODT, TXT или Markdown.",
       "tooLarge": "Размер файла или извлечённого текста превышает допустимый предел.",
       "tooManyPages": "В PDF может быть не более 25 страниц.",
       "empty": "Не удалось извлечь подходящие сведения из резюме. Попробуйте другой текстовый файл или добавьте недостающие данные.",
-      "unreadable": "Не удалось прочитать файл. Попробуйте другой текстовый файл PDF или DOCX.",
-      "legacyDoc": "Формат .doc устарел и не поддерживается. Сохраните как PDF или DOCX вместо этого."
+      "unreadable": "Не удалось прочитать файл. Попробуйте другой текстовый файл.",
+      "legacyDoc": "Формат .doc устарел и не поддерживается. Сохраните файл как PDF или DOCX.",
+      "parseFailed": "Не удалось обработать резюме. Повторите попытку или введите сведения вручную.",
+      "unauthorized": "Войдите в аккаунт, чтобы импортировать резюме.",
+      "inactive": "Сейчас этот аккаунт не может импортировать резюме."
     }
   },
   "AccountPanel": {
