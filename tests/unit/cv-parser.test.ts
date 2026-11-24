@@ -122,24 +122,17 @@ test("Gemini preserves Russian CV content and sends the multilingual instruction
     const payload = JSON.parse(requestBody) as {
       systemInstruction: { parts: { text: string }[] };
       generationConfig: {
-        responseSchema: {
-          properties: {
-            headline: { type: string; nullable: boolean };
-          };
-        };
+        responseMimeType: string;
       };
     };
 
     assert.equal(draft?.headline, "Инженер-программист");
     assert.match(payload.systemInstruction.parts[0]?.text ?? "", /Turkish, English, Russian/);
-    assert.equal(
-      payload.generationConfig.responseSchema.properties.headline.type,
-      "STRING",
-    );
-    assert.equal(
-      payload.generationConfig.responseSchema.properties.headline.nullable,
-      true,
-    );
+    // Schema is now embedded in the system prompt, not in generationConfig.responseSchema
+    assert.match(payload.systemInstruction.parts[0]?.text ?? "", /Return ONLY a JSON object matching this exact schema/);
+    assert.match(payload.systemInstruction.parts[0]?.text ?? "", /"headline": string \| null/);
+    assert.match(payload.systemInstruction.parts[0]?.text ?? "", /"location": "Lefkoşa"/);
+    assert.equal(payload.generationConfig.responseMimeType, "application/json");
   } finally {
     globalThis.fetch = originalFetch;
   }
