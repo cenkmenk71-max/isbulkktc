@@ -5,44 +5,207 @@
 Next.js 16 (App Router) + TypeScript + next-intl + Supabase. Tests: Playwright
 E2E, `node:test` unit tests, pgTAP database suites.
 
+## Package manager
+
+Use `bun` only. Never use `npm`, `npx`, or `yarn`. The lockfile is `bun.lock`;
+`npm ci` fails against it. All verification commands in this file use `bun`.
+
 ## Verify before pushing
 
 CI (`.github/workflows/ci.yml`) runs the same steps locally, split across three
-jobs plus an aggregator. The aggregator keeps the name
-"Quality, database and E2E" so branch protection's required check still
-resolves; it passes only when all three did.
+jobs plus an aggregator named "Quality, database and E2E"; it passes only when
+all three did. CI triggers only on `pull_request`. Pushing a feature branch or
+`main` by itself does not run the test suite; open a PR to get a CI run. A push
+to `main` triggers separate production-deployment verification.
 
-- `static` — `bun run lint`, `bun run typecheck`, `bun run check:frontend-source`
-  (design gate: palette tokens, contrast pairs, uploaded-photo budgets, locale
-  routing), `bun run test:unit`. Finishes in well under a minute.
-- `database` — `bun run test:db` (pgTAP; needs the local Supabase stack via Docker).
-- `e2e` — `bun run build`, then `bun run test:e2e`, split across four Playwright
-  shards (`--shard=n/4`). The suite runs against the production standalone server
-  at `.next/standalone/server.js`.
+Branch protection does not require the branch to be up to date — that was tried
+and caused a cascade of invalidated PRs, so it is off. Full CI is still required
+on every PR.
 
-Run them in this order locally:
+Run locally in this order:
 
 - `bun run lint`
 - `bun run typecheck`
 - `bun run check:frontend-source`
 - `bun run test:unit`
-- `bun run build`, then `bun run test:e2e`
-- `bun run test:db`
+- `bun run test:security`
+- `bun run test:integration`
+- `bun run build`, then `bun run test:e2e` (split across four Playwright shards:
+  `--shard=n/4`, against `.next/standalone/server.js`)
+- `bun run test:db` (pgTAP; needs the local Supabase stack via Docker)
 
-Use `bun`, not `npm`: the lockfile is `bun.lock` and `npm ci` fails against it.
+`test:db` and `test:e2e` require infrastructure; report when unavailable. Never
+mark skipped, emulated, or unavailable-infrastructure tests as passing.
 
-CI (`.github/workflows/ci.yml`) triggers only on `pull_request`. Pushing a feature
-branch or `main` by itself does not run the test suite; open a PR to get a CI
-run. A push to `main` triggers the separate production-deployment verification,
-which checks the deployed commit rather than rerunning CI.
+Run the narrow relevant checks and inspect their complete result before
+claiming anything passed.
 
-**Branch protection does not require the branch to be up to date.** It was on
-once; every merge then invalidated every open PR, so a queue of parallel PRs
-left the last one waiting roughly forty-five minutes. With several PRs running
-at once the cascade cost more than it caught, so it is off. Full CI is still
-required on every PR. A push to `main` runs deployment verification but does not
-rerun the full test suite. If the repository ever moves to a plan with merge
-queue, turn it on — that is the correct fix for the cascade.
+## Next.js 16
+
+This is NOT the Next.js you know — read the installed guide under
+`node_modules/next/dist/docs/` before changing framework behavior; the installed
+version is authoritative, not generic or older examples.
+
+- Keep pages and data access server-side by default. Add `"use client"` only for
+  actual browser interaction; never import server-only modules into client code.
+- Treat every Server Action and Route Handler as a public, untrusted request:
+  parse all input, verify the user with Supabase Auth, and authorize the
+  requested resource on the server.
+- Use the DAL for trusted user identity and narrow DTOs. Proxy cookie refresh is
+  not an authorization check; do not gate private data with client state or
+  claims alone.
+- Use the Next.js 16 `proxy.ts` convention; do not create deprecated
+  `middleware.ts` files. Handle `redirect()` outside `try` blocks because it
+  throws to terminate control flow.
+- Read request-time auth/cookies in dynamic routes; do not statically prerender
+  or cache authenticated pages across users.
+- Preserve dynamic rendering for user-specific routes; isolate browser
+  interaction in the smallest Client Component; keep secrets/database access
+  server-only.
+
+## Deep audit workflow
+
+Use when asked to deep-search, thoroughly audit, find mistakes, bugs, security
+or logical flaws, or verify that implemented features really work.
+
+1. Establish the requested scope and the authoritative spec. For this project,
+   V4 (`docs/architecture-v4.md`) is the only architecture source; separate
+   implementation status from planned requirements.
+2. Trace reachable user workflows end to end: route/UI → form/action/handler →
+   schema → server authentication/DAL → database function/grants/RLS → test
+   coverage.
+3. Search for callers, route targets and competing configuration; read complete
+   relevant file ranges before judging behavior.
+4. Check concrete edge cases and threat boundaries: anonymous/other-user access,
+   suspended status, duplicate submissions, malformed input, redirects/cookies,
+   unhandled errors and missing configuration.
+5. Execute the narrow relevant test/lint/type/build command. Do not substitute
+   source-pattern matches for runtime evidence or claim unavailable integrations
+   were verified.
+6. Fix only confirmed defects in scope when implementation is requested. Add a
+   regression test and rerun verification.
+7. Report findings by severity with absolute file/line links and evidence; list
+   planned-but-disabled features and infrastructure blockers separately. Do not
+   call an audit a security certification.
+
+## V4 Reviewer (read-only)
+
+Review only; do not edit files or run commands.
+
+1. Use `docs/architecture-v4.md` as the sole product/security authority and
+   `docs/architecture.md` as implementation status.
+2. Trace concrete behavior through UI, server action/handler, DAL, PostgreSQL
+   grants/RLS/RPC and tests. Do not infer a vulnerability from naming alone.
+3. Prioritize reproducible bugs and cross-account access. Give exact absolute
+   file and line references, impact, and confidence.
+4. Distinguish confirmed issues, design tradeoffs, and planned/disabled scope.
+   Do not report an emulator as real Supabase validation or claim certification.
+5. Return only actionable findings; if no finding is evidenced, say so and state
+   what was not verified.
+
+## Supabase / database
+
+Follow V4 (`docs/architecture-v4.md` is the sole product/security authority;
+`docs/architecture.md` is implementation status). Migrations are additive and
+explicit.
+
+- For each new table/function, inspect default privileges and grant the minimum
+  required columns/operations. Enable RLS and add positive and negative tests
+  for anon, owner, unrelated users, company members, and privileged actors as
+  applicable.
+- Keep `SECURITY DEFINER` functions narrowly scoped with `SET search_path = ''`,
+  fully qualified objects, authenticated active-user checks, validated input, and
+  revoked default/public execution.
+- Never let clients assign platform roles, verification, payment state, balance,
+  actor IDs, or company membership roles. Couple sensitive multi-row mutations in
+  one database transaction and emit redacted audit data.
+- Do not add permissive Storage policies before ownership, scanning, access, and
+  retention controls are implemented.
+- `revoke … from public` does not revoke `anon`/`authenticated`. Supabase's
+  `pg_default_acl` grants EXECUTE on every new `public` function to `anon`,
+  `authenticated`, and `service_role` explicitly. Always `revoke … from public,
+  anon, authenticated` and grant back only the roles that need it.
+- Exceptions: `is_valid_company_categories` and
+  `is_valid_candidate_profile_section` are IMMUTABLE CHECK validators; a CHECK
+  expression runs with the caller's privileges, so revoking them breaks every
+  INSERT with `42501`. `supabase/tests/database/function_privileges.test.sql`
+  ratchets the whole set by full signature — add any deliberately client-callable
+  function there or CI fails.
+- pgTAP suites must be independent of the seed. `supabase/seed-source-jobs.sql`
+  commits real source listings before `supabase test db` runs. Suites that count
+  or free-text-search `public.jobs` must clear committed source data at the start
+  of their transaction:
+  `delete from public.job_source_imports; delete from public.jobs where
+  publication_source = 'source_site'; delete from public.companies where slug
+  like 'source-%';`. The transaction rolls back.
+- Run `bun run test:db` against the real local Supabase stack when Docker is
+  available. A SQL parser or PostgreSQL emulator is not a substitute; state
+  clearly when pgTAP was not run.
+- Never connect a project MCP to a hosted Supabase project or run
+  destructive/reset commands unless the user explicitly authorizes that target.
+
+## Testing
+
+- Match the test to the behavior: schema/edge cases in unit tests, authorization
+  at the database boundary, user-visible flows in Playwright.
+- Include negative cases for invalid input, unauthenticated users, and
+  cross-account/company access wherever relevant; never prove security only by
+  checking that a UI control is hidden.
+- Keep fixtures synthetic. Do not use real user, candidate, payment, or
+  production data.
+- Run the narrowest applicable existing command and inspect its complete result.
+  Use `bun run test:e2e` for the full Playwright suite and `bun run test:db`
+  for Supabase/pgTAP.
+- 3D/WebGL E2E is load-sensitive: give those specs generous per-test timeouts
+  and rely on the CI retry budget.
+- Accessible names must contain the visible text (WCAG 2.5.3). Prefer dropping a
+  redundant `aria-label` over writing a longer one.
+
+## Route Handlers
+
+Every `route.ts` under `src/app/api/` must have `export const dynamic =
+'force-dynamic';`. Error/custom responses must include `Cache-Control:
+no-store`.
+
+## File editing
+
+When `apply_diff` fails, do not retry the same patch. Read the file from the
+top with `read_file` and update it with `write_to_file`.
+
+## Schema & tip synchronization
+
+When a Zod schema or TypeScript interface gains a field, grep every consumer
+(`src/server/dal/*.ts`, `src/features/**`, `*.test.ts`) and update them all in
+the same session. Never push with `bun run typecheck` errors.
+
+## Kilo configuration
+
+`.kilo/kilo.jsonc` — `{"snapshot": false}`. `.kilocodeignore` is kept.
+
+## MCP security decision
+
+Hosted Supabase MCP, GitHub MCP, and general filesystem MCP are deliberately not
+configured. The workspace's project/ref ID and production access permission are
+not yet determined; adding them risks accidental remote/production access or
+overly broad tool privileges. Only a narrowly scoped local/test Supabase
+connection may be added later when access and target are determined.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all
+differ from your training data. Read the relevant guide in
+`node_modules/next/dist/docs/` (resolved from this file's directory; in
+monorepos the `next` package may not be visible from the repo root) before
+writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at
+`node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a
+diff only re-creates the uncommitted change; committing it with your work keeps
+the tree clean.
+
+<!-- END:nextjs-agent-rules -->
 
 ## Gotchas worth remembering
 
@@ -170,13 +333,3 @@ queue, turn it on — that is the correct fix for the cascade.
   site key therefore reports "captcha is off" while production is protecting
   every auth form. Confirm with a real browser (the Turnstile iframe and its
   `turnstile`/`Privacy`/`Help` links appear) before drawing a conclusion.
-
-<!-- BEGIN:nextjs-agent-rules -->
-
-## This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
