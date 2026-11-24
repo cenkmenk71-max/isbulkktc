@@ -366,7 +366,7 @@ export async function parseResumeWithFallback(
       file,
       text,
       providers.geminiApiKey,
-      providers.geminiModel ?? "gemini-2.5-flash",
+      providers.geminiModel ?? "gemini-3.8-flash",
     );
     if (attempt.ok) return toDraft(attempt.output, text);
   }
