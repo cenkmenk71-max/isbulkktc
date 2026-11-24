@@ -169,7 +169,7 @@ async function requestGemini(
   model: string,
   fallbackModel?: string,
 ): Promise<ProviderAttempt> {
-  const models = [model, fallbackModel ?? "gemini-2.5-flash-lite"].filter(Boolean);
+  const models = [model, fallbackModel ?? "gemini-3.5-flash-lite"].filter(Boolean);
   const retryableStatus = new Set([429, 503]);
 
   for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
