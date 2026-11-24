@@ -295,7 +295,7 @@ test("registration, sign-in, and recovery pages stay localized and usable", asyn
     ).toHaveCount(0);
     await page
       .locator(".editorial-page-scene-video-controls")
-      .getByRole("button", { name: "Othello Kalesi" })
+      .getByRole("button", { name: copy.sceneMediaOthello })
       .click();
     const selectedVideo = page.locator(".editorial-page-scene-video");
     await expect(selectedVideo).toBeVisible();
