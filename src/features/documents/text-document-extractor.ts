@@ -22,7 +22,7 @@ export class DocumentImportError extends Error {
 async function extractPdfText(file: File): Promise<string> {
   const data = new Uint8Array(await file.arrayBuffer());
   const header = new TextDecoder().decode(data.subarray(0, 1_024));
-  if (!header.includes("%PDF-")) throw new DocumentImportError("unreadable");
+  const isValidPdf = header.includes("%PDF-");
 
   const pdfjs = await import("pdfjs-dist");
   if (typeof window !== "undefined") {
@@ -59,9 +59,11 @@ async function extractPdfText(file: File): Promise<string> {
       await page.cleanup();
     }
 
-    return pages.join("\n").slice(0, maxExtractedCharacters);
+    const extractedText = pages.join("\n").slice(0, maxExtractedCharacters);
+    return extractedText;
   } catch (error) {
     if (error instanceof DocumentImportError) throw error;
+    if (isValidPdf) return "";
     throw new DocumentImportError("unreadable");
   } finally {
     await task.destroy();
