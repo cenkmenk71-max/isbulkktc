@@ -67,6 +67,7 @@ ${cvSchemaDescription}`;
 type ProviderConfiguration = {
   geminiApiKey?: string;
   geminiModel?: string;
+  geminiFallbackModel?: string;
   groqApiKey?: string;
   groqModel?: string;
 };
@@ -90,7 +91,16 @@ function isRecord(value: unknown): value is JSONRecord {
 
 function parseProviderOutput(value: unknown): ProviderAttempt {
   const parsed = cvParserOutputSchema.safeParse(value);
-  if (!parsed.success) return { ok: false, reason: "invalid_schema" };
+  if (!parsed.success) {
+    console.warn("[cv-parser] Gemini returned invalid schema", {
+      issues: parsed.error.issues.map((issue) => ({
+        path: issue.path.join("."),
+        message: issue.message,
+        code: issue.code,
+      })),
+    });
+    return { ok: false, reason: "invalid_schema" };
+  }
   if (!hasOutputContent(parsed.data)) {
     return { ok: false, reason: "empty_response" };
   }
@@ -114,7 +124,13 @@ function hasOutputContent(output: CVParserOutput): boolean {
 function parseJSONContent(content: string | null): ProviderAttempt {
   if (!content) return { ok: false, reason: "empty_response" };
   try {
-    return parseProviderOutput(JSON.parse(content));
+    // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+    const cleaned = content
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/, "")
+      .trim();
+    const parsed = JSON.parse(cleaned);
+    return parseProviderOutput(parsed);
   } catch (error) {
     if (error instanceof SyntaxError) {
       return { ok: false, reason: "invalid_json" };
@@ -151,58 +167,75 @@ async function requestGemini(
   text: string,
   apiKey: string,
   model: string,
+  fallbackModel?: string,
 ): Promise<ProviderAttempt> {
-  try {
-    const parts: JSONRecord[] = [
-      { text: "Extract the profile data from this CV." },
-    ];
-    if (file.name.toLocaleLowerCase("en-US").endsWith(".pdf")) {
-      parts.push({
-        inlineData: {
-          mimeType: "application/pdf",
-          data: Buffer.from(await file.arrayBuffer()).toString("base64"),
-        },
-      });
-    } else {
-      parts.push({ text: `CV text:\n${text}` });
-    }
+  const models = [model, fallbackModel ?? "gemini-2.5-flash-lite"].filter(Boolean);
+  const retryableStatus = new Set([429, 503]);
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: "user", parts }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.1,
+  for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
+    const currentModel = models[modelIndex];
+    try {
+      const parts: JSONRecord[] = [
+        { text: "Extract the profile data from this CV." },
+      ];
+      if (file.name.toLocaleLowerCase("en-US").endsWith(".pdf")) {
+        parts.push({
+          inlineData: {
+            mimeType: "application/pdf",
+            data: Buffer.from(await file.arrayBuffer()).toString("base64"),
           },
-        }),
-        signal: AbortSignal.timeout(20_000),
-      },
-    );
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "<unreadable>");
-      console.error("[cv-parser] Gemini HTTP error", {
-        status: response.status,
-        model,
-        error: errorBody.slice(0, 500),
+        });
+      } else {
+        parts.push({ text: `CV text:\n${text}` });
+      }
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(currentModel)}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: "user", parts }],
+            generationConfig: {
+              responseMimeType: "application/json",
+              temperature: 0.1,
+            },
+          }),
+          signal: AbortSignal.timeout(20_000),
+        },
+      );
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => "<unreadable>");
+        console.error("[cv-parser] Gemini HTTP error", {
+          status: response.status,
+          model: currentModel,
+          error: errorBody.slice(0, 500),
+        });
+        if (retryableStatus.has(response.status) && modelIndex < models.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1_200));
+          continue;
+        }
+        return { ok: false, reason: "http_error" };
+      }
+      return parseJSONContent(geminiResponseText(await response.json()));
+    } catch (error) {
+      console.error("[cv-parser] Gemini network error", {
+        model: currentModel,
+        error: error instanceof Error ? error.message : String(error),
       });
-      return { ok: false, reason: "http_error" };
+      if (modelIndex < models.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1_200));
+        continue;
+      }
+      return { ok: false, reason: "network_error" };
     }
-    return parseJSONContent(geminiResponseText(await response.json()));
-  } catch (error) {
-    console.error("[cv-parser] Gemini network error", {
-      model,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return { ok: false, reason: "network_error" };
   }
+
+  return { ok: false, reason: "network_error" };
 }
 
 async function requestGroq(
@@ -367,6 +400,7 @@ export async function parseResumeWithFallback(
       text,
       providers.geminiApiKey,
       providers.geminiModel ?? "gemini-3.8-flash",
+      providers.geminiFallbackModel,
     );
     if (attempt.ok) return toDraft(attempt.output, text);
   }
