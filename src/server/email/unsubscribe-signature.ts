@@ -1,4 +1,4 @@
-import { isAppLocale } from "@/i18n/routing";
+import { isAppLocale } from "../../i18n/routing.ts";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /**
