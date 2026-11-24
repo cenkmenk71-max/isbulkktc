@@ -3,15 +3,13 @@
 import {
   useActionState,
   useState,
+  useTransition,
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
 import { Check, Circle, FileUp, LockKeyhole, Plus, Trash2 } from "lucide-react";
 import { saveCandidateProfile } from "./actions";
-import {
-  ResumeImportError,
-  extractResumeFile,
-} from "./resume-file-extractor";
+import { importResumeFile } from "./ai-resume-actions";
 import type {
   CandidateCertification,
   CandidateEducation,
@@ -113,6 +111,7 @@ export function CandidateProfileForm({
     saveCandidateProfile,
     initialState,
   );
+  const [, startImportTransition] = useTransition();
   const [fullName, setFullName] = useState(account.displayName);
   const [headline, setHeadline] = useState(profile.headline ?? "");
   const [location, setLocation] = useState(
@@ -138,6 +137,9 @@ export function CandidateProfileForm({
     | "empty"
     | "unreadable"
     | "legacyDoc"
+    | "parseFailed"
+    | "unauthorized"
+    | "inactive"
   >("idle");
   const [importSkipped, setImportSkipped] = useState(0);
   const [resumeImported, setResumeImported] = useState(false);
@@ -245,8 +247,15 @@ export function CandidateProfileForm({
     setImportStatus("idle");
     setImportSkipped(0);
     try {
-      const draft = await extractResumeFile(file);
-      const result = mergeResumeDraft(
+      const request = new FormData();
+      request.set("file", file);
+      const importResult = await importResumeFile(request);
+      if (!importResult.ok) {
+        setImportStatus(importResult.code);
+        return;
+      }
+
+      const mergeResult = mergeResumeDraft(
         {
           headline,
           location,
@@ -262,9 +271,9 @@ export function CandidateProfileForm({
           cvFullText: "",
           links,
         },
-        draft,
+        importResult.draft,
       );
-      const { profile: mergedProfile } = result;
+      const { profile: mergedProfile } = mergeResult;
       setHeadline(mergedProfile.headline);
       setLocation(mergedProfile.location);
       setSkillsText(mergedProfile.skills.join("\n"));
@@ -283,10 +292,10 @@ export function CandidateProfileForm({
       ) {
         setAdditionalSectionsOpen(true);
       }
-      setImportSkipped(result.skipped);
-      if (result.added === 0) {
+      setImportSkipped(mergeResult.skipped);
+      if (mergeResult.added === 0) {
         setImportStatus(
-          result.skipped > 0
+          mergeResult.skipped > 0
             ? "noNewInformationWithSkipped"
             : "noNewInformation",
         );
@@ -294,18 +303,14 @@ export function CandidateProfileForm({
       }
 
       setImportStatus(
-        result.skipped > 0 ? "importedWithSkipped" : "imported",
+        mergeResult.skipped > 0 ? "importedWithSkipped" : "imported",
       );
       setResumeImported(true);
     } catch (error) {
-      const code =
-        error instanceof ResumeImportError ? error.code : "unreadable";
-      if (!(error instanceof ResumeImportError)) {
-        console.error("Candidate CV parsing failed.", {
-          name: error instanceof Error ? error.name : "UnknownError",
-        });
-      }
-      setImportStatus(code);
+      console.error("Candidate CV import failed.", {
+        name: error instanceof Error ? error.name : "UnknownError",
+      });
+      setImportStatus("parseFailed");
     } finally {
       setImporting(false);
     }
@@ -348,7 +353,11 @@ export function CandidateProfileForm({
                 onChange={(event) => {
                   const file = event.currentTarget.files?.[0];
                   event.currentTarget.value = "";
-                  if (file) void handleResumeFile(file);
+                  if (file) {
+                    startImportTransition(() => {
+                      void handleResumeFile(file);
+                    });
+                  }
                 }}
                 type="file"
               />

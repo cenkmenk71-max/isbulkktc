@@ -3,8 +3,12 @@
 import { extractLanguagesFromCV } from "@/server/ai/language-extraction";
 import { synthesizeCVNarrative, type CVSynthesisResult } from "@/server/ai/cv-synthesis";
 import { convertToCandidateLanguages } from "./language-utils";
+import { getCurrentUser } from "@/server/dal/user";
+import { DocumentImportError, parseResumeFile } from "@/server/ai/cv-parser";
 import type { CandidateLanguage } from "./schemas";
 import type { CandidateResumeDraft } from "./resume-parser";
+import { canImportResume } from "./resume-import-authorization";
+import type { ImportResumeFileResult } from "./resume-import-types";
 
 type CandidateResumeDraftWithSynthesis = CandidateResumeDraft & {
   cvSynthesis?: CVSynthesisResult;
@@ -20,6 +24,7 @@ export async function parseLanguagesWithAI(
   } catch {
     return [];
   }
+
 }
 
 export async function parseResumeTextWithAI(
@@ -38,5 +43,28 @@ export async function parseResumeTextWithAI(
     };
   } catch {
     return draft;
+  }
+}
+
+export async function importResumeFile(
+  formData: FormData,
+): Promise<ImportResumeFileResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, code: "unauthorized" };
+  if (!canImportResume(user)) return { ok: false, code: "inactive" };
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) return { ok: false, code: "unsupported" };
+
+  try {
+    const draft = await parseResumeFile(file);
+    if (!draft) return { ok: false, code: "empty" };
+    const { cvFullText: _cvFullText, ...preview } = draft;
+    return { ok: true, draft: preview };
+  } catch (error) {
+    if (error instanceof DocumentImportError) {
+      return { ok: false, code: error.code };
+    }
+    return { ok: false, code: "parseFailed" };
   }
 }

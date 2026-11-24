@@ -72,6 +72,9 @@ const nextConfig: NextConfig = {
     .filter(Boolean),
   experimental: {
     agentUpgrade: "security",
+    serverActions: {
+      bodySizeLimit: "6mb",
+    },
   },
   images: {
     qualities: [75, 85, 90, 95, 100],

@@ -781,14 +781,14 @@
         },
         "resume": {
           "title": "CV’nizi seçin",
-          "description": "Metin tabanlı PDF veya DOCX bilgileri tarayıcınızda taslağa aktarılsın."
+          "description": "Metin tabanlı CV’niz sunucuda ayrıştırılır; Türkçe, İngilizce, Rusça ve diğer diller desteklenir."
         },
         "profile": {
           "title": "Kontrol edin ve kaydedin",
           "description": "Bilgileri düzenleyin; profiliniz siz kaydettiğinizde güncellensin."
         }
       },
-      "privacy": "CV dosyanız sunucuya yüklenmez; ayrıştırma tarayıcınızda yapılır.",
+      "privacy": "Dosya ayrıştırma için sunucuya gönderilir ve yapılandırılmışsa Gemini veya Groq tarafından işlenebilir. İşBul KKTC dosyayı saklamaz.",
       "action": "Aday hesabı oluştur"
     },
     "employer": {
@@ -1114,23 +1114,26 @@
     },
     "resumeImport": {
       "title": "CV’den içe aktar",
-      "description": "Metin tabanlı PDF veya DOCX seçin; çıkarılan bilgiler profil formunda incelenip düzenlenebilecek öneriler olarak gösterilir.",
-      "privacy": "Dosya bu tarayıcıda okunur; yüklenmez veya saklanmaz. Öneriler, siz kontrol edip Değişiklikleri kaydet’i seçene kadar profilinize kaydedilmez.",
+      "description": "Metin tabanlı PDF, DOCX, RTF, ODT, TXT veya Markdown seçin. Türkçe, İngilizce, Rusça ve diğer dillerdeki CV’ler desteklenir; bilgiler formda öneri olarak gösterilir.",
+      "privacy": "Dosya ayrıştırma için sunucuya gönderilir ve yapılandırılmışsa Gemini veya Groq tarafından işlenebilir. İşBul KKTC dosyayı saklamaz; öneriler siz kontrol edip kaydedene kadar profilinize yazılmaz.",
       "chooseFile": "CV dosyası seç",
       "processing": "CV okunuyor…",
-      "processingStatus": "CV’niz tarayıcıda okunuyor.",
-      "fileHint": "PDF veya DOCX · en fazla 5 MB ve 25 sayfa · taranmış dosyalar desteklenmez",
+      "processingStatus": "CV’niz sunucuda işleniyor.",
+      "fileHint": "PDF, DOCX, RTF, ODT, TXT veya Markdown · en fazla 5 MB ve PDF’de 25 sayfa · metin tabanlı dosya",
       "imported": "CV’den çıkarılan bilgiler forma öneri olarak eklendi; henüz kaydedilmedi. Kontrol edip düzenledikten sonra Değişiklikleri kaydet’i seçin.",
       "importedWithSkipped": "CV önerileri forma eklendi; henüz kaydedilmedi. Bölüm sınırı nedeniyle {count} kayıt eklenmedi. Önerileri kontrol edip Değişiklikleri kaydet’i seçin.",
       "noNewInformation": "CV okundu ancak eklenecek yeni bilgi bulunamadı. Profiliniz değiştirilmedi.",
       "noNewInformationWithSkipped": "Eklenecek yeni bilgi bulunamadı; {count} kayıt profil sınırını aştığı için eklenmedi. Mevcut profiliniz değiştirilmedi.",
       "errors": {
-        "unsupported": "PDF veya DOCX dosyası seçin.",
+        "unsupported": "Desteklenen bir PDF, DOCX, RTF, ODT, TXT veya Markdown dosyası seçin.",
         "tooLarge": "Dosya veya çıkarılan metin desteklenen sınırı aşıyor.",
         "tooManyPages": "PDF dosyaları en fazla 25 sayfa olabilir.",
         "empty": "CV’den desteklenen profil bilgisi çıkarılamadı. Metin tabanlı başka bir dosya deneyin veya eksik bilgileri ekleyin.",
-        "unreadable": "Dosya okunamadı. Metin tabanlı başka bir PDF veya DOCX deneyin.",
-        "legacyDoc": "Eski .doc formatını desteklemiyoruz. Lütfen PDF veya DOCX olarak kaydedin."
+        "unreadable": "Dosya okunamadı. Başka bir metin tabanlı dosya deneyin.",
+        "legacyDoc": "Eski .doc formatını desteklemiyoruz. Lütfen PDF veya DOCX olarak kaydedin.",
+        "parseFailed": "CV işlenemedi. Lütfen tekrar deneyin veya bilgileri elle girin.",
+        "unauthorized": "CV içe aktarmak için oturum açın.",
+        "inactive": "Bu hesap şu anda CV içe aktaramıyor."
       }
     }
   },
@@ -1560,23 +1563,26 @@
   },
   "resumeImport": {
     "chooseFile": "CV'den doldur",
-    "description": "PDF veya DOCX dosyasından net etiketli bilgileri forma öneri olarak getir.",
+    "description": "Metin tabanlı CV dosyanızı sunucuda ayrıştırıp profil formuna öneri olarak aktarın.",
     "errors": {
       "empty": "CV'den desteklenen profil bilgisi çıkarılamadı. Metin tabanlı başka bir dosya deneyin veya eksik bilgileri ekleyin.",
       "legacyDoc": "Eski .doc formatını desteklemiyoruz. Lütfen PDF veya DOCX olarak kaydedin.",
       "tooLarge": "Dosya veya çıkarılan metin desteklenen sınırı aşıyor.",
       "tooManyPages": "PDF dosyaları en fazla 25 sayfa olabilir.",
-      "unreadable": "Dosya okunamadı. Metin tabanlı başka bir PDF veya DOCX deneyin.",
-      "unsupported": "PDF veya DOCX dosyası seçin."
+      "unreadable": "Dosya okunamadı. Başka bir metin tabanlı dosya deneyin.",
+      "parseFailed": "CV işlenemedi. Lütfen tekrar deneyin veya bilgileri elle girin.",
+      "unauthorized": "CV içe aktarmak için oturum açın.",
+      "inactive": "Bu hesap şu anda CV içe aktaramıyor.",
+      "unsupported": "Desteklenen bir PDF, DOCX, RTF, ODT, TXT veya Markdown dosyası seçin."
     },
-    "fileHint": "PDF veya DOCX · en fazla 5 MB ve 25 sayfa",
+    "fileHint": "PDF, DOCX, RTF, ODT, TXT veya Markdown · en fazla 5 MB ve PDF’de 25 sayfa",
     "imported": "boş alan formda dolduruldu ve henüz kaydedilmedi. Mevcut bilgiler korundu; kontrol edip kaydedin.",
     "importedWithSkipped": "{count} boş alan dolduruldu. Mevcut bilgiler korundu; kontrol edip kaydedin.",
     "noNewInformation": "Boş alan doldurmak için yeni bilgi bulunamadı. Mevcut bilgiler korundu.",
     "noNewInformationWithSkipped": "Yeni bilgi bulunamadı; {count} öneri sınır nedeniyle atlandı. Mevcut bilgiler korundu.",
-    "privacy": "Dosya sadece bu tarayıcıda okunur; yüklenmez veya saklanmaz. Öneriler, değişiklikleri kontrol edip kaydettiğinizdeye kadar kaydedilmez.",
+    "privacy": "Dosya ayrıştırma için sunucuya gönderilir ve yapılandırılmışsa Gemini veya Groq tarafından işlenebilir. İşBul KKTC dosyayı saklamaz; öneriler siz kontrol edip kaydedene kadar profilinize yazılmaz.",
     "processing": "Dosya okunuyor…",
-    "processingStatus": "Dosya tarayıcıda okunuyor; dosya gönderilmiyor.",
+    "processingStatus": "CV’niz sunucuda işleniyor.",
     "title": "CV'den profil bilgisi al"
   },
   "CompanyCandidates": {

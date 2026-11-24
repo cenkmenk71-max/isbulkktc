@@ -89,8 +89,7 @@ export async function saveCandidateProfile(
     }
   }
 
-  // A CV import runs entirely in the browser, so the profile save is the first
-  // server-side moment that proves the résumé actually reached us.
+  // Send the receipt only after the candidate confirms the imported draft by saving.
   if (formData.get("resumeImported") === "1" && user.email) {
     try {
       await sendResumeReceivedEmail({

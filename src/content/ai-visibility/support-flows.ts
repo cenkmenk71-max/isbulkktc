@@ -139,7 +139,7 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "CV yüklemek zorunda mıyım",
       ],
       answer:
-        "CV gizliliği: CV dosyanız sunucuya yüklenmez; ayrıştırma tarayıcınızda yapılır ve dosya tarayıcınızda kalır.",
+        "CV gizliliği: Dosya ayrıştırma için sunucuya gönderilir ve yapılandırılmışsa Gemini veya Groq tarafından işlenebilir. İşBul KKTC dosyayı saklamaz.",
     },
   ],
   en: [
@@ -213,7 +213,7 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "CV storage",
       ],
       answer:
-        "CV privacy: your CV file is not uploaded to the server; it is parsed in your browser and stays there.",
+        "CV privacy: your CV file is sent to the server for parsing and may be processed by Gemini or Groq if structured. İşBul KKTC does not store the file.",
     },
   ],
   de: [
@@ -280,7 +280,7 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "Ist mein Lebenslauf sicher?",
       ],
       answer:
-        "Lebenslauf-Datenschutz: Ihre Lebenslaufdatei wird nicht auf den Server hochgeladen; sie wird in Ihrem Browser verarbeitet und bleibt dort.",
+        "Lebenslauf-Datenschutz: Ihre Lebenslaufdatei wird zum Parsen an den Server gesendet und kann, wenn strukturiert, von Gemini oder Groq verarbeitet werden. İşBul KKTC speichert die Datei nicht.",
     },
   ],
   ru: [

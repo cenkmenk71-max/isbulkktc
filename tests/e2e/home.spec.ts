@@ -474,7 +474,7 @@ test("home keeps candidate and company actions in the journey section", async ({
     candidateJourney.locator(".home-journey-steps > li"),
   ).toHaveCount(3);
   await expect(candidateJourney).toContainText(
-    "CV dosyanız sunucuya yüklenmez; ayrıştırma tarayıcınızda yapılır.",
+    "Dosya ayrıştırma için sunucuya gönderilir ve yapılandırılmışsa Gemini veya Groq tarafından işlenebilir. İşBul KKTC dosyayı saklamaz.",
   );
   await expect(candidateJourney.locator(".home-journey-link")).toHaveAttribute(
     "href",

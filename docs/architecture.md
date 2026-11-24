@@ -72,10 +72,10 @@ iskeletlerin “hazır” gösterilmesiyle taklit edilmez. Sonraki her dikey ak�
 kendi şema/migration'ı, grant'leri, pozitif-negatif RLS testleri, transaction
 ve runbook'u ile eklenir.
 
-20 Kasım 2026 itibarıyla çalışan kullanıcı arayüzü akışları; kayıt/giriş/
+24 Kasım 2026 itibarıyla çalışan kullanıcı arayüzü akışları; kayıt/giriş/
 çıkış ve parola kurtarma, şirket oluşturma ve şirket çalışma alanı, aday profili
-oluşturma/güncelleme (CV dosyasını sunucuya yüklemeden tarayıcıda metin çıkarımı
-dahil), herkese açık ilan arama/detay, adayın ilana başvurması ve başvuru
+oluşturma/güncelleme (sunucu tarafında üç katmanlı CV ayrıştırma dahil),
+herkese açık ilan arama/detay, adayın ilana başvurması ve başvuru
 durumunu izlemesi, doğrulanmış şirket üyesinin kendi başvurularını incelemesi
 ve başvuru detayını açmasıdır. Yönetici arayüzünde şirket doğrulama, içerik ve
 paket konsolları vardır; admin işlemleri AAL2 ile korunur.
@@ -102,17 +102,18 @@ bağlantısı yalnızca profile gider; otomatik DM gönderimi veya önceden dold
 mesaj desteği yoktur.
 Yönetici tarafından etkinleştirilen hak kataloğu ayrıca listelenir; bu katalog
 boşken de bilgilendirme amaçlı paket seçenekleri görünür kalır.
-Aday, metin tabanlı PDF veya DOCX dosyasını yalnız
-tarayıcıda ayrıştırır; dosyanın kendisi sunucuya yüklenmez veya saklanmaz.
-Ayrıştırılmış özet, bağlantı ve profil alanları kullanıcı açıkça kaydettiğinde
-profile yazılabilir; ham CV metni ise `candidate_profiles` tablosunda
-saklanmaz ve profil kaydetme isteğine dahil edilmez. Çıkarılan bilgiler formdaki
-mevcut değerlerle birleştirilir: tekil başlık ve konum yalnız boşsa doldurulur,
-mevcut kayıtlar silinmez, beceri ve bölüm tekrarları ayıklanır. Bu yalnızca
-tarayıcıdaki düzenlenebilir form taslağını değiştirir; aday alanları kontrol
-edip profil formundaki açık kaydetme eylemini başlatana kadar hiçbir profil
-değişikliği kalıcı olmaz. Şema sınırına sığmayan kayıtların sayısı bildirilir.
-Taranmış PDF/OCR ve harici AI kullanılmaz.
+Aday, metin tabanlı desteklenen CV dosyasını kimliği doğrulanmış Server Action'a
+gönderir. Sunucu dosya türünü, 5 MB boyutunu, PDF sayfa sayısını ve çıkarılan
+metin uzunluğunu sınırlar; ayrıştırma önce yapılandırılmış Gemini'yi, sonra
+Groq'u, en son yerel kural tabanlı ayrıştırıcıyı dener. Sağlayıcı anahtarları
+sunucu tarafında kalır. Dosya, ayrıştırma için sunucuya gönderilir ve ilgili
+sağlayıcı yapılandırılmışsa Gemini veya Groq'a aktarılabilir; İşBul KKTC dosya
+ve ham CV metnini kalıcı olarak saklamaz. Sağlayıcıların kendi veri işleme
+kuralları ayrıca geçerlidir. Şemayla doğrulanmış öneriler formda gösterilir ve
+adayın açık kaydetme eylemine kadar profile yazılmaz. Öneriler mevcut değerlerle
+birleştirilir: tekil başlık ve konum yalnız boşsa doldurulur, mevcut kayıtlar
+silinmez, tekrarlar ayıklanır ve ilçe dışı konumlar kaydedilmez. Şema sınırına
+sığmayan kayıtların sayısı bildirilir. Taranmış PDF/OCR desteklenmez.
 Google ve LinkedIn OIDC OAuth girişleri yalnızca `AUTH_OAUTH_PROVIDERS`
 ile açıkça etkinleştirilen ve Supabase Auth'ta ayrıca yapılandırılan sağlayıcılar
 için kullanılabilir. Yeni hesap profil adı, Auth metadata'sındaki güvenilmeyen
@@ -281,9 +282,9 @@ dönülür. Gizli/erişim gerektiren telefon ve e-posta bilgileri kopyalanmaz.
 Kaynak işverenler `pending` kalır, ana doğrulanmış şirket rehberi sayısına
 katılmaz ve kaynak ilanlarında İşBul üzerinden başvuru alınmaz. CV
 saklama/bağlama henüz sunulmaz; platform ilanlarının başvuru takibi ve site içi
-bildirimleri vardır, e-posta worker'ı ise üretim kurulumu bekler. Aday CV ayrıştırması yalnızca
-tarayıcıda düzenlenebilir bir taslak üretir; profil kaydı kullanıcının açık
-onayıyla yapılır. Ana sayfa, adaylara CV taslağını inceleyip kaydetme ve üyelik
+bildirimleri vardır, e-posta worker'ı ise üretim kurulumu bekler. Aday CV
+ayrıştırması sunucu tarafında düzenlenebilir bir taslak üretir; profil kaydı
+kullanıcının açık onayıyla yapılır. Ana sayfa, adaylara CV taslağını inceleyip kaydetme ve üyelik
 olmadan ilan arama yollarını; işverenlere ise şirket kaydı, doğrulama ve yayın
 yetkisi sonrasındaki ilan yönetimi akışını anlatır. İşverenler için aday
 havuzunda profil arama/filtreleme henüz uygulanmadığından pazarlama metninde

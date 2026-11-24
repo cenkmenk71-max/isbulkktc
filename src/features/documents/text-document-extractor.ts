@@ -1,5 +1,3 @@
-"use client";
-
 const maxFileBytes = 5 * 1024 * 1024;
 const maxPdfPages = 25;
 const maxExtractedCharacters = 80_000;
@@ -27,7 +25,9 @@ async function extractPdfText(file: File): Promise<string> {
   if (!header.includes("%PDF-")) throw new DocumentImportError("unreadable");
 
   const pdfjs = await import("pdfjs-dist");
-  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  if (typeof window !== "undefined") {
+    pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  }
 
   const task = pdfjs.getDocument({
     data,

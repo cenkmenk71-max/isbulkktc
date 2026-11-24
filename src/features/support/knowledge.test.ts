@@ -81,10 +81,10 @@ test("a how-to question is answered from the procedural flows, not the model", (
     ["tr", "Nasıl hesap oluştururum?", /Aday olarak/],
     ["tr", "İlana nasıl başvururum?", /başvurunuz siteye kaydedilir/i],
     ["tr", "İşveren olarak nasıl ilan veririm?", /inceleme sürecine alınır/],
-    ["tr", "CV dosyam güvenli mi?", /tarayıcınızda/],
+    ["tr", "CV dosyam güvenli mi?", /sunucuya g[öo]nderilir|dosyay[iı] saklamaz/],
     ["en", "How do I reset my password?", /Forgot your password/],
     ["en", "How do I apply for a job?", /candidate profile/i],
-    ["en", "Is my CV file safe?", /not uploaded to the server/i],
+    ["en", "Is my CV file safe?", /sent to the server|does not store/],
   ];
   for (const [locale, message, expected] of cases) {
     const answer = answerFromKnowledge(message, locale as "tr" | "en");
@@ -116,25 +116,25 @@ test("a paraphrase of a flow question is answered in-process", () => {
     ["tr", "ilana başvurmak istiyorum", /başvurunuz siteye kaydedilir/i],
     ["tr", "ilan vermek istiyorum", /inceleme sürecine alınır/],
     ["tr", "şirket kaydı nasıl yapılır", /inceleme sürecine alınır/],
-    ["tr", "cv gizliliği nasıl", /tarayıcınızda/],
+    ["tr", "cv gizliliği nasıl", /sunucuya g[öo]nderilir|dosyay[iı] saklamaz/],
     // The short-token case: "cv" is two characters, below the matcher's
     // significant-token floor, so "cv nasıl yüklenir" used to lose "cv" and
     // ride the generic "nasıl"/"yüklenir" into the *apply* flow — a confident
     // answer to a different question. With "cv" kept, these land on CV privacy.
-    ["tr", "cv nasıl yüklenir", /tarayıcınızda/],
-    ["tr", "cv nasıl eklenir", /tarayıcınızda/],
-    ["tr", "cv yükleme nasıl yapılır", /tarayıcınızda/],
-    ["tr", "cv nereye yüklenir", /tarayıcınızda/],
-    ["tr", "cv dosyası nasıl yüklenir", /tarayıcınızda/],
+    ["tr", "cv nasıl yüklenir", /sunucuya g[öo]nderilir|dosyay[iı] saklamaz/],
+    ["tr", "cv nasıl eklenir", /sunucuya g[öo]nderilir|dosyay[iı] saklamaz/],
+    ["tr", "cv yükleme nasıl yapılır", /sunucuya g[öo]nderilir|dosyay[iı] saklamaz/],
+    ["tr", "cv nereye yüklenir", /sunucuya g[öo]nderilir|dosyay[iı] saklamaz/],
+    ["tr", "cv dosyası nasıl yüklenir", /sunucuya g[öo]nderilir|dosyay[iı] saklamaz/],
     // en
     ["en", "i forgot my password", /Forgot your password/],
     ["en", "how to sign up", /candidate account/],
     ["en", "i want to register", /candidate account/],
     ["en", "email verification not working", /verification link/],
     ["en", "cover letter how to add", /cover letter/i],
-    ["en", "where is my cv stored", /not uploaded to the server/i],
-    ["en", "how do i upload my cv", /not uploaded to the server/i],
-    ["en", "cv upload", /not uploaded to the server/i],
+    ["en", "where is my cv stored", /sent to the server|does not store/],
+    ["en", "how do i upload my cv", /sent to the server|does not store/],
+    ["en", "cv upload", /sent to the server|does not store/],
     // de — the case that was a live false positive before entry-relative coverage
     ["de", "ich habe mein passwort vergessen", /Passwort vergessen/],
     ["de", "passwort ändern", /Passwort vergessen/],
@@ -143,7 +143,7 @@ test("a paraphrase of a flow question is answered in-process", () => {
     ["de", "bestätigungsmail nicht erhalten", /Bestätigungslink/],
     ["de", "wie kann ich mich bewerben", /Bewerbung erfolgt über das Formular/],
     ["de", "stellenanzeige schalten", /geprüft/],
-    ["de", "lebenslauf datenschutz", /nicht auf den Server/],
+    ["de", "lebenslauf datenschutz", /an den Server gesendet|speichert die Datei nicht/],
     // ru
     ["ru", "я забыл пароль", /Забыли пароль/],
     ["ru", "сменить пароль", /Забыли пароль/],

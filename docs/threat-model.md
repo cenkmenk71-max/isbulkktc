@@ -49,11 +49,16 @@ dosya baytları ve adı/MIME alanı, dış API cevabı ve AI üretimi. Sahiplik,
 
 ## Aday profili ve işveren profil incelemesi
 
-- CV ayrıştırma yalnız tarayıcıda yapılır. Ham dosya Server Action'a
-  gönderilmez veya saklanmaz; PDF/DOCX ve metin boyutu/sayfa sınırları
-  istemcide uygulanır. Yalnız şema ile doğrulanmış, birleştirilmiş profil
-  alanları authenticated Server Action'a gönderilir ve adayın kendi özel
-  profilinde saklanır. Taranmış PDF/OCR ve harici AI desteklenmez.
+- CV ayrıştırma kimliği doğrulanmış, aktif hesabı zorunlu kılan bir
+  Server Action üzerinden yapılır. Dosya türü, 5 MB sınırı, PDF'de 25 sayfa ve
+  çıkarılan metnin 80.000 karakter sınırı sunucuda doğrulanır. Server-only
+  modüller Gemini → Groq → yerel kural tabanlı ayrıştırıcı sırasını uygular;
+  sağlayıcı anahtarları istemciye gönderilmez veya loglanmaz. Dosya ve CV
+  içeriği yapılandırılmışsa Gemini ya da Groq'a aktarılabilir; İşBul KKTC
+  bunları kalıcı olarak saklamaz ve sağlayıcının veri işleme koşulları ayrıca
+  geçerlidir. Çıktı katı şemayla doğrulanır, ham CV metni istemciye dönmez ve
+  profil alanları yalnız aday formda kontrol edip kaydettiğinde yazılır.
+  Taranmış PDF/OCR desteklenmez.
 - İstemciden gelen profil bölümleri güvenilmeyen JSON kabul edilir; Server
   Action Zod şemasıyla doğrular, veritabanı JSONB kısıtları da nesne alanlarını,
   dizi uzunluğunu ve metin boyutunu sınırlar. Aday satır sahipliği RLS ile
