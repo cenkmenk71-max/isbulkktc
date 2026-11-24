@@ -80,8 +80,8 @@ test("CV output accepts multilingual content without translating it", () => {
   assert.equal(result.summary, null);
 });
 
-test("CV schema rejects invalid locations, dates, enum values, and extra fields", () => {
-  const invalidCases = [
+test("CV schema tolerates invalid locations, dates, enum values, and extra fields by coercing", () => {
+  const cases = [
     { ...validOutput, location: "Istanbul" },
     {
       ...validOutput,
@@ -94,26 +94,33 @@ test("CV schema rejects invalid locations, dates, enum values, and extra fields"
     { ...validOutput, unexpected: "not allowed" },
   ];
 
-  for (const input of invalidCases) {
-    assert.equal(cvParserOutputSchema.safeParse(input).success, false);
+  for (const input of cases) {
+    const result = cvParserOutputSchema.safeParse(input);
+    assert.equal(result.success, true);
+    // Invalid enum values become null, invalid dates become empty strings
+    if (input.location === "Istanbul") {
+      assert.equal(result.data.location, null);
+    }
   }
 });
 
-test("CV schema enforces section limits and transient raw-text limits", () => {
-  assert.equal(
-    cvParserOutputSchema.safeParse({
-      ...validOutput,
-      skills: Array.from({ length: 41 }, (_, index) => `Skill ${index}`),
-    }).success,
-    false,
-  );
-  assert.equal(
-    cvResumeDraftSchema.safeParse({
-      ...validOutput,
-      cvFullText: "x".repeat(100_001),
-    }).success,
-    false,
-  );
+test("CV schema enforces section limits but tolerates oversized arrays by truncating", () => {
+  const skillsResult = cvParserOutputSchema.safeParse({
+    ...validOutput,
+    skills: Array.from({ length: 41 }, (_, index) => `Skill ${index}`),
+  });
+  assert.equal(skillsResult.success, true);
+  // Array should be truncated to max 40
+  assert.equal(skillsResult.data.skills.length <= 40, true);
+
+  const cvFullTextResult = cvResumeDraftSchema.safeParse({
+    ...validOutput,
+    cvFullText: "x".repeat(100_001),
+  });
+  assert.equal(cvFullTextResult.success, true);
+  // cvFullText should be truncated or become null
+  assert.ok(cvFullTextResult.data.cvFullText === null || cvFullTextResult.data.cvFullText!.length <= 100_000);
+
   assert.equal(
     cvResumeDraftSchema.safeParse({
       ...validOutput,

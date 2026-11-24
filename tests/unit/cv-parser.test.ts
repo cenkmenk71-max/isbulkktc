@@ -75,7 +75,7 @@ test("Groq runs when Gemini is not configured and returns the canonical district
   }
 });
 
-test("Gemini 429 falls back to Groq", async () => {
+test("Gemini 429 falls back to Groq after retry with fallback model", async () => {
   const originalFetch = globalThis.fetch;
   const requests: string[] = [];
   globalThis.fetch = async (input) => {
@@ -96,9 +96,10 @@ test("Gemini 429 falls back to Groq", async () => {
       },
     );
 
-    assert.equal(requests.length, 2);
+    assert.equal(requests.length, 3);
     assert.match(requests[0] ?? "", /generativelanguage\.googleapis\.com/);
-    assert.match(requests[1] ?? "", /api\.groq\.com/);
+    assert.match(requests[1] ?? "", /generativelanguage\.googleapis\.com/);
+    assert.match(requests[2] ?? "", /api\.groq\.com/);
     assert.equal(draft?.headline, "Инженер-программист");
   } finally {
     globalThis.fetch = originalFetch;
