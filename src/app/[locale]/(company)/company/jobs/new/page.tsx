@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { JobDraftForm } from "@/features/jobs/job-management-forms";
 import { getEmployerWorkspace } from "@/server/dal/companies";
+import { requireAuthenticatedUser } from "@/server/dal/user";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
 
@@ -23,10 +24,12 @@ export default async function NewEmployerJobPage({
   if (!locale) notFound();
   setRequestLocale(locale);
 
+  await requireAuthenticatedUser({ audience: "employer" });
   const [{ company }, copy] = await Promise.all([
     getEmployerWorkspace(query.company),
     getTranslations("JobManagement.employer"),
   ]);
+  if (query.company && company.id !== query.company) notFound();
 
   return (
     <main className="employer-job-editor page-container">

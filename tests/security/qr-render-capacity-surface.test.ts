@@ -110,7 +110,10 @@ test("the default payload needs a later QR version, exercising auto-size fallbac
 });
 
 test("the route retries undersized pins and returns a controlled 414 when no symbol fits", () => {
-  const route = readFileSync(new URL("../../src/app/api/qr/route.ts", import.meta.url), "utf8");
+  const route = readFileSync(
+    new URL("../../src/app/api/qr/route.ts", import.meta.url),
+    "utf8",
+  ).replace(/\r\n/g, "\n");
   const renderStart = route.indexOf("async function render(");
   const renderEnd = route.indexOf("\n}\n\nexport async function GET", renderStart);
   assert.ok(renderStart >= 0 && renderEnd > renderStart, "the route render helper must remain present");

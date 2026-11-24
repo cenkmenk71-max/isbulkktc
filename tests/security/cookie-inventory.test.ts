@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 /**
  * Cookie inventory and flag audit (issue #418 §6 — the owner's top priority:
@@ -36,7 +37,7 @@ function walk(directory: URL): string[] {
   for (const entry of readdirSync(directory)) {
     const path = new URL(entry, directory);
     if (statSync(path).isDirectory()) files.push(...walk(new URL(`${entry}/`, directory)));
-    else if (/\.(ts|tsx)$/.test(entry)) files.push(path.pathname);
+    else if (/\.(ts|tsx)$/.test(entry)) files.push(fileURLToPath(path));
   }
   return files;
 }
@@ -44,7 +45,8 @@ function walk(directory: URL): string[] {
 const sourceFiles = walk(srcDir);
 
 function relative(path: string): string {
-  return path.slice(path.indexOf("/src/") + 1);
+  const normalised = path.replace(/\\/g, "/");
+  return normalised.slice(normalised.indexOf("/src/") + 1);
 }
 
 function read(path: string): string {
@@ -147,7 +149,7 @@ test("every client cookie writer is on the audited list (ratchet)", () => {
 test("every document.cookie write is scoped and hardened", () => {
   const offenders: string[] = [];
   for (const file of documentCookieWriters()) {
-    const source = read(new URL(`../../${file}`, import.meta.url).pathname);
+    const source = read(fileURLToPath(new URL(`../../${file}`, import.meta.url)));
     // `Secure` is conditional on HTTPS, so it arrives as an interpolation.
     const wiresSecure = /window\.location\.protocol\s*===\s*["']https:["']/.test(source);
     for (const template of documentCookieTemplates(source)) {
@@ -172,7 +174,7 @@ test("every document.cookie write is scoped and hardened", () => {
 
 test("the ib_consent cookie is Secure (https), SameSite=Lax and Path=/", () => {
   const source = read(
-    new URL("../../src/components/analytics/consent-browser.ts", import.meta.url).pathname,
+    fileURLToPath(new URL("../../src/components/analytics/consent-browser.ts", import.meta.url)),
   );
   const templates = documentCookieTemplates(source);
   assert.equal(
@@ -205,7 +207,7 @@ test("the ib_consent cookie is Secure (https), SameSite=Lax and Path=/", () => {
 
 test("the consent cookie carries a finite Max-Age on the write", () => {
   const source = read(
-    new URL("../../src/components/analytics/consent-browser.ts", import.meta.url).pathname,
+    fileURLToPath(new URL("../../src/components/analytics/consent-browser.ts", import.meta.url)),
   );
   const templates = documentCookieTemplates(source);
   const write = templates.find((template) => /Max-Age=\$\{consentCookieMaxAgeSeconds\}/.test(template));
@@ -265,8 +267,8 @@ test("the cookie-name detector sees a declared name and rejects a near-miss (sel
 // ---------------------------------------------------------------------------
 
 test("the NEXT_LOCALE inventory row matches the routing config it describes", () => {
-  const inventory = read(new URL(import.meta.url).pathname);
-  const routing = read(new URL("../../src/i18n/routing.ts", import.meta.url).pathname);
+  const inventory = read(fileURLToPath(import.meta.url));
+  const routing = read(fileURLToPath(new URL("../../src/i18n/routing.ts", import.meta.url)));
 
   const row = inventory.split("\n").find((line) => /\|\s*`NEXT_LOCALE`\s*\|/.test(line));
   assert.ok(row, "the §6 table no longer documents the NEXT_LOCALE cookie");

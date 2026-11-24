@@ -85,6 +85,7 @@ function cronSecretNames(code: string): string[] {
 function bearerGuardedRoutes(): string[] {
   const entries = readdirSync(apiDir, { recursive: true }) as string[];
   return entries
+    .map((entry) => entry.replace(/\\/g, "/"))
     .filter((entry) => entry.endsWith("route.ts"))
     .map((entry) => `src/app/api/${entry}`)
     .filter((file) => isBearerSecretGuard(source(file)))

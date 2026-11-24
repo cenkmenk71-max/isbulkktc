@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { AccountAudiencePicker } from "@/components/layout/account-audience-picker";
 import { EditorialFormPage } from "@/components/layout/editorial-form-page";
@@ -8,6 +9,7 @@ import { createAuthPageMetadata } from "@/features/identity/auth-metadata";
 import { resolveEnabledOAuthProviders } from "@/features/identity/oauth-providers";
 import { routing } from "@/i18n/routing";
 import { getEnabledOAuthProviders } from "@/server/config/oauth-providers";
+import { getSignedInAuthDestination } from "@/server/dal/user";
 
 // The page's own title/description; without this the route inherits the locale
 // layout's home-page metadata and announces itself as the home page.
@@ -40,12 +42,21 @@ export async function generateMetadata({
 }
 
 export default async function RegisterPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{ audience?: string }>;
 }) {
-  const { audience: requestedAudience } = await searchParams;
+  const [{ locale: requestedLocale }, { audience: requestedAudience }] =
+    await Promise.all([params, searchParams]);
+  const locale =
+    routing.locales.find((supported) => supported === requestedLocale) ??
+    routing.defaultLocale;
   const audience = accountAudienceSchema.catch("candidate").parse(requestedAudience);
+  const destination = await getSignedInAuthDestination(audience, locale);
+  if (destination) redirect(destination);
+
   const copy = await getTranslations("AccountPages.register");
   // A malformed AUTH_OAUTH_PROVIDERS must not 500 the registration page; it
   // degrades to "no provider enabled", exactly like an empty value.

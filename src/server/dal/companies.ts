@@ -15,6 +15,25 @@ type CompanyDirectoryOverride =
 type CompanyVerificationQueue =
   Database["public"]["Functions"]["admin_list_company_verifications"]["Returns"];
 
+export async function hasActiveCompanyOwnership(userId: string): Promise<boolean> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("company_members")
+    .select("company_id")
+    .eq("user_id", userId)
+    .eq("membership_role", "owner")
+    .eq("status", "active")
+    .limit(1);
+
+  if (error) {
+    throw new Error("The user's active company ownership could not be verified.", {
+      cause: error,
+    });
+  }
+
+  return data.length > 0;
+}
+
 export async function getOwnedCompany(
   userId: string,
   companyId: string,

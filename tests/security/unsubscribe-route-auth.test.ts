@@ -34,13 +34,13 @@ test("GET validates and renders confirmation without touching the mutation path"
     source.indexOf("export async function POST"),
   );
   assert.match(getBody, /isValidUnsubscribeLink\(email, signature\)/);
-  assert.match(getBody, /confirmationPage\(request\)/);
+  assert.match(getBody, /confirmationPage\(request, getLocale\(request\)\)/);
   assert.doesNotMatch(getBody, /optOut\(|createSupabaseServiceClient|supabase\.rpc/);
 });
 
 test("POST is the only route handler that invokes the opt-out mutation", () => {
   const postBody = source.slice(source.indexOf("export async function POST"));
-  assert.match(postBody, /optOut\(email, signature\)/);
+  assert.match(postBody, /optOut\(email, signature, getLocale\(request\)\)/);
   const getBody = source.slice(
     source.indexOf("export async function GET"),
     source.indexOf("export async function POST"),

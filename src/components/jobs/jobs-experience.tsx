@@ -6,6 +6,8 @@ import { Link } from "@/i18n/navigation";
 import { northernCyprusDistrictValues } from "@/features/locations/northern-cyprus-districts";
 import type { PublicJobSearchFilters } from "@/features/jobs/schemas";
 import { EmployerLogo } from "@/components/jobs/employer-logo";
+import { PendingGetForm } from "@/components/forms/pending-get-form";
+import { buildPublicJobSearchHref } from "@/features/jobs/search-href";
 import {
   getDistrictMessageKey,
   getJobTypeMessageKey,
@@ -96,7 +98,10 @@ export async function JobsExperience({
       </header>
 
       <div className="page-container jobs-content">
-        <form className="jobs-filter-panel" method="get" aria-label={t("filterTitle")}>
+        <PendingGetForm
+          className="jobs-filter-panel"
+          ariaLabel={t("filterTitle")}
+        >
           <div className="jobs-filter-heading">
             <div>
               <p className="jobs-section-kicker">{t("filterEyebrow")}</p>
@@ -165,7 +170,7 @@ export async function JobsExperience({
               {searchCopy("searchAction")}
             </button>
           </div>
-        </form>
+        </PendingGetForm>
 
         {invalidFilters ? (
           <p className="jobs-filter-error" role="alert">
@@ -272,7 +277,10 @@ export async function JobsExperience({
                 aria-label={searchCopy("paginationLabel")}
               >
                 {results.page > 1 ? (
-                  <Link href={buildSearchHref(filters, results.page - 1)} rel="prev">
+                  <Link
+                    href={buildPublicJobSearchHref(filters, results.page - 1, "/jobs")}
+                    rel="prev"
+                  >
                     {searchCopy("previousPage")}
                   </Link>
                 ) : (
@@ -280,7 +288,10 @@ export async function JobsExperience({
                 )}
                 <span>{searchCopy("pageCount", { page: results.page, pages })}</span>
                 {results.page < pages ? (
-                  <Link href={buildSearchHref(filters, results.page + 1)} rel="next">
+                  <Link
+                    href={buildPublicJobSearchHref(filters, results.page + 1, "/jobs")}
+                    rel="next"
+                  >
                     {searchCopy("nextPage")}
                   </Link>
                 ) : (
@@ -295,14 +306,4 @@ export async function JobsExperience({
       </div>
     </div>
   );
-}
-
-function buildSearchHref(filters: PublicJobSearchFilters, page: number) {
-  const params = new URLSearchParams();
-  if (filters.query) params.set("query", filters.query);
-  if (filters.district) params.set("district", filters.district);
-  if (filters.jobType) params.set("jobType", filters.jobType);
-  if (filters.workplaceMode) params.set("workplaceMode", filters.workplaceMode);
-  params.set("page", String(page));
-  return `/jobs?${params.toString()}`;
 }

@@ -35,7 +35,12 @@ function form(values: Record<string, string> = {}): FormData {
 }
 
 function passwordForm(values: Record<string, string> = {}): FormData {
-  return form({ password: "Str0ng-Passw0rd!", locale: "tr", ...values });
+  return form({
+    password: "Str0ng-Passw0rd!",
+    confirmPassword: "Str0ng-Passw0rd!",
+    locale: "tr",
+    ...values,
+  });
 }
 
 async function loadIdentityActions() {

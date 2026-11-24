@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { EditorialFormPage } from "@/components/layout/editorial-form-page";
 import { PasswordResetForm } from "@/features/identity/password-reset-form";
 import { createAuthPageMetadata } from "@/features/identity/auth-metadata";
 import { routing } from "@/i18n/routing";
+import { getSignedInAuthDestination } from "@/server/dal/user";
 
 // The page's own title/description; without this the route inherits the locale
 // layout's home-page metadata and announces itself as the home page.
@@ -27,11 +29,22 @@ export async function generateMetadata({
 }
 
 export default async function ForgotPasswordPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  const { error } = await searchParams;
+  const [{ locale: requestedLocale }, { error }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
+  const locale =
+    routing.locales.find((supported) => supported === requestedLocale) ??
+    routing.defaultLocale;
+  const destination = await getSignedInAuthDestination("candidate", locale);
+  if (destination) redirect(destination);
+
   const copy = await getTranslations("AccountPages.reset");
 
   return (

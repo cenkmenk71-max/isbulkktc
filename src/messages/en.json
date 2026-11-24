@@ -186,6 +186,7 @@
     "deleteFaq": "Delete",
     "deletingFaq": "Deleting…",
     "emptyFaq": "No questions in this locale yet.",
+    "emptyLegal": "No managed legal document exists for this locale yet.",
     "planCode": "Code",
     "planName": "Plan name",
     "planAudience": "Audience label",
@@ -207,6 +208,11 @@
       "saved": "Record saved.",
       "deleted": "Record deleted."
     }
+  },
+  "AccountSceneMedia": {
+    "othello": "Othello Castle",
+    "stHilarion": "St Hilarion Castle",
+    "blueHouse": "Blue House"
   },
   "AboutMeta": {
     "title": "About us",
@@ -984,10 +990,21 @@
     },
     "profileTitle": "Profile details",
     "profileDescription": "The information you save is private to your account.",
+    "emptyProfile": {
+      "title": "Let’s build your profile",
+      "description": "Start with a few details or import your CV. You can review every suggestion before saving.",
+      "start": "Add details manually",
+      "import": "Start with a CV"
+    },
     "completionEyebrow": "YOUR PROFILE",
     "completionTitle": "The essentials",
     "completionOf": "/ {total} details added",
     "completionLabel": "{current} of {total} profile essentials added",
+    "completionStatus": {
+      "notStarted": "Not started",
+      "inProgress": "In progress",
+      "complete": "Complete"
+    },
     "completionHint": "Details extracted from your CV appear as suggestions in the form first. Review them and select Save changes to confirm.",
     "completionFields": {
       "headline": "Professional headline",
@@ -1050,6 +1067,7 @@
       "title": "Import from your CV",
       "description": "Choose a supported PDF, DOCX, RTF, ODT, TXT, or Markdown CV. Text is extracted on our server; scanned PDFs may use a configured vision provider. Turkish, English, Russian, and other languages are supported.",
       "privacy": "Your file is sent to our server for parsing and may be processed by Gemini or Groq when configured. İşBul KKTC does not store the file; suggestions are not saved to your profile until you review and save them.",
+      "dropPrompt": "Or drag and drop your CV here.",
       "chooseFile": "Choose CV",
       "processing": "Reading CV…",
       "processingStatus": "Your CV is being processed on our server.",
@@ -1074,7 +1092,16 @@
     "additionalDetails": "Experience, education and more · {count} entries",
     "additionalDetailsHint": "These sections are optional. CV details are added to the form without removing existing entries; review and edit them before saving.",
     "entryLabel": "Entry {number}",
-    "removeEntry": "Remove this entry",
+    "removeEntry": "Remove {section} entry {number}",
+    "proficiencyLevels": {
+      "Native": "Native",
+      "C2": "C2 · Proficient",
+      "C1": "C1 · Advanced",
+      "B2": "B2 · Upper intermediate",
+      "B1": "B1 · Intermediate",
+      "A2": "A2 · Elementary",
+      "A1": "A1 · Beginner"
+    },
     "fields": {
       "role": "Job title",
       "organization": "Company",

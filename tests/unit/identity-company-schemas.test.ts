@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import {
+  companyProfileSubmissionReviewSchema,
   companyVerificationReviewSchema,
   companyProfileSchema,
   createCompanySchema,
@@ -89,6 +90,37 @@ test("company verification review accepts only a UUID and explicit review decisi
     companyVerificationReviewSchema.safeParse({
       ...valid,
       companyId: "not-a-uuid",
+    }).success,
+    false,
+  );
+});
+
+test("company profile review validates its target, decision, and note on the server", () => {
+  const valid = {
+    submissionId: "00000000-0000-4000-8000-000000000001",
+    decision: "approved",
+    reviewNote: "Reviewed",
+  };
+
+  assert.deepEqual(companyProfileSubmissionReviewSchema.parse(valid), valid);
+  assert.equal(
+    companyProfileSubmissionReviewSchema.safeParse({
+      ...valid,
+      submissionId: "not-a-uuid",
+    }).success,
+    false,
+  );
+  assert.equal(
+    companyProfileSubmissionReviewSchema.safeParse({
+      ...valid,
+      decision: "pending",
+    }).success,
+    false,
+  );
+  assert.equal(
+    companyProfileSubmissionReviewSchema.safeParse({
+      ...valid,
+      reviewNote: "x".repeat(1_001),
     }).success,
     false,
   );
@@ -320,18 +352,38 @@ test("password reset requests canonicalize the email and reject bad locales", ()
 
 test("password updates enforce the shared ten-character minimum", () => {
   assert.equal(
-    updatePasswordSchema.safeParse({ password: "a".repeat(10), locale: "en" })
+    updatePasswordSchema.safeParse({
+      password: "a".repeat(10),
+      confirmPassword: "a".repeat(10),
+      locale: "en",
+    })
       .success,
     true,
   );
   assert.equal(
-    updatePasswordSchema.safeParse({ password: "a".repeat(9), locale: "en" })
+    updatePasswordSchema.safeParse({
+      password: "a".repeat(9),
+      confirmPassword: "a".repeat(9),
+      locale: "en",
+    })
       .success,
     false,
   );
   assert.equal(
-    updatePasswordSchema.safeParse({ password: "a".repeat(129), locale: "en" })
+    updatePasswordSchema.safeParse({
+      password: "a".repeat(129),
+      confirmPassword: "a".repeat(129),
+      locale: "en",
+    })
       .success,
+    false,
+  );
+  assert.equal(
+    updatePasswordSchema.safeParse({
+      password: "a".repeat(10),
+      confirmPassword: "b".repeat(10),
+      locale: "en",
+    }).success,
     false,
   );
 });

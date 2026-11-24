@@ -30,9 +30,9 @@ test("the ordinary GET body link is read-only and the advertised POST performs o
     unsubscribeRoute.indexOf("export async function POST"),
   );
   const postBody = unsubscribeRoute.slice(unsubscribeRoute.indexOf("export async function POST"));
-  assert.match(getBody, /confirmationPage\(request\)/);
+  assert.match(getBody, /confirmationPage\(request, getLocale\(request\)\)/);
   assert.doesNotMatch(getBody, /optOut\(|supabase\.rpc|createSupabaseServiceClient/);
-  assert.match(postBody, /optOut\(email, signature\)/);
+  assert.match(postBody, /optOut\(email, signature, getLocale\(request\)\)/);
 });
 
 test("the POST verifies the signed address before the service-role mutation", () => {

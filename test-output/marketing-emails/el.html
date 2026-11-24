@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="light dark">
 <meta name="supported-color-schemes" content="light dark">
 <meta name="x-apple-disable-message-reformatting">
-<title>Ας έρθει το σωστό τάλεντο κοντά σας — εσείς απλά επιλέγετε</title>
+<title>Επιλέξτε πακέτο αγγελιών για τις ανάγκες προσλήψεών σας</title>
 <style>
   body { margin:0 !important; padding:0 !important; width:100% !important; }
   a { -webkit-text-size-adjust:none; }
@@ -14,57 +14,286 @@
   @media (max-width:600px) {
     .ibk-pad { padding-left:20px !important; padding-right:20px !important; }
     .ibk-h1 { font-size:20px !important; }
+    .ibk-package-cell { display:block !important; width:100% !important; padding:0 0 12px !important; }
+    .ibk-brand-name { font-size:24px !important; }
+    .ibk-brand-tagline { font-size:10px !important; line-height:1.35 !important; }
   }
+  /* Dark mode is component-scoped. A global p/div/td colour override creates
+     white-on-white text in package cards and secondary actions. */
   @media (prefers-color-scheme:dark) {
-    .ibk-bg { background:#171B1A !important; }
-    .ibk-card { background:#222827 !important; }
-    .ibk-h1, .ibk-code { color:#F3F1EC !important; }
-    .ibk-foot { background:#171B1A !important; }
+    .ibk-bg { background-color:#171B1A !important; }
+    .ibk-card, .ibk-content-bg { background-color:#1E2423 !important; }
+    .ibk-brand-bg { background-color:#123128 !important; }
+    .ibk-content, .ibk-content p, .ibk-content div, .ibk-content td,
+    .ibk-content span, .ibk-content strong, .ibk-content h1, .ibk-content h2,
+    .ibk-content h3, .ibk-content h4, .ibk-content li, .ibk-content a {
+      color:#F3F1EC !important;
+    }
+    .ibk-package-card, .ibk-panel, .ibk-soft-panel {
+      background-color:#2A3430 !important;
+      border-color:#46544D !important;
+    }
+    .ibk-icon-bg { background-color:#2C4037 !important; }
+    .ibk-button-secondary-cell, .ibk-button-secondary {
+      background-color:#2A3430 !important;
+      border-color:#6FAA92 !important;
+      color:#F3F1EC !important;
+    }
+    .ibk-button-primary-cell { background-color:#123128 !important; }
+    .ibk-button-primary { color:#FFFFFF !important; }
+    .ibk-foot { background-color:#171B1A !important; color:#C5CEC8 !important; }
+    .ibk-foot a { color:#A9CBBB !important; }
   }
-  [data-ogsc] .ibk-card { background:#222827 !important; }
+
+  /* Outlook.com / Outlook on the web exposes these attributes when its
+     dark-theme engine rewrites an element. Repeat the scoped palette so the
+     foreground and the surface always move together. */
+  [data-ogsc] .ibk-content,
+  [data-ogsc] .ibk-content p, [data-ogsc] .ibk-content div,
+  [data-ogsc] .ibk-content td, [data-ogsc] .ibk-content span,
+  [data-ogsc] .ibk-content strong, [data-ogsc] .ibk-content h1,
+  [data-ogsc] .ibk-content h2, [data-ogsc] .ibk-content h3,
+  [data-ogsc] .ibk-content h4, [data-ogsc] .ibk-content li,
+  [data-ogsc] .ibk-content a,
+  p[data-ogsc], div[data-ogsc], td[data-ogsc], span[data-ogsc],
+  strong[data-ogsc], h1[data-ogsc], h2[data-ogsc], h3[data-ogsc],
+  h4[data-ogsc], li[data-ogsc], a[data-ogsc] {
+    color:#F3F1EC !important;
+  }
+  [data-ogsb] .ibk-card, [data-ogsb] .ibk-content-bg {
+    background-color:#1E2423 !important;
+  }
+  [data-ogsb] .ibk-brand-bg { background-color:#123128 !important; }
+  [data-ogsb] .ibk-package-card, [data-ogsb] .ibk-panel,
+  [data-ogsb] .ibk-soft-panel {
+    background-color:#2A3430 !important;
+    border-color:#46544D !important;
+  }
+  [data-ogsb] .ibk-icon-bg { background-color:#2C4037 !important; }
+  [data-ogsb] .ibk-button-secondary-cell {
+    background-color:#2A3430 !important;
+    border-color:#6FAA92 !important;
+  }
+  [data-ogsb] .ibk-button-primary-cell { background-color:#123128 !important; }
+  [data-ogsb] .ibk-foot { background-color:#171B1A !important; }
+  [data-ogsc] .ibk-foot { color:#C5CEC8 !important; }
+  [data-ogsc] .ibk-foot a { color:#A9CBBB !important; }
 </style>
 </head>
 <body style="margin:0;padding:0;background:#FFFFFF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#171B1A;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">Οι αγγελίες σας μεταφράζονται αυτόματα σε 6 γλώσσες, ενσωματώνονται στο Google Jobs και σας δίνουν άμεση πρόσβαση σε χιλιάδες υποψηφίους. Χωρίς πιστωτική κάρτα — ξεκινήστε απευθείας μέσω WhatsApp.‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ </div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-bg" style="background:#FFFFFF;padding:32px 8px;">
-<tr><td align="center">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="ibk-card" style="max-width:600px;width:100%;background:#FFFFFF;border-radius:14px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.07);">
-<tr><td class="ibk-pad" style="background:#194435;padding:24px 32px;">
-<table role="presentation" cellpadding="0" cellspacing="0"><tr>
-<td style="vertical-align:middle;">
-<img src="https://isbulkktc.com/images/isbul-logo-mark-white.png" width="56" height="33" alt="" style="display:block;border:0;outline:none;text-decoration:none;" />
+<div lang="el" dir="ltr">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">Συγκρίνετε επιλογές για 1, έως 3 και έως 5 αγγελίες, με διάρκεια 1, 7 ή 30 ημερών ανά αγγελία. Οι εταιρικοί όροι συμφωνούνται γραπτώς.‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ ‌ </div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-bg" style="width:100%;table-layout:fixed;background:#FFFFFF;">
+<tr><td align="center" style="padding:32px 8px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="ibk-card" style="max-width:600px;width:100%;table-layout:fixed;background:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.08);">
+
+<tr><td class="ibk-pad ibk-brand-bg" bgcolor="#194435" style="background:#194435;padding:24px 32px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-brand-table" style="width:100%;table-layout:fixed;"><tr>
+<td width="56" style="width:56px;vertical-align:middle;">
+<a href="https://isbulkktc.com/" style="display:inline-block;text-decoration:none;"><img src="https://isbulkktc.com/images/isbul-logo-mark-white.png" width="56" height="33" alt="İşBul KKTC" style="display:block;border:0;outline:none;text-decoration:none;" /></a>
 </td>
-<td style="vertical-align:middle;padding-left:14px;">
-<div style="color:#FFFFFF;font-size:26px;font-weight:700;letter-spacing:-0.4px;line-height:1.1;">İşBul KKTC</div>
-<div style="color:rgba(255,255,255,0.85);font-size:11px;margin-top:3px;">Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı</div>
+<td class="ibk-brand-copy" style="vertical-align:middle;padding-left:14px;word-wrap:break-word;">
+<div class="ibk-brand-name" style="color:#FFFFFF;font-size:28px;font-weight:800;letter-spacing:-0.4px;line-height:1.1;">İşBul KKTC</div>
+<div class="ibk-brand-tagline" style="color:rgba(255,255,255,0.85);font-size:11px;margin-top:3px;">Kuzey Kıbrıs'ın Güvenilir Kariyer ve İstihdam Ağı</div>
 </td>
 </tr></table>
 </td></tr>
-<tr><td class="ibk-pad" style="padding:32px;">
-<h1 style="margin:0 0 16px;font-size:26px;line-height:1.25;font-weight:700;letter-spacing:-0.4px;color:#171B1A;" class="ibk-h1">Ας έρθει το σωστό τάλεντο κοντά σας — εσείς απλά επιλέγετε</h1><div style="font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">Αξιότιμε/η,</p><p style="margin:0 0 12px;">Η εύρεση του σωστού υποψηφίου στη Βόρεια Κύπρο δεν απαιτεί πλέον να ξεχωρίζετε μεταξύ δεκάδων καναλιών και хаотиχών υπολογιστικών φύλλων.</p><p style="margin:0 0 12px;">Το İşBul KKTC είναι το ισχυρότερο δίκτυο καριέρας της περιοχής — οι αγγελίες σας δημοσιεύονται σε 6 γλώσσες, κατακτώνται την κορυφή του Google Jobs και σας προσφέρουν επαγγελματική διαχείριση αιτήσεων με ένα κλικ.</p></div><div style="margin:24px 0 0;">
-<p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.04em;color:#194435;">ΜΕ ΤΟ İŞBUL KKTC Η ΕΠΙΧΕΙΡΗΣΗ ΣΑΣ ΚΕΡΔΙΖΕΙ:</p>
-<div style="font-size:15px;line-height:1.6;color:#171B1A;"><table role="presentation" cellpadding="0" cellspacing="0" style="margin:0;width:100%;"><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>🌍 Δημοσιεύστε σε 6 γλώσσες — κατακτήστε την κορυφή του Google</strong> — Οι αγγελίες δημοσιεύονται αυτόματα στα tr, en, ru, el, fa, de. Η ενσωμάτωση σχήματος Google Jobs αναβαθμίζει τις αγγελίες σας στην κορυφή των αποτελεσμάτων αναζήτησης, φτάνοντας ταυτόχρονα διεθνή και τοπικό ταλέντο.</td></tr><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>🔍 Εξερευνήστε το σύνολο υποψηφίων — μην περιορίζεστε στις αιτήσεις</strong> — Φιλτράρετε χιλιάδες προφίλ υποψηφίων στην πλατφόρμα για να βρείτε ταλέντα που δεν έκαναν καν αιτήσεις. Τα εργαλεία αναζήτησης και φιλτράρισης εντοπίζουν το ιδανικό match δευτερόλεπτα.</td></tr><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>⚡ Αυτοματοποιήστε τη διαχείριση CV/αιτήσεων από έναν πίνακα</strong> — Οι υποψήφιοι ανεβάζουν CV, το σύστημα δημιουργεί άμεσα δομημένα προφίλ. Μετακινείτε αιτήσεις σε kanban πίνακες, προσθέτετε σημειώσεις, μοιράζεστε με την ομάδα — αλυσίδες email και υπολογιστικά φύλλα γίνονται παρελθόν.</td></tr><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>✅ Επιβεβαιωμένο βεϊλ εταιρείας — χτίστε εμπιστοσύνη, αυξήστε αιτήσεις</strong> — Οι επιχειρήσεις που περνάνε την επαλήθευση ταυτότητας λαμβάνουν βεϊλ &#39;Επιβεβαιωμένο&#39;. Οι επιβεβαιωμένες επιχειρήσεις ξεχωρίζουν στους υποψηφίους, αυξάνοντας μετρήσιμα τις αιτήσεις.</td></tr><tr><td style="vertical-align:top;padding:0 10px 12px 0;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#E2ECE5;color:#194435;font-size:13px;font-weight:700;">•</span></td><td style="vertical-align:top;padding:0 0 12px;font-size:15px;line-height:1.55;color:#171B1A;"><strong>📦 Ελαστικά πακέτα αγγελιών — πληρώστε για ό,τι χρειάζεστε</strong> — Μια αγγελία, απεριόριστο μηνιαίο, ετήσιο εταιρικό πακέτο. Καμία εκπληκτική αυτόματη ανανέωση, καμία κρυφή χρέωση. Διαφανές pricing σας δίνει τον έλεγχο του προϋπολογισμού.</td></tr></table></div>
-</div><div style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">Ξεκινήστε να διαχειρίζεστε τη διαδικασία πρόσληψης σε μία πλατφόρμα σήμερα.</p></div><table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 0;width:100%;"><tr><td style="padding:16px 0 0;">
-<p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#171B1A;">Δείτε τα πακέτα αγγελιών που ταιριάζουν στην επιχείρησή σας και ξεκινήστε:</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
-<td align="center" bgcolor="#194435" style="border-radius:8px;">
-<a href="https://wa.me/905391316421?text=Merhaba%20IsBul%20KKTC%2C%20ilan%20paketleri%20ve%20aday%20havuzu%20aktivasyonu%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." class="ibk-btn" style="display:block;padding:16px 24px;color:#FFFFFF;text-decoration:none;font-weight:600;font-size:15px;border-radius:8px;text-align:center;">Ξεκινήστε μέσω WhatsApp</a>
+
+<tr><td class="ibk-pad ibk-content-bg" bgcolor="#FFFFFF" style="padding:0;background:#FFFFFF;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 32px;">
+    <tr><td class="ibk-brand-bg" bgcolor="#194435" style="background:#194435;border-radius:16px;padding:48px 32px;text-align:left;">
+      <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:0.12em;color:#C9D9CF;">İŞBUL KKTC</p>
+      <h1 class="ibk-h1" style="margin:0;font-size:28px;line-height:1.25;font-weight:800;letter-spacing:-0.5px;color:#FFFFFF;">Επιλέξτε πακέτο αγγελιών για τις ανάγκες προσλήψεών σας</h1>
+      <p style="margin:8px 0 0;font-size:17px;line-height:1.6;color:#EAF1EC;font-weight:400;">Επιλέξτε αριθμό αγγελιών και διάρκεια 1, 7 ή 30 ημερών για καθεμία.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 0;">
+       <tr><td align="center" bgcolor="#FFFFFF" class="ibk-button-secondary-cell" style="border-radius:999px;">
+         <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#packages-current" style="height:48px;v-text-anchor:middle;width:188px;" arcsize="50%" strokecolor="#194435" fillcolor="#FFFFFF">
+<w:anchorlock/>
+<center style="color:#194435;font-family:Arial,sans-serif;font-size:15px;font-weight:700;">Δείτε τα πακέτα</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#packages-current" class="ibk-button-secondary" style="display:inline-block;padding:16px 32px;background:#FFFFFF;color:#194435;text-decoration:none;font-weight:700;font-size:15px;line-height:1.6;border:2px solid #194435;border-radius:10px;text-align:center;">Δείτε τα πακέτα</a>
+<!--<![endif]-->
+       </td></tr></table>
+    </td></tr>
+  </table><div class="ibk-content" style="padding:32px;"><h2 class="ibk-h1" style="margin:0 0 16px;font-size:28px;line-height:1.25;font-weight:800;letter-spacing:-0.5px;color:#171B1A;">Επιλέξτε πακέτο αγγελιών για τις ανάγκες προσλήψεών σας</h2><div style="font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">Αγαπητέ εργοδότη,</p><p style="margin:0 0 12px;">Τα πακέτα εργοδοτών του İşBul KKTC προσφέρουν διαφορετικό αριθμό αγγελιών ανάλογα με τις ανοιχτές θέσεις που θέλετε να δημοσιεύετε ταυτόχρονα.</p><p style="margin:0 0 12px;">Για κάθε αγγελία μπορείτε να επιλέξετε διάρκεια 1, 7 ή 30 ημερών. Ο αριθμός αγγελιών και το εύρος του εταιρικού πακέτου καθορίζονται σε γραπτή προσφορά.</p></div><div style="margin:24px 0 0;">
+  <h3 style="margin:0 0 8px;font-size:13px;line-height:1.6;font-weight:700;letter-spacing:0.06em;color:#194435;">ΟΙ ΒΑΣΙΚΕΣ ΔΙΑΦΟΡΕΣ ΤΩΝ ΠΑΚΕΤΩΝ</h3>
+  <div style="font-size:15px;line-height:1.6;color:#171B1A;"></div>
+</div><div style="margin:24px 0 0;">
+  <h3 style="margin:0 0 8px;font-size:13px;line-height:1.6;font-weight:700;letter-spacing:0.06em;color:#194435;">ΕΠΙΛΕΞΤΕ ΠΑΚΕΤΟ ΑΓΓΕΛΙΩΝ ΠΟΥ ΤΑΙΡΙΑΖΕΙ ΣΤΙΣ ΑΝΑΓΚΕΣ ΣΑΣ.</h3>
+  <div style="font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">Συγκρίνετε τα πακέτα εργοδοτών ως προς τον αριθμό και τη διάρκεια των αγγελιών.</p><p style="margin:0 0 12px;">Εξερευνήστε τα πακέτα αγγελιών. Η πληρωμή γίνεται με μεταφορά IBAN εκτός ιστοτόπου· τα στοιχεία και οι οδηγίες κοινοποιούνται ιδιωτικά μετά τη συζήτηση των όρων.</p></div>
+</div><div style="margin:24px 0 0;">
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
+    <tr>
+      <td width="48" valign="top" style="padding:16px 16px 24px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" class="ibk-icon-bg" bgcolor="#E2ECE5" style="width:40px;height:40px;background:#E2ECE5;border-radius:10px;">
+          <tr><td align="center" valign="middle" style="font-size:18px;line-height:1;color:#194435;font-weight:700;" aria-hidden="true">01</td></tr>
+        </table>
+      </td>
+      <td valign="top" style="padding:16px 0 24px;font-size:15px;line-height:1.6;color:#171B1A;">
+        <strong style="font-size:15px;font-weight:700;color:#171B1A;">Μία ανοιχτή θέση</strong>
+        <p style="margin:4px 0 0;font-weight:400;color:#414846;">Το πακέτο Μίας Αγγελίας περιλαμβάνει μία αγγελία για μία ανοιχτή θέση.</p>
+      </td>
+    </tr>
+    <tr>
+      <td width="48" valign="top" style="padding:16px 16px 24px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" class="ibk-icon-bg" bgcolor="#E2ECE5" style="width:40px;height:40px;background:#E2ECE5;border-radius:10px;">
+          <tr><td align="center" valign="middle" style="font-size:18px;line-height:1;color:#194435;font-weight:700;" aria-hidden="true">03</td></tr>
+        </table>
+      </td>
+      <td valign="top" style="padding:16px 0 24px;font-size:15px;line-height:1.6;color:#171B1A;">
+        <strong style="font-size:15px;font-weight:700;color:#171B1A;">Πολλαπλές θέσεις</strong>
+        <p style="margin:4px 0 0;font-weight:400;color:#414846;">Το πακέτο Ανάπτυξης περιλαμβάνει έως τρεις αγγελίες ταυτόχρονα.</p>
+      </td>
+    </tr>
+    <tr>
+      <td width="48" valign="top" style="padding:16px 16px 24px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" class="ibk-icon-bg" bgcolor="#E2ECE5" style="width:40px;height:40px;background:#E2ECE5;border-radius:10px;">
+          <tr><td align="center" valign="middle" style="font-size:18px;line-height:1;color:#194435;font-weight:700;" aria-hidden="true">05</td></tr>
+        </table>
+      </td>
+      <td valign="top" style="padding:16px 0 24px;font-size:15px;line-height:1.6;color:#171B1A;">
+        <strong style="font-size:15px;font-weight:700;color:#171B1A;">Τακτικές προσλήψεις</strong>
+        <p style="margin:4px 0 0;font-weight:400;color:#414846;">Το Επαγγελματικό πακέτο περιλαμβάνει έως πέντε αγγελίες ταυτόχρονα.</p>
+      </td>
+    </tr>
+    <tr>
+      <td width="48" valign="top" style="padding:16px 16px 24px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" class="ibk-icon-bg" bgcolor="#E2ECE5" style="width:40px;height:40px;background:#E2ECE5;border-radius:10px;">
+          <tr><td align="center" valign="middle" style="font-size:18px;line-height:1;color:#194435;font-weight:700;" aria-hidden="true">✓</td></tr>
+        </table>
+      </td>
+      <td valign="top" style="padding:16px 0 24px;font-size:15px;line-height:1.6;color:#171B1A;">
+        <strong style="font-size:15px;font-weight:700;color:#171B1A;">Εταιρικό εύρος</strong>
+        <p style="margin:4px 0 0;font-weight:400;color:#414846;">Ο αριθμός, το εύρος και η διάρκεια των εταιρικών αγγελιών συμφωνούνται σε γραπτή προσφορά.</p>
+      </td>
+    </tr></table>
+  </div><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="width:100%;margin:24px 0 0;"><tr><td class="ibk-package-cell" width="50%" valign="top" style="width:50%;padding:6px;vertical-align:top;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="ibk-package-card" bgcolor="#FFFFFF" style="width:100%;background:#FFFFFF;border:1px solid #D1D5D0;border-top:4px solid #4b8066;border-radius:16px;">
+          <tr><td style="padding:24px;">
+            <p style="margin:0 0 8px;font-size:11px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:#194435;">ΜΙΑ ΑΝΟΙΧΤΗ ΘΕΣΗ</p>
+            <h4 style="margin:0;font-size:20px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:#171B1A;">Μία αγγελία</h4>
+            <p style="margin:8px 0 0;min-height:44px;font-size:13px;line-height:1.6;color:#414846;">Δημοσιεύστε μία θέση για 1, 7 ή 30 ημέρες, ανάλογα με τις ανάγκες σας.</p>
+            <p style="margin:16px 0 0;padding:16px 0;border-top:1px solid #D1D5D0;border-bottom:1px solid #D1D5D0;font-size:13px;line-height:1.6;font-weight:700;color:#171B1A;">1 αγγελία εργασίας · Επιλέξτε 1, 7 ή 30 ημέρες ανά αγγελία · Για μία ανοιχτή θέση</p>
+            <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#414846;">Διάρκεια αγγελίας: Επιλέξτε 1, 7 ή 30 ημέρες ανά αγγελία</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0 0;width:100%;">
+            <tr><td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+              <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#package-tek-ilan" style="height:44px;v-text-anchor:middle;width:169px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:13px;font-weight:700;">Προβολή πακέτου</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#package-tek-ilan" class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:13px;line-height:1.6;border:0;border-radius:10px;text-align:center;">Προβολή πακέτου</a>
+<!--<![endif]-->
+            </td></tr>
+          </table>
+          </td></tr>
+        </table>
+      </td><td class="ibk-package-cell" width="50%" valign="top" style="width:50%;padding:6px;vertical-align:top;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="ibk-package-card" bgcolor="#FFFFFF" style="width:100%;background:#FFFFFF;border:1px solid #D1D5D0;border-top:4px solid #c6a46a;border-radius:16px;">
+          <tr><td style="padding:24px;">
+            <p style="margin:0 0 8px;font-size:11px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:#194435;">ΠΟΛΛΕΣ ΑΝΟΙΧΤΕΣ ΘΕΣΕΙΣ</p>
+            <h4 style="margin:0;font-size:20px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:#171B1A;">Ανάπτυξη</h4>
+            <p style="margin:8px 0 0;min-height:44px;font-size:13px;line-height:1.6;color:#414846;">Απλή δυνατότητα δημοσίευσης έως τριών ανοιχτών θέσεων ταυτόχρονα.</p>
+            <p style="margin:16px 0 0;padding:16px 0;border-top:1px solid #D1D5D0;border-bottom:1px solid #D1D5D0;font-size:13px;line-height:1.6;font-weight:700;color:#171B1A;">Έως 3 αγγελίες εργασίας · Επιλέξτε 1, 7 ή 30 ημέρες ανά αγγελία · Για πολλές ανοιχτές θέσεις</p>
+            <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#414846;">Διάρκεια αγγελίας: Επιλέξτε 1, 7 ή 30 ημέρες ανά αγγελία</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0 0;width:100%;">
+            <tr><td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+              <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#package-buyume" style="height:44px;v-text-anchor:middle;width:169px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:13px;font-weight:700;">Προβολή πακέτου</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#package-buyume" class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:13px;line-height:1.6;border:0;border-radius:10px;text-align:center;">Προβολή πακέτου</a>
+<!--<![endif]-->
+            </td></tr>
+          </table>
+          </td></tr>
+        </table>
+      </td></tr><tr><td class="ibk-package-cell" width="50%" valign="top" style="width:50%;padding:6px;vertical-align:top;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="ibk-package-card" bgcolor="#FFFFFF" style="width:100%;background:#FFFFFF;border:1px solid #D1D5D0;border-top:4px solid #326c54;border-radius:16px;">
+          <tr><td style="padding:24px;">
+            <p style="margin:0 0 8px;font-size:11px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:#194435;">ΤΑΚΤΙΚΕΣ ΠΡΟΣΛΗΨΕΙΣ</p>
+            <h4 style="margin:0;font-size:20px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:#171B1A;">Επαγγελματικό</h4>
+            <p style="margin:8px 0 0;min-height:44px;font-size:13px;line-height:1.6;color:#414846;">Για ομάδες προσλήψεων που δημοσιεύουν έως πέντε ανοιχτές θέσεις ταυτόχρονα.</p>
+            <p style="margin:16px 0 0;padding:16px 0;border-top:1px solid #D1D5D0;border-bottom:1px solid #D1D5D0;font-size:13px;line-height:1.6;font-weight:700;color:#171B1A;">Έως 5 αγγελίες εργασίας · Επιλέξτε 1, 7 ή 30 ημέρες ανά αγγελία · Για ομάδες με τακτικές προσλήψεις</p>
+            <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#414846;">Διάρκεια αγγελίας: Επιλέξτε 1, 7 ή 30 ημέρες ανά αγγελία</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0 0;width:100%;">
+            <tr><td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+              <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#package-profesyonel" style="height:44px;v-text-anchor:middle;width:169px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:13px;font-weight:700;">Προβολή πακέτου</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#package-profesyonel" class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:13px;line-height:1.6;border:0;border-radius:10px;text-align:center;">Προβολή πακέτου</a>
+<!--<![endif]-->
+            </td></tr>
+          </table>
+          </td></tr>
+        </table>
+      </td><td class="ibk-package-cell" width="50%" valign="top" style="width:50%;padding:6px;vertical-align:top;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="ibk-package-card" bgcolor="#FFFFFF" style="width:100%;background:#FFFFFF;border:1px solid #D1D5D0;border-top:4px solid #9cbba7;border-radius:16px;">
+          <tr><td style="padding:24px;">
+            <p style="margin:0 0 8px;font-size:11px;line-height:1.4;font-weight:700;letter-spacing:0.08em;color:#194435;">ΕΤΑΙΡΙΚΕΣ ΠΡΟΣΛΗΨΕΙΣ</p>
+            <h4 style="margin:0;font-size:20px;line-height:1.25;font-weight:800;letter-spacing:-0.3px;color:#171B1A;">Εταιρικό</h4>
+            <p style="margin:8px 0 0;min-height:44px;font-size:13px;line-height:1.6;color:#414846;">Για οργανισμούς που χρειάζονται γραπτή προσφορά με καθορισμένο αριθμό και διάρκεια αγγελιών.</p>
+            <p style="margin:16px 0 0;padding:16px 0;border-top:1px solid #D1D5D0;border-bottom:1px solid #D1D5D0;font-size:13px;line-height:1.6;font-weight:700;color:#171B1A;">Ο αριθμός αγγελιών ορίζεται στη γραπτή προσφορά · Επιλέξτε 1, 7 ή 30 ημέρες ανά αγγελία · Το εύρος και η διάρκεια συμφωνούνται πριν από την προσφορά</p>
+            <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#414846;">Διάρκεια αγγελίας: Επιλέξτε 1, 7 ή 30 ημέρες ανά αγγελία</p>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0 0;width:100%;">
+            <tr><td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+              <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://isbulkktc.com/packages#packages-lead-title" style="height:44px;v-text-anchor:middle;width:169px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:13px;font-weight:700;">Προβολή πακέτου</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://isbulkktc.com/packages#packages-lead-title" class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:13px;line-height:1.6;border:0;border-radius:10px;text-align:center;">Προβολή πακέτου</a>
+<!--<![endif]-->
+            </td></tr>
+          </table>
+          </td></tr>
+        </table>
+      </td></tr></table><div style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">Εξετάστε το εύρος των πακέτων και συζητήστε με την ομάδα μας την κατάλληλη επιλογή.</p></div><table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 0;width:100%;"><tr><td style="padding:16px 0 0;">
+<p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#171B1A;">Συζητήστε με την ομάδα μας για το επιλεγμένο πακέτο και το εύρος του.</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
+<td align="center" bgcolor="#194435" class="ibk-button-primary-cell" style="border-radius:10px;">
+<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://wa.me/905391316421?text=%CE%93%CE%B5%CE%B9%CE%B1+%CF%83%CE%B1%CF%82%2C+%CE%B8%CE%B1+%CE%AE%CE%B8%CE%B5%CE%BB%CE%B1+%CF%80%CE%BB%CE%B7%CF%81%CE%BF%CF%86%CE%BF%CF%81%CE%AF%CE%B5%CF%82+%CE%B3%CE%B9%CE%B1+%CF%84%CE%B1+%CF%80%CE%B1%CE%BA%CE%AD%CF%84%CE%B1+%CE%B1%CE%B3%CE%B3%CE%B5%CE%BB%CE%B9%CF%8E%CE%BD+%CF%84%CE%BF%CF%85+%C4%B0%C5%9FBul+KKTC.+%CE%A0%CE%B1%CF%81%CE%B1%CE%BA%CE%B1%CE%BB%CF%8E+%CE%B5%CE%BD%CE%B7%CE%BC%CE%B5%CF%81%CF%8E%CF%83%CF%84%CE%B5+%CE%BC%CE%B5+%CE%B3%CE%B9%CE%B1+%CF%84%CE%BF+%CE%B5%CF%8D%CF%81%CE%BF%CF%82+%CF%84%CF%89%CE%BD+%CF%80%CE%B1%CE%BA%CE%AD%CF%84%CF%89%CE%BD+%CE%BA%CE%B1%CE%B9+%CF%84%CE%B1+%CE%B2%CE%AE%CE%BC%CE%B1%CF%84%CE%B1+%CF%80%CE%BB%CE%B7%CF%81%CF%89%CE%BC%CE%AE%CF%82." style="height:48px;v-text-anchor:middle;width:290px;" arcsize="12%" strokecolor="#194435" fillcolor="#194435">
+<w:anchorlock/>
+<center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:15px;font-weight:700;">Άνοιγμα πρόχειρου WhatsApp</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="https://wa.me/905391316421?text=%CE%93%CE%B5%CE%B9%CE%B1+%CF%83%CE%B1%CF%82%2C+%CE%B8%CE%B1+%CE%AE%CE%B8%CE%B5%CE%BB%CE%B1+%CF%80%CE%BB%CE%B7%CF%81%CE%BF%CF%86%CE%BF%CF%81%CE%AF%CE%B5%CF%82+%CE%B3%CE%B9%CE%B1+%CF%84%CE%B1+%CF%80%CE%B1%CE%BA%CE%AD%CF%84%CE%B1+%CE%B1%CE%B3%CE%B3%CE%B5%CE%BB%CE%B9%CF%8E%CE%BD+%CF%84%CE%BF%CF%85+%C4%B0%C5%9FBul+KKTC.+%CE%A0%CE%B1%CF%81%CE%B1%CE%BA%CE%B1%CE%BB%CF%8E+%CE%B5%CE%BD%CE%B7%CE%BC%CE%B5%CF%81%CF%8E%CF%83%CF%84%CE%B5+%CE%BC%CE%B5+%CE%B3%CE%B9%CE%B1+%CF%84%CE%BF+%CE%B5%CF%8D%CF%81%CE%BF%CF%82+%CF%84%CF%89%CE%BD+%CF%80%CE%B1%CE%BA%CE%AD%CF%84%CF%89%CE%BD+%CE%BA%CE%B1%CE%B9+%CF%84%CE%B1+%CE%B2%CE%AE%CE%BC%CE%B1%CF%84%CE%B1+%CF%80%CE%BB%CE%B7%CF%81%CF%89%CE%BC%CE%AE%CF%82." class="ibk-button-primary" style="display:inline-block;padding:16px 24px;background:#194435;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:15px;line-height:1.6;border:0;border-radius:10px;text-align:center;">Άνοιγμα πρόχειρου WhatsApp</a>
+<!--<![endif]-->
 </td></tr></table>
 </td></tr><tr><td style="padding:16px 0 0;">
-<p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#171B1A;">Ή επικοινωνήστε άμεσα με την ομάδα υποστήριξής μας:</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
-<td align="center" bgcolor="#FFFFFF" style="border-radius:8px;border:1px solid #194435;">
-<a href="mailto:destek@isbulkktc.com" class="ibk-btn" style="display:block;padding:16px 24px;color:#194435;text-decoration:none;font-weight:600;font-size:15px;border-radius:8px;text-align:center;">Λάβετε πληροφορίες με email</a>
+<p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#171B1A;">Επικοινωνήστε μαζί μας για αυτό το πακέτο αγγελιών.</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
+<td align="center" bgcolor="#FFFFFF" class="ibk-button-secondary-cell" style="border-radius:10px;border:2px solid #194435;">
+<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="mailto:info@isbulkktc.com?subject=%CE%A0%CE%B1%CE%BA%CE%AD%CF%84%CE%B1+%CE%B5%CF%81%CE%B3%CE%BF%CE%B4%CE%BF%CF%84%CF%8E%CE%BD+%C4%B0%C5%9FBul+KKTC%3A+%CE%B5%CF%80%CE%B9%CE%BB%CE%AD%CE%BE%CF%84%CE%B5+%CF%84%CE%BF+%CE%B5%CF%8D%CF%81%CE%BF%CF%82+%CF%80%CF%81%CE%BF%CF%83%CE%BB%CE%AE%CF%88%CE%B5%CF%89%CE%BD&amp;body=%CE%93%CE%B5%CE%B9%CE%B1+%CF%83%CE%B1%CF%82%2C+%CE%B8%CE%B1+%CE%AE%CE%B8%CE%B5%CE%BB%CE%B1+%CF%80%CE%BB%CE%B7%CF%81%CE%BF%CF%86%CE%BF%CF%81%CE%AF%CE%B5%CF%82+%CE%B3%CE%B9%CE%B1+%CF%84%CE%B1+%CF%80%CE%B1%CE%BA%CE%AD%CF%84%CE%B1+%CE%B1%CE%B3%CE%B3%CE%B5%CE%BB%CE%B9%CF%8E%CE%BD+%CF%84%CE%BF%CF%85+%C4%B0%C5%9FBul+KKTC.+%CE%A0%CE%B1%CF%81%CE%B1%CE%BA%CE%B1%CE%BB%CF%8E+%CE%B5%CE%BD%CE%B7%CE%BC%CE%B5%CF%81%CF%8E%CF%83%CF%84%CE%B5+%CE%BC%CE%B5+%CE%B3%CE%B9%CE%B1+%CF%84%CE%BF+%CE%B5%CF%8D%CF%81%CE%BF%CF%82+%CF%84%CF%89%CE%BD+%CF%80%CE%B1%CE%BA%CE%AD%CF%84%CF%89%CE%BD+%CE%BA%CE%B1%CE%B9+%CF%84%CE%B1+%CE%B2%CE%AE%CE%BC%CE%B1%CF%84%CE%B1+%CF%80%CE%BB%CE%B7%CF%81%CF%89%CE%BC%CE%AE%CF%82.%0A%0Ahttps%3A%2F%2Fisbulkktc.com%2Fpackages%23packages-current" style="height:48px;v-text-anchor:middle;width:272px;" arcsize="12%" strokecolor="#194435" fillcolor="#FFFFFF">
+<w:anchorlock/>
+<center style="color:#194435;font-family:Arial,sans-serif;font-size:15px;font-weight:700;">Άνοιγμα προσχεδίου email</center>
+</v:roundrect>
+<![endif]--><!--[if !mso]><!-- -->
+<a href="mailto:info@isbulkktc.com?subject=%CE%A0%CE%B1%CE%BA%CE%AD%CF%84%CE%B1+%CE%B5%CF%81%CE%B3%CE%BF%CE%B4%CE%BF%CF%84%CF%8E%CE%BD+%C4%B0%C5%9FBul+KKTC%3A+%CE%B5%CF%80%CE%B9%CE%BB%CE%AD%CE%BE%CF%84%CE%B5+%CF%84%CE%BF+%CE%B5%CF%8D%CF%81%CE%BF%CF%82+%CF%80%CF%81%CE%BF%CF%83%CE%BB%CE%AE%CF%88%CE%B5%CF%89%CE%BD&amp;body=%CE%93%CE%B5%CE%B9%CE%B1+%CF%83%CE%B1%CF%82%2C+%CE%B8%CE%B1+%CE%AE%CE%B8%CE%B5%CE%BB%CE%B1+%CF%80%CE%BB%CE%B7%CF%81%CE%BF%CF%86%CE%BF%CF%81%CE%AF%CE%B5%CF%82+%CE%B3%CE%B9%CE%B1+%CF%84%CE%B1+%CF%80%CE%B1%CE%BA%CE%AD%CF%84%CE%B1+%CE%B1%CE%B3%CE%B3%CE%B5%CE%BB%CE%B9%CF%8E%CE%BD+%CF%84%CE%BF%CF%85+%C4%B0%C5%9FBul+KKTC.+%CE%A0%CE%B1%CF%81%CE%B1%CE%BA%CE%B1%CE%BB%CF%8E+%CE%B5%CE%BD%CE%B7%CE%BC%CE%B5%CF%81%CF%8E%CF%83%CF%84%CE%B5+%CE%BC%CE%B5+%CE%B3%CE%B9%CE%B1+%CF%84%CE%BF+%CE%B5%CF%8D%CF%81%CE%BF%CF%82+%CF%84%CF%89%CE%BD+%CF%80%CE%B1%CE%BA%CE%AD%CF%84%CF%89%CE%BD+%CE%BA%CE%B1%CE%B9+%CF%84%CE%B1+%CE%B2%CE%AE%CE%BC%CE%B1%CF%84%CE%B1+%CF%80%CE%BB%CE%B7%CF%81%CF%89%CE%BC%CE%AE%CF%82.%0A%0Ahttps%3A%2F%2Fisbulkktc.com%2Fpackages%23packages-current" class="ibk-button-secondary" style="display:inline-block;padding:16px 32px;background:#FFFFFF;color:#194435;text-decoration:none;font-weight:700;font-size:15px;line-height:1.6;border:2px solid #194435;border-radius:10px;text-align:center;">Άνοιγμα προσχεδίου email</a>
+<!--<![endif]-->
 </td></tr></table>
-</td></tr></table><div style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">Με εκτίμηση, İşBul KKTC — το ψηφιακό σημείο συνάντησης για εργασία και απασχόληση στη Βόρεια Κύπρο</p></div><div style="margin:24px 0 0;background:#F0F1ED;border:1px solid #D1D5D0;border-radius:8px;padding:16px 24px;">
-<p style="margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:0.04em;color:#194435;">ΓΡΗΓΟΡΗ ΕΠΙΚΟΙΝΩΝΙΑ — ΑΝ ΘΕΛΕΤΕ ΝΑ ΑΠΟΦΑΣΙΣΕΤΕ ΤΩΡΑ:</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr><td style="padding:6px 0;font-size:15px;line-height:1.6;color:#414846;">Email: <a href="mailto:destek@isbulkktc.com" style="color:#194435;text-decoration:none;font-weight:600;">destek@isbulkktc.com</a></td></tr><tr><td style="padding:6px 0;font-size:15px;line-height:1.6;color:#414846;">Τηλέφωνο: <a href="tel:+905391316421" style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></td></tr><tr><td style="padding:6px 0;font-size:15px;line-height:1.6;color:#414846;">WhatsApp: <a href="https://wa.me/905391316421?text=Merhaba%20IsBul%20KKTC%2C%20ilan%20paketleri%20ve%20aday%20havuzu%20aktivasyonu%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></td></tr></table>
+</td></tr></table><div style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#171B1A;"><p style="margin:0 0 12px;">Με εκτίμηση, İşBul KKTC</p></div><div class="ibk-panel" style="margin:32px 0 0;background:#F0F1ED;border:1px solid #D1D5D0;border-radius:16px;padding:24px 32px;">
+<p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.06em;color:#194435;">ΕΠΙΚΟΙΝΩΝΗΣΤΕ ΜΑΖΙ ΜΑΣ ΓΙΑ ΑΥΤΟ ΤΟ ΠΑΚΕΤΟ ΑΓΓΕΛΙΩΝ.</p><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr><td style="padding:8px 0;font-size:15px;line-height:1.6;color:#414846;">Email: <a href="mailto:info@isbulkktc.com" style="color:#194435;text-decoration:none;font-weight:600;">info@isbulkktc.com</a></td></tr><tr><td style="padding:8px 0;font-size:15px;line-height:1.6;color:#414846;">Τηλέφωνο: <a href="tel:+905391316421" style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></td></tr><tr><td style="padding:8px 0;font-size:15px;line-height:1.6;color:#414846;">WhatsApp: <a href="https://wa.me/905391316421?text=%CE%93%CE%B5%CE%B9%CE%B1+%CF%83%CE%B1%CF%82%2C+%CE%B8%CE%B1+%CE%AE%CE%B8%CE%B5%CE%BB%CE%B1+%CF%80%CE%BB%CE%B7%CF%81%CE%BF%CF%86%CE%BF%CF%81%CE%AF%CE%B5%CF%82+%CE%B3%CE%B9%CE%B1+%CF%84%CE%B1+%CF%80%CE%B1%CE%BA%CE%AD%CF%84%CE%B1+%CE%B1%CE%B3%CE%B3%CE%B5%CE%BB%CE%B9%CF%8E%CE%BD+%CF%84%CE%BF%CF%85+%C4%B0%C5%9FBul+KKTC.+%CE%A0%CE%B1%CF%81%CE%B1%CE%BA%CE%B1%CE%BB%CF%8E+%CE%B5%CE%BD%CE%B7%CE%BC%CE%B5%CF%81%CF%8E%CF%83%CF%84%CE%B5+%CE%BC%CE%B5+%CE%B3%CE%B9%CE%B1+%CF%84%CE%BF+%CE%B5%CF%8D%CF%81%CE%BF%CF%82+%CF%84%CF%89%CE%BD+%CF%80%CE%B1%CE%BA%CE%AD%CF%84%CF%89%CE%BD+%CE%BA%CE%B1%CE%B9+%CF%84%CE%B1+%CE%B2%CE%AE%CE%BC%CE%B1%CF%84%CE%B1+%CF%80%CE%BB%CE%B7%CF%81%CF%89%CE%BC%CE%AE%CF%82." style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></td></tr></table>
+</div></div>
+</td></tr>
+<tr><td class="ibk-foot" style="padding:32px 32px;background:#FAF8F3;border-top:1px solid #D1D5D0;text-align:center;font-size:11px;line-height:1.75;color:#414846;">
+<p style="margin:0 0 8px;">Αυτό το email παρέχει πληροφορίες για τα πακέτα αγγελιών του İşBul KKTC για εργοδότες.</p>
+<p style="margin:0 0 8px;"><a href="mailto:info@isbulkktc.com" style="color:#194435;text-decoration:none;font-weight:600;">info@isbulkktc.com</a> <span aria-hidden="true">·</span> <a href="tel:+905391316421" style="color:#194435;text-decoration:none;font-weight:600;">0539 131 64 21</a></p>
+<p style="margin:0 0 8px;">Alsancak, Girne · Kuzey Kıbrıs Türk Cumhuriyeti</p>
+<p style="margin:0;">© 2026 İşBul KKTC · <a href="https://isbulkktc.com/" style="color:#194435;text-decoration:none;">isbulkktc.com</a> · <a href="https://isbulkktc.com/api/email/unsubscribe?e=x&amp;s=y" style="color:#414846;text-decoration:underline;">Κατάργηση εγγραφής</a></p>
+</td></tr>
+</table>
+</td></tr>
+</table>
 </div>
-</td></tr>
-<tr><td class="ibk-foot" style="padding:24px 32px;background:#FAF8F3;border-top:1px solid #D1D5D0;text-align:center;font-size:11px;line-height:1.75;color:#414846;">
-<p style="margin:0 0 6px;">Λάβατε αυτό το email επειδή πιστεύουμε ότι το İşBul KKTC μπορεί να είναι χρήσιμο για την επιχείρησή σας.</p>
-<p style="margin:0 0 6px;">Alsancak, Girne · Kuzey Kıbrıs Türk Cumhuriyeti</p>
-<p style="margin:0;">© 2026 İşBul KKTC · <a href="https://isbulkktc.com/" style="color:#194435;text-decoration:none;">isbulkktc.com</a> · <a href="https://isbulkktc.com/api/email/unsubscribe?e=x&amp;s=y" style="color:#414846;text-decoration:underline;">Διαγραφή</a></p>
-</td></tr>
-</table>
-</td></tr>
-</table>
 </body>
 </html>

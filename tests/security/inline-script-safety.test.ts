@@ -38,10 +38,13 @@ function sourceFiles(): { file: string; source: string }[] {
         !entry.endsWith(".d.ts"),
     )
     .sort()
-    .map((entry) => ({
-      file: `src/${entry}`,
-      source: readFileSync(new URL(entry, srcDir), "utf8"),
-    }));
+    .map((entry) => {
+      const normalisedEntry = entry.replace(/\\/g, "/");
+      return {
+        file: `src/${normalisedEntry}`,
+        source: readFileSync(new URL(normalisedEntry, srcDir), "utf8"),
+      };
+    });
 }
 
 /** The balanced `{ … }` attribute region that starts at the first `{` after `at`. */

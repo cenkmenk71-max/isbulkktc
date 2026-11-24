@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
 
 import {
@@ -27,8 +28,8 @@ async function render() {
 }
 
 test("isDirectRun matches the launched path and ignores a bare import", () => {
-  const self = new URL("./email-preview.mjs", import.meta.url).pathname;
-  assert.equal(isDirectRun(`file://${self}`, self), true);
+  const self = fileURLToPath(new URL("./email-preview.mjs", import.meta.url));
+  assert.equal(isDirectRun(pathToFileURL(self).href, self), true);
   assert.equal(isDirectRun("file:///other.mjs", self), false);
   assert.equal(isDirectRun("file:///x.mjs", undefined), false);
 });

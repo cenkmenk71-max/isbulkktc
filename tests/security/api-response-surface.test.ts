@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { GET as buildInfoGet } from "@/app/api/build-info/route";
 
@@ -41,7 +42,7 @@ function walk(directory: URL): string[] {
   for (const entry of readdirSync(directory)) {
     const path = new URL(entry, directory);
     if (statSync(path).isDirectory()) files.push(...walk(new URL(`${entry}/`, directory)));
-    else if (/\.(ts|tsx)$/.test(entry)) files.push(path.pathname);
+    else if (/\.(ts|tsx)$/.test(entry)) files.push(fileURLToPath(path));
   }
   return files;
 }
@@ -49,7 +50,8 @@ function walk(directory: URL): string[] {
 const sourceFiles = walk(srcDir);
 
 function relative(path: string): string {
-  return path.slice(path.indexOf("/src/") + 1);
+  const normalised = path.replace(/\\/g, "/");
+  return normalised.slice(normalised.indexOf("/src/") + 1);
 }
 
 function read(path: string): string {
@@ -177,7 +179,9 @@ test("the cross-origin grant matcher sees a real grant (self-test)", () => {
 
 const ROUTE_PATTERN = /\/src\/app\/api\/.+\/route\.tsx?$/;
 
-const routeFiles = sourceFiles.filter((path) => ROUTE_PATTERN.test(path));
+const routeFiles = sourceFiles.filter((path) =>
+  ROUTE_PATTERN.test(path.replace(/\\/g, "/")),
+);
 
 test("every API route declares its caching intent", () => {
   assert.ok(routeFiles.length >= 6, `expected the API routes to be discovered, found ${routeFiles.length}`);

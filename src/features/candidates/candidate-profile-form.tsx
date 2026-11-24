@@ -2,12 +2,23 @@
 
 import {
   useActionState,
+  useRef,
   useState,
   useTransition,
+  type Ref,
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
-import { Check, Circle, FileUp, LockKeyhole, Plus, Trash2 } from "lucide-react";
+import {
+  Check,
+  Circle,
+  FileUp,
+  LoaderCircle,
+  LockKeyhole,
+  Plus,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { saveCandidateProfile } from "./actions";
 import { importResumeFile } from "./ai-resume-actions";
 import type {
@@ -32,6 +43,43 @@ const initialState: CandidateProfileFormState = {
   status: "idle",
   message: "idle",
 };
+const proficiencyLevels = ["Native", "C2", "C1", "B2", "B1", "A2", "A1"] as const;
+
+function hasEntryContent(entries: object[]) {
+  return entries.some((entry) =>
+    Object.values(entry).some(
+      (value) => typeof value === "string" && value.trim().length > 0,
+    ),
+  );
+}
+
+function focusProfileEntry(section: Element | null, index: number) {
+  requestAnimationFrame(() => {
+    const entry =
+      section?.querySelectorAll<HTMLElement>(".candidate-profile-entry")[index];
+    entry?.querySelector<HTMLElement>("input, textarea, select")?.focus();
+  });
+}
+
+function restoreProfileSectionFocus(
+  section: Element | null,
+  index: number,
+  remainingCount: number,
+) {
+  requestAnimationFrame(() => {
+    if (!section) return;
+    if (remainingCount === 0) {
+      section.querySelector<HTMLButtonElement>(".candidate-entry-add")?.focus();
+      return;
+    }
+
+    const entry =
+      section.querySelectorAll<HTMLElement>(".candidate-profile-entry")[
+        Math.min(index, remainingCount - 1)
+      ];
+    entry?.querySelector<HTMLElement>("input, textarea, select")?.focus();
+  });
+}
 
 function ProfileEntry({
   label,
@@ -42,6 +90,7 @@ function ProfileEntry({
   maxLength,
   hint,
   placeholder,
+  inputRef,
 }: {
   label: string;
   value: string;
@@ -51,6 +100,7 @@ function ProfileEntry({
   maxLength: number;
   hint?: string;
   placeholder?: string;
+  inputRef?: Ref<HTMLInputElement>;
 }) {
   return (
     <label>
@@ -70,6 +120,7 @@ function ProfileEntry({
           name={name}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
+          ref={inputRef}
           value={value}
         />
       )}
@@ -112,6 +163,8 @@ export function CandidateProfileForm({
     initialState,
   );
   const [, startImportTransition] = useTransition();
+  const resumeInputRef = useRef<HTMLInputElement>(null);
+  const fullNameInputRef = useRef<HTMLInputElement>(null);
   const [fullName, setFullName] = useState(account.displayName);
   const [headline, setHeadline] = useState(profile.headline ?? "");
   const [location, setLocation] = useState(
@@ -143,6 +196,7 @@ export function CandidateProfileForm({
   >("idle");
   const [importSkipped, setImportSkipped] = useState(0);
   const [resumeImported, setResumeImported] = useState(false);
+  const [isDraggingResume, setIsDraggingResume] = useState(false);
   const [additionalSectionsOpen, setAdditionalSectionsOpen] = useState(
     Boolean(
       profile.experience.length ||
@@ -160,16 +214,33 @@ export function CandidateProfileForm({
       key: "skills",
       complete: skillsText.split(/[,;\n]+/).some((skill) => skill.trim()),
     },
-    { key: "experience", complete: experience.length > 0 },
-    { key: "education", complete: education.length > 0 },
-    { key: "languages", complete: languages.length > 0 },
-    { key: "certifications", complete: certifications.length > 0 },
+    { key: "experience", complete: hasEntryContent(experience) },
+    { key: "education", complete: hasEntryContent(education) },
+    { key: "languages", complete: languages.some((entry) => entry.name.trim()) },
+    { key: "certifications", complete: hasEntryContent(certifications) },
     { key: "summary", complete: Boolean(summary.trim()) },
-    { key: "links", complete: links.length > 0 },
+    { key: "links", complete: hasEntryContent(links) },
   ] as const;
   const completedEssentials = profileEssentials.filter(
     (item) => item.complete,
   ).length;
+  const profileStatus =
+    completedEssentials === 0
+      ? "notStarted"
+      : completedEssentials === profileEssentials.length
+        ? "complete"
+        : "inProgress";
+  const isProfileEmpty = !(
+    headline.trim() ||
+    location.trim() ||
+    skillsText.trim() ||
+    summary.trim() ||
+    hasEntryContent(experience) ||
+    hasEntryContent(education) ||
+    languages.some((entry) => entry.name.trim()) ||
+    hasEntryContent(certifications) ||
+    hasEntryContent(links)
+  );
 
   function updateExperience(
     index: number,
@@ -360,13 +431,89 @@ export function CandidateProfileForm({
           <span className="candidate-profile-index">{copy("profileIndex")}</span>
           <h2 id="profile-title">{copy("profileTitle")}</h2>
           <p>{copy("profileDescription")}</p>
+          <div
+            aria-live="polite"
+            className="candidate-profile-overview"
+          >
+            <span data-status={profileStatus}>
+              {copy(`completionStatus.${profileStatus}`)}
+            </span>
+            <span>
+              {copy("completionLabel", {
+                current: completedEssentials,
+                total: profileEssentials.length,
+              })}
+            </span>
+          </div>
         </div>
         <form
           action={action}
           aria-busy={importing}
           className="candidate-profile-form"
         >
-          <section className="candidate-resume-import" aria-labelledby="resume-import-title">
+          {isProfileEmpty ? (
+            <section
+              aria-labelledby="candidate-profile-onboarding-title"
+              className="candidate-profile-onboarding"
+            >
+              <span className="candidate-profile-onboarding-mark" aria-hidden="true">
+                <Sparkles size={18} />
+              </span>
+              <div>
+                <h3 id="candidate-profile-onboarding-title">
+                  {copy("emptyProfile.title")}
+                </h3>
+                <p>{copy("emptyProfile.description")}</p>
+                <div className="candidate-profile-onboarding-actions">
+                  <button
+                    className="candidate-onboarding-action candidate-onboarding-action--primary"
+                    onClick={() => fullNameInputRef.current?.focus()}
+                    type="button"
+                  >
+                    {copy("emptyProfile.start")}
+                  </button>
+                  <button
+                    className="candidate-onboarding-action"
+                    onClick={() => resumeInputRef.current?.click()}
+                    type="button"
+                  >
+                    <FileUp size={15} aria-hidden="true" />
+                    {copy("emptyProfile.import")}
+                  </button>
+                </div>
+              </div>
+            </section>
+          ) : null}
+          <section
+            aria-labelledby="resume-import-title"
+            className="candidate-resume-import"
+            data-drag-active={isDraggingResume}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setIsDraggingResume(true);
+            }}
+            onDragLeave={(event) => {
+              const relatedTarget = event.relatedTarget;
+              if (
+                !(relatedTarget instanceof Node) ||
+                !event.currentTarget.contains(relatedTarget)
+              ) {
+                setIsDraggingResume(false);
+              }
+            }}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              setIsDraggingResume(false);
+              if (importing) return;
+              const file = event.dataTransfer.files[0];
+              if (file) {
+                startImportTransition(() => {
+                  void handleResumeFile(file);
+                });
+              }
+            }}
+          >
             <div className="candidate-resume-import-icon" aria-hidden="true">
               <FileUp size={19} />
             </div>
@@ -376,6 +523,9 @@ export function CandidateProfileForm({
               <p className="candidate-resume-privacy">
                 <LockKeyhole size={14} aria-hidden="true" />
                 {rootCopy("resumeImport.privacy")}
+              </p>
+              <p className="candidate-resume-drop-hint">
+                {copy("resumeImport.dropPrompt")}
               </p>
             </div>
             <label className="candidate-resume-file">
@@ -387,6 +537,8 @@ export function CandidateProfileForm({
               <input
                 accept=".pdf,.docx,.rtf,.odt,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
                 disabled={importing}
+                ref={resumeInputRef}
+                aria-describedby="candidate-resume-file-hint candidate-resume-status"
                 onChange={(event) => {
                   const file = event.currentTarget.files?.[0];
                   event.currentTarget.value = "";
@@ -399,6 +551,9 @@ export function CandidateProfileForm({
                 type="file"
               />
             </label>
+            <p className="candidate-resume-file-hint" id="candidate-resume-file-hint">
+              {rootCopy("resumeImport.fileHint")}
+            </p>
             <p
               aria-live="polite"
               className="candidate-resume-status"
@@ -425,7 +580,7 @@ export function CandidateProfileForm({
               {importStatus === "idle"
                 ? importing
                   ? rootCopy("resumeImport.processingStatus")
-                  : rootCopy("resumeImport.fileHint")
+                  : ""
                 : importStatus === "imported"
                   ? rootCopy("resumeImport.imported")
                   : importStatus === "importedWithSkipped"
@@ -440,6 +595,16 @@ export function CandidateProfileForm({
                       ? rootCopy("resumeImport.noNewInformation")
                   : rootCopy(`resumeImport.errors.${importStatus}`)}
             </p>
+            {importing ? (
+              <div
+                aria-hidden="true"
+                className="candidate-resume-pending"
+              >
+                <LoaderCircle className="candidate-resume-spinner" size={16} />
+                <span className="candidate-resume-skeleton candidate-resume-skeleton--long" />
+                <span className="candidate-resume-skeleton" />
+              </div>
+            ) : null}
           </section>
 
           <fieldset
@@ -453,11 +618,6 @@ export function CandidateProfileForm({
             name="certifications"
             type="hidden"
             value={JSON.stringify(certifications)}
-          />
-          <input
-            name="summary"
-            type="hidden"
-            value={JSON.stringify(summary)}
           />
           <input
             name="links"
@@ -477,6 +637,7 @@ export function CandidateProfileForm({
             onChange={setFullName}
             hint={copy("fullNameHint")}
             placeholder={copy("fullNamePlaceholder")}
+            inputRef={fullNameInputRef}
             value={fullName}
           />
           <ProfileEntry
@@ -539,9 +700,18 @@ export function CandidateProfileForm({
               <fieldset className="candidate-profile-entry" key={index}>
                 <legend>{copy("entryLabel", { number: index + 1 })}</legend>
                 <button
-                  aria-label={copy("removeEntry")}
+                  aria-label={copy("removeEntry", {
+                    section: copy("sections.links.title"),
+                    number: index + 1,
+                  })}
                   className="candidate-entry-remove"
-                  onClick={() => removeLink(index)}
+                  onClick={(event) => {
+                    const section = event.currentTarget.closest(
+                      ".candidate-profile-section",
+                    );
+                    removeLink(index);
+                    restoreProfileSectionFocus(section, index, links.length - 1);
+                  }}
                   type="button"
                 >
                   <Trash2 size={15} aria-hidden="true" />
@@ -565,7 +735,14 @@ export function CandidateProfileForm({
             <button
               className="candidate-entry-add"
               disabled={links.length >= 12}
-              onClick={addLink}
+              onClick={(event) => {
+                const section = event.currentTarget.closest(
+                  ".candidate-profile-section",
+                );
+                const index = links.length;
+                addLink();
+                focusProfileEntry(section, index);
+              }}
               type="button"
             >
               <Plus size={16} aria-hidden="true" />
@@ -597,13 +774,24 @@ export function CandidateProfileForm({
               <fieldset className="candidate-profile-entry" key={index}>
                 <legend>{copy("entryLabel", { number: index + 1 })}</legend>
                 <button
-                  aria-label={copy("removeEntry")}
+                  aria-label={copy("removeEntry", {
+                    section: copy("sections.experience.title"),
+                    number: index + 1,
+                  })}
                   className="candidate-entry-remove"
-                  onClick={() =>
+                  onClick={(event) => {
+                    const section = event.currentTarget.closest(
+                      ".candidate-profile-section",
+                    );
                     setExperience((entries) =>
                       entries.filter((_, entryIndex) => entryIndex !== index),
-                    )
-                  }
+                    );
+                    restoreProfileSectionFocus(
+                      section,
+                      index,
+                      experience.length - 1,
+                    );
+                  }}
                   type="button"
                 >
                   <Trash2 size={15} aria-hidden="true" />
@@ -660,7 +848,11 @@ export function CandidateProfileForm({
             <button
               className="candidate-entry-add"
               disabled={experience.length >= 12}
-              onClick={() =>
+              onClick={(event) => {
+                const section = event.currentTarget.closest(
+                  ".candidate-profile-section",
+                );
+                const index = experience.length;
                 setExperience((entries) => [
                   ...entries,
                   {
@@ -671,8 +863,9 @@ export function CandidateProfileForm({
                     endDate: "",
                     description: "",
                   },
-                ])
-              }
+                ]);
+                focusProfileEntry(section, index);
+              }}
               type="button"
             >
               <Plus size={16} aria-hidden="true" />
@@ -688,13 +881,24 @@ export function CandidateProfileForm({
               <fieldset className="candidate-profile-entry" key={index}>
                 <legend>{copy("entryLabel", { number: index + 1 })}</legend>
                 <button
-                  aria-label={copy("removeEntry")}
+                  aria-label={copy("removeEntry", {
+                    section: copy("sections.education.title"),
+                    number: index + 1,
+                  })}
                   className="candidate-entry-remove"
-                  onClick={() =>
+                  onClick={(event) => {
+                    const section = event.currentTarget.closest(
+                      ".candidate-profile-section",
+                    );
                     setEducation((entries) =>
                       entries.filter((_, entryIndex) => entryIndex !== index),
-                    )
-                  }
+                    );
+                    restoreProfileSectionFocus(
+                      section,
+                      index,
+                      education.length - 1,
+                    );
+                  }}
                   type="button"
                 >
                   <Trash2 size={15} aria-hidden="true" />
@@ -753,7 +957,11 @@ export function CandidateProfileForm({
             <button
               className="candidate-entry-add"
               disabled={education.length >= 12}
-              onClick={() =>
+              onClick={(event) => {
+                const section = event.currentTarget.closest(
+                  ".candidate-profile-section",
+                );
+                const index = education.length;
                 setEducation((entries) => [
                   ...entries,
                   {
@@ -764,8 +972,9 @@ export function CandidateProfileForm({
                     endDate: "",
                     description: "",
                   },
-                ])
-              }
+                ]);
+                focusProfileEntry(section, index);
+              }}
               type="button"
             >
               <Plus size={16} aria-hidden="true" />
@@ -781,13 +990,24 @@ export function CandidateProfileForm({
               <fieldset className="candidate-profile-entry" key={index}>
                 <legend>{copy("entryLabel", { number: index + 1 })}</legend>
                 <button
-                  aria-label={copy("removeEntry")}
+                  aria-label={copy("removeEntry", {
+                    section: copy("sections.languages.title"),
+                    number: index + 1,
+                  })}
                   className="candidate-entry-remove"
-                  onClick={() =>
+                  onClick={(event) => {
+                    const section = event.currentTarget.closest(
+                      ".candidate-profile-section",
+                    );
                     setLanguages((entries) =>
                       entries.filter((_, entryIndex) => entryIndex !== index),
-                    )
-                  }
+                    );
+                    restoreProfileSectionFocus(
+                      section,
+                      index,
+                      languages.length - 1,
+                    );
+                  }}
                   type="button"
                 >
                   <Trash2 size={15} aria-hidden="true" />
@@ -799,26 +1019,38 @@ export function CandidateProfileForm({
                     onChange={(value) => updateLanguage(index, "name", value)}
                     value={entry.name}
                   />
-                  <ProfileEntry
-                    label={copy("fields.proficiency")}
-                    maxLength={80}
-                    onChange={(value) =>
-                      updateLanguage(index, "proficiency", value)
-                    }
-                    value={entry.proficiency}
-                  />
+                  <label>
+                    {copy("fields.proficiency")}
+                    <select
+                      onChange={(event) =>
+                        updateLanguage(index, "proficiency", event.target.value)
+                      }
+                      value={entry.proficiency}
+                    >
+                      {proficiencyLevels.map((level) => (
+                          <option key={level} value={level}>
+                            {copy(`proficiencyLevels.${level}`)}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
                 </div>
               </fieldset>
             ))}
             <button
               className="candidate-entry-add"
               disabled={languages.length >= 12}
-              onClick={() =>
+              onClick={(event) => {
+                const section = event.currentTarget.closest(
+                  ".candidate-profile-section",
+                );
+                const index = languages.length;
                 setLanguages((entries) => [
                   ...entries,
                   { name: "", proficiency: "B1" as const },
-                ])
-              }
+                ]);
+                focusProfileEntry(section, index);
+              }}
               type="button"
             >
               <Plus size={16} aria-hidden="true" />
@@ -834,13 +1066,24 @@ export function CandidateProfileForm({
               <fieldset className="candidate-profile-entry" key={index}>
                 <legend>{copy("entryLabel", { number: index + 1 })}</legend>
                 <button
-                  aria-label={copy("removeEntry")}
+                  aria-label={copy("removeEntry", {
+                    section: copy("sections.certifications.title"),
+                    number: index + 1,
+                  })}
                   className="candidate-entry-remove"
-                  onClick={() =>
+                  onClick={(event) => {
+                    const section = event.currentTarget.closest(
+                      ".candidate-profile-section",
+                    );
                     setCertifications((entries) =>
                       entries.filter((_, entryIndex) => entryIndex !== index),
-                    )
-                  }
+                    );
+                    restoreProfileSectionFocus(
+                      section,
+                      index,
+                      certifications.length - 1,
+                    );
+                  }}
                   type="button"
                 >
                   <Trash2 size={15} aria-hidden="true" />
@@ -886,12 +1129,17 @@ export function CandidateProfileForm({
             <button
               className="candidate-entry-add"
               disabled={certifications.length >= 12}
-              onClick={() =>
+              onClick={(event) => {
+                const section = event.currentTarget.closest(
+                  ".candidate-profile-section",
+                );
+                const index = certifications.length;
                 setCertifications((entries) => [
                   ...entries,
                   { name: "", issuer: "", issueDate: "", expiryDate: "" },
-                ])
-              }
+                ]);
+                focusProfileEntry(section, index);
+              }}
               type="button"
             >
               <Plus size={16} aria-hidden="true" />
@@ -931,6 +1179,12 @@ export function CandidateProfileForm({
           <p aria-live="polite" className="candidate-completion-count">
             <strong>{completedEssentials}</strong>
             <span>{copy("completionOf", { total: profileEssentials.length })}</span>
+          </p>
+          <p
+            className="candidate-completion-status"
+            data-status={profileStatus}
+          >
+            {copy(`completionStatus.${profileStatus}`)}
           </p>
           <progress
             aria-label={copy("completionLabel", {

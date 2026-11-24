@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { CreateCompanyForm } from "@/features/companies/create-company-form";
 import { getCurrentUser } from "@/server/dal/user";
+import { hasActiveCompanyOwnership } from "@/server/dal/companies";
 import { redirectLocalized } from "@/i18n/redirect";
 import { EditorialFormPage } from "@/components/layout/editorial-form-page";
 import { noIndexMetadata } from "@/lib/seo";
@@ -17,6 +18,9 @@ export default async function NewCompanyPage() {
   if (!user) return redirectLocalized("/login?audience=employer");
   if (user.status !== "active") {
     return redirectLocalized("/login?audience=employer&error=account");
+  }
+  if (await hasActiveCompanyOwnership(user.id)) {
+    return redirectLocalized("/company/dashboard");
   }
 
   return (

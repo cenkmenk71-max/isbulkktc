@@ -21,6 +21,7 @@ import { getManagedDirectoryEntries } from "@/server/dal/content";
 import * as mailer from "@/server/email/mailer";
 import {
   companyProfileSchema,
+  companyProfileSubmissionReviewSchema,
   companyVerificationReviewSchema,
   createCompanySchema,
   type CompanyProfileFormState,
@@ -245,18 +246,15 @@ export async function reviewCompanyProfile(
     return { status: "error", message: "unauthorized" };
   }
 
-  const submissionId = formData.get("submissionId");
-  const decision = formData.get("decision");
-  const reviewNote = formData.get("reviewNote");
-  if (
-    typeof submissionId !== "string" ||
-    !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(submissionId) ||
-    (decision !== "approved" && decision !== "rejected") ||
-    typeof reviewNote !== "string" ||
-    reviewNote.length > 1_000
-  ) {
+  const result = companyProfileSubmissionReviewSchema.safeParse({
+    submissionId: formData.get("submissionId"),
+    decision: formData.get("decision"),
+    reviewNote: formData.get("reviewNote"),
+  });
+  if (!result.success) {
     return { status: "error", message: "failed" };
   }
+  const { submissionId, decision, reviewNote } = result.data;
 
   const supabase = await createSupabaseServerClient();
   const { data: submission, error: loadError } = await supabase

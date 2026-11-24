@@ -117,7 +117,11 @@ export async function POST(request: Request) {
 
   const recipients = (data ?? []) as EngagementRecipient[];
   for (const recipient of recipients) {
-    const unsubscribeUrl = unsubscribeUrlFor(recipient.email, siteUrl);
+    const unsubscribeUrl = unsubscribeUrlFor(
+      recipient.email,
+      siteUrl,
+      recipient.locale,
+    );
     if (!unsubscribeUrl) {
       failed += 1;
       continue;

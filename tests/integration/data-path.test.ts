@@ -145,6 +145,7 @@ test("saving a candidate profile upserts the caller's own row", async () => {
       fullName: "Ada Lovelace",
       headline: "Yazılım geliştirici",
       skillsText: "TypeScript, React",
+      summary: "Ürün odaklı yazılım geliştirici",
     }),
   );
 
@@ -153,6 +154,10 @@ test("saving a candidate profile upserts the caller's own row", async () => {
   const upserts = fromCalls("candidate_profiles").flatMap((call) => call.ops.filter((op) => op.startsWith("upsert:")));
   assert.equal(upserts.length, 1, "exactly one upsert is expected");
   assert.ok(upserts[0].includes(`"user_id":"${ID}"`), `the row must be bound to the session id: ${upserts[0]}`);
+  assert.ok(
+    upserts[0].includes('"summary":"Ürün odaklı yazılım geliştirici"'),
+    `the submitted summary must be persisted as plain text: ${upserts[0]}`,
+  );
 });
 
 test("saving a candidate profile never persists raw CV text", async () => {

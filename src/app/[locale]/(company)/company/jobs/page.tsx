@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { BriefcaseBusiness, Plus } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { getEmployerWorkspace } from "@/server/dal/companies";
+import { requireAuthenticatedUser } from "@/server/dal/user";
 import { getCompanyJobsPage, getCompanyJobEntitlements } from "@/server/dal/jobs";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
@@ -27,10 +28,12 @@ export default async function EmployerJobsPage({
   if (!locale) notFound();
   setRequestLocale(locale);
 
+  await requireAuthenticatedUser({ audience: "employer" });
   const [{ company }, copy] = await Promise.all([
     getEmployerWorkspace(query.company),
     getTranslations("JobManagement.employer"),
   ]);
+  if (query.company && company.id !== query.company) notFound();
   const [jobPage, entitlements] = await Promise.all([
     getCompanyJobsPage(company.id, {
       afterCreatedAt: query.afterCreatedAt,

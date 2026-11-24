@@ -6,6 +6,7 @@ import { CompanyVerificationReviewForm } from "@/features/companies/company-veri
 import {
   getAdminCompanyProfileReviewQueues,
 } from "@/server/dal/companies";
+import { requirePlatformRole } from "@/server/dal/user";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
@@ -27,6 +28,7 @@ export default async function CompanyProfileReviewPage({
   if (!locale) notFound();
 
   setRequestLocale(locale);
+  await requirePlatformRole("platform_admin");
   const [queues, copy, adminCopy] = await Promise.all([
     getAdminCompanyProfileReviewQueues(),
     getTranslations("CompanyReview"),

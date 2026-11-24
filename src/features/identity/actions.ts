@@ -449,6 +449,7 @@ export async function updatePassword(
 ): Promise<SignInFormState> {
   const result = updatePasswordSchema.safeParse({
     password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
     locale: formData.get("locale"),
   });
 

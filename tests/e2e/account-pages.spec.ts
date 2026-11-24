@@ -119,6 +119,9 @@ test("registration, sign-in, and recovery pages stay localized and usable", asyn
             audienceLabel: "Hesap türünüzü seçin",
             forgotPassword: "Şifrenizi mi unuttunuz?",
             sendResetLink: "Şifre yenileme bağlantısı gönder",
+            sceneMediaOthello: "Othello Kalesi",
+            sceneMediaStHilarion: "St. Hilarion Kalesi",
+            sceneMediaBlueHouse: "Mavi Köşk",
           }
         : {
             title: "A considered start to your career journey.",
@@ -141,6 +144,9 @@ test("registration, sign-in, and recovery pages stay localized and usable", asyn
             audienceLabel: "Choose your account type",
             forgotPassword: "Forgot your password?",
             sendResetLink: "Send reset link",
+            sceneMediaOthello: "Othello Castle",
+            sceneMediaStHilarion: "St Hilarion Castle",
+            sceneMediaBlueHouse: "Blue House",
           };
 
     await page.goto(locale === "tr" ? "/tr/register" : "/en/register");
@@ -194,9 +200,9 @@ test("registration, sign-in, and recovery pages stay localized and usable", asyn
     expect(sceneCopyGeometry.marginLeft).toBe("0px");
     expect(sceneCopyGeometry.backgroundImage).toContain("0.32");
     await expect(sceneMedia.getByRole("group").getByRole("button")).toHaveCount(3);
-    await expect(sceneMedia.getByRole("button", { name: "Othello Kalesi" })).toBeVisible();
-    await expect(sceneMedia.getByRole("button", { name: "St. Hilarion Kalesi" })).toBeVisible();
-    await expect(sceneMedia.getByRole("button", { name: "Mavi Köşk" })).toBeVisible();
+    await expect(sceneMedia.getByRole("button", { name: copy.sceneMediaOthello })).toBeVisible();
+    await expect(sceneMedia.getByRole("button", { name: copy.sceneMediaStHilarion })).toBeVisible();
+    await expect(sceneMedia.getByRole("button", { name: copy.sceneMediaBlueHouse })).toBeVisible();
     await expect(sceneMedia.locator("video")).toHaveCount(0);
     const headerBottom = await page
       .locator(".site-header")
@@ -289,7 +295,7 @@ test("registration, sign-in, and recovery pages stay localized and usable", asyn
     ).toHaveCount(0);
     await page
       .locator(".editorial-page-scene-video-controls")
-      .getByRole("button", { name: "Othello Kalesi" })
+      .getByRole("button", { name: copy.sceneMediaOthello })
       .click();
     const selectedVideo = page.locator(".editorial-page-scene-video");
     await expect(selectedVideo).toBeVisible();

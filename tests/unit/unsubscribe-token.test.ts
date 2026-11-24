@@ -57,4 +57,28 @@ test("a signature verifies for the exact address and fails otherwise", async () 
     assert.equal(verifyUnsubscribeSignature("ayse@example.com", "tampered"), false);
     assert.equal(verifyUnsubscribeSignature("ayse@example.com", ""), false);
   });
+
+  test("unsubscribe links carry only a supported recipient locale", async () => {
+    const { buildUnsubscribeUrl } = await import(
+      "../../src/server/email/unsubscribe-signature"
+    );
+    const url = buildUnsubscribeUrl("ada@example.com", {
+      baseUrl: "https://isbulkktc.test",
+      key: SECRET,
+      locale: "fa",
+    });
+
+    assert.ok(url);
+    assert.equal(new URL(url).searchParams.get("locale"), "fa");
+    assert.equal(
+      new URL(
+        buildUnsubscribeUrl("ada@example.com", {
+          baseUrl: "https://isbulkktc.test",
+          key: SECRET,
+          locale: "xx",
+        })!,
+      ).searchParams.has("locale"),
+      false,
+    );
+  });
 });
