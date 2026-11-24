@@ -9,6 +9,7 @@ import { Link, usePathname } from '@/i18n/navigation'
 import { localeNames, routing } from '@/i18n/routing'
 import { languageOptionHref } from '@/components/layout/language-links'
 import { signOut } from '@/features/identity/actions'
+import { PendingActionSubmitButton } from '@/components/forms/pending-action-submit-button'
 import { getHeaderSession } from '@/features/identity/header-session-actions'
 import type { HeaderSessionState } from '@/features/identity/header-session'
 
@@ -101,9 +102,9 @@ export function SiteHeader() {
               <>
                 <Link href={session.dashboardHref} className="header-login">{navCopy('account')}</Link>
                 <form action={signOut} className="header-signout">
-                  <button className="button button-dark header-post" type="submit">
+                  <PendingActionSubmitButton className="button button-dark header-post">
                     <LogOut size={16} aria-hidden="true"/><span>{navCopy('signOut')}</span>
-                  </button>
+                  </PendingActionSubmitButton>
                 </form>
               </>
             ) : (
@@ -147,7 +148,7 @@ export function SiteHeader() {
               <>
                 <Link href={session.dashboardHref} onClick={closeMenu}>{navCopy('account')}<ArrowRight size={15} aria-hidden="true"/></Link>
                 <form action={signOut} className="mobile-nav-primary-form">
-                  <button className="mobile-nav-primary" type="submit"><LogOut size={17} aria-hidden="true"/>{navCopy('signOut')}</button>
+                  <PendingActionSubmitButton className="mobile-nav-primary"><LogOut size={17} aria-hidden="true"/>{navCopy('signOut')}</PendingActionSubmitButton>
                 </form>
               </>
             ) : (

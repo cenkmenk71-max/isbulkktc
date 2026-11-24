@@ -186,6 +186,7 @@
     "deleteFaq": "Löschen",
     "deletingFaq": "Wird gelöscht…",
     "emptyFaq": "In dieser Sprache gibt es noch keine Fragen.",
+    "emptyLegal": "Für diese Sprache ist noch kein verwaltetes Rechtsdokument vorhanden.",
     "planCode": "Code",
     "planName": "Paketname",
     "planAudience": "Zielgruppen-Label",
@@ -207,6 +208,11 @@
       "saved": "Datensatz gespeichert.",
       "deleted": "Datensatz gelöscht."
     }
+  },
+  "AccountSceneMedia": {
+    "othello": "Othello-Burg",
+    "stHilarion": "Burg St. Hilarion",
+    "blueHouse": "Blaues Haus"
   },
   "AboutMeta": {
     "title": "Über uns",
@@ -984,10 +990,21 @@
     },
     "profileTitle": "Profilangaben",
     "profileDescription": "Ihre gespeicherten Informationen sind nur für Ihr Konto bestimmt.",
+    "emptyProfile": {
+      "title": "Erstellen Sie Ihr Profil",
+      "description": "Ergänzen Sie zunächst einige Angaben oder importieren Sie Ihren Lebenslauf. Alle Vorschläge können Sie vor dem Speichern prüfen.",
+      "start": "Angaben selbst ergänzen",
+      "import": "Mit Lebenslauf starten"
+    },
     "completionEyebrow": "IHR PROFIL",
     "completionTitle": "Das Wichtigste",
     "completionOf": "/ {total} Angaben ergänzt",
     "completionLabel": "{current} von {total} wichtigen Profilangaben ergänzt",
+    "completionStatus": {
+      "notStarted": "Noch nicht begonnen",
+      "inProgress": "In Bearbeitung",
+      "complete": "Vollständig"
+    },
     "completionHint": "Aus dem CV extrahierte Angaben erscheinen zuerst als Vorschläge im Formular. Prüfen Sie sie und wählen Sie zum Bestätigen „Änderungen speichern“.",
     "completionFields": {
       "headline": "Beruflicher Titel",
@@ -1050,7 +1067,16 @@
     "additionalDetails": "Erfahrung, Ausbildung und mehr · {count} Einträge",
     "additionalDetailsHint": "Diese Bereiche sind optional. CV-Angaben werden ohne Löschen vorhandener Einträge in das Formular übernommen; prüfen und bearbeiten Sie sie vor dem Speichern.",
     "entryLabel": "Eintrag {number}",
-    "removeEntry": "Diesen Eintrag entfernen",
+    "removeEntry": "Eintrag {number} aus „{section}“ entfernen",
+    "proficiencyLevels": {
+      "Native": "Muttersprache",
+      "C2": "C2 · Kompetent",
+      "C1": "C1 · Fortgeschritten",
+      "B2": "B2 · Gute Mittelstufe",
+      "B1": "B1 · Mittelstufe",
+      "A2": "A2 · Grundkenntnisse",
+      "A1": "A1 · Anfänger"
+    },
     "fields": {
       "role": "Berufsbezeichnung",
       "organization": "Unternehmen",
@@ -1116,6 +1142,7 @@
       "title": "Lebenslauf importieren",
       "description": "Wählen Sie einen unterstützten Lebenslauf als PDF, DOCX, RTF, ODT, TXT oder Markdown. Text wird auf unserem Server extrahiert; gescannte PDFs können mit einem konfigurierten Vision-Anbieter verarbeitet werden. Türkisch, Englisch, Russisch und weitere Sprachen werden unterstützt.",
       "privacy": "Die Datei wird zur Verarbeitung an unseren Server gesendet und kann bei entsprechender Konfiguration von Gemini oder Groq verarbeitet werden. İşBul KKTC speichert die Datei nicht; Vorschläge werden erst nach Ihrer Prüfung und dem Speichern im Profil abgelegt.",
+      "dropPrompt": "Ziehen Sie Ihren Lebenslauf hierher oder wählen Sie eine Datei aus.",
       "chooseFile": "Lebenslauf auswählen",
       "processing": "Lebenslauf wird gelesen …",
       "processingStatus": "Ihr Lebenslauf wird auf unserem Server verarbeitet.",

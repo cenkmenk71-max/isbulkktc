@@ -1,9 +1,11 @@
 import { BriefcaseBusiness, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+import { PendingGetForm } from "@/components/forms/pending-get-form";
 import { northernCyprusDistrictValues } from "@/features/locations/northern-cyprus-districts";
 import type { PublicJobSearchFilters } from "@/features/jobs/schemas";
 import type { AppLocale } from "@/i18n/routing";
+import { buildPublicJobSearchHref } from "@/features/jobs/search-href";
 
 type JobPreview = {
   title: string;
@@ -70,7 +72,7 @@ export async function HomeJobSearch({
           <p>{copy("description")}</p>
         </header>
 
-        <form className="home-job-search-form" method="get">
+        <PendingGetForm className="home-job-search-form">
           <label className="home-job-search-field home-job-search-keyword">
             <span>{copy("keywordLabel")}</span>
             <span className="home-job-search-input-wrap">
@@ -127,7 +129,7 @@ export async function HomeJobSearch({
           <Link className="home-job-search-clear" href="/">
             {copy("clearFilters")}
           </Link>
-        </form>
+        </PendingGetForm>
 
         {invalidFilters ? (
           <p className="home-job-search-error" role="alert">
@@ -175,7 +177,7 @@ export async function HomeJobSearch({
               <nav className="home-job-search-pagination" aria-label={copy("paginationLabel")}>
                 {results.page > 1 ? (
                   <a
-                    href={buildSearchHref(filters, results.page - 1)}
+                    href={buildPublicJobSearchHref(filters, results.page - 1, "")}
                     rel="prev"
                     aria-label={copy("previousPage")}
                   >
@@ -186,7 +188,7 @@ export async function HomeJobSearch({
                 <span>{copy("pageCount", { page: results.page, pages: Math.ceil(results.total / results.pageSize) })}</span>
                 {results.page * results.pageSize < results.total ? (
                   <a
-                    href={buildSearchHref(filters, results.page + 1)}
+                    href={buildPublicJobSearchHref(filters, results.page + 1, "")}
                     rel="next"
                     aria-label={copy("nextPage")}
                   >
@@ -201,14 +203,4 @@ export async function HomeJobSearch({
       </div>
     </section>
   );
-}
-
-function buildSearchHref(filters: PublicJobSearchFilters, page: number) {
-  const params = new URLSearchParams();
-  if (filters.query) params.set("query", filters.query);
-  if (filters.district) params.set("district", filters.district);
-  if (filters.jobType) params.set("jobType", filters.jobType);
-  if (filters.workplaceMode) params.set("workplaceMode", filters.workplaceMode);
-  params.set("page", String(page));
-  return `?${params.toString()}`;
 }

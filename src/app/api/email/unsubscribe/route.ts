@@ -1,18 +1,86 @@
 import { createSupabaseServiceClient } from "@/server/db/supabase-server";
 import { textNoStore } from "@/server/http/no-store-response";
 import { verifyUnsubscribeSignature } from "@/server/email/unsubscribe-token-core";
+import {
+  isAppLocale,
+  isRightToLeftLocale,
+  routing,
+  type AppLocale,
+} from "@/i18n/routing";
 
 export const dynamic = "force-dynamic";
 
-const SUCCESS_BODY = [
-  "İşBul KKTC",
-  "",
-  "Bu adres tanıtım e-postalarından çıkarıldı.",
-  "This address has been removed from promotional emails.",
-  "",
-  "İş başvurularınız ve hesabınızla ilgili bilgilendirme e-postaları",
-  "bundan etkilenmez.",
-].join("\n");
+const unsubscribeCopy: Record<
+  AppLocale,
+  {
+    title: string;
+    heading: string;
+    description: string;
+    button: string;
+    note: string;
+    removed: string;
+  }
+> = {
+  tr: {
+    title: "İşBul KKTC | E-posta aboneliği",
+    heading: "Tanıtım e-postalarını durdurmak istiyor musunuz?",
+    description:
+      "Onayladığınızda bu adres İşBul KKTC tanıtım e-postalarından çıkarılır. Başvuru ve hesap güvenliği gibi işlem e-postaları bundan etkilenmez.",
+    button: "Tanıtım e-postalarını durdur",
+    note: "Bu sayfayı açmak aboneliğinizi değiştirmez. İşlem yalnızca düğmeye bastığınızda tamamlanır.",
+    removed: "Bu adres tanıtım e-postalarından çıkarıldı.",
+  },
+  en: {
+    title: "İşBul KKTC | Email preferences",
+    heading: "Would you like to stop promotional emails?",
+    description:
+      "If you confirm, this address will stop receiving İşBul KKTC promotional emails. Application and account-security emails are not affected.",
+    button: "Stop promotional emails",
+    note: "Opening this page does not change your subscription. The change is made only when you select the button.",
+    removed: "This address has been removed from promotional emails.",
+  },
+  ru: {
+    title: "İşBul KKTC | Настройки электронной почты",
+    heading: "Отключить рекламные письма?",
+    description:
+      "После подтверждения этот адрес перестанет получать рекламные письма İşBul KKTC. Письма о заявках и безопасности аккаунта продолжат приходить.",
+    button: "Отключить рекламные письма",
+    note: "Открытие этой страницы не меняет подписку. Изменение произойдёт только после нажатия кнопки.",
+    removed: "Этот адрес исключён из рекламной рассылки.",
+  },
+  el: {
+    title: "İşBul KKTC | Προτιμήσεις email",
+    heading: "Θέλετε να σταματήσετε τα προωθητικά email;",
+    description:
+      "Αν επιβεβαιώσετε, αυτή η διεύθυνση θα σταματήσει να λαμβάνει προωθητικά email από το İşBul KKTC. Τα email αιτήσεων και ασφάλειας λογαριασμού δεν επηρεάζονται.",
+    button: "Διακοπή προωθητικών email",
+    note: "Το άνοιγμα αυτής της σελίδας δεν αλλάζει τη συνδρομή σας. Η αλλαγή γίνεται μόνο όταν επιλέξετε το κουμπί.",
+    removed: "Αυτή η διεύθυνση αφαιρέθηκε από τα προωθητικά email.",
+  },
+  fa: {
+    title: "İşBul KKTC | تنظیمات ایمیل",
+    heading: "آیا می‌خواهید ایمیل‌های تبلیغاتی را متوقف کنید؟",
+    description:
+      "با تأیید، این نشانی دیگر ایمیل‌های تبلیغاتی İşBul KKTC را دریافت نمی‌کند. ایمیل‌های مربوط به درخواست‌های شغلی و امنیت حساب همچنان ارسال می‌شوند.",
+    button: "توقف ایمیل‌های تبلیغاتی",
+    note: "باز کردن این صفحه اشتراک شما را تغییر نمی‌دهد. تغییر فقط پس از انتخاب دکمه انجام می‌شود.",
+    removed: "این نشانی از دریافت ایمیل‌های تبلیغاتی حذف شد.",
+  },
+  de: {
+    title: "İşBul KKTC | E-Mail-Einstellungen",
+    heading: "Möchten Sie keine Werbe-E-Mails mehr erhalten?",
+    description:
+      "Nach Ihrer Bestätigung erhält diese Adresse keine Werbe-E-Mails von İşBul KKTC mehr. E-Mails zu Bewerbungen und Kontosicherheit sind davon nicht betroffen.",
+    button: "Werbe-E-Mails abbestellen",
+    note: "Das Öffnen dieser Seite ändert Ihr Abonnement nicht. Die Änderung erfolgt erst, wenn Sie die Schaltfläche auswählen.",
+    removed: "Diese Adresse wurde aus dem Werbeverteiler entfernt.",
+  },
+};
+
+function getLocale(request: Request): AppLocale {
+  const locale = new URL(request.url).searchParams.get("locale");
+  return locale && isAppLocale(locale) ? locale : routing.defaultLocale;
+}
 
 function readParameters(request: Request): { email: string; signature: string } {
   const url = new URL(request.url);
@@ -42,16 +110,18 @@ function escapeHtmlAttribute(value: string): string {
  * A mailbox GET is only a preview. Security scanners routinely prefetch links;
  * mutating on GET would silently unsubscribe recipients who never clicked.
  */
-function confirmationPage(request: Request): Response {
+function confirmationPage(request: Request, locale: AppLocale): Response {
   const url = new URL(request.url);
   const action = escapeHtmlAttribute(url.pathname + url.search);
+  const copy = unsubscribeCopy[locale];
+  const direction = isRightToLeftLocale(locale) ? "rtl" : "ltr";
   const html = `<!doctype html>
-<html lang="tr" dir="ltr">
+<html lang="${locale}" dir="${direction}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
-  <title>İşBul KKTC | E-posta aboneliği</title>
+  <title>${copy.title}</title>
   <style>
     :root { color-scheme: light; }
     body { margin: 0; padding: 32px 18px; background: #f4f7f5; color: #17251d; font: 16px/1.6 Arial, sans-serif; }
@@ -65,12 +135,12 @@ function confirmationPage(request: Request): Response {
 </head>
 <body>
   <main>
-    <h1>Tanıtım e-postalarını durdurmak istiyor musunuz?</h1>
-    <p>Onayladığınızda bu adres İşBul KKTC tanıtım e-postalarından çıkarılır. Başvuru ve hesap güvenliği gibi işlem e-postaları bundan etkilenmez.</p>
+    <h1>${copy.heading}</h1>
+    <p>${copy.description}</p>
     <form method="post" action="${action}">
-      <button type="submit">Tanıtım e-postalarını durdur</button>
+      <button type="submit">${copy.button}</button>
     </form>
-    <small>Bu sayfayı açmak aboneliğinizi değiştirmez. İşlem yalnızca düğmeye bastığınızda tamamlanır.</small>
+    <small>${copy.note}</small>
   </main>
 </body>
 </html>`;
@@ -92,7 +162,11 @@ function confirmationPage(request: Request): Response {
  * The POST handler serves both the explicit button above and RFC 8058
  * List-Unsubscribe-Post requests. Both carry the signed email in the URL.
  */
-async function optOut(email: string, signature: string): Promise<Response> {
+async function optOut(
+  email: string,
+  signature: string,
+  locale: AppLocale,
+): Promise<Response> {
   if (!isValidUnsubscribeLink(email, signature)) {
     return textNoStore("Invalid or expired unsubscribe link.", { status: 400 });
   }
@@ -118,7 +192,7 @@ async function optOut(email: string, signature: string): Promise<Response> {
     });
   }
 
-  return textNoStore(SUCCESS_BODY, {
+  return textNoStore(unsubscribeCopy[locale].removed, {
     status: 200,
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
@@ -135,7 +209,7 @@ export async function GET(request: Request): Promise<Response> {
   if (!isValidUnsubscribeLink(email, signature)) {
     return textNoStore("Invalid or expired unsubscribe link.", { status: 400 });
   }
-  return confirmationPage(request);
+  return confirmationPage(request, getLocale(request));
 }
 
 /**
@@ -144,5 +218,5 @@ export async function GET(request: Request): Promise<Response> {
  */
 export async function POST(request: Request): Promise<Response> {
   const { email, signature } = readParameters(request);
-  return optOut(email, signature);
+  return optOut(email, signature, getLocale(request));
 }

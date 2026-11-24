@@ -9,6 +9,10 @@ import { getLocalePrefix, isAppLocale, type AppLocale } from "@/i18n/routing";
 import { isCorruptedSupabaseAuthError } from "@/server/auth/supabase-guards";
 import { readSignInMethods } from "@/features/identity/oauth-providers";
 import {
+  resolveAuthDestination,
+} from "@/features/identity/auth-routing";
+import type { AccountAudience } from "@/features/identity/schemas";
+import {
   candidateProfileSchema,
   type CandidateProfileValues,
 } from "@/features/candidates/schemas";
@@ -153,6 +157,34 @@ export const getCurrentUser = cache(
     };
   },
 );
+
+export async function getSignedInAuthDestination(
+  fallbackAudience: AccountAudience,
+  locale: AppLocale,
+): Promise<string | null> {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  const supabase = await createSupabaseServerClient();
+  const { data: membership, error } = await supabase
+    .from("company_memberships")
+    .select("company_id")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("The signed-in user's company destination could not be resolved.", {
+      cause: error,
+    });
+  }
+
+  return resolveAuthDestination(
+    membership ? "employer" : fallbackAudience,
+    locale,
+  );
+}
 
 export const requireAuthenticatedUser = cache(
   async (): Promise<CurrentUserDTO> => {

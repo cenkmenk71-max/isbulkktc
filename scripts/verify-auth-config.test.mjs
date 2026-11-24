@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import {
@@ -77,12 +79,17 @@ test("the direct-run guard fires even when the script path holds a space or #", 
   // The naive `file://${argv[1]}` guard never equals `import.meta.url` when the
   // path holds a space or `#`, so `node`-invoked runs exited 0 having verified
   // nothing. `pathToFileURL` percent-encodes both, so the guard matches.
-  const url = "file:///tmp/verify%23guard%20x/verify-auth-config.mjs";
-  assert.equal(isDirectRun(url, "/tmp/verify#guard x/verify-auth-config.mjs"), true);
-  assert.equal(isDirectRun("file:///repo/scripts/verify-auth-config.mjs", "/repo/scripts/verify-auth-config.mjs"), true);
+  const spacedPath = resolve("tmp/verify#guard x/verify-auth-config.mjs");
+  const url = pathToFileURL(spacedPath).href;
+  const scriptPath = resolve("repo/scripts/verify-auth-config.mjs");
+  assert.equal(isDirectRun(url, spacedPath), true);
+  assert.equal(isDirectRun(pathToFileURL(scriptPath).href, scriptPath), true);
   assert.equal(isDirectRun(url, undefined), false);
   assert.equal(isDirectRun(url, ""), false);
-  assert.equal(isDirectRun("file:///repo/scripts/other.mjs", "/repo/scripts/verify-auth-config.mjs"), false);
+  assert.equal(
+    isDirectRun(pathToFileURL(resolve("repo/scripts/other.mjs")).href, scriptPath),
+    false,
+  );
 });
 
 test("the deployed captcha state is read from the bundle, not the local env var", () => {

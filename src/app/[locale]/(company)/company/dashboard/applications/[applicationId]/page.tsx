@@ -3,11 +3,16 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ApplicationStatusForm } from "@/features/jobs/application-status-form";
 import { getApplicationStatusMessageKey } from "@/features/jobs/presentation";
-import { getCompanyApplicationDetail } from "@/server/dal/jobs";
+import {
+  getCompanyApplicationDetail,
+  getCompanyApplications,
+} from "@/server/dal/jobs";
+import { getEmployerWorkspace } from "@/server/dal/companies";
 import { requireAuthenticatedUser } from "@/server/dal/user";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
@@ -19,20 +24,35 @@ type CompanyApplicationPageProps = {
 export default async function CompanyApplicationPage({
   params,
 }: CompanyApplicationPageProps) {
-  const [{ locale: requestedLocale, applicationId }] = await Promise.all([
-    params,
-    requireAuthenticatedUser(),
-  ]);
+  const { locale: requestedLocale, applicationId } = await params;
   const locale = routing.locales.find(
     (supportedLocale) => supportedLocale === requestedLocale,
   );
   if (!locale) notFound();
 
   setRequestLocale(locale);
+  await requireAuthenticatedUser();
+  if (!z.string().uuid().safeParse(applicationId).success) notFound();
+
+  const { companies } = await getEmployerWorkspace();
+  const companyApplications = await Promise.all(
+    companies.map((company) => getCompanyApplications(company.id)),
+  );
+  if (
+    !companyApplications.some((applications) =>
+      applications.some(
+        (application) => application.application_id === applicationId,
+      ),
+    )
+  ) {
+    notFound();
+  }
+
   const [application, copy] = await Promise.all([
     getCompanyApplicationDetail(applicationId),
     getTranslations("CompanyManagement"),
   ]);
+  if (!application) notFound();
 
   return (
     <main className="company-application-detail page-container">

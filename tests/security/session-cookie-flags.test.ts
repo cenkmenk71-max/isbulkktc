@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 /**
  * Session-cookie hardening for the Supabase auth cookie.
@@ -40,7 +41,7 @@ function walk(directory: URL): string[] {
   for (const entry of entries) {
     const path = new URL(entry, directory);
     if (statSync(path).isDirectory()) files.push(...walk(new URL(`${entry}/`, directory)));
-    else if (/\.(ts|tsx)$/.test(entry)) files.push(path.pathname);
+    else if (/\.(ts|tsx)$/.test(entry)) files.push(fileURLToPath(path));
   }
   return files;
 }
@@ -48,7 +49,8 @@ function walk(directory: URL): string[] {
 const sourceFiles = walk(srcDir);
 
 function relative(path: string): string {
-  return path.slice(path.indexOf("/src/") + 1);
+  const normalised = path.replace(/\\/g, "/");
+  return normalised.slice(normalised.indexOf("/src/") + 1);
 }
 
 function read(path: string): string {
@@ -79,7 +81,11 @@ test("no client module creates a browser Supabase client", () => {
 // ---------------------------------------------------------------------------
 
 test("the proxy verifies claims rather than trusting the raw session", () => {
-  const proxy = read(sourceFiles.find((path) => path.endsWith("/src/proxy.ts"))!);
+  const proxyPath = sourceFiles.find((path) =>
+    path.replace(/\\/g, "/").endsWith("/src/proxy.ts"),
+  );
+  assert.ok(proxyPath, "the Proxy source must be discovered");
+  const proxy = read(proxyPath);
   assert.match(proxy, /auth\.getClaims\(\)/, "the proxy must verify the token with getClaims()");
   assert.ok(
     !/auth\.getSession\(\)/.test(proxy),
@@ -182,7 +188,7 @@ test("every Supabase server-client call site is discovered (self-test)", () => {
 test("the Supabase session cookie is HttpOnly, Secure and SameSite", () => {
   const offenders: string[] = [];
   for (const file of sessionClientFiles()) {
-    const source = read(new URL(`../../${file}`, import.meta.url).pathname);
+    const source = read(fileURLToPath(new URL(`../../${file}`, import.meta.url)));
     const { httpOnly, secure, sameSite } = isHardened(source);
     if (!httpOnly || !secure || !sameSite) {
       offenders.push(`${file} [httpOnly:${httpOnly} secure:${secure} sameSite:${sameSite}]`);
@@ -233,7 +239,7 @@ test("the cookie-flag check detects a hardened call site (self-test)", () => {
 
 test("the OAuth sign-up intent cookie is HttpOnly, Secure and SameSite", () => {
   const source = read(
-    new URL("../../src/features/identity/actions.ts", import.meta.url).pathname,
+    fileURLToPath(new URL("../../src/features/identity/actions.ts", import.meta.url)),
   );
   const setCall = source.match(
     /cookieStore\.set\(\s*oauthSignupIntentCookieName[\s\S]*?\{([\s\S]*?)\}\s*,?\s*\);/,

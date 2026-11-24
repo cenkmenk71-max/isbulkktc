@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import {
@@ -199,15 +201,20 @@ test("the direct-run guard fires even when the script path holds a space or #", 
   // The naive `file://${argv[1]}` guard never equals `import.meta.url` when the
   // path holds a space or `#`, so `node`-invoked runs exited 0 having verified
   // nothing. `pathToFileURL` percent-encodes both, so the guard matches.
-  const url = "file:///tmp/verify%23guard%20x/verify-deliverability.mjs";
-  assert.equal(isDirectRun(url, "/tmp/verify#guard x/verify-deliverability.mjs"), true);
+  const spacedPath = resolve("tmp/verify#guard x/verify-deliverability.mjs");
+  const url = pathToFileURL(spacedPath).href;
+  assert.equal(isDirectRun(url, spacedPath), true);
   // A plain path still matches.
-  assert.equal(isDirectRun("file:///repo/scripts/verify-deliverability.mjs", "/repo/scripts/verify-deliverability.mjs"), true);
+  const scriptPath = resolve("repo/scripts/verify-deliverability.mjs");
+  assert.equal(isDirectRun(pathToFileURL(scriptPath).href, scriptPath), true);
   // A missing argv[1] (imported, not launched) must never fire.
   assert.equal(isDirectRun(url, undefined), false);
   assert.equal(isDirectRun(url, ""), false);
   // A different script on the same path must not fire.
-  assert.equal(isDirectRun("file:///repo/scripts/other.mjs", "/repo/scripts/verify-deliverability.mjs"), false);
+  assert.equal(
+    isDirectRun(pathToFileURL(resolve("repo/scripts/other.mjs")).href, scriptPath),
+    false,
+  );
 });
 
 test("an unqueryable Return-Path subdomain is a skip, never a FAIL", () => {

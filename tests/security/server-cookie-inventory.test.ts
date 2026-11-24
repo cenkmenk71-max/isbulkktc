@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 /**
  * Server-side cookie write inventory and flag ratchet (issue #418 §6 — the
@@ -40,7 +41,7 @@ function walk(directory: URL): string[] {
   for (const entry of readdirSync(directory)) {
     const path = new URL(entry, directory);
     if (statSync(path).isDirectory()) files.push(...walk(new URL(`${entry}/`, directory)));
-    else if (/\.(ts|tsx)$/.test(entry)) files.push(path.pathname);
+    else if (/\.(ts|tsx)$/.test(entry)) files.push(fileURLToPath(path));
   }
   return files;
 }
@@ -49,7 +50,8 @@ function walk(directory: URL): string[] {
 const sourceFiles = walk(srcDir).filter((path) => !/\.test\.tsx?$/.test(path));
 
 function relative(path: string): string {
-  return path.slice(path.indexOf("/src/") + 1);
+  const normalised = path.replace(/\\/g, "/");
+  return normalised.slice(normalised.indexOf("/src/") + 1);
 }
 
 function read(path: string): string {

@@ -48,8 +48,9 @@ export function verifyUnsubscribeSignature(
 export function unsubscribeUrlFor(
   email: string,
   baseUrl: string | URL,
+  locale?: string | null,
 ): string | null {
   const key = resolveUnsubscribeSigningKey();
   if (!key) return null;
-  return buildUnsubscribeUrl(email, { baseUrl, key });
+  return buildUnsubscribeUrl(email, { baseUrl, key, locale });
 }

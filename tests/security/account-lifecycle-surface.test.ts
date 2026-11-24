@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 /**
  * The account-lifecycle boundary (#418 "account journey" micro-audit,
@@ -24,7 +25,7 @@ function listFiles(directory: URL, suffix: RegExp): string[] {
   for (const entry of readdirSync(directory)) {
     const path = new URL(entry, directory);
     if (statSync(path).isDirectory()) files.push(...listFiles(new URL(`${entry}/`, directory), suffix));
-    else if (suffix.test(entry)) files.push(path.pathname);
+    else if (suffix.test(entry)) files.push(fileURLToPath(path));
   }
   return files;
 }
@@ -43,7 +44,8 @@ const sourceFiles = listFiles(srcDir, /\.(ts|tsx)$/);
 const source = sourceFiles.map((file) => readFileSync(file, "utf8")).join("\n");
 
 function relative(path: string): string {
-  return path.slice(path.indexOf("/src/") + 1);
+  const normalised = path.replace(/\\/g, "/");
+  return normalised.slice(normalised.indexOf("/src/") + 1);
 }
 
 // ---------------------------------------------------------------------------
@@ -256,7 +258,7 @@ test("an API route that can answer an error forbids shared caching", () => {
   const routePattern = /\/src\/app\/api\/.+\/route\.tsx?$/;
   const errorStatus = /status:\s*[45]\d\d\b/;
   const routesWithErrors = sourceFiles
-    .filter((path) => routePattern.test(path))
+    .filter((path) => routePattern.test(path.replace(/\\/g, "/")))
     .filter((path) => errorStatus.test(readFileSync(path, "utf8")));
   assert.ok(routesWithErrors.length >= 2, "expected API routes with error paths to be discovered");
   const unguarded = routesWithErrors.filter((path) => {

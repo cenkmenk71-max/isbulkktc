@@ -23,6 +23,7 @@ import { getCompanyProfileCompletion } from "@/features/companies/profile-comple
 import { getCompanyApplications, isJobCompanyMember } from "@/server/dal/jobs";
 import { getApplicationStatusMessageKey } from "@/features/jobs/presentation";
 import { getEmployerWorkspace } from "@/server/dal/companies";
+import { requireAuthenticatedUser } from "@/server/dal/user";
 import {
   getNorthernCyprusDistrictForLocation,
   northernCyprusDistricts,
@@ -33,6 +34,7 @@ import { noIndexMetadata } from "@/lib/seo";
 import { PushPermissionControl } from "@/components/pwa/push-permission-control";
 import { getVapidPublicKey } from "@/server/push/vapid";
 import { MarkerConversion } from "@/lib/analytics/conversion-client";
+import { PendingActionSubmitButton } from "@/components/forms/pending-action-submit-button";
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
@@ -56,6 +58,7 @@ export default async function CompanyDashboardPage({
   if (!locale) notFound();
 
   setRequestLocale(locale);
+  await requireAuthenticatedUser();
   const [
     { user, companies, company, latestSubmission },
     copy,
@@ -69,6 +72,7 @@ export default async function CompanyDashboardPage({
     getManagedDirectoryEntries(),
     getTranslations("JobManagement.employer"),
   ]);
+  if (query.company && company.id !== query.company) notFound();
   const directoryEntries = managedDirectory ?? companyDirectory;
   const submittedProfile =
     latestSubmission && latestSubmission.status !== "approved"
@@ -181,10 +185,10 @@ export default async function CompanyDashboardPage({
               {copy("addCompany")}
             </Link>
             <form action={signOut}>
-              <button className="button button-outline" type="submit">
+              <PendingActionSubmitButton className="button button-outline">
                 <LogOut size={16} aria-hidden="true" />
                 {copy("signOut")}
-              </button>
+              </PendingActionSubmitButton>
             </form>
           </div>
         </div>
@@ -273,9 +277,9 @@ export default async function CompanyDashboardPage({
                         type="hidden"
                         value={application.application_id}
                       />
-                      <button className="button button-outline" type="submit">
+                      <PendingActionSubmitButton className="button button-outline">
                         {copy("openApplication")}
-                      </button>
+                      </PendingActionSubmitButton>
                     </form>
                   </article>
                 </li>

@@ -1,3 +1,4 @@
+import { isAppLocale } from "@/i18n/routing";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /**
@@ -76,7 +77,7 @@ export function verifyUnsubscribeSignatureWithKey(
  */
 export function buildUnsubscribeUrl(
   email: string,
-  options: { baseUrl: string | URL; key: string },
+  options: { baseUrl: string | URL; key: string; locale?: string | null },
 ): string | null {
   let url: URL;
   try {
@@ -86,5 +87,8 @@ export function buildUnsubscribeUrl(
   }
   url.searchParams.set("e", normaliseUnsubscribeEmail(email));
   url.searchParams.set("s", signUnsubscribeEmailWithKey(email, options.key));
+  if (options.locale && isAppLocale(options.locale)) {
+    url.searchParams.set("locale", options.locale);
+  }
   return url.toString();
 }

@@ -1,9 +1,14 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
+import { z } from "zod";
 import { Link } from "@/i18n/navigation";
 import { JobDraftForm } from "@/features/jobs/job-management-forms";
 import { getEmployerWorkspace } from "@/server/dal/companies";
-import { getCompanyJobForEdit } from "@/server/dal/jobs";
+import {
+  getCompanyJobForEdit,
+  isJobCompanyMember,
+} from "@/server/dal/jobs";
+import { requireAuthenticatedUser } from "@/server/dal/user";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
 
@@ -24,10 +29,15 @@ export default async function EditEmployerJobPage({
   if (!locale) notFound();
   setRequestLocale(locale);
 
+  await requireAuthenticatedUser();
+  if (!z.string().uuid().safeParse(jobId).success) notFound();
   const [{ company }, copy] = await Promise.all([
     getEmployerWorkspace(query.company),
     getTranslations("JobManagement.employer"),
   ]);
+  if (query.company && company.id !== query.company) notFound();
+  if (!(await isJobCompanyMember(company.id))) notFound();
+
   const job = await getCompanyJobForEdit(company.id, jobId);
   if (!job) notFound();
 

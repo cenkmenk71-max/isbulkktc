@@ -72,8 +72,12 @@ export const resendConfirmationSchema = z.object({
 
 export const updatePasswordSchema = z.object({
   password: z.string().min(10).max(128),
+  confirmPassword: z.string().min(10).max(128),
   locale: z.enum(routing.locales),
-});
+}).refine(
+  ({ password, confirmPassword }) => password === confirmPassword,
+  { path: ["confirmPassword"] },
+);
 
 export type AccountAudience = z.infer<typeof accountAudienceSchema>;
 export type OAuthProvider = z.infer<typeof oauthProviderSchema>;

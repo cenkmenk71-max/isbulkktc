@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import {
@@ -106,13 +108,15 @@ test("parseArgs falls back to the cap when --limit is not a number", () => {
 });
 
 test("isDirectRun matches only the launched script, never a bare file:// path", () => {
-  const url = "file:///repo/scripts/submit-indexing.mjs";
-  assert.equal(isDirectRun(url, "/repo/scripts/submit-indexing.mjs"), true);
+  const scriptPath = resolve("repo/scripts/submit-indexing.mjs");
+  const url = pathToFileURL(scriptPath).href;
+  assert.equal(isDirectRun(url, scriptPath), true);
   // A path with a space must still match via pathToFileURL's encoding.
-  const spaced = "file:///repo/a%20b/submit-indexing.mjs";
-  assert.equal(isDirectRun(spaced, "/repo/a b/submit-indexing.mjs"), true);
+  const spacedPath = resolve("repo/a b/submit-indexing.mjs");
+  const spaced = pathToFileURL(spacedPath).href;
+  assert.equal(isDirectRun(spaced, spacedPath), true);
   assert.equal(isDirectRun(url, undefined), false);
-  assert.equal(isDirectRun(url, "/repo/scripts/other.mjs"), false);
+  assert.equal(isDirectRun(url, resolve("repo/scripts/other.mjs")), false);
 });
 
 // The workflow is the only thing that runs this script on a schedule, so it has
@@ -141,6 +145,6 @@ test("the indexing workflow stays green when the credential is absent", () => {
 });
 
 test("the indexing workflow declares least-privilege permissions", () => {
-  assert.match(workflowYaml, /^permissions:\n  contents: read$/m);
+  assert.match(workflowYaml, /^permissions:\r?\n  contents: read\r?$/m);
   assert.doesNotMatch(workflowYaml, /\bcontents: write\b/);
 });

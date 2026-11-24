@@ -26,11 +26,17 @@ function withEnv(vars: Record<string, string | undefined>): () => void {
 
 let sign: ((email: string) => string | null) | null = null;
 
-function signedLink(email: string, signature?: string | null): string {
+function signedLink(
+  email: string,
+  signature?: string | null,
+  locale?: string,
+): string {
   if (!signature && !sign) throw new Error("the unsubscribe signature helper is not loaded");
   const actual = signature ?? sign!(email);
+  const localeQuery = locale ? "&locale=" + encodeURIComponent(locale) : "";
   return "https://isbulkktc.test/api/email/unsubscribe?e=" +
-    encodeURIComponent(email) + "&s=" + encodeURIComponent(String(actual));
+    encodeURIComponent(email) + "&s=" + encodeURIComponent(String(actual)) +
+    localeQuery;
 }
 
 const optOutCalls = () =>
@@ -66,6 +72,20 @@ test("unsubscribe link access", async (t) => {
     assert.match(body, /Tanıtım e-postalarını durdur/);
     assert.match(body, /sayfayı açmak aboneliğinizi değiştirmez/i);
     assert.ok(!body.includes("Ada@Example.com"), "the recipient address is not rendered");
+    assert.deepEqual(recorded.supabase, []);
+  });
+
+  await t.test("the confirmation page uses the recipient locale and RTL direction", async () => {
+    resetBoundary({}, null);
+    const { GET } = await unsubscribeRoute();
+    const response = await GET(
+      new Request(signedLink("ada@example.com", undefined, "fa")),
+    );
+    const body = await response.text();
+
+    assert.equal(response.status, 200);
+    assert.match(body, /<html lang="fa" dir="rtl">/);
+    assert.match(body, /ایمیل‌های تبلیغاتی/);
     assert.deepEqual(recorded.supabase, []);
   });
 
@@ -112,7 +132,7 @@ test("unsubscribe link access", async (t) => {
     resetBoundary({}, { rpcs: { opt_out_engagement: { data: null, error: null } } });
     const { POST } = await unsubscribeRoute();
     const response = await POST(
-      new Request(signedLink("Ada@Example.com"), {
+      new Request(signedLink("Ada@Example.com", undefined, "en"), {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
         body: "",

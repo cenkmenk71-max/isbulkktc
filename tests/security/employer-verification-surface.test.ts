@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 /**
  * The employer-verification boundary (#418 account journey, the security layer
@@ -24,7 +25,7 @@ function listFiles(directory: URL, suffix: RegExp): string[] {
   for (const entry of readdirSync(directory)) {
     const path = new URL(entry, directory);
     if (statSync(path).isDirectory()) files.push(...listFiles(new URL(`${entry}/`, directory), suffix));
-    else if (suffix.test(entry)) files.push(path.pathname);
+    else if (suffix.test(entry)) files.push(fileURLToPath(path));
   }
   return files;
 }

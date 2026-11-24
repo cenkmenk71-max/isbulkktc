@@ -414,17 +414,16 @@ function recordMail(template: string, payload: Record<string, unknown>): void {
 // ---------------------------------------------------------------------------
 
 export function installBoundaryMocks(): void {
-  mock.module("server-only", { namedExports: {} });
-
+  mock.module("server-only", { exports: {} });
   mock.module("next/headers", {
-    namedExports: {
+    exports: {
       cookies: async () => ({ getAll: () => [], set: () => {}, delete: () => {} }),
       headers: async () => requestHeaders,
     },
   });
 
   mock.module("next/cache", {
-    namedExports: {
+    exports: {
       revalidatePath: (path: string) => {
         recorded.revalidated.push(path);
       },
@@ -436,7 +435,7 @@ export function installBoundaryMocks(): void {
   });
 
   mock.module("next/navigation", {
-    namedExports: {
+    exports: {
       redirect: (destination: string): never => {
         recorded.redirects.push(destination);
         throw new RedirectSignal(destination);
@@ -445,11 +444,10 @@ export function installBoundaryMocks(): void {
   });
 
   mock.module("next-intl/server", {
-    namedExports: { getLocale: async () => "tr" },
+    exports: { getLocale: async () => "tr" },
   });
-
   mock.module("@/server/db/supabase-server", {
-    namedExports: {
+    exports: {
       createSupabaseServerClient: async () => {
         recorded.supabase.push({ kind: "auth", method: "createClient" });
         return fakeSupabase;
@@ -465,7 +463,7 @@ export function installBoundaryMocks(): void {
   // a recorder lets a test assert *that* a receipt was attempted, and lets it
   // force a failure to prove the caller treats mail as best-effort.
   mock.module("@/server/email/mailer", {
-    namedExports: {
+    exports: {
       sendFeedbackEmails: async (payload: Record<string, unknown>) => recordMail("feedback", payload),
       sendSalesLeadEmails: async (payload: Record<string, unknown>) => recordMail("sales", payload),
       sendResumeReceivedEmail: async (payload: Record<string, unknown>) => recordMail("resume", payload),

@@ -186,6 +186,7 @@
     "deleteFaq": "Sil",
     "deletingFaq": "Siliniyor…",
     "emptyFaq": "Bu dilde henüz soru yok.",
+    "emptyLegal": "Bu dil için henüz yönetilen bir yasal belge yok.",
     "planCode": "Kod",
     "planName": "Paket adı",
     "planAudience": "Hedef kitle etiketi",
@@ -207,6 +208,11 @@
       "saved": "Kayıt kaydedildi.",
       "deleted": "Kayıt silindi."
     }
+  },
+  "AccountSceneMedia": {
+    "othello": "Othello Kalesi",
+    "stHilarion": "St. Hilarion Kalesi",
+    "blueHouse": "Mavi Köşk"
   },
   "AboutMeta": {
     "title": "Hakkımızda",
@@ -984,10 +990,21 @@
     },
     "profileTitle": "Profil bilgileri",
     "profileDescription": "Kaydettiğiniz bilgiler hesabınıza özeldir.",
+    "emptyProfile": {
+      "title": "Profilinizi birlikte oluşturalım",
+      "description": "Birkaç bilgi ekleyerek başlayın veya CV’nizi aktarın. Kaydetmeden önce tüm önerileri inceleyebilirsiniz.",
+      "start": "Bilgileri kendim ekleyeceğim",
+      "import": "CV ile başla"
+    },
     "completionEyebrow": "PROFİLİNİZ",
     "completionTitle": "Temel bilgiler",
     "completionOf": "/ {total} bilgi eklendi",
     "completionLabel": "{total} temel bilginin {current} tanesi eklendi",
+    "completionStatus": {
+      "notStarted": "Henüz başlanmadı",
+      "inProgress": "Devam ediyor",
+      "complete": "Tamamlandı"
+    },
     "completionHint": "CV’den çıkarılan bilgiler önce formda öneri olarak gösterilir. Kontrol ettikten sonra Değişiklikleri kaydet ile onaylayın.",
     "completionFields": {
       "headline": "Mesleki başlık",
@@ -1060,7 +1077,16 @@
     "additionalDetails": "Deneyim, eğitim ve diğer detaylar · {count} kayıt",
     "additionalDetailsHint": "Bu bölümler isteğe bağlıdır. CV’den çıkarılan bilgiler mevcut kayıtlarınız korunarak forma eklenir; kaydetmeden önce kontrol edip düzenleyebilirsiniz.",
     "entryLabel": "Kayıt {number}",
-    "removeEntry": "Bu kaydı kaldır",
+    "removeEntry": "{section} kaydını kaldır · {number}",
+    "proficiencyLevels": {
+      "Native": "Ana dili",
+      "C2": "C2 · Yetkin",
+      "C1": "C1 · İleri",
+      "B2": "B2 · Üst orta",
+      "B1": "B1 · Orta",
+      "A2": "A2 · Temel",
+      "A1": "A1 · Başlangıç"
+    },
     "fields": {
       "role": "Görev unvanı",
       "organization": "Şirket",
@@ -1116,6 +1142,7 @@
       "title": "CV’den içe aktar",
       "description": "Desteklenen PDF, DOCX, RTF, ODT, TXT veya Markdown CV’nizi seçin. Metin sunucuda çıkarılır; taranmış PDF’ler yapılandırılmış bir görüntü sağlayıcısıyla işlenebilir. Türkçe, İngilizce, Rusça ve diğer diller desteklenir.",
       "privacy": "Dosya ayrıştırma için sunucuya gönderilir ve yapılandırılmışsa Gemini veya Groq tarafından işlenebilir. İşBul KKTC dosyayı saklamaz; öneriler siz kontrol edip kaydedene kadar profilinize yazılmaz.",
+      "dropPrompt": "CV’nizi buraya sürükleyip bırakabilir veya dosya seçebilirsiniz.",
       "chooseFile": "CV dosyası seç",
       "processing": "CV okunuyor…",
       "processingStatus": "CV’niz sunucuda işleniyor.",

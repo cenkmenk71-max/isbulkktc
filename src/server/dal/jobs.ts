@@ -454,7 +454,7 @@ export async function getCompanyJobsPage(
 
   const hasCursorPart = Boolean(input?.afterCreatedAt) || Boolean(input?.afterId);
   const cursor = hasCursorPart
-    ? employerJobsCursorSchema.safeParse({
+    ? moderationCursorSchema.safeParse({
         createdAt: input?.afterCreatedAt,
         id: input?.afterId,
       })
@@ -502,16 +502,16 @@ export async function getCompanyJobForEdit(
 ): Promise<JobRow | null> {
   const user = await getCurrentUser();
   if (!user || user.status !== "active") {
-    throw new Error("An active user session is required to edit company jobs.");
+    return null;
   }
   if (
     !z.string().uuid().safeParse(companyId).success ||
     !z.string().uuid().safeParse(jobId).success
   ) {
-    throw new Error("Valid company and job identifiers are required.");
+    return null;
   }
   if (!(await isJobCompanyMember(companyId))) {
-    throw new Error("The current user is not authorized for this company's jobs.");
+    return null;
   }
 
   const supabase = await createSupabaseServerClient();
@@ -700,13 +700,12 @@ export async function getCompanyApplicationDetail(applicationId: string) {
   );
 
   if (error) {
+    if (error.code === "42501") return null;
     throw new Error("The company application detail could not be loaded.", {
       cause: error,
     });
   }
-  if (data.length !== 1) {
-    throw new Error("The company application detail is missing.");
-  }
+  if (data.length !== 1) return null;
 
   return data[0];
 }

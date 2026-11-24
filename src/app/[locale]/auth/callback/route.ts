@@ -74,21 +74,6 @@ function redirectAndClearOAuthIntent(url: URL): NextResponse {
   return response;
 }
 
-/**
- * Reports only whether the expected PKCE verifier cookie was sent. Cookie
- * values, auth codes, email addresses and flow ids are never logged.
- */
-function hasCookieValueOrChunk(
-  cookieNames: readonly string[],
-  baseName: string,
-): boolean {
-  return cookieNames.some((name) => {
-    if (name === baseName) return true;
-    if (!name.startsWith(`${baseName}.`)) return false;
-    return /^\d+$/.test(name.slice(baseName.length + 1));
-  });
-}
-
 function getPkceCookieDiagnostics(
   request: NextRequest,
   flowId: string | undefined,

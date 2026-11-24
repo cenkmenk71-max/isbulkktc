@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 import {
@@ -206,8 +208,9 @@ test("sitemapLocs extracts and XML-decodes every <loc>", () => {
 });
 
 test("isDirectRun matches only the launched script", () => {
-  const url = "file:///repo/scripts/verify-search-console.mjs";
-  assert.equal(isDirectRun(url, "/repo/scripts/verify-search-console.mjs"), true);
+  const scriptPath = resolve("repo/scripts/verify-search-console.mjs");
+  const url = pathToFileURL(scriptPath).href;
+  assert.equal(isDirectRun(url, scriptPath), true);
   assert.equal(isDirectRun(url, undefined), false);
-  assert.equal(isDirectRun(url, "/repo/scripts/other.mjs"), false);
+  assert.equal(isDirectRun(url, resolve("repo/scripts/other.mjs")), false);
 });

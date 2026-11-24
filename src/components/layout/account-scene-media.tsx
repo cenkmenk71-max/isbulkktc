@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Pause, Play } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 
 const photos = [
@@ -12,7 +13,7 @@ const photos = [
 ];
 
 type SceneVideo = {
-  title: string;
+  titleKey: "othello" | "stHilarion" | "blueHouse";
   poster: string;
   /** Ordered by efficiency: AV1 first, H.264 as the universal fallback. */
   sources: { src: string; type: string }[];
@@ -20,7 +21,7 @@ type SceneVideo = {
 
 const videos: SceneVideo[] = [
   {
-    title: "Othello Kalesi",
+    titleKey: "othello",
     poster: "/videos/account-gallery/othello-kalesi-poster.webp",
     sources: [
       {
@@ -34,7 +35,7 @@ const videos: SceneVideo[] = [
     ],
   },
   {
-    title: "St. Hilarion Kalesi",
+    titleKey: "stHilarion",
     poster: "/videos/account-gallery/st-hilarion-kalesi-poster.webp",
     sources: [
       {
@@ -48,7 +49,7 @@ const videos: SceneVideo[] = [
     ],
   },
   {
-    title: "Mavi Köşk",
+    titleKey: "blueHouse",
     poster: "/videos/account-gallery/mavi-kosk-poster.webp",
     sources: [
       {
@@ -70,6 +71,7 @@ export function AccountSceneMedia({
   label: string;
   videoUnavailable: string;
 }) {
+  const copy = useTranslations("AccountSceneMedia");
   const videoRef = useRef<HTMLVideoElement>(null);
   const [activeVideoIndex, setActiveVideoIndex] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -147,14 +149,14 @@ export function AccountSceneMedia({
 
           return (
             <button
-              key={video.title}
+              key={video.titleKey}
               type="button"
-              aria-label={video.title}
+              aria-label={copy(video.titleKey)}
               aria-pressed={isActive && isPlaying}
               onClick={() => selectVideo(index)}
             >
               <Icon size={13} aria-hidden="true" />
-              <span>{video.title}</span>
+              <span>{copy(video.titleKey)}</span>
             </button>
           );
         })}

@@ -67,6 +67,12 @@ export const companyVerificationReviewSchema = z.object({
   decision: z.enum(["verified", "rejected"]),
 });
 
+export const companyProfileSubmissionReviewSchema = z.object({
+  submissionId: z.string().uuid(),
+  decision: z.enum(["approved", "rejected"]),
+  reviewNote: z.string().max(1_000),
+});
+
 export type CreateCompanyFormState = {
   message: "idle" | "invalid" | "duplicate" | "unauthorized" | "failed" | "saved";
   status: "idle" | "error" | "success";

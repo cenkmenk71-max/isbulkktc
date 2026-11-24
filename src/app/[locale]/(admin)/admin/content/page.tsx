@@ -17,10 +17,15 @@ import {
   getAdminListingPlans,
   getAdminSiteContentEntries,
 } from "@/server/dal/content";
-import { getPlatformAdminMfaStatus } from "@/server/dal/user";
+import {
+  hasAssignedPlatformRole,
+  getPlatformAdminMfaStatus,
+  requireAuthenticatedUser,
+} from "@/server/dal/user";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
+import { redirectLocalized } from "@/i18n/redirect";
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
@@ -81,6 +86,10 @@ export default async function AdminContentPage({
   if (!locale) notFound();
 
   setRequestLocale(locale);
+  await requireAuthenticatedUser();
+  if (!(await hasAssignedPlatformRole("platform_admin"))) {
+    return redirectLocalized("/");
+  }
   const mfa = await getPlatformAdminMfaStatus();
   const copy = await getTranslations("AdminContent");
 
@@ -140,6 +149,12 @@ export default async function AdminContentPage({
           </div>
           <span className="admin-count">{legalRows.length}</span>
         </header>
+        {legalRows.every((row) => row.document === null) ? (
+          <p className="admin-package-empty" role="status">
+            <FileText size={19} aria-hidden="true" />
+            {copy("emptyLegal")}
+          </p>
+        ) : null}
         <div className="admin-package-list">
           {legalRows.map((row) => (
             <LegalDocumentForm key={row.key} row={row} />

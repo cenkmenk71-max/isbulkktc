@@ -14,6 +14,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { getEnabledOAuthProviders } from "@/server/config/oauth-providers";
+import { PendingActionSubmitButton } from "@/components/forms/pending-action-submit-button";
 
 type LoginSearchParams = {
   audience?: string;
@@ -144,9 +145,9 @@ export default async function LoginPage({
             {copy("inactiveMessage")}
           </p>
           <form action={signOut} className="editorial-signout">
-            <button className="button button-outline" type="submit">
+            <PendingActionSubmitButton className="button button-outline">
               {copy("signOut")}
-            </button>
+            </PendingActionSubmitButton>
           </form>
         </>
       ) : (

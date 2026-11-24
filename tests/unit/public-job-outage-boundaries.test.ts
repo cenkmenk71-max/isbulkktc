@@ -24,11 +24,10 @@ test("company directory distinguishes unavailable job employers from an empty re
   assert.match(page, /<CompanyDirectory companies=\{publishedCompanies\} \/>/);
 });
 
-test("localized route error boundary uses the Next.js reset callback for retry", async () => {
+test("localized route error boundary uses the Next.js retry callback", async () => {
   const boundary = await read("src/app/[locale]/error.tsx");
 
-  assert.match(boundary, /reset:\s*\(\)\s*=>\s*void/);
-  assert.match(boundary, /LocaleError\(\{ error, reset \}/);
-  assert.match(boundary, /onClick=\{reset\}/);
-  assert.doesNotMatch(boundary, /retry:\s*\(\)\s*=>\s*void/);
+  assert.match(boundary, /retry:\s*\(\)\s*=>\s*void/);
+  assert.match(boundary, /LocaleError\(\{ error, retry \}/);
+  assert.match(boundary, /onClick=\{retry\}/);
 });

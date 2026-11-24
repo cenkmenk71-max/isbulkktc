@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { execFile, execFileSync } from "node:child_process";
 import { createServer } from "node:http";
-import { cpSync, mkdtempSync, rmSync, writeFileSync, chmodSync } from "node:fs";
+import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -98,13 +98,12 @@ test("the direct-run guard fires even when the script path holds a space", () =>
 });
 
 /**
- * Run the script in a throwaway dir with a fake `git` on PATH whose
- * `ls-remote origin refs/heads/main` reports `tipSha`. `--expect`/`--tip` are
- * pinned to `expectedSha`, the poll is capped, and no Vercel token is set so the
- * HTTP channel (pointed at a closed port) is the only one — meaning the run can
- * only ever end by deadline or by the superseded skip.
+ * Run the script against a throwaway local bare remote. `--expect`/`--tip` are
+ * pinned to its first commit, the poll is capped, and no Vercel token is set so
+ * the HTTP channel (pointed at a closed port) is the only one — meaning the run
+ * can only ever end by deadline or by the superseded skip.
  */
-function runWithFakeGit({ expectedSha, tipSha, passTip = true, eventName = "" }) {
+function runWithFakeGit({ advanceTip = true, passTip = true, eventName = "" }) {
   const source = fileURLToPath(
     new URL("./verify-production-deployment.mjs", import.meta.url),
   );
@@ -113,19 +112,49 @@ function runWithFakeGit({ expectedSha, tipSha, passTip = true, eventName = "" })
     const copy = join(dir, "verify-production-deployment.mjs");
     cpSync(source, copy);
 
-    const fakeGit = join(dir, "git");
-    writeFileSync(
-      fakeGit,
-      [
-        "#!/bin/sh",
-        'if [ "$1" = "ls-remote" ]; then',
-        `  echo "${tipSha}\trefs/heads/main"`,
-        "  exit 0",
-        "fi",
-        "exit 1",
-      ].join("\n"),
-    );
-    chmodSync(fakeGit, 0o755);
+    const remote = join(dir, "remote.git");
+    const worktree = join(dir, "worktree");
+    execFileSync("git", ["init", "--bare", remote], { stdio: "ignore" });
+    execFileSync("git", ["init", "--initial-branch=main", worktree], {
+      stdio: "ignore",
+    });
+    execFileSync("git", ["-C", worktree, "config", "user.name", "Test"], {
+      stdio: "ignore",
+    });
+    execFileSync("git", ["-C", worktree, "config", "user.email", "test@example.com"], {
+      stdio: "ignore",
+    });
+    writeFileSync(join(worktree, "state.txt"), "initial\n");
+    execFileSync("git", ["-C", worktree, "add", "state.txt"], { stdio: "ignore" });
+    execFileSync("git", ["-C", worktree, "commit", "-m", "initial"], {
+      stdio: "ignore",
+    });
+    const expectedSha = execFileSync(
+      "git",
+      ["-C", worktree, "rev-parse", "HEAD"],
+      { encoding: "utf8" },
+    ).trim();
+    execFileSync("git", ["-C", worktree, "remote", "add", "origin", remote], {
+      stdio: "ignore",
+    });
+    execFileSync("git", ["-C", worktree, "push", "--set-upstream", "origin", "main"], {
+      stdio: "ignore",
+    });
+
+    if (advanceTip) {
+      writeFileSync(join(worktree, "state.txt"), "advanced\n");
+      execFileSync("git", ["-C", worktree, "commit", "-am", "advance"], {
+        stdio: "ignore",
+      });
+      execFileSync("git", ["-C", worktree, "push", "origin", "main"], {
+        stdio: "ignore",
+      });
+    }
+    const tipSha = execFileSync(
+      "git",
+      ["-C", worktree, "rev-parse", "HEAD"],
+      { encoding: "utf8" },
+    ).trim();
 
     const args = [
       copy,
@@ -143,10 +172,9 @@ function runWithFakeGit({ expectedSha, tipSha, passTip = true, eventName = "" })
     try {
       output = execFileSync(process.execPath, args, {
         encoding: "utf8",
+        cwd: worktree,
         env: {
           ...process.env,
-          // Put the fake `git` first so `readRemoteTip` finds it.
-          PATH: `${dir}:${process.env.PATH}`,
           GITHUB_SHA: "",
           GITHUB_EVENT_NAME: eventName,
           BRANCH_TIP_SHA: "",
@@ -160,7 +188,7 @@ function runWithFakeGit({ expectedSha, tipSha, passTip = true, eventName = "" })
       code = error.status;
       output = `${error.stdout ?? ""}${error.stderr ?? ""}`;
     }
-    return { code, output };
+    return { code, output, expectedSha, tipSha };
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -172,13 +200,10 @@ test("a tip that advances mid-run makes the poll skip instead of failing", () =>
   // alias moves to the newer commit; the stale tip means the run never sees
   // "superseded" and paints a healthy site red. Here the fake remote tip is a
   // different commit from `--expect`, which is exactly the mid-run state.
-  const { code, output } = runWithFakeGit({
-    expectedSha: "1111111111111111111111111111111111111111",
-    tipSha: "2222222222222222222222222222222222222222",
-  });
+  const { code, output, tipSha } = runWithFakeGit({ advanceTip: true });
 
   assert.equal(code, 0, output);
-  assert.match(output, /superseded by `22222222`/);
+  assert.ok(output.includes(`superseded by \`${tipSha.slice(0, 8)}\``));
   // The skip must come from the in-loop refresh, not the up-front check: the
   // up-front `--tip` equals `--expect`, so only a live re-read can skip here.
   assert.doesNotMatch(output, /FAIL/);
@@ -187,10 +212,12 @@ test("a tip that advances mid-run makes the poll skip instead of failing", () =>
 test("a tip that never moves still fails loudly when the commit does not promote", () => {
   // Guards against over-correcting: if the remote tip stays put, the run must
   // still report the real failure rather than skip everything.
-  const sha = "3333333333333333333333333333333333333333";
-  const { code, output } = runWithFakeGit({ expectedSha: sha, tipSha: sha });
+  const { code, output, expectedSha, tipSha } = runWithFakeGit({
+    advanceTip: false,
+  });
 
   assert.equal(code, 1, output);
+  assert.equal(tipSha, expectedSha);
   assert.match(output, /FAIL/);
   assert.doesNotMatch(output, /superseded/);
 });
@@ -199,23 +226,21 @@ test("a push run recovers when the workflow's initial tip read came back empty",
   // The workflow's own `git ls-remote` can fail (network blip), leaving `--tip`
   // empty. On a push run the script still tracks the tip, so a commit that was
   // superseded while this run polled is skipped instead of failing red.
-  const { code, output } = runWithFakeGit({
-    expectedSha: "1111111111111111111111111111111111111111",
-    tipSha: "2222222222222222222222222222222222222222",
+  const { code, output, tipSha } = runWithFakeGit({
+    advanceTip: true,
     passTip: false,
     eventName: "push",
   });
 
   assert.equal(code, 0, output);
-  assert.match(output, /superseded by `22222222`/);
+  assert.ok(output.includes(`superseded by \`${tipSha.slice(0, 8)}\``));
 });
 
 test("a manual run without a tip never re-reads the remote and still fails loudly", () => {
   // `workflow_dispatch` names the commit explicitly and means to verify it even
   // if it is no longer the tip, so a manual run must not skip on a live re-read.
   const { code, output } = runWithFakeGit({
-    expectedSha: "1111111111111111111111111111111111111111",
-    tipSha: "2222222222222222222222222222222222222222",
+    advanceTip: true,
     passTip: false,
     eventName: "workflow_dispatch",
   });

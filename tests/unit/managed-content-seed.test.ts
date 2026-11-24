@@ -20,8 +20,8 @@ const committed = readFileSync(seedPath, "utf8");
 test("committed managed-content seed matches a fresh build from the bundled sources", async () => {
   const { sql } = await buildSeedSql();
   assert.equal(
-    committed,
-    sql,
+    committed.replace(/\r\n/g, "\n"),
+    sql.replace(/\r\n/g, "\n"),
     "supabase/seed-managed-content.sql is stale — run `bun run seed:managed-content`",
   );
 });

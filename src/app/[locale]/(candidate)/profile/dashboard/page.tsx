@@ -2,7 +2,10 @@ import { getTranslations } from "next-intl/server";
 import { CandidateProfileForm } from "@/features/candidates/candidate-profile-form";
 import { signOut } from "@/features/identity/actions";
 import { DeleteAccountButton } from "@/features/identity/delete-account-button";
-import { getCandidateWorkspace } from "@/server/dal/user";
+import {
+  getCandidateWorkspace,
+  requireAuthenticatedUser,
+} from "@/server/dal/user";
 import { BriefcaseBusiness, LogOut } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { noIndexMetadata } from "@/lib/seo";
@@ -11,11 +14,13 @@ import { getApplicationStatusMessageKey } from "@/features/jobs/presentation";
 import { PushPermissionControl } from "@/components/pwa/push-permission-control";
 import { getVapidPublicKey } from "@/server/push/vapid";
 import { MarkerConversion } from "@/lib/analytics/conversion-client";
+import { PendingActionSubmitButton } from "@/components/forms/pending-action-submit-button";
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
 
 export default async function CandidateDashboardPage() {
+  await requireAuthenticatedUser();
   const { user, profile } = await getCandidateWorkspace();
   const [copy, applicationData] = await Promise.all([
     getTranslations("CandidateDashboard"),
@@ -40,10 +45,10 @@ export default async function CandidateDashboardPage() {
               {copy("employerWorkspaceLink")}
             </Link>
             <form action={signOut} className="candidate-signout">
-              <button className="button button-outline" type="submit">
+              <PendingActionSubmitButton className="button button-outline">
                 <LogOut size={16} aria-hidden="true" />
                 {copy("signOut")}
-              </button>
+              </PendingActionSubmitButton>
             </form>
           </div>
         </div>
