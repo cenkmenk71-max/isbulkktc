@@ -139,7 +139,7 @@ export const supportFlowsByLocale: Record<AppLocale, readonly SupportFlow[]> = {
         "CV yüklemek zorunda mıyım",
       ],
       answer:
-        "CV gizliliği: CV dosyanız sunucuya yüklenmez; ayrıştırma tarayıcınızda yapılır ve dosya tarayıcınızda kalır.",
+        "CV gizliliği: Dosya ayrıştırma için sunucuya gönderilir ve yapılandırılmışsa Gemini veya Groq tarafından işlenebilir. İşBul KKTC dosyayı saklamaz.",
     },
   ],
   en: [
