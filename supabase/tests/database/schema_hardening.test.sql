@@ -1,6 +1,6 @@
 begin;
 
-select plan(5);
+select plan(8);
 
 select is(
   (
@@ -39,14 +39,14 @@ select is(
     where namespace_row.nspname = 'public'
       and table_row.relname = 'candidate_profiles'
       and column_row.attname = any (array[
-        'summary', 'links', 'phone', 'job_type_preference',
+        'summary', 'links', 'cv_full_text', 'phone', 'job_type_preference',
         'workplace_mode_preference', 'salary_expectation', 'availability'
       ]::text[])
       and column_row.attnum > 0
       and not column_row.attisdropped
   ),
-  7,
-  'candidate profile additions match the deployed contract without persisted raw CV text'
+  8,
+  'candidate profile additions match the schema and database types'
 );
 
 select ok(
@@ -74,6 +74,85 @@ select ok(
       and not column_row.attisdropped
   ),
   'candidate preference SQL types and nullability match the Zod contract'
+);
+
+select ok(
+  exists (
+    select 1
+    from pg_catalog.pg_attribute as column_row
+    where column_row.attrelid = 'public.candidate_profiles'::regclass
+      and column_row.attname = 'summary'
+      and column_row.atttypid = 'text'::regtype
+      and not column_row.attnotnull
+  )
+  and exists (
+    select 1
+    from pg_catalog.pg_attribute as column_row
+    join pg_catalog.pg_attrdef as default_row
+      on default_row.adrelid = column_row.attrelid
+      and default_row.adnum = column_row.attnum
+    where column_row.attrelid = 'public.candidate_profiles'::regclass
+      and column_row.attname = 'links'
+      and column_row.atttypid = 'jsonb'::regtype
+      and column_row.attnotnull
+      and pg_catalog.pg_get_expr(default_row.adbin, default_row.adrelid) = '''[]''::jsonb'
+  )
+  and exists (
+    select 1
+    from pg_catalog.pg_attribute as column_row
+    where column_row.attrelid = 'public.candidate_profiles'::regclass
+      and column_row.attname = 'cv_full_text'
+      and column_row.atttypid = 'text'::regtype
+      and not column_row.attnotnull
+  ),
+  'summary, links and raw-CV columns have the required SQL types, nullability and default'
+);
+
+select ok(
+  exists (
+    select 1
+    from pg_catalog.pg_constraint as constraint_row
+    where constraint_row.conrelid = 'public.candidate_profiles'::regclass
+      and constraint_row.conname = 'candidate_profiles_summary_check'
+      and pg_catalog.pg_get_constraintdef(constraint_row.oid) like '%char_length(summary) <= 2000%'
+  )
+  and exists (
+    select 1
+    from pg_catalog.pg_constraint as constraint_row
+    where constraint_row.conrelid = 'public.candidate_profiles'::regclass
+      and constraint_row.conname = 'candidate_profiles_links_section_valid_check'
+      and pg_catalog.pg_get_constraintdef(constraint_row.oid) like '%is_valid_candidate_profile_section%'
+      and pg_catalog.pg_get_constraintdef(constraint_row.oid) like '%label%'
+      and pg_catalog.pg_get_constraintdef(constraint_row.oid) like '%url%'
+      and pg_catalog.pg_get_constraintdef(constraint_row.oid) like '%12%'
+      and pg_catalog.pg_get_constraintdef(constraint_row.oid) like '%600%'
+  )
+  and exists (
+    select 1
+    from pg_catalog.pg_constraint as constraint_row
+    where constraint_row.conrelid = 'public.candidate_profiles'::regclass
+      and constraint_row.conname = 'candidate_profiles_cv_full_text_length_check'
+      and pg_catalog.pg_get_constraintdef(constraint_row.oid) like '%char_length(cv_full_text) <= 100000%'
+  ),
+  'candidate text and structured-link checks match their schema limits'
+);
+
+select ok(
+  (
+    select pg_catalog.bool_and(
+      has_column_privilege('authenticated', 'public.candidate_profiles', column_name, 'INSERT')
+      and has_column_privilege('authenticated', 'public.candidate_profiles', column_name, 'UPDATE')
+    )
+    from unnest(array[
+      'summary', 'links', 'cv_full_text', 'phone', 'job_type_preference',
+      'workplace_mode_preference', 'salary_expectation', 'availability'
+    ]::text[]) as granted_columns(column_name)
+  )
+  and not has_table_privilege('authenticated', 'public.candidate_profiles', 'INSERT')
+  and not has_table_privilege('authenticated', 'public.candidate_profiles', 'UPDATE')
+  and not has_column_privilege('authenticated', 'public.candidate_profiles', 'visibility', 'INSERT')
+  and not has_column_privilege('authenticated', 'public.candidate_profiles', 'visibility', 'UPDATE'),
+  'authenticated can write only the approved profile columns, never visibility'
 );
 
 select is(

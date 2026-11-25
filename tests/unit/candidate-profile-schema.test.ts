@@ -175,6 +175,51 @@ test("candidate profile rejects oversized or malformed structured sections", () 
   );
 });
 
+test("candidate profile text and links match database length limits", () => {
+  const maximumLinks = Array.from({ length: 12 }, () => ({
+    label: "l".repeat(120),
+    url: "u".repeat(600),
+  }));
+  const validProfile = {
+    headline: "",
+    location: "",
+    skillsText: "",
+    summary: "s".repeat(2000),
+    cvFullText: "c".repeat(100_000),
+    links: maximumLinks,
+  };
+
+  assert.equal(candidateProfileSchema.safeParse(validProfile).success, true);
+  assert.equal(
+    candidateProfileSchema.safeParse({
+      ...validProfile,
+      summary: "s".repeat(2001),
+    }).success,
+    false,
+  );
+  assert.equal(
+    candidateProfileSchema.safeParse({
+      ...validProfile,
+      cvFullText: "c".repeat(100_001),
+    }).success,
+    false,
+  );
+  assert.equal(
+    candidateProfileSchema.safeParse({
+      ...validProfile,
+      links: [{ label: "site", url: "u".repeat(601) }],
+    }).success,
+    false,
+  );
+  assert.equal(
+    candidateProfileSchema.safeParse({
+      ...validProfile,
+      links: [...maximumLinks, { label: "site", url: "u" }],
+    }).success,
+    false,
+  );
+});
+
 test("candidate profile location accepts only a Northern Cyprus district", () => {
   const profile = {
     headline: "",

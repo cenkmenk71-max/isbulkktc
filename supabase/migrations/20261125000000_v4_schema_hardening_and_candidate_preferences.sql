@@ -55,7 +55,18 @@ alter table public.company_profile_submissions
 alter table public.company_directory_overrides
   validate constraint company_directory_overrides_municipality_northern_cyprus_district;
 
+-- Replace the older links check without rewriting potentially longer legacy rows.
 alter table public.candidate_profiles
+  alter column links set default '[]'::jsonb,
+  alter column links set not null,
+  drop constraint candidate_profiles_links_check,
+  add constraint candidate_profiles_links_section_valid_check
+    check (public.is_valid_candidate_profile_section(
+      links, array['label', 'url'], 12, 600
+    )) not valid,
+  add column cv_full_text text,
+  add constraint candidate_profiles_cv_full_text_length_check
+    check (cv_full_text is null or char_length(cv_full_text) <= 100000),
   add column phone text
     check (phone is null or char_length(phone) <= 80),
   add column job_type_preference text[] not null default '{}'
@@ -75,10 +86,34 @@ alter table public.candidate_profiles
   add column availability text
     check (availability is null or char_length(availability) <= 80);
 
-grant insert (phone, job_type_preference, workplace_mode_preference, salary_expectation, availability)
+revoke insert, update on table public.candidate_profiles
+  from public, anon, authenticated;
+revoke insert (visibility), update (visibility)
+  on table public.candidate_profiles
+  from public, anon, authenticated;
+
+grant insert (
+  summary,
+  links,
+  cv_full_text,
+  phone,
+  job_type_preference,
+  workplace_mode_preference,
+  salary_expectation,
+  availability
+)
   on table public.candidate_profiles to authenticated;
 
-grant update (phone, job_type_preference, workplace_mode_preference, salary_expectation, availability)
+grant update (
+  summary,
+  links,
+  cv_full_text,
+  phone,
+  job_type_preference,
+  workplace_mode_preference,
+  salary_expectation,
+  availability
+)
   on table public.candidate_profiles to authenticated;
 
 commit;

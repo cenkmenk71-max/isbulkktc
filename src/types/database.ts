@@ -119,6 +119,7 @@ export type Database = {
           certifications: Json;
           summary: string | null;
           links: Json;
+          cv_full_text: string | null;
           phone: string | null;
           job_type_preference: CandidateJobType[];
           workplace_mode_preference: CandidateWorkplaceMode[];
@@ -139,12 +140,13 @@ export type Database = {
           certifications?: Json;
           summary?: string | null;
           links?: Json;
+          cv_full_text?: string | null;
           phone?: string | null;
           job_type_preference?: CandidateJobType[];
           workplace_mode_preference?: CandidateWorkplaceMode[];
           salary_expectation?: string | null;
           availability?: string | null;
-          visibility?: string;
+          visibility?: never;
           created_at?: never;
           updated_at?: never;
         },
@@ -158,12 +160,13 @@ export type Database = {
           certifications?: Json;
           summary?: string | null;
           links?: Json;
+          cv_full_text?: string | null;
           phone?: string | null;
           job_type_preference?: CandidateJobType[];
           workplace_mode_preference?: CandidateWorkplaceMode[];
           salary_expectation?: string | null;
           availability?: string | null;
-          visibility?: string;
+          visibility?: never;
           user_id?: never;
           created_at?: never;
           updated_at?: never;
