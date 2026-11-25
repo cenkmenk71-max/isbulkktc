@@ -151,7 +151,8 @@ grant select on public.resumes, public.resume_versions to authenticated;
 grant select, insert, delete on public.saved_jobs to authenticated;
 grant select on public.conversations, public.conversation_members, public.messages
   to authenticated;
-grant insert on public.messages (conversation_id, sender_id, body, message_type, metadata)
+grant insert (conversation_id, sender_id, body, message_type, metadata)
+  on public.messages
   to authenticated;
 grant select, insert, update on public.integration_sync_runs to service_role;
 grant all on public.resumes, public.resume_versions to service_role;
