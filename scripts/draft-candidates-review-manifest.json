@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-11-25T14:09:13.235Z",
+  "generatedAt": "2026-11-25T15:07:52.997Z",
   "companies": [
     {
       "recordKey": "shancerli-tic-ltd",
-      "action": "would_create",
-      "id": "eeee8363-44e4-40a-8cb-939251e1b474",
+      "action": "created",
+      "id": "eeee8363-44e4-40aa-8b93-9251e1b4743f",
       "name": "Şevket Hançerli Tic. Ltd.",
       "slug": "sevket-hancerli-tic-ltd",
       "verificationStatus": "pending",
@@ -12,8 +12,8 @@
     },
     {
       "recordKey": "mandella-extra",
-      "action": "would_create",
-      "id": "eae65b6d-7ddb-448-8d1-4b99aff1c8ea",
+      "action": "created",
+      "id": "eae65b6d-7ddb-448c-814b-99aff1c8eaa5",
       "name": "Mandella Extra",
       "slug": "mandella-extra",
       "verificationStatus": "pending",
@@ -23,11 +23,11 @@
   "jobs": [
     {
       "recordKey": "job-13062-shancerli-import-operations",
-      "action": "would_create",
-      "id": "9fd4eac6-daec-495-877-59d53cb898cd",
+      "action": "created",
+      "id": "9fd4eac6-daec-4959-8759-d53cb898cd08",
       "title": "İthalat Operasyon Sorumlusu",
       "slug": "ithalat-operasyon-sorumlusu-sevket-hancerli-tic-ltd",
-      "companyId": "eeee8363-44e4-40a-8cb-939251e1b474",
+      "companyId": "eeee8363-44e4-40aa-8b93-9251e1b4743f",
       "status": "draft",
       "publicationSource": "platform",
       "sourceScreenshotHash": "3fef0b8ade8cd0cb45b56ac29f6c54abd1829e908e23598c0bf5d138c60aa27e",
@@ -48,11 +48,11 @@
     },
     {
       "recordKey": "job-13060-mandella-experienced-sales-advisor",
-      "action": "would_create",
-      "id": "ab07d155-aa36-429-810-c5bd9f29bdbc",
+      "action": "created",
+      "id": "ab07d155-aa36-429f-80c5-bd9f29bdbc97",
       "title": "Deneyimli Satış Danışmanı",
       "slug": "deneyimli-satis-danismani-mandella-extra",
-      "companyId": "eae65b6d-7ddb-448-8d1-4b99aff1c8ea",
+      "companyId": "eae65b6d-7ddb-448c-814b-99aff1c8eaa5",
       "status": "draft",
       "publicationSource": "platform",
       "sourceScreenshotHash": "0304d47a5f018f882984d41fa20ad7b64b216fdac58b46944ad74c070c1f00e9",
