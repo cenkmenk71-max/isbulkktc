@@ -1,0 +1,77 @@
+{
+  "generatedAt": "2026-11-25T14:09:13.235Z",
+  "companies": [
+    {
+      "recordKey": "shancerli-tic-ltd",
+      "action": "would_create",
+      "id": "eeee8363-44e4-40a-8cb-939251e1b474",
+      "name": "Şevket Hançerli Tic. Ltd.",
+      "slug": "sevket-hancerli-tic-ltd",
+      "verificationStatus": "pending",
+      "approvalStatus": "draft_pending_internal_and_employer_approval"
+    },
+    {
+      "recordKey": "mandella-extra",
+      "action": "would_create",
+      "id": "eae65b6d-7ddb-448-8d1-4b99aff1c8ea",
+      "name": "Mandella Extra",
+      "slug": "mandella-extra",
+      "verificationStatus": "pending",
+      "approvalStatus": "draft_pending_legal_name_and_employer_approval"
+    }
+  ],
+  "jobs": [
+    {
+      "recordKey": "job-13062-shancerli-import-operations",
+      "action": "would_create",
+      "id": "9fd4eac6-daec-495-877-59d53cb898cd",
+      "title": "İthalat Operasyon Sorumlusu",
+      "slug": "ithalat-operasyon-sorumlusu-sevket-hancerli-tic-ltd",
+      "companyId": "eeee8363-44e4-40a-8cb-939251e1b474",
+      "status": "draft",
+      "publicationSource": "platform",
+      "sourceScreenshotHash": "3fef0b8ade8cd0cb45b56ac29f6c54abd1829e908e23598c0bf5d138c60aa27e",
+      "sourceUrls": [
+        "https://www.iskibris.com/jobs/26414",
+        "https://www.sevkethancerli.com/",
+        "https://www.sevkethancerli.com/iletisim/",
+        "https://www.sevkethancerli.com/hakkimizda/"
+      ],
+      "prePublishChecks": [
+        "Employer must confirm the vacancy is still open on 2026-11-25 or provide a new close date.",
+        "Get explicit permission to republish the role and receive applications through İşBul KKTC.",
+        "Complete İşBul KKTC's own company verification and publication approval; external job-board verification does not transfer.",
+        "Confirm application route and phone/email are current.",
+        "Use only official company-provided logo asset after permission."
+      ],
+      "approvalStatus": "draft_pending_review"
+    },
+    {
+      "recordKey": "job-13060-mandella-experienced-sales-advisor",
+      "action": "would_create",
+      "id": "ab07d155-aa36-429-810-c5bd9f29bdbc",
+      "title": "Deneyimli Satış Danışmanı",
+      "slug": "deneyimli-satis-danismani-mandella-extra",
+      "companyId": "eae65b6d-7ddb-448-8d1-4b99aff1c8ea",
+      "status": "draft",
+      "publicationSource": "platform",
+      "sourceScreenshotHash": "0304d47a5f018f882984d41fa20ad7b64b216fdac58b46944ad74c070c1f00e9",
+      "sourceUrls": [
+        "https://www.iskibris.com/jobs/26447",
+        "https://www.iskibris.com/jobs/26128?slug=retail-jobs",
+        "https://kibrismandella.com/",
+        "https://kibrismandella.com/iletisim/"
+      ],
+      "prePublishChecks": [
+        "Do not merge this post with İş Kıbrıs job ID 26128; it is a separate listing. Screenshot-visible ID 26447 was inaccessible during this review.",
+        "Confirm that the two cities are current job locations and request exact branch/workplace addresses separately.",
+        "Confirm whether employment is full-time; the screenshot itself does not say so.",
+        "Confirm application phone +90 546 995 19 18 and info@kibrismandella.com because the official website publishes different general contact details.",
+        "Get registered legal company name and permission to publish this vacancy and company profile.",
+        "Complete İşBul KKTC's own employer verification and obtain original logo asset."
+      ],
+      "approvalStatus": "draft_pending_review"
+    }
+  ],
+  "notes": "Private draft candidates for internal review only. Not for public publication."
+}
