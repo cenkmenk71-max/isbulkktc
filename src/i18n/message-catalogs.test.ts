@@ -45,6 +45,58 @@ function flatten(
 
 const turkish = flatten(readMessages("tr"));
 
+const candidateDashboardRefreshKeys = [
+  "CandidateDashboard.dangerZone.title",
+  "CandidateDashboard.dangerZone.description",
+  "CandidateDashboard.sections.essentials.title",
+  "CandidateDashboard.sections.essentials.description",
+  "CandidateDashboard.sections.preferences.title",
+  "CandidateDashboard.sections.preferences.description",
+  "CandidateDashboard.sections.experience.title",
+  "CandidateDashboard.sections.experience.description",
+  "CandidateDashboard.sections.education.title",
+  "CandidateDashboard.sections.education.description",
+  "CandidateDashboard.sections.languagesCerts.title",
+  "CandidateDashboard.sections.languagesCerts.description",
+  "CandidateDashboard.sections.linksSkills.title",
+  "CandidateDashboard.sections.linksSkills.description",
+  "CandidateDashboard.accordion.openAll",
+  "CandidateDashboard.accordion.closeAll",
+  "CandidateDashboard.revert.label",
+  "CandidateDashboard.revert.title",
+  "CandidateDashboard.entryCount",
+  "CandidateDashboard.selectPlaceholder",
+  "CandidateDashboard.jobTypePreferenceLabel",
+  "CandidateDashboard.workplaceModePreferenceLabel",
+] as const;
+
+test("candidate dashboard refresh copy is complete and translated in every locale", () => {
+  for (const locale of locales) {
+    const messages = flatten(readMessages(locale));
+    for (const key of candidateDashboardRefreshKeys) {
+      assert.ok(key in messages, `${locale} is missing ${key}`);
+      if (locale !== "tr") {
+        assert.notEqual(
+          messages[key],
+          turkish[key],
+          `${locale}.${key} must be translated from Turkish`,
+        );
+      }
+    }
+
+    assert.equal(
+      "CandidateDashboard.salaryExpectationLabel" in messages,
+      false,
+      `${locale} must not retain the unused salary expectation label`,
+    );
+  }
+
+  assert.equal(
+    turkish["CandidateDashboard.deleteAccount.confirmLabel"],
+    "Evet, hesabımı sil",
+  );
+});
+
 // `contactEmail` is an address, not prose, so every locale legitimately keeps
 // the same value. Everything else under `Legal` is user-facing copy and must be
 // authored per language, not left as the Turkish original (the regression #141

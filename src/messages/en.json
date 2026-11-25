@@ -991,9 +991,8 @@
     "profileTitle": "Profile details",
     "profileDescription": "The information you save is private to your account.",
     "phoneLabel": "Phone",
-    "jobTypePreferenceLabel": "Preferred job types",
-    "workplaceModePreferenceLabel": "Preferred work arrangements",
-    "salaryExpectationLabel": "Salary expectation",
+    "jobTypePreferenceLabel": "Job type",
+    "workplaceModePreferenceLabel": "Work arrangement",
     "availabilityLabel": "Availability to start",
     "emptyProfile": {
       "title": "Let’s build your profile",
@@ -1059,6 +1058,10 @@
       "cancel": "Cancel",
       "rateLimited": "Too many deletion attempts. Please try again later.",
       "failed": "Your account could not be deleted. Existing records may have blocked the operation. Please contact the support team."
+    },
+    "dangerZone": {
+      "title": "Danger zone",
+      "description": "These actions cannot be undone. Review the details carefully before continuing."
     },
     "employerWorkspaceLink": "Employer workspace",
     "messages": {
@@ -1127,6 +1130,22 @@
       "linkUrl": "Link URL"
     },
     "sections": {
+      "essentials": {
+        "title": "Profile basics & summary",
+        "description": "Your name, phone number, professional headline and location"
+      },
+      "preferences": {
+        "title": "Work preferences",
+        "description": "Job type, work arrangement and availability to start"
+      },
+      "languagesCerts": {
+        "title": "Languages & certificates",
+        "description": "Languages you speak and your professional certificates"
+      },
+      "linksSkills": {
+        "title": "Links & skills",
+        "description": "Your professional links and skills"
+      },
       "experience": {
         "title": "Experience",
         "add": "Add experience",
@@ -1158,6 +1177,16 @@
         "description": "Add LinkedIn, GitHub and other professional links"
       }
     },
+    "accordion": {
+      "openAll": "Expand all",
+      "closeAll": "Collapse all"
+    },
+    "revert": {
+      "label": "Undo changes",
+      "title": "Restore the profile as it was before editing"
+    },
+    "entryCount": "entries",
+    "selectPlaceholder": "Not selected",
     "summary": {
       "title": "Summary",
       "add": "Add summary",

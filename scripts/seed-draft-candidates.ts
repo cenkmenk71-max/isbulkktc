@@ -223,7 +223,7 @@ const DRAFT_JOBS: DraftJob[] = [
       "Lefkoşa ve Gazimağusa ikamet edenler tercih edilir",
     ].join("\n"),
     responsibilities: [
-      "Perakende mağaza satışları ve müşteri yardımı; detaylı görevler ekran görüntüsünde sağlanmamış",
+      "Perakende mağaza satışları ve müşteri yardımı",
     ].join("\n"),
     jobType: "full_time",
     workplaceMode: "on_site",
