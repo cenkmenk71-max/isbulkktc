@@ -172,6 +172,9 @@ select lives_ok(
   'a verified payment reconciliation records the order and credit grant atomically'
 );
 
+set local "request.jwt.claims" =
+  '{"sub":"b1000000-0000-4000-8000-000000000001","role":"authenticated"}';
+
 select is(
   (select status::text from public.orders
    where id = current_setting('test.billing_order_id')::uuid),
@@ -193,6 +196,9 @@ select is(
   'purchase_grant:3',
   'the credit grant is recorded in the ledger'
 );
+
+set local "request.jwt.claims" =
+  '{"sub":"b1000000-0000-4000-8000-000000000003","role":"authenticated","aal":"aal2"}';
 
 select throws_ok(
   $$select public.admin_reconcile_payment(

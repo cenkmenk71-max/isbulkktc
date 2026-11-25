@@ -126,6 +126,7 @@ select ok(
       and pg_catalog.pg_get_constraintdef(constraint_row.oid) like '%url%'
       and pg_catalog.pg_get_constraintdef(constraint_row.oid) like '%12%'
       and pg_catalog.pg_get_constraintdef(constraint_row.oid) like '%600%'
+      and constraint_row.convalidated
   )
   and exists (
     select 1
@@ -144,8 +145,10 @@ select ok(
       and has_column_privilege('authenticated', 'public.candidate_profiles', column_name, 'UPDATE')
     )
     from unnest(array[
-      'summary', 'links', 'cv_full_text', 'phone', 'job_type_preference',
-      'workplace_mode_preference', 'salary_expectation', 'availability'
+      'user_id', 'headline', 'location', 'skills', 'experience', 'education',
+      'languages', 'certifications', 'summary', 'links', 'cv_full_text',
+      'phone', 'job_type_preference', 'workplace_mode_preference',
+      'salary_expectation', 'availability'
     ]::text[]) as granted_columns(column_name)
   )
   and not has_table_privilege('authenticated', 'public.candidate_profiles', 'INSERT')

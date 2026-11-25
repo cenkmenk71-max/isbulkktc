@@ -86,6 +86,9 @@ alter table public.candidate_profiles
   add column availability text
     check (availability is null or char_length(availability) <= 80);
 
+alter table public.candidate_profiles
+  validate constraint candidate_profiles_links_section_valid_check;
+
 revoke insert, update on table public.candidate_profiles
   from public, anon, authenticated;
 revoke insert (visibility), update (visibility)
@@ -93,6 +96,14 @@ revoke insert (visibility), update (visibility)
   from public, anon, authenticated;
 
 grant insert (
+  user_id,
+  headline,
+  location,
+  skills,
+  experience,
+  education,
+  languages,
+  certifications,
   summary,
   links,
   cv_full_text,
@@ -105,6 +116,14 @@ grant insert (
   on table public.candidate_profiles to authenticated;
 
 grant update (
+  user_id,
+  headline,
+  location,
+  skills,
+  experience,
+  education,
+  languages,
+  certifications,
   summary,
   links,
   cv_full_text,
