@@ -26,9 +26,9 @@ function deterministicUuid(namespace: string, key: string): string {
   return [
     hash.slice(0, 8),
     hash.slice(8, 12),
-    "4" + hash.slice(13, 15),
-    "8" + hash.slice(16, 18),
-    hash.slice(18, 30),
+    `4${hash.slice(13, 16)}`,
+    `8${hash.slice(17, 20)}`,
+    hash.slice(20, 32),
   ].join("-");
 }
 
