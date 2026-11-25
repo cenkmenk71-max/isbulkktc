@@ -1,8 +1,17 @@
 import { z } from "zod";
 import { northernCyprusDistrictValues } from "@/features/locations/northern-cyprus-districts";
-import { jobTypeKeys } from "@/features/jobs/job-type-slugs";
+import { jobTypeKeys, type JobTypeKey } from "@/features/jobs/job-type-slugs";
 
 const workplaceModeValues = ["on_site", "hybrid", "remote"] as const;
+const jobTypePreferenceSchema = z.union([
+  z.literal(""),
+  z.custom<JobTypeKey>(
+    (value): value is JobTypeKey =>
+      typeof value === "string" &&
+      jobTypeKeys.some((jobType) => jobType === value),
+    { message: "invalid job type" },
+  ),
+]);
 
 const optionalProfileText = (max: number) =>
   z
@@ -98,23 +107,10 @@ export const candidateProfileSchema = z.object({
     .transform((value) => value || null)
     .nullish()
     .transform((value) => value || null),
-  jobTypePreference: z
-    .array(z.enum(jobTypeKeys))
-    .max(jobTypeKeys.length)
-    .default([])
-    .transform((values) => [...new Set(values)]),
+  jobTypePreference: jobTypePreferenceSchema.default(""),
   workplaceModePreference: z
-    .array(z.enum(workplaceModeValues))
-    .max(workplaceModeValues.length)
-    .default([])
-    .transform((values) => [...new Set(values)]),
-  salaryExpectation: z
-    .string()
-    .trim()
-    .max(120)
-    .transform((value) => value || null)
-    .nullish()
-    .transform((value) => value || null),
+    .union([z.literal(""), z.enum(workplaceModeValues)])
+    .default(""),
   availability: z
     .string()
     .trim()
@@ -178,9 +174,8 @@ export type CandidateCertification = z.infer<typeof certificationEntrySchema>;
 
 export type CandidateProfileValues = {
   phone: string | null;
-  jobTypePreference: (typeof jobTypeKeys)[number][];
-  workplaceModePreference: (typeof workplaceModeValues)[number][];
-  salaryExpectation: string | null;
+  jobTypePreference: JobTypeKey | "";
+  workplaceModePreference: (typeof workplaceModeValues)[number] | "";
   availability: string | null;
   headline: string | null;
   location: string | null;

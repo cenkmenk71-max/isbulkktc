@@ -991,9 +991,8 @@
     "profileTitle": "Profil bilgileri",
     "profileDescription": "Kaydettiğiniz bilgiler hesabınıza özeldir.",
     "phoneLabel": "Telefon",
-    "jobTypePreferenceLabel": "İş türü tercihleri",
-    "workplaceModePreferenceLabel": "Çalışma düzeni tercihleri",
-    "salaryExpectationLabel": "Maaş beklentisi",
+    "jobTypePreferenceLabel": "Çalışma türü",
+    "workplaceModePreferenceLabel": "Çalışma düzeni",
     "availabilityLabel": "İşe başlama uygunluğu",
     "emptyProfile": {
       "title": "Profilinizi birlikte oluşturalım",
@@ -1063,12 +1062,16 @@
       "title": "Hesap silme",
       "description": "Hesap silme işlemi, ilişkili kayıtlar denetlenerek gerçekleştirilir. Geçmiş başvuru, ilan veya yönetim kayıtları gibi korunması gereken ilişkiler işlemin tamamlanmasını engelleyebilir.",
       "buttonLabel": "Hesabımı sil",
-      "confirmLabel": "Hesabımı kalıcı olarak sil",
+      "confirmLabel": "Evet, hesabımı sil",
       "warningText": "Bu işlem geri alınamaz. Geçmiş başvuru ve işlem kayıtları silmeyi engelleyebilir. Silme engellenirse hesabınız ve verileriniz silinmez.",
       "pending": "Siliniyor…",
       "cancel": "Vazgeç",
       "rateLimited": "Çok fazla silme denemesi. Lütfen daha sonra tekrar deneyin.",
       "failed": "Hesabınız silinemedi. Geçmiş kayıtlar nedeniyle işlem engellenmiş olabilir. Lütfen destek ekibiyle iletişime geçin."
+    },
+    "dangerZone": {
+      "title": "Tehlikeli Bölge",
+      "description": "Bu işlemler geri alınamaz. Devam etmeden önce dikkatle okuyun."
     },
     "employerWorkspaceLink": "İşveren alanı",
     "messages": {
@@ -1112,15 +1115,31 @@
       "linkUrl": "Bağlantı URL'si"
     },
     "sections": {
+      "essentials": {
+        "title": "Temel Bilgiler & Özet",
+        "description": "Ad Soyad, telefon, mesleki başlık ve konum"
+      },
+      "preferences": {
+        "title": "Çalışma Tercihleri",
+        "description": "Çalışma türü, çalışma düzeni ve işe başlama uygunluğu"
+      },
       "experience": {
-        "title": "İş deneyimi",
+        "title": "İş Deneyimi",
         "add": "Deneyim ekle",
         "description": "Görevlerinizi, sorumluluklarınızı ve öne çıkan sonuçlarınızı ekleyin."
       },
       "education": {
-        "title": "Eğitim",
+        "title": "Eğitim Bilgileri",
         "add": "Eğitim ekle",
         "description": "Eğitim geçmişinizi, derecelerinizi ve ilgili alanları belirtin."
+      },
+      "languagesCerts": {
+        "title": "Diller & Sertifikalar",
+        "description": "Bildiğiniz diller ve mesleki sertifikalarınız"
+      },
+      "linksSkills": {
+        "title": "Bağlantılar & Beceriler",
+        "description": "Profesyonel bağlantılarınız ve beceri listeniz"
       },
       "languages": {
         "title": "Diller",
@@ -1143,6 +1162,16 @@
         "description": "LinkedIn, GitHub ve diğer profesyonel bağlantılarınızı ekleyin"
       }
     },
+    "accordion": {
+      "openAll": "Tümünü Aç",
+      "closeAll": "Tümünü Kapat"
+    },
+    "revert": {
+      "label": "Değişiklikleri geri al",
+      "title": "Formu kaydedilmemiş haline getirir"
+    },
+    "entryCount": "kayıt",
+    "selectPlaceholder": "Seçilmedi",
     "resumeImport": {
       "title": "CV’den içe aktar",
       "description": "Desteklenen PDF, DOCX, RTF, ODT, TXT veya Markdown CV’nizi seçin. Metin sunucuda çıkarılır; taranmış PDF’ler yapılandırılmış bir görüntü sağlayıcısıyla işlenebilir. Türkçe, İngilizce, Rusça ve diğer diller desteklenir.",

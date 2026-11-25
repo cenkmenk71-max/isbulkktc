@@ -134,7 +134,6 @@ export function mergeResumeDraft(
       phone: current.phone,
       jobTypePreference: current.jobTypePreference,
       workplaceModePreference: current.workplaceModePreference,
-      salaryExpectation: current.salaryExpectation,
       availability: current.availability,
       headline,
       location,

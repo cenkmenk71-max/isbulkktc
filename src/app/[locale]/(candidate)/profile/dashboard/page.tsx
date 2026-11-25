@@ -142,13 +142,15 @@ export default async function CandidateDashboardPage() {
         aria-labelledby="candidate-danger-zone-title"
         className="candidate-dashboard-danger"
       >
-        <h2 id="candidate-danger-zone-title">{copy("deleteAccount.title")}</h2>
-        <p>{copy("deleteAccount.description")}</p>
-        <DeleteAccountButton
-          confirmLabel={copy("deleteAccount.confirmLabel")}
-          buttonLabel={copy("deleteAccount.buttonLabel")}
-          warningText={copy("deleteAccount.warningText")}
-        />
+        <div className="danger-zone-card">
+          <h2 id="candidate-danger-zone-title">{copy("dangerZone.title")}</h2>
+          <p>{copy("dangerZone.description")}</p>
+          <DeleteAccountButton
+            confirmLabel={copy("deleteAccount.confirmLabel")}
+            buttonLabel={copy("deleteAccount.buttonLabel")}
+            warningText={copy("deleteAccount.warningText")}
+          />
+        </div>
       </section>
     </div>
   );

@@ -2,6 +2,9 @@
 
 import {
   useActionState,
+  useEffect,
+  useId,
+  useMemo,
   useRef,
   useState,
   useTransition,
@@ -11,11 +14,14 @@ import {
 import { useTranslations } from "next-intl";
 import {
   Check,
+  ChevronDown,
+  ChevronRight,
   Circle,
   FileUp,
   LoaderCircle,
   LockKeyhole,
   Plus,
+  RotateCcw,
   Sparkles,
   Trash2,
 } from "lucide-react";
@@ -30,6 +36,12 @@ import type {
   CandidateProfileValues,
 } from "./schemas";
 import { mergeResumeDraft } from "./resume-profile-draft";
+import {
+  candidateProfileSectionKeys,
+  getOpenCandidateProfileSections,
+  hasEntryContent,
+  type CandidateProfileSectionKey,
+} from "./candidate-profile-sections";
 import {
   AccountPanel,
   type AccountPanelAccount,
@@ -47,14 +59,6 @@ const initialState: CandidateProfileFormState = {
   message: "idle",
 };
 const proficiencyLevels = ["Native", "C2", "C1", "B2", "B1", "A2", "A1"] as const;
-
-function hasEntryContent(entries: object[]) {
-  return entries.some((entry) =>
-    Object.values(entry).some(
-      (value) => typeof value === "string" && value.trim().length > 0,
-    ),
-  );
-}
 
 function focusProfileEntry(section: Element | null, index: number) {
   requestAnimationFrame(() => {
@@ -132,22 +136,55 @@ function ProfileEntry({
   );
 }
 
-function ProfileSection({
+function AccordionCard({
   title,
   description,
   children,
+  isOpen,
+  onToggle,
+  badge,
+  sectionKey,
 }: {
   title: string;
   description: string;
   children: ReactNode;
+  isOpen: boolean;
+  onToggle: () => void;
+  badge?: ReactNode;
+  sectionKey: CandidateProfileSectionKey;
 }) {
+  const contentId = useId();
+
   return (
-    <section className="candidate-profile-section">
-      <div className="candidate-profile-section-heading">
-        <h3>{title}</h3>
-        <p>{description}</p>
+    <section
+      className="candidate-profile-accordion-card"
+      id={`candidate-profile-section-${sectionKey}`}
+    >
+      <h3 className="candidate-profile-accordion-heading-wrap">
+        <button
+          type="button"
+          className="candidate-profile-accordion-heading"
+          onClick={onToggle}
+          aria-expanded={isOpen}
+          aria-controls={contentId}
+        >
+          <span className="candidate-profile-accordion-title">
+            <span>{title}</span>
+            {badge}
+          </span>
+          <span className="candidate-profile-accordion-chevron" aria-hidden="true">
+            {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+          </span>
+        </button>
+      </h3>
+      <p className="candidate-profile-section-description">{description}</p>
+      <div
+        id={contentId}
+        className="candidate-profile-accordion-content"
+        hidden={!isOpen}
+      >
+        {children}
       </div>
-      {children}
     </section>
   );
 }
@@ -168,6 +205,7 @@ export function CandidateProfileForm({
   const [, startImportTransition] = useTransition();
   const resumeInputRef = useRef<HTMLInputElement>(null);
   const fullNameInputRef = useRef<HTMLInputElement>(null);
+
   const [fullName, setFullName] = useState(account.displayName);
   const [phone, setPhone] = useState(profile.phone ?? "");
   const [jobTypePreference, setJobTypePreference] = useState(
@@ -175,9 +213,6 @@ export function CandidateProfileForm({
   );
   const [workplaceModePreference, setWorkplaceModePreference] = useState(
     profile.workplaceModePreference,
-  );
-  const [salaryExpectation, setSalaryExpectation] = useState(
-    profile.salaryExpectation ?? "",
   );
   const [availability, setAvailability] = useState(profile.availability ?? "");
   const [headline, setHeadline] = useState(profile.headline ?? "");
@@ -211,55 +246,137 @@ export function CandidateProfileForm({
   const [importSkipped, setImportSkipped] = useState(0);
   const [resumeImported, setResumeImported] = useState(false);
   const [isDraggingResume, setIsDraggingResume] = useState(false);
-  const [additionalSectionsOpen, setAdditionalSectionsOpen] = useState(
-    Boolean(
-      profile.experience.length ||
-        profile.education.length ||
-        profile.languages.length ||
-        profile.certifications.length ||
-        profile.links.length,
-    ),
+
+  const [openSections, setOpenSections] = useState<
+    Set<CandidateProfileSectionKey>
+  >(() =>
+    getOpenCandidateProfileSections(profile),
   );
 
-  const profileEssentials = [
-    { key: "headline", complete: Boolean(headline.trim()) },
-    { key: "location", complete: Boolean(location.trim()) },
-    {
-      key: "skills",
-      complete: skillsText.split(/[,;\n]+/).some((skill) => skill.trim()),
-    },
-    { key: "experience", complete: hasEntryContent(experience) },
-    { key: "education", complete: hasEntryContent(education) },
-    { key: "languages", complete: languages.some((entry) => entry.name.trim()) },
-    { key: "certifications", complete: hasEntryContent(certifications) },
-    { key: "summary", complete: Boolean(summary.trim()) },
-    { key: "links", complete: hasEntryContent(links) },
-  ] as const;
-  const completedEssentials = profileEssentials.filter(
-    (item) => item.complete,
-  ).length;
-  const profileStatus =
-    completedEssentials === 0
-      ? "notStarted"
-      : completedEssentials === profileEssentials.length
-        ? "complete"
-        : "inProgress";
-  const isProfileEmpty = !(
-    headline.trim() ||
-    location.trim() ||
-    phone.trim() ||
-    jobTypePreference.length ||
-    workplaceModePreference.length ||
-    salaryExpectation.trim() ||
-    availability.trim() ||
-    skillsText.trim() ||
-    summary.trim() ||
-    hasEntryContent(experience) ||
-    hasEntryContent(education) ||
-    languages.some((entry) => entry.name.trim()) ||
-    hasEntryContent(certifications) ||
-    hasEntryContent(links)
-  );
+  const [initialValues, setInitialValues] = useState(() => ({
+    ...profile,
+    fullName: account.displayName,
+    phone: profile.phone ?? "",
+    availability: profile.availability ?? "",
+    headline: profile.headline ?? "",
+    location: resolveNorthernCyprusDistrict(profile.location) ?? "",
+    summary: profile.summary ?? "",
+    skillsText: profile.skills.join("\n"),
+  }));
+  const currentValuesRef = useRef(initialValues);
+  const previousActionStateRef = useRef(state);
+
+  useEffect(() => {
+    currentValuesRef.current = {
+      ...initialValues,
+      fullName,
+      phone,
+      jobTypePreference,
+      workplaceModePreference,
+      availability,
+      headline,
+      location,
+      summary,
+      skillsText,
+      experience,
+      education,
+      languages,
+      certifications,
+      links,
+    };
+  }, [
+    initialValues,
+    fullName,
+    phone,
+    jobTypePreference,
+    workplaceModePreference,
+    availability,
+    headline,
+    location,
+    summary,
+    skillsText,
+    experience,
+    education,
+    languages,
+    certifications,
+    links,
+  ]);
+
+  useEffect(() => {
+    if (previousActionStateRef.current === state) return;
+    previousActionStateRef.current = state;
+    if (state.status !== "success") return;
+
+    setInitialValues(currentValuesRef.current);
+    setResumeImported(false);
+    setImportSkipped(0);
+    setImportStatus("idle");
+  }, [state]);
+
+  const hasUnsavedChanges = useMemo(() => {
+    const initial = initialValues;
+    if (!initial) return false;
+
+    if (fullName !== initial.fullName) return true;
+    if (phone !== initial.phone) return true;
+    if (headline !== initial.headline) return true;
+    if (location !== initial.location) return true;
+    if (availability !== initial.availability) return true;
+    if (summary !== initial.summary) return true;
+    if (skillsText !== initial.skillsText) return true;
+    if (jobTypePreference !== initial.jobTypePreference) return true;
+    if (workplaceModePreference !== initial.workplaceModePreference) return true;
+    if (JSON.stringify(experience) !== JSON.stringify(initial.experience))
+      return true;
+    if (JSON.stringify(education) !== JSON.stringify(initial.education))
+      return true;
+    if (JSON.stringify(languages) !== JSON.stringify(initial.languages))
+      return true;
+    if (
+      JSON.stringify(certifications) !== JSON.stringify(initial.certifications)
+    )
+      return true;
+    if (JSON.stringify(links) !== JSON.stringify(initial.links)) return true;
+
+    return false;
+  }, [
+    fullName,
+    phone,
+    headline,
+    location,
+    availability,
+    summary,
+    skillsText,
+    jobTypePreference,
+    workplaceModePreference,
+    experience,
+    education,
+    languages,
+    certifications,
+    links,
+    initialValues,
+  ]);
+
+  function revertToInitial() {
+    const initial = initialValues;
+    setFullName(initial.fullName);
+    setPhone(initial.phone);
+    setJobTypePreference(initial.jobTypePreference);
+    setWorkplaceModePreference(initial.workplaceModePreference);
+    setAvailability(initial.availability);
+    setHeadline(initial.headline);
+    setLocation(initial.location);
+    setSkillsText(initial.skillsText);
+    setExperience(initial.experience);
+    setEducation(initial.education);
+    setLanguages(initial.languages);
+    setCertifications(initial.certifications);
+    setSummary(initial.summary);
+    setLinks(initial.links ?? []);
+    setResumeImported(false);
+    setImportSkipped(0);
+    setImportStatus("idle");
+  }
 
   function updateExperience(
     index: number,
@@ -309,11 +426,7 @@ export function CandidateProfileForm({
     );
   }
 
-  function updateLink(
-    index: number,
-    field: "label" | "url",
-    value: string,
-  ) {
+  function updateLink(index: number, field: "label" | "url", value: string) {
     setLinks((currentLinks) =>
       currentLinks.map((link, linkIndex) =>
         linkIndex === index ? { ...link, [field]: value } : link,
@@ -322,7 +435,9 @@ export function CandidateProfileForm({
   }
 
   function removeLink(index: number) {
-    setLinks((currentLinks) => currentLinks.filter((_, linkIndex) => linkIndex !== index));
+    setLinks((currentLinks) =>
+      currentLinks.filter((_, linkIndex) => linkIndex !== index),
+    );
   }
 
   function addLink() {
@@ -387,7 +502,6 @@ export function CandidateProfileForm({
           phone,
           jobTypePreference,
           workplaceModePreference,
-          salaryExpectation,
           availability,
           headline,
           location,
@@ -415,15 +529,6 @@ export function CandidateProfileForm({
       setCertifications(mergedProfile.certifications);
       setSummary(mergedProfile.summary);
       setLinks(mergedProfile.links);
-      if (
-        mergedProfile.experience.length ||
-        mergedProfile.education.length ||
-        mergedProfile.languages.length ||
-        mergedProfile.certifications.length ||
-        mergedProfile.links.length
-      ) {
-        setAdditionalSectionsOpen(true);
-      }
       setImportSkipped(mergeResult.skipped);
       if (mergeResult.added === 0) {
         setImportStatus(
@@ -438,6 +543,7 @@ export function CandidateProfileForm({
         mergeResult.skipped > 0 ? "importedWithSkipped" : "imported",
       );
       setResumeImported(true);
+      setOpenSections(getOpenCandidateProfileSections(mergedProfile));
     } catch (error) {
       console.error("Candidate CV import failed.", {
         name: error instanceof Error ? error.name : "UnknownError",
@@ -447,6 +553,73 @@ export function CandidateProfileForm({
       setImporting(false);
     }
   }
+
+  const profileEssentials = [
+    { key: "headline", complete: Boolean(headline.trim()) },
+    { key: "location", complete: Boolean(location.trim()) },
+    {
+      key: "skills",
+      complete: skillsText.split(/[,;\n]+/).some((skill) => skill.trim()),
+    },
+    { key: "experience", complete: hasEntryContent(experience) },
+    { key: "education", complete: hasEntryContent(education) },
+    { key: "languages", complete: languages.some((entry) => entry.name.trim()) },
+    { key: "certifications", complete: hasEntryContent(certifications) },
+    { key: "summary", complete: Boolean(summary.trim()) },
+    { key: "links", complete: hasEntryContent(links) },
+  ] as const;
+  const completedEssentials = profileEssentials.filter(
+    (item) => item.complete,
+  ).length;
+  const profileStatus =
+    completedEssentials === 0
+      ? "notStarted"
+      : completedEssentials === profileEssentials.length
+        ? "complete"
+        : "inProgress";
+
+  const isProfileEmpty = !(
+    headline.trim() ||
+    location.trim() ||
+    phone.trim() ||
+    Boolean(jobTypePreference) ||
+    Boolean(workplaceModePreference) ||
+    availability.trim() ||
+    skillsText.trim() ||
+    summary.trim() ||
+    hasEntryContent(experience) ||
+    hasEntryContent(education) ||
+    languages.some((entry) => entry.name.trim()) ||
+    hasEntryContent(certifications) ||
+    hasEntryContent(links)
+  );
+
+  const scrollToSection = (sectionKey: CandidateProfileSectionKey) => {
+    setOpenSections((prev) => new Set(prev).add(sectionKey));
+    const section = document.getElementById(
+      `candidate-profile-section-${sectionKey}`,
+    );
+    requestAnimationFrame(() => {
+      section?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "center",
+      });
+    });
+  };
+
+  const completionKeyToSection: Record<string, CandidateProfileSectionKey> = {
+    headline: "essentials",
+    location: "essentials",
+    skills: "linksSkills",
+    experience: "experience",
+    education: "education",
+    languages: "languagesCerts",
+    certifications: "languagesCerts",
+    links: "linksSkills",
+    summary: "essentials",
+  };
 
   return (
     <div className="candidate-dashboard-grid">
@@ -616,9 +789,21 @@ export function CandidateProfileForm({
                           count: importSkipped,
                         })
                       : importStatus === "noNewInformation"
-                      ? rootCopy("resumeImport.noNewInformation")
-                  : rootCopy(`resumeImport.errors.${importStatus}`)}
+                        ? rootCopy("resumeImport.noNewInformation")
+                        : rootCopy(`resumeImport.errors.${importStatus}`)}
             </p>
+            {resumeImported ? (
+              <button
+                className="candidate-revert-button"
+                disabled={!hasUnsavedChanges || pending || importing}
+                onClick={revertToInitial}
+                title={copy("revert.title")}
+                type="button"
+              >
+                <RotateCcw size={16} aria-hidden="true" />
+                {copy("revert.label")}
+              </button>
+            ) : null}
             {importing ? (
               <div
                 aria-hidden="true"
@@ -633,7 +818,7 @@ export function CandidateProfileForm({
 
           <fieldset
             className="candidate-profile-fields"
-            disabled={importing}
+            disabled={pending || importing}
           >
           <input name="experience" type="hidden" value={JSON.stringify(experience)} />
           <input name="education" type="hidden" value={JSON.stringify(education)} />
@@ -649,133 +834,85 @@ export function CandidateProfileForm({
             value={JSON.stringify(links)}
           />
           <input
-            name="jobTypePreference"
-            type="hidden"
-            value={JSON.stringify(jobTypePreference)}
-          />
-          <input
-            name="workplaceModePreference"
-            type="hidden"
-            value={JSON.stringify(workplaceModePreference)}
-          />
-          <input
             name="resumeImported"
             type="hidden"
-            value={resumeImported ? "1" : ""}
+            value={resumeImported && hasUnsavedChanges ? "1" : ""}
           />
 
-          <ProfileEntry
-            label={copy("fullNameLabel")}
-            maxLength={80}
-            name="fullName"
-            onChange={setFullName}
-            hint={copy("fullNameHint")}
-            placeholder={copy("fullNamePlaceholder")}
-            inputRef={fullNameInputRef}
-            value={fullName}
-          />
-          <ProfileEntry
-            label={copy("phoneLabel")}
-            maxLength={80}
-            name="phone"
-            onChange={setPhone}
-            value={phone}
-          />
-          <ProfileEntry
-            label={copy("salaryExpectationLabel")}
-            maxLength={120}
-            name="salaryExpectation"
-            onChange={setSalaryExpectation}
-            value={salaryExpectation}
-          />
-          <ProfileEntry
-            label={copy("availabilityLabel")}
-            maxLength={80}
-            name="availability"
-            onChange={setAvailability}
-            value={availability}
-          />
-          <fieldset className="candidate-profile-preferences">
-            <legend>{copy("jobTypePreferenceLabel")}</legend>
-            {jobTypeKeys.map((jobType) => (
-              <label key={jobType}>
-                <input
-                  checked={jobTypePreference.includes(jobType)}
-                  onChange={(event) => {
-                    const checked = event.currentTarget.checked;
-                    setJobTypePreference((current) =>
-                      checked
-                        ? [...current, jobType]
-                        : current.filter((value) => value !== jobType),
-                    );
-                  }}
-                  type="checkbox"
-                />
-                {rootCopy(`HomeJobSearch.jobTypes.${jobType}`)}
-              </label>
-            ))}
-          </fieldset>
-          <fieldset className="candidate-profile-preferences">
-            <legend>{copy("workplaceModePreferenceLabel")}</legend>
-            {workplaceModeKeys.map((workplaceMode) => (
-              <label key={workplaceMode}>
-                <input
-                  checked={workplaceModePreference.includes(workplaceMode)}
-                  onChange={(event) => {
-                    const checked = event.currentTarget.checked;
-                    setWorkplaceModePreference((current) =>
-                      checked
-                        ? [...current, workplaceMode]
-                        : current.filter((value) => value !== workplaceMode),
-                    );
-                  }}
-                  type="checkbox"
-                />
-                {rootCopy(`HomeJobSearch.workplaceModes.${workplaceMode}`)}
-              </label>
-            ))}
-          </fieldset>
-          <ProfileEntry
-            label={copy("headlineLabel")}
-            maxLength={140}
-            name="headline"
-            onChange={setHeadline}
-            hint={copy("headlineHint")}
-            placeholder={copy("headlinePlaceholder")}
-            value={headline}
-          />
-          <label>
-            {copy("locationLabel")}
-            <select
-              name="location"
-              onChange={(event) => setLocation(event.currentTarget.value)}
-              value={location}
+          <div className="candidate-profile-accordion-controls">
+            <button
+              className="candidate-profile-accordion-control"
+              onClick={() =>
+                setOpenSections(new Set(candidateProfileSectionKeys))
+              }
+              type="button"
             >
-              <option value="">{copy("locationPlaceholder")}</option>
-              {northernCyprusDistricts.map(({ value, key }) => (
-                <option key={value} value={value}>
-                  {copy(`districts.${key}`)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {copy("skillsLabel")}
-            <textarea
-              maxLength={2600}
-              name="skillsText"
-              onChange={(event) => setSkillsText(event.target.value)}
-              placeholder={copy("skillsPlaceholder")}
-              rows={4}
-              value={skillsText}
-            />
-            <small>{copy("skillsHint")}</small>
-          </label>
+              {copy("accordion.openAll")}
+            </button>
+            <button
+              className="candidate-profile-accordion-control"
+              onClick={() => setOpenSections(new Set())}
+              type="button"
+            >
+              {copy("accordion.closeAll")}
+            </button>
+          </div>
 
-          <ProfileSection
-            title={copy("summaryLabel")}
-            description={copy("summaryDescription")}
+          <AccordionCard
+            sectionKey="essentials"
+            title={copy("sections.essentials.title")}
+            description={copy("sections.essentials.description")}
+            isOpen={openSections.has("essentials")}
+            onToggle={() =>
+              setOpenSections((prev) => {
+                const next = new Set(prev);
+                if (next.has("essentials")) next.delete("essentials");
+                else next.add("essentials");
+                return next;
+              })
+            }
           >
+            <ProfileEntry
+              label={copy("fullNameLabel")}
+              maxLength={80}
+              name="fullName"
+              onChange={setFullName}
+              hint={copy("fullNameHint")}
+              placeholder={copy("fullNamePlaceholder")}
+              inputRef={fullNameInputRef}
+              value={fullName}
+            />
+            <ProfileEntry
+              label={copy("phoneLabel")}
+              maxLength={80}
+              name="phone"
+              onChange={setPhone}
+              value={phone}
+            />
+            <ProfileEntry
+              label={copy("headlineLabel")}
+              maxLength={140}
+              name="headline"
+              onChange={setHeadline}
+              hint={copy("headlineHint")}
+              placeholder={copy("headlinePlaceholder")}
+              value={headline}
+            />
+            <label>
+              {copy("locationLabel")}
+              <select
+                name="location"
+                onChange={(event) => setLocation(event.currentTarget.value)}
+                value={location}
+              >
+                <option value="">{copy("locationPlaceholder")}</option>
+                {northernCyprusDistricts.map(({ value, key }) => (
+                  <option key={value} value={value}>
+                    {copy(`districts.${key}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
             <ProfileEntry
               label={copy("summaryLabel")}
               maxLength={2000}
@@ -785,85 +922,91 @@ export function CandidateProfileForm({
               placeholder={copy("summaryPlaceholder")}
               value={summary}
             />
-          </ProfileSection>
+          </AccordionCard>
 
-          <ProfileSection
-            title={copy("linksLabel")}
-            description={copy("linksDescription")}
+          <AccordionCard
+            sectionKey="preferences"
+            title={copy("sections.preferences.title")}
+            description={copy("sections.preferences.description")}
+            isOpen={openSections.has("preferences")}
+            onToggle={() =>
+              setOpenSections((prev) => {
+                const next = new Set(prev);
+                if (next.has("preferences")) next.delete("preferences");
+                else next.add("preferences");
+                return next;
+              })
+            }
           >
-            {links.map((link, index) => (
-              <fieldset className="candidate-profile-entry" key={index}>
-                <legend>{copy("entryLabel", { number: index + 1 })}</legend>
-                <button
-                  aria-label={copy("removeEntry", {
-                    section: copy("sections.links.title"),
-                    number: index + 1,
-                  })}
-                  className="candidate-entry-remove"
-                  onClick={(event) => {
-                    const section = event.currentTarget.closest(
-                      ".candidate-profile-section",
-                    );
-                    removeLink(index);
-                    restoreProfileSectionFocus(section, index, links.length - 1);
-                  }}
-                  type="button"
-                >
-                  <Trash2 size={15} aria-hidden="true" />
-                </button>
-                <div className="candidate-entry-fields">
-                  <ProfileEntry
-                    label={copy("fields.linkLabel")}
-                    maxLength={120}
-                    onChange={(value) => updateLink(index, "label", value)}
-                    value={link.label}
-                  />
-                  <ProfileEntry
-                    label={copy("fields.linkUrl")}
-                    maxLength={600}
-                    onChange={(value) => updateLink(index, "url", value)}
-                    value={link.url}
-                  />
-                </div>
-              </fieldset>
-            ))}
-            <button
-              className="candidate-entry-add"
-              disabled={links.length >= 12}
-              onClick={(event) => {
-                const section = event.currentTarget.closest(
-                  ".candidate-profile-section",
-                );
-                const index = links.length;
-                addLink();
-                focusProfileEntry(section, index);
-              }}
-              type="button"
-            >
-              <Plus size={16} aria-hidden="true" />
-              {copy("linksAdd")}
-            </button>
-          </ProfileSection>
+            <label>
+              {copy("jobTypePreferenceLabel")}
+              <select
+                name="jobTypePreference"
+                onChange={(event) => {
+                  const selected = event.currentTarget.value;
+                  setJobTypePreference(
+                    jobTypeKeys.find((jobType) => jobType === selected) ?? "",
+                  );
+                }}
+                value={jobTypePreference}
+              >
+                <option value="">{copy("selectPlaceholder")}</option>
+                {jobTypeKeys.map((jobType) => (
+                  <option key={jobType} value={jobType}>
+                    {rootCopy(`HomeJobSearch.jobTypes.${jobType}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {copy("workplaceModePreferenceLabel")}
+              <select
+                name="workplaceModePreference"
+                onChange={(event) => {
+                  const selected = event.currentTarget.value;
+                  setWorkplaceModePreference(
+                    workplaceModeKeys.find((mode) => mode === selected) ?? "",
+                  );
+                }}
+                value={workplaceModePreference}
+              >
+                <option value="">{copy("selectPlaceholder")}</option>
+                {workplaceModeKeys.map((workplaceMode) => (
+                  <option key={workplaceMode} value={workplaceMode}>
+                    {rootCopy(`HomeJobSearch.workplaceModes.${workplaceMode}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <ProfileEntry
+              label={copy("availabilityLabel")}
+              maxLength={80}
+              name="availability"
+              onChange={setAvailability}
+              value={availability}
+            />
+          </AccordionCard>
 
-          <details
-            className="candidate-profile-additional"
-            onToggle={(event) => setAdditionalSectionsOpen(event.currentTarget.open)}
-            open={additionalSectionsOpen}
-          >
-            <summary>
-              {copy("additionalDetails", {
-                count:
-                  experience.length +
-                  education.length +
-                  languages.length +
-                  certifications.length +
-                  links.length,
-              })}
-            </summary>
-            <p>{copy("additionalDetailsHint")}</p>
-            <ProfileSection
+          <AccordionCard
+            sectionKey="experience"
             title={copy("sections.experience.title")}
             description={copy("sections.experience.description")}
+            isOpen={openSections.has("experience")}
+            onToggle={() =>
+              setOpenSections((prev) => {
+                const next = new Set(prev);
+                if (next.has("experience")) next.delete("experience");
+                else next.add("experience");
+                return next;
+              })
+            }
+            badge={
+              experience.length > 0 ? (
+                <span className="candidate-profile-section-badge">
+                  {experience.length} {copy("entryCount")}
+                </span>
+              ) : null
+            }
           >
             {experience.map((entry, index) => (
               <fieldset className="candidate-profile-entry" key={index}>
@@ -876,7 +1019,7 @@ export function CandidateProfileForm({
                   className="candidate-entry-remove"
                   onClick={(event) => {
                     const section = event.currentTarget.closest(
-                      ".candidate-profile-section",
+                      ".candidate-profile-accordion-card",
                     );
                     setExperience((entries) =>
                       entries.filter((_, entryIndex) => entryIndex !== index),
@@ -945,7 +1088,7 @@ export function CandidateProfileForm({
               disabled={experience.length >= 12}
               onClick={(event) => {
                 const section = event.currentTarget.closest(
-                  ".candidate-profile-section",
+                  ".candidate-profile-accordion-card",
                 );
                 const index = experience.length;
                 setExperience((entries) => [
@@ -966,11 +1109,28 @@ export function CandidateProfileForm({
               <Plus size={16} aria-hidden="true" />
               {copy("sections.experience.add")}
             </button>
-            </ProfileSection>
+          </AccordionCard>
 
-            <ProfileSection
+          <AccordionCard
+            sectionKey="education"
             title={copy("sections.education.title")}
             description={copy("sections.education.description")}
+            isOpen={openSections.has("education")}
+            onToggle={() =>
+              setOpenSections((prev) => {
+                const next = new Set(prev);
+                if (next.has("education")) next.delete("education");
+                else next.add("education");
+                return next;
+              })
+            }
+            badge={
+              education.length > 0 ? (
+                <span className="candidate-profile-section-badge">
+                  {education.length} {copy("entryCount")}
+                </span>
+              ) : null
+            }
           >
             {education.map((entry, index) => (
               <fieldset className="candidate-profile-entry" key={index}>
@@ -983,7 +1143,7 @@ export function CandidateProfileForm({
                   className="candidate-entry-remove"
                   onClick={(event) => {
                     const section = event.currentTarget.closest(
-                      ".candidate-profile-section",
+                      ".candidate-profile-accordion-card",
                     );
                     setEducation((entries) =>
                       entries.filter((_, entryIndex) => entryIndex !== index),
@@ -1054,7 +1214,7 @@ export function CandidateProfileForm({
               disabled={education.length >= 12}
               onClick={(event) => {
                 const section = event.currentTarget.closest(
-                  ".candidate-profile-section",
+                  ".candidate-profile-accordion-card",
                 );
                 const index = education.length;
                 setEducation((entries) => [
@@ -1075,181 +1235,306 @@ export function CandidateProfileForm({
               <Plus size={16} aria-hidden="true" />
               {copy("sections.education.add")}
             </button>
-            </ProfileSection>
+          </AccordionCard>
 
-            <ProfileSection
-            title={copy("sections.languages.title")}
-            description={copy("sections.languages.description")}
+          <AccordionCard
+            sectionKey="languagesCerts"
+            title={copy("sections.languagesCerts.title")}
+            description={copy("sections.languagesCerts.description")}
+            isOpen={openSections.has("languagesCerts")}
+            onToggle={() =>
+              setOpenSections((prev) => {
+                const next = new Set(prev);
+                if (next.has("languagesCerts")) next.delete("languagesCerts");
+                else next.add("languagesCerts");
+                return next;
+              })
+            }
+            badge={
+              languages.length > 0 || certifications.length > 0 ? (
+                <span className="candidate-profile-section-badge">
+                  {languages.length + certifications.length} {copy("entryCount")}
+                </span>
+              ) : null
+            }
           >
-            {languages.map((entry, index) => (
-              <fieldset className="candidate-profile-entry" key={index}>
-                <legend>{copy("entryLabel", { number: index + 1 })}</legend>
-                <button
-                  aria-label={copy("removeEntry", {
-                    section: copy("sections.languages.title"),
-                    number: index + 1,
-                  })}
-                  className="candidate-entry-remove"
-                  onClick={(event) => {
-                    const section = event.currentTarget.closest(
-                      ".candidate-profile-section",
-                    );
-                    setLanguages((entries) =>
-                      entries.filter((_, entryIndex) => entryIndex !== index),
-                    );
-                    restoreProfileSectionFocus(
-                      section,
-                      index,
-                      languages.length - 1,
-                    );
-                  }}
-                  type="button"
-                >
-                  <Trash2 size={15} aria-hidden="true" />
-                </button>
-                <div className="candidate-entry-fields candidate-entry-fields--two">
-                  <ProfileEntry
-                    label={copy("fields.language")}
-                    maxLength={80}
-                    onChange={(value) => updateLanguage(index, "name", value)}
-                    value={entry.name}
-                  />
-                  <label>
-                    {copy("fields.proficiency")}
-                    <select
-                      onChange={(event) =>
-                        updateLanguage(index, "proficiency", event.target.value)
-                      }
-                      value={entry.proficiency}
+            <div className="candidate-profile-subsections">
+              <div>
+                <h4>{copy("sections.languages.title")}</h4>
+                {languages.map((entry, index) => (
+                  <fieldset className="candidate-profile-entry" key={index}>
+                    <legend>{copy("entryLabel", { number: index + 1 })}</legend>
+                    <button
+                      aria-label={copy("removeEntry", {
+                        section: copy("sections.languages.title"),
+                        number: index + 1,
+                      })}
+                      className="candidate-entry-remove"
+                      onClick={(event) => {
+                        const section = event.currentTarget.closest(
+                          ".candidate-profile-accordion-card",
+                        );
+                        setLanguages((entries) =>
+                          entries.filter((_, entryIndex) => entryIndex !== index),
+                        );
+                        restoreProfileSectionFocus(
+                          section,
+                          index,
+                          languages.length - 1,
+                        );
+                      }}
+                      type="button"
                     >
-                      {proficiencyLevels.map((level) => (
-                          <option key={level} value={level}>
-                            {copy(`proficiencyLevels.${level}`)}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                </div>
-              </fieldset>
-            ))}
-            <button
-              className="candidate-entry-add"
-              disabled={languages.length >= 12}
-              onClick={(event) => {
-                const section = event.currentTarget.closest(
-                  ".candidate-profile-section",
-                );
-                const index = languages.length;
-                setLanguages((entries) => [
-                  ...entries,
-                  { name: "", proficiency: "B1" as const },
-                ]);
-                focusProfileEntry(section, index);
-              }}
-              type="button"
-            >
-              <Plus size={16} aria-hidden="true" />
-              {copy("sections.languages.add")}
-            </button>
-            </ProfileSection>
-
-            <ProfileSection
-            title={copy("sections.certifications.title")}
-            description={copy("sections.certifications.description")}
-          >
-            {certifications.map((entry, index) => (
-              <fieldset className="candidate-profile-entry" key={index}>
-                <legend>{copy("entryLabel", { number: index + 1 })}</legend>
+                      <Trash2 size={15} aria-hidden="true" />
+                    </button>
+                    <div className="candidate-entry-fields candidate-entry-fields--two">
+                      <ProfileEntry
+                        label={copy("fields.language")}
+                        maxLength={80}
+                        onChange={(value) => updateLanguage(index, "name", value)}
+                        value={entry.name}
+                      />
+                      <label>
+                        {copy("fields.proficiency")}
+                        <select
+                          onChange={(event) =>
+                            updateLanguage(index, "proficiency", event.target.value)
+                          }
+                          value={entry.proficiency}
+                        >
+                          {proficiencyLevels.map((level) => (
+                            <option key={level} value={level}>
+                              {copy(`proficiencyLevels.${level}`)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  </fieldset>
+                ))}
                 <button
-                  aria-label={copy("removeEntry", {
-                    section: copy("sections.certifications.title"),
-                    number: index + 1,
-                  })}
-                  className="candidate-entry-remove"
+                  className="candidate-entry-add"
+                  disabled={languages.length >= 12}
                   onClick={(event) => {
                     const section = event.currentTarget.closest(
-                      ".candidate-profile-section",
+                      ".candidate-profile-accordion-card",
                     );
-                    setCertifications((entries) =>
-                      entries.filter((_, entryIndex) => entryIndex !== index),
-                    );
-                    restoreProfileSectionFocus(
-                      section,
-                      index,
-                      certifications.length - 1,
-                    );
+                    const index = languages.length;
+                    setLanguages((entries) => [
+                      ...entries,
+                      { name: "", proficiency: "B1" as const },
+                    ]);
+                    focusProfileEntry(section, index);
                   }}
                   type="button"
                 >
-                  <Trash2 size={15} aria-hidden="true" />
+                  <Plus size={16} aria-hidden="true" />
+                  {copy("sections.languages.add")}
                 </button>
-                <div className="candidate-entry-fields">
-                  <ProfileEntry
-                    label={copy("fields.certification")}
-                    maxLength={160}
-                    onChange={(value) =>
-                      updateCertification(index, "name", value)
-                    }
-                    value={entry.name}
-                  />
-                  <ProfileEntry
-                    label={copy("fields.issuer")}
-                    maxLength={160}
-                    onChange={(value) =>
-                      updateCertification(index, "issuer", value)
-                    }
-                    value={entry.issuer}
-                  />
-                  <ProfileEntry
-                    label={copy("fields.issueDate")}
-                    maxLength={32}
-                    onChange={(value) =>
-                      updateCertification(index, "issueDate", value)
-                    }
-                    value={entry.issueDate}
-                    hint={copy("fields.dateHint")}
-                  />
-                  <ProfileEntry
-                    label={copy("fields.expiryDate")}
-                    maxLength={32}
-                    onChange={(value) =>
-                      updateCertification(index, "expiryDate", value)
-                    }
-                    value={entry.expiryDate}
-                    hint={copy("fields.dateHint")}
-                  />
-                </div>
-              </fieldset>
-            ))}
-            <button
-              className="candidate-entry-add"
-              disabled={certifications.length >= 12}
-              onClick={(event) => {
-                const section = event.currentTarget.closest(
-                  ".candidate-profile-section",
-                );
-                const index = certifications.length;
-                setCertifications((entries) => [
-                  ...entries,
-                  { name: "", issuer: "", issueDate: "", expiryDate: "" },
-                ]);
-                focusProfileEntry(section, index);
-              }}
-              type="button"
-            >
-              <Plus size={16} aria-hidden="true" />
-              {copy("sections.certifications.add")}
-            </button>
-            </ProfileSection>
-          </details>
+              </div>
 
-          <button
-            className="button button-dark"
-            disabled={pending || importing}
-            type="submit"
+              <div>
+                <h4>{copy("sections.certifications.title")}</h4>
+                {certifications.map((entry, index) => (
+                  <fieldset className="candidate-profile-entry" key={index}>
+                    <legend>{copy("entryLabel", { number: index + 1 })}</legend>
+                    <button
+                      aria-label={copy("removeEntry", {
+                        section: copy("sections.certifications.title"),
+                        number: index + 1,
+                      })}
+                      className="candidate-entry-remove"
+                      onClick={(event) => {
+                        const section = event.currentTarget.closest(
+                          ".candidate-profile-accordion-card",
+                        );
+                        setCertifications((entries) =>
+                          entries.filter((_, entryIndex) => entryIndex !== index),
+                        );
+                        restoreProfileSectionFocus(
+                          section,
+                          index,
+                          certifications.length - 1,
+                        );
+                      }}
+                      type="button"
+                    >
+                      <Trash2 size={15} aria-hidden="true" />
+                    </button>
+                    <div className="candidate-entry-fields">
+                      <ProfileEntry
+                        label={copy("fields.certification")}
+                        maxLength={160}
+                        onChange={(value) =>
+                          updateCertification(index, "name", value)
+                        }
+                        value={entry.name}
+                      />
+                      <ProfileEntry
+                        label={copy("fields.issuer")}
+                        maxLength={160}
+                        onChange={(value) =>
+                          updateCertification(index, "issuer", value)
+                        }
+                        value={entry.issuer}
+                      />
+                      <ProfileEntry
+                        label={copy("fields.issueDate")}
+                        maxLength={32}
+                        onChange={(value) =>
+                          updateCertification(index, "issueDate", value)
+                        }
+                        value={entry.issueDate}
+                        hint={copy("fields.dateHint")}
+                      />
+                      <ProfileEntry
+                        label={copy("fields.expiryDate")}
+                        maxLength={32}
+                        onChange={(value) =>
+                          updateCertification(index, "expiryDate", value)
+                        }
+                        value={entry.expiryDate}
+                        hint={copy("fields.dateHint")}
+                      />
+                    </div>
+                  </fieldset>
+                ))}
+                <button
+                  className="candidate-entry-add"
+                  disabled={certifications.length >= 12}
+                  onClick={(event) => {
+                    const section = event.currentTarget.closest(
+                      ".candidate-profile-accordion-card",
+                    );
+                    const index = certifications.length;
+                    setCertifications((entries) => [
+                      ...entries,
+                      { name: "", issuer: "", issueDate: "", expiryDate: "" },
+                    ]);
+                    focusProfileEntry(section, index);
+                  }}
+                  type="button"
+                >
+                  <Plus size={16} aria-hidden="true" />
+                  {copy("sections.certifications.add")}
+                </button>
+              </div>
+            </div>
+          </AccordionCard>
+
+          <AccordionCard
+            sectionKey="linksSkills"
+            title={copy("sections.linksSkills.title")}
+            description={copy("sections.linksSkills.description")}
+            isOpen={openSections.has("linksSkills")}
+            onToggle={() =>
+              setOpenSections((prev) => {
+                const next = new Set(prev);
+                if (next.has("linksSkills")) next.delete("linksSkills");
+                else next.add("linksSkills");
+                return next;
+              })
+            }
+            badge={
+              links.length > 0 || skillsText.trim().length > 0 ? (
+                <span className="candidate-profile-section-badge">
+                  {links.length + (skillsText.trim() ? 1 : 0)} {copy("entryCount")}
+                </span>
+              ) : null
+            }
           >
-            {pending ? copy("saving") : copy("save")}
-          </button>
+            <div className="candidate-profile-subsections">
+              <div>
+                <label>
+                  {copy("skillsLabel")}
+                  <textarea
+                    maxLength={2600}
+                    name="skillsText"
+                    onChange={(event) => setSkillsText(event.target.value)}
+                    placeholder={copy("skillsPlaceholder")}
+                    rows={4}
+                    value={skillsText}
+                  />
+                  <small>{copy("skillsHint")}</small>
+                </label>
+              </div>
+              <div>
+                <h4>{copy("sections.links.title")}</h4>
+                {links.map((link, index) => (
+                  <fieldset className="candidate-profile-entry" key={index}>
+                    <legend>{copy("entryLabel", { number: index + 1 })}</legend>
+                    <button
+                      aria-label={copy("removeEntry", {
+                        section: copy("sections.links.title"),
+                        number: index + 1,
+                      })}
+                      className="candidate-entry-remove"
+                      onClick={(event) => {
+                        const section = event.currentTarget.closest(
+                          ".candidate-profile-accordion-card",
+                        );
+                        removeLink(index);
+                        restoreProfileSectionFocus(section, index, links.length - 1);
+                      }}
+                      type="button"
+                    >
+                      <Trash2 size={15} aria-hidden="true" />
+                    </button>
+                    <div className="candidate-entry-fields">
+                      <ProfileEntry
+                        label={copy("fields.linkLabel")}
+                        maxLength={120}
+                        onChange={(value) => updateLink(index, "label", value)}
+                        value={link.label}
+                      />
+                      <ProfileEntry
+                        label={copy("fields.linkUrl")}
+                        maxLength={600}
+                        onChange={(value) => updateLink(index, "url", value)}
+                        value={link.url}
+                      />
+                    </div>
+                  </fieldset>
+                ))}
+                <button
+                  className="candidate-entry-add"
+                  disabled={links.length >= 12}
+                  onClick={(event) => {
+                    const section = event.currentTarget.closest(
+                      ".candidate-profile-accordion-card",
+                    );
+                    const index = links.length;
+                    addLink();
+                    focusProfileEntry(section, index);
+                  }}
+                  type="button"
+                >
+                  <Plus size={16} aria-hidden="true" />
+                  {copy("linksAdd")}
+                </button>
+              </div>
+            </div>
+          </AccordionCard>
+
+          <div className="candidate-profile-save-bar">
+            <button
+              className="button button-dark"
+              disabled={pending || importing}
+              type="submit"
+            >
+              {pending ? copy("saving") : copy("save")}
+            </button>
+            <button
+              className="candidate-revert-button"
+              disabled={!hasUnsavedChanges || pending || importing}
+              type="button"
+              onClick={revertToInitial}
+              title={copy("revert.title")}
+            >
+              <RotateCcw size={16} aria-hidden="true" />
+              {copy("revert.label")}
+            </button>
+          </div>
           <p
             aria-live="polite"
             className="candidate-profile-message"
@@ -1293,12 +1578,18 @@ export function CandidateProfileForm({
           <ul className="candidate-completion-list">
             {profileEssentials.map(({ key, complete }) => (
               <li key={key} data-complete={complete}>
-                {complete ? (
-                  <Check size={15} aria-hidden="true" />
-                ) : (
-                  <Circle size={15} aria-hidden="true" />
-                )}
-                {copy(`completionFields.${key}`)}
+                <button
+                  className="candidate-completion-link"
+                  onClick={() => scrollToSection(completionKeyToSection[key])}
+                  type="button"
+                >
+                  {complete ? (
+                    <Check size={15} aria-hidden="true" />
+                  ) : (
+                    <Circle size={15} aria-hidden="true" />
+                  )}
+                  {copy(`completionFields.${key}`)}
+                </button>
               </li>
             ))}
           </ul>

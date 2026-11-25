@@ -991,9 +991,8 @@
     "profileTitle": "جزئیات پروفایل",
     "profileDescription": "اطلاعات ذخیره‌شده خصوصی و متعلق به حساب شماست.",
     "phoneLabel": "تلفن",
-    "jobTypePreferenceLabel": "نوع کار ترجیحی",
-    "workplaceModePreferenceLabel": "شیوه کاری ترجیحی",
-    "salaryExpectationLabel": "حقوق مورد انتظار",
+    "jobTypePreferenceLabel": "نوع همکاری",
+    "workplaceModePreferenceLabel": "شیوه کار",
     "availabilityLabel": "زمان آمادگی برای شروع کار",
     "emptyProfile": {
       "title": "پروفایل خود را بسازید",
@@ -1060,6 +1059,10 @@
       "rateLimited": "تعداد تلاش‌های حذف بیش از حد است. بعداً دوباره امتحان کنید.",
       "failed": "حساب شما حذف نشد. ممکن است سوابق موجود مانع انجام عملیات شده باشند. با پشتیبانی تماس بگیرید."
     },
+    "dangerZone": {
+      "title": "بخش پرخطر",
+      "description": "این اقدامات برگشت‌پذیر نیستند. پیش از ادامه، اطلاعات را با دقت بخوانید."
+    },
     "employerWorkspaceLink": "فضای کارفرما",
     "messages": {
       "invalid": "اطلاعات را بررسی و دوباره تلاش کنید.",
@@ -1102,6 +1105,22 @@
       "linkUrl": "آدرس پیوند"
     },
     "sections": {
+      "essentials": {
+        "title": "اطلاعات پایه و خلاصه",
+        "description": "نام، تلفن، عنوان حرفه‌ای و موقعیت"
+      },
+      "preferences": {
+        "title": "ترجیحات کاری",
+        "description": "نوع همکاری، شیوه کار و زمان آمادگی برای شروع"
+      },
+      "languagesCerts": {
+        "title": "زبان‌ها و گواهی‌ها",
+        "description": "زبان‌هایی که می‌دانید و گواهی‌های حرفه‌ای شما"
+      },
+      "linksSkills": {
+        "title": "پیوندها و مهارت‌ها",
+        "description": "پیوندهای حرفه‌ای و مهارت‌های شما"
+      },
       "experience": {
         "title": "سوابق کاری",
         "add": "افزودن سابقه کاری",
@@ -1133,6 +1152,16 @@
         "description": "LinkedIn، GitHub و سایر پیوندهای حرفه‌ای خود را اضافه کنید"
       }
     },
+    "accordion": {
+      "openAll": "باز کردن همه",
+      "closeAll": "بستن همه"
+    },
+    "revert": {
+      "label": "بازگردانی تغییرات",
+      "title": "بازگرداندن پروفایل به وضعیت اولیه"
+    },
+    "entryCount": "مورد",
+    "selectPlaceholder": "انتخاب نشده",
     "resumeImport": {
       "title": "واردکردن اطلاعات از رزومه",
       "description": "یک فایل PDF، DOCX، RTF، ODT، TXT یا Markdown انتخاب کنید. متن روی سرور استخراج می‌شود؛ PDF اسکن‌شده در صورت پیکربندی ارائه‌دهندهٔ بینایی قابل پردازش است. رزومه‌های فارسی، ترکی، انگلیسی، روسی و زبان‌های دیگر پشتیبانی می‌شوند.",

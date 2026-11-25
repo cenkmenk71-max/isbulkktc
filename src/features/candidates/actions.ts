@@ -5,6 +5,18 @@ import { getCurrentUser } from "@/server/dal/user";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import { sendResumeReceivedEmail } from "@/server/email/mailer";
 
+function parseSection(formData: FormData, name: string): unknown {
+  const value = formData.get(name);
+  if (value === null) return undefined;
+  if (typeof value !== "string" || value.length > 50_000) return null;
+
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 export async function saveCandidateProfile(
   _previousState: CandidateProfileFormState,
   formData: FormData,
@@ -19,33 +31,21 @@ export async function saveCandidateProfile(
     return { status: "error", message: "inactive" };
   }
 
-  const parseSection = (name: string): unknown => {
-    const value = formData.get(name);
-    if (typeof value !== "string" || value.length > 50_000) return null;
-
-    try {
-      return JSON.parse(value);
-    } catch {
-      return null;
-    }
-  };
-
   const result = candidateProfileUpdateSchema.safeParse({
     fullName: formData.get("fullName"),
     phone: formData.get("phone") ?? "",
-    jobTypePreference: parseSection("jobTypePreference") ?? [],
-    workplaceModePreference: parseSection("workplaceModePreference") ?? [],
-    salaryExpectation: formData.get("salaryExpectation") ?? "",
+    jobTypePreference: formData.get("jobTypePreference") ?? "",
+    workplaceModePreference: formData.get("workplaceModePreference") ?? "",
     availability: formData.get("availability") ?? "",
     headline: formData.get("headline"),
     location: formData.get("location"),
     skillsText: formData.get("skillsText"),
-    experience: parseSection("experience"),
-    education: parseSection("education"),
-    languages: parseSection("languages"),
-    certifications: parseSection("certifications"),
+    experience: parseSection(formData, "experience"),
+    education: parseSection(formData, "education"),
+    languages: parseSection(formData, "languages"),
+    certifications: parseSection(formData, "certifications"),
     summary: formData.get("summary") ?? "",
-    links: parseSection("links") ?? "[]",
+    links: parseSection(formData, "links"),
   });
 
   if (!result.success) {
@@ -59,9 +59,12 @@ export async function saveCandidateProfile(
     {
       user_id: user.id,
       phone: result.data.phone,
-      job_type_preference: result.data.jobTypePreference,
-      workplace_mode_preference: result.data.workplaceModePreference,
-      salary_expectation: result.data.salaryExpectation,
+      job_type_preference: result.data.jobTypePreference
+        ? [result.data.jobTypePreference]
+        : [],
+      workplace_mode_preference: result.data.workplaceModePreference
+        ? [result.data.workplaceModePreference]
+        : [],
       availability: result.data.availability,
       headline: result.data.headline,
       location: result.data.location,

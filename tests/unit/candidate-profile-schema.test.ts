@@ -16,9 +16,8 @@ test("candidate profile trims text and normalizes a unique skills list", () => {
     }),
     {
       phone: null,
-      jobTypePreference: [],
-      workplaceModePreference: [],
-      salaryExpectation: null,
+      jobTypePreference: "",
+      workplaceModePreference: "",
       availability: null,
       headline: "Senior product designer",
       location: "Lefkoşa",
@@ -68,9 +67,8 @@ test("candidate profile accepts blank optional fields without storing whitespace
     }),
     {
       phone: null,
-      jobTypePreference: [],
-      workplaceModePreference: [],
-      salaryExpectation: null,
+      jobTypePreference: "",
+      workplaceModePreference: "",
       availability: null,
       headline: null,
       location: null,
@@ -118,9 +116,8 @@ test("candidate profile trims structured sections and drops blank entries", () =
     }),
     {
       phone: null,
-      jobTypePreference: [],
-      workplaceModePreference: [],
-      salaryExpectation: null,
+      jobTypePreference: "",
+      workplaceModePreference: "",
       availability: null,
       headline: null,
       location: null,
@@ -259,9 +256,8 @@ test("candidate profile rejects database-overflowing values and excessive skills
 test("candidate preferences are bounded, deduplicated and stored using canonical values", () => {
   const parsed = candidateProfileSchema.parse({
     phone: " +90 555 123 4567 ",
-    jobTypePreference: ["full_time", "freelance", "full_time"],
-    workplaceModePreference: ["remote", "hybrid", "remote"],
-    salaryExpectation: "  40,000 TRY  ",
+    jobTypePreference: "full_time",
+    workplaceModePreference: "remote",
     availability: "  Immediate  ",
     headline: "",
     location: "",
@@ -269,10 +265,9 @@ test("candidate preferences are bounded, deduplicated and stored using canonical
     summary: "",
   });
 
-  assert.deepEqual(parsed.jobTypePreference, ["full_time", "freelance"]);
-  assert.deepEqual(parsed.workplaceModePreference, ["remote", "hybrid"]);
+  assert.equal(parsed.jobTypePreference, "full_time");
+  assert.equal(parsed.workplaceModePreference, "remote");
   assert.equal(parsed.phone, "+90 555 123 4567");
-  assert.equal(parsed.salaryExpectation, "40,000 TRY");
   assert.equal(parsed.availability, "Immediate");
 
   assert.equal(
@@ -280,7 +275,7 @@ test("candidate preferences are bounded, deduplicated and stored using canonical
       headline: "",
       location: "",
       skillsText: "",
-      jobTypePreference: ["not-a-job-type"],
+      jobTypePreference: "not-a-job-type",
     }).success,
     false,
   );
@@ -289,7 +284,7 @@ test("candidate preferences are bounded, deduplicated and stored using canonical
       headline: "",
       location: "",
       skillsText: "",
-      workplaceModePreference: ["onsite"],
+      workplaceModePreference: "onsite",
     }).success,
     false,
   );

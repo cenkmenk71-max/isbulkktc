@@ -36,9 +36,9 @@ function form(values: Record<string, string> = {}): FormData {
 }
 
 /**
- * The candidate profile form always submits its repeating sections as JSON
- * strings; a missing field parses to `null`, which the schema rejects (it wants
- * an array, and only `undefined` would take the `.default([])`).
+ * The candidate profile form submits repeating sections as JSON strings.
+ * Missing sections default to empty arrays; malformed JSON is rejected by the
+ * server action.
  */
 function candidateProfileForm(values: Record<string, string> = {}): FormData {
   return form({
@@ -53,6 +53,8 @@ function candidateProfileForm(values: Record<string, string> = {}): FormData {
     certifications: "[]",
     summary: "",
     links: "[]",
+    jobTypePreference: "",
+    workplaceModePreference: "",
     ...values,
   });
 }
@@ -104,7 +106,6 @@ test("candidate workspace reads only deployed profile columns and keeps raw CV t
           phone: "+90 555 123 4567",
           job_type_preference: ["full_time"],
           workplace_mode_preference: ["remote"],
-          salary_expectation: "40,000 TRY",
           availability: "Immediate",
         },
         error: null,
@@ -121,9 +122,8 @@ test("candidate workspace reads only deployed profile columns and keeps raw CV t
     { label: "Portfolio", url: "https://example.com" },
   ]);
   assert.equal(workspace.profile.phone, "+90 555 123 4567");
-  assert.deepEqual(workspace.profile.jobTypePreference, ["full_time"]);
-  assert.deepEqual(workspace.profile.workplaceModePreference, ["remote"]);
-  assert.equal(workspace.profile.salaryExpectation, "40,000 TRY");
+  assert.equal(workspace.profile.jobTypePreference, "full_time");
+  assert.equal(workspace.profile.workplaceModePreference, "remote");
   assert.equal(workspace.profile.availability, "Immediate");
   assert.equal(workspace.profile.cvFullText, null);
 
@@ -131,13 +131,13 @@ test("candidate workspace reads only deployed profile columns and keeps raw CV t
   assert.ok(profileLookup, "the candidate profile lookup must execute");
   assert.ok(
     profileLookup.ops.includes(
-      "select:headline, location, skills, experience, education, languages, certifications, summary, links, phone, job_type_preference, workplace_mode_preference, salary_expectation, availability",
+      "select:headline, location, skills, experience, education, languages, certifications, summary, links, phone, job_type_preference, workplace_mode_preference, availability",
     ),
     "the DAL must select only columns present in the deployed table",
   );
   assert.ok(
-    !profileLookup.ops.some((operation) => /cv_full_text/i.test(operation)),
-    "the database must not be queried for transient CV text",
+    !profileLookup.ops.some((operation) => /cv_full_text|salary_expectation/i.test(operation)),
+    "the database must not be queried for transient CV text or removed salary column",
   );
 });
 
@@ -156,6 +156,8 @@ test("saving a candidate profile upserts the caller's own row", async () => {
       headline: "Yazılım geliştirici",
       skillsText: "TypeScript, React",
       summary: "Ürün odaklı yazılım geliştirici",
+      jobTypePreference: "full_time",
+      workplaceModePreference: "remote",
     }),
   );
 
@@ -169,7 +171,30 @@ test("saving a candidate profile upserts the caller's own row", async () => {
     `the submitted summary must be persisted as plain text: ${upserts[0]}`,
   );
   assert.ok(upserts[0].includes('"phone":null'));
-  assert.ok(upserts[0].includes('"job_type_preference":[]'));
+  assert.ok(upserts[0].includes('"job_type_preference":["full_time"]'));
+  assert.ok(upserts[0].includes('"workplace_mode_preference":["remote"]'));
+  assert.ok(!upserts[0].includes('salary_expectation'));
+});
+
+test("malformed repeated profile sections are rejected without throwing or writing", async () => {
+  activeCandidate();
+
+  const { saveCandidateProfile } = await import("../../src/features/candidates/actions");
+  const state = await saveCandidateProfile(
+    { status: "idle", message: "idle" } as never,
+    candidateProfileForm({
+      fullName: "Ada Lovelace",
+      experience: "{invalid-json",
+    }),
+  );
+
+  assert.deepEqual(state, { status: "error", message: "invalid" });
+  assert.equal(
+    fromCalls("candidate_profiles").some((call) =>
+      call.ops.some((op) => op.startsWith("upsert:")),
+    ),
+    false,
+  );
 });
 
 test("saving a candidate profile never persists raw CV text", async () => {

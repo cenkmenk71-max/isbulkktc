@@ -991,9 +991,8 @@
     "profileTitle": "Profilangaben",
     "profileDescription": "Ihre gespeicherten Informationen sind nur für Ihr Konto bestimmt.",
     "phoneLabel": "Telefon",
-    "jobTypePreferenceLabel": "Bevorzugte Beschäftigungsarten",
-    "workplaceModePreferenceLabel": "Bevorzugte Arbeitsmodelle",
-    "salaryExpectationLabel": "Gehaltsvorstellung",
+    "jobTypePreferenceLabel": "Beschäftigungsart",
+    "workplaceModePreferenceLabel": "Arbeitsmodell",
     "availabilityLabel": "Verfügbarkeit für den Arbeitsbeginn",
     "emptyProfile": {
       "title": "Erstellen Sie Ihr Profil",
@@ -1060,6 +1059,10 @@
       "rateLimited": "Zu viele Löschversuche. Bitte versuchen Sie es später erneut.",
       "failed": "Ihr Konto konnte nicht gelöscht werden. Vorhandene Datensätze könnten den Vorgang verhindert haben. Bitte wenden Sie sich an den Support."
     },
+    "dangerZone": {
+      "title": "Gefahrenbereich",
+      "description": "Diese Aktionen können nicht rückgängig gemacht werden. Lesen Sie die Hinweise sorgfältig, bevor Sie fortfahren."
+    },
     "employerWorkspaceLink": "Arbeitgeberbereich",
     "messages": {
       "invalid": "Prüfen Sie die Angaben und versuchen Sie es erneut.",
@@ -1102,6 +1105,22 @@
       "linkUrl": "Link-URL"
     },
     "sections": {
+      "essentials": {
+        "title": "Grundangaben & Kurzprofil",
+        "description": "Name, Telefonnummer, beruflicher Titel und Standort"
+      },
+      "preferences": {
+        "title": "Berufliche Präferenzen",
+        "description": "Beschäftigungsart, Arbeitsmodell und möglicher Arbeitsbeginn"
+      },
+      "languagesCerts": {
+        "title": "Sprachen & Zertifikate",
+        "description": "Ihre Sprachkenntnisse und beruflichen Zertifikate"
+      },
+      "linksSkills": {
+        "title": "Links & Fähigkeiten",
+        "description": "Ihre beruflichen Links und Fähigkeiten"
+      },
       "experience": {
         "title": "Berufserfahrung",
         "add": "Berufserfahrung hinzufügen",
@@ -1133,6 +1152,16 @@
         "description": "Fügen Sie LinkedIn, GitHub und andere berufliche Links hinzu"
       }
     },
+    "accordion": {
+      "openAll": "Alle öffnen",
+      "closeAll": "Alle schließen"
+    },
+    "revert": {
+      "label": "Änderungen rückgängig machen",
+      "title": "Ursprüngliche Profilangaben wiederherstellen"
+    },
+    "entryCount": "Einträge",
+    "selectPlaceholder": "Nicht ausgewählt",
     "summary": {
       "title": "Zusammenfassung",
       "add": "Zusammenfassung hinzufügen",

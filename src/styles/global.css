@@ -5781,6 +5781,289 @@ a {
   cursor: not-allowed;
   opacity: 0.55;
 }
+
+/* Candidate profile accordion cards */
+.candidate-profile-accordion-card {
+  border: 1px solid var(--color-crayon-200);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  overflow: hidden;
+}
+
+.candidate-profile-accordion-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px 18px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.candidate-profile-accordion-heading-wrap {
+  margin: 0;
+}
+
+.candidate-profile-accordion-heading:hover {
+  background: var(--green-soft);
+}
+
+.candidate-profile-accordion-heading:focus-visible {
+  outline: 3px solid var(--color-shade-green-700);
+  outline-offset: -3px;
+  border-radius: var(--radius-md);
+}
+
+.candidate-profile-accordion-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.candidate-profile-accordion-chevron {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--ink-3);
+  transition: transform 160ms var(--ease-premium);
+}
+
+.candidate-profile-accordion-content {
+  padding: 0 18px 18px;
+}
+
+.candidate-profile-section-description {
+  margin: 0 0 14px;
+  color: var(--ink-4);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.candidate-profile-section-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: var(--radius-lg);
+  background: var(--green-soft);
+  color: var(--green);
+  font:
+    600 10px/1 var(--font-geist-mono),
+    monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.candidate-profile-subsections {
+  display: grid;
+  gap: 20px;
+}
+
+.candidate-profile-subsections h4 {
+  margin: 0 0 10px;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 620;
+}
+
+.candidate-profile-accordion-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.candidate-profile-accordion-control {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--color-crayon-300);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.candidate-profile-accordion-control:hover {
+  border-color: var(--color-vanadium-400);
+  color: var(--ink);
+}
+
+.candidate-profile-accordion-control:focus-visible,
+.candidate-completion-link:focus-visible {
+  outline: 3px solid var(--color-shade-green-700);
+  outline-offset: 3px;
+}
+
+.candidate-profile-accordion-control:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.candidate-completion-link {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 9px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+/* Candidate profile save bar */
+.candidate-profile-save-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+/* Danger zone card */
+.danger-zone-card {
+  padding: clamp(20px, 2.5vw, 28px);
+  border: 1px solid
+    color-mix(in srgb, var(--color-status-error) 24%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--color-status-error-bg);
+}
+
+.danger-zone-card h2 {
+  margin: 0 0 10px;
+  color: var(--color-status-error);
+  font-size: 19px;
+  font-weight: 590;
+  letter-spacing: -0.04em;
+}
+
+.danger-zone-card > p {
+  margin: 0 0 16px;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* Delete account dialog */
+.delete-account-confirm {
+  display: grid;
+  gap: 16px;
+  width: min(100%, 420px);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  padding: 24px;
+  border: 1px solid var(--color-crayon-200);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  animation: modal-in 0.22s var(--ease-premium) both;
+}
+
+.delete-account-confirm h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.delete-account-warning {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.delete-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.delete-account-error {
+  margin: 0;
+  color: var(--color-status-error);
+  font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .candidate-profile-accordion-heading {
+    transition: none;
+  }
+  .candidate-profile-accordion-chevron {
+    transition: none;
+  }
+  .delete-account-confirm {
+    animation: none;
+  }
+  .delete-account-dialog-backdrop {
+    animation: none;
+  }
+}
+
+.delete-account-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--ink) 56%, transparent);
+  backdrop-filter: blur(4px);
+  animation: fade-in 0.18s ease both;
+}
+
+/* Revert button */
+.candidate-revert-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid var(--color-crayon-300);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 620;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.candidate-revert-button:hover {
+  border-color: var(--color-vanadium-400);
+  background: var(--color-vanadium-50);
+  color: var(--ink);
+}
+
+.candidate-revert-button:focus-visible {
+  outline: 3px solid var(--color-shade-green-700);
+  outline-offset: 3px;
+}
+
+.candidate-revert-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .company-management {
   width: min(calc(100% - 2 * var(--page-gutter)), 1440px);
   max-width: none;
