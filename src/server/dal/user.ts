@@ -211,7 +211,7 @@ export async function getCandidateWorkspace(): Promise<{
   const { data, error } = await supabase
     .from("candidate_profiles")
     .select(
-      "headline, location, skills, experience, education, languages, certifications, summary, links",
+      "headline, location, skills, experience, education, languages, certifications, summary, links, phone, job_type_preference, workplace_mode_preference, salary_expectation, availability",
     )
     .eq("user_id", user.id)
     .maybeSingle();
@@ -223,6 +223,11 @@ export async function getCandidateWorkspace(): Promise<{
   }
 
   const profile = candidateProfileSchema.safeParse({
+    phone: data?.phone ?? "",
+    jobTypePreference: data?.job_type_preference ?? [],
+    workplaceModePreference: data?.workplace_mode_preference ?? [],
+    salaryExpectation: data?.salary_expectation ?? "",
+    availability: data?.availability ?? "",
     headline: data?.headline ?? "",
     location: data?.location ?? "",
     skillsText: (data?.skills ?? []).join("\n"),
@@ -245,6 +250,11 @@ export async function getCandidateWorkspace(): Promise<{
   return {
     user,
     profile: {
+      phone: profile.data.phone,
+      jobTypePreference: profile.data.jobTypePreference,
+      workplaceModePreference: profile.data.workplaceModePreference,
+      salaryExpectation: profile.data.salaryExpectation,
+      availability: profile.data.availability,
       headline: profile.data.headline,
       location: profile.data.location,
       skills: profile.data.skillsText,

@@ -16,7 +16,7 @@ begin;
 -- function that forgets to revoke `anon`/`authenticated` fails CI instead of
 -- shipping.
 
-select plan(16);
+select plan(17);
 
 -- ---------------------------------------------------------------------------
 -- The two engagement RPCs are service-role-only.
@@ -118,6 +118,25 @@ select ok(
   'only the source catalogue worker can replace imported listings'
 );
 
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.update_resume_status(uuid, text, jsonb)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'authenticated',
+    'public.update_resume_status(uuid, text, jsonb)',
+    'EXECUTE'
+  )
+  and has_function_privilege(
+    'service_role',
+    'public.update_resume_status(uuid, text, jsonb)',
+    'EXECUTE'
+  ),
+  'resume processing status remains service-role-only'
+);
+
 -- ---------------------------------------------------------------------------
 -- Trigger plumbing stays off the client surface.
 -- ---------------------------------------------------------------------------
@@ -203,19 +222,27 @@ select is(
     'admin_list_site_content()',
     'admin_list_support_threads()',
     'admin_list_verified_companies()',
+    'admin_reconcile_payment(_order_id uuid, _submission_id uuid, _decision reconciliation_decision, _bank_reference_normalized text, _notes text, _reviewed_by uuid)',
     'admin_reply_support_thread(_thread_id uuid, _body text)',
     'admin_save_job_package(_package_id uuid, _code text, _display_name text, _description text, _max_active_jobs integer, _job_duration_days integer, _is_active boolean)',
+    'admin_save_payment_instructions(_beneficiary_name text, _bank_name text, _iban_restricted_value text, _currency text, _instructions text, _active_from timestamp with time zone, _active_to timestamp with time zone, _created_by uuid)',
     'admin_upsert_directory_company(_directory_entry_id text, _name text, _categories text[], _logo_file text, _logo_domain text, _logo_width integer, _logo_height integer, _locations jsonb)',
     'admin_upsert_faq_entry(_id uuid, _locale text, _question text, _answer text, _sort_order integer, _is_published boolean)',
     'admin_upsert_listing_plan(_code text, _audience text, _name text, _blurb text, _features text[], _color text, _listing_count integer, _price_1 integer, _price_7 integer, _price_30 integer, _is_active boolean, _sort_order integer)',
     'admin_upsert_site_content(_content_key text, _locale text, _document jsonb)',
+    'adjust_credit_balance(_company_id uuid, _quantity_delta integer, _entry_type credit_entry_type, _idempotency_key text, _reason text, _actor_id uuid)',
+    'archive_conversation(_conversation_id uuid)',
     'apply_to_job(_job_id uuid, _cover_letter text)',
     'apply_to_job(_job_id uuid, _cover_letter text, _share_contact_email boolean)',
     'create_company(company_name text, company_slug text)',
+    'create_order(_company_id uuid, _listing_plan_code text, _duration_days integer)',
+    'create_resume(_candidate_id uuid, _storage_path text, _original_filename text, _file_size_bytes bigint, _mime_type text, _page_count integer)',
     'get_application_contact_email(_application_id uuid)',
     'get_company_application_detail(_application_id uuid)',
+    'get_company_credit_ledger(_company_id uuid, _limit integer, _offset integer)',
     'get_company_job_entitlements(_company_id uuid)',
     'get_my_push_preferences()',
+    'get_order_payment_instructions(_order_id uuid)',
     'get_public_directory()',
     'get_public_faq(_locale text)',
     'get_public_job_details(_slug text)',
@@ -236,13 +263,17 @@ select is(
     'review_company_profile_submission(_submission_id uuid, _decision text, _review_note text)',
     'review_company_verification(_company_id uuid, _decision text)',
     'review_job(_job_id uuid, _decision text, _review_note text)',
+    'review_payment_submission(_order_id uuid, _submission_id uuid)',
     'revoke_push_subscription(_endpoint text)',
     'search_public_job_companies()',
     'search_public_job_previews(_query text, _district text, _job_type text, _workplace_mode text, _page integer)',
     'search_public_jobs(_query text, _district text, _job_type text, _workplace_mode text, _page integer)',
     'set_push_notification_preferences(_application_updates boolean, _job_alerts boolean, _employer_applications boolean, _messages boolean, _marketing boolean)',
+    'send_message(_conversation_id uuid, _body text, _message_type text, _metadata jsonb)',
+    'start_conversation(_participant_ids uuid[], _subject text)',
     'submit_feedback(_name text, _email text, _category text, _rating integer, _message text, _locale text)',
     'submit_job_for_review(_job_id uuid)',
+    'submit_payment(_order_id uuid, _sender_name text, _transfer_reference text, _amount_minor integer, _currency text, _transferred_at timestamp with time zone, _receipt_storage_path text)',
     'submit_sales_lead(_company_name text, _contact_name text, _email text, _phone text, _plan text, _duration_days integer, _note text, _locale text)',
     'submit_sales_lead(_company_name text, _contact_name text, _email text, _phone text, _plan text, _duration_days integer, _note text, _locale text, _marketing_consent boolean)',
     'submit_support_message(_name text, _email text, _subject text, _body text, _locale text)',

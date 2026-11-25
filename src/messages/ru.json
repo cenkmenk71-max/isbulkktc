@@ -990,6 +990,11 @@
     },
     "profileTitle": "Данные профиля",
     "profileDescription": "Сохранённая информация доступна только вам.",
+    "phoneLabel": "Телефон",
+    "jobTypePreferenceLabel": "Предпочитаемый тип работы",
+    "workplaceModePreferenceLabel": "Предпочитаемый формат работы",
+    "salaryExpectationLabel": "Ожидаемая зарплата",
+    "availabilityLabel": "Готовность приступить к работе",
     "emptyProfile": {
       "title": "Создайте свой профиль",
       "description": "Добавьте несколько сведений или импортируйте резюме. Перед сохранением вы сможете проверить каждое предложение.",

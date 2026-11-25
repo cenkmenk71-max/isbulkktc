@@ -18,7 +18,7 @@ begin;
 -- grant fails CI until it is added here deliberately — the same contract the
 -- function ratchet already enforces.
 
-select plan(9);
+select plan(10);
 
 select is(
   (
@@ -51,10 +51,20 @@ select is(
     'company_directory_overrides',
     'company_members',
     'company_profile_submissions',
+    'conversation_members',
+    'conversations',
+    'credit_accounts',
+    'credit_ledger_entries',
     'job_packages',
     'jobs',
+    'messages',
     'notifications',
+    'orders',
+    'payment_submissions',
     'profiles',
+    'resume_versions',
+    'resumes',
+    'saved_jobs',
     'support_messages',
     'support_threads',
     'user_roles'
@@ -126,6 +136,18 @@ select ok(
   and not has_table_privilege('anon', 'public.listing_plans', 'INSERT')
   and not has_table_privilege('authenticated', 'public.listing_plans', 'INSERT'),
   'package-assignment, directory and managed-content tables stay admin-only'
+);
+
+select ok(
+  not has_table_privilege('anon', 'public.payment_instruction_versions', 'SELECT')
+  and not has_table_privilege('authenticated', 'public.payment_instruction_versions', 'SELECT')
+  and not has_table_privilege('anon', 'public.payment_reconciliations', 'SELECT')
+  and not has_table_privilege('authenticated', 'public.payment_reconciliations', 'SELECT')
+  and not has_table_privilege('anon', 'public.integration_sync_runs', 'SELECT')
+  and not has_table_privilege('authenticated', 'public.integration_sync_runs', 'SELECT')
+  and not has_table_privilege('anon', 'public.outbox_events', 'SELECT')
+  and not has_table_privilege('authenticated', 'public.outbox_events', 'SELECT'),
+  'payment instructions, reconciliations, sync runs and outbox stay closed to clients'
 );
 
 -- The reviewed positive surface: a visitor can read the public catalogue, and a

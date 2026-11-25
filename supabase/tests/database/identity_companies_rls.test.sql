@@ -1,6 +1,6 @@
 begin;
 
-select plan(55);
+select plan(57);
 
 insert into auth.users (id, email, raw_user_meta_data)
 values
@@ -167,11 +167,37 @@ select is(
 select lives_ok(
   $$update public.candidate_profiles
     set location = 'Mağusa',
+        phone = '+90 555 123 4567',
+        job_type_preference = array['full_time', 'freelance']::text[],
+        workplace_mode_preference = array['remote']::text[],
+        salary_expectation = '40,000 TRY',
+        availability = 'Immediate',
         education = '[{"institution":"Örnek üniversite","qualification":"Lisans","field":"Tasarım","startDate":"2018","endDate":"2022","description":""}]'::jsonb,
         languages = '[{"name":"Türkçe","proficiency":"Ana dil"}]'::jsonb,
         certifications = '[{"name":"Erişilebilir tasarım","issuer":"Örnek kurum","issueDate":"2024","expiryDate":""}]'::jsonb
     where user_id = (select auth.uid())$$,
   'candidate can save the structured sections of their own profile'
+);
+
+select is(
+  (
+    select phone || '|' || array_to_string(job_type_preference, ',') || '|'
+      || array_to_string(workplace_mode_preference, ',') || '|'
+      || salary_expectation || '|' || availability
+    from public.candidate_profiles
+    where user_id = (select auth.uid())
+  ),
+  '+90 555 123 4567|full_time,freelance|remote|40,000 TRY|Immediate',
+  'candidate preference fields persist under the owner RLS policy'
+);
+
+select throws_ok(
+  $$update public.candidate_profiles
+    set job_type_preference = array['not-a-job-type']::text[]
+    where user_id = (select auth.uid())$$,
+  '23514',
+  null,
+  'candidate preference arrays reject unsupported job types'
 );
 
 -- PostgREST turns `upsert(..., { onConflict: 'user_id' })` into an INSERT with

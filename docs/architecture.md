@@ -63,6 +63,15 @@ değildir. Web checkout'u, platform içi
 ödeme işleme ve kredi defteri kapsam dışıdır; IBAN ile manuel site dışı havale
 ürün kararıdır.
 
+2026-11-25 tarihli mikro-denetim çalışması bu dalda aday tercih alanları,
+resume metadata, saved jobs, messaging ve billing/credit için şema, DAL ve test
+iskeletleri ekler. Bunlar yerel/üretim veritabanına uygulanmış veya kullanıcıya
+açılmış özellikler değildir: resume upload/Storage policy ve messaging UI
+yoktur. Ayrıca V4'te platform içi ödeme ve kredi defteri kapsam dışı
+olduğundan, `20261125020000` migration'ı mimari kapsam kararı güncellenmeden
+uygulanmamalıdır. Docker/yerel Supabase bulunmadığı için bu dalın migration ve
+pgTAP sonuçları henüz doğrulanmamıştır.
+
 İlk migration, yalnız ilk güvenlik temelini kurar: Auth ile tetiklenen profil,
 güvenilir kullanıcı rolleri, aday profil şeması, şirket ve şirket üyeliği,
 dar şirket-kur oluşturma RPC'si, redakte edilmiş audit kayıtları ve erişimi

@@ -38,6 +38,9 @@ import {
   northernCyprusDistricts,
   resolveNorthernCyprusDistrict,
 } from "@/features/locations/northern-cyprus-districts";
+import { jobTypeKeys } from "@/features/jobs/job-type-slugs";
+
+const workplaceModeKeys = ["on_site", "hybrid", "remote"] as const;
 
 const initialState: CandidateProfileFormState = {
   status: "idle",
@@ -166,6 +169,17 @@ export function CandidateProfileForm({
   const resumeInputRef = useRef<HTMLInputElement>(null);
   const fullNameInputRef = useRef<HTMLInputElement>(null);
   const [fullName, setFullName] = useState(account.displayName);
+  const [phone, setPhone] = useState(profile.phone ?? "");
+  const [jobTypePreference, setJobTypePreference] = useState(
+    profile.jobTypePreference,
+  );
+  const [workplaceModePreference, setWorkplaceModePreference] = useState(
+    profile.workplaceModePreference,
+  );
+  const [salaryExpectation, setSalaryExpectation] = useState(
+    profile.salaryExpectation ?? "",
+  );
+  const [availability, setAvailability] = useState(profile.availability ?? "");
   const [headline, setHeadline] = useState(profile.headline ?? "");
   const [location, setLocation] = useState(
     resolveNorthernCyprusDistrict(profile.location) ?? "",
@@ -233,6 +247,11 @@ export function CandidateProfileForm({
   const isProfileEmpty = !(
     headline.trim() ||
     location.trim() ||
+    phone.trim() ||
+    jobTypePreference.length ||
+    workplaceModePreference.length ||
+    salaryExpectation.trim() ||
+    availability.trim() ||
     skillsText.trim() ||
     summary.trim() ||
     hasEntryContent(experience) ||
@@ -365,6 +384,11 @@ export function CandidateProfileForm({
 
       const mergeResult = mergeResumeDraft(
         {
+          phone,
+          jobTypePreference,
+          workplaceModePreference,
+          salaryExpectation,
+          availability,
           headline,
           location,
           skills: skillsText
@@ -625,6 +649,16 @@ export function CandidateProfileForm({
             value={JSON.stringify(links)}
           />
           <input
+            name="jobTypePreference"
+            type="hidden"
+            value={JSON.stringify(jobTypePreference)}
+          />
+          <input
+            name="workplaceModePreference"
+            type="hidden"
+            value={JSON.stringify(workplaceModePreference)}
+          />
+          <input
             name="resumeImported"
             type="hidden"
             value={resumeImported ? "1" : ""}
@@ -640,6 +674,67 @@ export function CandidateProfileForm({
             inputRef={fullNameInputRef}
             value={fullName}
           />
+          <ProfileEntry
+            label={copy("phoneLabel")}
+            maxLength={80}
+            name="phone"
+            onChange={setPhone}
+            value={phone}
+          />
+          <ProfileEntry
+            label={copy("salaryExpectationLabel")}
+            maxLength={120}
+            name="salaryExpectation"
+            onChange={setSalaryExpectation}
+            value={salaryExpectation}
+          />
+          <ProfileEntry
+            label={copy("availabilityLabel")}
+            maxLength={80}
+            name="availability"
+            onChange={setAvailability}
+            value={availability}
+          />
+          <fieldset className="candidate-profile-preferences">
+            <legend>{copy("jobTypePreferenceLabel")}</legend>
+            {jobTypeKeys.map((jobType) => (
+              <label key={jobType}>
+                <input
+                  checked={jobTypePreference.includes(jobType)}
+                  onChange={(event) => {
+                    const checked = event.currentTarget.checked;
+                    setJobTypePreference((current) =>
+                      checked
+                        ? [...current, jobType]
+                        : current.filter((value) => value !== jobType),
+                    );
+                  }}
+                  type="checkbox"
+                />
+                {rootCopy(`HomeJobSearch.jobTypes.${jobType}`)}
+              </label>
+            ))}
+          </fieldset>
+          <fieldset className="candidate-profile-preferences">
+            <legend>{copy("workplaceModePreferenceLabel")}</legend>
+            {workplaceModeKeys.map((workplaceMode) => (
+              <label key={workplaceMode}>
+                <input
+                  checked={workplaceModePreference.includes(workplaceMode)}
+                  onChange={(event) => {
+                    const checked = event.currentTarget.checked;
+                    setWorkplaceModePreference((current) =>
+                      checked
+                        ? [...current, workplaceMode]
+                        : current.filter((value) => value !== workplaceMode),
+                    );
+                  }}
+                  type="checkbox"
+                />
+                {rootCopy(`HomeJobSearch.workplaceModes.${workplaceMode}`)}
+              </label>
+            ))}
+          </fieldset>
           <ProfileEntry
             label={copy("headlineLabel")}
             maxLength={140}

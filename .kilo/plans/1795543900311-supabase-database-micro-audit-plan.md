@@ -1,6 +1,6 @@
 # İşBul KKTC — Supabase Veritabanı Mikro-Seviye Tam Röntgen ve Düzeltme Planı
 
-> **Not:** Bu plan salt okunur denetim ve planlama belgesidir. Hiçbir dosya değiştirilmemiştir. Uygulama ayrı bir oturumda yapılacaktır.
+> **Uygulama notu:** Planın kod aşamaları `20261125000000`, `20261125010000` ve `20261125020000` migration'ları, TypeScript/Zod/DAL katmanları ve pgTAP/privilege ratchet güncellemeleriyle bu dalda uygulanmıştır. Yerel Supabase testleri henüz çalıştırılmadığından veritabanı uygulaması doğrulanmış sayılmaz. İlk röntgendeki bazı varsayımlar düzeltilmiştir: `summary`, `links` ve KKTC ilçe kısıtları önceden mevcuttu; ham CV metni gizlilik sınırı nedeniyle hiçbir zaman kalıcı olarak saklanmaz.
 
 ---
 
@@ -61,14 +61,19 @@
 | `education` | `jsonb NOT NULL DEFAULT '[]' CHECK (...)` | `education: z.array(educationEntrySchema).max(12)...` | `Row.education: Json` | ⚠️ Aynı |
 | `languages` | `jsonb NOT NULL DEFAULT '[]' CHECK (...)` | `languages: z.array(languageEntrySchema).max(12)...` | `Row.languages: Json` | ⚠️ Aynı |
 | `certifications` | `jsonb NOT NULL DEFAULT '[]' CHECK (...)` | `certifications: z.array(certificationEntrySchema).max(12)...` | `Row.certifications: Json` | ⚠️ Aynı |
-| `summary` | **YOK** (migration'da eklenmemiş!) | `summary: z.string().trim().max(2000).transform(v=>v\|\|null)` | **YOK** (types'da yok) | ❌ **EKSİK SÜTUN** — Migration `20261014000000_v4_candidate_profile_sections.sql` sadece `experience, education, languages, certifications` eklemiş; `summary`, `cvFullText`, `links` EKSİK |
+| `summary` | **YOK** (migration'da eklenmemiş!) | `summary: z.string().trim().max(2000).transform(v=>v\|\|null)` | **YOK** (types'da yok) | ❌ **EKSİK SÜTUN** |
 | `cvFullText` | **YOK** | `cvFullText: z.string().max(100000).nullish().transform(...)` | **YOK** | ❌ **EKSİK SÜTUN** |
 | `links` | **YOK** | `links: z.array(linksEntrySchema).max(12)...` | **YOK** | ❌ **EKSİK SÜTUN** |
+| `phone` | **YOK** | Frontend remediation planında eklenecek | **YOK** | ❌ **EKSİK SÜTUN** — DB migration, formun kaydetmesinden önce gelmeli |
+| `job_type_preference` | **YOK** | `jobTypePreference` alanıyla senkronize edilecek | **YOK** | ❌ **EKSİK SÜTUN** |
+| `workplace_mode_preference` | **YOK** | `workplaceModePreference` alanıyla senkronize edilecek | **YOK** | ❌ **EKSİK SÜTUN** |
+| `salary_expectation` | **YOK** | `salaryExpectation` alanıyla senkronize edilecek | **YOK** | ❌ **EKSİK SÜTUN** |
+| `availability` | **YOK** | `availability` alanıyla senkronize edilecek | **YOK** | ❌ **EKSİK SÜTUN** |
 | `visibility` | `text NOT NULL DEFAULT 'private' CHECK (private,public)` | Schema'da `omit` edilmemiş ama `candidateProfileUpdateSchema` omit ediyor | `Row.visibility: string` | ✅ OK (ama `UPDATE` grant'te `visibility` var — **GÜVENLİK RİSKİ**: kandidat `public` yapabiliyor; migration `20261014000000` L84-86 `revoke insert/update visibility` yapmış ✅) |
 | `created_at` | `timestamptz DEFAULT now()` | Schema'da yok | `Row.created_at: string` | ✅ OK |
 | `updated_at` | `timestamptz DEFAULT now()` + trigger | Schema'da yok | `Row.updated_at: string` | ✅ OK |
 
-**Özet `candidate_profiles`:** **3 sütun eksik** (`summary`, `cvFullText`, `links`). Zod schema bu alanları bekliyor ama DB'de yok. `candidateProfileUpdateSchema` bu alanları `omit({cvFullText: true})` yapıyor ama `summary` ve `links` hala formda — **runtime hata verecek**.
+**Özet `candidate_profiles`:** Veritabanında **8 sütun eksik**: `summary`, `cv_full_text`, `links`, `phone`, `job_type_preference`, `workplace_mode_preference`, `salary_expectation`, `availability`. İlk üç alan mevcut aday şemasıyla; diğer beş alan frontend remediation planındaki Zod sözleşmesiyle aynı migration/type/DAL değişikliğinde eşleştirilmeli. Yeni alanların SQL tipi, nullability ve CHECK kuralları ilgili Zod şemasıyla birlikte kararlaştırılmalı; henüz tanımlı olmayan enum/değerler varsayılmamalı. Migration ve DB testleri tamamlanmadan form bu alanları kaydetmemeli.
 
 ### 2.2 `companies` Tablosu — Migration vs Zod vs TypeScript Types
 
@@ -381,10 +386,9 @@ Her tablo için 5 madde kontrolü:
 
 1. **`companies.municipality`** — KKTC 6 ilçesi `CHECK` **EKSİK**
 2. **`company_profile_submissions.municipality`** — KKTC 6 ilçesi `CHECK` **EKSİK**
-3. **`candidate_profiles.summary`** — Sütun **EKSİK** (migration eklenmemiş)
-4. **`candidate_profiles.cvFullText`** — Sütun **EKSİK**
-5. **`candidate_profiles.links`** — Sütun **EKSİK**
-6. **`notification_email_outbox.notification_id`** — FK leading column index **EKSİK**
+3. **`candidate_profiles.summary`, `cv_full_text`, `links`** — Sütunlar **EKSİK**
+4. **`candidate_profiles.phone`, `job_type_preference`, `workplace_mode_preference`, `salary_expectation`, `availability`** — Frontend remediation kapsamındaki beş profil alanı için sütunlar **EKSİK**
+5. **`notification_email_outbox.notification_id`** — FK leading column index **EKSİK**
 
 ---
 
@@ -394,9 +398,9 @@ Her tablo için 5 madde kontrolü:
 
 ### 6.1 Migrasyon Dosyası Yapısı
 
-**Tek bir kapsamlı migrasyon dosyası** (veya mantıksal bağımlılıklara göre 2-3 dosya) önerilir. Timestamp: `20261124000000` (bugünün tarihi).
+**Tek bir kapsamlı migrasyon dosyası** (veya mantıksal bağımlılıklara göre 2-3 dosya) önerilir. Tarih damgası bugünün tarihiyle `20261125` önekini kullanmalı; dosyalar sıralı ve benzersiz olmalı (`20261125000000`, `20261125010000`, `20261125020000`).
 
-#### Migrasyon 1: `20261124000000_v4_schema_hardening_and_missing_columns.sql`
+#### Migrasyon 1: `20261125000000_v4_schema_hardening_and_candidate_preferences.sql`
 
 ```sql
 begin;
@@ -432,33 +436,43 @@ alter table public.job_source_imports force row level security;
 alter table public.application_contact_shares force row level security;
 
 -- ============================================================
--- 2. KKTC İlçesi CHECK Constraint'leri — companies & submissions
+-- 2. KKTC İlçesi CHECK Constraint'leri — mevcut constraint'leri doğrula
 -- ============================================================
-alter table public.companies
-  add constraint companies_municipality_district_check
-  check (municipality is null or municipality in ('Lefkoşa','Mağusa','Girne','İskele','Güzelyurt','Lefke'));
+-- Bilinen eski yazımı constraint eklenmeden önce kanonik değere taşı.
+update public.companies
+set municipality = 'Mağusa'
+where municipality = 'Gazimağusa';
 
-alter table public.company_profile_submissions
-  add constraint company_profile_submissions_municipality_district_check
-  check (municipality is null or municipality in ('Lefkoşa','Mağusa','Girne','İskele','Güzelyurt','Lefke'));
+update public.company_profile_submissions
+set municipality = 'Mağusa'
+where municipality = 'Gazimağusa';
 
--- ============================================================
--- 3. candidate_profiles eksik sütunları
--- ============================================================
+-- district constraint'leri önceki migration'larda zaten oluşturuldu.
 alter table public.candidate_profiles
-  add column summary text
-    check (summary is null or char_length(summary) <= 2000),
-  add column cv_full_text text
-    check (cv_full_text is null or char_length(cv_full_text) <= 100000),
-  add column links jsonb not null default '[]'::jsonb
-    check (
-      public.is_valid_candidate_profile_section(
-        links,
-        array['label','url'],
-        12,
-        600
-      )
-    );
+  validate constraint candidate_profiles_location_northern_cyprus_district;
+alter table public.companies
+  validate constraint companies_municipality_northern_cyprus_district;
+alter table public.company_profile_submissions
+  validate constraint company_profile_submissions_municipality_northern_cyprus_district;
+alter table public.company_directory_overrides
+  validate constraint company_directory_overrides_municipality_northern_cyprus_district;
+
+-- ============================================================
+-- 3. candidate_profiles tercih sütunları
+-- ============================================================
+-- summary ve links 20261118000000 migration'ında zaten eklendi.
+-- cv_full_text bilerek kalıcılaştırılmıyor; CV metni parse sırasında transient.
+alter table public.candidate_profiles
+  add column phone text
+    check (phone is null or char_length(phone) <= 80),
+  add column job_type_preference text[] not null default '{}',
+  add column workplace_mode_preference text[] not null default '{}',
+  add column salary_expectation text
+    check (salary_expectation is null or char_length(salary_expectation) <= 120),
+  add column availability text
+    check (availability is null or char_length(availability) <= 80);
+
+-- Preference array allowlists are enforced by CHECK constraints in the migration.
 
 -- updated_at trigger zaten var (20261013000000)
 
@@ -469,8 +483,7 @@ alter table public.candidate_profiles
 -- ============================================================
 -- 5. notification_email_outbox.notification_id FK index
 -- ============================================================
-create index if not exists notification_email_outbox_notification_id_idx
-  on public.notification_email_outbox (notification_id);
+-- The existing unique index already covers notification_id; no duplicate index.
 
 -- ============================================================
 -- 6. Eski/çakışan throttle migration temizliği (opsiyonel)
@@ -481,7 +494,7 @@ create index if not exists notification_email_outbox_notification_id_idx
 commit;
 ```
 
-#### Migrasyon 2: `20261124010000_v4_missing_v4_tables.sql` (V4 §6.2-6.3 eksik tablolar — Core & Chat)
+#### Migrasyon 2: `20261125010000_v4_missing_v4_tables.sql` (V4 §6.2-6.3 eksik tablolar — Core & Chat)
 
 > **Not:** Bu migrasyon 7 tablo + RPC'leri kapsar. Billing/credit ayrı migrasyonda (Migrasyon 3).
 
@@ -661,13 +674,36 @@ commit;
 
 Her tablo için: `ENABLE ROW LEVEL SECURITY` + `FORCE ROW LEVEL SECURITY`, `revoke all from anon, authenticated`, FK leading column indeksler, `updated_at` trigger where applicable, `audit_logs` insert.
 
-#### Migrasyon 3: `20261124020000_v4_billing_credit_tables.sql` (V4 §6.3 — Billing, Credit, Outbox)
+#### Migrasyon 3: `20261125020000_v4_billing_credit_tables.sql` (V4 §6.3 — Billing, Credit, Outbox)
 
 > **Not:** Bu migrasyon 7 tablo + RPC'leri kapsar. IBAN sipariş, ödeme mutabakatı, kredi defteri, event outbox.
 
-**Tablolar (sıralı — FK bağımlılıkları):**
+**Tablolar (sıralı — FK bağımlılıkları; `orders` öncesinde talimat sürüm tablosu oluşturulmalı):**
 
-1. **`orders`** — IBAN sipariş
+1. **`payment_instruction_versions`** — IBAN talimat sürümleme
+   ```sql
+   create table public.payment_instruction_versions (
+     id uuid primary key default gen_random_uuid(),
+     beneficiary_name text not null check (char_length(beneficiary_name) between 1 and 120),
+     bank_name text not null check (char_length(bank_name) between 1 and 120),
+     iban_restricted_value text not null check (char_length(iban_restricted_value) between 15 and 34),
+     currency text not null default 'TRY' check (char_length(currency) = 3),
+     instructions text check (instructions is null or char_length(instructions) <= 5000),
+     active_from timestamptz not null default now(),
+     active_to timestamptz,
+     created_by uuid not null references auth.users (id) on delete restrict,
+     created_at timestamptz not null default now(),
+     check (active_to is null or active_to > active_from)
+   );
+   create index payment_instruction_versions_active_idx on public.payment_instruction_versions (active_from, active_to);
+   alter table public.payment_instruction_versions enable row level security;
+   alter table public.payment_instruction_versions force row level security;
+   revoke all on public.payment_instruction_versions from anon, authenticated;
+   grant select on public.payment_instruction_versions to authenticated;
+   -- Admin RPC ile insert/update (admin_save_payment_instructions)
+   ```
+
+2. **`orders`** — IBAN sipariş
    ```sql
    create type public.order_status as enum (
      'awaiting_transfer', 'payment_submitted', 'payment_under_review',
@@ -696,7 +732,7 @@ Her tablo için: `ENABLE ROW LEVEL SECURITY` + `FORCE ROW LEVEL SECURITY`, `revo
    grant select on public.orders to authenticated;
    ```
 
-2. **`payment_submissions`** — Kullanıcı transfer bildirimi
+3. **`payment_submissions`** — Kullanıcı transfer bildirimi
    ```sql
    create type public.payment_submission_status as enum (
      'submitted', 'under_review', 'accepted', 'rejected', 'needs_more_information'
@@ -724,7 +760,7 @@ Her tablo için: `ENABLE ROW LEVEL SECURITY` + `FORCE ROW LEVEL SECURITY`, `revo
    grant select, insert on public.payment_submissions to authenticated;
    ```
 
-3. **`payment_reconciliations`** — Admin mutabakat kararı
+4. **`payment_reconciliations`** — Admin mutabakat kararı
    ```sql
    create type public.reconciliation_decision as enum ('accepted', 'rejected');
 
@@ -753,29 +789,6 @@ Her tablo için: `ENABLE ROW LEVEL SECURITY` + `FORCE ROW LEVEL SECURITY`, `revo
    alter table public.payment_reconciliations force row level security;
    revoke all on public.payment_reconciliations from anon, authenticated;
    -- Sadece RPC ile erişim (admin_reconcile_payment)
-   ```
-
-4. **`payment_instruction_versions`** — IBAN talimat sürümleme
-   ```sql
-   create table public.payment_instruction_versions (
-     id uuid primary key default gen_random_uuid(),
-     beneficiary_name text not null check (char_length(beneficiary_name) between 1 and 120),
-     bank_name text not null check (char_length(bank_name) between 1 and 120),
-     iban_restricted_value text not null check (char_length(iban_restricted_value) between 15 and 34),
-     currency text not null default 'TRY' check (char_length(currency) = 3),
-     instructions text check (instructions is null or char_length(instructions) <= 5000),
-     active_from timestamptz not null default now(),
-     active_to timestamptz,
-     created_by uuid not null references auth.users (id) on delete restrict,
-     created_at timestamptz not null default now(),
-     check (active_to is null or active_to > active_from)
-   );
-   create index payment_instruction_versions_active_idx on public.payment_instruction_versions (active_from, active_to);
-   alter table public.payment_instruction_versions enable row level security;
-   alter table public.payment_instruction_versions force row level security;
-   revoke all on public.payment_instruction_versions from anon, authenticated;
-   grant select on public.payment_instruction_versions to authenticated;
-   -- Admin RPC ile insert/update (admin_save_payment_instructions)
    ```
 
 5. **`credit_accounts`** — Şirket kredi bakiye görünümü
@@ -912,6 +925,11 @@ candidate_profiles: Table<{
   summary: string | null;
   cv_full_text: string | null;  // snake_case DB kolon adı
   links: Json;
+  phone: string | null;
+  job_type_preference: Json;
+  workplace_mode_preference: Json;
+  salary_expectation: Json | null;
+  availability: string | null;
   // ...
 }, {...}, {...}>;
 
@@ -1211,8 +1229,10 @@ publish_outbox_event: { Args: { event_type: string; aggregate_id: string; payloa
 
 | Test Dosyası | Kapsam | Kritik Test Senaryoları |
 |---|---|---|
-| `supabase/tests/database/schema_hardening.test.sql` | FORCE RLS tüm tablolar, KKTC district check, FK index notification_email_outbox | 1) Her tablo için `FORCE ROW LEVEL SECURITY` aktif 2) `companies.municipality` ve `company_profile_submissions.municipality` KKTC 6 ilçesi CHECK 3) `notification_email_outbox.notification_id` FK leading index exists 4) `candidate_profiles.summary`, `cv_full_text`, `links` kolonları var |
-| `supabase/tests/database/candidate_profiles_complete.test.sql` | summary, cv_full_text, links kolonları; Zod ile uyum; RLS | 1) Aday `summary`/`cv_full_text`/`links` INSERT/UPDATE/SELECT 2) `links` JSONB CHECK validator (label,url, max 12, max 600) 3) Cross-candidate denied 4) `visibility` column UPDATE denied (revoke confirmed) |
+| `supabase/tests/database/schema_hardening.test.sql` | FORCE RLS tüm tablolar, KKTC district check, FK index notification_email_outbox | 1) Her tablo için `FORCE ROW LEVEL SECURITY` aktif 2) İlçe verisi temizliği sonrası iki municipality CHECK'i 3) `notification_email_outbox.notification_id` FK leading index exists 4) `candidate_profiles` için eksik 8 kolon mevcut |
+| `supabase/tests/database/candidate_profiles_complete.test.sql` | Aday profili eksik 8 kolon; Zod ile uyum; RLS | 1) Sekiz alanın kolon/tip/nullability sözleşmesi Zod ile uyumlu 2) `links` JSONB CHECK validator (label,url, max 12, max 600) 3) Adayın kendi alanlarında INSERT/UPDATE/SELECT, başka aday erişimi reddedilir 4) `visibility` column UPDATE denied |
+| `supabase/tests/database/table_privileges.test.sql` | Mevcut tablo ayrıcalıkları ratcheti | Eklenen tabloların allowlist/privilege beklentilerini migration'daki minimum grant'lerle güncelle; anon ve authenticated için yetkisiz erişimlerin reddedildiğini koru |
+| `supabase/tests/database/function_privileges.test.sql` | Mevcut fonksiyon ayrıcalıkları ratcheti | Yeni RPC'leri tam imzalarıyla beklenen rol allowlist'ine ekle; gereksiz `anon`/`authenticated` EXECUTE grant'i ekleme |
 | `supabase/tests/database/jobs_created_by_nullable.test.sql` | created_by NULL kabul, RI check | 1) `source_site` ilan `created_by` NULL insert succeeds 2) `platform` ilan `created_by` NOT NULL required 3) FK RI check on delete restrict works with NULL |
 | `supabase/tests/database/resumes_rls.test.sql` | resumes, resume_versions — owner read/write, anon denied, cross-candidate denied | 1) Candidate owns resume CRUD 2) Anon denied all 3) Cross-candidate denied 4) `resume_versions` read via resume ownership 5) `storage_path` unique constraint 6) `retention_until` default 90 days |
 | `supabase/tests/database/saved_jobs_rls.test.sql` | saved_jobs — candidate CRUD, unique constraint, cross-user denied | 1) Candidate save/unsave job 2) Unique (user_id,job_id) enforced 3) Cross-user denied 4) Anon denied |
@@ -1223,7 +1243,7 @@ publish_outbox_event: { Args: { event_type: string; aggregate_id: string; payloa
 | `supabase/tests/database/outbox_events_rls.test.sql` | outbox_events — service_role only | 1) Service_role CRUD 2) Anon/authenticated denied all 3) `published_at` nullable, `created_at` default now |
 | `supabase/tests/database/notification_email_outbox_fk_index.test.sql` | notification_email_outbox.notification_id FK index | 1) Dedicated index exists (leading column notification_id) 2) RI check on delete restrict uses index (EXPLAIN) |
 
-**Mevcut testlerin korunması:** 23 mevcut test dosyası bozulmamalı. Ratchet testler (`function_privileges`, `table_privileges`, `unindexed_foreign_keys`, `constraint_hygiene`) **hala geçmeli**.
+**Mevcut testlerin korunması:** 23 mevcut test dosyası bozulmamalı. Yeni tablolar ve RPC'ler eklendiğinde `table_privileges.test.sql` ve `function_privileges.test.sql` ratchet'leri de aynı değişiklikte güncellenmeli; ratchet testler (`function_privileges`, `table_privileges`, `unindexed_foreign_keys`, `constraint_hygiene`) **hala geçmeli**.
 
 **Toplam tahmini assertion:** Mevcut ~171 + Yeni ~280 = ~451 assertion
 
@@ -1266,7 +1286,7 @@ bun run test:e2e  # 4 shard
 |---|---|---|---|---|
 | 1 | `candidate_profiles.links` JSONB CHECK — `is_valid_candidate_profile_section` mı, ayrı `is_valid_candidate_links` mı? | A) Mevcut fonksiyonu reuse et (label,url, 12, 600) B) Yeni validator | **A** | DRY, mevcut fonksiyon yeterli; `array['label','url'], 12, 600` parametreleriyle uygun |
 | 2 | `jobs.created_by` nullable — TypeScript `string \| null` breaking change mi? | A) Evet, DAL'de `created_by` handle edilerek B) Migration'da `NOT NULL` geri getir (ama `source_site` ilanlar için NULL gerekiyor) | **A** | V4 `source_site` ilanlar `created_by` NULL; tip düzeltmesi şart; DAL zaten `created_by` set etmiyor (server default) |
-| 3 | V4 eksik 14 tablo — tek migrasyon mu, 3-4'e bölünsün mü? | A) Tek dosya (atomic) B) Bağımlılık sırasına göre 3 dosya | **B** | Review/debug kolaylığı; `20261124010000` (core+chat), `20261124020000` (billing+credit), `20261124030000` (outbox/integration) |
+| 3 | V4 eksik 14 tablo — tek migrasyon mu, 3-4'e bölünsün mü? | A) Tek dosya (atomic) B) Bağımlılık sırasına göre 3 dosya | **B** | Review/debug kolaylığı; `20261125000000` (hardening+profil), `20261125010000` (core+chat), `20261125020000` (billing+credit+outbox/integration). Aynı migrasyonda `payment_instruction_versions`, `orders` tablosundan önce oluşturulur. |
 | 4 | `notification_email_outbox.notification_id` FK index — unique constraint da eklensin mi? | A) Sadece index B) Unique index (bir notification → max 1 outbox row) | **B** | Migration `20261022130000` L111 `unique (notification_id)` zaten var ✅ Index yeterli |
 | 5 | Docker Supabase yerel başlatılamazsa? | CI'da Ubuntu runner'da çalışır; yerel "infrastructure unavailable" raporlanır, skip edilmez | **CI sonucu beklenir** | AGENTS.md: "Docker ve geçerli gerçek Supabase test sonuçları olmadan bu kapı geçmiş sayılmaz" |
 | 6 | `resumes.mime_type` — sadece `application/pdf` mı, `docx` da eklensin mi? | A) Sadece PDF (MVP) B) PDF + DOCX | **A** | V4 §6.2 "CV dosyası" — PDF yeterli; DOCX sonraki aşama |
@@ -1279,7 +1299,7 @@ bun run test:e2e  # 4 shard
 | Risk | Etki | Olasılık | Mitigasyon |
 |---|---|---|---|
 | `jobs.created_by` nullable → TypeScript break | DAL/runtime hatası | Yüksek | `types/database.ts` güncellenmeli; DAL'de `created_by` nullable handle (zaten server default) |
-| `candidate_profiles` eksik kolonlar → Zod validation hata | Form submit 500 | Yüksek | Migrasyon 1 ile kolonlar eklenmeli; Zod `cvFullText` omit ediliyor ama `summary`, `links` hala formda |
+| `candidate_profiles` eksik kolonlar → Zod validation hata | Form submit 500 / `column does not exist` | Yüksek | Migrasyon 1'de sekiz alan tamamlanmalı; beş yeni alanın SQL sözleşmesi Zod ile eşleştirilmeli ve migration doğrulanana kadar forma bağlanmamalı |
 | Billing/credit tabloları çok büyük migrasyon → Review zor | Merge conflict, hata | Orta | 3 migrasyona bölünmüş; her biri bağımsız test edilebilir |
 | pgTAP testleri Docker'sız çalışmaz | CI passing, local fail | Yüksek | CI'da Ubuntu runner zorunlu; local "unavailable" raporlanır |
 | `FORCE RLS` → superuser/admin lockout | Migration runner fail | Düşük | Migration `SECURITY DEFINER` RPC içinde çalışır; owner işlemleri RPC ile yapılır |
@@ -1290,9 +1310,9 @@ bun run test:e2e  # 4 shard
 
 | Aşama | Migrasyon | Açıklama | Doğrulama |
 |---|---|---|---|
-| 1 | `20261124000000_v4_schema_hardening_and_missing_columns.sql` | FORCE RLS, KKTC district check, candidate_profiles eksik kolonlar, FK index | `bun run typecheck`, `bun run test:db` (schema hardening testleri) |
-| 2 | `20261124010000_v4_missing_v4_tables.sql` | Core & Chat: resumes, resume_versions, saved_jobs, conversations, conversation_members, messages, integration_sync_runs | `bun run typecheck`, `bun run test:db` (RLS testleri), `bun run test:unit` (Zod/DAL) |
-| 3 | `20261124020000_v4_billing_credit_tables.sql` | Billing, Credit, Outbox: orders, payment_submissions, payment_reconciliations, payment_instruction_versions, credit_accounts, credit_ledger_entries, outbox_events | `bun run typecheck`, `bun run test:db` (billing/credit RLS testleri), `bun run test:integration` |
+| 1 | `20261125000000_v4_schema_hardening_and_missing_columns.sql` | FORCE RLS, güvenli ilçe temizliği ve CHECK'ler, candidate_profiles eksik 8 kolon, FK index | `bun run typecheck`, `bun run test:db` (schema hardening ve candidate profile testleri) |
+| 2 | `20261125010000_v4_missing_v4_tables.sql` | Core & Chat: resumes, resume_versions, saved_jobs, conversations, conversation_members, messages, integration_sync_runs | `bun run typecheck`, `bun run test:db` (RLS + privilege ratchet testleri), `bun run test:unit` (Zod/DAL) |
+| 3 | `20261125020000_v4_billing_credit_tables.sql` | Billing, Credit, Outbox: payment_instruction_versions → orders → payment_submissions → payment_reconciliations, credit_accounts, credit_ledger_entries, outbox_events | `bun run typecheck`, `bun run test:db` (billing/credit RLS + privilege ratchet testleri), `bun run test:integration` |
 | 4 | `src/types/database.ts` güncelleme | Tüm yeni tablolar, enum'lar, RPC'ler | `bun run typecheck` (0 hata) |
 | 5 | Zod şema güncellemeleri | `resumes`, `saved_jobs`, `conversations`, `messages`, `orders`, `payment_*`, `credit_*` | `bun run check:frontend-source`, `bun run test:unit` |
 | 6 | DAL güncellemeleri | Yeni RPC wrapper'ları, query helpers | `bun run test:unit`, `bun run test:integration` |
@@ -1315,4 +1335,4 @@ bun run test:e2e  # 4 shard
 
 ## SONRAKİ ADIM
 
-Bu plan onaylandığında, uygulama oturumunda **Migrasyon 1** (`20261124000000_v4_schema_hardening_and_missing_columns.sql`) yazılmaya başlanacak. Her migrasyon uygulandıktan sonra `bun run typecheck` ve `bun run test:db` (varsa) ile doğrulanacak.
+Bu plan onaylandığında, uygulama oturumunda **Migrasyon 1** (`20261125000000_v4_schema_hardening_and_missing_columns.sql`) yazılmaya başlanacak. Her migrasyon uygulandıktan sonra `bun run typecheck` ve gerçek yerel Supabase üzerinde `bun run test:db` ile doğrulanacak.

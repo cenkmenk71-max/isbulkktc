@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { northernCyprusDistrictValues } from "@/features/locations/northern-cyprus-districts";
+import { jobTypeKeys } from "@/features/jobs/job-type-slugs";
+
+const workplaceModeValues = ["on_site", "hybrid", "remote"] as const;
 
 const optionalProfileText = (max: number) =>
   z
@@ -88,6 +91,37 @@ const skillsSchema = z
   .pipe(z.array(z.string().min(1).max(60)).max(40));
 
 export const candidateProfileSchema = z.object({
+  phone: z
+    .string()
+    .trim()
+    .max(80)
+    .transform((value) => value || null)
+    .nullish()
+    .transform((value) => value || null),
+  jobTypePreference: z
+    .array(z.enum(jobTypeKeys))
+    .max(jobTypeKeys.length)
+    .default([])
+    .transform((values) => [...new Set(values)]),
+  workplaceModePreference: z
+    .array(z.enum(workplaceModeValues))
+    .max(workplaceModeValues.length)
+    .default([])
+    .transform((values) => [...new Set(values)]),
+  salaryExpectation: z
+    .string()
+    .trim()
+    .max(120)
+    .transform((value) => value || null)
+    .nullish()
+    .transform((value) => value || null),
+  availability: z
+    .string()
+    .trim()
+    .max(80)
+    .transform((value) => value || null)
+    .nullish()
+    .transform((value) => value || null),
   headline: z
     .string()
     .trim()
@@ -143,6 +177,11 @@ export type CandidateLanguage = z.infer<typeof languageEntrySchema>;
 export type CandidateCertification = z.infer<typeof certificationEntrySchema>;
 
 export type CandidateProfileValues = {
+  phone: string | null;
+  jobTypePreference: (typeof jobTypeKeys)[number][];
+  workplaceModePreference: (typeof workplaceModeValues)[number][];
+  salaryExpectation: string | null;
+  availability: string | null;
   headline: string | null;
   location: string | null;
   skills: string[];

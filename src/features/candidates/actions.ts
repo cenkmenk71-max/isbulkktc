@@ -32,6 +32,11 @@ export async function saveCandidateProfile(
 
   const result = candidateProfileUpdateSchema.safeParse({
     fullName: formData.get("fullName"),
+    phone: formData.get("phone") ?? "",
+    jobTypePreference: parseSection("jobTypePreference") ?? [],
+    workplaceModePreference: parseSection("workplaceModePreference") ?? [],
+    salaryExpectation: formData.get("salaryExpectation") ?? "",
+    availability: formData.get("availability") ?? "",
     headline: formData.get("headline"),
     location: formData.get("location"),
     skillsText: formData.get("skillsText"),
@@ -53,6 +58,11 @@ export async function saveCandidateProfile(
   const { error } = await supabase.from("candidate_profiles").upsert(
     {
       user_id: user.id,
+      phone: result.data.phone,
+      job_type_preference: result.data.jobTypePreference,
+      workplace_mode_preference: result.data.workplaceModePreference,
+      salary_expectation: result.data.salaryExpectation,
+      availability: result.data.availability,
       headline: result.data.headline,
       location: result.data.location,
       skills: result.data.skillsText,

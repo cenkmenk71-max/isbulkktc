@@ -17,6 +17,11 @@ import {
  */
 
 const emptyProfile: CandidateProfileDraft = {
+  phone: null,
+  jobTypePreference: [],
+  workplaceModePreference: [],
+  salaryExpectation: null,
+  availability: null,
   headline: "",
   location: "",
   skills: [],

@@ -6,6 +6,11 @@ import {
 } from "../../src/features/candidates/resume-profile-draft";
 
 const emptyProfile: CandidateProfileDraft = {
+  phone: null,
+  jobTypePreference: [],
+  workplaceModePreference: [],
+  salaryExpectation: null,
+  availability: null,
   headline: "",
   location: "",
   skills: [],
