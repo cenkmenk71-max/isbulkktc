@@ -990,6 +990,11 @@
     },
     "profileTitle": "Profile details",
     "profileDescription": "The information you save is private to your account.",
+    "phoneLabel": "Phone",
+    "jobTypePreferenceLabel": "Preferred job types",
+    "workplaceModePreferenceLabel": "Preferred work arrangements",
+    "salaryExpectationLabel": "Salary expectation",
+    "availabilityLabel": "Availability to start",
     "emptyProfile": {
       "title": "Let’s build your profile",
       "description": "Start with a few details or import your CV. You can review every suggestion before saving.",

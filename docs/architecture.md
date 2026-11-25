@@ -63,6 +63,15 @@ değildir. Web checkout'u, platform içi
 ödeme işleme ve kredi defteri kapsam dışıdır; IBAN ile manuel site dışı havale
 ürün kararıdır.
 
+2026-11-25 tarihli mikro-denetim çalışması bu dalda aday tercih alanları,
+resume metadata, saved jobs, messaging ve billing/credit için şema, DAL ve test
+iskeletleri ekler. Bunlar yerel/üretim veritabanına uygulanmış veya kullanıcıya
+açılmış özellikler değildir: resume upload/Storage policy ve messaging UI
+yoktur. Ayrıca V4'te platform içi ödeme ve kredi defteri kapsam dışı
+olduğundan, `20261125020000` migration'ı mimari kapsam kararı güncellenmeden
+uygulanmamalıdır. Docker/yerel Supabase bulunmadığı için bu dalın migration ve
+pgTAP sonuçları henüz doğrulanmamıştır.
+
 İlk migration, yalnız ilk güvenlik temelini kurar: Auth ile tetiklenen profil,
 güvenilir kullanıcı rolleri, aday profil şeması, şirket ve şirket üyeliği,
 dar şirket-kur oluşturma RPC'si, redakte edilmiş audit kayıtları ve erişimi
@@ -109,8 +118,12 @@ Metin çıkarılamayan PDF'lerde ilk iki sayfanın görseli yapılandırılmış
 Vision'a gönderilir. Sonra Groq metin ayrıştırması ve yerel kural tabanlı
 ayrıştırıcı denenir. Sağlayıcı anahtarları sunucu tarafında kalır. Dosya ve
 sayfa görselleri ayrıştırma için sunucuya gönderilir; ilgili sağlayıcı
-yapılandırılmışsa Gemini veya Groq'a aktarılabilir. İşBul KKTC dosya, görsel
-ve ham CV metnini kalıcı olarak saklamaz. Sağlayıcıların kendi veri işleme
+yapılandırılmışsa Gemini veya Groq'a aktarılabilir. Dosya ve görseller kalıcı
+saklanmaz. `candidate_profiles.cv_full_text` alanı veritabanı seviyesinde
+adayın kendi satırına sınırlı yazıma açıktır; mevcut profil Server Action'ı bu
+alanı yazmaz ve DAL bu alanı okumaz. Uygulama içe aktarma akışında ham CV metni
+transient kalır; veritabanı alanının doğrudan kullanımı için saklama/silme
+politikası ayrıca kararlaştırılmalıdır. Sağlayıcıların kendi veri işleme
 kuralları ayrıca geçerlidir. Şemayla doğrulanmış öneriler formda gösterilir ve
 adayın açık kaydetme eylemine kadar profile yazılmaz. Öneriler mevcut değerlerle
 birleştirilir: tekil başlık ve konum yalnız boşsa doldurulur, mevcut kayıtlar

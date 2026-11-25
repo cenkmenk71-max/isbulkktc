@@ -11,6 +11,38 @@ export type CompanyRole = "owner" | "recruiter" | "billing" | "viewer";
 export type CompanyVerificationStatus = "pending" | "verified" | "rejected" | "suspended";
 export type MembershipStatus = "active" | "pending" | "suspended";
 export type CompanyProfileSubmissionStatus = "pending" | "approved" | "rejected";
+export type CandidateJobType =
+  | "full_time"
+  | "part_time"
+  | "contract"
+  | "temporary"
+  | "internship"
+  | "freelance";
+export type CandidateWorkplaceMode = "on_site" | "hybrid" | "remote";
+export type OrderStatus =
+  | "awaiting_transfer"
+  | "payment_submitted"
+  | "payment_under_review"
+  | "paid"
+  | "rejected"
+  | "expired"
+  | "cancelled"
+  | "refund_pending"
+  | "refunded";
+export type PaymentSubmissionStatus =
+  | "submitted"
+  | "under_review"
+  | "accepted"
+  | "rejected"
+  | "needs_more_information";
+export type ReconciliationDecision = "accepted" | "rejected";
+export type CreditEntryType =
+  | "purchase_grant"
+  | "job_consume"
+  | "job_refund"
+  | "manual_adjustment"
+  | "expiry"
+  | "reversal";
 
 type Table<Row, Insert, Update> = {
   Row: Row;
@@ -87,6 +119,12 @@ export type Database = {
           certifications: Json;
           summary: string | null;
           links: Json;
+          cv_full_text: string | null;
+          phone: string | null;
+          job_type_preference: CandidateJobType[];
+          workplace_mode_preference: CandidateWorkplaceMode[];
+          salary_expectation: string | null;
+          availability: string | null;
           visibility: string;
           created_at: string;
           updated_at: string;
@@ -102,7 +140,13 @@ export type Database = {
           certifications?: Json;
           summary?: string | null;
           links?: Json;
-          visibility?: string;
+          cv_full_text?: string | null;
+          phone?: string | null;
+          job_type_preference?: CandidateJobType[];
+          workplace_mode_preference?: CandidateWorkplaceMode[];
+          salary_expectation?: string | null;
+          availability?: string | null;
+          visibility?: never;
           created_at?: never;
           updated_at?: never;
         },
@@ -116,7 +160,13 @@ export type Database = {
           certifications?: Json;
           summary?: string | null;
           links?: Json;
-          visibility?: string;
+          cv_full_text?: string | null;
+          phone?: string | null;
+          job_type_preference?: CandidateJobType[];
+          workplace_mode_preference?: CandidateWorkplaceMode[];
+          salary_expectation?: string | null;
+          availability?: string | null;
+          visibility?: never;
           user_id?: never;
           created_at?: never;
           updated_at?: never;
@@ -301,7 +351,7 @@ export type Database = {
         {
           id: string;
           company_id: string;
-          created_by: string;
+          created_by: string | null;
           title: string;
           slug: string;
           summary: string;
@@ -419,6 +469,195 @@ export type Database = {
           messages: boolean;
           marketing: boolean;
           updated_at: string;
+        },
+        never,
+        never
+      >;
+      resumes: Table<
+        {
+          id: string;
+          candidate_id: string;
+          storage_path: string;
+          original_filename: string;
+          file_size_bytes: number;
+          mime_type: string;
+          page_count: number | null;
+          status: "uploaded" | "processing" | "parsed" | "failed" | "deleted";
+          retention_until: string;
+          parsed_data: Json | null;
+          created_at: string;
+          updated_at: string;
+        },
+        never,
+        never
+      >;
+      resume_versions: Table<
+        {
+          id: string;
+          resume_id: string;
+          version: number;
+          structured_data: Json;
+          created_at: string;
+        },
+        never,
+        never
+      >;
+      saved_jobs: Table<
+        { user_id: string; job_id: string; created_at: string },
+        { user_id: string; job_id: string; created_at?: never },
+        never
+      >;
+      conversations: Table<
+        {
+          id: string;
+          subject: string | null;
+          status: "active" | "archived" | "closed";
+          created_at: string;
+          updated_at: string;
+        },
+        never,
+        never
+      >;
+      conversation_members: Table<
+        {
+          conversation_id: string;
+          user_id: string;
+          role: "owner" | "member";
+          joined_at: string;
+          left_at: string | null;
+        },
+        never,
+        never
+      >;
+      messages: Table<
+        {
+          id: string;
+          conversation_id: string;
+          sender_id: string;
+          body: string;
+          message_type: "text" | "system" | "file";
+          metadata: Json;
+          created_at: string;
+        },
+        {
+          conversation_id: string;
+          sender_id: string;
+          body: string;
+          message_type?: "text" | "system" | "file";
+          metadata?: Json;
+        },
+        never
+      >;
+      integration_sync_runs: Table<
+        {
+          id: string;
+          integration: "ministry_jobs" | "ministry_companies" | "external_api";
+          status: "running" | "completed" | "failed" | "partial";
+          started_at: string;
+          finished_at: string | null;
+          records_processed: number;
+          records_succeeded: number;
+          records_failed: number;
+          error_summary: string | null;
+          metadata: Json;
+        },
+        never,
+        never
+      >;
+      payment_instruction_versions: Table<
+        {
+          id: string;
+          beneficiary_name: string;
+          bank_name: string;
+          iban_restricted_value: string;
+          currency: string;
+          instructions: string | null;
+          active_from: string;
+          active_to: string | null;
+          created_by: string;
+          created_at: string;
+        },
+        never,
+        never
+      >;
+      orders: Table<
+        {
+          id: string;
+          company_id: string;
+          status: OrderStatus;
+          total_minor: number;
+          currency: string;
+          reference_code: string;
+          package_snapshot: Json;
+          payment_instructions_version_id: string;
+          expires_at: string;
+          created_at: string;
+          updated_at: string;
+        },
+        never,
+        never
+      >;
+      payment_submissions: Table<
+        {
+          id: string;
+          order_id: string;
+          submitted_by: string;
+          sender_name: string;
+          transfer_reference: string;
+          amount_minor: number;
+          currency: string;
+          transferred_at: string;
+          receipt_storage_path: string | null;
+          status: PaymentSubmissionStatus;
+          created_at: string;
+          updated_at: string;
+        },
+        never,
+        never
+      >;
+      payment_reconciliations: Table<
+        {
+          id: string;
+          order_id: string;
+          submission_id: string;
+          reviewed_by: string;
+          decision: ReconciliationDecision;
+          bank_reference_normalized: string;
+          notes: string | null;
+          reviewed_at: string;
+        },
+        never,
+        never
+      >;
+      credit_accounts: Table<
+        { company_id: string; available_balance: number; updated_at: string },
+        never,
+        never
+      >;
+      credit_ledger_entries: Table<
+        {
+          id: string;
+          company_id: string;
+          order_id: string | null;
+          job_id: string | null;
+          entry_type: CreditEntryType;
+          quantity_delta: number;
+          idempotency_key: string;
+          actor_id: string;
+          reason: string;
+          created_at: string;
+        },
+        never,
+        never
+      >;
+      outbox_events: Table<
+        {
+          id: string;
+          event_type: string;
+          aggregate_id: string;
+          payload_minimal: Json;
+          created_at: string;
+          published_at: string | null;
         },
         never,
         never
@@ -963,6 +1202,145 @@ export type Database = {
         Args: { _directory_entry_id: string };
         Returns: undefined;
       };
+      create_resume: {
+        Args: {
+          _candidate_id: string;
+          _storage_path: string;
+          _original_filename: string;
+          _file_size_bytes: number;
+          _mime_type: string;
+          _page_count?: number | null;
+        };
+        Returns: string;
+      };
+      update_resume_status: {
+        Args: { _resume_id: string; _status: string; _parsed_data?: Json | null };
+        Returns: undefined;
+      };
+      create_resume_version: {
+        Args: { _resume_id: string; _structured_data: Json };
+        Returns: string;
+      };
+      start_conversation: {
+        Args: { _participant_ids: string[]; _subject?: string | null };
+        Returns: string;
+      };
+      send_message: {
+        Args: {
+          _conversation_id: string;
+          _body: string;
+          _message_type?: string;
+          _metadata?: Json;
+        };
+        Returns: string;
+      };
+      archive_conversation: {
+        Args: { _conversation_id: string };
+        Returns: undefined;
+      };
+      log_integration_sync: {
+        Args: {
+          _integration: string;
+          _status: string;
+          _records_processed: number;
+          _records_succeeded: number;
+          _records_failed: number;
+          _error_summary?: string | null;
+          _metadata?: Json;
+        };
+        Returns: string;
+      };
+      create_order: {
+        Args: {
+          _company_id: string;
+          _listing_plan_code: string;
+          _duration_days: number;
+        };
+        Returns: string;
+      };
+      submit_payment: {
+        Args: {
+          _order_id: string;
+          _sender_name: string;
+          _transfer_reference: string;
+          _amount_minor: number;
+          _currency: string;
+          _transferred_at: string;
+          _receipt_storage_path?: string | null;
+        };
+        Returns: string;
+      };
+      get_order_payment_instructions: {
+        Args: { _order_id: string };
+        Returns: {
+          beneficiary_name: string;
+          bank_name: string;
+          iban_restricted_value: string;
+          currency: string;
+          instructions: string | null;
+          reference_code: string;
+          total_minor: number;
+          expires_at: string;
+        }[];
+      };
+      admin_save_payment_instructions: {
+        Args: {
+          _beneficiary_name: string;
+          _bank_name: string;
+          _iban_restricted_value: string;
+          _currency?: string;
+          _instructions?: string | null;
+          _active_from?: string;
+          _active_to?: string | null;
+          _created_by?: string | null;
+        };
+        Returns: string;
+      };
+      admin_reconcile_payment: {
+        Args: {
+          _order_id: string;
+          _submission_id: string;
+          _decision: ReconciliationDecision;
+          _bank_reference_normalized: string;
+          _notes?: string | null;
+          _reviewed_by?: string | null;
+        };
+        Returns: undefined;
+      };
+      review_payment_submission: {
+        Args: { _order_id: string; _submission_id: string };
+        Returns: undefined;
+      };
+      get_company_credit_ledger: {
+        Args: { _company_id: string; _limit?: number; _offset?: number };
+        Returns: {
+          id: string;
+          company_id: string;
+          order_id: string | null;
+          job_id: string | null;
+          entry_type: CreditEntryType;
+          quantity_delta: number;
+          idempotency_key: string;
+          actor_id: string;
+          reason: string;
+          created_at: string;
+        }[];
+      };
+      adjust_credit_balance: {
+        Args: {
+          _company_id: string;
+          _quantity_delta: number;
+          _entry_type: CreditEntryType;
+          _idempotency_key: string;
+          _reason: string;
+          _actor_id?: string | null;
+        };
+        Returns: undefined;
+      };
+      publish_outbox_event: {
+        Args: { _event_type: string; _aggregate_id: string; _payload_minimal: Json };
+        Returns: string;
+      };
     };
     Enums: {
       platform_role: PlatformRole;
@@ -970,6 +1348,10 @@ export type Database = {
       company_verification_status: CompanyVerificationStatus;
       membership_status: MembershipStatus;
       company_profile_submission_status: CompanyProfileSubmissionStatus;
+      order_status: OrderStatus;
+      payment_submission_status: PaymentSubmissionStatus;
+      reconciliation_decision: ReconciliationDecision;
+      credit_entry_type: CreditEntryType;
     };
     CompositeTypes: Record<string, never>;
   };

@@ -101,6 +101,11 @@ test("candidate workspace reads only deployed profile columns and keeps raw CV t
           certifications: [],
           summary: "Backend and API development",
           links: [{ label: "Portfolio", url: "https://example.com" }],
+          phone: "+90 555 123 4567",
+          job_type_preference: ["full_time"],
+          workplace_mode_preference: ["remote"],
+          salary_expectation: "40,000 TRY",
+          availability: "Immediate",
         },
         error: null,
       },
@@ -115,13 +120,18 @@ test("candidate workspace reads only deployed profile columns and keeps raw CV t
   assert.deepEqual(workspace.profile.links, [
     { label: "Portfolio", url: "https://example.com" },
   ]);
+  assert.equal(workspace.profile.phone, "+90 555 123 4567");
+  assert.deepEqual(workspace.profile.jobTypePreference, ["full_time"]);
+  assert.deepEqual(workspace.profile.workplaceModePreference, ["remote"]);
+  assert.equal(workspace.profile.salaryExpectation, "40,000 TRY");
+  assert.equal(workspace.profile.availability, "Immediate");
   assert.equal(workspace.profile.cvFullText, null);
 
   const [profileLookup] = fromCalls("candidate_profiles");
   assert.ok(profileLookup, "the candidate profile lookup must execute");
   assert.ok(
     profileLookup.ops.includes(
-      "select:headline, location, skills, experience, education, languages, certifications, summary, links",
+      "select:headline, location, skills, experience, education, languages, certifications, summary, links, phone, job_type_preference, workplace_mode_preference, salary_expectation, availability",
     ),
     "the DAL must select only columns present in the deployed table",
   );
@@ -158,6 +168,8 @@ test("saving a candidate profile upserts the caller's own row", async () => {
     upserts[0].includes('"summary":"Ürün odaklı yazılım geliştirici"'),
     `the submitted summary must be persisted as plain text: ${upserts[0]}`,
   );
+  assert.ok(upserts[0].includes('"phone":null'));
+  assert.ok(upserts[0].includes('"job_type_preference":[]'));
 });
 
 test("saving a candidate profile never persists raw CV text", async () => {

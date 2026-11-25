@@ -15,6 +15,11 @@ test("candidate profile trims text and normalizes a unique skills list", () => {
       links: [],
     }),
     {
+      phone: null,
+      jobTypePreference: [],
+      workplaceModePreference: [],
+      salaryExpectation: null,
+      availability: null,
       headline: "Senior product designer",
       location: "Lefkoşa",
       skillsText: ["Figma", "User research", "Prototyping"],
@@ -62,6 +67,11 @@ test("candidate profile accepts blank optional fields without storing whitespace
       links: [],
     }),
     {
+      phone: null,
+      jobTypePreference: [],
+      workplaceModePreference: [],
+      salaryExpectation: null,
+      availability: null,
       headline: null,
       location: null,
       skillsText: [],
@@ -107,6 +117,11 @@ test("candidate profile trims structured sections and drops blank entries", () =
       certifications: [],
     }),
     {
+      phone: null,
+      jobTypePreference: [],
+      workplaceModePreference: [],
+      salaryExpectation: null,
+      availability: null,
       headline: null,
       location: null,
       skillsText: [],
@@ -160,6 +175,51 @@ test("candidate profile rejects oversized or malformed structured sections", () 
   );
 });
 
+test("candidate profile text and links match database length limits", () => {
+  const maximumLinks = Array.from({ length: 12 }, () => ({
+    label: "l".repeat(120),
+    url: "u".repeat(600),
+  }));
+  const validProfile = {
+    headline: "",
+    location: "",
+    skillsText: "",
+    summary: "s".repeat(2000),
+    cvFullText: "c".repeat(100_000),
+    links: maximumLinks,
+  };
+
+  assert.equal(candidateProfileSchema.safeParse(validProfile).success, true);
+  assert.equal(
+    candidateProfileSchema.safeParse({
+      ...validProfile,
+      summary: "s".repeat(2001),
+    }).success,
+    false,
+  );
+  assert.equal(
+    candidateProfileSchema.safeParse({
+      ...validProfile,
+      cvFullText: "c".repeat(100_001),
+    }).success,
+    false,
+  );
+  assert.equal(
+    candidateProfileSchema.safeParse({
+      ...validProfile,
+      links: [{ label: "site", url: "u".repeat(601) }],
+    }).success,
+    false,
+  );
+  assert.equal(
+    candidateProfileSchema.safeParse({
+      ...validProfile,
+      links: [...maximumLinks, { label: "site", url: "u" }],
+    }).success,
+    false,
+  );
+});
+
 test("candidate profile location accepts only a Northern Cyprus district", () => {
   const profile = {
     headline: "",
@@ -194,6 +254,45 @@ test("candidate profile rejects database-overflowing values and excessive skills
   for (const profile of invalidProfiles) {
     assert.equal(candidateProfileSchema.safeParse(profile).success, false);
   }
+});
+
+test("candidate preferences are bounded, deduplicated and stored using canonical values", () => {
+  const parsed = candidateProfileSchema.parse({
+    phone: " +90 555 123 4567 ",
+    jobTypePreference: ["full_time", "freelance", "full_time"],
+    workplaceModePreference: ["remote", "hybrid", "remote"],
+    salaryExpectation: "  40,000 TRY  ",
+    availability: "  Immediate  ",
+    headline: "",
+    location: "",
+    skillsText: "",
+    summary: "",
+  });
+
+  assert.deepEqual(parsed.jobTypePreference, ["full_time", "freelance"]);
+  assert.deepEqual(parsed.workplaceModePreference, ["remote", "hybrid"]);
+  assert.equal(parsed.phone, "+90 555 123 4567");
+  assert.equal(parsed.salaryExpectation, "40,000 TRY");
+  assert.equal(parsed.availability, "Immediate");
+
+  assert.equal(
+    candidateProfileSchema.safeParse({
+      headline: "",
+      location: "",
+      skillsText: "",
+      jobTypePreference: ["not-a-job-type"],
+    }).success,
+    false,
+  );
+  assert.equal(
+    candidateProfileSchema.safeParse({
+      headline: "",
+      location: "",
+      skillsText: "",
+      workplaceModePreference: ["onsite"],
+    }).success,
+    false,
+  );
 });
 
 

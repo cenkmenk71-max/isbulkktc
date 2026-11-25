@@ -131,6 +131,11 @@ export function mergeResumeDraft(
 
   return {
     profile: {
+      phone: current.phone,
+      jobTypePreference: current.jobTypePreference,
+      workplaceModePreference: current.workplaceModePreference,
+      salaryExpectation: current.salaryExpectation,
+      availability: current.availability,
       headline,
       location,
       skills,

@@ -990,6 +990,11 @@
     },
     "profileTitle": "جزئیات پروفایل",
     "profileDescription": "اطلاعات ذخیره‌شده خصوصی و متعلق به حساب شماست.",
+    "phoneLabel": "تلفن",
+    "jobTypePreferenceLabel": "نوع کار ترجیحی",
+    "workplaceModePreferenceLabel": "شیوه کاری ترجیحی",
+    "salaryExpectationLabel": "حقوق مورد انتظار",
+    "availabilityLabel": "زمان آمادگی برای شروع کار",
     "emptyProfile": {
       "title": "پروفایل خود را بسازید",
       "description": "با افزودن چند جزئیات یا واردکردن رزومه شروع کنید. پیش از ذخیره می‌توانید همه پیشنهادها را بررسی کنید.",

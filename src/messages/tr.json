@@ -990,6 +990,11 @@
     },
     "profileTitle": "Profil bilgileri",
     "profileDescription": "Kaydettiğiniz bilgiler hesabınıza özeldir.",
+    "phoneLabel": "Telefon",
+    "jobTypePreferenceLabel": "İş türü tercihleri",
+    "workplaceModePreferenceLabel": "Çalışma düzeni tercihleri",
+    "salaryExpectationLabel": "Maaş beklentisi",
+    "availabilityLabel": "İşe başlama uygunluğu",
     "emptyProfile": {
       "title": "Profilinizi birlikte oluşturalım",
       "description": "Birkaç bilgi ekleyerek başlayın veya CV’nizi aktarın. Kaydetmeden önce tüm önerileri inceleyebilirsiniz.",

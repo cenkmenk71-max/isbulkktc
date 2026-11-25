@@ -990,6 +990,11 @@
     },
     "profileTitle": "Profilangaben",
     "profileDescription": "Ihre gespeicherten Informationen sind nur für Ihr Konto bestimmt.",
+    "phoneLabel": "Telefon",
+    "jobTypePreferenceLabel": "Bevorzugte Beschäftigungsarten",
+    "workplaceModePreferenceLabel": "Bevorzugte Arbeitsmodelle",
+    "salaryExpectationLabel": "Gehaltsvorstellung",
+    "availabilityLabel": "Verfügbarkeit für den Arbeitsbeginn",
     "emptyProfile": {
       "title": "Erstellen Sie Ihr Profil",
       "description": "Ergänzen Sie zunächst einige Angaben oder importieren Sie Ihren Lebenslauf. Alle Vorschläge können Sie vor dem Speichern prüfen.",
