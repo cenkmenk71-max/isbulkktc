@@ -244,6 +244,8 @@ export function CandidateProfileForm({
     | "inactive"
   >("idle");
   const [importSkipped, setImportSkipped] = useState(0);
+  const [importAdded, setImportAdded] = useState(0);
+  const [importFilledFields, setImportFilledFields] = useState<string[]>([]);
   const [resumeImported, setResumeImported] = useState(false);
   const [isDraggingResume, setIsDraggingResume] = useState(false);
 
@@ -310,6 +312,8 @@ export function CandidateProfileForm({
     setInitialValues(currentValuesRef.current);
     setResumeImported(false);
     setImportSkipped(0);
+    setImportAdded(0);
+    setImportFilledFields([]);
     setImportStatus("idle");
   }, [state]);
 
@@ -519,7 +523,8 @@ export function CandidateProfileForm({
         },
         importResult.draft,
       );
-      const { profile: mergedProfile } = mergeResult;
+      const { profile: mergedProfile, added, skipped, filledFields } =
+        mergeResult;
       setHeadline(mergedProfile.headline);
       setLocation(mergedProfile.location);
       setSkillsText(mergedProfile.skills.join("\n"));
@@ -529,19 +534,19 @@ export function CandidateProfileForm({
       setCertifications(mergedProfile.certifications);
       setSummary(mergedProfile.summary);
       setLinks(mergedProfile.links);
-      setImportSkipped(mergeResult.skipped);
-      if (mergeResult.added === 0) {
+      setImportSkipped(skipped);
+      setImportAdded(added);
+      setImportFilledFields(filledFields);
+      if (added === 0) {
         setImportStatus(
-          mergeResult.skipped > 0
+          skipped > 0
             ? "noNewInformationWithSkipped"
             : "noNewInformation",
         );
         return;
       }
 
-      setImportStatus(
-        mergeResult.skipped > 0 ? "importedWithSkipped" : "imported",
-      );
+      setImportStatus(skipped > 0 ? "importedWithSkipped" : "imported");
       setResumeImported(true);
       setOpenSections(getOpenCandidateProfileSections(mergedProfile));
     } catch (error) {
@@ -717,10 +722,6 @@ export function CandidateProfileForm({
             <div className="candidate-resume-import-copy">
               <h3 id="resume-import-title">{rootCopy("resumeImport.title")}</h3>
               <p>{rootCopy("resumeImport.description")}</p>
-              <p className="candidate-resume-privacy">
-                <LockKeyhole size={14} aria-hidden="true" />
-                {rootCopy("resumeImport.privacy")}
-              </p>
               <p className="candidate-resume-drop-hint">
                 {copy("resumeImport.dropPrompt")}
               </p>
@@ -735,7 +736,7 @@ export function CandidateProfileForm({
                 accept=".pdf,.docx,.rtf,.odt,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
                 disabled={importing}
                 ref={resumeInputRef}
-                aria-describedby="candidate-resume-file-hint candidate-resume-status"
+                aria-describedby="candidate-resume-status"
                 onChange={(event) => {
                   const file = event.currentTarget.files?.[0];
                   event.currentTarget.value = "";
@@ -748,9 +749,6 @@ export function CandidateProfileForm({
                 type="file"
               />
             </label>
-            <p className="candidate-resume-file-hint" id="candidate-resume-file-hint">
-              {rootCopy("resumeImport.fileHint")}
-            </p>
             <p
               aria-live="polite"
               className="candidate-resume-status"
@@ -776,13 +774,18 @@ export function CandidateProfileForm({
             >
               {importStatus === "idle"
                 ? importing
-                  ? rootCopy("resumeImport.processingStatus")
+                  ? rootCopy("resumeImport.processing")
                   : ""
                 : importStatus === "imported"
-                  ? rootCopy("resumeImport.imported")
+                  ? rootCopy("resumeImport.imported", {
+                      count: importAdded,
+                      fields: importFilledFields.join(", "),
+                    })
                   : importStatus === "importedWithSkipped"
                     ? rootCopy("resumeImport.importedWithSkipped", {
-                        count: importSkipped,
+                        count: importAdded,
+                        skipped: importSkipped,
+                        fields: importFilledFields.join(", "),
                       })
                     : importStatus === "noNewInformationWithSkipped"
                       ? rootCopy("resumeImport.noNewInformationWithSkipped", {
@@ -792,18 +795,6 @@ export function CandidateProfileForm({
                         ? rootCopy("resumeImport.noNewInformation")
                         : rootCopy(`resumeImport.errors.${importStatus}`)}
             </p>
-            {resumeImported ? (
-              <button
-                className="candidate-revert-button"
-                disabled={!hasUnsavedChanges || pending || importing}
-                onClick={revertToInitial}
-                title={copy("revert.title")}
-                type="button"
-              >
-                <RotateCcw size={16} aria-hidden="true" />
-                {copy("revert.label")}
-              </button>
-            ) : null}
             {importing ? (
               <div
                 aria-hidden="true"

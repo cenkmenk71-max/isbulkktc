@@ -86,7 +86,7 @@ export async function importResumeFile(
     const draft = await parseResumeFile(file, pageImages);
     if (!draft) return { ok: false, code: "empty" };
     const { cvFullText: _cvFullText, ...preview } = draft;
-    return { ok: true, draft: preview };
+    return { ok: true, draft: preview, added: 0, skipped: 0, filledFields: [] };
   } catch (error) {
     if (error instanceof DocumentImportError) {
       return { ok: false, code: error.code };
