@@ -12,9 +12,9 @@ create or replace function public.update_published_job(
   _description text,
   _requirements text,
   _responsibilities text,
-  _job_type public.job_type,
-  _workplace_mode public.workplace_mode,
-  _district public.northern_cyprus_district
+  _job_type text,
+  _workplace_mode text,
+  _district text
 )
 returns void
 language plpgsql
@@ -128,6 +128,24 @@ begin
       using errcode = '22023';
   end if;
 
+  -- Validate job_type against check constraint
+  if _job_type not in ('full_time', 'part_time', 'contract', 'temporary', 'internship', 'freelance') then
+    raise exception 'Invalid job_type value.'
+      using errcode = '22023';
+  end if;
+
+  -- Validate workplace_mode against check constraint
+  if _workplace_mode not in ('on_site', 'hybrid', 'remote') then
+    raise exception 'Invalid workplace_mode value.'
+      using errcode = '22023';
+  end if;
+
+  -- Validate district against check constraint (nullable)
+  if _district is not null and _district not in ('Lefkoşa', 'Mağusa', 'Girne', 'İskele', 'Güzelyurt', 'Lefke') then
+    raise exception 'Invalid district value.'
+      using errcode = '22023';
+  end if;
+
   -- Update only the allowed fields (NOT status, published_at, expires_at, company_id, created_by, etc.)
   update public.jobs
   set title = pg_catalog.btrim(_title),
@@ -164,9 +182,9 @@ end;
 $$;
 
 -- Revoke default grants and grant only to authenticated
-revoke all on function public.update_published_job(uuid, text, text, text, text, text, text, public.job_type, public.workplace_mode, public.northern_cyprus_district)
+revoke all on function public.update_published_job(uuid, text, text, text, text, text, text, text, text, text)
   from public, anon, authenticated;
-grant execute on function public.update_published_job(uuid, text, text, text, text, text, text, public.job_type, public.workplace_mode, public.northern_cyprus_district)
+grant execute on function public.update_published_job(uuid, text, text, text, text, text, text, text, text, text)
   to authenticated;
 
 commit;
