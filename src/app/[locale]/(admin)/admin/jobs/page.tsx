@@ -55,7 +55,10 @@ export default async function AdminJobsPage({
         <p className="eyebrow"><span className="eyebrow-rule" /><ShieldCheck size={15} aria-hidden="true" />{copy("pageCount")}: {jobs.length}</p>
         <h1>{copy("title")}</h1>
         <p>{copy("description")}</p>
-        <Link href="/admin/packages">{copy("backToPackages")}</Link>
+        <div className="admin-job-review-links">
+          <Link href="/admin/packages">{copy("backToPackages")}</Link>
+          <Link href="/admin/outreach">{copy("outreachLink")}</Link>
+        </div>
       </header>
 
       {jobs.length ? (

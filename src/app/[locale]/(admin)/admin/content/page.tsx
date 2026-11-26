@@ -134,6 +134,7 @@ export default async function AdminContentPage({
           </span>
           <Link href="/admin/packages">{copy("catalogLink")}</Link>
           <Link href="/admin/company-profiles">{copy("reviewsLink")}</Link>
+          <Link href="/admin/outreach">{copy("outreachLink")}</Link>
         </div>
       </header>
 

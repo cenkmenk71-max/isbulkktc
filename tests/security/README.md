@@ -21,6 +21,7 @@ a boundary regression is attributable at a glance.
 
 | File | Boundary |
 |---|---|
+| `admin-outreach-surface.test.ts` | `/admin/outreach` enforces platform_admin MFA, validates recipients server-side, checks `email_engagement_optouts` before sending, emits `List-Unsubscribe` headers via signed tokens, and caps batch size at 25 |
 | `open-redirect.test.ts` | `/[locale]/install?next=` continuation stays same-origin |
 | `qr-render-capacity-surface.test.ts` | generator-level boundary probes for a byte-oversized `next` and an undersized pinned version; the route catches generator errors, auto-sizes an insufficient pinned version and returns a no-store 414 when no QR version can encode the payload. Actual route behaviour is exercised in `tests/integration/qr-route.test.ts` by decoding PNG/SVG with an independent QR decoder |
 | `auth-redirect-boundary.test.ts` | `/auth/callback` query values (`next`, `flow`, `sb_flow_id`) never become an off-origin path |
