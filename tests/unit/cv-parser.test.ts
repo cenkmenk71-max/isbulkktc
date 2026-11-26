@@ -97,10 +97,11 @@ test("Gemini 429 falls back to Groq after retry with fallback model", async () =
       },
     );
 
-    assert.equal(requests.length, 3);
+    assert.equal(requests.length, 4);
     assert.match(requests[0] ?? "", /generativelanguage\.googleapis\.com/);
     assert.match(requests[1] ?? "", /generativelanguage\.googleapis\.com/);
-    assert.match(requests[2] ?? "", /api\.groq\.com/);
+    assert.match(requests[2] ?? "", /generativelanguage\.googleapis\.com/);
+    assert.match(requests[3] ?? "", /api\.groq\.com/);
     assert.equal(draft?.headline, "Инженер-программист");
   } finally {
     globalThis.fetch = originalFetch;
@@ -166,7 +167,7 @@ test("a missing Gemini model falls back to the configured model", async () => {
   }
 });
 
-test("scanned PDFs use Qwen vision when Gemini and the configured Groq model fail", async () => {
+test("scanned PDFs use Groq Vision scout first, then Maverick fallback", async () => {
   const originalFetch = globalThis.fetch;
   const models: string[] = [];
   globalThis.fetch = async (input, init) => {
@@ -178,18 +179,19 @@ test("scanned PDFs use Qwen vision when Gemini and the configured Groq model fai
     const payload = JSON.parse(String(init?.body)) as {
       model: string;
       max_completion_tokens: number;
-      messages: { content: { image_url?: { url: string } }[] }[];
+      messages: { content: unknown[] }[];
+      response_format: { type: string };
     };
     models.push(payload.model);
-    if (payload.model !== "qwen/qwen3.8-27b") {
+    assert.equal(payload.response_format.type, "json_object");
+    const userContent = payload.messages[1]?.content;
+    const imageItem = userContent?.[1] as { image_url?: { url: string } } | undefined;
+    if (payload.model !== "meta-llama/llama-4-maverick-17b-128e-instruct") {
       return new Response("{}", { status: 404 });
     }
 
     assert.equal(payload.max_completion_tokens, 4_000);
-    assert.equal(
-      payload.messages[1]?.content[1]?.image_url?.url,
-      "data:image/jpeg;base64,dGVzdA==",
-    );
+    assert.equal(imageItem?.image_url?.url, "data:image/jpeg;base64,dGVzdA==");
     return groqResponse(output);
   };
 
@@ -209,9 +211,104 @@ test("scanned PDFs use Qwen vision when Gemini and the configured Groq model fai
 
     assert.deepEqual(models, [
       "meta-llama/llama-4-scout-17b-16e-instruct",
-      "qwen/qwen3.8-27b",
+      "meta-llama/llama-4-maverick-17b-128e-instruct",
     ]);
     assert.equal(draft?.headline, "Инженер-программист");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("pageImages bypasses Gemini entirely; Groq Vision single-step JSON fills all 9 fields", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: string[] = [];
+  globalThis.fetch = async (_input, init) => {
+    const url = String(_input);
+    requests.push(url);
+    if (url.includes("generativelanguage.googleapis.com")) {
+      // Gemini must never be consulted when page images + Groq key exist
+      throw new Error("Gemini must not be called for page-images parsing");
+    }
+    const payload = JSON.parse(String(init?.body)) as {
+      model: string;
+      response_format: { type: string };
+      messages: { content: unknown[] }[];
+    };
+    if (payload.model !== "meta-llama/llama-4-scout-17b-16e-instruct") {
+      return new Response("{}", { status: 404 });
+    }
+    assert.equal(payload.response_format.type, "json_object");
+    const userContent = payload.messages[1]?.content;
+    const imageItem = userContent?.[1] as { image_url?: { url: string } } | undefined;
+    assert.equal(imageItem?.image_url?.url, "data:image/jpeg;base64,dGVzdA==");
+    return groqResponse({
+      headline: "Yazılım Geliştirici",
+      location: "Lefkoşa",
+      skills: ["TypeScript", "React", "AWS"],
+      experience: [
+        {
+          role: "Geliştirici",
+          organization: "Acme",
+          location: "Lefkoşa",
+          startDate: "2020",
+          endDate: "2023",
+          description: "Web geliştirme",
+        },
+      ],
+      education: [
+        {
+          institution: "Üniversite",
+          qualification: "Lisans",
+          field: "Bilgisayar Mühendisliği",
+          startDate: "2016",
+          endDate: "2020",
+          description: "",
+        },
+      ],
+      languages: [{ name: "Türkçe", proficiency: "Native" }],
+      certifications: [{ name: "AWS Certified", issuer: "Amazon", issueDate: "2021", expiryDate: "" }],
+      summary: "Yazılım geliştirici özet.",
+      links: [{ label: "GitHub", url: "https://github.com/me" }],
+    });
+  };
+
+  try {
+    const { draft, diagnostics } = await parseResumeWithFallback(
+      makeFile("resume.pdf"),
+      "Professional Title: Yazılım Geliştirici",
+      {
+        geminiApiKey: "test-gemini-key",
+        geminiModel: "gemini-3.8-flash",
+        groqApiKey: "test-groq-key",
+        groqVisionModel: "meta-llama/llama-4-scout-17b-16e-instruct",
+      },
+      ["data:image/jpeg;base64,dGVzdA=="],
+    );
+
+    assert.equal(requests.length, 1);
+    assert.match(requests[0] ?? "", /api\.groq\.com/);
+    assert.ok(!requests.some((url) => url.includes("generativelanguage.googleapis.com")));
+    assert.equal(diagnostics.providerUsed, "groq-vision");
+    assert.equal(draft?.headline, "Yazılım Geliştirici");
+    assert.equal(draft?.location, "Lefkoşa");
+    assert.deepEqual(draft?.skills, ["TypeScript", "React", "AWS"]);
+    assert.equal(draft?.experience?.length, 1);
+    assert.equal(draft?.experience?.[0]?.role, "Geliştirici");
+    assert.equal(draft?.experience?.[0]?.organization, "Acme");
+    assert.equal(draft?.experience?.[0]?.startDate, "2020");
+    assert.equal(draft?.experience?.[0]?.endDate, "2023");
+    assert.equal(draft?.education?.length, 1);
+    assert.equal(draft?.education?.[0]?.institution, "Üniversite");
+    assert.equal(draft?.education?.[0]?.qualification, "Lisans");
+    assert.equal(draft?.education?.[0]?.field, "Bilgisayar Mühendisliği");
+    assert.equal(draft?.languages?.length, 1);
+    assert.equal(draft?.languages?.[0]?.name, "Türkçe");
+    assert.equal(draft?.languages?.[0]?.proficiency, "Native");
+    assert.equal(draft?.certifications?.length, 1);
+    assert.equal(draft?.certifications?.[0]?.name, "AWS Certified");
+    assert.equal(draft?.certifications?.[0]?.issuer, "Amazon");
+    assert.equal(draft?.summary, "Yazılım geliştirici özet.");
+    assert.deepEqual(draft?.links, [{ label: "GitHub", url: "https://github.com/me" }]);
   } finally {
     globalThis.fetch = originalFetch;
   }

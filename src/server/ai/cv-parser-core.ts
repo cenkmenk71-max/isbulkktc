@@ -85,6 +85,8 @@ Never infer or invent information. Use null for unknown headline, location, summ
 
 Read the entire CV before returning data. Populate every section with supported evidence, including entries that appear below the first page or outside the opening profile block. Do not return an empty array for a section when the CV contains matching information.
 
+LAYOUT: This resume image may have a 2-column or table layout. Read BOTH left and right columns completely from top to bottom. Extract EVERY work experience entry (role, organization, startDate, endDate, descriptions), EVERY education entry (qualification, fieldOfStudy, institution, startDate, endDate), EVERY language with proficiency level, EVERY certification, ALL technical/soft skills, summary, headline, KKTC location, and ALL URLs/links. Never omit sections. Two-column or table layouts are read as one continuous document; entries in the right column are never dropped.
+
 ${cvSchemaDescription}`;
 
 type ProviderConfiguration = {
@@ -212,9 +214,9 @@ async function requestGemini(
   model: string,
   fallbackModel?: string,
 ): Promise<ProviderAttempt> {
-  const models = Array.from(
-    new Set(
-      [model, fallbackModel, "gemini-3.6-flash"].filter(
+      const models = Array.from(
+        new Set(
+          [model, fallbackModel, "gemini-3.6-flash", "gemini-3.5-flash-lite"].filter(
         (candidate): candidate is string => Boolean(candidate),
       ),
     ),
@@ -254,7 +256,7 @@ async function requestGemini(
               temperature: 0.1,
             },
           }),
-          signal: AbortSignal.timeout(20_000),
+          signal: AbortSignal.timeout(8_000),
         },
       );
       if (!response.ok) {
@@ -347,7 +349,7 @@ async function requestGroqVision(
   apiKey: string,
   model: string,
 ): Promise<ProviderAttempt> {
-  const models = Array.from(new Set([model, "qwen/qwen3.8-27b"]));
+  const models = Array.from(new Set([model, "meta-llama/llama-4-maverick-17b-128e-instruct"]));
   const retryableStatus = new Set([429, 503]);
 
   for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
@@ -361,7 +363,7 @@ async function requestGroqVision(
         {
           role: "user",
           content: [
-            { type: "text", text: "Extract the profile data from this CV. The PDF is scanned/image-based so no text could be extracted. Use the images below." },
+            { type: "text", text: "Extract ALL 9 CV fields (headline, location, summary, skills, experience, education, languages, certifications, links) from the CV image(s) below as a single JSON object. The CV may have a 2-column or table layout; read both columns completely and never omit a section." },
             ...pageImages.map((image) => ({
               type: "image_url",
               image_url: { url: image },
@@ -619,15 +621,51 @@ export async function parseResumeWithFallback(
     textQuality: assessTextQuality(text),
   });
 
-  // Check if we should use vision: text exists but structured sections are missing
-  const textQuality = diagnostics.textQuality;
-  const needsVision = providers.groqApiKey && 
-    pageImages && 
-    pageImages.length > 0 && 
-    text.trim().length > 0 &&
-    (textQuality.hasExperience || textQuality.hasEducation || textQuality.hasLanguages || textQuality.hasCertifications);
+  let visionWasAttempted = false;
 
-  // Try Gemini first (supports both text and PDF bytes)
+  // 1. Page images present + Groq configured: run the single-step Groq Vision
+  //    9-field JSON engine FIRST. Do not wait for Gemini's text/PDF timeout.
+  if (pageImages && pageImages.length > 0 && providers.groqApiKey) {
+    visionWasAttempted = true;
+    const visionAttempt = await requestGroqVision(
+      pageImages,
+      providers.groqApiKey,
+      providers.groqVisionModel ?? "meta-llama/llama-4-scout-17b-16e-instruct",
+    );
+    if (visionAttempt.ok) {
+      const visionDraft = toDraft(visionAttempt.output, text);
+      if (draftIsIncomplete(visionDraft) && providers.geminiApiKey) {
+        const geminiAttempt = await requestGemini(
+          file,
+          text,
+          providers.geminiApiKey,
+          providers.geminiModel ?? "gemini-3.8-flash",
+          providers.geminiFallbackModel,
+        );
+        if (geminiAttempt.ok) {
+          const geminiDraft = toDraft(geminiAttempt.output, text);
+          return {
+            draft: mergeDrafts(visionDraft, geminiDraft),
+            diagnostics: createDiagnostics({
+              ...diagnostics,
+              providerUsed: "groq-vision",
+              fallbackReason: "Vision left sections empty; filled gaps from Gemini text layer",
+            }),
+          };
+        }
+      }
+      return {
+        draft: visionDraft,
+        diagnostics: createDiagnostics({
+          ...diagnostics,
+          providerUsed: "groq-vision",
+        }),
+      };
+    }
+    diagnostics.warnings.push(`Groq Vision failed: ${visionAttempt.reason}`);
+  }
+
+  // 2. Try Gemini first (supports both text and PDF bytes)
   if (providers.geminiApiKey) {
     const attempt = await requestGemini(
       file,
@@ -638,7 +676,9 @@ export async function parseResumeWithFallback(
     );
     if (attempt.ok) {
       const draft = toDraft(attempt.output, text);
-      const merged = await tryVisionMerge(draft, pageImages, providers);
+      const merged = visionWasAttempted
+        ? { draft, merged: false }
+        : await tryVisionMerge(draft, pageImages, providers);
       return { 
         draft: merged.draft, 
         diagnostics: createDiagnostics({ 
@@ -653,46 +693,6 @@ export async function parseResumeWithFallback(
     diagnostics.warnings.push(`Gemini failed: ${attempt.reason}`);
   } else {
     diagnostics.warnings.push("Gemini API key not configured");
-  }
-
-  // Try Groq Vision if text extraction was poor for structured sections
-  if (needsVision) {
-    const visionAttempt = await requestGroqVision(
-      pageImages,
-      providers.groqApiKey!,
-      providers.groqVisionModel ?? "qwen/qwen3.8-27b",
-    );
-    if (visionAttempt.ok) {
-      const draft = toDraft(visionAttempt.output, "");
-      return { 
-        draft, 
-        diagnostics: createDiagnostics({ 
-          ...diagnostics, 
-          providerUsed: "groq-vision",
-          fallbackReason: "Text extraction missed structured sections; used vision fallback"
-        }) 
-      };
-    }
-    diagnostics.warnings.push(`Groq Vision failed: ${visionAttempt.reason}`);
-  } else if (providers.groqApiKey && pageImages && pageImages.length > 0 && !text.trim()) {
-    // Original logic: no text at all, try vision
-    const visionAttempt = await requestGroqVision(
-      pageImages,
-      providers.groqApiKey,
-      providers.groqVisionModel ?? "qwen/qwen3.8-27b",
-    );
-    if (visionAttempt.ok) {
-      const draft = toDraft(visionAttempt.output, "");
-      return { 
-        draft, 
-        diagnostics: createDiagnostics({ 
-          ...diagnostics, 
-          providerUsed: "groq-vision",
-          fallbackReason: "No text extracted; used vision fallback"
-        }) 
-      };
-    }
-    diagnostics.warnings.push(`Groq Vision failed: ${visionAttempt.reason}`);
   }
 
   // Try Groq (text-only)
