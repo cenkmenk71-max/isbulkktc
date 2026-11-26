@@ -5354,6 +5354,10 @@ a {
   color: var(--ink);
   font-size: 14px;
   font-weight: 450;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  min-width: 0;
 }
 .candidate-profile-form textarea {
   min-height: 126px;
@@ -5719,11 +5723,12 @@ a {
 .candidate-profile-entry {
   position: relative;
   min-width: 0;
-  margin: 0;
-  padding: 18px 15px 15px;
+  margin: 0 0 12px;
+  padding: 16px 15px 14px;
   border: 1px solid var(--color-crayon-200);
   border-radius: 11px;
   background: var(--surface-raised);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 .candidate-profile-entry legend {
   padding: 0 7px;
@@ -5754,6 +5759,13 @@ a {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 13px;
+}
+.candidate-entry-fields input,
+.candidate-entry-fields textarea,
+.candidate-entry-fields select {
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  min-width: 0;
 }
 .candidate-entry-fields--two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5788,6 +5800,8 @@ a {
   border-radius: var(--radius-md);
   background: var(--surface-raised);
   overflow: hidden;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .candidate-profile-accordion-heading {
@@ -6034,13 +6048,13 @@ a {
   align-items: center;
   gap: 7px;
   min-height: 40px;
-  padding: 0 13px;
+  padding: 0 14px;
   border: 1px solid var(--color-crayon-300);
   border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--ink-2);
-  font-size: 11px;
-  font-weight: 620;
+  background: var(--green-soft);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 650;
   cursor: pointer;
   transition:
     border-color 160ms ease,
@@ -6049,9 +6063,9 @@ a {
 }
 
 .candidate-revert-button:hover {
-  border-color: var(--color-vanadium-400);
-  background: var(--color-vanadium-50);
-  color: var(--ink);
+  border-color: var(--green-mid);
+  background: var(--green-mid);
+  color: #fff;
 }
 
 .candidate-revert-button:focus-visible {

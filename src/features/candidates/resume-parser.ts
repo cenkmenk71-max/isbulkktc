@@ -45,9 +45,13 @@ const sectionLabels: Record<ResumeSection, string[]> = {
     "title",
     "position",
     "mesleki baslik",
+    "mesleki başlık",
     "uzmanlik alani",
+    "uzmanlık alanı",
     "unvan",
+    "ünvan",
     "gorev",
+    "görev",
     "профессиональная специализация",
     "επαγγελματικός τίτλος",
     "عنوان حرفه‌ای",
@@ -69,8 +73,11 @@ const sectionLabels: Record<ResumeSection, string[]> = {
     "competencies",
     "beceriler",
     "yetenekler",
+    "yetenekler",
     "yetkinlikler",
     "uzmanlik alanlari",
+    "uzmanlık alanları",
+    "teknik beceriler",
     "teknik beceriler",
     "навыки",
     "ключевые навыки",
@@ -87,7 +94,9 @@ const sectionLabels: Record<ResumeSection, string[]> = {
     "work history",
     "career",
     "is deneyimi",
+    "iş deneyimi",
     "is deneyimleri",
+    "iş deneyimleri",
     "deneyim",
     "deneyimler",
     "deneyimlerim",
@@ -95,7 +104,10 @@ const sectionLabels: Record<ResumeSection, string[]> = {
     "is tecrubeleri",
     "tecrube",
     "tecrubeler",
+    "tecrübe",
+    "tecrübeler",
     "calisma deneyimi",
+    "çalışma deneyimi",
     "calisma hayati",
     "kariyer",
     "опыт работы",
@@ -112,10 +124,15 @@ const sectionLabels: Record<ResumeSection, string[]> = {
     "education history",
     "academic background",
     "egitim",
+    "eğitim",
     "egitim bilgileri",
+    "eğitim bilgileri",
     "egitim durumu",
     "ogrenim",
+    "öğrenim",
     "ogrenim bilgileri",
+    "öğrenim bilgileri",
+    "okullar",
     "okullar",
     "образование",
     "εκπαίδευση",
@@ -129,7 +146,10 @@ const sectionLabels: Record<ResumeSection, string[]> = {
     "languages",
     "language skills",
     "diller",
+    "diller",
     "yabanci diller",
+    "yabancı diller",
+    "dil bilgisi",
     "dil bilgisi",
     "языки",
     "владение языками",
@@ -144,9 +164,14 @@ const sectionLabels: Record<ResumeSection, string[]> = {
     "licenses",
     "courses",
     "sertifikalar",
+    "sertifikalar",
+    "sertifika ve kurslar",
     "sertifika ve kurslar",
     "sertifikalar ve lisanslar",
+    "sertifikalar ve lisanslar",
     "kurslar",
+    "kurslar",
+    "belgeler",
     "belgeler",
     "сертификаты",
     "πιστοποιήσεις",
@@ -158,9 +183,13 @@ const sectionLabels: Record<ResumeSection, string[]> = {
   ],
   summary: [
     "ozet",
+    "özet",
     "ozet bilgileri",
+    "özet bilgileri",
     "hakkimda",
+    "hakkımda",
     "hakkinda",
+    "hakkında",
     "profil",
     "summary",
     "profile",
@@ -653,6 +682,29 @@ function looksLikeDistrictList(line: string): boolean {
   return segments.every((segment) => resolveNorthernCyprusDistrict(segment) !== null);
 }
 
+/** An address-like line ("X Mahallesi Y Sokak", "Mh. Sk. Cd.", "Semt"). */
+function looksLikeAddress(line: string): boolean {
+  const normalized = normalizeHeading(line);
+  const addressTokens = [
+    "mahalle",
+    "mah",
+    "mh",
+    "sokak",
+    "sk",
+    "cadde",
+    "cd",
+    "semt",
+    "mahallesi",
+    "sokagi",
+    "sokak",
+    "cadde",
+    "street",
+    "avenue",
+    "road",
+  ];
+  return addressTokens.some((token) => normalized.includes(token));
+}
+
 /**
  * A short, unpunctuated line — the shape of a role or an employer name.
  *
@@ -1139,6 +1191,13 @@ function inferSections(loose: string[]): Map<ResumeSection, string[]> {
 
     // A bare district list ("Lefkoşa, Girne") is a location, not a headline.
     if (looksLikeDistrictList(line)) {
+      if (!sections.has("location")) push("location", line);
+      continue;
+    }
+
+    // An address-like line ("X Mahallesi Y Sokak", "Mh. Sk. Cd.") is a
+    // location even when it does not name a canonical district on its own.
+    if (looksLikeAddress(line)) {
       if (!sections.has("location")) push("location", line);
       continue;
     }
