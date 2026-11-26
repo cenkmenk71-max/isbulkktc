@@ -14,6 +14,8 @@ const documentFields = [
   "publicEmail",
   "address",
   "municipality",
+  "profileDescription",
+  "categoriesText",
 ] as const satisfies readonly (keyof CompanyDocumentSuggestions)[];
 
 export function applyCompanyDocumentAutofill(
