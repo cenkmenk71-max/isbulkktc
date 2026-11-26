@@ -229,7 +229,7 @@ test("AI CV output fills all nine fields and opens every populated section", asy
     );
 
   try {
-    const draft = await parseResumeWithFallback(
+    const { draft } = await parseResumeWithFallback(
       file,
       cvText,
       { geminiApiKey: "test-key" },

@@ -55,7 +55,7 @@ test("Groq runs when Gemini is not configured and returns the canonical district
   };
 
   try {
-    const draft = await parseResumeWithFallback(
+    const { draft } = await parseResumeWithFallback(
       makeFile(),
       "Профессиональная специализация: Инженер-программист",
       { groqApiKey: "test-groq-key" },
@@ -87,7 +87,7 @@ test("Gemini 429 falls back to Groq after retry with fallback model", async () =
   };
 
   try {
-    const draft = await parseResumeWithFallback(
+    const { draft } = await parseResumeWithFallback(
       makeFile(),
       "Профессиональная специализация: Инженер-программист",
       {
@@ -119,7 +119,7 @@ test("Gemini overload retries with the stable Flash fallback", async () => {
   };
 
   try {
-    const draft = await parseResumeWithFallback(
+    const { draft } = await parseResumeWithFallback(
       makeFile(),
       "Профессиональная специализация: Инженер-программист",
       {
@@ -148,7 +148,7 @@ test("a missing Gemini model falls back to the configured model", async () => {
   };
 
   try {
-    const draft = await parseResumeWithFallback(
+    const { draft } = await parseResumeWithFallback(
       makeFile(),
       "Professional title: Product manager",
       {
@@ -193,7 +193,7 @@ test("scanned PDFs use Qwen vision when Gemini and the configured Groq model fai
   };
 
   try {
-    const draft = await parseResumeWithFallback(
+    const { draft } = await parseResumeWithFallback(
       makeFile("resume.pdf"),
       "",
       {
@@ -225,7 +225,7 @@ test("Gemini preserves Russian CV content and sends the multilingual instruction
   };
 
   try {
-    const draft = await parseResumeWithFallback(
+    const { draft } = await parseResumeWithFallback(
       makeFile(),
       "РЕЗЮМЕ\nПрофессиональная специализация: Инженер-программист",
       { geminiApiKey: "test-gemini-key" },
@@ -259,7 +259,7 @@ test("both providers failing falls back to the local multilingual parser", async
     });
 
   try {
-    const draft = await parseResumeWithFallback(
+    const { draft } = await parseResumeWithFallback(
       makeFile(),
       "PROFESSIONAL TITLE: Senior analyst\nSKILLS: SQL, Python",
       {
@@ -283,7 +283,7 @@ test("the local parser handles Turkish, English, and Russian CV headings", async
   ] as const;
 
   for (const [text, expectedHeadline] of examples) {
-    const draft = await parseResumeWithFallback(makeFile(), text, {});
+    const { draft } = await parseResumeWithFallback(makeFile(), text, {});
     assert.equal(draft?.headline, expectedHeadline);
   }
 });
