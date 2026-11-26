@@ -96,6 +96,74 @@ function hasSomeFields(suggestions: CompanyDocumentSuggestions): boolean {
   );
 }
 
+function geminiResponseText(value: unknown): string | null {
+  if (!isRecord(value) || !Array.isArray(value.candidates)) return null;
+  const first = value.candidates[0];
+  if (!isRecord(first) || !isRecord(first.content)) return null;
+  const parts = first.content.parts;
+  if (!Array.isArray(parts)) return null;
+  const text = parts
+    .filter((part): part is Record<string, unknown> => isRecord(part))
+    .map((part) => part.text)
+    .filter((part): part is string => typeof part === "string")
+    .join("");
+  return text || null;
+}
+
+async function requestGeminiCompany(
+  file: File,
+  apiKey: string,
+): Promise<{ ok: true; output: CompanyDocumentSuggestions } | { ok: false }> {
+  const models = ["gemini-3.5-flash-lite", "gemini-3.6-flash"];
+  const arrayBuffer = await file.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+  const mimeType = file.type.startsWith("image/") || file.type === "application/pdf"
+    ? file.type
+    : "application/pdf";
+
+  for (const model of models) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: companyDocumentSystemPrompt }] },
+            contents: [{ role: "user", parts: [
+              { text: "Extract ALL 8 company fields from this company registration document as a single JSON object. Read both columns of any table layout completely and never omit a section." },
+              { inlineData: { mimeType, data: base64 } },
+            ] }],
+            generationConfig: {
+              responseMimeType: "application/json",
+              temperature: 0.1,
+            },
+          }),
+          signal: AbortSignal.timeout(8_000),
+        },
+      );
+      if (!response.ok) continue;
+      const json = await response.json().catch(() => null);
+      const content = geminiResponseText(json);
+      if (typeof content !== "string") continue;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim());
+      } catch {
+        continue;
+      }
+      return { ok: true, output: normalizeCompanyPayload(parsed) };
+    } catch {
+      continue;
+    }
+  }
+
+  return { ok: false };
+}
+
 async function requestGroqCompanyText(
   text: string,
   apiKey: string,
@@ -108,7 +176,7 @@ async function requestGroqCompanyText(
         authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: process.env.GROQ_CV_MODEL ?? "openai/gpt-oss-20b",
+        model: process.env.GROQ_CV_MODEL ?? "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: companyDocumentSystemPrompt },
           { role: "user", content: `Company document text:\n${text}` },
@@ -141,72 +209,27 @@ async function requestGroqCompanyText(
   }
 }
 
-async function requestGroqCompanyVision(
-  pageImages: string[],
-  apiKey: string,
-): Promise<{ ok: true; output: CompanyDocumentSuggestions } | { ok: false }> {
-  try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: process.env.GROQ_CV_VISION_MODEL ?? "meta-llama/llama-4-scout-17b-16e-instruct",
-        messages: [
-          { role: "system", content: companyDocumentSystemPrompt },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Extract ALL 8 company fields from the company registration document image(s) below as a single JSON object. Read both columns of any table layout completely and never omit a section." },
-              ...pageImages.map((image) => ({ type: "image_url", image_url: { url: image } })),
-            ],
-          },
-        ],
-        temperature: 0.1,
-        max_completion_tokens: 4_000,
-        response_format: { type: "json_object" },
-      }),
-      signal: AbortSignal.timeout(30_000),
-    });
-    if (!response.ok) return { ok: false };
-    const json = await response.json().catch(() => null);
-    const content =
-      isRecord(json) &&
-      Array.isArray(json.choices) &&
-      isRecord(json.choices[0]) &&
-      isRecord(json.choices[0].message)
-        ? json.choices[0].message.content
-        : null;
-    if (typeof content !== "string") return { ok: false };
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim());
-    } catch {
-      return { ok: false };
-    }
-    return { ok: true, output: normalizeCompanyPayload(parsed) };
-  } catch {
-    return { ok: false };
-  }
-}
-
 export async function parseCompanyDocumentAI(
   file: File,
   text: string,
-  pageImages?: string[],
 ): Promise<CompanyDocumentSuggestions> {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) return {};
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const groqApiKey = process.env.GROQ_API_KEY;
 
-  const textAttempt = await requestGroqCompanyText(text, apiKey);
   let suggestions: CompanyDocumentSuggestions = {};
-  if (textAttempt.ok) suggestions = textAttempt.output;
 
-  if (!hasSomeFields(suggestions) && pageImages?.length) {
-    const visionAttempt = await requestGroqCompanyVision(pageImages, apiKey);
-    if (visionAttempt.ok) suggestions = { ...suggestions, ...visionAttempt.output };
+  if (geminiApiKey) {
+    const geminiAttempt = await requestGeminiCompany(file, geminiApiKey);
+    if (geminiAttempt.ok) {
+      suggestions = { ...suggestions, ...geminiAttempt.output };
+    }
+  }
+
+  if (groqApiKey && !hasSomeFields(suggestions)) {
+    const groqAttempt = await requestGroqCompanyText(text, groqApiKey);
+    if (groqAttempt.ok) {
+      suggestions = { ...suggestions, ...groqAttempt.output };
+    }
   }
 
   return suggestions;
