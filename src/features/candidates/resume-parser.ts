@@ -392,7 +392,7 @@ const dateToken = `(?:${yearToken}[./-]${monthNumberToken}|(?:\\d{1,2}[./-])?(?:
 // Longer alternatives first: "devam ediyor" must win over "devam", or the
 // regex stops at "devam" and leaves "ediyor" as a stray location (#208).
 const ongoingPattern =
-  "devam ediyor|present|current|now|halen|devam|guncel|güncel|ongoing";
+  "devam ediyor|present|current|now|halen|devam|guncel|güncel|ongoing|şu an|at present";
 // `|` is a separator a tabular CV uses between the start and end year
 // ("Acme | Dev | 2019 | 2023"); without it the end date is lost (#208).
 const dateRangePattern = new RegExp(
@@ -400,6 +400,22 @@ const dateRangePattern = new RegExp(
   "i",
 );
 const singleYearPattern = /(?:19|20)\d{2}/;
+
+// Extended date range pattern that also catches "2020 - 2024" with just years
+const extendedDateRangePattern = new RegExp(
+  `(${yearToken})\\s*(?:-|–|—|to)\\s*(${yearToken}|${ongoingPattern})`,
+  "i",
+);
+
+// Global versions for matchAll
+const dateRangePatternGlobal = new RegExp(
+  `(${dateToken})\\s*(?:-|–|—|to|\\/|\\|)\\s*(${dateToken}|${ongoingPattern})`,
+  "gi",
+);
+const extendedDateRangePatternGlobal = new RegExp(
+  `(${yearToken})\\s*(?:-|–|—|to)\\s*(${yearToken}|${ongoingPattern})`,
+  "gi",
+);
 
 /**
  * Words that mark a line as personal data rather than an employment or
@@ -575,6 +591,14 @@ function extractDateRange(line: string): DateRange | null {
     if (!isValidYearRange(startDate, endDate)) return null;
     return { startDate, endDate, matched: match[0] };
   }
+  // Fallback: try extended pattern for bare year ranges like "2020 - 2024"
+  const extMatch = line.match(extendedDateRangePattern);
+  if (extMatch) {
+    const startDate = extMatch[1].trim().slice(0, 32);
+    const endDate = extMatch[2].trim().slice(0, 32);
+    if (!isValidYearRange(startDate, endDate)) return null;
+    return { startDate, endDate, matched: extMatch[0] };
+  }
   const single = line.match(singleYearPattern);
   if (single) {
     return { startDate: single[0], endDate: "", matched: single[0] };
@@ -587,6 +611,8 @@ function stripDateRange(line: string, range?: DateRange | null): string {
   if (range?.matched && !dateRangePattern.test(range.matched)) {
     result = result.replace(range.matched, " ");
   }
+  // Also remove extended pattern matches
+  result = result.replace(extendedDateRangePattern, " ");
   return result
     .replace(/\(\s*\)/g, " ")
     .replace(/\s{2,}/g, " ")
@@ -605,12 +631,50 @@ function splitEntryParts(line: string): string[] {
     .filter(Boolean);
 }
 
-const allDatePattern = new RegExp(dateToken, "gi");
-
 /** Every date token on a line, in order ("PMP | PMI | 2019 | 2024" → [2019, 2024]). */
 function extractDates(line: string): string[] {
   if (isPersonalDataLine(line)) return [];
-  return (line.match(allDatePattern) ?? []).map((value) => value.trim());
+  const dates: string[] = [];
+  
+  // Find all date ranges first (start and end dates)
+  const rangeMatches = line.matchAll(dateRangePatternGlobal);
+  for (const match of rangeMatches) {
+    dates.push(match[1].trim());
+    if (match[2] && !match[2].match(/^(devam|present|current|now|halen|ongoing)$/i)) {
+      dates.push(match[2].trim());
+    }
+  }
+  
+  // Find extended year ranges
+  const extMatches = line.matchAll(extendedDateRangePatternGlobal);
+  for (const match of extMatches) {
+    dates.push(match[1].trim());
+    if (match[2] && !match[2].match(/^(devam|present|current|now|halen|ongoing)$/i)) {
+      dates.push(match[2].trim());
+    }
+  }
+  
+  // Find all individual date tokens (including YYYY.MM format)
+  const tokenMatches = line.matchAll(new RegExp(dateToken, "gi"));
+  for (const match of tokenMatches) {
+    const date = match[0].trim();
+    if (!dates.includes(date)) {
+      dates.push(date);
+    }
+  }
+  
+  // Fallback to bare year tokens
+  if (dates.length < 2) {
+    const yearMatches = line.matchAll(new RegExp(yearToken, "gi"));
+    for (const match of yearMatches) {
+      const year = match[0].trim();
+      if (!dates.includes(year)) {
+        dates.push(year);
+      }
+    }
+  }
+  
+  return dates.slice(0, 4);
 }
 
 function stripDates(line: string): string {
@@ -666,6 +730,64 @@ function looksLikeRoleOrCompany(line: string): boolean {
   if (!trimmed || trimmed.length > 90) return false;
   if (/[.!?]$/.test(trimmed)) return false;
   return trimmed.split(/\s+/).length <= 8;
+}
+
+const descriptionKeywords = [
+  "geliştirme",
+  "çalışma",
+  "proje",
+  "yönetim",
+  "tasarım",
+  "analiz",
+  "test",
+  "bakım",
+  "destek",
+  "eğitim",
+  "danışmanlık",
+  "araştırma",
+  "development",
+  "work",
+  "project",
+  "management",
+  "design",
+  "analysis",
+  "testing",
+  "maintenance",
+  "support",
+  "consulting",
+  "research",
+  "işbirlik",
+  "koordinasyon",
+  "planlama",
+  "strateji",
+  "optimizasyon",
+  "implementasyon",
+  "entegrasyon",
+  "migration",
+  "deployment",
+  "monitoring",
+  "documentation",
+  "review",
+  "meeting",
+  "presentation",
+  "reporting",
+  "توسعه",
+  "کار",
+  "پروژه",
+  "مدیریت",
+  "طراحی",
+  "تحلیل",
+  "آزمایش",
+  "نگهداری",
+  "پشتیبانی",
+  "آموزش",
+  "مشاوره",
+  "پژوهش",
+];
+
+function looksLikeDescription(line: string): boolean {
+  const lower = line.toLowerCase();
+  return descriptionKeywords.some((keyword) => lower.includes(keyword));
 }
 
 /**
@@ -778,7 +900,12 @@ function buildBlocks(records: string[]): ResumeBlock[] {
         current.descriptionLines.push(line);
       }
     } else if (current.headerLines.length < 2) {
-      current.headerLines.push(line);
+      // Only treat as header if it looks like a role/company; otherwise it's description
+      if (looksLikeRoleOrCompany(line)) {
+        current.headerLines.push(line);
+      } else {
+        current.descriptionLines.push(line);
+      }
     } else {
       current.descriptionLines.push(line);
     }
@@ -866,16 +993,60 @@ function parseExperience(lines: string[]): CandidateExperience[] {
         role = ordered.role;
         organization = ordered.organization;
         leftover = block.headerLines.slice(2);
-      } else if (parts.length >= 2) {
+      } else if (parts.length >= 3) {
+        // Three or more parts: role, organization, location
         const ordered = orderRoleAndOrganization(parts[0] ?? "", parts[1] ?? "");
         role = ordered.role;
         organization = ordered.organization;
         if (parts[2] && parts[2].length <= 60) location = parts[2];
         leftover = parts.slice(3);
         if (!hasDates) leftover = [...leftover, ...block.headerLines.slice(1)];
+      } else if (parts.length === 2) {
+        // Two parts: role and organization
+        const ordered = orderRoleAndOrganization(parts[0] ?? "", parts[1] ?? "");
+        role = ordered.role;
+        organization = ordered.organization;
+        leftover = parts.slice(2);
+        if (!hasDates) leftover = [...leftover, ...block.headerLines.slice(1)];
+        // Check if there's a location in the next header line
+        if (block.headerLines[1] && block.headerLines[1].length <= 60 && !hasDates) {
+          const secondLine = block.headerLines[1];
+          if (!looksLikeOrganization(secondLine) && !secondLine.match(singleYearPattern)) {
+            location = secondLine;
+          }
+        }
+      } else if (parts.length === 1) {
+        // Single part on first line, use header lines for role/org
+        // But if it looks like a description (no date, no org, description keywords),
+        // treat it as description instead of role
+        const singleLine = block.headerLines[0] ?? "";
+        if (!hasDates && block.headerLines.length === 1 && block.descriptionLines.length === 0 && looksLikeDescription(singleLine)) {
+          role = "";
+          organization = "";
+          leftover = [singleLine];
+        } else {
+          role = singleLine;
+          organization = block.headerLines[1] ?? "";
+          // Check if third line is location
+          if (block.headerLines[2] && block.headerLines[2].length <= 60) {
+            location = block.headerLines[2];
+          }
+          leftover = block.headerLines.slice(3);
+          if (!hasDates) leftover = [...leftover, ...block.headerLines.slice(1)];
+        }
       } else {
         // No date and no separator: the section carried prose, not an entry.
         leftover = [...block.headerLines];
+      }
+
+      // If we have dates but no role/org yet, try to extract from header lines
+      if (hasDates && !role && block.headerLines.length > 0) {
+        const ordered = orderRoleAndOrganization(
+          block.headerLines[0] ?? "",
+          block.headerLines[1] ?? "",
+        );
+        role = ordered.role;
+        organization = ordered.organization;
       }
 
       const description = [...leftover, ...block.descriptionLines]
@@ -907,7 +1078,11 @@ function parseEducation(lines: string[]): CandidateEducation[] {
       let field = "";
       let leftover: string[] = [];
 
-      if (parts.length >= 2) {
+      // Extract dates from the block
+      const blockDates = block.dates;
+
+      if (parts.length >= 3) {
+        // Three or more parts: likely institution, qualification, field
         const ordered = orderInstitutionAndQualification(
           parts[0] ?? "",
           parts[1] ?? "",
@@ -916,16 +1091,60 @@ function parseEducation(lines: string[]): CandidateEducation[] {
         qualification = ordered.qualification;
         field = parts[2] ?? "";
         leftover = parts.slice(3);
-        if (!block.dates) leftover = [...leftover, ...block.headerLines.slice(1)];
+        if (!blockDates) leftover = [...leftover, ...block.headerLines.slice(1)];
+      } else if (parts.length === 2) {
+        // Two parts: could be institution + qualification, or qualification + field
+        // Check if first part looks like institution
+        if (looksLikeEducationInstitution(parts[0])) {
+          institution = parts[0];
+          qualification = parts[1];
+        } else if (looksLikeEducationInstitution(parts[1])) {
+          institution = parts[1];
+          qualification = parts[0];
+        } else {
+          // Default: first is qualification, second is field
+          const ordered = orderInstitutionAndQualification(
+            parts[0] ?? "",
+            parts[1] ?? "",
+          );
+          institution = ordered.institution;
+          qualification = ordered.qualification;
+        }
+        if (!blockDates) leftover = [...block.headerLines.slice(1)];
+      } else if (parts.length === 1) {
+        // Single part on first line, check other header lines
+        const firstLine = parts[0] ?? "";
+        if (looksLikeEducationInstitution(firstLine)) {
+          institution = firstLine;
+          qualification = block.headerLines[1] ?? "";
+          field = block.headerLines[2] ?? "";
+        } else {
+          // Could be qualification first
+          qualification = firstLine;
+          institution = block.headerLines[1] ?? "";
+          field = block.headerLines[2] ?? "";
+          // Re-check if second line is institution
+          if (looksLikeEducationInstitution(institution)) {
+            [institution, qualification] = [qualification, institution];
+          }
+        }
+        leftover = block.headerLines.slice(3);
       } else {
-        // One short line per row: institution, then qualification, then field.
-        const ordered = orderInstitutionAndQualification(
-          block.headerLines[0] ?? "",
-          block.headerLines[1] ?? "",
-        );
-        institution = ordered.institution;
-        qualification = ordered.qualification;
-        field = block.headerLines[2] ?? "";
+        // No parts on first line, use header lines directly
+        if (block.headerLines.length >= 1) {
+          if (looksLikeEducationInstitution(block.headerLines[0])) {
+            institution = block.headerLines[0];
+            qualification = block.headerLines[1] ?? "";
+            field = block.headerLines[2] ?? "";
+          } else {
+            qualification = block.headerLines[0];
+            institution = block.headerLines[1] ?? "";
+            field = block.headerLines[2] ?? "";
+            if (looksLikeEducationInstitution(institution)) {
+              [institution, qualification] = [qualification, institution];
+            }
+          }
+        }
         leftover = block.headerLines.slice(3);
       }
 
@@ -937,8 +1156,8 @@ function parseEducation(lines: string[]): CandidateEducation[] {
         institution: institution.slice(0, 160),
         qualification: qualification.slice(0, 140),
         field: field.slice(0, 140),
-        startDate: block.dates?.startDate ?? "",
-        endDate: block.dates?.endDate ?? "",
+        startDate: blockDates?.startDate ?? "",
+        endDate: blockDates?.endDate ?? "",
         description,
       };
     })
@@ -959,13 +1178,24 @@ function parseLanguages(lines: string[]): CandidateLanguage[] {
 
   return values.map((name) => {
     const mapped = mapLanguageNameToCode(name);
+    // Extract proficiency from the original line if present
     const proficiencyMatch = name.match(
       /\b(native|ana dil|mother tongue|fluent|advanced|ileri|upper intermediate|orta\.?[üu]st\.?|intermediate|orta|elementary|temel|beginner|başlangıç|c2|c1|b2|b1|a2|a1|expert|proficient|good|fair|basic|ilr \d|dlpt \d)\b/i
     );
     const proficiency = proficiencyMatch
       ? mapProficiencyToCEFR(proficiencyMatch[1])
       : "B1";
-    const standardName = mapped?.standardNameTr ?? name.slice(0, 80);
+    // Clean up the name by removing proficiency indicators
+    let cleanName = name;
+    if (proficiencyMatch) {
+      cleanName = name
+        .replace(
+          /\s*[-–—|/]\s*(native|ana dil|mother tongue|fluent|advanced|ileri|upper intermediate|orta\.?[üu]st\.?|intermediate|orta|elementary|temel|beginner|başlangıç|c2|c1|b2|b1|a2|a1|expert|proficient|good|fair|basic|ilr \d|dlpt \d)\b/i,
+          ""
+        )
+        .trim();
+    }
+    const standardName = mapped?.standardNameTr ?? cleanName.slice(0, 80);
     return { name: standardName, proficiency };
   });
 }
@@ -977,9 +1207,28 @@ function parseCertifications(lines: string[]): CandidateCertification[] {
     .slice(0, 12)
     .map((line) => {
       const dates = extractDates(line);
-      const [name = "", issuer = ""] = splitEntryParts(stripDates(line));
+      // Try to split by separators to get name and issuer
+      const parts = splitEntryParts(stripDates(line)).filter(Boolean);
+      let name = "";
+      let issuer = "";
+      
+      if (parts.length >= 2) {
+        // Check if first part looks like a cert name (not an org marker)
+        name = parts[0];
+        issuer = parts[1];
+        // If the first part looks like an organization, swap
+        if (looksLikeOrganization(name) && !looksLikeOrganization(issuer)) {
+          [name, issuer] = [issuer, name];
+        }
+      } else if (parts.length === 1) {
+        name = parts[0];
+      } else {
+        // No separators, use the whole line as name
+        name = stripDates(line) || line;
+      }
+      
       return {
-        name: (issuer ? name : stripDates(line) || line).slice(0, 160),
+        name: name.slice(0, 160),
         issuer: issuer.slice(0, 160),
         issueDate: (dates[0] ?? "").slice(0, 32),
         expiryDate: (dates[1] ?? "").slice(0, 32),

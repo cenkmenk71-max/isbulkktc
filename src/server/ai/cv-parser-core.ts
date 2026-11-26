@@ -60,7 +60,29 @@ const systemPrompt = `Extract only factual profile details from the supplied CV.
 
 The CV may be written in Turkish, English, Russian, or another language. Reliably identify headings, dates, names, qualifications, and skills across languages and scripts. Preserve names, job titles, organization names, descriptions, and summaries in the language used by the CV; do not translate or rewrite them. Normalize only dates to YYYY or YYYY-MM and a verified Northern Cyprus location to one of the schema's canonical districts.
 
-Never infer or invent information. Use null for an unknown headline, location, or summary; use empty arrays for absent sections; use empty strings for unknown fields within an evidenced entry. Do not assign a language proficiency unless the CV explicitly states it or clearly identifies a language as the candidate's native language. Omit an entry when there is not enough evidence to identify it. Keep distinct columns in two-column or table layouts attached to their correct section and entry. Correct obvious OCR or spelling errors only when the intended value is unambiguous. Return only data that matches the supplied schema.
+CRITICAL: You MUST extract ALL 9 fields when evidence exists in the CV. Do not leave any structured section empty if the CV contains matching information.
+
+SECTION MAPPING (Turkish / English / Russian / German headings):
+- headline: "Mesleki Başlık" / "Uzmanlık Alanı" / "Ünvan" / "Professional Title" / "Headline" / "Position" / "Professionelle Spezialisierung" / "Beruflicher Titel"
+- location: "Konum" / "İkamet" / "Location" / "Standort" / "Местоположение"
+- summary: "Özet" / "Hakkımda" / "Profil" / "Summary" / "Profile" / "About Me" / "Objective" / "Über mich" / "Zusammenfassung" / "О себе" / "Профиль"
+- skills: "Beceriler" / "Yetenekler" / "Yetkinlikler" / "Uzmanlık Alanları" / "Teknik Beceriler" / "Skills" / "Technical Skills" / "Core Competencies" / "Competencies" / "Навыки" / "Ключевые навыки" / "Fähigkeiten" / "Kompetenzen"
+- experience: "İş Deneyimi" / "İş Tecrübeleri" / "Deneyim" / "Deneyimler" / "Çalışma Deneyimi" / "Çalışma Hayatı" / "Kariyer" / "Experience" / "Work Experience" / "Professional Experience" / "Employment History" / "Work History" / "Career" / "Опыт работы" / "Профессиональный опыт" / "Επαγγελματική εμπειρία" / "Berufserfahrung" / "Beruflicher Werdegang" / "تجربه کاری" / "سوابق شغلی"
+- education: "Eğitim" / "Eğitim Bilgileri" / "Eğitim Durumu" / "Öğrenim" / "Öğrenim Bilgileri" / "Okullar" / "Education" / "Education History" / "Academic Background" / "Образование" / "Εκπαίδευση" / "Σπουδές" / "Ausbildung" / "Studium" / "تحصیلات" / "آموزش"
+- languages: "Diller" / "Yabancı Diller" / "Dil Bilgisi" / "Languages" / "Language Skills" / "Языки" / "Владение языками" / "Γλώσσες" / "Sprachen" / "Sprachkenntnisse" / "زبان‌ها"
+- certifications: "Sertifikalar" / "Sertifika ve Kurslar" / "Sertifikalar ve Lisanslar" / "Kurslar" / "Belgeler" / "Certifications" / "Certificates" / "Licenses" / "Courses" / "Сертификаты" / "Πιστοποιήσεις" / "Zertifikate" / "Zertifizierungen" / "گواهینامه‌ها"
+- links: "Bağlantılar" / "Linkler" / "Profil Linkleri" / "Links" / "Profile Links" / "Ссылки" / "Σύνδεσμοι" / "Verknüpfungen" / "پیوندها"
+
+EXTRACTION RULES PER FIELD:
+- experience: Extract role, organization, location, startDate (YYYY or YYYY-MM), endDate (YYYY or YYYY-MM or "Present"/"Devam Ediyor"/"Halen"), description. Handle two-column layouts where role/employer/dates are on separate lines.
+- education: Extract institution, qualification (degree), field (major), startDate, endDate, description. Identify institution by keywords like "Üniversite", "University", "College", "Institute".
+- languages: Extract language name and proficiency (A1-C2 or Native). Proficiency must be explicitly stated or clearly native.
+- certifications: Extract name, issuer, issueDate, expiryDate.
+- links: Extract label and URL. Normalize URLs (add https:// if missing).
+
+Never infer or invent information. Use null for unknown headline, location, summary; empty arrays for absent sections; empty strings for unknown fields within an evidenced entry. Omit an entry when there is not enough evidence to identify it. Keep distinct columns in two-column or table layouts attached to their correct section and entry. Correct obvious OCR or spelling errors only when the intended value is unambiguous. Return only data that matches the supplied schema.
+
+Read the entire CV before returning data. Populate every section with supported evidence, including entries that appear below the first page or outside the opening profile block. Do not return an empty array for a section when the CV contains matching information.
 
 ${cvSchemaDescription}`;
 
@@ -93,7 +115,7 @@ function isRecord(value: unknown): value is JSONRecord {
 function parseProviderOutput(value: unknown): ProviderAttempt {
   const parsed = cvParserOutputSchema.safeParse(value);
   if (!parsed.success) {
-    console.warn("[cv-parser] Gemini returned invalid schema", {
+    console.warn("[cv-parser] Provider returned invalid schema", {
       issues: parsed.error.issues.map((issue) => ({
         path: issue.path.join("."),
         message: issue.message,
@@ -120,6 +142,24 @@ function hasOutputContent(output: CVParserOutput): boolean {
       output.summary ||
       output.links.some((entry) => Object.values(entry).some(Boolean)),
   );
+}
+
+function assessTextQuality(text: string): { hasExperience: boolean; hasEducation: boolean; hasLanguages: boolean; hasCertifications: boolean; totalLines: number } {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const lowerText = text.toLowerCase();
+  
+  const experienceKeywords = ["iş deneyimi", "iş tecrübeleri", "deneyim", "experience", "work experience", "employment history", "опыт работы", "berufserfahrung"];
+  const educationKeywords = ["eğitim", "eğitim bilgileri", "öğrenim", "okullar", "education", "education history", "academic background", "образование", "ausbildung"];
+  const languageKeywords = ["diller", "yabancı diller", "dil bilgisi", "languages", "language skills", "языки", "sprachen", "sprachkenntnisse"];
+  const certKeywords = ["sertifikalar", "sertifika", "kurslar", "belgeler", "certifications", "certificates", "licenses", "сертификаты", "zertifikate"];
+  
+  return {
+    hasExperience: experienceKeywords.some(k => lowerText.includes(k)),
+    hasEducation: educationKeywords.some(k => lowerText.includes(k)),
+    hasLanguages: languageKeywords.some(k => lowerText.includes(k)),
+    hasCertifications: certKeywords.some(k => lowerText.includes(k)),
+    totalLines: lines.length,
+  };
 }
 
 function parseJSONContent(content: string | null): ProviderAttempt {
@@ -479,12 +519,44 @@ function toDraft(output: CVParserOutput, text: string): CandidateResumeDraft {
   };
 }
 
+export interface ParseDiagnostics {
+  providerUsed: "gemini" | "groq" | "groq-vision" | "local" | "none";
+  textQuality: ReturnType<typeof assessTextQuality>;
+  aiKeysPresent: { gemini: boolean; groq: boolean };
+  fallbackReason?: string;
+  warnings: string[];
+}
+
+function createDiagnostics(partial: Partial<ParseDiagnostics>): ParseDiagnostics {
+  return {
+    providerUsed: "none",
+    textQuality: { hasExperience: false, hasEducation: false, hasLanguages: false, hasCertifications: false, totalLines: 0 },
+    aiKeysPresent: { gemini: false, groq: false },
+    warnings: [],
+    ...partial,
+  };
+}
+
 export async function parseResumeWithFallback(
   file: File,
   text: string,
   providers: ProviderConfiguration,
   pageImages?: string[],
-): Promise<CandidateResumeDraft | null> {
+): Promise<{ draft: CandidateResumeDraft | null; diagnostics: ParseDiagnostics }> {
+  const diagnostics = createDiagnostics({
+    aiKeysPresent: { gemini: !!providers.geminiApiKey, groq: !!providers.groqApiKey },
+    textQuality: assessTextQuality(text),
+  });
+
+  // Check if we should use vision: text exists but structured sections are missing
+  const textQuality = diagnostics.textQuality;
+  const needsVision = providers.groqApiKey && 
+    pageImages && 
+    pageImages.length > 0 && 
+    text.trim().length > 0 &&
+    (textQuality.hasExperience || textQuality.hasEducation || textQuality.hasLanguages || textQuality.hasCertifications);
+
+  // Try Gemini first (supports both text and PDF bytes)
   if (providers.geminiApiKey) {
     const attempt = await requestGemini(
       file,
@@ -493,32 +565,107 @@ export async function parseResumeWithFallback(
       providers.geminiModel ?? "gemini-3.8-flash",
       providers.geminiFallbackModel,
     );
-    if (attempt.ok) return toDraft(attempt.output, text);
+    if (attempt.ok) {
+      const draft = toDraft(attempt.output, text);
+      return { 
+        draft, 
+        diagnostics: createDiagnostics({ 
+          ...diagnostics, 
+          providerUsed: "gemini" 
+        }) 
+      };
+    }
+    diagnostics.warnings.push(`Gemini failed: ${attempt.reason}`);
+  } else {
+    diagnostics.warnings.push("Gemini API key not configured");
   }
 
-  // If Gemini failed and we have page images but no text, try Groq Vision
-  if (providers.groqApiKey && pageImages && pageImages.length > 0 && !text.trim()) {
+  // Try Groq Vision if text extraction was poor for structured sections
+  if (needsVision) {
+    const visionAttempt = await requestGroqVision(
+      pageImages,
+      providers.groqApiKey!,
+      providers.groqVisionModel ?? "qwen/qwen3.8-27b",
+    );
+    if (visionAttempt.ok) {
+      const draft = toDraft(visionAttempt.output, "");
+      return { 
+        draft, 
+        diagnostics: createDiagnostics({ 
+          ...diagnostics, 
+          providerUsed: "groq-vision",
+          fallbackReason: "Text extraction missed structured sections; used vision fallback"
+        }) 
+      };
+    }
+    diagnostics.warnings.push(`Groq Vision failed: ${visionAttempt.reason}`);
+  } else if (providers.groqApiKey && pageImages && pageImages.length > 0 && !text.trim()) {
+    // Original logic: no text at all, try vision
     const visionAttempt = await requestGroqVision(
       pageImages,
       providers.groqApiKey,
       providers.groqVisionModel ?? "qwen/qwen3.8-27b",
     );
-    if (visionAttempt.ok) return toDraft(visionAttempt.output, "");
+    if (visionAttempt.ok) {
+      const draft = toDraft(visionAttempt.output, "");
+      return { 
+        draft, 
+        diagnostics: createDiagnostics({ 
+          ...diagnostics, 
+          providerUsed: "groq-vision",
+          fallbackReason: "No text extracted; used vision fallback"
+        }) 
+      };
+    }
+    diagnostics.warnings.push(`Groq Vision failed: ${visionAttempt.reason}`);
   }
 
+  // Try Groq (text-only)
   if (providers.groqApiKey) {
     const attempt = await requestGroq(
       text,
       providers.groqApiKey,
       providers.groqModel ?? "openai/gpt-oss-20b",
     );
-    if (attempt.ok) return toDraft(attempt.output, text);
+    if (attempt.ok) {
+      const draft = toDraft(attempt.output, text);
+      return { 
+        draft, 
+        diagnostics: createDiagnostics({ 
+          ...diagnostics, 
+          providerUsed: "groq" 
+        }) 
+      };
+    }
+    diagnostics.warnings.push(`Groq failed: ${attempt.reason}`);
+  } else {
+    diagnostics.warnings.push("Groq API key not configured");
   }
 
+  // Fallback to local parser
   const localDraft = parseResumeText(text);
   const local = cvParserOutputSchema.safeParse(localParserOutput(localDraft));
-  if (!local.success || !hasOutputContent(local.data)) return null;
-  return toDraft(local.data, text);
+  if (!local.success || !hasOutputContent(local.data)) {
+    diagnostics.warnings.push("Local parser produced no usable content");
+    return { 
+      draft: null, 
+      diagnostics: createDiagnostics({ 
+        ...diagnostics, 
+        providerUsed: "local",
+        fallbackReason: "All AI providers failed or unavailable; local parser produced no usable content"
+      }) 
+    };
+  }
+  
+  const draft = toDraft(local.data, text);
+  return { 
+    draft, 
+    diagnostics: createDiagnostics({ 
+      ...diagnostics, 
+      providerUsed: "local",
+      fallbackReason: "All AI providers failed or unavailable; used local parser"
+    }) 
+  };
 }
 
 export { systemPrompt as cvParserSystemPrompt };

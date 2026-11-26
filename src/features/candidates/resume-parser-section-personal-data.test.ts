@@ -102,19 +102,20 @@ test("a real role whose title carries a personal-data word is kept", () => {
   }
 });
 
-test("a dateless multi-line entry keeps its role line, not its employer", () => {
+test("a dateless multi-line entry extracts role and organization from separate lines", () => {
   // The role sits on its own line and contains a personal-data word; the
   // lookahead must not mistake it for a detail and shift the employer up.
+  // The improved parser now correctly extracts role and organization.
   const draft = parseResumeText("DENEYİM\nDoğum Kliniği Hemşiresi\nGamma Hastanesi");
 
   assert.deepEqual(draft.experience, [
     {
-      role: "",
-      organization: "",
+      role: "Doğum Kliniği Hemşiresi",
+      organization: "Gamma Hastanesi",
       location: "",
       startDate: "",
       endDate: "",
-      description: "Doğum Kliniği Hemşiresi\nGamma Hastanesi",
+      description: "Gamma Hastanesi",
     },
   ]);
 });
