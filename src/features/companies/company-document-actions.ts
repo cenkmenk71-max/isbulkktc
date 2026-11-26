@@ -34,32 +34,63 @@ export async function importCompanyDocument(
   const file = formData.get("file");
   if (!(file instanceof File)) return { ok: false, code: "unsupported" };
 
-  let text: string;
+  // Extract text layer when possible, but never short-circuit on empty text:
+  // the raw PDF bytes are always handed to the AI layer (Gemini can read
+  // application/pdf inlineData directly), so a scanned or pdfjs-broken PDF
+  // can still yield all 8 fields.
+  let text = "";
+  let pdfExtractionFailed = false;
   try {
     text = await extractTextDocument(file);
   } catch (error) {
     if (error instanceof DocumentImportError) {
       return { ok: false, code: mapDocumentErrorCode(error.code) };
     }
-    return { ok: false, code: "unreadable" };
+    pdfExtractionFailed = true;
+    text = "";
+    console.error("[company-doc] PDF text extraction failed", {
+      error: error instanceof Error ? error.message : String(error),
+      fileName: file.name,
+      fileType: file.type,
+    });
   }
 
-  if (!text.trim()) return { ok: false, code: "empty" };
+  console.info("[company-doc] Text extraction complete", {
+    textLength: text.length,
+    pdfExtractionFailed,
+    fileName: file.name,
+  });
 
   const localSuggestions = parseCompanyDocumentText(text);
 
   let aiSuggestions: CompanyDocumentSuggestions = {};
   try {
     aiSuggestions = await parseCompanyDocumentAI(file, text);
-  } catch {
+    console.info("[company-doc] AI extraction complete", {
+      fieldsFilled: Object.keys(aiSuggestions).length,
+      fields: Object.keys(aiSuggestions),
+    });
+  } catch (error) {
     aiSuggestions = {};
+    console.error("[company-doc] AI extraction threw", {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   // Merge: local rule-based parser is authoritative for clearly labeled text;
   // AI fills any fields the local parser missed (tables, scanned layouts).
   const suggestions = mergeCompanySuggestions(localSuggestions, aiSuggestions);
 
-  if (!hasContent(suggestions)) return { ok: false, code: "empty" };
+  console.info("[company-doc] Document parsed", {
+    totalFieldsFilled: Object.keys(suggestions).length,
+    fields: Object.keys(suggestions),
+    pdfExtractionFailed,
+  });
+
+  if (!hasContent(suggestions)) {
+    if (pdfExtractionFailed || !text.trim()) return { ok: false, code: "unreadable" };
+    return { ok: false, code: "empty" };
+  }
 
   return { ok: true, suggestions };
 }

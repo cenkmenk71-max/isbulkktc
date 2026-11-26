@@ -216,21 +216,61 @@ export async function parseCompanyDocumentAI(
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
 
+  console.info("[company-doc] AI extraction started", {
+    hasGeminiKey: Boolean(geminiApiKey),
+    hasGroqKey: Boolean(groqApiKey),
+    textLength: text.length,
+    fileName: file.name,
+    fileType: file.type,
+    fileSize: file.size,
+  });
+
   let suggestions: CompanyDocumentSuggestions = {};
 
   if (geminiApiKey) {
-    const geminiAttempt = await requestGeminiCompany(file, geminiApiKey);
-    if (geminiAttempt.ok) {
-      suggestions = { ...suggestions, ...geminiAttempt.output };
+    try {
+      const geminiAttempt = await requestGeminiCompany(file, geminiApiKey);
+      if (geminiAttempt.ok) {
+        suggestions = { ...suggestions, ...geminiAttempt.output };
+        console.info("[company-doc] Gemini extraction succeeded", {
+          model: "gemini-3.5-flash-lite / gemini-3.6-flash",
+          fieldsFilled: Object.keys(geminiAttempt.output).length,
+          fields: Object.keys(geminiAttempt.output),
+        });
+      } else {
+        console.error("[company-doc] Gemini extraction failed");
+      }
+    } catch (error) {
+      console.error("[company-doc] Gemini extraction threw", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
   if (groqApiKey && !hasSomeFields(suggestions)) {
-    const groqAttempt = await requestGroqCompanyText(text, groqApiKey);
-    if (groqAttempt.ok) {
-      suggestions = { ...suggestions, ...groqAttempt.output };
+    try {
+      const groqAttempt = await requestGroqCompanyText(text, groqApiKey);
+      if (groqAttempt.ok) {
+        suggestions = { ...suggestions, ...groqAttempt.output };
+        console.info("[company-doc] Groq text extraction succeeded", {
+          model: process.env.GROQ_CV_MODEL ?? "llama-3.3-70b-versatile",
+          fieldsFilled: Object.keys(groqAttempt.output).length,
+          fields: Object.keys(groqAttempt.output),
+        });
+      } else {
+        console.error("[company-doc] Groq text extraction failed");
+      }
+    } catch (error) {
+      console.error("[company-doc] Groq text extraction threw", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
+
+  console.info("[company-doc] AI extraction complete", {
+    totalFieldsFilled: Object.keys(suggestions).length,
+    fields: Object.keys(suggestions),
+  });
 
   return suggestions;
 }

@@ -68,7 +68,11 @@ async function extractPdfText(file: File): Promise<string> {
     return extractedText;
   } catch (error) {
     if (error instanceof DocumentImportError) throw error;
-    if (isValidPdf) return "";
+    if (isValidPdf) {
+      const fallback = extractPdfTextFallback(data);
+      if (fallback.trim()) return fallback;
+      return "";
+    }
     throw new DocumentImportError("unreadable");
   } finally {
     await task.destroy();
@@ -260,4 +264,266 @@ export async function extractTextDocument(file: File): Promise<string> {
   if (extension && textExtensions.has(extension)) return extractPlainText(file);
 
   throw new DocumentImportError("unsupported");
+}
+
+/* ── Pure-JS PDF text extractor fallback (zero dependencies) ──────────────
+
+  Used when `pdfjs-dist` cannot run (e.g. Vercel serverless without
+  `@napi-rs/canvas`). It scans the PDF byte buffer for text-showing
+  operators (`Tj`, `TJ`) and decodes string literals `(...)`, hex literals
+  `<hex>` using WinAnsi (cp1252) with UTF-16BE BOM detection.
+
+  This is a best-effort fallback: it recovers visible text from digitally
+  encoded PDFs but does not handle embedded fonts, encoding diffs, or
+  scanned/image-only pages.
+─────────────────────────────────────────────────────────────────────────── */
+
+// Windows-1252 (WinAnsi) code points 0x80–0x9F that differ from ISO-8859-1.
+const winAnsiMap: Record<number, string> = {
+  0x80: "\u20AC",
+  0x82: "\u201A",
+  0x83: "\u0192",
+  0x84: "\u201E",
+  0x85: "\u2026",
+  0x86: "\u2020",
+  0x87: "\u2021",
+  0x88: "\u02C6",
+  0x89: "\u2030",
+  0x8A: "\u0160",
+  0x8B: "\u2039",
+  0x8C: "\u0152",
+  0x8E: "\u017D",
+  0x91: "\u2018",
+  0x92: "\u2019",
+  0x93: "\u201C",
+  0x94: "\u201D",
+  0x95: "\u2022",
+  0x96: "\u2013",
+  0x97: "\u2014",
+  0x98: "\u02DC",
+  0x99: "\u2122",
+  0x9A: "\u0161",
+  0x9B: "\u203A",
+  0x9C: "\u0153",
+  0x9E: "\u017E",
+  0x9F: "\u0178",
+};
+
+function decodeBytes(bytes: Uint8Array): string {
+  // UTF-16BE BOM
+  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+    return new TextDecoder("utf-16be").decode(bytes.subarray(2));
+  }
+
+  try {
+    return new TextDecoder("windows-1252").decode(bytes);
+  } catch {
+    let decoded = "";
+    for (let i = 0; i < bytes.length; i += 1) {
+      const b = bytes[i];
+      if (b >= 0x80 && b <= 0x9f && winAnsiMap[b]) {
+        decoded += winAnsiMap[b];
+      } else {
+        decoded += String.fromCharCode(b);
+      }
+    }
+    return decoded;
+  }
+}
+
+function decodePdfString(raw: string): string {
+  const bytes = new Uint8Array(raw.length);
+  let j = 0;
+  let i = 0;
+  while (i < raw.length) {
+    const ch = raw[i];
+    if (ch === "\\") {
+      const next = raw[i + 1];
+      if (next === "n") { bytes[j] = 0x0a; i += 2; j += 1; continue; }
+      if (next === "r") { bytes[j] = 0x0d; i += 2; j += 1; continue; }
+      if (next === "t") { bytes[j] = 0x09; i += 2; j += 1; continue; }
+      if (next === "b") { bytes[j] = 0x08; i += 2; j += 1; continue; }
+      if (next === "f") { bytes[j] = 0x0c; i += 2; j += 1; continue; }
+      if (next === "(" || next === ")" || next === "\\") {
+        bytes[j] = next.charCodeAt(0);
+        i += 2;
+        j += 1;
+        continue;
+      }
+      if (/[0-7]/.test(next)) {
+        let octal = "";
+        let k = i + 1;
+        while (k < raw.length && k - i - 1 < 3 && /[0-7]/.test(raw[k])) {
+          octal += raw[k];
+          k += 1;
+        }
+        bytes[j] = parseInt(octal, 8);
+        i = k;
+        j += 1;
+        continue;
+      }
+      bytes[j] = next.charCodeAt(0);
+      i += 2;
+      j += 1;
+      continue;
+    }
+    bytes[j] = ch.charCodeAt(0);
+    i += 1;
+    j += 1;
+  }
+  return decodeBytes(bytes.subarray(0, j));
+}
+
+function decodeHexString(hex: string): string {
+  const clean = hex.replace(/\s/g, "");
+  if (clean.length % 2 !== 0) return "";
+  const bytes = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < clean.length; i += 2) {
+    bytes[i / 2] = parseInt(clean.slice(i, i + 2), 16);
+  }
+  return decodeBytes(bytes);
+}
+
+function findPdfStringEnd(s: string, start: number): number {
+  let depth = 0;
+  let i = start;
+  while (i < s.length) {
+    const ch = s[i];
+    if (ch === "\\") {
+      i += 2;
+      continue;
+    }
+    if (ch === "(") {
+      depth += 1;
+      i += 1;
+      continue;
+    }
+    if (ch === ")") {
+      depth -= 1;
+      if (depth === 0) return i;
+      i += 1;
+      continue;
+    }
+    i += 1;
+  }
+  return -1;
+}
+
+function extractArrayItems(content: string): string[] {
+  const items: string[] = [];
+  let i = 0;
+  while (i < content.length) {
+    if (/\s/.test(content[i])) {
+      i += 1;
+      continue;
+    }
+    if (content[i] === "(") {
+      const end = findPdfStringEnd(content, i);
+      if (end === -1) {
+        i += 1;
+        continue;
+      }
+      items.push(decodePdfString(content.slice(i + 1, end)));
+      i = end + 1;
+      continue;
+    }
+    if (content[i] === "<") {
+      const end = content.indexOf(">", i);
+      if (end === -1) {
+        i += 1;
+        continue;
+      }
+      items.push(decodeHexString(content.slice(i + 1, end)));
+      i = end + 1;
+      continue;
+    }
+    // Skip numbers, brackets, and other non-string tokens.
+    i += 1;
+  }
+  return items;
+}
+
+function extractTextFromContentStream(stream: string): string {
+  const parts: string[] = [];
+
+  // Handle [ ... ] TJ arrays.
+  const tjArrayRegex = /\[\s*([\s\S]*?)\]\s*TJ/g;
+  let arrayMatch: RegExpExecArray | null;
+  while ((arrayMatch = tjArrayRegex.exec(stream)) !== null) {
+    const items = extractArrayItems(arrayMatch[1]);
+    parts.push(...items);
+  }
+
+  // Remove processed TJ arrays so their strings are not double-counted.
+  const cleaned = stream.replace(/\[\s*[\s\S]*?\]\s*TJ/g, " ");
+
+  // Handle (...) Tj and <hex> Tj.
+  let i = 0;
+  while (i < cleaned.length) {
+    if (/\s/.test(cleaned[i])) {
+      i += 1;
+      continue;
+    }
+
+    if (cleaned[i] === "(") {
+      const end = findPdfStringEnd(cleaned, i);
+      if (end === -1) {
+        i += 1;
+        continue;
+      }
+      const raw = cleaned.slice(i + 1, end);
+      i = end + 1;
+      while (i < cleaned.length && /\s/.test(cleaned[i])) i += 1;
+      if (cleaned.startsWith("Tj", i)) {
+        parts.push(decodePdfString(raw));
+        i += 2;
+      }
+      continue;
+    }
+
+    if (cleaned[i] === "<") {
+      const end = cleaned.indexOf(">", i);
+      if (end === -1) {
+        i += 1;
+        continue;
+      }
+      const raw = cleaned.slice(i + 1, end);
+      i = end + 1;
+      while (i < cleaned.length && /\s/.test(cleaned[i])) i += 1;
+      if (cleaned.startsWith("Tj", i)) {
+        parts.push(decodeHexString(raw));
+        i += 2;
+      }
+      continue;
+    }
+
+    // Skip operator names and other tokens.
+    if (/[a-zA-Z]/.test(cleaned[i])) {
+      let j = i;
+      while (j < cleaned.length && /[a-zA-Z]/.test(cleaned[j])) j += 1;
+      i = j;
+      continue;
+    }
+
+    i += 1;
+  }
+
+  return parts.join(" ");
+}
+
+export function extractPdfTextFallback(data: Uint8Array): string {
+  let str = "";
+  for (let i = 0; i < data.length; i += 1) {
+    str += String.fromCharCode(data[i]);
+  }
+
+  const texts: string[] = [];
+  const textObjRegex = /BT([\s\S]*?)ET/g;
+  let match: RegExpExecArray | null;
+  while ((match = textObjRegex.exec(str)) !== null) {
+    const pageText = extractTextFromContentStream(match[1]);
+    if (pageText.trim()) texts.push(pageText);
+  }
+
+  return texts.join("\n");
 }
