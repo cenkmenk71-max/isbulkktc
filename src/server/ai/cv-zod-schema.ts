@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { northernCyprusDistrictValues } from "@/features/locations/northern-cyprus-districts";
 import { ProficiencyCodeSchema } from "@/features/candidates/language-extraction";
+import { mapProficiencyToCEFR } from "@/features/candidates/cefr-alignment";
 
 const text = (max: number) =>
   z.string().max(max).nullish().transform((v) => v ?? "").catch("");
@@ -181,3 +182,130 @@ export type CVParserOutput = z.infer<typeof cvParserOutputSchema>;
 export type CVResumeDraft = z.infer<typeof cvResumeDraftSchema>;
 
 export const cvParserJsonSchema = z.toJSONSchema(jsonSchemaBase);
+
+type JsonRecord = Record<string, unknown>;
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function pickString(record: JsonRecord, keys: string[]): string {
+  for (const key of keys) {
+    const value = record[key];
+    if (value !== undefined && value !== null) return String(value);
+  }
+  return "";
+}
+
+// Splits "2019 - 2023", "2019/2023", "2019 to 2023" into start/end. A lone
+// year becomes the start date only.
+function splitPeriod(value: string): { start: string; end: string } {
+  const parts = value.split(/[-–—/]| to /i).map((part) => part.trim()).filter(Boolean);
+  if (parts.length === 0) return { start: "", end: "" };
+  if (parts.length === 1) return { start: parts[0], end: "" };
+  return { start: parts[0], end: parts[1] };
+}
+
+// Splits "Türkçe (Anadil)" / "İngilizce - İleri" into { name, level }.
+function splitLanguageNameLevel(value: string): { name: string; level: string } {
+  const match = value.match(/^\s*(.*?)\s*[\(\[\-–—/]\s*([^\]\)]+?)\s*[\]\)]?\s*$/);
+  if (!match) return { name: value.trim(), level: "" };
+  return { name: match[1].trim(), level: match[2].trim() };
+}
+
+/**
+ * Tolerant field normalization for AI CV JSON before Zod validation.
+ *
+ * AI models often return synonym keys instead of the canonical schema keys
+ * (`position` instead of `role`, `university` instead of `institution`,
+ * `language` instead of `name`, plain string arrays for languages/certifications,
+ * a single `period` string instead of `startDate`/`endDate`, or a multi-line
+ * `highlights` string instead of `description`). This normalizes every known
+ * synonym into the canonical shape so Zod accepts payloads the strict schema
+ * would otherwise reject. Unknown keys pass through unchanged; arrays that are
+ * not arrays pass through unchanged so Zod's `.catch([])` handles them.
+ */
+export function normalizeRawAiCvPayload(raw: unknown): unknown {
+  if (!isJsonRecord(raw)) return raw;
+
+  const result: JsonRecord = { ...raw };
+
+  if (Array.isArray(raw.experience)) {
+    result.experience = raw.experience.map((entry) => {
+      if (!isJsonRecord(entry)) return entry;
+      const period = pickString(entry, ["period", "dates", "duration"]);
+      const { start, end } = period
+        ? splitPeriod(period)
+        : {
+            start: pickString(entry, ["startDate"]),
+            end: pickString(entry, ["endDate"]),
+          };
+      const highlights = entry.highlights ?? entry.description ?? entry.summary;
+      const description =
+        typeof highlights === "string"
+          ? highlights.split(/\n/).filter(Boolean).join("\n")
+          : String(highlights ?? "");
+      return {
+        role: pickString(entry, ["role", "title", "position", "job_title"]),
+        organization: pickString(entry, ["company", "organization", "employer"]),
+        location: pickString(entry, ["location"]),
+        startDate: start,
+        endDate: end,
+        description,
+      };
+    });
+  }
+
+  if (Array.isArray(raw.education)) {
+    result.education = raw.education.map((entry) => {
+      if (!isJsonRecord(entry)) return entry;
+      const year = pickString(entry, ["year", "period", "dates", "graduationYear"]);
+      const { start, end } = year
+        ? splitPeriod(year)
+        : {
+            start: pickString(entry, ["startDate"]),
+            end: pickString(entry, ["endDate"]),
+          };
+      return {
+        institution: pickString(entry, ["school", "institution", "university"]),
+        qualification: pickString(entry, ["qualification", "degree", "title", "department", "program"]),
+        field: pickString(entry, ["field"]),
+        startDate: start,
+        endDate: end,
+        description: pickString(entry, ["description"]),
+      };
+    });
+  }
+
+  if (Array.isArray(raw.languages)) {
+    result.languages = raw.languages.map((entry) => {
+      if (typeof entry === "string") {
+        const { name, level } = splitLanguageNameLevel(entry);
+        return { name, proficiency: mapProficiencyToCEFR(level || name) };
+      }
+      if (!isJsonRecord(entry)) return entry;
+      return {
+        name: pickString(entry, ["name", "language", "title"]),
+        proficiency: mapProficiencyToCEFR(
+          pickString(entry, ["proficiency", "level", "fluency"]),
+        ),
+      };
+    });
+  }
+
+  if (Array.isArray(raw.certifications)) {
+    result.certifications = raw.certifications.map((entry) => {
+      if (typeof entry === "string")
+        return { name: entry, issuer: "", issueDate: "", expiryDate: "" };
+      if (!isJsonRecord(entry)) return entry;
+      return {
+        name: pickString(entry, ["name", "title", "certificate"]),
+        issuer: pickString(entry, ["issuer", "organization", "provider"]),
+        issueDate: pickString(entry, ["issueDate", "year", "date"]),
+        expiryDate: pickString(entry, ["expiryDate"]),
+      };
+    });
+  }
+
+  return result;
+}
