@@ -1633,8 +1633,8 @@
       "inactive": "Bu hesap şu anda CV içe aktaramıyor.",
       "unsupported": "Desteklenen bir PDF, DOCX, RTF, ODT, TXT veya Markdown dosyası seçin."
     },
-    "imported": "boş alan formda dolduruldu ve henüz kaydedilmedi. Mevcut bilgiler korundu; kontrol edip kaydedin.",
-    "importedWithSkipped": "{count} boş alan dolduruldu. Mevcut bilgiler korundu; kontrol edip kaydedin.",
+    "imported": "CV’den çıkarılan öneriler forma eklendi; henüz kaydedilmedi. Mevcut bilgiler korundu. Kontrol edip kaydedin.",
+    "importedWithSkipped": "CV önerileri forma eklendi; henüz kaydedilmedi. Bölüm sınırı nedeniyle {count} kayıt eklenemedi. Önerileri kontrol edip kaydedin.",
     "noNewInformation": "Boş alan doldurmak için yeni bilgi bulunamadı. Mevcut bilgiler korundu.",
     "noNewInformationWithSkipped": "Yeni bilgi bulunamadı; {count} öneri sınır nedeniyle atlandı. Mevcut bilgiler korundu.",
     "processing": "Dosya okunuyor…",

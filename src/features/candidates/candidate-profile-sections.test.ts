@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   candidateProfileSectionKeys,
-  getOpenCandidateProfileSections,
+  computeOpenSections,
 } from "./candidate-profile-sections";
 import type { CandidateProfileValues } from "./schemas";
 
@@ -30,7 +30,7 @@ function makeProfile(
 
 test("empty profile sections start collapsed", () => {
   assert.deepEqual(
-    [...getOpenCandidateProfileSections(makeProfile())],
+    [...computeOpenSections(makeProfile())],
     [],
   );
 });
@@ -77,7 +77,7 @@ test("only populated sections start expanded", () => {
 
   for (const { section, profile } of cases) {
     assert.deepEqual(
-      [...getOpenCandidateProfileSections(makeProfile(profile))],
+      [...computeOpenSections(makeProfile(profile))],
       [section],
       `${section} should open when it has profile data`,
     );

@@ -8,11 +8,5 @@ export type ResumeImportErrorCode =
   | "inactive";
 
 export type ImportResumeFileResult =
-  | {
-      ok: true;
-      draft: Omit<CandidateResumeDraft, "cvFullText">;
-      added: number;
-      skipped: number;
-      filledFields: string[];
-    }
+  | { ok: true; draft: Omit<CandidateResumeDraft, "cvFullText"> }
   | { ok: false; code: ResumeImportErrorCode };

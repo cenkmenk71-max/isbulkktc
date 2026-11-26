@@ -70,6 +70,26 @@ const candidateDashboardRefreshKeys = [
   "CandidateDashboard.workplaceModePreferenceLabel",
 ] as const;
 
+const resumeImportUiKeys = [
+  "resumeImport.title",
+  "resumeImport.description",
+  "resumeImport.chooseFile",
+  "resumeImport.processing",
+  "resumeImport.imported",
+  "resumeImport.importedWithSkipped",
+  "resumeImport.noNewInformation",
+  "resumeImport.noNewInformationWithSkipped",
+  "resumeImport.errors.empty",
+  "resumeImport.errors.legacyDoc",
+  "resumeImport.errors.tooLarge",
+  "resumeImport.errors.tooManyPages",
+  "resumeImport.errors.unreadable",
+  "resumeImport.errors.parseFailed",
+  "resumeImport.errors.unauthorized",
+  "resumeImport.errors.inactive",
+  "resumeImport.errors.unsupported",
+] as const;
+
 test("candidate dashboard refresh copy is complete and translated in every locale", () => {
   for (const locale of locales) {
     const messages = flatten(readMessages(locale));
@@ -95,6 +115,38 @@ test("candidate dashboard refresh copy is complete and translated in every local
     turkish["CandidateDashboard.deleteAccount.confirmLabel"],
     "Evet, hesabımı sil",
   );
+});
+
+test("CV import UI copy is translated and omits provider implementation details", () => {
+  const placeholders = (message: string | undefined) =>
+    Array.from(
+      message?.matchAll(/\{(\w+)(?:\s*,[^}]*)?\}/g) ?? [],
+      (match) => match[1],
+    ).sort();
+
+  for (const locale of locales) {
+    const messages = flatten(readMessages(locale));
+    for (const key of resumeImportUiKeys) {
+      assert.ok(key in messages, `${locale} is missing ${key}`);
+      assert.doesNotMatch(
+        messages[key] ?? "",
+        /\b(?:Gemini|Groq)\b/i,
+        `${locale}.${key} must not expose provider details`,
+      );
+      assert.deepEqual(
+        placeholders(messages[key]),
+        placeholders(turkish[key]),
+        `${locale}.${key} must preserve the Turkish message placeholders`,
+      );
+      if (locale !== "tr") {
+        assert.notEqual(
+          messages[key],
+          turkish[key],
+          `${locale}.${key} must be translated from Turkish`,
+        );
+      }
+    }
+  }
 });
 
 // `contactEmail` is an address, not prose, so every locale legitimately keeps

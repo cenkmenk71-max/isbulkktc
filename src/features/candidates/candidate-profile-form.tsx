@@ -35,10 +35,10 @@ import type {
   CandidateProfileFormState,
   CandidateProfileValues,
 } from "./schemas";
-import { mergeResumeDraft } from "./resume-profile-draft";
+import { mergeResumeDraftForForm } from "./resume-profile-import";
 import {
   candidateProfileSectionKeys,
-  getOpenCandidateProfileSections,
+  computeOpenSections,
   hasEntryContent,
   type CandidateProfileSectionKey,
 } from "./candidate-profile-sections";
@@ -244,16 +244,12 @@ export function CandidateProfileForm({
     | "inactive"
   >("idle");
   const [importSkipped, setImportSkipped] = useState(0);
-  const [importAdded, setImportAdded] = useState(0);
-  const [importFilledFields, setImportFilledFields] = useState<string[]>([]);
   const [resumeImported, setResumeImported] = useState(false);
   const [isDraggingResume, setIsDraggingResume] = useState(false);
 
   const [openSections, setOpenSections] = useState<
     Set<CandidateProfileSectionKey>
-  >(() =>
-    getOpenCandidateProfileSections(profile),
-  );
+  >(() => computeOpenSections(profile));
 
   const [initialValues, setInitialValues] = useState(() => ({
     ...profile,
@@ -312,8 +308,6 @@ export function CandidateProfileForm({
     setInitialValues(currentValuesRef.current);
     setResumeImported(false);
     setImportSkipped(0);
-    setImportAdded(0);
-    setImportFilledFields([]);
     setImportStatus("idle");
   }, [state]);
 
@@ -501,7 +495,7 @@ export function CandidateProfileForm({
         return;
       }
 
-      const mergeResult = mergeResumeDraft(
+      const mergeResult = mergeResumeDraftForForm(
         {
           phone,
           jobTypePreference,
@@ -523,7 +517,7 @@ export function CandidateProfileForm({
         },
         importResult.draft,
       );
-      const { profile: mergedProfile, added, skipped, filledFields } =
+      const { profile: mergedProfile, added, skipped, openSections } =
         mergeResult;
       setHeadline(mergedProfile.headline);
       setLocation(mergedProfile.location);
@@ -535,8 +529,7 @@ export function CandidateProfileForm({
       setSummary(mergedProfile.summary);
       setLinks(mergedProfile.links);
       setImportSkipped(skipped);
-      setImportAdded(added);
-      setImportFilledFields(filledFields);
+      setOpenSections(openSections);
       if (added === 0) {
         setImportStatus(
           skipped > 0
@@ -548,7 +541,6 @@ export function CandidateProfileForm({
 
       setImportStatus(skipped > 0 ? "importedWithSkipped" : "imported");
       setResumeImported(true);
-      setOpenSections(getOpenCandidateProfileSections(mergedProfile));
     } catch (error) {
       console.error("Candidate CV import failed.", {
         name: error instanceof Error ? error.name : "UnknownError",
@@ -777,15 +769,10 @@ export function CandidateProfileForm({
                   ? rootCopy("resumeImport.processing")
                   : ""
                 : importStatus === "imported"
-                  ? rootCopy("resumeImport.imported", {
-                      count: importAdded,
-                      fields: importFilledFields.join(", "),
-                    })
+                  ? rootCopy("resumeImport.imported")
                   : importStatus === "importedWithSkipped"
                     ? rootCopy("resumeImport.importedWithSkipped", {
-                        count: importAdded,
-                        skipped: importSkipped,
-                        fields: importFilledFields.join(", "),
+                        count: importSkipped,
                       })
                     : importStatus === "noNewInformationWithSkipped"
                       ? rootCopy("resumeImport.noNewInformationWithSkipped", {

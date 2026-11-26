@@ -4,6 +4,8 @@ import {
   mergeResumeDraft,
   type CandidateProfileDraft,
 } from "../../src/features/candidates/resume-profile-draft";
+import { mergeResumeDraftForForm } from "../../src/features/candidates/resume-profile-import";
+import { parseResumeWithFallback } from "../../src/server/ai/cv-parser-core";
 
 const emptyProfile: CandidateProfileDraft = {
   phone: null,
@@ -170,4 +172,98 @@ test("deduplicates imported entries and reports entries beyond profile limits", 
   assert.equal(result.profile.skills.length, 40);
   assert.equal(result.added, 0);
   assert.equal(result.skipped, 2);
+});
+
+test("AI CV output fills all nine fields and opens every populated section", async () => {
+  const cvText = [
+    "Alex Example",
+    "Senior Product Designer | Example Studio | Lefkoşa | 2021-2025",
+    "Accessible product design and user research.",
+  ].join("\n");
+  const file = new File([cvText], "alex-example.txt", { type: "text/plain" });
+  const providerOutput = {
+    headline: "Senior Product Designer",
+    location: "Lefkoşa",
+    summary: "Product designer experienced in accessible digital products.",
+    skills: ["Figma", "User Research", "Prototyping"],
+    experience: [{
+      role: "Senior Product Designer",
+      organization: "Example Studio",
+      location: "Lefkoşa",
+      startDate: "2021",
+      endDate: "2025",
+      description: "Led product design for accessible web applications.",
+    }],
+    education: [{
+      institution: "Doğu Akdeniz Üniversitesi",
+      qualification: "Bachelor of Design",
+      field: "Product Design",
+      startDate: "2017",
+      endDate: "2021",
+      description: "",
+    }],
+    languages: [
+      { name: "Turkish", proficiency: "Native" },
+      { name: "English", proficiency: "C1" },
+    ],
+    certifications: [{
+      name: "Accessibility Foundations",
+      issuer: "Example Academy",
+      issueDate: "2024",
+      expiryDate: "",
+    }],
+    links: [{
+      label: "LinkedIn",
+      url: "https://linkedin.com/in/alex-example",
+    }],
+  };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        candidates: [{
+          content: { parts: [{ text: JSON.stringify(providerOutput) }] },
+        }],
+      }),
+      { status: 200 },
+    );
+
+  try {
+    const draft = await parseResumeWithFallback(
+      file,
+      cvText,
+      { geminiApiKey: "test-key" },
+    );
+    assert.ok(draft);
+
+    const result = mergeResumeDraftForForm(emptyProfile, draft);
+    assert.equal(result.profile.headline, providerOutput.headline);
+    assert.equal(result.profile.location, providerOutput.location);
+    assert.equal(result.profile.summary, providerOutput.summary);
+    assert.deepEqual(result.profile.skills, providerOutput.skills);
+    assert.deepEqual(result.profile.experience, providerOutput.experience);
+    assert.deepEqual(result.profile.education, providerOutput.education);
+    assert.deepEqual(result.profile.languages, providerOutput.languages);
+    assert.deepEqual(result.profile.certifications, providerOutput.certifications);
+    assert.deepEqual(result.profile.links, providerOutput.links);
+    assert.deepEqual([...result.openSections], [
+      "essentials",
+      "experience",
+      "education",
+      "languagesCerts",
+      "linksSkills",
+    ]);
+
+    const duplicateImport = mergeResumeDraftForForm(result.profile, draft);
+    assert.equal(duplicateImport.added, 0);
+    assert.deepEqual([...duplicateImport.openSections], [
+      "essentials",
+      "experience",
+      "education",
+      "languagesCerts",
+      "linksSkills",
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
