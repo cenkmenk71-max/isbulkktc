@@ -240,14 +240,30 @@ function sectionHeading(line: string): {
   section: ResumeSection | "ignored";
   remainder: string;
 } | null {
-  const match = line.match(/^([^:：]{1,64})\s*[:：]\s*(.*)$/);
-  const label = match ? match[1] : line;
+  const colonMatch = line.match(/^([^:：]{1,64})\s*[:：]\s*(.*)$/);
+  const label = colonMatch ? colonMatch[1] : line;
   const normalized = normalizeHeading(label);
   const section = headings.get(normalized);
-  if (section) return { section, remainder: match?.[2] ?? "" };
+  if (section) return { section, remainder: colonMatch ? colonMatch[2] : "" };
   if (ignoredHeadings.has(normalized)) {
-    return { section: "ignored", remainder: match?.[2] ?? "" };
+    return { section: "ignored", remainder: colonMatch ? colonMatch[2] : "" };
   }
+
+  // Two-column and table PDFs often print a heading glued to its first entry on
+  // the same line ("İŞ DENEYİMİ - Yazılım Geliştirici | Acme | 2019 - 2023").
+  // Split on a strong entry separator and treat the leading label as a heading
+  // when it matches a known section and the remainder carries non-date content.
+  const sepMatch = line.match(/^([^|•\-–—:：]{1,64})\s*[|•\-–—:：]\s*(.*)$/);
+  if (sepMatch) {
+    const sepLabel = sepMatch[1];
+    const sepNormalized = normalizeHeading(sepLabel);
+    const sepSection = headings.get(sepNormalized);
+    const sepRemainder = stripDateRange(sepMatch[2]).trim();
+    if (sepSection && sepRemainder.length > 0) {
+      return { section: sepSection, remainder: sepMatch[2] };
+    }
+  }
+
   return null;
 }
 
@@ -306,6 +322,20 @@ function sectionLines(text: string): SectionSplit {
 
 function cleanLine(line: string): string {
   return line.replace(/^\s*(?:[•●▪◦*-]|\d+[.)])\s*/, "").trim();
+}
+
+/**
+ * Splits "Türkçe (Anadil)" / "İngilizce - İleri" / "French / C2" into the
+ * language name and its proficiency token, so two-column PDFs that glue the
+ * level next to the language name still yield { name, level } records.
+ */
+function splitLanguageNameLevel(value: string): {
+  name: string;
+  level: string;
+} {
+  const match = value.match(/^\s*(.*?)\s*[\(\[\-–—/]\s*([^\]\)]+?)\s*[\]\)]?\s*$/);
+  if (!match) return { name: value.trim(), level: "" };
+  return { name: match[1].trim(), level: match[2].trim() };
 }
 
 function uniqueValues(values: string[], maximum: number): string[] {
@@ -1177,24 +1207,18 @@ function parseLanguages(lines: string[]): CandidateLanguage[] {
   );
 
   return values.map((name) => {
-    const mapped = mapLanguageNameToCode(name);
-    // Extract proficiency from the original line if present
+    const { name: cleanName, level } = splitLanguageNameLevel(name);
+    const mapped = mapLanguageNameToCode(cleanName);
+    // A level spelled next to the language ("Türkçe (Anadil)", "İngilizce - İleri")
+    // wins over proficiency keywords embedded in the name.
     const proficiencyMatch = name.match(
       /\b(native|ana dil|mother tongue|fluent|advanced|ileri|upper intermediate|orta\.?[üu]st\.?|intermediate|orta|elementary|temel|beginner|başlangıç|c2|c1|b2|b1|a2|a1|expert|proficient|good|fair|basic|ilr \d|dlpt \d)\b/i
     );
-    const proficiency = proficiencyMatch
+    const proficiency = level
+      ? mapProficiencyToCEFR(level)
+      : proficiencyMatch
       ? mapProficiencyToCEFR(proficiencyMatch[1])
       : "B1";
-    // Clean up the name by removing proficiency indicators
-    let cleanName = name;
-    if (proficiencyMatch) {
-      cleanName = name
-        .replace(
-          /\s*[-–—|/]\s*(native|ana dil|mother tongue|fluent|advanced|ileri|upper intermediate|orta\.?[üu]st\.?|intermediate|orta|elementary|temel|beginner|başlangıç|c2|c1|b2|b1|a2|a1|expert|proficient|good|fair|basic|ilr \d|dlpt \d)\b/i,
-          ""
-        )
-        .trim();
-    }
     const standardName = mapped?.standardNameTr ?? cleanName.slice(0, 80);
     return { name: standardName, proficiency };
   });

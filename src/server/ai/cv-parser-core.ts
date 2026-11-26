@@ -4,6 +4,7 @@ import {
   cvParserJsonSchema,
   cvParserOutputSchema,
   cvResumeDraftSchema,
+  normalizeRawAiCvPayload,
   type CVParserOutput,
 } from "./cv-zod-schema";
 
@@ -113,7 +114,8 @@ function isRecord(value: unknown): value is JSONRecord {
 }
 
 function parseProviderOutput(value: unknown): ProviderAttempt {
-  const parsed = cvParserOutputSchema.safeParse(value);
+  const normalized = normalizeRawAiCvPayload(value);
+  const parsed = cvParserOutputSchema.safeParse(normalized);
   if (!parsed.success) {
     console.warn("[cv-parser] Provider returned invalid schema", {
       issues: parsed.error.issues.map((issue) => ({
@@ -519,6 +521,75 @@ function toDraft(output: CVParserOutput, text: string): CandidateResumeDraft {
   };
 }
 
+function draftIsIncomplete(draft: CandidateResumeDraft): boolean {
+  return (
+    draft.experience?.length === 0 ||
+    draft.education?.length === 0 ||
+    draft.languages?.length === 0 ||
+    draft.certifications?.length === 0
+  );
+}
+
+/**
+ * Merges a text-layer draft with a vision draft. Per structured section, the
+ * draft that returns more entries wins; ties keep the text layer, which is the
+ * authoritative source when it could be extracted.
+ */
+function mergeDrafts(
+  primary: CandidateResumeDraft,
+  secondary: CandidateResumeDraft,
+): CandidateResumeDraft {
+  const pickSection = <T>(
+    a: T[] | undefined,
+    b: T[] | undefined,
+  ): T[] | undefined => {
+    const aLen = (a ?? []).length;
+    const bLen = (b ?? []).length;
+    if (aLen > 0 && aLen >= bLen) return a;
+    if (bLen > 0) return b;
+    return a;
+  };
+
+  return {
+    ...primary,
+    experience: pickSection(primary.experience, secondary.experience),
+    education: pickSection(primary.education, secondary.education),
+    languages: pickSection(primary.languages, secondary.languages),
+    certifications: pickSection(primary.certifications, secondary.certifications),
+  };
+}
+
+/**
+ * When a text-layer provider returned a draft but at least one of the four
+ * structured arrays is empty and page images exist, run Groq Vision and merge
+ * the results so two-column / image-heavy CVs are not returned with empty
+ * experience, education, languages, or certifications.
+ */
+async function tryVisionMerge(
+  draft: CandidateResumeDraft,
+  pageImages: string[] | undefined,
+  providers: ProviderConfiguration,
+): Promise<{ draft: CandidateResumeDraft; merged: boolean }> {
+  if (
+    !providers.groqApiKey ||
+    !pageImages ||
+    pageImages.length === 0 ||
+    !draftIsIncomplete(draft)
+  ) {
+    return { draft, merged: false };
+  }
+
+  const visionAttempt = await requestGroqVision(
+    pageImages,
+    providers.groqApiKey,
+    providers.groqVisionModel ?? "qwen/qwen3.8-27b",
+  );
+  if (!visionAttempt.ok) return { draft, merged: false };
+
+  const visionDraft = toDraft(visionAttempt.output, "");
+  return { draft: mergeDrafts(draft, visionDraft), merged: true };
+}
+
 export interface ParseDiagnostics {
   providerUsed: "gemini" | "groq" | "groq-vision" | "local" | "none";
   textQuality: ReturnType<typeof assessTextQuality>;
@@ -567,11 +638,15 @@ export async function parseResumeWithFallback(
     );
     if (attempt.ok) {
       const draft = toDraft(attempt.output, text);
+      const merged = await tryVisionMerge(draft, pageImages, providers);
       return { 
-        draft, 
+        draft: merged.draft, 
         diagnostics: createDiagnostics({ 
           ...diagnostics, 
-          providerUsed: "gemini" 
+          providerUsed: "gemini",
+          ...(merged.merged
+            ? { fallbackReason: "Text layer missed structured sections; merged with Groq Vision result" }
+            : {}),
         }) 
       };
     }
@@ -629,11 +704,15 @@ export async function parseResumeWithFallback(
     );
     if (attempt.ok) {
       const draft = toDraft(attempt.output, text);
+      const merged = await tryVisionMerge(draft, pageImages, providers);
       return { 
-        draft, 
+        draft: merged.draft, 
         diagnostics: createDiagnostics({ 
           ...diagnostics, 
-          providerUsed: "groq" 
+          providerUsed: "groq",
+          ...(merged.merged
+            ? { fallbackReason: "Text layer missed structured sections; merged with Groq Vision result" }
+            : {}),
         }) 
       };
     }
@@ -669,3 +748,4 @@ export async function parseResumeWithFallback(
 }
 
 export { systemPrompt as cvParserSystemPrompt };
+export { normalizeRawAiCvPayload } from "./cv-zod-schema";

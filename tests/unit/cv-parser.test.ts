@@ -3,6 +3,7 @@ import test from "node:test";
 import { canImportResume } from "../../src/features/candidates/resume-import-authorization";
 import {
   cvParserSystemPrompt,
+  normalizeRawAiCvPayload,
   parseResumeWithFallback,
 } from "../../src/server/ai/cv-parser-core";
 
@@ -292,4 +293,155 @@ test("the active candidate is authorized and anonymous or inactive accounts are 
   assert.equal(canImportResume(null), false);
   assert.equal(canImportResume({ status: "suspended" }), false);
   assert.equal(canImportResume({ status: "active" }), true);
+});
+
+test("partial text draft + pageImages triggers Groq Vision merge filling all arrays", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.includes("generativelanguage.googleapis.com")) {
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({
+                      headline: "Yazılım Geliştirici",
+                      location: "Lefkoşa",
+                      skills: ["TypeScript"],
+                      experience: [],
+                      education: [],
+                      languages: [],
+                      certifications: [],
+                      summary: null,
+                      links: [],
+                    }),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    }
+    return groqResponse({
+      headline: "Yazılım Geliştirici",
+      location: "Lefkoşa",
+      skills: ["TypeScript", "React"],
+      experience: [
+        {
+          role: "Geliştirici",
+          organization: "Acme",
+          location: "Lefkoşa",
+          startDate: "2020",
+          endDate: "2023",
+          description: "Web",
+        },
+      ],
+      education: [
+        {
+          institution: "Üniversite",
+          qualification: "Lisans",
+          field: "Bilgisayar",
+          startDate: "2016",
+          endDate: "2020",
+          description: "",
+        },
+      ],
+      languages: [{ name: "Türkçe", proficiency: "Native" }],
+      certifications: [{ name: "AWS", issuer: "Amazon", issueDate: "2021", expiryDate: "" }],
+      summary: null,
+      links: [],
+    });
+  };
+
+  try {
+    const { draft } = await parseResumeWithFallback(
+      makeFile("resume.pdf"),
+      "Professional Title: Yazılım Geliştirici",
+      {
+        geminiApiKey: "test-gemini-key",
+        geminiModel: "gemini-3.8-flash",
+        groqApiKey: "test-groq-key",
+        groqVisionModel: "qwen/qwen3.8-27b",
+      },
+      ["data:image/jpeg;base64,dGVzdA=="],
+    );
+
+    assert.equal(draft?.headline, "Yazılım Geliştirici");
+    assert.equal(draft?.experience?.length, 1);
+    assert.equal(draft?.experience?.[0]?.role, "Geliştirici");
+    assert.equal(draft?.education?.length, 1);
+    assert.equal(draft?.languages?.length, 1);
+    assert.equal(draft?.certifications?.length, 1);
+    assert.equal(draft?.certifications?.[0]?.name, "AWS");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("normalizeRawAiCvPayload converts alternate AI keys to canonical schema", () => {
+  const normalized = normalizeRawAiCvPayload({
+    headline: "Yazılım Geliştirici",
+    location: "Lefkoşa",
+    skills: ["TypeScript"],
+    experience: [
+      {
+        position: "Geliştirici",
+        employer: "Acme",
+        period: "2020 - 2023",
+        summary: "Web geliştirme\nEkip yönetimi",
+      },
+    ],
+    education: [
+      {
+        degree: "Lisans",
+        university: "Üniversite",
+        graduationYear: "2020",
+      },
+    ],
+    languages: ["Türkçe (Ana Dil)", "İngilizce (İleri)", "Fransızca / B2"],
+    certifications: ["AWS Sertifikası"],
+    summary: null,
+    links: [],
+  }) as {
+    experience: Array<{ role?: string; organization?: string; startDate?: string; endDate?: string }>;
+    education: Array<{ institution?: string; qualification?: string; startDate?: string; endDate?: string }>;
+    languages: Array<{ name?: string; proficiency?: string }>;
+    certifications: Array<{ name?: string; issuer?: string; issueDate?: string; expiryDate?: string }>;
+  };
+
+  assert.deepEqual(normalized.experience, [
+    {
+      role: "Geliştirici",
+      organization: "Acme",
+      location: "",
+      startDate: "2020",
+      endDate: "2023",
+      description: "Web geliştirme\nEkip yönetimi",
+    },
+  ]);
+  assert.deepEqual(normalized.education, [
+    {
+      institution: "Üniversite",
+      qualification: "Lisans",
+      field: "",
+      startDate: "2020",
+      endDate: "",
+      description: "",
+    },
+  ]);
+  assert.equal(normalized.languages.length, 3);
+  assert.equal(normalized.languages[0]?.name, "Türkçe");
+  assert.equal(normalized.languages[0]?.proficiency, "Native");
+  assert.equal(normalized.languages[1]?.name, "İngilizce");
+  assert.equal(normalized.languages[1]?.proficiency, "C1");
+  assert.equal(normalized.languages[2]?.name, "Fransızca");
+  assert.equal(normalized.languages[2]?.proficiency, "B2");
+  assert.deepEqual(normalized.certifications, [
+    { name: "AWS Sertifikası", issuer: "", issueDate: "", expiryDate: "" },
+  ]);
 });
