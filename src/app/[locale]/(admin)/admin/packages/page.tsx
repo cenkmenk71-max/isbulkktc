@@ -59,6 +59,7 @@ export default async function AdminPackagesPage({
         <div className="admin-packages-links">
           <span><ShieldCheck size={15} aria-hidden="true" />{copy("mfaVerified")}</span>
           <Link href="/admin/packages">{copy("catalogTitle")}</Link>
+          <Link href="/admin/payments/pending">{copy("pendingPaymentsLink")}</Link>
           <Link href="/admin/company-profiles">{copy("companyReviews")}</Link>
           <Link href="/admin/jobs">{jobCopy("title")}</Link>
           <Link href="/admin/content">{contentCopy("title")}</Link>

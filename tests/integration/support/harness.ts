@@ -469,6 +469,9 @@ export function installBoundaryMocks(): void {
       sendResumeReceivedEmail: async (payload: Record<string, unknown>) => recordMail("resume", payload),
       sendWelcomeEmail: async (payload: Record<string, unknown>) => recordMail("welcome", payload),
       sendJobPublishedEmail: async (payload: Record<string, unknown>) => recordMail("jobPublished", payload),
+      sendJobPublishedAdminEmail: async (payload: Record<string, unknown>) => recordMail("jobPublishedAdmin", payload),
+      sendCompanyProfileVerifiedEmails: async (payload: Record<string, unknown>) => recordMail("companyProfileVerified", payload),
+      sendPackageActivatedEmail: async (payload: Record<string, unknown>) => recordMail("packageActivated", payload),
       sendEngagementEmail: async (input: EngagementMailCall) => {
         if (simulatedFailure("engagement")) return false;
         recorded.engagementMail.push(input);

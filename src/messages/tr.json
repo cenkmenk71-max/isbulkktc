@@ -77,6 +77,7 @@
     "catalogEyebrow": "PAKET KATALOĞU",
     "catalogTitle": "Paket tanımları",
     "outreachLink": "Tanıtım Maili",
+    "pendingPaymentsLink": "Bekleyen Ödemeler",
     "newPackage": "Yeni paket oluştur",
     "createPackage": "Paketi oluştur",
     "savePackage": "Değişiklikleri kaydet",
@@ -142,6 +143,29 @@
         "verifyFailed": "MFA doğrulanamadı. Yeniden deneyin."
       }
     }
+  },
+  "AdminPayments": {
+    "eyebrow": "ÖDEME YÖNETİMİ",
+    "title": "Bekleyen ödemeler",
+    "description": "İşverenlerin paket satın alma için başlattığı ödemeleri onaylayın. Onay anında paket şirkete atanır ve işverene e-posta gönderilir.",
+    "mfaVerified": "Yönetici MFA doğrulandı",
+    "packagesLink": "Paket tanımları",
+    "companyReviewsLink": "Şirket incelemeleri",
+    "jobsLink": "İlan yönetimi",
+    "contentLink": "İçerik yönetimi",
+    "outreachLink": "Tanıtım Maili",
+    "pendingEyebrow": "BEKLEYEN ÖDEMELER",
+    "pendingTitle": "Onay bekleyen ödemeler",
+    "pendingDescription": "Aşağıdaki liste, işverenlerin WhatsApp veya e-posta ile bildirdiği ve henüz onaylanmamış ödemelerdir. Her satırda şirket, paket, tutar ve talep tarihi görünür.",
+    "table": {
+      "company": "Şirket",
+      "package": "Paket",
+      "amount": "Tutar",
+      "requestedAt": "Talep tarihi",
+      "actions": "İşlem"
+    },
+    "confirmButton": "Ödemeyi onayla ve paketi aktifleştir",
+    "emptyPayments": "Onay bekleyen ödeme bulunmuyor."
   },
   "AdminContent": {
     "eyebrow": "İÇERİK YÖNETİMİ",
@@ -390,6 +414,10 @@
           "title": "Kurumsal",
           "summary": "İlan adedi ve süreleri önceden belirlenmiş, yazılı özel teklif isteyen kuruluşlar için."
         }
+      },
+      "companySetupSuccess": {
+        "title": "Şirket profiliniz oluşturuldu ve yayınlandı!",
+        "description": "Şirketiniz İşBul KKTC rehberinde görünüyor. Şimdi ilan paketinizi seçerek ilk ilanınızı yayımlayabilirsiniz."
       }
     }
   },
@@ -1786,6 +1814,8 @@
       "submitReview": "İncelemeye gönder",
       "saving": "Kaydediliyor…",
       "submitting": "Gönderiliyor…",
+      "updating": "Güncelleniyor…",
+      "updatePublished": "Yayınlanmış ilanı güncelle",
       "back": "İlanlarıma dön",
       "jobTitle": "İlan başlığı",
       "slug": "İlan bağlantısı",
@@ -1814,6 +1844,8 @@
       "unauthorized": "Bu işlem için yetkiniz bulunmuyor.",
       "saveFailed": "Taslak kaydedilemedi.",
       "submitFailed": "İlan incelemeye gönderilemedi.",
+      "updateFailed": "İlan güncellenemedi.",
+      "updated": "İlan güncellendi.",
       "reviewNote": "İnceleme notu",
       "approvedNote": "İlanınız onaylandı. Yayınlama, paket ve ilan süresi seçimi tamamlandığında etkinleştirilecektir.",
       "rejectedNote": "İnceleme notunu dikkate alıp ilanı düzenleyerek yeniden gönderebilirsiniz.",

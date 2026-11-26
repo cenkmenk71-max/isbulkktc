@@ -9,11 +9,11 @@ import { getLocalePrefix } from "@/i18n/routing";
 import {
   getApplicationForActor,
   getJobCompanyId,
-  getJobPublishAnnouncement,
+  getJobForAdmin,
   hasPlatformRole,
   isJobCompanyMember,
 } from "@/server/dal/jobs";
-import { sendJobPublishedEmail } from "@/server/email/mailer";
+import { sendJobPublishedEmail, sendJobPublishedAdminEmail } from "@/server/email/mailer";
 import {
   applicationIdSchema,
   applicationTransitionSchema,
@@ -23,10 +23,12 @@ import {
   jobIdSchema,
   jobPackageSchema,
   jobReviewSchema,
+  updatePublishedJobSchema,
   type ApplicationFormState,
   type JobFormState,
   type JobPackageActionState,
   type JobReviewFormState,
+  type UpdatePublishedJobFormState,
 } from "./schemas";
 
 const initialJobFormState: JobFormState = {
@@ -45,6 +47,11 @@ const initialReviewFormState: JobReviewFormState = {
 };
 
 const initialPackageActionState: JobPackageActionState = {
+  status: "idle",
+  message: "idle",
+};
+
+const initialUpdatePublishedJobState: UpdatePublishedJobFormState = {
   status: "idle",
   message: "idle",
 };
@@ -254,20 +261,21 @@ export async function publishApprovedJob(
     return { ...initialJobFormState, status: "error", message: "publishFailed" };
   }
 
+  // Fetch updated job details (including expires_at) for emails
+  const jobDetails = await getJobForAdmin(result.data.jobId);
+
   // Best-effort: the employer is told the listing is live, but a mail failure
   // must not turn a successful publication into an error state.
-  if (user.email) {
+  if (user.email && jobDetails) {
     try {
-      const announcement = await getJobPublishAnnouncement(result.data.jobId);
-      if (announcement) {
-        await sendJobPublishedEmail({
-          to: user.email,
-          locale: user.locale,
-          jobTitle: announcement.title,
-          jobSlug: announcement.slug,
-          jobId: result.data.jobId,
-        });
-      }
+      await sendJobPublishedEmail({
+        to: user.email,
+        locale: user.locale,
+        jobTitle: jobDetails.title,
+        jobSlug: jobDetails.slug,
+        jobId: result.data.jobId,
+        expiresAt: jobDetails.expiresAt,
+      });
     } catch (mailError) {
       console.error("Job published email could not be sent.", {
         error: mailError instanceof Error ? mailError.message : "unknown_error",
@@ -275,7 +283,95 @@ export async function publishApprovedJob(
     }
   }
 
+  // Best-effort: admin notification
+  if (jobDetails) {
+    try {
+      await sendJobPublishedAdminEmail({
+        companyName: jobDetails.companies?.name ?? "Bilinmeyen Şirket",
+        jobTitle: jobDetails.title,
+        district: jobDetails.district,
+        durationDays: jobDetails.jobDurationDays,
+        jobSlug: jobDetails.slug,
+      });
+    } catch (mailError) {
+      console.error("Job published admin email could not be sent.", {
+        error: mailError instanceof Error ? mailError.message : "unknown_error",
+      });
+    }
+  }
+
   return { status: "success", message: "published", jobId: result.data.jobId };
+}
+
+export async function updatePublishedJob(
+  _previousState: UpdatePublishedJobFormState,
+  formData: FormData,
+): Promise<UpdatePublishedJobFormState> {
+  const user = await getCurrentUser();
+  if (!user) return { ...initialUpdatePublishedJobState, status: "error", message: "unauthorized" };
+  const accountError = activeUserError(user.status);
+  if (accountError) return { ...initialUpdatePublishedJobState, ...accountError };
+
+  const result = updatePublishedJobSchema.safeParse({
+    jobId: formData.get("jobId"),
+    companyId: formData.get("companyId"),
+    title: formData.get("title"),
+    slug: formData.get("slug"),
+    summary: formData.get("summary"),
+    description: formData.get("description"),
+    requirements: formData.get("requirements") ?? "",
+    responsibilities: formData.get("responsibilities") ?? "",
+    jobType: formData.get("jobType"),
+    workplaceMode: formData.get("workplaceMode"),
+    district: formData.get("district") || null,
+  });
+  if (!result.success) {
+    return { ...initialUpdatePublishedJobState, status: "error", message: "invalid" };
+  }
+
+  const companyId = await getJobCompanyId(result.data.jobId);
+  if (!companyId || !(await isJobCompanyMember(companyId))) {
+    return { ...initialUpdatePublishedJobState, status: "error", message: "unauthorized" };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc(
+    // @ts-expect-error - RPC not yet in generated types
+    "update_published_job",
+    {
+      _job_id: result.data.jobId,
+      _title: result.data.title,
+      _slug: result.data.slug,
+      _summary: result.data.summary,
+      _description: result.data.description,
+      _requirements: result.data.requirements,
+      _responsibilities: result.data.responsibilities,
+      _job_type: result.data.jobType,
+      _workplace_mode: result.data.workplaceMode,
+      _district: result.data.district,
+    },
+  );
+  if (error) {
+    if (error.code === "42501") {
+      return { ...initialUpdatePublishedJobState, status: "error", message: "unauthorized" };
+    }
+    if (error.code === "22023") {
+      return { ...initialUpdatePublishedJobState, status: "error", message: "invalid" };
+    }
+    if (error.code === "23505") {
+      return { ...initialUpdatePublishedJobState, status: "error", message: "invalid" };
+    }
+    console.error("Published job update failed.", { code: error.code });
+    return { ...initialUpdatePublishedJobState, status: "error", message: "updateFailed" };
+  }
+
+  const prefix = getLocalePrefix(user.locale);
+  revalidatePath(`${prefix}/company/jobs`);
+  revalidatePath(`${prefix}/company/dashboard`);
+  revalidatePath(`${prefix}/jobs/${result.data.slug}`);
+  revalidatePath(`${prefix}/admin/jobs`);
+
+  return { status: "success", message: "updated", jobId: result.data.jobId };
 }
 
 export async function saveJobPackage(

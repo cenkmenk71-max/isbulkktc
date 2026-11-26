@@ -25,3 +25,19 @@ export async function getAdminPackageConsoleData() {
 
   return { packages, companies };
 }
+
+export async function getPackageByCode(code: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("job_packages")
+    .select("id, code, display_name, description, max_active_jobs, job_duration_days, is_active")
+    .eq("code", code)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Package could not be loaded.", { cause: error });
+  }
+
+  return data;
+}

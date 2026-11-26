@@ -25,6 +25,12 @@ import {
   renderCompanyProfileTeamEmail,
   type CompanyProfileSubmission,
 } from "./company-profile-render";
+import {
+  renderCompanyProfileVerifiedEmployerEmail,
+  renderCompanyProfileVerifiedAdminEmail,
+} from "./company-profile-verified-render";
+import { renderJobPublishedAdminEmail } from "./job-published-admin-render";
+import { renderPackageActivationEmail } from "./package-activation-render";
 import { buildEmailHeaders, type EmailHeaders } from "./email-headers";
 import { EMAIL_HEALTH_EVENT, reportDeliveryFailure } from "./delivery-health";
 
@@ -242,6 +248,7 @@ export async function sendJobPublishedEmail(input: {
   jobTitle: string;
   jobSlug: string;
   jobId: string;
+  expiresAt?: string | null;
 }): Promise<void> {
   const locale = resolveEmailLocale(input.locale);
   const email = renderJobPublishedEmail({
@@ -249,8 +256,32 @@ export async function sendJobPublishedEmail(input: {
     siteUrl: localeUrl(locale, "/"),
     jobTitle: input.jobTitle,
     jobUrl: localeUrl(locale, `/jobs/${input.jobSlug}`),
+    expiresAt: input.expiresAt,
   });
   await deliver(email, input.to, `job-published/${input.jobId}`);
+}
+
+/** Sent to info@isbulkktc.com when a job is published. Best-effort. */
+export async function sendJobPublishedAdminEmail(input: {
+  companyName: string;
+  jobTitle: string;
+  district: string | null;
+  durationDays: number;
+  jobSlug: string;
+}): Promise<void> {
+  const locale = "tr"; // Admin emails always in Turkish
+  const email = renderJobPublishedAdminEmail({
+    locale,
+    siteUrl: localeUrl(locale, "/"),
+    companyName: input.companyName,
+    jobTitle: input.jobTitle,
+    district: input.district,
+    durationDays: input.durationDays,
+    jobSlug: input.jobSlug,
+    actionUrl: localeUrl(locale, "/jobs"),
+    adminLink: localeUrl(locale, "/admin/jobs"),
+  });
+  await deliver(email, "info@isbulkktc.com", `job-published-admin/${input.jobSlug}`);
 }
 
 /** Sent to the candidate after a CV import writes their profile. */
@@ -448,4 +479,90 @@ export async function sendMarketingEmail(input: {
     unsubscribeUrl: input.unsubscribeUrl,
     from: MARKETING_FROM,
   });
+}
+
+/** Sent to the employer when their package payment is confirmed and activated. */
+export async function sendPackageActivatedEmail(input: {
+  to: string;
+  locale: string | null | undefined;
+  companyName: string;
+  packageName: string;
+  maxJobs: number;
+  expiresAt: string | null;
+}): Promise<void> {
+  const locale = resolveEmailLocale(input.locale);
+  const email = renderPackageActivationEmail({
+    locale,
+    siteUrl: localeUrl(locale, "/"),
+    companyName: input.companyName,
+    packageName: input.packageName,
+    maxJobs: input.maxJobs,
+    expiresAt: input.expiresAt,
+    actionUrl: localeUrl(locale, "/company/jobs/new"),
+  });
+  await deliver(email, input.to, `package-activated/${input.to}/${input.packageName}`);
+}
+
+/**
+ * Company profile auto-verified (self-serve flow).
+ * Sends welcome email to employer with CTA to /packages,
+ * and admin notification to info@isbulkktc.com with full company details.
+ * Both sends are best-effort and never fail the primary action.
+ */
+export async function sendCompanyProfileVerifiedEmails(input: {
+  employerEmail: string | null | undefined;
+  employerLocale: string | null | undefined;
+  adminEmail: string | null | undefined;
+  companyName: string;
+  categories?: string | null;
+  website?: string | null;
+  phone?: string | null;
+  publicEmail?: string | null;
+  address?: string | null;
+  submittedBy?: string | null;
+  submissionId: string;
+}): Promise<void> {
+  const employerLocale = resolveEmailLocale(input.employerLocale);
+  const adminLocale = resolveEmailLocale(input.employerLocale); // admin email uses employer's locale
+  const siteUrl = localeUrl(employerLocale, "/");
+
+  // 1. Employer welcome email with CTA to /packages
+  if (input.employerEmail) {
+    try {
+      const employerEmailRendered = renderCompanyProfileVerifiedEmployerEmail({
+        locale: employerLocale,
+        siteUrl,
+        companyName: input.companyName,
+        categories: input.categories,
+        website: input.website,
+        phone: input.phone,
+        publicEmail: input.publicEmail,
+        address: input.address,
+        actionUrl: localeUrl(employerLocale, "/packages?companySetup=completed"),
+      });
+      await deliver(employerEmailRendered, input.employerEmail, `company-profile-verified-employer/${input.submissionId}`);
+    } catch (mailError) {
+      console.error("Company profile verified employer email failed.", { error: mailError });
+    }
+  }
+
+  // 2. Admin notification to info@isbulkktc.com
+  const adminTo = input.adminEmail ?? "info@isbulkktc.com";
+  try {
+    const adminEmailRendered = renderCompanyProfileVerifiedAdminEmail({
+      locale: adminLocale,
+      siteUrl,
+      companyName: input.companyName,
+      categories: input.categories,
+      website: input.website,
+      phone: input.phone,
+      publicEmail: input.publicEmail,
+      address: input.address,
+      submittedBy: input.submittedBy,
+      actionUrl: localeUrl(adminLocale, "/admin/company-profiles"),
+    });
+    await deliver(adminEmailRendered, adminTo, `company-profile-verified-admin/${input.submissionId}`);
+  } catch (mailError) {
+    console.error("Company profile verified admin email failed.", { error: mailError });
+  }
 }

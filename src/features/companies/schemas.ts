@@ -99,3 +99,16 @@ export type CompanyVerificationReviewState = {
   status: "idle" | "error" | "success";
   message: "idle" | "unauthorized" | "failed" | "verified" | "rejected";
 };
+
+export type CreatePaymentConfirmationFormState = {
+  status: "idle" | "error" | "success";
+  message:
+    | "idle"
+    | "invalid"
+    | "unauthorized"
+    | "inactive"
+    | "companyNotVerified"
+    | "packageUnavailable"
+    | "invalidDuration"
+    | "failed";
+};

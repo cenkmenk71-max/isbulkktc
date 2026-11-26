@@ -71,9 +71,11 @@ export type PlanPriceOverrides = Record<
 export async function PackagesExperience({
   locale,
   planPriceOverrides,
+  companySetup,
 }: {
   locale: AppLocale;
   planPriceOverrides?: PlanPriceOverrides;
+  companySetup?: string;
 }) {
   const copy = await getTranslations({ locale, namespace: "PackagesPage" });
   const leadCopy = await getTranslations({ locale, namespace: "SalesLeadForm" });
@@ -103,8 +105,29 @@ export async function PackagesExperience({
     label: getDurationLabel(days),
   }));
 
+  const showSuccessBanner = companySetup === "completed";
+
   return (
     <div className="packages-page">
+      {showSuccessBanner && (
+        <div className="company-setup-success" role="status" aria-live="polite">
+          <div className="page-container">
+            <div className="company-setup-success-content">
+              <svg className="company-setup-success-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <div>
+                {/* @ts-expect-error - key added to message catalog but types not regenerated */}
+                <p className="company-setup-success-title">{copy("companySetupSuccess.title")}</p>
+                {/* @ts-expect-error - key added to message catalog but types not regenerated */}
+                <p className="company-setup-success-description">{copy("companySetupSuccess.description")}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <section className="packages-hero" aria-labelledby="packages-title">
         <Image
           src="/images/packages-hero.webp"
@@ -184,28 +207,30 @@ export async function PackagesExperience({
                         {copy("showcase.pricing.customPrice")}
                       </p>
                      )}
-                     <div className="package-catalog-contact-actions">
-                       <WhatsAppButton
-                         locale={locale}
-                         packageName={profile.title}
-                         duration={prices ? 1 : undefined}
-                         price={prices ? new Intl.NumberFormat(locale, {
-                           style: "currency",
-                           currency: "TRY",
-                           maximumFractionDigits: 0,
-                         }).format(prices[1]) : undefined}
-                       />
-                       <EmailButton
-                         locale={locale}
-                         packageName={profile.title}
-                         duration={prices ? 1 : undefined}
-                         price={prices ? new Intl.NumberFormat(locale, {
-                           style: "currency",
-                           currency: "TRY",
-                           maximumFractionDigits: 0,
-                         }).format(prices[1]) : undefined}
-                       />
-                     </div>
+<div className="package-catalog-contact-actions">
+                        <WhatsAppButton
+                          _locale={locale}
+                          packageCode={profile.code}
+                          _packageName={profile.title}
+                          duration={prices ? 1 : undefined}
+                          _price={prices ? new Intl.NumberFormat(locale, {
+                            style: "currency",
+                            currency: "TRY",
+                            maximumFractionDigits: 0,
+                          }).format(prices[1]) : undefined}
+                        />
+                        <EmailButton
+                          _locale={locale}
+                          packageCode={profile.code}
+                          _packageName={profile.title}
+                          duration={prices ? 1 : undefined}
+                          _price={prices ? new Intl.NumberFormat(locale, {
+                            style: "currency",
+                            currency: "TRY",
+                            maximumFractionDigits: 0,
+                          }).format(prices[1]) : undefined}
+                        />
+                      </div>
                    </article>
                 </li>
               );

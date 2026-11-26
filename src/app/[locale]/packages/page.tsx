@@ -8,6 +8,7 @@ import { createLocalizedPageMetadata } from "@/lib/seo";
 
 type PackagesPageProps = {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ companySetup?: string }>;
 };
 
 export async function generateMetadata({
@@ -28,8 +29,9 @@ export async function generateMetadata({
   });
 }
 
-export default async function PackagesPage({ params }: PackagesPageProps) {
+export default async function PackagesPage({ params, searchParams }: PackagesPageProps) {
   const { locale: requestedLocale } = await params;
+  const { companySetup } = await searchParams;
   const locale = routing.locales.find(
     (supportedLocale) => supportedLocale === requestedLocale,
   );
@@ -44,6 +46,10 @@ export default async function PackagesPage({ params }: PackagesPageProps) {
     ]),
   );
   return (
-    <PackagesExperience locale={locale} planPriceOverrides={planPriceOverrides} />
+    <PackagesExperience
+      locale={locale}
+      planPriceOverrides={planPriceOverrides}
+      companySetup={companySetup}
+    />
   );
 }

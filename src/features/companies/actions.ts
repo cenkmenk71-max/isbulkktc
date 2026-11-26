@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import {
+  revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/server/db/supabase-server";
 import {
@@ -151,90 +152,63 @@ export async function submitCompanyProfile(
     return { status: "error", message: "invalid" };
   }
 
-  const profile = {
-    company_name: result.data.companyName,
-    profile_description: result.data.profileDescription,
-    categories: result.data.categoriesText,
-    website: result.data.website,
-    phone: result.data.phone,
-    public_email: result.data.publicEmail,
-    address: result.data.address,
-    municipality: result.data.municipality,
-    directory_entry_id: directoryTarget?.directoryEntryId ?? null,
-    directory_location_index: directoryTarget?.directoryLocationIndex ?? null,
-  };
+  const categoriesArray = result.data.categoriesText;
+
   const supabase = await createSupabaseServerClient();
-  const { data: pendingSubmission, error: lookupError } = await supabase
-    .from("company_profile_submissions")
-    .select("id")
-    .eq("company_id", company.id)
-    .eq("status", "pending")
-    .maybeSingle();
 
-  if (lookupError) {
-    console.error("Company profile submission lookup failed.", {
-      code: lookupError.code,
-    });
-    return { status: "error", message: "saveFailed" };
-  }
+  // Call SECURITY DEFINER RPC to finalize company profile with auto-verification
+  // @ts-expect-error - RPC not yet in generated types
+  const { error: rpcError } = await supabase.rpc("finalize_company_profile", {
+    _company_id: company.id,
+    _company_name: result.data.companyName,
+    _profile_description: result.data.profileDescription,
+    _categories: categoriesArray,
+    _website: result.data.website,
+    _phone: result.data.phone,
+    _public_email: result.data.publicEmail,
+    _address: result.data.address,
+    _municipality: result.data.municipality,
+    _directory_entry_id: directoryTarget?.directoryEntryId ?? null,
+    _directory_location_index: directoryTarget?.directoryLocationIndex ?? null,
+  });
 
-  const { data: submissionId, error } = pendingSubmission
-    ? await supabase
-        .from("company_profile_submissions")
-        .update(profile)
-        .eq("id", pendingSubmission.id)
-        .select("id")
-        .single()
-    : await supabase
-        .from("company_profile_submissions")
-        .insert({
-          ...profile,
-          company_id: company.id,
-          submitted_by: user.id,
-        })
-        .select("id")
-        .single();
-
-  if (error) {
-    if (error.code === "23505") {
-      return { status: "error", message: "pending" };
-    }
-    if (error.code === "42501") {
+  if (rpcError) {
+    if (rpcError.code === "42501") {
       return { status: "error", message: "unauthorized" };
     }
-    console.error("Company profile submission failed.", { code: error.code });
+    if (rpcError.code === "22023") {
+      return { status: "error", message: "invalid" };
+    }
+    console.error("Company profile finalization failed.", { code: rpcError.code });
     return { status: "error", message: "saveFailed" };
   }
 
-  // The submission is now queued, so nobody is looking at it until an admin
-  // happens to open the queue (#465). Tell the employer it arrived and alert the
-  // review inbox. Best-effort: `deliver` reports its own failures under
-  // `email_health`, and a mail problem must never undo the stored submission.
+  // Send dual emails: employer welcome + admin notification
   try {
-    await mailer.sendCompanyProfileEmails({
-      to: user.email,
-      locale: user.locale,
-      // The submission row's own id is the idempotency key. Using the company
-      // id here would suppress a *second* acknowledgement after a rejected
-      // submission is resubmitted within Resend's idempotency window — the
-      // "I submitted and heard nothing" symptom #465 is about.
-      submissionId: submissionId.id,
+    await mailer.sendCompanyProfileVerifiedEmails({
+      employerEmail: user.email,
+      employerLocale: user.locale,
+      adminEmail: "info@isbulkktc.com",
       companyName: result.data.companyName,
-      categories: result.data.categoriesText.join(", ") || null,
+      categories: categoriesArray.join(", ") || null,
       website: result.data.website,
       phone: result.data.phone,
       publicEmail: result.data.publicEmail,
       address: result.data.address,
       submittedBy: user.email,
+      submissionId: `profile-${company.id}-${Date.now()}`,
     });
   } catch (mailError) {
-    console.error("Company profile notification could not be sent.", {
+    console.error("Company profile verified emails could not be sent.", {
       error: mailError instanceof Error ? mailError.message : "unknown_error",
     });
   }
 
   revalidatePath(`${getLocalePrefix(user.locale)}/company/dashboard`);
-  return { status: "success", message: "submitted" };
+  revalidatePath(`${getLocalePrefix(user.locale)}/companies`);
+
+  // Redirect to packages page with success banner
+  redirect(`${getLocalePrefix(user.locale)}/packages?companySetup=completed`);
 }
 
 export async function reviewCompanyProfile(

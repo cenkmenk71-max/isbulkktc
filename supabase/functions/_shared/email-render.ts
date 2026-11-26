@@ -333,16 +333,22 @@ export function renderFeedbackTeamEmail(input: FeedbackInput): RenderedEmail {
 export function renderJobPublishedEmail(input: SiteContext & {
   jobTitle: string;
   jobUrl: string;
+  expiresAt?: string | null;
 }): RenderedEmail {
   const extras = getEmailCopyExtras(input.locale);
   const copy = getEmailCopy(input.locale);
+  const steps = [...extras.jobPublished.steps];
+  if (input.expiresAt) {
+    const dateStr = new Intl.DateTimeFormat(input.locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(input.expiresAt));
+    steps.push(`İlan süresi sona erer: ${dateStr}`);
+  }
   const opts = {
     locale: resolveEmailLocale(input.locale),
     preheader: extras.jobPublished.lead,
     heading: extras.jobPublished.heading,
     introHtml: `${paragraph(extras.jobPublished.lead)}${strongLine(input.jobTitle)}`,
     sections: [
-      { heading: copy.notification.openDashboard, html: listHtml(extras.jobPublished.steps) },
+      { heading: copy.notification.openDashboard, html: listHtml(steps) },
     ],
     button: { label: extras.jobPublished.cta, url: input.jobUrl },
     footerNote: copy.footer.reason,

@@ -390,9 +390,11 @@ test("publishApprovedJob announces the listing by mail after a successful RPC", 
     message: "published",
     jobId: JOB,
   });
-  assert.equal(recorded.mail.length, 1);
+  assert.equal(recorded.mail.length, 2);
   assert.equal(recorded.mail[0].template, "jobPublished");
   assert.equal(recorded.mail[0].payload.jobTitle, "Ürün Tasarımcısı");
+  assert.equal(recorded.mail[1].template, "jobPublishedAdmin");
+  assert.equal(recorded.mail[1].payload.companyName, "Acme");
 });
 
 test("publishApprovedJob treats a mail failure as best-effort", async () => {

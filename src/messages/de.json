@@ -77,6 +77,7 @@
     "catalogEyebrow": "PAKETKATALOG",
     "catalogTitle": "Paketdefinitionen",
     "outreachLink": "Akquise-E-Mail",
+    "pendingPaymentsLink": "Ausstehende Zahlungen",
     "newPackage": "Paket erstellen",
     "createPackage": "Paket erstellen",
     "savePackage": "Änderungen speichern",
@@ -142,6 +143,29 @@
         "verifyFailed": "Die MFA-Prüfung ist fehlgeschlagen. Bitte erneut versuchen."
       }
     }
+  },
+  "AdminPayments": {
+    "eyebrow": "ZAHLUNGSVERWALTUNG",
+    "title": "Ausstehende Zahlungen",
+    "description": "Bestätigen Sie Zahlungen, die Arbeitgeber für Paketkäufe initiiert haben. Bei Bestätigung wird das Paket dem Unternehmen zugewiesen und eine Bestätigungs-E-Mail versendet.",
+    "mfaVerified": "Administrator-MFA bestätigt",
+    "packagesLink": "Paketdefinitionen",
+    "companyReviewsLink": "Unternehmensprüfungen",
+    "jobsLink": "Stellenanzeigen-Verwaltung",
+    "contentLink": "Inhaltsverwaltung",
+    "outreachLink": "Akquise-E-Mail",
+    "pendingEyebrow": "AUSSTEHENDE ZAHLUNGEN",
+    "pendingTitle": "Zahlungen, die auf Bestätigung warten",
+    "pendingDescription": "Die folgende Liste zeigt Zahlungen, die Arbeitgeber über WhatsApp oder E-Mail gemeldet haben und die noch nicht bestätigt wurden. Jede Zeile zeigt das Unternehmen, das Paket, den Betrag und das Anfragedatum.",
+    "table": {
+      "company": "Unternehmen",
+      "package": "Paket",
+      "amount": "Betrag",
+      "requestedAt": "Angefragt am",
+      "actions": "Aktion"
+    },
+    "confirmButton": "Zahlung bestätigen und Paket aktivieren",
+    "emptyPayments": "Keine Zahlungen, die auf Bestätigung warten."
   },
   "AdminContent": {
     "eyebrow": "INHALTSVERWALTUNG",
@@ -490,6 +514,10 @@
           "title": "Unternehmen",
           "summary": "Für Organisationen, die ein schriftliches Angebot mit festgelegter Anzeigenzahl und Laufzeit benötigen."
         }
+      },
+      "companySetupSuccess": {
+        "title": "Ihr Firmenprofil wurde erstellt und veröffentlicht!",
+        "description": "Ihr Unternehmen ist nun im İşBul KKTC-Verzeichnis sichtbar. Wählen Sie ein Anzeigenpaket, um Ihre erste Stellenanzeige zu veröffentlichen."
       }
     }
   },
@@ -1786,6 +1814,8 @@
       "submitReview": "Zur Prüfung einreichen",
       "saving": "Wird gespeichert…",
       "submitting": "Wird eingereicht…",
+      "updating": "Wird aktualisiert…",
+      "updatePublished": "Veröffentlichte Anzeige aktualisieren",
       "back": "Zurück zu meinen Anzeigen",
       "jobTitle": "Stellentitel",
       "slug": "URL-Kennung",
@@ -1814,6 +1844,8 @@
       "unauthorized": "Sie sind zu dieser Aktion nicht berechtigt.",
       "saveFailed": "Der Entwurf konnte nicht gespeichert werden.",
       "submitFailed": "Die Anzeige konnte nicht eingereicht werden.",
+      "updateFailed": "Die Anzeige konnte nicht aktualisiert werden.",
+      "updated": "Anzeige aktualisiert.",
       "reviewNote": "Prüfhinweis",
       "approvedNote": "Ihre Anzeige wurde genehmigt. Die Veröffentlichung wird nach Auswahl des Pakets und der individuellen Laufzeit aktiviert.",
       "rejectedNote": "Überarbeiten Sie die Anzeige anhand des Prüfhinweises und reichen Sie sie erneut ein.",

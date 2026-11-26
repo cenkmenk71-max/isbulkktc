@@ -77,6 +77,7 @@
     "catalogEyebrow": "PACKAGE CATALOG",
     "catalogTitle": "Package definitions",
     "outreachLink": "Outreach Email",
+    "pendingPaymentsLink": "Pending Payments",
     "newPackage": "Create a package",
     "createPackage": "Create package",
     "savePackage": "Save changes",
@@ -142,6 +143,29 @@
         "verifyFailed": "MFA verification failed. Please try again."
       }
     }
+  },
+  "AdminPayments": {
+    "eyebrow": "PAYMENT MANAGEMENT",
+    "title": "Pending payments",
+    "description": "Approve payments initiated by employers for package purchases. Upon confirmation, the package is assigned to the company and a confirmation email is sent.",
+    "mfaVerified": "Administrator MFA verified",
+    "packagesLink": "Package definitions",
+    "companyReviewsLink": "Company reviews",
+    "jobsLink": "Job management",
+    "contentLink": "Content management",
+    "outreachLink": "Outreach Email",
+    "pendingEyebrow": "PENDING PAYMENTS",
+    "pendingTitle": "Payments awaiting confirmation",
+    "pendingDescription": "The list below shows payments reported by employers via WhatsApp or email that have not yet been confirmed. Each row displays the company, package, amount, and request date.",
+    "table": {
+      "company": "Company",
+      "package": "Package",
+      "amount": "Amount",
+      "requestedAt": "Requested at",
+      "actions": "Action"
+    },
+    "confirmButton": "Confirm payment and activate package",
+    "emptyPayments": "No payments awaiting confirmation."
   },
   "AdminContent": {
     "eyebrow": "CONTENT MANAGEMENT",
@@ -390,6 +414,10 @@
           "title": "Corporate",
           "summary": "For organisations that need a written quote with clearly defined listing quantities and durations."
         }
+      },
+      "companySetupSuccess": {
+        "title": "Your company profile has been created and published!",
+        "description": "Your company is now visible in the İşBul KKTC directory. Choose a listing package to publish your first job."
       }
     }
   },
@@ -1786,6 +1814,8 @@
       "submitReview": "Submit for review",
       "saving": "Saving…",
       "submitting": "Submitting…",
+      "updating": "Updating…",
+      "updatePublished": "Update published listing",
       "back": "Back to my listings",
       "jobTitle": "Job title",
       "slug": "Listing URL slug",
@@ -1814,6 +1844,8 @@
       "unauthorized": "You are not authorized to perform this action.",
       "saveFailed": "The draft could not be saved.",
       "submitFailed": "The listing could not be submitted for review.",
+      "updateFailed": "The listing could not be updated.",
+      "updated": "Listing updated.",
       "reviewNote": "Review note",
       "approvedNote": "Your listing is approved. Publishing will be enabled after package and per-listing duration selection are implemented.",
       "rejectedNote": "Use the review note to update your listing and submit it again.",

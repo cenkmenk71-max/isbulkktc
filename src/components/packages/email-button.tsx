@@ -1,38 +1,38 @@
-import { SUPPORT_EMAIL } from "@/lib/social-links";
+"use client";
+
 import { useTranslations } from "next-intl";
 import { buttonVariants } from "@/components/ui/button";
+import { createPaymentConfirmationAction } from "@/features/companies/payment-confirmation-actions";
 
 interface EmailButtonProps {
-  locale: string;
-  packageName: string;
+  _locale: string;
+  packageCode: string;
+  _packageName: string;
   duration?: number;
-  price?: string;
+  _price?: string;
 }
 
 export function EmailButton({
-  locale,
-  packageName,
+  _locale,
+  packageCode,
+  _packageName,
   duration,
-  price,
+  _price,
 }: EmailButtonProps) {
   const t = useTranslations("PackagesPage.showcase.pricing");
-  
-  // Construct the message body using the same pattern as Panel.tsx
-  const inquiryBody = t("inquiryBody")
-    .replaceAll("%PACKAGE%", packageName)
-    .replaceAll("%DAYS%", duration ? new Intl.NumberFormat(locale).format(duration) : "")
-    .replaceAll("%PRICE%", price || "");
-    
-  const inquirySubject = t("inquirySubject");
-  const emailUrl = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(inquirySubject)}&body=${encodeURIComponent(inquiryBody)}`;
 
   return (
-    <a
-      href={emailUrl}
-      aria-label={t("emailAction")}
-      className={buttonVariants({ variant: "default" })}
-    >
-      {t("emailAction")}
-    </a>
+    <form action={createPaymentConfirmationAction}>
+      <input type="hidden" name="packageCode" value={packageCode} />
+      <input type="hidden" name="durationDays" value={duration?.toString() ?? "30"} />
+      <input type="hidden" name="channel" value="email" />
+      <button
+        type="submit"
+        className={buttonVariants({ variant: "default" })}
+        aria-label={t("emailAction")}
+      >
+        {t("emailAction")}
+      </button>
+    </form>
   );
 }
