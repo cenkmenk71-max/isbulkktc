@@ -9,10 +9,6 @@ import {
   LockKeyhole,
   ShieldCheck,
 } from "lucide-react";
-import {
-  DocumentImportError,
-  extractTextDocument,
-} from "@/features/documents/text-document-extractor";
 import { submitCompanyProfile } from "./actions";
 import type {
   CompanyProfileSubmissionStatus,
@@ -32,7 +28,7 @@ import {
   applyCompanyDocumentAutofill,
   type CompanyDocumentConflict,
 } from "./company-document-autofill";
-import { parseCompanyDocumentText } from "./company-document-parser";
+import { importCompanyDocument } from "./company-document-actions";
 import {
   northernCyprusDistricts,
   resolveNorthernCyprusDistrict,
@@ -41,6 +37,17 @@ import {
 export type DirectoryTargetOption = CompanyDirectoryAutofillSource & {
   value: string;
   label: string;
+};
+
+const documentFieldTranslationKeys: Record<keyof import("./company-document-parser").CompanyDocumentSuggestions, string> = {
+  companyName: "companyName",
+  website: "website",
+  phone: "phone",
+  publicEmail: "publicEmail",
+  address: "address",
+  municipality: "municipality",
+  profileDescription: "description",
+  categoriesText: "categories",
 };
 
 const initialState: CompanyProfileFormState = {
@@ -149,6 +156,39 @@ export function CompanyProfileForm({
     setFields(result.fields);
   }
 
+  async function convertPdfToImages(file: File): Promise<string[]> {
+    try {
+      const pdfjs = await import("pdfjs-dist");
+      pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+      const data = new Uint8Array(await file.arrayBuffer());
+      const task = pdfjs.getDocument({ data, enableXfa: false, stopAtErrors: true });
+      const pdfDocument = await task.promise;
+      const maxPages = Math.min(2, pdfDocument.numPages);
+      const images: string[] = [];
+
+      for (let pageNumber = 1; pageNumber <= maxPages; pageNumber += 1) {
+        const page = await pdfDocument.getPage(pageNumber);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const maxWidth = 1200;
+        const scale = Math.min(1.5, maxWidth / viewport.width);
+        const scaledViewport = page.getViewport({ scale });
+        const canvas = globalThis.document.createElement("canvas");
+        canvas.width = scaledViewport.width;
+        canvas.height = scaledViewport.height;
+        const context = canvas.getContext("2d");
+        if (!context) continue;
+        await page.render({ canvas, viewport: scaledViewport }).promise;
+        const base64 = canvas.toDataURL("image/jpeg", 0.75);
+        images.push(base64);
+        await page.cleanup();
+      }
+      await task.destroy();
+      return images;
+    } catch {
+      return [];
+    }
+  }
+
   async function handleCompanyDocument(file: File) {
     setDocumentImporting(true);
     setDocumentImportStatus("idle");
@@ -156,37 +196,52 @@ export function CompanyProfileForm({
     setDocumentConflicts([]);
 
     try {
-      const text = await extractTextDocument(file);
-      const suggestions = parseCompanyDocumentText(text);
-      if (Object.keys(suggestions).length === 0) {
-        setDocumentImportStatus("empty");
+      let pageImages: string[] = [];
+      if (file.type === "application/pdf") {
+        pageImages = await convertPdfToImages(file);
+      }
+      const request = new FormData();
+      request.set("file", file);
+      if (pageImages.length > 0) {
+        request.set("pageImages", JSON.stringify(pageImages));
+      }
+
+      const result = await importCompanyDocument(request);
+      if (!result.ok) {
+        setDocumentImportStatus(
+          result.code === "unauthorized" || result.code === "inactive"
+            ? "unreadable"
+            : result.code === "parseFailed"
+              ? "unreadable"
+              : result.code,
+        );
         return;
       }
 
-      const result = applyCompanyDocumentAutofill(fieldsRef.current, suggestions);
-      fieldsRef.current = result.fields;
-      setFields(result.fields);
-      setDocumentFieldsFilled(result.filled);
-      setDocumentConflicts(result.conflicts);
+      const suggestions = result.suggestions;
+      const autofillResult = applyCompanyDocumentAutofill(
+        fieldsRef.current,
+        suggestions,
+      );
+      fieldsRef.current = autofillResult.fields;
+      setFields(autofillResult.fields);
+      setDocumentFieldsFilled(autofillResult.filled);
+      setDocumentConflicts(autofillResult.conflicts);
       setDocumentImportStatus(
-        result.filled > 0
+        autofillResult.filled > 0
           ? "imported"
-          : result.conflicts.length > 0
+          : autofillResult.conflicts.length > 0
             ? "suggestionsOnly"
             : "noNewInformation",
       );
-      if (result.filled > 0 || result.conflicts.length > 0) {
+      if (autofillResult.filled > 0 || autofillResult.conflicts.length > 0) {
         setDetailsOpen(true);
       }
     } catch (error) {
-      if (error instanceof DocumentImportError) {
-        setDocumentImportStatus(error.code);
-      } else {
-        console.error("Company document parsing failed.", {
-          name: error instanceof Error ? error.name : "UnknownError",
-        });
-        setDocumentImportStatus("unreadable");
-      }
+      console.error("Company document parsing failed.", {
+        name: error instanceof Error ? error.name : "UnknownError",
+      });
+      setDocumentImportStatus("unreadable");
     } finally {
       setDocumentImporting(false);
     }
@@ -472,7 +527,13 @@ export function CompanyProfileForm({
                 {documentConflicts.map(({ field, value }) => (
                   <div className="company-document-conflict" key={field}>
                     <span>
-                      <strong>{copy(field)}</strong>
+                      <strong>
+                        {copy(
+                          documentFieldTranslationKeys[field] as Parameters<
+                            typeof copy
+                          >[0],
+                        )}
+                      </strong>
                       <span>{value}</span>
                     </span>
                     <button

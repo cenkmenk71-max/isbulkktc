@@ -7,7 +7,6 @@ import {
   parseCompanyDocumentText,
 } from "../../src/features/companies/company-document-parser";
 import type { CompanyProfileFields } from "../../src/features/companies/company-directory-autofill";
-
 const emptyFields: CompanyProfileFields = {
   companyName: "",
   profileDescription: "",
@@ -96,4 +95,75 @@ test("ignores invalid or unsupported document values", () => {
   );
 
   assert.deepEqual(suggestions, {});
+});
+
+test("extracts all eight company fields from a Turkish KKTC Tescil Beyanı", () => {
+  const suggestions = parseCompanyDocumentText(
+    [
+      "Şirket Tam Unvanı: Ada Teknoloji Limited Şirketi",
+      "Kayıtlı İlçe / Belediye: Lefkoşa",
+      "Açık Merkez Adresi: 12 Liman Sokak, Merkez, Lefkoşa",
+      "Kurumsal E-Posta: info@ada.example",
+      "Telefon Numarası: +90 392 123 4567",
+      "Resmi Web Sitesi: https://ada.example",
+      "Ana Faaliyet Alanı: Yazılım geliştirme ve danışmanlık hizmetleri",
+      "Hukuki Statü: Limited Şirketi",
+    ].join("\n"),
+  );
+
+  assert.deepEqual(suggestions, {
+    companyName: "Ada Teknoloji Limited Şirketi",
+    municipality: "Lefkoşa",
+    address: "12 Liman Sokak, Merkez, Lefkoşa",
+    publicEmail: "info@ada.example",
+    phone: "+90 392 123 4567",
+    website: "https://ada.example",
+    profileDescription: "Yazılım geliştirme ve danışmanlık hizmetleri",
+    categoriesText: "Limited Şirketi",
+  });
+});
+
+test("extracts company fields from label-then-value table layout", () => {
+  const suggestions = parseCompanyDocumentText(
+    [
+      "Ticari Unvan",
+      "Northstar Limited",
+      "Kayıtlı İlçe / Belediye",
+      "Mağusa",
+      "Açık Merkez Adresi",
+      "45 Liman Caddesi, Mağusa",
+      "Kurumsal E-Posta",
+      "contact@northstar.example",
+      "Telefon Numarası",
+      "+90 392 222 3333",
+      "Resmi Web Sitesi",
+      "https://northstar.example",
+      "Ana Faaliyet Alanı",
+      "İthalat ihracat ve müşavirlik",
+      "Hukuki Statü",
+      "Anonim Şirket",
+    ].join("\n"),
+  );
+
+  assert.equal(suggestions.companyName, "Northstar Limited");
+  assert.equal(suggestions.municipality, "Mağusa");
+  assert.equal(suggestions.address, "45 Liman Caddesi, Mağusa");
+  assert.equal(suggestions.publicEmail, "contact@northstar.example");
+  assert.equal(suggestions.phone, "+90 392 222 3333");
+  assert.equal(suggestions.website, "https://northstar.example");
+  assert.equal(suggestions.profileDescription, "İthalat ihracat ve müşavirlik");
+  assert.equal(suggestions.categoriesText, "Anonim Şirket");
+});
+
+test("normalizes municipality from the KKTC district synonyms via autofill", () => {
+  const suggestions = parseCompanyDocumentText(
+    ["Kayıtlı İlçe / Belediye: Gazimağusa"].join("\n"),
+  );
+  assert.equal(suggestions.municipality, "Gazimağusa");
+
+  const result = applyCompanyDocumentAutofill(
+    emptyFields,
+    suggestions,
+  );
+  assert.equal(result.fields.municipality, "Mağusa");
 });

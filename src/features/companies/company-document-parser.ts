@@ -9,6 +9,8 @@ export type CompanyDocumentSuggestions = Partial<
     | "publicEmail"
     | "address"
     | "municipality"
+    | "profileDescription"
+    | "categoriesText"
   >
 >;
 
@@ -23,8 +25,13 @@ const fieldLabels: Record<CompanyDocumentField, string[]> = {
     "legal name",
     "firm name",
     "ticaret unvani",
+    "ticari unvan",
     "sirket unvani",
     "sirket adi",
+    "sirket tam unvani",
+    "sirket tam unvan",
+    "firma adi",
+    "firma unvani",
     "isletme unvani",
     "isletme adi",
     "наименование компании",
@@ -45,10 +52,12 @@ const fieldLabels: Record<CompanyDocumentField, string[]> = {
     "sirket adresi",
     "kayitli sirket adresi",
     "merkez adresi",
+    "acik merkez adresi",
+    "acik merkezi adres",
     "юридический адрес",
     "адрес компании",
     "διεύθυνση εταιρείας",
-    "διεύθυνση έδρας",
+    "διεύθυνσηèdρας",
     "نشانی شرکت",
     "آدرس شرکت",
     "geschäftsanschrift",
@@ -60,8 +69,13 @@ const fieldLabels: Record<CompanyDocumentField, string[]> = {
     "town",
     "district",
     "belediye",
+    "kayitli ilce",
+    "kayitli ilce belediye",
+    "kayitli ilce / belediye",
+    "kayitli ilce-belediye",
     "ilce",
     "sehir",
+    "şehir",
     "город",
     "муниципалитет",
     "δήμος",
@@ -77,6 +91,8 @@ const fieldLabels: Record<CompanyDocumentField, string[]> = {
     "company web address",
     "sirket web sitesi",
     "isletme web sitesi",
+    "resmi web sitesi",
+    "web sitesi",
     "ιστοσελίδα εταιρείας",
     "وب‌سایت شرکت",
     "unternehmenswebsite",
@@ -90,6 +106,10 @@ const fieldLabels: Record<CompanyDocumentField, string[]> = {
     "sirket telefonu",
     "isletme telefonu",
     "ofis telefonu",
+    "telefon numarasi",
+    "telefon numarası",
+    "tel",
+    "gestionar el teléfono",
     "τηλέφωνο εταιρείας",
     "تلفن شرکت",
     "unternehmenstelefon",
@@ -102,9 +122,46 @@ const fieldLabels: Record<CompanyDocumentField, string[]> = {
     "business e-mail",
     "sirket e-posta",
     "isletme e-posta",
+    "kurumsal e-posta",
+    "kurumsal eposta",
+    "e-posta",
     "ηλεκτρονικό ταχυδρομείο εταιρείας",
     "ایمیل شرکت",
     "unternehmens-e-mail",
+  ],
+  profileDescription: [
+    "ana faaliyet alanı",
+    "ana faaliyet",
+    "faaliyet alanı",
+    "faaliyet alani",
+    "main activity",
+    "business activity",
+    "company description",
+    "profile description",
+    "aciklama",
+    "açıklama",
+    "ozet",
+    "özet",
+    "hakkinda",
+    "hakkında",
+    "about",
+    "summary",
+    "profile",
+  ],
+  categoriesText: [
+    "hukuki statu",
+    "hukuki statü",
+    "legal status",
+    "faaliyet konusu",
+    "faaliyet konusu",
+    "activity subject",
+    "company type",
+    "sirket turu",
+    "şirket türü",
+    "kategori",
+    "categories",
+    "sector",
+    "sektor",
   ],
 };
 
@@ -141,6 +198,8 @@ function normalizeValue(field: CompanyDocumentField, value: string): string {
     publicEmail: 254,
     address: 240,
     municipality: 120,
+    profileDescription: 2_000,
+    categoriesText: 1_000,
   }[field];
 
   if (!cleaned || cleaned.length > maximumLength) return "";
@@ -204,5 +263,23 @@ export function parseCompanyDocumentText(
     }
   }
 
+  return suggestions;
+}
+
+/**
+ * Merges AI-suggested fields into locally parsed suggestions. Local (rule-based)
+ * values win when both are present; AI only fills fields the local parser missed.
+ * Pure helper (no server-only deps) so it can be imported outside "use server"
+ * modules without triggering Next.js Server Action export rules.
+ */
+export function mergeCompanySuggestions(
+  local: CompanyDocumentSuggestions,
+  ai: CompanyDocumentSuggestions,
+): CompanyDocumentSuggestions {
+  const suggestions: CompanyDocumentSuggestions = { ...local };
+  for (const field of Object.keys(ai) as (keyof CompanyDocumentSuggestions)[]) {
+    const value = ai[field];
+    if (value && !suggestions[field]) suggestions[field] = value;
+  }
   return suggestions;
 }
