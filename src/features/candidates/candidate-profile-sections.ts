@@ -20,7 +20,7 @@ export function hasEntryContent(entries: object[]): boolean {
   );
 }
 
-export function getOpenCandidateProfileSections(
+export function computeOpenSections(
   profile: CandidateProfileValues,
 ): Set<CandidateProfileSectionKey> {
   const sections = new Set<CandidateProfileSectionKey>();

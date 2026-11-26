@@ -122,20 +122,6 @@ function hasOutputContent(output: CVParserOutput): boolean {
   );
 }
 
-function countOutputFields(output: CVParserOutput): number {
-  let count = 0;
-  if (output.headline) count += 1;
-  if (output.location) count += 1;
-  count += output.skills.length;
-  count += output.experience.filter((entry) => Object.values(entry).some(Boolean)).length;
-  count += output.education.filter((entry) => Object.values(entry).some(Boolean)).length;
-  count += output.languages.length;
-  count += output.certifications.filter((entry) => Object.values(entry).some(Boolean)).length;
-  if (output.summary) count += 1;
-  count += output.links.filter((entry) => Object.values(entry).some(Boolean)).length;
-  return count;
-}
-
 function parseJSONContent(content: string | null): ProviderAttempt {
   if (!content) return { ok: false, reason: "empty_response" };
   try {
@@ -499,16 +485,6 @@ export async function parseResumeWithFallback(
   providers: ProviderConfiguration,
   pageImages?: string[],
 ): Promise<CandidateResumeDraft | null> {
-  const logAttempt = (provider: string, attempt: ProviderAttempt) => {
-    console.log("[cv-parser] attempt", {
-      provider,
-      ok: attempt.ok,
-      fields: attempt.ok ? countOutputFields(attempt.output) : undefined,
-      reason: attempt.ok ? undefined : attempt.reason,
-    });
-  };
-
-  // 1. Gemini — handles text and PDF bytes directly.
   if (providers.geminiApiKey) {
     const attempt = await requestGemini(
       file,
@@ -517,50 +493,32 @@ export async function parseResumeWithFallback(
       providers.geminiModel ?? "gemini-3.8-flash",
       providers.geminiFallbackModel,
     );
-    logAttempt("gemini", attempt);
     if (attempt.ok) return toDraft(attempt.output, text);
   }
 
-  // 2. Groq Vision — image-based / scanned PDFs. Try not only when the text
-  // layer is completely empty but also when it is short or partial: a weak text
-  // extraction is a sign the CV is image-based and may yield only a single
-  // field through text providers. Vision is attempted before the plain Groq
-  // text provider so image CVs get their best chance first.
-  const hasImages = Boolean(pageImages && pageImages.length > 0);
-  const textIsSparse = !text.trim() || text.length < 200;
-  if (providers.groqApiKey && hasImages && textIsSparse) {
-    const attempt = await requestGroqVision(
-      pageImages!,
+  // If Gemini failed and we have page images but no text, try Groq Vision
+  if (providers.groqApiKey && pageImages && pageImages.length > 0 && !text.trim()) {
+    const visionAttempt = await requestGroqVision(
+      pageImages,
       providers.groqApiKey,
       providers.groqVisionModel ?? "qwen/qwen3.8-27b",
     );
-    logAttempt("groq-vision", attempt);
-    if (attempt.ok) return toDraft(attempt.output, "");
+    if (visionAttempt.ok) return toDraft(visionAttempt.output, "");
   }
 
-  // 3. Groq text — text-based PDFs and other documents.
   if (providers.groqApiKey) {
     const attempt = await requestGroq(
       text,
       providers.groqApiKey,
       providers.groqModel ?? "openai/gpt-oss-20b",
     );
-    logAttempt("groq", attempt);
     if (attempt.ok) return toDraft(attempt.output, text);
   }
 
-  // 4. Local rule-based parser — final fallback, never invents data.
   const localDraft = parseResumeText(text);
   const local = cvParserOutputSchema.safeParse(localParserOutput(localDraft));
-  if (local.success && hasOutputContent(local.data)) {
-    console.log("[cv-parser] local parser ok", {
-      fields: countOutputFields(local.data),
-    });
-    return toDraft(local.data, text);
-  }
-
-  console.log("[cv-parser] all providers failed, returning null");
-  return null;
+  if (!local.success || !hasOutputContent(local.data)) return null;
+  return toDraft(local.data, text);
 }
 
 export { systemPrompt as cvParserSystemPrompt };
