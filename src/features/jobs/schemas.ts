@@ -39,6 +39,10 @@ export const publicJobSlugSchema = z
   .max(100)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
+export const updatePublishedJobSchema = jobDraftSchema.extend({
+  jobId: z.string().uuid(),
+});
+
 export const jobPackageSchema = z.object({
   packageId: z.string().uuid().nullable(),
   code: z
@@ -218,6 +222,17 @@ export type JobFormState = {
     | "packageRequired"
     | "packageLimit"
     | "publishFailed";
+  jobId?: string;
+};
+
+export type UpdatePublishedJobFormState = {
+  status: "idle" | "error" | "success";
+  message:
+    | "idle"
+    | "invalid"
+    | "unauthorized"
+    | "updateFailed"
+    | "updated";
   jobId?: string;
 };
 

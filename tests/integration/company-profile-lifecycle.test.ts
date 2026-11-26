@@ -245,27 +245,18 @@ test("submitCompanyProfile inserts a new submission bound to the owned company a
   });
 
   const { submitCompanyProfile } = await actions();
-  const state = await submitCompanyProfile(
-    { status: "idle", message: "idle" },
-    companyProfileForm(),
+  await assert.rejects(
+    () => submitCompanyProfile({ status: "idle", message: "idle" }, companyProfileForm()),
+    (error: unknown) => isRedirect(error),
   );
+  assert.deepEqual(recorded.redirects, ["/packages?companySetup=completed"]);
 
-  assert.equal(state.status, "success");
-  assert.equal(state.message, "submitted");
-
-  const inserts = opsFor("company_profile_submissions").filter((op) => op.startsWith("insert:"));
-  assert.equal(inserts.length, 1, "exactly one insert is expected");
-  assert.ok(inserts[0].includes(`"company_id":"${COMPANY}"`), inserts[0]);
-  assert.ok(inserts[0].includes(`"submitted_by":"${USER}"`), inserts[0]);
-  // The categories transform splits the free text into a deduplicated array.
-  assert.ok(inserts[0].includes('"categories":["Kafe","Restoran"]'), inserts[0]);
-  // No directory branch was selected, so both directory columns are null.
-  assert.ok(inserts[0].includes('"directory_entry_id":null'), inserts[0]);
-  assert.deepEqual(
-    opsFor("company_profile_submissions").filter((op) => op.startsWith("update:")),
-    [],
-    "a first submission must insert, not update",
-  );
+  const rpcCall = rpcCalls("finalize_company_profile");
+  assert.equal(rpcCall.length, 1, "exactly one finalize_company_profile RPC call is expected");
+  assert.equal(rpcCall[0].args._company_id, COMPANY);
+  assert.deepEqual(rpcCall[0].args._categories, ["Kafe", "Restoran"]);
+  assert.equal(rpcCall[0].args._directory_entry_id, null);
+  assert.equal(rpcCall[0].args._directory_location_index, null);
 });
 
 test("submitCompanyProfile updates the open pending submission instead of opening a second one", async () => {
@@ -279,24 +270,15 @@ test("submitCompanyProfile updates the open pending submission instead of openin
   });
 
   const { submitCompanyProfile } = await actions();
-  const state = await submitCompanyProfile(
-    { status: "idle", message: "idle" },
-    companyProfileForm(),
+  await assert.rejects(
+    () => submitCompanyProfile({ status: "idle", message: "idle" }, companyProfileForm()),
+    (error: unknown) => isRedirect(error),
   );
+  assert.deepEqual(recorded.redirects, ["/packages?companySetup=completed"]);
 
-  assert.equal(state.message, "submitted");
-
-  const updates = opsFor("company_profile_submissions").filter((op) => op.startsWith("update:"));
-  assert.equal(updates.length, 1, "the pending row must be updated exactly once");
-  assert.deepEqual(
-    opsFor("company_profile_submissions").filter((op) => op.startsWith("insert:")),
-    [],
-    "an existing pending submission must not be duplicated",
-  );
-  assert.ok(
-    fromCalls("company_profile_submissions").some((call) => call.ops.includes(`eq:id=${JSON.stringify(SUBMISSION)}`)),
-    "the update must target the pending row's id",
-  );
+  const rpcCall = rpcCalls("finalize_company_profile");
+  assert.equal(rpcCall.length, 1, "the finalize_company_profile RPC must be called exactly once");
+  // The RPC doesn't distinguish between insert and update - it always upserts
 });
 
 test("submitCompanyProfile refuses a caller who is not an active owner of the company", async () => {
@@ -363,32 +345,32 @@ test("submitCompanyProfile carries a resolved directory branch onto the submissi
   });
 
   const { submitCompanyProfile } = await actions();
-  const state = await submitCompanyProfile(
-    { status: "idle", message: "idle" },
-    companyProfileForm({ directoryTarget: `${DIRECTORY_ENTRY}:0` }),
+  await assert.rejects(
+    () => submitCompanyProfile({ status: "idle", message: "idle" }, companyProfileForm({ directoryTarget: `${DIRECTORY_ENTRY}:0` })),
+    (error: unknown) => isRedirect(error),
   );
+  assert.deepEqual(recorded.redirects, ["/packages?companySetup=completed"]);
 
-  assert.equal(state.message, "submitted");
-  const insert = opsFor("company_profile_submissions").find((op) => op.startsWith("insert:"));
-  assert.ok(insert, "an insert is expected");
-  assert.ok(insert.includes(`"directory_entry_id":"${DIRECTORY_ENTRY}"`), insert);
-  assert.ok(insert.includes('"directory_location_index":0'), insert);
+  const rpcCall = rpcCalls("finalize_company_profile");
+  assert.equal(rpcCall.length, 1, "an insert is expected");
+  assert.equal(rpcCall[0].args._directory_entry_id, DIRECTORY_ENTRY);
+  assert.equal(rpcCall[0].args._directory_location_index, 0);
 });
 
-test("submitCompanyProfile maps a unique-violation to the pending message", async () => {
+test("submitCompanyProfile maps an RPC error to saveFailed", async () => {
   activeOwner({
     tables: {
       profiles: { data: fakeProfileRow({ id: USER }), error: null },
       company_members: { data: { company_id: COMPANY }, error: null },
       companies: { data: ownedCompanyRow(), error: null },
-      // Only the INSERT trips the unique constraint. The pending-lookup
-      // `select` must succeed (no open submission), otherwise the action
-      // reports `saveFailed` from the lookup error and never reaches the
-      // 23505 branch this test is meant to exercise.
-      company_profile_submissions: (ops) =>
-        ops.some((op) => op.startsWith("insert:"))
-          ? { data: null, error: { code: "23505", message: "duplicate pending submission" } }
-          : { data: null, error: null },
+      // The new flow uses finalize_company_profile RPC, not the submissions table
+      company_profile_submissions: { data: null, error: null },
+    },
+    rpcs: {
+      finalize_company_profile: {
+        data: null,
+        error: { code: "23505", message: "duplicate key value violates unique constraint" },
+      },
     },
   });
 
@@ -399,11 +381,7 @@ test("submitCompanyProfile maps a unique-violation to the pending message", asyn
   );
 
   assert.equal(state.status, "error");
-  assert.equal(state.message, "pending");
-  assert.ok(
-    opsFor("company_profile_submissions").some((op) => op.startsWith("insert:")),
-    "the unique violation must come from an insert attempt",
-  );
+  assert.equal(state.message, "saveFailed");
 });
 
 test("submitCompanyProfile rejects a municipality outside the district enum", async () => {

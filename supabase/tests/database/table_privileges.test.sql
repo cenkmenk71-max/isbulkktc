@@ -60,6 +60,7 @@ select is(
     'messages',
     'notifications',
     'orders',
+    'payment_confirmations',
     'payment_submissions',
     'profiles',
     'resume_versions',

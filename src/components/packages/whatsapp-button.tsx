@@ -1,39 +1,38 @@
-import { getWhatsAppUrl } from "@/lib/social-links";
+"use client";
+
 import { useTranslations } from "next-intl";
 import { buttonVariants } from "@/components/ui/button";
+import { createPaymentConfirmationAction } from "@/features/companies/payment-confirmation-actions";
 
 interface WhatsAppButtonProps {
-  locale: string;
-  packageName: string;
+  _locale: string;
+  packageCode: string;
+  _packageName: string;
   duration?: number;
-  price?: string;
+  _price?: string;
 }
 
 export function WhatsAppButton({
-  locale,
-  packageName,
+  _locale,
+  packageCode,
+  _packageName,
   duration,
-  price,
+  _price,
 }: WhatsAppButtonProps) {
   const t = useTranslations("PackagesPage.showcase.pricing");
-  
-  // Construct the message body using the same pattern as Panel.tsx
-  const inquiryBody = t("inquiryBody")
-    .replaceAll("%PACKAGE%", packageName)
-    .replaceAll("%DAYS%", duration ? new Intl.NumberFormat(locale).format(duration) : "")
-    .replaceAll("%PRICE%", price || "");
-    
-  const whatsappUrl = `${getWhatsAppUrl()}?text=${encodeURIComponent(inquiryBody)}`;
 
   return (
-    <a
-      href={whatsappUrl}
-      rel="noopener noreferrer"
-      target="_blank"
-      aria-label={t("whatsappAction")}
-      className={buttonVariants({ variant: "default" })}
-    >
-      {t("whatsappAction")}
-    </a>
+    <form action={createPaymentConfirmationAction}>
+      <input type="hidden" name="packageCode" value={packageCode} />
+      <input type="hidden" name="durationDays" value={duration?.toString() ?? "30"} />
+      <input type="hidden" name="channel" value="whatsapp" />
+      <button
+        type="submit"
+        className={buttonVariants({ variant: "default" })}
+        aria-label={t("whatsappAction")}
+      >
+        {t("whatsappAction")}
+      </button>
+    </form>
   );
 }

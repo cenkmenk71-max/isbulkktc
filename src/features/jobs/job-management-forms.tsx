@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState } from "react";
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { northernCyprusDistricts } from "@/features/locations/northern-cyprus-districts";
 import type { Database } from "@/types/database";
-import { reviewJob, saveJobDraft, submitJobForReview } from "./actions";
-import type { JobFormState, JobReviewFormState } from "./schemas";
+import { reviewJob, saveJobDraft, submitJobForReview, updatePublishedJob } from "./actions";
+import type { JobFormState, JobReviewFormState, UpdatePublishedJobFormState } from "./schemas";
 
 type JobRow = Database["public"]["Tables"]["jobs"]["Row"];
 type JobDraftValues = Pick<
@@ -25,6 +26,39 @@ type JobDraftValues = Pick<
 
 const initialJobState: JobFormState = { status: "idle", message: "idle" };
 const initialReviewState: JobReviewFormState = { status: "idle", message: "idle" };
+const initialUpdateState: UpdatePublishedJobFormState = { status: "idle", message: "idle" };
+
+function getDraftStorageKey(companyId: string, jobId?: string): string {
+  return `job-draft-${companyId}${jobId ? `-${jobId}` : ""}`;
+}
+
+function saveDraftToStorage(key: string, data: Record<string, string>) {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch {
+      // Ignore quota errors
+    }
+  }
+}
+
+function loadDraftFromStorage(key: string): Record<string, string> | null {
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored) return JSON.parse(stored);
+    } catch {
+      // Ignore parse errors
+    }
+  }
+  return null;
+}
+
+function clearDraftFromStorage(key: string) {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(key);
+  }
+}
 
 export function JobDraftForm({
   companyId,
@@ -40,13 +74,61 @@ export function JobDraftForm({
     submitJobForReview,
     initialJobState,
   );
+  const [updateState, updateAction, updating] = useActionState(updatePublishedJob, initialUpdateState);
   const savedJobId = state.jobId ?? submission.jobId ?? job?.id;
   const canSubmit = submission.status !== "success" && (!job || job.status === "draft" || job.status === "rejected");
+  const isEditingPublished = job?.status === "published";
+  const draftKey = getDraftStorageKey(companyId, job?.id);
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    const draft = loadDraftFromStorage(draftKey);
+    if (draft) {
+      // Dispatch a custom event to populate form fields
+      window.dispatchEvent(new CustomEvent("job-draft-load", { detail: draft }));
+    }
+  }, [draftKey]);
+
+  // Save draft to localStorage on form change
+  useEffect(() => {
+    const handleStorage = () => {
+      const form = document.querySelector(`form[data-draft-key="${draftKey}"]`) as HTMLFormElement | null;
+      if (form) {
+        const formData = new FormData(form);
+        const data: Record<string, string> = {};
+        formData.forEach((value, key) => {
+          data[key] = value.toString();
+        });
+        saveDraftToStorage(draftKey, data);
+      }
+    };
+
+    const handleInput = (e: Event) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
+        handleStorage();
+      }
+    };
+
+    document.addEventListener("input", handleInput);
+    document.addEventListener("change", handleInput);
+
+    return () => {
+      document.removeEventListener("input", handleInput);
+      document.removeEventListener("change", handleInput);
+    };
+  }, [draftKey]);
+
+  // Clear draft on successful save/submit/update
+  useEffect(() => {
+    if (state.status === "success" || submission.status === "success" || updateState.status === "success") {
+      clearDraftFromStorage(draftKey);
+    }
+  }, [state.status, submission.status, updateState.status, draftKey]);
 
   return (
     <div className="job-authoring">
-      <form action={action} className="job-authoring-form">
-        <fieldset aria-label={copy("description")} className="job-authoring-fields" disabled={submission.status === "success"}>
+      <form action={action} className="job-authoring-form" data-draft-key={draftKey}>
+        <fieldset aria-label={copy("description")} className="job-authoring-fields" disabled={submission.status === "success" || updateState.status === "success"}>
         <input name="companyId" type="hidden" value={companyId} />
         <input name="jobId" type="hidden" value={savedJobId ?? ""} />
 
@@ -151,7 +233,7 @@ export function JobDraftForm({
         </label>
 
         <div className="job-authoring-actions">
-          <button className="button button-dark" disabled={pending || submitting} type="submit">
+          <button className="button button-dark" disabled={pending || submitting || updating} type="submit">
             {pending ? copy("saving") : copy("saveDraft")}
           </button>
           {canSubmit ? (
@@ -164,6 +246,16 @@ export function JobDraftForm({
               {submitting ? copy("submitting") : copy("submitReview")}
             </button>
           ) : null}
+          {isEditingPublished ? (
+            <button
+              className="button button-outline"
+              disabled={pending || updating}
+              formAction={updateAction}
+              type="submit"
+            >
+              {updating ? copy("updating") : copy("updatePublished")}
+            </button>
+          ) : null}
           {state.status !== "idle" ? (
             <p aria-live="polite" data-status={state.status} role={state.status === "error" ? "alert" : "status"}>
               {copy(state.message)}
@@ -172,6 +264,11 @@ export function JobDraftForm({
           {submission.status !== "idle" ? (
             <p aria-live="polite" data-status={submission.status} role={submission.status === "error" ? "alert" : "status"}>
               {copy(submission.message)}
+            </p>
+          ) : null}
+          {updateState.status !== "idle" ? (
+            <p aria-live="polite" data-status={updateState.status} role={updateState.status === "error" ? "alert" : "status"}>
+              {copy(updateState.message)}
             </p>
           ) : null}
         </div>

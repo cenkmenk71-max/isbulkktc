@@ -214,6 +214,7 @@ select is(
   array[
     'adjust_credit_balance(_company_id uuid, _quantity_delta integer, _entry_type credit_entry_type, _idempotency_key text, _reason text, _actor_id uuid)',
     'admin_assign_company_job_package(_company_id uuid, _package_id uuid, _expires_at timestamp with time zone)',
+    'admin_confirm_payment(_confirmation_id uuid)',
     'admin_delete_directory_company(_directory_entry_id text)',
     'admin_delete_faq_entry(_id uuid)',
     'admin_list_company_verifications()',
@@ -236,7 +237,9 @@ select is(
     'archive_conversation(_conversation_id uuid)',
     'create_company(company_name text, company_slug text)',
     'create_order(_company_id uuid, _listing_plan_code text, _duration_days integer)',
+    'create_payment_confirmation(_company_id uuid, _package_id uuid, _amount integer, _currency text, _reference_code text)',
     'create_resume(_candidate_id uuid, _storage_path text, _original_filename text, _file_size_bytes bigint, _mime_type text, _page_count integer)',
+    'finalize_company_profile(_company_id uuid, _company_name text, _profile_description text, _categories text[], _website text, _phone text, _public_email text, _address text, _municipality text, _directory_entry_id text, _directory_location_index integer)',
     'get_application_contact_email(_application_id uuid)',
     'get_company_application_detail(_application_id uuid)',
     'get_company_credit_ledger(_company_id uuid, _limit integer, _offset integer)',
@@ -278,7 +281,8 @@ select is(
     'submit_sales_lead(_company_name text, _contact_name text, _email text, _phone text, _plan text, _duration_days integer, _note text, _locale text, _marketing_consent boolean)',
     'submit_support_message(_name text, _email text, _subject text, _body text, _locale text)',
     'sync_oauth_profile()',
-    'transition_application(_application_id uuid, _next_status text)'
+    'transition_application(_application_id uuid, _next_status text)',
+    'update_published_job(_job_id uuid, _title text, _slug text, _summary text, _description text, _requirements text, _responsibilities text, _job_type text, _workplace_mode text, _district text)'
   ]::text[],
   'only reviewed function signatures are executable by anon/authenticated'
 );

@@ -111,6 +111,55 @@ export async function getJobPublishAnnouncement(jobId: string): Promise<{
   return { title: data.title, slug: data.slug, companyName };
 }
 
+export async function getJobForAdmin(jobId: string): Promise<{
+  title: string;
+  slug: string;
+  district: string | null;
+  jobDurationDays: number;
+  expiresAt: string | null;
+  companies: { name: string } | null;
+} | null> {
+  if (!z.string().uuid().safeParse(jobId).success) return null;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("title, slug, district, published_at, expires_at, company_id")
+    .eq("id", jobId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("The job details could not be loaded.", { cause: error });
+  }
+  if (!data) return null;
+
+  // Calculate duration days from published_at and expires_at
+  let jobDurationDays = 30;
+  if (data.published_at && data.expires_at) {
+    const diffMs = new Date(data.expires_at).getTime() - new Date(data.published_at).getTime();
+    jobDurationDays = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+  }
+
+  // Fetch company name separately
+  let companies: { name: string } | null = null;
+  if (data.company_id) {
+    const { data: company } = await supabase
+      .from("companies")
+      .select("name")
+      .eq("id", data.company_id)
+      .maybeSingle();
+    companies = company ? { name: company.name } : null;
+  }
+
+  return {
+    title: data.title,
+    slug: data.slug,
+    district: data.district,
+    jobDurationDays,
+    expiresAt: data.expires_at,
+    companies,
+  };
+}
+
 export async function getApplicationForActor(applicationId: string) {
   if (!z.string().uuid().safeParse(applicationId).success) return null;
   const supabase = await createSupabaseServerClient();
