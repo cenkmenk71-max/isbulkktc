@@ -36,6 +36,8 @@ async function extractPdfText(file: File): Promise<string> {
     data,
     enableXfa: false,
     stopAtErrors: true,
+    useSystemFonts: true,
+    disableFontFace: true,
   });
 
   try {

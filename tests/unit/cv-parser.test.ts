@@ -108,7 +108,7 @@ test("Gemini 429 falls back to Groq after retry with fallback model", async () =
   }
 });
 
-test("Gemini overload retries with the stable Flash fallback", async () => {
+test("Gemini 3.5 Flash Lite is tried first, then fallbacks", async () => {
   const originalFetch = globalThis.fetch;
   const models: string[] = [];
   globalThis.fetch = async (input) => {
@@ -130,14 +130,14 @@ test("Gemini overload retries with the stable Flash fallback", async () => {
       },
     );
 
-    assert.deepEqual(models, ["gemini-3.8-flash", "gemini-3.6-flash"]);
+    assert.deepEqual(models, ["gemini-3.5-flash-lite"]);
     assert.equal(draft?.headline, "Инженер-программист");
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("a missing Gemini model falls back to the configured model", async () => {
+test("a missing Gemini model falls back to 3.5 Flash Lite first", async () => {
   const originalFetch = globalThis.fetch;
   const models: string[] = [];
   globalThis.fetch = async (input) => {
@@ -160,14 +160,14 @@ test("a missing Gemini model falls back to the configured model", async () => {
       },
     );
 
-    assert.deepEqual(models, ["missing-model", "gemini-3.6-flash"]);
+    assert.deepEqual(models, ["gemini-3.5-flash-lite"]);
     assert.equal(draft?.headline, "Инженер-программист");
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("scanned PDFs use Groq Vision scout first, then Maverick fallback", async () => {
+test("scanned PDFs use Groq Vision with a valid model", async () => {
   const originalFetch = globalThis.fetch;
   const models: string[] = [];
   globalThis.fetch = async (input, init) => {
@@ -186,7 +186,7 @@ test("scanned PDFs use Groq Vision scout first, then Maverick fallback", async (
     assert.equal(payload.response_format.type, "json_object");
     const userContent = payload.messages[1]?.content;
     const imageItem = userContent?.[1] as { image_url?: { url: string } } | undefined;
-    if (payload.model !== "meta-llama/llama-4-maverick-17b-128e-instruct") {
+    if (payload.model !== "llama-3.3-70b-versatile") {
       return new Response("{}", { status: 404 });
     }
 
@@ -204,15 +204,12 @@ test("scanned PDFs use Groq Vision scout first, then Maverick fallback", async (
         geminiModel: "gemini-3.8-flash",
         geminiFallbackModel: "gemini-3.8-flash",
         groqApiKey: "test-groq-key",
-        groqVisionModel: "meta-llama/llama-4-scout-17b-16e-instruct",
+        groqVisionModel: "llama-3.3-70b-versatile",
       },
       ["data:image/jpeg;base64,dGVzdA=="],
     );
 
-    assert.deepEqual(models, [
-      "meta-llama/llama-4-scout-17b-16e-instruct",
-      "meta-llama/llama-4-maverick-17b-128e-instruct",
-    ]);
+    assert.deepEqual(models, ["llama-3.3-70b-versatile"]);
     assert.equal(draft?.headline, "Инженер-программист");
   } finally {
     globalThis.fetch = originalFetch;
@@ -234,7 +231,7 @@ test("pageImages bypasses Gemini entirely; Groq Vision single-step JSON fills al
       response_format: { type: string };
       messages: { content: unknown[] }[];
     };
-    if (payload.model !== "meta-llama/llama-4-scout-17b-16e-instruct") {
+    if (payload.model !== "llama-3.3-70b-versatile") {
       return new Response("{}", { status: 404 });
     }
     assert.equal(payload.response_format.type, "json_object");
@@ -280,7 +277,7 @@ test("pageImages bypasses Gemini entirely; Groq Vision single-step JSON fills al
         geminiApiKey: "test-gemini-key",
         geminiModel: "gemini-3.8-flash",
         groqApiKey: "test-groq-key",
-        groqVisionModel: "meta-llama/llama-4-scout-17b-16e-instruct",
+        groqVisionModel: "llama-3.3-70b-versatile",
       },
       ["data:image/jpeg;base64,dGVzdA=="],
     );

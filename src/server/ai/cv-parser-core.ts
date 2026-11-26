@@ -216,11 +216,11 @@ async function requestGemini(
 ): Promise<ProviderAttempt> {
       const models = Array.from(
         new Set(
-          [model, fallbackModel, "gemini-3.6-flash", "gemini-3.5-flash-lite"].filter(
-        (candidate): candidate is string => Boolean(candidate),
-      ),
-    ),
-  );
+          ["gemini-3.5-flash-lite", model, fallbackModel, "gemini-3.6-flash"].filter(
+            (candidate): candidate is string => Boolean(candidate),
+          ),
+        ),
+      );
   const retryableStatus = new Set([429, 503]);
 
   for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
@@ -349,7 +349,7 @@ async function requestGroqVision(
   apiKey: string,
   model: string,
 ): Promise<ProviderAttempt> {
-  const models = Array.from(new Set([model, "meta-llama/llama-4-maverick-17b-128e-instruct"]));
+  const models = Array.from(new Set([model]));
   const retryableStatus = new Set([429, 503]);
 
   for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
@@ -630,7 +630,7 @@ export async function parseResumeWithFallback(
     const visionAttempt = await requestGroqVision(
       pageImages,
       providers.groqApiKey,
-      providers.groqVisionModel ?? "meta-llama/llama-4-scout-17b-16e-instruct",
+      providers.groqVisionModel ?? "llama-3.3-70b-versatile",
     );
     if (visionAttempt.ok) {
       const visionDraft = toDraft(visionAttempt.output, text);

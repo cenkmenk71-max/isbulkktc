@@ -24,26 +24,6 @@ export type ImportCompanyDocumentResult =
   | { ok: true; suggestions: CompanyDocumentSuggestions }
   | { ok: false; code: ImportCompanyDocumentCode };
 
-const validImage = /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/;
-
-function parsePageImages(raw: unknown): string[] | undefined {
-  if (raw === null || raw === undefined) return undefined;
-  if (typeof raw !== "string") return undefined;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (
-      !Array.isArray(parsed) ||
-      parsed.length > 2 ||
-      !parsed.every((image): image is string => typeof image === "string" && validImage.test(image))
-    ) {
-      return undefined;
-    }
-    return parsed;
-  } catch {
-    return undefined;
-  }
-}
-
 export async function importCompanyDocument(
   formData: FormData,
 ): Promise<ImportCompanyDocumentResult> {
@@ -53,8 +33,6 @@ export async function importCompanyDocument(
 
   const file = formData.get("file");
   if (!(file instanceof File)) return { ok: false, code: "unsupported" };
-
-  const pageImages = parsePageImages(formData.get("pageImages"));
 
   let text: string;
   try {
@@ -72,7 +50,7 @@ export async function importCompanyDocument(
 
   let aiSuggestions: CompanyDocumentSuggestions = {};
   try {
-    aiSuggestions = await parseCompanyDocumentAI(file, text, pageImages);
+    aiSuggestions = await parseCompanyDocumentAI(file, text);
   } catch {
     aiSuggestions = {};
   }
