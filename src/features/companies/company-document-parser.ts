@@ -265,3 +265,21 @@ export function parseCompanyDocumentText(
 
   return suggestions;
 }
+
+/**
+ * Merges AI-suggested fields into locally parsed suggestions. Local (rule-based)
+ * values win when both are present; AI only fills fields the local parser missed.
+ * Pure helper (no server-only deps) so it can be imported outside "use server"
+ * modules without triggering Next.js Server Action export rules.
+ */
+export function mergeCompanySuggestions(
+  local: CompanyDocumentSuggestions,
+  ai: CompanyDocumentSuggestions,
+): CompanyDocumentSuggestions {
+  const suggestions: CompanyDocumentSuggestions = { ...local };
+  for (const field of Object.keys(ai) as (keyof CompanyDocumentSuggestions)[]) {
+    const value = ai[field];
+    if (value && !suggestions[field]) suggestions[field] = value;
+  }
+  return suggestions;
+}

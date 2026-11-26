@@ -3,7 +3,10 @@
 import { getCurrentUser } from "@/server/dal/user";
 import { DocumentImportError, extractTextDocument } from "@/features/documents/text-document-extractor";
 import type { DocumentImportErrorCode } from "@/features/documents/text-document-extractor";
-import { parseCompanyDocumentText } from "./company-document-parser";
+import {
+  parseCompanyDocumentText,
+  mergeCompanySuggestions,
+} from "./company-document-parser";
 import { parseCompanyDocumentAI } from "./company-document-ai";
 import type { CompanyDocumentSuggestions } from "./company-document-parser";
 
@@ -76,13 +79,7 @@ export async function importCompanyDocument(
 
   // Merge: local rule-based parser is authoritative for clearly labeled text;
   // AI fills any fields the local parser missed (tables, scanned layouts).
-  const suggestions: CompanyDocumentSuggestions = { ...localSuggestions };
-  for (const field of Object.keys(aiSuggestions) as (keyof CompanyDocumentSuggestions)[]) {
-    const value = aiSuggestions[field];
-    if (value && !suggestions[field]) {
-      suggestions[field] = value;
-    }
-  }
+  const suggestions = mergeCompanySuggestions(localSuggestions, aiSuggestions);
 
   if (!hasContent(suggestions)) return { ok: false, code: "empty" };
 
@@ -109,17 +106,4 @@ function mapDocumentErrorCode(code: DocumentImportErrorCode): ImportCompanyDocum
     default:
       return code;
   }
-}
-
-// Exported for tests that want to run the merge without a File.
-export function mergeCompanySuggestions(
-  local: CompanyDocumentSuggestions,
-  ai: CompanyDocumentSuggestions,
-): CompanyDocumentSuggestions {
-  const suggestions: CompanyDocumentSuggestions = { ...local };
-  for (const field of Object.keys(ai) as (keyof CompanyDocumentSuggestions)[]) {
-    const value = ai[field];
-    if (value && !suggestions[field]) suggestions[field] = value;
-  }
-  return suggestions;
 }
