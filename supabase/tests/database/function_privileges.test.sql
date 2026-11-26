@@ -282,7 +282,7 @@ select is(
     'submit_support_message(_name text, _email text, _subject text, _body text, _locale text)',
     'sync_oauth_profile()',
     'transition_application(_application_id uuid, _next_status text)',
-    'update_published_job(_job_id uuid, _title text, _slug text, _summary text, _description text, _requirements text, _responsibilities text, _job_type public.job_type, _workplace_mode public.workplace_mode, _district public.northern_cyprus_district)'
+    'update_published_job(_job_id uuid, _title text, _slug text, _summary text, _description text, _requirements text, _responsibilities text, _job_type text, _workplace_mode text, _district text)'
   ]::text[],
   'only reviewed function signatures are executable by anon/authenticated'
 );
