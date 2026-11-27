@@ -83,7 +83,7 @@ export default async function LoginPage({
             .eq("id", user.id)
             .maybeSingle(),
           supabase
-            .from("company_memberships")
+            .from("company_members")
             .select("company_id")
             .eq("user_id", user.id)
             .eq("status", "active")

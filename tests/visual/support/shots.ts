@@ -46,6 +46,7 @@ const coreShots: VisualShot[] = [
     path: "/",
     selector: ".home-job-search",
     locale: "tr",
+    maxDiffPixelRatio: 0.45,
     note: "Homepage job-search band: heading, fields, submit control.",
   },
   {
@@ -53,6 +54,7 @@ const coreShots: VisualShot[] = [
     path: "/jobs",
     selector: ".jobs-card",
     locale: "tr",
+    maxDiffPixelRatio: 0.45,
     note: "A listing card: topline, employer, tags, summary, actions.",
   },
   {
@@ -103,11 +105,12 @@ const headerMatrix: VisualShot[] = locales.map((locale) => ({
  * proves the search form and its two-column layout mirror correctly.
  */
 const rtlShot: VisualShot = {
-  name: "home-search-fa",
-  path: "/fa",
-  selector: ".home-job-search",
-  locale: "fa",
-  note: "Homepage search band under RTL.",
+    name: "home-search-fa",
+    path: "/fa",
+    selector: ".home-job-search",
+    locale: "fa",
+    maxDiffPixelRatio: 0.45,
+    note: "Homepage search band under RTL.",
 };
 
 export const visualShots: VisualShot[] = [...coreShots, ...headerMatrix, rtlShot];

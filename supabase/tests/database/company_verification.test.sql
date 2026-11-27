@@ -1,6 +1,6 @@
 begin;
 
-select plan(26);
+select plan(27);
 
 insert into auth.users (id, email, raw_user_meta_data)
 values
@@ -144,14 +144,23 @@ select is(
   (
     select count(*)::integer
     from public.admin_list_company_verifications()
+    where id = '73000000-0000-4000-8000-000000000004'
+  ),
+  1,
+  'the queue now includes verified companies with active owners'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.admin_list_company_verifications()
     where id in (
-      '73000000-0000-4000-8000-000000000004',
       '73000000-0000-4000-8000-000000000005',
       '73000000-0000-4000-8000-000000000006'
     )
   ),
   0,
-  'the queue excludes verified, suspended and ownerless companies'
+  'the queue excludes suspended and ownerless companies'
 );
 
 select lives_ok(

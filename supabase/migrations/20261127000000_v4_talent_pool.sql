@@ -196,13 +196,14 @@ begin
     insert into public.job_match_notifications (
       user_id, job_id, match_score
     )
-    select vtp.id, _job_id, 100
-    from public.v_talent_pool as vtp
-    where vtp.is_searchable
-      and vtp.email is null
+    select cp.user_id, _job_id, 100
+    from public.candidate_profiles as cp
+    join public.profiles as p on p.id = cp.user_id
+    where cp.visibility = 'public'
+      and p.status = 'active'
       and exists (
         select 1
-        from pg_catalog.unnest(vtp.skills) as skill
+        from pg_catalog.unnest(cp.skills) as skill
         where v_job.title ilike '%' || skill || '%'
            or v_job.summary ilike '%' || skill || '%'
       )
