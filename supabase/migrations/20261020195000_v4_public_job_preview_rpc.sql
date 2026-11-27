@@ -15,11 +15,6 @@ create or replace function public.search_public_job_previews(
 returns table (
   job_title text,
   company_name text,
-  job_slug text,
-  job_summary text,
-  job_type text,
-  workplace_mode text,
-  district text,
   total_count bigint
 )
 language plpgsql
@@ -61,12 +56,8 @@ begin
     select
       j.id,
       j.title as job_title,
-      j.slug as job_slug,
-      j.summary as job_summary,
-      j.job_type,
-      j.workplace_mode,
-      j.district,
-      c.name as company_name
+      c.name as company_name,
+      j.published_at
     from public.jobs as j
     join public.companies as c on c.id = j.company_id
     where j.status = 'published'
@@ -85,7 +76,7 @@ begin
       )
   ),
   page_jobs as (
-    select f.id, f.job_title, f.job_slug, f.job_summary, f.job_type, f.workplace_mode, f.district, f.company_name
+    select f.id, f.job_title, f.company_name, f.published_at
     from filtered_jobs as f
     order by f.published_at desc, f.id desc
     limit 6
@@ -95,7 +86,7 @@ begin
     select pg_catalog.count(*) as total_count
     from filtered_jobs
   )
-  select p.job_title, p.company_name, p.job_slug, p.job_summary, p.job_type, p.workplace_mode, p.district, c.total_count
+  select p.job_title, p.company_name, c.total_count
   from result_count as c
   left join page_jobs as p on true
   order by p.published_at desc nulls last, p.id desc nulls last;
