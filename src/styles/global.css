@@ -16355,3 +16355,48 @@ body:has(.pwa-update-toast) .support-widget {
     list-style: none;
   }
 }
+
+/* 320px dar ekran: yatay taşma sıfırlama. */
+@media (max-width: 359px) {
+  /* Üst menü: kayıt / ilan ver butonu 320px'te sığmazsa gizle (hamburger menü içinde zaten var). */
+  .header-post {
+    display: none;
+  }
+  .header-inner {
+    max-width: 100%;
+    min-width: 0;
+    gap: 8px;
+  }
+  .header-actions {
+    max-width: 100%;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  /* Dekoratif ışık katmanları: 320px viewport sınırlarını aşmasın. */
+  .hero-section {
+    overflow-x: clip;
+  }
+  .freelance-hero {
+    overflow-x: clip;
+  }
+
+  /* Çerez onay kartı: 320px'te sağdan taşma sıfırla. */
+  section.consent-card {
+    inset-inline: 8px;
+    max-width: calc(100vw - 16px);
+    width: auto;
+  }
+
+  /* Şirket rehberi: uzun kategori metinleri 320px'te sığdırılsın. */
+  .company-directory-category {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .company-directory-hero {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
