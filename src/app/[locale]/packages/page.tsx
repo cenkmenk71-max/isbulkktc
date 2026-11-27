@@ -8,7 +8,7 @@ import { createLocalizedPageMetadata } from "@/lib/seo";
 
 type PackagesPageProps = {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ companySetup?: string }>;
+  searchParams: Promise<{ companySetup?: string; companyName?: string; email?: string }>;
 };
 
 export async function generateMetadata({
@@ -31,7 +31,8 @@ export async function generateMetadata({
 
 export default async function PackagesPage({ params, searchParams }: PackagesPageProps) {
   const { locale: requestedLocale } = await params;
-  const { companySetup } = await searchParams;
+  const searchParamsResolved = await searchParams;
+  const { companySetup, companyName, email } = searchParamsResolved;
   const locale = routing.locales.find(
     (supportedLocale) => supportedLocale === requestedLocale,
   );
@@ -50,6 +51,8 @@ export default async function PackagesPage({ params, searchParams }: PackagesPag
       locale={locale}
       planPriceOverrides={planPriceOverrides}
       companySetup={companySetup}
+      _companyName={companyName}
+      _userEmail={email}
     />
   );
 }

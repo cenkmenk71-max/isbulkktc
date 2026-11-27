@@ -6,10 +6,12 @@ import { CompanyVerificationReviewForm } from "@/features/companies/company-veri
 import {
   getAdminCompanyProfileReviewQueues,
 } from "@/server/dal/companies";
+import { deleteCompany } from "@/features/companies/actions";
 import { requirePlatformRole } from "@/server/dal/user";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
+import { DeleteCompanyButton } from "./delete-company-button";
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
@@ -35,6 +37,11 @@ export default async function CompanyProfileReviewPage({
     getTranslations("AdminPackages"),
   ]);
   const { submissions, verifications } = queues;
+
+  async function deleteCompanyAction(formData: FormData) {
+    "use server";
+    await deleteCompany(null, formData);
+  }
 
   return (
     <main className="company-review-page page-container">
@@ -197,6 +204,48 @@ export default async function CompanyProfileReviewPage({
           ))}
         </div>
       )}
+
+      <section className="company-deletion-section">
+        <header className="company-deletion-heading">
+          <p className="eyebrow">
+            <span className="eyebrow-rule" />
+            {copy("deletionEyebrow")}
+          </p>
+          <h2>{copy("deletionTitle")}</h2>
+          <p>{copy("deletionDescription")}</p>
+        </header>
+        <div className="company-deletion-table">
+          <table>
+            <thead>
+              <tr>
+                <th>{copy("company")}</th>
+                <th>{copy("slug")}</th>
+                <th>{copy("verificationStatus")}</th>
+                <th>{copy("actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {verifications.map((company) => (
+                <tr key={company.id}>
+                  <td>{company.name}</td>
+                  <td>{company.slug}</td>
+                  <td>
+                    <span data-status={company.verification_status}>
+                      {company.verification_status}
+                    </span>
+                  </td>
+                  <td>
+                  <form action={deleteCompanyAction}>
+                    <input name="companyId" type="hidden" value={company.id} />
+                    <DeleteCompanyButton companyName={company.name} />
+                  </form>
+                </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </main>
   );
 }

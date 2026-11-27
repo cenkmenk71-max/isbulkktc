@@ -30,6 +30,7 @@ import {
   renderCompanyProfileVerifiedAdminEmail,
 } from "./company-profile-verified-render";
 import { renderJobPublishedAdminEmail } from "./job-published-admin-render";
+import { renderJobMatchAlert } from "./job-match-alert-render";
 import { renderPackageActivationEmail } from "./package-activation-render";
 import { buildEmailHeaders, type EmailHeaders } from "./email-headers";
 import { EMAIL_HEALTH_EVENT, reportDeliveryFailure } from "./delivery-health";
@@ -565,4 +566,31 @@ export async function sendCompanyProfileVerifiedEmails(input: {
   } catch (mailError) {
     console.error("Company profile verified admin email failed.", { error: mailError });
   }
+}
+
+/**
+ * Job match alert. Promotional-adjacent: it carries the one-click unsubscribe
+ * header so recipients can opt out. Returns whether Resend accepted the
+ * message, so a worker can count a rejection as a failure.
+ */
+export async function sendJobMatchAlert(input: {
+  to: string;
+  locale: string | null | undefined;
+  name?: string | null;
+  jobs: { title: string; company: string; url: string }[];
+  jobsUrl: string;
+  unsubscribeUrl: string;
+}): Promise<boolean> {
+  const locale = resolveEmailLocale(input.locale);
+  const email = renderJobMatchAlert({
+    locale,
+    name: input.name,
+    jobs: input.jobs,
+    jobsUrl: input.jobsUrl,
+    siteUrl: localeUrl(locale, "/"),
+    unsubscribeUrl: input.unsubscribeUrl,
+  });
+  return deliver(email, input.to, `job-match/${input.jobs.length}`, {
+    unsubscribeUrl: input.unsubscribeUrl,
+  });
 }

@@ -16,7 +16,7 @@ begin;
 -- function that forgets to revoke `anon`/`authenticated` fails CI instead of
 -- shipping.
 
-select plan(17);
+select plan(27);
 
 -- ---------------------------------------------------------------------------
 -- The two engagement RPCs are service-role-only.
@@ -180,6 +180,102 @@ select ok(
 );
 
 -- ---------------------------------------------------------------------------
+-- New v4 functions: admin_delete_company and admin_list_talent_pool_for_company
+-- are authenticated-callable (internally gated on platform_admin).
+-- claim_job_match_email_outbox and finish_job_match_email are service-role-only.
+-- ---------------------------------------------------------------------------
+
+select ok(
+  has_function_privilege(
+    'authenticated',
+    'public.admin_delete_company(uuid)',
+    'EXECUTE'
+  ),
+  'authenticated sessions can execute admin_delete_company (gated internally)'
+);
+
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.admin_delete_company(uuid)',
+    'EXECUTE'
+  ),
+  'anonymous visitors cannot execute admin_delete_company'
+);
+
+select ok(
+  has_function_privilege(
+    'authenticated',
+    'public.admin_list_talent_pool_for_company(uuid)',
+    'EXECUTE'
+  ),
+  'authenticated sessions can execute admin_list_talent_pool_for_company'
+);
+
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.admin_list_talent_pool_for_company(uuid)',
+    'EXECUTE'
+  ),
+  'anonymous visitors cannot execute admin_list_talent_pool_for_company'
+);
+
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.claim_job_match_email_outbox(integer)',
+    'EXECUTE'
+  ),
+  'anonymous visitors cannot claim job match email outbox'
+);
+
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.claim_job_match_email_outbox(integer)',
+    'EXECUTE'
+  ),
+  'signed-in clients cannot claim job match email outbox'
+);
+
+select ok(
+  has_function_privilege(
+    'service_role',
+    'public.claim_job_match_email_outbox(integer)',
+    'EXECUTE'
+  ),
+  'the job match email worker can claim the outbox'
+);
+
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.finish_job_match_email(uuid, text, text)',
+    'EXECUTE'
+  ),
+  'anonymous visitors cannot finish job match email'
+);
+
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.finish_job_match_email(uuid, text, text)',
+    'EXECUTE'
+  ),
+  'signed-in clients cannot finish job match email'
+);
+
+select ok(
+  has_function_privilege(
+    'service_role',
+    'public.finish_job_match_email(uuid, text, text)',
+    'EXECUTE'
+  ),
+  'the job match email worker can finish job match email'
+);
+
+-- ---------------------------------------------------------------------------
 -- Ratchet: every client-executable function in `public` must be reviewed.
 -- ---------------------------------------------------------------------------
 
@@ -215,6 +311,7 @@ select is(
     'adjust_credit_balance(_company_id uuid, _quantity_delta integer, _entry_type credit_entry_type, _idempotency_key text, _reason text, _actor_id uuid)',
     'admin_assign_company_job_package(_company_id uuid, _package_id uuid, _expires_at timestamp with time zone)',
     'admin_confirm_payment(_confirmation_id uuid)',
+    'admin_delete_company(_company_id uuid)',
     'admin_delete_directory_company(_directory_entry_id text)',
     'admin_delete_faq_entry(_id uuid)',
     'admin_list_company_verifications()',
@@ -223,6 +320,7 @@ select is(
     'admin_list_listing_plans()',
     'admin_list_site_content()',
     'admin_list_support_threads()',
+    'admin_list_talent_pool_for_company(_company_id uuid)',
     'admin_list_verified_companies()',
     'admin_reconcile_payment(_order_id uuid, _submission_id uuid, _decision reconciliation_decision, _bank_reference_normalized text, _notes text, _reviewed_by uuid)',
     'admin_reply_support_thread(_thread_id uuid, _body text)',
@@ -241,6 +339,7 @@ select is(
     'create_resume(_candidate_id uuid, _storage_path text, _original_filename text, _file_size_bytes bigint, _mime_type text, _page_count integer)',
     'finalize_company_profile(_company_id uuid, _company_name text, _profile_description text, _categories text[], _website text, _phone text, _public_email text, _address text, _municipality text, _directory_entry_id text, _directory_location_index integer)',
     'get_application_contact_email(_application_id uuid)',
+    'get_candidate_contact(_user_id uuid)',
     'get_company_application_detail(_application_id uuid)',
     'get_company_credit_ledger(_company_id uuid, _limit integer, _offset integer)',
     'get_company_job_entitlements(_company_id uuid)',

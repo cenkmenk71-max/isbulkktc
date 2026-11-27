@@ -90,6 +90,14 @@ export type EmailCopy = {
     legal: string;
     rights: string;
   };
+  jobMatch: {
+    subject: string;
+    lead: string;
+    companyHeading: string;
+    matchScoreHeading: string;
+    matchScoreLabel: string;
+    cta: string;
+  };
 };
 
 const tr: EmailCopy = {
@@ -193,6 +201,14 @@ const tr: EmailCopy = {
       "Bu e-posta İşBul KKTC platformu üzerinden güvenli bir şekilde gönderilmiştir.",
     rights: "Tüm hakları saklıdır.",
   },
+  jobMatch: {
+    subject: "Profilinize uygun yeni ilanlar",
+    lead: "Yayınlanan ilanlardan profilinize uygun olanları derledik.",
+    companyHeading: "{company}",
+    matchScoreHeading: "Eşleşme skoru",
+    matchScoreLabel: "%{score} eşleşme",
+    cta: "İlanları görüntüle",
+  },
 };
 
 const en: EmailCopy = {
@@ -295,6 +311,14 @@ const en: EmailCopy = {
     legal: "This email was sent securely through the İşBul KKTC platform.",
     rights: "All rights reserved.",
   },
+  jobMatch: {
+    subject: "New jobs matching your profile",
+    lead: "We gathered newly published listings that match your profile.",
+    companyHeading: "{company}",
+    matchScoreHeading: "Match score",
+    matchScoreLabel: "%{score}% match",
+    cta: "View jobs",
+  },
 };
 
 const ru: EmailCopy = {
@@ -396,6 +420,14 @@ const ru: EmailCopy = {
       "Вы получили это письмо из-за действия в вашем аккаунте İşBul KKTC.",
     legal: "Это письмо отправлено безопасно через платформу İşBul KKTC.",
     rights: "Все права защищены.",
+  },
+  jobMatch: {
+    subject: "Новые вакансии, подходящие вашему профилю",
+    lead: "Мы собрали опубликованные вакансии, соответствующие вашему профилю.",
+    companyHeading: "{company}",
+    matchScoreHeading: "Оценка соответствия",
+    matchScoreLabel: "%{score}% совпадение",
+    cta: "Посмотреть вакансии",
   },
 };
 
@@ -501,6 +533,14 @@ const el: EmailCopy = {
     legal: "Αυτό το email στάλθηκε με ασφάλεια μέσω της πλατφόρμας İşBul KKTC.",
     rights: "Με επιφύλαξη παντός δικαιώματος.",
   },
+  jobMatch: {
+    subject: "Νέες θέσεις που ταιριάζουν στο προφίλ σας",
+    lead: "Συγκεντρώσαμε νέες δημοσιευμένες θέσεις που ταιριάζουν στο προφίλ σας.",
+    companyHeading: "{company}",
+    matchScoreHeading: "Βαθμολογία ταιριάσματος",
+    matchScoreLabel: "%{score}% ταιριάζει",
+    cta: "Προβολή θέσεων",
+  },
 };
 
 const fa: EmailCopy = {
@@ -602,6 +642,14 @@ const fa: EmailCopy = {
       "این ایمیل به دلیل فعالیتی در حساب İşBul KKTC شما ارسال شد.",
     legal: "این ایمیل به‌صورت امن از طریق پلتفرم İşBul KKTC ارسال شده است.",
     rights: "تمامی حقوق محفوظ است.",
+  },
+  jobMatch: {
+    subject: "موقعیت‌های جدید متناسب با پروفایل شما",
+    lead: "آگهی‌های منتشر‌شده جدیدی متناسب با پروفایل شما جمع‌آوری کردیم.",
+    companyHeading: "{company}",
+    matchScoreHeading: "نمره تطابق",
+    matchScoreLabel: "%{score}% تطابق",
+    cta: "مشاهده موقعیت‌ها",
   },
 };
 
@@ -706,6 +754,14 @@ const de: EmailCopy = {
       "Sie erhalten diese E-Mail aufgrund einer Aktivität in Ihrem İşBul KKTC-Konto.",
     legal: "Diese E-Mail wurde sicher über die İşBul KKTC-Plattform versendet.",
     rights: "Alle Rechte vorbehalten.",
+  },
+  jobMatch: {
+    subject: "Neue Stellen, die zu Ihrem Profil passen",
+    lead: "Wir haben neu veröffentlichte Anzeigen gesammelt, die zu Ihrem Profil passen.",
+    companyHeading: "{company}",
+    matchScoreHeading: "Übereinstimmungswert",
+    matchScoreLabel: "%{score}% Übereinstimmung",
+    cta: "Stellen ansehen",
   },
 };
 

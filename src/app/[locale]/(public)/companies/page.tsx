@@ -9,7 +9,7 @@ import { CompanyDirectory } from "@/features/companies/company-directory";
 import { withCompanyLogos } from "@/features/companies/company-logos";
 import { companyDirectory } from "@/features/companies/directory-data";
 import { applyCompanyDirectoryOverrides, deduplicateCompanyDirectory } from "@/features/companies/directory";
-import { getPublicCompanyDirectoryOverrides } from "@/server/dal/companies";
+import { getAllVerifiedCompanies, getPublicCompanyDirectoryOverrides } from "@/server/dal/companies";
 import { getManagedDirectoryEntries } from "@/server/dal/content";
 import {
   PublicJobDataUnavailableError,
@@ -54,22 +54,44 @@ export default async function CompaniesPage({ params }: CompaniesPageProps) {
 
   setRequestLocale(locale);
   await connection();
-  const [t, overrides, jobCompaniesResult, managedDirectory] = await Promise.all([
-    getTranslations("CompanyDirectory"),
-    getPublicCompanyDirectoryOverrides(),
-    getPublicJobCompanies()
-      .then((companies) => ({ status: "available" as const, companies }))
-      .catch((error: unknown) => {
-        if (!(error instanceof PublicJobDataUnavailableError)) throw error;
-        return { status: "unavailable" as const, companies: [] };
-      }),
-    getManagedDirectoryEntries(),
-  ]);
+  const [t, overrides, jobCompaniesResult, managedDirectory, verifiedCompanies] =
+    await Promise.all([
+      getTranslations("CompanyDirectory"),
+      getPublicCompanyDirectoryOverrides(),
+      getPublicJobCompanies()
+        .then((companies) => ({ status: "available" as const, companies }))
+        .catch((error: unknown) => {
+          if (!(error instanceof PublicJobDataUnavailableError)) throw error;
+          return { status: "unavailable" as const, companies: [] };
+        }),
+      getManagedDirectoryEntries(),
+      getAllVerifiedCompanies(),
+    ]);
   const jobCompanies = jobCompaniesResult.companies;
   const jobCompaniesUnavailable = jobCompaniesResult.status === "unavailable";
+
+  // Convert verified companies from the DB into directory entries so every
+  // verified company appears in /[locale]/companies even without a job listing.
+  const verifiedDirectoryEntries = verifiedCompanies.map((company) => ({
+    id: company.id,
+    name: company.name,
+    categories: company.categories ?? [],
+    locations: [
+      {
+        address: company.address ?? null,
+        municipality: company.municipality ?? null,
+        phone: company.phone ?? null,
+        website: company.website ?? null,
+        email: company.public_email ?? null,
+      },
+    ],
+    description: company.profile_description ?? null,
+    logo: company.logo_url ?? null,
+  }));
+
   // The managed directory already carries its logos; the bundled bundle is only
   // merged with the logo manifest on the fallback path.
-  const publishedCompanies = managedDirectory
+  const baseDirectory = managedDirectory
     ? deduplicateCompanyDirectory(
         applyCompanyDirectoryOverrides(managedDirectory, overrides),
       )
@@ -78,6 +100,12 @@ export default async function CompaniesPage({ params }: CompaniesPageProps) {
           applyCompanyDirectoryOverrides(companyDirectory, overrides),
         ),
       );
+
+  // Merge verified companies into the directory (deduplication handles overlaps).
+  const publishedCompanies = deduplicateCompanyDirectory([
+    ...baseDirectory,
+    ...verifiedDirectoryEntries,
+  ]);
 
   // The directory index names its own section with the nav's employer label,
   // so the structured data agrees with the visible navigation.

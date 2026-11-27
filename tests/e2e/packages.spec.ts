@@ -4,37 +4,37 @@ const locales = [
   {
     path: "/tr/packages",
     locale: "tr",
-    title: "İşe alım hakları, açık ve anlaşılır.",
+    title: "Firmanız için en uygun ilan paketini seçin.",
     removedCatalog: "İlan yayınlama hakları",
   },
   {
     path: "/en/packages",
     locale: "en",
-    title: "Hiring rights, clearly defined.",
+    title: "Choose the right job package for your company.",
     removedCatalog: "Job posting rights",
   },
   {
     path: "/ru/packages",
     locale: "ru",
-    title: "Права на найм — чётко и прозрачно.",
+    title: "Выберите подходящий пакет вакансий для вашей компании.",
     removedCatalog: "Права на публикацию вакансий",
   },
   {
     path: "/el/packages",
     locale: "el",
-    title: "Σαφή δικαιώματα για τις προσλήψεις σας.",
+    title: "Επιλέξτε το κατάλληλο πακέτο αγγελιών για την εταιρεία σας.",
     removedCatalog: "Δικαιώματα δημοσίευσης θέσεων",
   },
   {
     path: "/fa/packages",
     locale: "fa",
-    title: "حقوق استخدام، روشن و مشخص.",
+    title: "بسته آگهی شغلی مناسب برای شرکت خود انتخاب کنید.",
     removedCatalog: "حقوق انتشار آگهی شغلی",
   },
   {
     path: "/de/packages",
     locale: "de",
-    title: "Klare Rechte für Ihre Personalsuche.",
+    title: "Wählen Sie das passende Stellenanzeigen-Paket für Ihr Unternehmen.",
     removedCatalog: "Rechte für Stellenanzeigen",
   },
 ];

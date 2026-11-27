@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { BriefcaseBusiness, ChevronLeft, ChevronRight, MapPin, Search } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { PendingGetForm } from "@/components/forms/pending-get-form";
@@ -10,6 +10,11 @@ import { buildPublicJobSearchHref } from "@/features/jobs/search-href";
 type JobPreview = {
   title: string;
   companyName: string;
+  slug: string;
+  summary: string | null;
+  jobType: string;
+  workplaceMode: string | null;
+  district: string | null;
 };
 
 type SearchResults = {
@@ -39,6 +44,7 @@ const districtKeys = {
   Lefke: "lefke",
 } as const;
 
+type DistrictKey = keyof typeof districtKeys;
 const jobTypes = [
   "full_time",
   "part_time",
@@ -157,15 +163,37 @@ export async function HomeJobSearch({
               </p>
             </div>
 
-            {results.previews.length > 0 ? (
-              <ul className="home-job-preview-list">
-                {results.previews.map((preview, index) => (
-                  <li className="home-job-preview" key={`${preview.companyName}-${preview.title}-${index}`}>
-                    <h4>{preview.title}</h4>
-                    <p>{preview.companyName}</p>
-                  </li>
-                ))}
-              </ul>
+{results.previews.length > 0 ? (
+                <ul className="home-job-preview-list">
+                  {results.previews.map((preview, index) => (
+                    <li className="home-job-preview" key={`${preview.companyName}-${preview.title}-${index}`}>
+                      <Link href={`/jobs/${preview.slug}`} className="home-job-preview-link">
+                        <h4>{preview.title}</h4>
+                        <p className="home-job-preview-company">{preview.companyName}</p>
+                        {preview.summary ? (
+                          <p className="home-job-preview-summary">{preview.summary}</p>
+                        ) : null}
+                        <div className="home-job-preview-facts">
+                          {preview.district ? (
+                            <span>
+                              <MapPin size={14} aria-hidden="true" />
+                              {copy(`districts.${districtKeys[preview.district as DistrictKey]}`)}
+                            </span>
+                          ) : null}
+                          <span>
+                            <BriefcaseBusiness size={14} aria-hidden="true" />
+                            {copy(`jobTypes.${preview.jobType as "full_time" | "part_time" | "contract" | "temporary" | "internship" | "freelance"}`)}
+                          </span>
+                          {preview.workplaceMode ? (
+                            <span>
+                              {copy(`workplaceModes.${preview.workplaceMode as "on_site" | "hybrid" | "remote"}`)}
+                            </span>
+                          ) : null}
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
             ) : (
               <div className="home-job-search-empty">
                 <h4>{copy("emptyTitle")}</h4>

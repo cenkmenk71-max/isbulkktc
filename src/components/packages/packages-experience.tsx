@@ -13,6 +13,7 @@ import {
 } from "@/lib/social-links";
 import { WhatsAppButton } from "@/components/packages/whatsapp-button";
 import { EmailButton } from "@/components/packages/email-button";
+import { CompanySetupCelebration } from "@/components/packages/company-setup-celebration";
 import type { ListingDuration } from "@/experience/scenes/vend-pricing/lib/plans";
 
 const packageTiers = [
@@ -72,10 +73,14 @@ export async function PackagesExperience({
   locale,
   planPriceOverrides,
   companySetup,
+  _companyName,
+  _userEmail,
 }: {
   locale: AppLocale;
   planPriceOverrides?: PlanPriceOverrides;
   companySetup?: string;
+  _companyName?: string | null;
+  _userEmail?: string | null;
 }) {
   const copy = await getTranslations({ locale, namespace: "PackagesPage" });
   const leadCopy = await getTranslations({ locale, namespace: "SalesLeadForm" });
@@ -109,24 +114,7 @@ export async function PackagesExperience({
 
   return (
     <div className="packages-page">
-      {showSuccessBanner && (
-        <div className="company-setup-success" role="status" aria-live="polite">
-          <div className="page-container">
-            <div className="company-setup-success-content">
-              <svg className="company-setup-success-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <div>
-                {/* @ts-expect-error - key added to message catalog but types not regenerated */}
-                <p className="company-setup-success-title">{copy("companySetupSuccess.title")}</p>
-                {/* @ts-expect-error - key added to message catalog but types not regenerated */}
-                <p className="company-setup-success-description">{copy("companySetupSuccess.description")}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {showSuccessBanner && <CompanySetupCelebration />}
 
       <section className="packages-hero" aria-labelledby="packages-title">
         <Image

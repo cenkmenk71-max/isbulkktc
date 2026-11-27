@@ -49,6 +49,14 @@ function listHtml(items: string[]): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0;">${rows}</table>`;
 }
 
+function absoluteUrl(siteUrl: string, path: string): string {
+  try {
+    return new URL(path, siteUrl.endsWith("/") ? siteUrl : `${siteUrl}/`).toString();
+  } catch {
+    return path;
+  }
+}
+
 export type CompanyProfileVerifiedEmployerInput = SiteContext & {
   companyName: string;
   categories?: string | null;
@@ -98,7 +106,7 @@ export function renderCompanyProfileVerifiedEmployerEmail(
         html: listHtml(copy.employerNextSteps),
       },
     ],
-    button: { label: copy.employerCta, url: input.actionUrl },
+    button: { label: copy.employerCta, url: absoluteUrl(input.siteUrl, input.actionUrl) },
     footerNote: base.footer.reason,
     siteUrl: input.siteUrl,
   };
@@ -134,7 +142,7 @@ export function renderCompanyProfileVerifiedAdminEmail(
         html: `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">${detailRow(copy.adminCompanyLabel, input.companyName)}${detailRow(copy.adminCategoriesLabel, input.categories)}${detailRow(copy.adminWebsiteLabel, input.website)}${detailRow(copy.adminContactLabel, contactValue)}${detailRow(copy.adminAddressLabel, input.address)}${detailRow(copy.adminSubmittedByLabel, input.submittedBy)}</table>`,
       },
     ],
-    button: { label: copy.adminReviewLinkText, url: input.actionUrl },
+    button: { label: copy.adminReviewLinkText, url: absoluteUrl(input.siteUrl, input.actionUrl) },
     footerNote: base.footer.reason,
     siteUrl: input.siteUrl,
   };

@@ -1,8 +1,17 @@
 {
   "_comment": "Hardcoded hex values outside the @theme block. This is a ratchet: the list may shrink but must never grow. Move values into @theme tokens instead of adding entries here.",
-  "count": 50,
+  "count": 59,
   "lines": [
+    "#164d70 100%",
+    "#1a5d85 0%,",
+    "#1a5d85 100%",
     "#1d5d46 0%,",
+    "#1d5d46 100%",
+    "#1e6f9f 0%,",
+    "#1e6f9f 50%,",
+    "#236746 0%,",
+    "#236746 50%,",
+    "#2589c7 50%,",
     "#264e3e 0%,",
     "#2c7a5c 100%",
     "#377d64 100%",

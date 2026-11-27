@@ -321,3 +321,35 @@ export async function reviewCompanyVerification(
   revalidatePath(`${getLocalePrefix(user.locale)}/companies`);
   return { status: "success", message: result.data.decision };
 }
+
+export async function deleteCompany(
+  _previousState: { status: string; message: string } | null,
+  formData: FormData,
+): Promise<{ status: string; message: string }> {
+  const user = await getCurrentUser();
+  if (!user || user.status !== "active") {
+    return { status: "error", message: "unauthorized" };
+  }
+
+  const companyId = formData.get("companyId");
+  if (typeof companyId !== "string") {
+    return { status: "error", message: "invalid" };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("admin_delete_company", {
+    _company_id: companyId,
+  });
+
+  if (error) {
+    if (error.code === "42501") {
+      return { status: "error", message: "unauthorized" };
+    }
+    console.error("Company deletion failed.", { code: error.code });
+    return { status: "error", message: "failed" };
+  }
+
+  revalidatePath(`${getLocalePrefix(user.locale)}/admin/company-profiles`);
+  revalidatePath(`${getLocalePrefix(user.locale)}/companies`);
+  return { status: "success", message: "deleted" };
+}

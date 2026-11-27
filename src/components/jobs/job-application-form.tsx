@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { applyToJob } from "@/features/jobs/actions";
 import { Link } from "@/i18n/navigation";
@@ -10,11 +11,16 @@ const initialState = { status: "idle", message: "idle" } as const;
 
 export function JobApplicationForm({
   jobId,
+  slug,
   contact,
 }: {
   jobId: string;
+  slug: string;
   contact: { email: string | null; emailConfirmed: boolean } | null;
 }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const locale = searchParams.get("locale") ?? pathname.split("/")[1];
   const t = useTranslations("JobApplication");
   const [state, action, pending] = useActionState(applyToJob, initialState);
 
@@ -27,6 +33,30 @@ export function JobApplicationForm({
 
   useTrackConversionOnSuccess(state.status, "apply_to_job", { job_id: jobId });
 
+  const nextPath = `/${locale}/jobs/${slug}`;
+  const signInHref = `/${locale}/sign-in?next=${encodeURIComponent(nextPath)}`;
+  const signUpHref = `/${locale}/sign-up?next=${encodeURIComponent(nextPath)}`;
+
+  // Unauthenticated visitor: show high-conversion CTA card instead of form
+  if (!contact) {
+    return (
+      <section className="job-application-card job-application-card--cta" aria-labelledby="job-application-cta-title">
+        <h2 id="job-application-cta-title">{t("ctaTitle")}</h2>
+        <p>{t("ctaDescription")}</p>
+        <div className="job-application-cta-actions">
+          <Link className="button button-primary" href={signInHref}>
+            {t("ctaSignIn")}
+          </Link>
+          <Link className="button button-outline" href={signUpHref}>
+            {t("ctaSignUp")}
+          </Link>
+        </div>
+        <p className="job-application-cta-note">{t("ctaNote")}</p>
+      </section>
+    );
+  }
+
+  // Authenticated user: show the application form
   return (
     <section className="job-application-card" aria-labelledby="job-application-title">
       <h2 id="job-application-title">{t("title")}</h2>
@@ -79,7 +109,7 @@ export function JobApplicationForm({
           {state.message === "unauthorized" ? (
             <>
               {" "}
-              <Link href="/login">{t("loginAction")}</Link>
+              <Link href={signInHref}>{t("loginAction")}</Link>
             </>
           ) : null}
         </p>

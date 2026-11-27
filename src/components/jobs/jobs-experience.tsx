@@ -17,6 +17,7 @@ import type { AppLocale } from "@/i18n/routing";
 import type { searchPublicJobs } from "@/server/dal/jobs";
 
 type JobsResults = Awaited<ReturnType<typeof searchPublicJobs>>;
+type PublicJobListing = JobsResults["jobs"][number];
 type JobType = NonNullable<PublicJobSearchFilters["jobType"]>;
 type WorkplaceMode = NonNullable<PublicJobSearchFilters["workplaceMode"]>;
 
@@ -192,75 +193,77 @@ export async function JobsExperience({
               </p>
             </div>
 
-            {results.jobs.length > 0 ? (
-              <ul className="jobs-list">
-                {results.jobs.map((job) => (
-                  <li className="jobs-list-item" key={job.id}>
-                    <article className="jobs-card" data-reveal>
-                      <div className="jobs-card-topline">
-                        <span className="jobs-card-type">
-                          {searchCopy(getJobTypeMessageKey(job.job_type))}
-                        </span>
-                        {job.published_at ? (
-                          <time dateTime={job.published_at}>
-                            {t("postedOn", {
-                              date: new Intl.DateTimeFormat(locale, {
-                                dateStyle: "medium",
-                              }).format(new Date(job.published_at)),
-                            })}
-                          </time>
-                        ) : null}
-                      </div>
-                      <h3>
-                        <Link href={`/jobs/${job.slug}`}>{job.title}</Link>
-                      </h3>
-                      <div className="jobs-card-company">
-                        <EmployerLogo
-                          companyName={job.company.name}
-                          logoUrl={job.company.logo_url}
-                          className="jobs-card-company-logo"
-                          sizes="54px"
-                        />
-                        <div>
-                          <Link className="jobs-company-link" href="/companies">
-                            {job.company.name}
-                            <ArrowUpRight size={14} aria-hidden="true" />
-                          </Link>
-                          {job.company.categories.length > 0 ? (
-                            <p className="jobs-card-company-category">
-                              {job.company.categories.join(" · ")}
-                            </p>
+{results.jobs.length > 0 ? (
+                <ul className="jobs-list">
+                  {results.jobs.map((job: PublicJobListing) => (
+                    <li className="jobs-list-item" key={job.id}>
+                      <article className="jobs-card" data-reveal>
+                        <div className="jobs-card-topline">
+                          <span className="jobs-card-type">
+                            {searchCopy(getJobTypeMessageKey(job.job_type))}
+                          </span>
+                          {job.published_at ? (
+                            <time dateTime={job.published_at}>
+                              {t("postedOn", {
+                                date: new Intl.DateTimeFormat(locale, {
+                                  dateStyle: "medium",
+                                }).format(new Date(job.published_at)),
+                              })}
+                            </time>
                           ) : null}
                         </div>
-                      </div>
-                      {job.summary ? (
-                        <p className="jobs-card-summary">{job.summary}</p>
-                      ) : null}
-                      <div className="jobs-card-footer">
-                        <div className="jobs-card-tags">
+                        <h3>
+                          <Link href={`/jobs/${job.slug}`}>{job.title}</Link>
+                        </h3>
+                        <div className="jobs-card-company">
+                          <EmployerLogo
+                            companyName={job.company.name}
+                            logoUrl={job.company.logo_url}
+                            className="jobs-card-company-logo"
+                            sizes="54px"
+                          />
+                          <div>
+                            <Link className="jobs-company-link" href="/companies">
+                              {job.company.name}
+                              <ArrowUpRight size={14} aria-hidden="true" />
+                            </Link>
+                            {job.company.categories.length > 0 ? (
+                              <p className="jobs-card-company-category">
+                                {job.company.categories.join(" · ")}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                        {job.summary ? (
+                          <p className="jobs-card-summary">{job.summary}</p>
+                        ) : null}
+                        <div className="jobs-card-facts">
                           {job.district ? (
                             <span>
                               <MapPin size={14} aria-hidden="true" />
                               {searchCopy(getDistrictMessageKey(job.district))}
                             </span>
                           ) : null}
+                          <span>
+                            <BriefcaseBusiness size={14} aria-hidden="true" />
+                            {searchCopy(getJobTypeMessageKey(job.job_type))}
+                          </span>
                           {job.workplace_mode ? (
                             <span>
-                              {searchCopy(
-                                getWorkplaceModeMessageKey(job.workplace_mode),
-                              )}
+                              {searchCopy(getWorkplaceModeMessageKey(job.workplace_mode))}
                             </span>
                           ) : null}
                         </div>
-                        <Link className="jobs-details-link" href={`/jobs/${job.slug}`}>
-                          {t("viewDetails")}
-                          <ArrowUpRight size={15} aria-hidden="true" />
-                        </Link>
-                      </div>
-                    </article>
-                  </li>
-                ))}
-              </ul>
+                        <div className="jobs-card-footer">
+                          <Link className="jobs-details-link" href={`/jobs/${job.slug}`}>
+                            {t("viewDetails")}
+                            <ArrowUpRight size={15} aria-hidden="true" />
+                          </Link>
+                        </div>
+                      </article>
+                    </li>
+                  ))}
+                </ul>
             ) : (
               <div className="jobs-empty-state">
                 <span className="jobs-empty-icon" aria-hidden="true">

@@ -117,7 +117,7 @@ export async function JobDetailExperience({
             </div>
             <aside className="job-detail-aside">
               {job.publication_source === "platform" ? (
-                <JobApplicationForm contact={viewerContact} jobId={job.id} />
+                <JobApplicationForm contact={viewerContact} jobId={job.id} slug={job.slug} />
               ) : null}
               <section className="job-detail-company-card">
                 <span>{t("companyLabel")}</span>
