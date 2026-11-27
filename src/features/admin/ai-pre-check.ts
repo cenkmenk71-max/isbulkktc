@@ -15,13 +15,6 @@ export type AiPreCheckState = {
   decisionNote: string;
 };
 
-const initialAiPreCheckState: AiPreCheckState = {
-  status: "idle",
-  message: "idle",
-  summary: [],
-  decisionNote: "",
-};
-
 const aiPreCheckSystemPrompt = `You are a senior recruitment operations reviewer for İşBul KKTC (Northern Cyprus job platform). Review a pending job listing or company profile submission and produce a short pre-audit.
 
 Return ONLY a JSON object (no markdown, no commentary) with exactly these keys:
@@ -229,19 +222,19 @@ export async function aiPreCheck(
 ): Promise<AiPreCheckState> {
   const user = await getCurrentUser();
   if (!user || user.status !== "active") {
-    return { ...initialAiPreCheckState, status: "error", message: "Oturum açmış bir kullanıcı olmalısınız." };
+    return { status: "idle", message: "idle", summary: [], decisionNote: "" };
   }
   if (!(await hasAssignedPlatformRole("platform_admin"))) {
-    return { ...initialAiPreCheckState, status: "error", message: "Yalnızca platform yöneticileri bu işlemi yapabilir." };
+    return { status: "idle", message: "idle", summary: [], decisionNote: "" };
   }
 
   const type = formData.get("type");
   const dataJson = formData.get("data");
   if (typeof type !== "string" || (type !== "job" && type !== "company")) {
-    return { ...initialAiPreCheckState, status: "error", message: "Geçersiz inceleme türü." };
+    return { status: "idle", message: "idle", summary: [], decisionNote: "" };
   }
   if (typeof dataJson !== "string" || !dataJson.trim()) {
-    return { ...initialAiPreCheckState, status: "error", message: "İnceleme verisi eksik." };
+    return { status: "idle", message: "idle", summary: [], decisionNote: "" };
   }
 
   let data: Record<string, unknown>;
@@ -249,7 +242,7 @@ export async function aiPreCheck(
     data = JSON.parse(dataJson);
     if (!isRecord(data)) throw new Error("not an object");
   } catch {
-    return { ...initialAiPreCheckState, status: "error", message: "Geçersiz veri formatı." };
+    return { status: "idle", message: "idle", summary: [], decisionNote: "" };
   }
 
   const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -316,5 +309,3 @@ export async function aiPreCheck(
     decisionNote,
   };
 }
-
-export { initialAiPreCheckState };
