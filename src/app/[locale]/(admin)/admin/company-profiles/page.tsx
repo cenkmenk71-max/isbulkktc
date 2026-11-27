@@ -39,6 +39,7 @@ export default async function CompanyProfileReviewPage({
   const { submissions, verifications } = queues;
 
   async function deleteCompanyAction(formData: FormData) {
+    "use server";
     await deleteCompany(null, formData);
   }
 
