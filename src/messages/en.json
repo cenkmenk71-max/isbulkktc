@@ -1917,7 +1917,11 @@
       "outreachLink": "Outreach Email",
       "idle": "",
       "pageCount": "Listings on this page",
-      "viewDetails": "View full listing details"
+      "viewDetails": "View full listing details",
+      "aiPreCheck": "AI Pre-check",
+      "aiChecking": "Checking…",
+      "aiPreCheckResult": "Pre-check Result",
+      "aiDecisionNote": "Decision note"
     }
   },
   "TalentPool": {
