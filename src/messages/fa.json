@@ -1917,7 +1917,11 @@
       "outreachLink": "ایمیل جذب",
       "idle": "",
       "pageCount": "آگهی‌های این صفحه",
-      "viewDetails": "نمایش جزئیات کامل آگهی"
+      "viewDetails": "نمایش جزئیات کامل آگهی",
+      "aiPreCheck": "پیش‌بررسی هو مصنوعی",
+      "aiChecking": "در حال بررسی…",
+      "aiPreCheckResult": "نتیجه پیش‌بررسی",
+      "aiDecisionNote": "یادداشت تصمیم"
     }
   },
   "TalentPool": {

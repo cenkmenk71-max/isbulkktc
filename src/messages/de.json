@@ -1917,7 +1917,11 @@
       "outreachLink": "Akquise-E-Mail",
       "idle": "",
       "pageCount": "Anzeigen auf dieser Seite",
-      "viewDetails": "Alle Anzeigendetails anzeigen"
+      "viewDetails": "Alle Anzeigendetails anzeigen",
+      "aiPreCheck": "KI-Vorprüfung",
+      "aiChecking": "Wird geprüft…",
+      "aiPreCheckResult": "Ergebnis der KI-Vorprüfung",
+      "aiDecisionNote": "Entscheidungsnotiz"
     }
   },
   "TalentPool": {

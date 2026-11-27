@@ -1917,7 +1917,11 @@
       "outreachLink": "Tanıtım Maili",
       "idle": "",
       "pageCount": "Bu sayfadaki ilanlar",
-      "viewDetails": "İlan ayrıntılarını görüntüle"
+      "viewDetails": "İlan ayrıntılarını görüntüle",
+      "aiPreCheck": "AI Ön Kontrol",
+      "aiChecking": "Kontrol ediliyor…",
+      "aiPreCheckResult": "Ön İnceleme Sonucu",
+      "aiDecisionNote": "Karar notu"
     }
   },
   "TalentPool": {
