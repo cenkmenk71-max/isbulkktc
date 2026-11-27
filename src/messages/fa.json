@@ -140,7 +140,9 @@
         "unauthorized": "نشست مدیر تأیید نشد. دوباره وارد شوید و تلاش کنید.",
         "setupFailed": "شروع MFA انجام نشد. کمی بعد دوباره تلاش کنید.",
         "invalidCode": "کد نادرست یا منقضی شده است. آخرین کد برنامه را وارد کنید.",
-        "verifyFailed": "تأیید MFA ناموفق بود. دوباره تلاش کنید."
+        "verifyFailed": "تأیید MFA ناموفق بود. دوباره تلاش کنید.",
+        "challengeExpired": "اتصال قطع شد. لطفاً کد شش رقمی فعلی را از برنامه تایید هویت وارد کنید.",
+        "ipMismatch": "اتصال قطع شد. لطفاً کد شش رقمی فعلی را از برنامه تایید هویت وارد کنید."
       }
     }
   },
@@ -302,7 +304,8 @@
     "summaryInvalid": "نامعتبر: {count, number}",
     "summaryErrors": "خطا: {count, number}",
     "removeRecipient": "حذف گیرنده: {email}",
-    "actionsTitle": "عملیات"
+    "actionsTitle": "عملیات",
+    "dismissToast": "بستن"
   },
   "AdminTalentPool": {
     "eyebrow": "حوزه استعدادها",
@@ -1946,7 +1949,22 @@
     "candidateEmail": "ایمیل",
     "title": "استخر talents",
     "description": "کاندیدای متناسب با استخدام را ببینید.",
-    "empty": "هنوز رکوردی از کاندیدا وجود ندارد."
+    "empty": "هنوز رکوردی از کاندیدا وجود ندارد.",
+    "actions": "عملیات",
+    "addedAt": "تاریخ افزودن",
+    "aiConvertButton": "تولید JSON از متن خام / CSV با هو مصنوعی",
+    "aiConvertDescription": "متن خام، خطوط CSV یا خلاصه‌های رزومه را در Zusammenarbeit با هو مصنوعی در یک JSON ساختاریافته با full_name, email, phone, headline, location, skills, summary تبدیل کنید.",
+    "aiConvertPlaceholder": "کاندیداها را به صورت خط به خط یا CSV paste کنید (مثلاً: Ayşe Demir, ayse@example.com, +90 539 111 22 33, Software Engineer, Lefkoşa, React, TypeScript; Summary…)",
+    "aiConvertTitle": "تولید JSON از متن خام / CSV با هو مصنوعی",
+    "aiConvertedJson": "JSON تولید شده",
+    "aiConverting": "در حال تبدیل…",
+    "aiImportButton": "افزودن به استخر",
+    "aiImporting": "در حال افزودن…",
+    "confirmDeleteEntry": "آیا مطمئن هستید که می‌خواهید این رکورد کاندیدا را حذف کنید؟ این عملیات غیرقابل بازگشت است.",
+    "deleteEntry": "حذف رکورد {name}",
+    "entriesTitle": "رکوردهای استخر",
+    "entryDeleted": "رکورد کاندیدا حذف شد.",
+    "headline": "عنوان"
   },
   "AdminConsole": {
     "ariaLabel": "ناوبری کنسول مدیریت",

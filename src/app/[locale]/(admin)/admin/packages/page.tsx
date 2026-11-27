@@ -1,6 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { PackageCheck, ShieldCheck } from "lucide-react";
+import { PackageCheck } from "lucide-react";
 import { AdminMfaGate } from "@/features/identity/admin-mfa-gate";
 import {
   CompanyPackageAssignmentForm,
@@ -9,7 +9,6 @@ import {
 } from "@/features/jobs/admin-package-forms";
 import { getAdminPackageConsoleData } from "@/server/dal/admin-packages";
 import { getPlatformAdminMfaStatus } from "@/server/dal/user";
-import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
 import { AdminConsoleNav } from "@/components/admin/admin-console-nav";
@@ -32,11 +31,7 @@ export default async function AdminPackagesPage({
 
   setRequestLocale(locale);
   const mfa = await getPlatformAdminMfaStatus();
-  const [copy, contentCopy, jobCopy] = await Promise.all([
-    getTranslations("AdminPackages"),
-    getTranslations("AdminContent"),
-    getTranslations("JobManagement.admin"),
-  ]);
+  const [copy] = await Promise.all([getTranslations("AdminPackages")]);
 
   if (!mfa.aal2) {
     return (
@@ -59,15 +54,6 @@ export default async function AdminPackagesPage({
         </p>
         <h1>{copy("title")}</h1>
         <p>{copy("description")}</p>
-        <div className="admin-packages-links">
-          <span><ShieldCheck size={15} aria-hidden="true" />{copy("mfaVerified")}</span>
-          <Link href="/admin/packages">{copy("catalogTitle")}</Link>
-          <Link href="/admin/payments/pending">{copy("pendingPaymentsLink")}</Link>
-          <Link href="/admin/company-profiles">{copy("companyReviews")}</Link>
-          <Link href="/admin/jobs">{jobCopy("title")}</Link>
-          <Link href="/admin/content">{contentCopy("title")}</Link>
-          <Link href="/admin/outreach">{copy("outreachLink")}</Link>
-        </div>
       </header>
 
       <section className="admin-packages-section" aria-labelledby="package-console-title">

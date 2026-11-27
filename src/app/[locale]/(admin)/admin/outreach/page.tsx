@@ -1,10 +1,9 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { ShieldCheck, AlertTriangle, CheckCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle } from "lucide-react";
 import { AdminMfaGate } from "@/features/identity/admin-mfa-gate";
 import { OutreachComposer } from "@/features/admin/outreach-composer";
 import { getPlatformAdminMfaStatus } from "@/server/dal/user";
-import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
 import { AdminConsoleNav } from "@/components/admin/admin-console-nav";
@@ -27,12 +26,7 @@ export default async function AdminOutreachPage({
 
   setRequestLocale(locale);
   const mfa = await getPlatformAdminMfaStatus();
-  const [copy, adminPackagesCopy, adminContentCopy, jobCopy] = await Promise.all([
-    getTranslations("AdminOutreach"),
-    getTranslations("AdminPackages"),
-    getTranslations("AdminContent"),
-    getTranslations("JobManagement.admin"),
-  ]);
+  const [copy] = await Promise.all([getTranslations("AdminOutreach")]);
 
   if (!mfa.aal2) {
     return (
@@ -56,16 +50,6 @@ export default async function AdminOutreachPage({
         </p>
         <h1>{copy("title")}</h1>
         <p>{copy("description")}</p>
-        <div className="admin-packages-links">
-          <span>
-            <ShieldCheck size={15} aria-hidden="true" />
-            {copy("mfaVerified")}
-          </span>
-          <Link href="/admin/packages">{adminPackagesCopy("catalogTitle")}</Link>
-          <Link href="/admin/company-profiles">{adminContentCopy("reviewsLink")}</Link>
-          <Link href="/admin/content">{adminContentCopy("title")}</Link>
-          <Link href="/admin/jobs">{jobCopy("title")}</Link>
-        </div>
       </header>
 
       <section className="admin-outreach-status-section" aria-labelledby="resend-status-title">

@@ -140,7 +140,9 @@
         "unauthorized": "Yönetici oturumu doğrulanamadı. Yeniden giriş yapıp deneyin.",
         "setupFailed": "MFA işlemi başlatılamadı. Biraz sonra tekrar deneyin.",
         "invalidCode": "Kod geçersiz veya süresi dolmuş. Uygulamanızdaki en son kodu girin.",
-        "verifyFailed": "MFA doğrulanamadı. Yeniden deneyin."
+        "verifyFailed": "MFA doğrulanamadı. Yeniden deneyin.",
+        "ipMismatch": "Bağlantı yenilendi, lütfen Authenticator uygulamasındaki güncel 6 haneli kodu tekrar girin.",
+        "challengeExpired": "Bağlantı yenilendi, lütfen Authenticator uygulamasındaki güncel 6 haneli kodu tekrar girin."
       }
     }
   },
@@ -302,7 +304,8 @@
     "summaryInvalid": "Geçersiz: {count}",
     "summaryErrors": "Hata: {count}",
     "removeRecipient": "Alıcıyı kaldır: {email}",
-    "actionsTitle": "İşlemler"
+    "actionsTitle": "İşlemler",
+    "dismissToast": "Kapat"
   },
   "AdminTalentPool": {
     "eyebrow": "ADAY HAVUZU",
@@ -1946,7 +1949,22 @@
     "candidateEmail": "E-posta",
     "title": "Aday Havuzu",
     "description": "İşe alım için uygun adayları görüntüleyin.",
-    "empty": "Henüz aday kaydı yok."
+    "empty": "Henüz aday kaydı yok.",
+    "aiConvertTitle": "AI ile Ham Metin / CSV'den JSON Üret",
+    "aiConvertDescription": "Ham metni, CSV satırlarını veya CV özetlerini yapıştırın; AI onları [full_name, email, phone, headline, location, skills, summary] içeren yapılandırılmış JSON'a dönüştürür.",
+    "aiConvertPlaceholder": "Adayları satır satır veya CSV olarak yapıştırın (ör: Ayşe Demir, ayse@example.com, +90 539 111 22 33, Yazılım Mühendisi, Lefkoşa, React, TypeScript; Özet…)",
+    "aiConvertButton": "AI ile JSON Üret",
+    "aiConverting": "Dönüştürülüyor…",
+    "aiConvertedJson": "Oluşturulan JSON",
+    "aiImportButton": "Havuza Ekle",
+    "aiImporting": "Ekleniyor…",
+    "entriesTitle": "Havuz Kayıtları",
+    "headline": "Başlık",
+    "addedAt": "Eklenme Tarihi",
+    "actions": "İşlem",
+    "confirmDeleteEntry": "Bu aday kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+    "deleteEntry": "{name} adlı kaydı sil",
+    "entryDeleted": "Aday kaydı silindi."
   },
   "AdminConsole": {
     "ariaLabel": "Yönetim konsolu navigasyonu",

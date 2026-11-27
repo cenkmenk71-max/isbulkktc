@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Mail, Plus, Trash2, Eye, Send, Loader2, AlertTriangle, CheckCircle, Users, FileText } from "lucide-react";
-import { sendOutreachEmails, getCompaniesWithEmail, getSalesLeadsWithEmail } from "./outreach-actions";
+import { sendOutreachEmails } from "./outreach-actions";
 
 type Recipient = {
   id: string;
@@ -210,9 +210,10 @@ export function OutreachComposer() {
   const [sendResults, setSendResults] = useState<{ results: SendResult[]; summary: SendSummary } | null>(null);
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [existingCompanies, setExistingCompanies] = useState<Array<{ name: string; email: string }>>([]);
-  const [existingLeads, setExistingLeads] = useState<Array<{ name: string | null; email: string }>>([]);
-  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"single" | "bulk">("single");
+  const [toast, setToast] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+
+  const dismissToast = useCallback(() => setToast(null), []);
 
   const validRecipients = useMemo(() => recipients.filter((r) => EMAIL_REGEX.test(r.email)), [recipients]);
   const invalidCount = recipients.length - validRecipients.length;
@@ -265,38 +266,23 @@ export function OutreachComposer() {
     setRecipients((prev) => prev.filter((r) => r.id !== id));
   }, []);
 
-  const loadExistingCompanies = useCallback(async () => {
-    setLoadingExisting(true);
-    try {
-      const [companies, leads] = await Promise.all([getCompaniesWithEmail(), getSalesLeadsWithEmail()]);
-      setExistingCompanies(companies);
-      setExistingLeads(leads);
-    } finally {
-      setLoadingExisting(false);
-    }
-  }, []);
-
-  const addFromExisting = useCallback((items: Array<{ name: string | null; email: string }>) => {
-    const newRecipients: Recipient[] = [];
-    for (const item of items) {
-      const normEmail = item.email.toLowerCase();
-      if (!recipients.some((r) => r.email === normEmail) && !newRecipients.some((r) => r.email === normEmail)) {
-        newRecipients.push({ id: crypto.randomUUID(), companyName: item.name ?? "", email: normEmail, locale: "tr" });
-      }
-    }
-    setRecipients((prev) => [...prev, ...newRecipients]);
-  }, [recipients]);
-
   const handleSendTest = useCallback(async () => {
     const adminEmail = prompt(t("testEmailPrompt"));
     if (!adminEmail || !EMAIL_REGEX.test(adminEmail)) return;
     setTestSending(true);
     setTestResult(null);
+    setToast(null);
     try {
       const res = await sendOutreachEmails({ recipients: [], testMode: true, testEmail: adminEmail });
       setTestResult({ success: res.success, message: res.results[0]?.message ?? (res.success ? t("testSent") : t("testFailed")) });
+      if (res.success) {
+        setToast({ kind: "success", message: t("testSent") });
+      } else {
+        setToast({ kind: "error", message: t("testFailed") });
+      }
     } catch (error) {
       setTestResult({ success: false, message: error instanceof Error ? error.message : t("testError") });
+      setToast({ kind: "error", message: t("testError") });
     } finally {
       setTestSending(false);
     }
@@ -306,14 +292,21 @@ export function OutreachComposer() {
     if (validRecipients.length === 0) return;
     setSending(true);
     setSendResults(null);
+    setToast(null);
     try {
       const res = await sendOutreachEmails({ recipients: validRecipients, testMode: false });
       setSendResults({ results: res.results, summary: res.summary });
+      if (res.success) {
+        setToast({ kind: "success", message: t("sendComplete", { sent: res.summary.sent, total: validRecipients.length }) });
+      } else {
+        setToast({ kind: "error", message: t("sendError") });
+      }
     } catch (error) {
       setSendResults({
         results: validRecipients.map((r) => ({ email: r.email, status: "error" as const, message: error instanceof Error ? error.message : t("sendError") })),
         summary: { sent: 0, skipped: 0, invalid: invalidCount, errors: validRecipients.length },
       });
+      setToast({ kind: "error", message: t("sendError") });
     } finally {
       setSending(false);
     }
@@ -339,6 +332,16 @@ export function OutreachComposer() {
 
   return (
     <div className="admin-outreach-composer">
+      {toast && (
+        <div className={`outreach-toast outreach-toast--${toast.kind}`} role="alert" aria-live="polite">
+          {toast.kind === "success" ? <CheckCircle size={16} aria-hidden="true" /> : <AlertTriangle size={16} aria-hidden="true" />}
+          <span>{toast.message}</span>
+          <button className="outreach-toast-dismiss" onClick={dismissToast} aria-label={t("dismissToast")}>
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+      )}
+
       <div className="composer-grid">
         <section className="composer-panel" aria-labelledby="recipients-title">
           <header className="panel-header">
@@ -352,109 +355,88 @@ export function OutreachComposer() {
           </header>
 
           <div className="input-tabs" role="tablist">
-            <button role="tab" aria-selected={true} className="tab-active">{t("tabSingle")}</button>
-            <button role="tab" aria-selected={false}>{t("tabBulk")}</button>
-            <button role="tab" aria-selected={false} onClick={loadExistingCompanies} disabled={loadingExisting}>
-              {t("tabExisting")} {loadingExisting && <Loader2 size={14} className="spinning" />}
+            <button
+              role="tab"
+              aria-selected={activeTab === "single"}
+              onClick={() => setActiveTab("single")}
+              className={activeTab === "single" ? "tab-active" : ""}
+            >
+              {t("tabSingle")}
+            </button>
+            <button
+              role="tab"
+              aria-selected={activeTab === "bulk"}
+              onClick={() => setActiveTab("bulk")}
+              className={activeTab === "bulk" ? "tab-active" : ""}
+            >
+              {t("tabBulk")}
             </button>
           </div>
 
-          <div className="tab-panel" role="tabpanel">
-            <div className="form-row">
-              <label htmlFor="companyName">{t("companyName")}</label>
-              <input
-                id="companyName"
-                type="text"
-                value={singleForm.companyName}
-                onChange={(e) => setSingleForm((prev) => ({ ...prev, companyName: e.target.value }))}
-                placeholder={t("companyNamePlaceholder")}
-                maxLength={200}
-              />
-            </div>
-            <div className="form-row">
-              <label htmlFor="singleEmail">{t("email")}</label>
-              <input
-                id="singleEmail"
-                type="email"
-                value={singleForm.email}
-                onChange={(e) => setSingleForm((prev) => ({ ...prev, email: e.target.value }))}
-                placeholder={t("emailPlaceholder")}
-              />
-            </div>
-            <div className="form-row">
-              <label htmlFor="singleLocale">{t("locale")}</label>
-              <select
-                id="singleLocale"
-                value={singleForm.locale}
-                onChange={(e) => setSingleForm((prev) => ({ ...prev, locale: e.target.value as "tr" | "en" }))}
+          {activeTab === "single" && (
+            <div className="tab-panel">
+              <div className="form-row">
+                <label htmlFor="companyName">{t("companyName")}</label>
+                <input
+                  id="companyName"
+                  type="text"
+                  value={singleForm.companyName}
+                  onChange={(e) => setSingleForm((prev) => ({ ...prev, companyName: e.target.value }))}
+                  placeholder={t("companyNamePlaceholder")}
+                  maxLength={200}
+                />
+              </div>
+              <div className="form-row">
+                <label htmlFor="singleEmail">{t("email")}</label>
+                <input
+                  id="singleEmail"
+                  type="email"
+                  value={singleForm.email}
+                  onChange={(e) => setSingleForm((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder={t("emailPlaceholder")}
+                />
+              </div>
+              <div className="form-row">
+                <label htmlFor="singleLocale">{t("locale")}</label>
+                <select
+                  id="singleLocale"
+                  value={singleForm.locale}
+                  onChange={(e) => setSingleForm((prev) => ({ ...prev, locale: e.target.value as "tr" | "en" }))}
+                >
+                  <option value="tr">Türkçe</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+              <button
+                className="button button-primary"
+                onClick={addSingleRecipient}
+                disabled={!singleForm.email || !EMAIL_REGEX.test(singleForm.email)}
               >
-                <option value="tr">Türkçe</option>
-                <option value="en">English</option>
-              </select>
+                <Plus size={16} aria-hidden="true" /> {t("addRecipient")}
+              </button>
             </div>
-            <button className="button button-primary" onClick={addSingleRecipient} disabled={!singleForm.email || !EMAIL_REGEX.test(singleForm.email)}>
-              <Plus size={16} aria-hidden="true" /> {t("addRecipient")}
-            </button>
-          </div>
+          )}
 
-          <div className="tab-panel" role="tabpanel" hidden>
-            <label htmlFor="bulkInput" className="visually-hidden">{t("bulkPlaceholder")}</label>
-            <textarea
-              id="bulkInput"
-              value={bulkText}
-              onChange={(e) => setBulkText(e.target.value)}
-              placeholder={t("bulkPlaceholder")}
-              rows={8}
-            />
-            <p className="bulk-hint">{t("bulkHint")}</p>
-            <button className="button button-primary" onClick={() => parseBulkText(bulkText)} disabled={!bulkText.trim()}>
-              <Plus size={16} aria-hidden="true" /> {t("addFromBulk")}
-            </button>
-          </div>
-
-          <div className="tab-panel" role="tabpanel" hidden>
-            {loadingExisting ? (
-              <p className="loading-existing">{t("loadingExisting")}</p>
-            ) : (
-              <>
-                <div className="existing-section">
-                  <h4>{t("existingCompanies")} ({existingCompanies.length})</h4>
-                  {existingCompanies.length === 0 ? (
-                    <p className="empty-existing">{t("noExistingCompanies")}</p>
-                  ) : (
-                    <ul className="existing-list">
-                      {existingCompanies.map((c) => (
-                        <li key={c.email}>
-                          <span>{c.name}</span>
-                          <span className="existing-email">{c.email}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div className="existing-section">
-                  <h4>{t("existingLeads")} ({existingLeads.length})</h4>
-                  {existingLeads.length === 0 ? (
-                    <p className="empty-existing">{t("noExistingLeads")}</p>
-                  ) : (
-                    <ul className="existing-list">
-                      {existingLeads.map((l, i) => (
-                        <li key={`${l.email}-${i}`}>
-                          <span>{l.name ?? t("unnamedLead")}</span>
-                          <span className="existing-email">{l.email}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div className="existing-actions">
-                  <button className="button button-secondary" onClick={() => addFromExisting([...existingCompanies, ...existingLeads])} disabled={existingCompanies.length === 0 && existingLeads.length === 0}>
-                    <Users size={16} aria-hidden="true" /> {t("addAllExisting")}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          {activeTab === "bulk" && (
+            <div className="tab-panel">
+              <label htmlFor="bulkInput" className="visually-hidden">{t("bulkPlaceholder")}</label>
+              <textarea
+                id="bulkInput"
+                value={bulkText}
+                onChange={(e) => setBulkText(e.target.value)}
+                placeholder={t("bulkPlaceholder")}
+                rows={8}
+              />
+              <p className="bulk-hint">{t("bulkHint")}</p>
+              <button
+                className="button button-primary"
+                onClick={() => parseBulkText(bulkText)}
+                disabled={!bulkText.trim()}
+              >
+                <Plus size={16} aria-hidden="true" /> {t("addFromBulk")}
+              </button>
+            </div>
+          )}
 
           {invalidCount > 0 && (
             <div className="validation-warning">

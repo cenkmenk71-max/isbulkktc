@@ -117,7 +117,7 @@ export async function sendOutreachEmails(input: OutreachInput): Promise<Outreach
         to: testEmail,
         locale: "tr",
         unsubscribeUrl,
-        campaignId: `outreach-test/${Date.now()}`,
+        campaignId: `outreach-${Date.now()}-0`,
       });
 
       if (accepted) {
@@ -169,14 +169,15 @@ export async function sendOutreachEmails(input: OutreachInput): Promise<Outreach
 
   const siteUrl = getAppBaseUrl();
 
-  for (const recipient of uniqueRecipients) {
+  for (let index = 0; index < uniqueRecipients.length; index += 1) {
+    const recipient = uniqueRecipients[index];
     const normEmail = normaliseEmail(recipient.email);
 
     if (unsubscribedEmails.has(normEmail)) {
       results.push({
         email: recipient.email,
         status: "unsubscribed_skipped",
-        message: "Recipient has unsubscribed from marketing emails",
+        message: "Alıcı pazarlama e-postalarından abonelikten çıkmış",
       });
       skipped += 1;
       continue;
@@ -187,33 +188,25 @@ export async function sendOutreachEmails(input: OutreachInput): Promise<Outreach
       results.push({
         email: recipient.email,
         status: "error",
-        message: "Could not generate unsubscribe URL",
+        message: "Abonelikten çıkış bağlantısı oluşturulamadı",
       });
       errors += 1;
       continue;
     }
 
-    try {
-      const accepted = await sendMarketingEmail({
-        to: recipient.email,
-        locale: recipient.locale,
-        unsubscribeUrl,
-        campaignId: `outreach/${Date.now()}/${recipient.email}`,
-      });
+    const campaignId = `outreach-${Date.now()}-${index}`;
+    const accepted = await sendMarketingEmail({
+      to: recipient.email,
+      locale: recipient.locale,
+      unsubscribeUrl,
+      campaignId,
+    });
 
-      if (accepted) {
-        results.push({ email: recipient.email, status: "sent", message: "Email sent successfully" });
-        sent += 1;
-      } else {
-        results.push({ email: recipient.email, status: "error", message: "Resend rejected the email" });
-        errors += 1;
-      }
-    } catch (error) {
-      results.push({
-        email: recipient.email,
-        status: "error",
-        message: error instanceof Error ? error.message : "Unknown error",
-      });
+    if (accepted) {
+      results.push({ email: recipient.email, status: "sent", message: "E-posta başarıyla gönderildi" });
+      sent += 1;
+    } else {
+      results.push({ email: recipient.email, status: "error", message: "Resend e-postayı reddetti" });
       errors += 1;
     }
   }

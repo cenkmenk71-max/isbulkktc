@@ -45,7 +45,7 @@ export default async function AdminTalentPoolPage({
   }
 
   const supabase = await createSupabaseServerClient();
-  const [importedResult, memberResult] = await Promise.all([
+  const [importedResult, memberResult, entriesResult] = await Promise.all([
     supabase
       .from("talent_pool_entries")
       .select("id", { head: true, count: "exact" }),
@@ -53,11 +53,27 @@ export default async function AdminTalentPoolPage({
       .from("candidate_profiles")
       .select("id", { head: true, count: "exact" })
       .eq("visibility", "public"),
+    supabase
+      .from("talent_pool_entries")
+      .select("id, full_name, email, phone, headline, location, skills, summary, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100),
   ]);
 
   const importedCandidates = importedResult.count ?? 0;
   const memberCandidates = memberResult.count ?? 0;
   const totalCandidates = importedCandidates + memberCandidates;
+  const entries = (entriesResult.data ?? []) as Array<{
+    id: string;
+    full_name: string;
+    email: string;
+    phone: string | null;
+    headline: string | null;
+    location: string | null;
+    skills: string[];
+    summary: string | null;
+    created_at: string;
+  }>;
 
   return (
     <main className="admin-talent-pool-page page-container">
@@ -67,6 +83,7 @@ export default async function AdminTalentPoolPage({
         totalCandidates={totalCandidates}
         importedCandidates={importedCandidates}
         memberCandidates={memberCandidates}
+        entries={entries}
       />
     </main>
   );

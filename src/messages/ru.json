@@ -140,7 +140,9 @@
         "unauthorized": "Не удалось подтвердить сессию администратора. Войдите снова.",
         "setupFailed": "Не удалось начать настройку MFA. Повторите попытку позже.",
         "invalidCode": "Код неверен или истёк. Введите последний код из приложения.",
-        "verifyFailed": "Не удалось подтвердить MFA. Попробуйте ещё раз."
+        "verifyFailed": "Не удалось подтвердить MFA. Попробуйте ещё раз.",
+        "challengeExpired": "Соединение сброшено. Пожалуйста, введите текущий шестизначный код из приложения-аутентификатора.",
+        "ipMismatch": "Соединение сброшено. Пожалуйста, введите текущий шестизначный код из приложения-аутентификатора."
       }
     }
   },
@@ -302,7 +304,8 @@
     "summaryInvalid": "Некорректно: {count}",
     "summaryErrors": "Ошибок: {count}",
     "removeRecipient": "Удалить получателя: {email}",
-    "actionsTitle": "Действия"
+    "actionsTitle": "Действия",
+    "dismissToast": "Закрыть"
   },
   "AdminTalentPool": {
     "eyebrow": "БАЗА ТАЛАНТОВ",
@@ -1946,7 +1949,22 @@
     "candidateEmail": "Электронная почта",
     "title": "Кадровый резерв",
     "description": "Просмотрите кандидатов, подходящих для найма.",
-    "empty": "Еще нет записей кандидатов."
+    "empty": "Еще нет записей кандидатов.",
+    "actions": "Действия",
+    "addedAt": "Дата добавления",
+    "aiConvertButton": "Сгенерировать JSON через ИИ",
+    "aiConvertDescription": "Вставьте необработанный текст, строки CSV или резюме; ИИ преобразует их в структурированный JSON с полями full_name, email, phone, headline, location, skills, summary.",
+    "aiConvertPlaceholder": "Вставьте кандидатов по строкам или в формате CSV (например: Ayşe Demir, ayse@example.com, +90 539 111 22 33, Software Engineer, Lefkoşa, React, TypeScript; Summary…)",
+    "aiConvertTitle": "Генерация JSON из необработанного текста / CSV через ИИ",
+    "aiConvertedJson": "Сгенерированный JSON",
+    "aiConverting": "Преобразование…",
+    "aiImportButton": "Добавить в резерв",
+    "aiImporting": "Добавление…",
+    "confirmDeleteEntry": "Вы уверены, что хотите удалить эту запись кандидата? Это действие нельзя отменить.",
+    "deleteEntry": "Удалить запись {name}",
+    "entriesTitle": "Записи резерва",
+    "entryDeleted": "Запись кандидата удалена.",
+    "headline": "Заголовок"
   },
   "AdminConsole": {
     "ariaLabel": "Навигация консоли администратора",

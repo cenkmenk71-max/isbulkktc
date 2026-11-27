@@ -9,7 +9,7 @@ import { staleUnverifiedTotpFactorIds } from "./admin-mfa-factors";
 
 export type AdminMfaState = {
   status: "idle" | "error";
-  message: "idle" | "unauthorized" | "setupFailed" | "invalidCode" | "verifyFailed";
+  message: "idle" | "unauthorized" | "setupFailed" | "invalidCode" | "verifyFailed" | "ipMismatch" | "challengeExpired";
   mode?: "enroll" | "challenge";
   factorId?: string;
   challengeId?: string;
@@ -25,7 +25,6 @@ const initialAdminMfaState: AdminMfaState = {
 const verifyAdminMfaSchema = z.object({
   mode: z.enum(["enroll", "challenge"]),
   factorId: z.string().uuid(),
-  challengeId: z.string().uuid(),
   code: z.string().trim().regex(/^\d{6}$/),
 });
 
@@ -134,7 +133,6 @@ export async function verifyAdminMfa(
   const input = verifyAdminMfaSchema.safeParse({
     mode: formData.get("mode"),
     factorId: formData.get("factorId"),
-    challengeId: formData.get("challengeId"),
     code: formData.get("code"),
   });
   if (!input.success) {
@@ -161,13 +159,18 @@ export async function verifyAdminMfa(
     return { ...initialAdminMfaState, status: "error", message: "unauthorized" };
   }
 
-  const { error } = await supabase.auth.mfa.verify({
+  const { error } = await supabase.auth.mfa.challengeAndVerify({
     factorId: input.data.factorId,
-    challengeId: input.data.challengeId,
     code: input.data.code,
   });
   if (error) {
     console.error("Admin MFA verification failed.", { code: error.code });
+    if (
+      error.code === "mfa_ip_address_mismatch" ||
+      error.code === "mfa_challenge_expired"
+    ) {
+      return { ...initialAdminMfaState, status: "error", message: "ipMismatch" };
+    }
     return { ...initialAdminMfaState, status: "error", message: "invalidCode" };
   }
 
