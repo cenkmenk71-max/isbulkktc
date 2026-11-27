@@ -17,6 +17,7 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false)
   const [session, setSession] = useState<HeaderSessionState>({ signedIn: false })
   const menuButtonRef = useRef<HTMLButtonElement | null>(null)
+  const headerRef = useRef<HTMLElement | null>(null)
   const locale = useLocale()
   const pathname = usePathname()
   const navCopy = useTranslations('Nav')
@@ -34,6 +35,20 @@ export function SiteHeader() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open])
+
+  // Mobil menü açıkken header dışına (ör. sayfa içeriğine) dokunulduğunda
+  // menüyü kapatır. Escape tuşu zaten bu işi görüyor; bu işaretçi katmanı
+  // dokunmatik cihazlarda aynı davranışı sağlar.
+  useEffect(() => {
+    if (!open) return
+    const onPointerDown = (event: PointerEvent) => {
+      if (headerRef.current && !headerRef.current.contains(event.target as Node)) {
+        closeMenu()
+      }
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [open])
 
   // The layout is shared with statically prerendered public routes, so the
@@ -64,7 +79,7 @@ export function SiteHeader() {
   return (
     <>
       <a className="skip-link" href="#main">{navCopy('skipToContent')}</a>
-      <header className="site-header">
+      <header ref={headerRef} className="site-header">
         <div className="page-container header-inner">
           <Link href="/#top" aria-label={navCopy('homeLabel')} className="header-brand" onClick={closeMenu}>
             <Logo tone="dark" />

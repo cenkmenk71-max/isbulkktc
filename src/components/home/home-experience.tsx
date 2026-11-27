@@ -24,6 +24,7 @@ import renewableEnergyPhoto from "../../../assets-src/sector-photos/pexels-nc-fa
 import technologyPhoto from "../../../assets-src/sector-photos/pexels-zayed-hossain-52728970-36706460.jpg";
 import tourismPhoto from "../../../assets-src/sector-photos/pexels-imda-12160204.jpg";
 import { HomeJobSearch, type HomeJobSearchData } from "@/components/home/home-job-search";
+import { HeroCycleControl } from "@/components/home/hero-cycle-control";
 import { DistrictLinks } from "@/components/jobs/district-links";
 import { JobTypeLinks } from "@/components/jobs/job-type-links";
 import { HomeJourneys } from "@/components/home/home-journeys";
@@ -246,23 +247,25 @@ export async function HomeExperience({
   return (
     <div className="home-page">
       <section id="top" className="hero-section" aria-labelledby="home-title">
-        <div className="hero-photo" aria-hidden="true">
-          {homeHeroSlides.map((slide) => (
-            <Image
-              key={slide.district}
-              src={slide.src}
-              alt=""
-              fill
-              loading={slide.district === "girne" || slide.district === "gazimagusa" ? "eager" : "lazy"}
-              fetchPriority={slide.district === "girne" ? "high" : "low"}
-              sizes="100vw"
-              quality={90}
-              className="hero-photo-image home-hero-slide"
-              data-home-hero-photo={slide.district}
-              data-home-hero-source={slide.asset}
-            />
-          ))}
-        </div>
+        <HeroCycleControl>
+          <div className="hero-photo" aria-hidden="true">
+            {homeHeroSlides.map((slide) => (
+              <Image
+                key={slide.district}
+                src={slide.src}
+                alt=""
+                fill
+                loading={slide.district === "girne" ? "eager" : "lazy"}
+                fetchPriority={slide.district === "girne" ? "high" : "low"}
+                sizes="100vw"
+                quality={90}
+                className="hero-photo-image home-hero-slide"
+                data-home-hero-photo={slide.district}
+                data-home-hero-source={slide.asset}
+              />
+            ))}
+          </div>
+        </HeroCycleControl>
         <div className="hero-light-layer hero-light-layer--readability" aria-hidden="true" />
         <div className="hero-light-layer hero-light-layer--warmth" aria-hidden="true" />
         <div className="hero-light-layer hero-light-layer--vignette" aria-hidden="true" />

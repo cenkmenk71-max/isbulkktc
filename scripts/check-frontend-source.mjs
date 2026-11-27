@@ -313,10 +313,10 @@ assert.match(
 );
 assert.match(css, /font-family:\s*var\(--font-display\)/);
 assert.doesNotMatch(css, /-webkit-font-smoothing:\s*antialiased/);
-assert.match(
-  home,
-  /loading=\{slide\.district === "girne" \|\| slide\.district === "gazimagusa" \? "eager" : "lazy"\}/,
-);
+  assert.match(
+    home,
+    /loading=\{slide\.district === "girne" \? "eager" : "lazy"\}/,
+  );
 assert.match(home, /sizes="100vw"/);
 assert.match(home, new RegExp(`quality=\\{${homepageImageQuality}\\}`));
 assert.match(home, /hero-light-layer--readability/);

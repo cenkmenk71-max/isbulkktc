@@ -1590,7 +1590,6 @@ a {
   opacity: 0.78;
 }
 .mobile-menu-button {
-  display: none;
   width: 44px;
   height: 44px;
   place-items: center;
@@ -2663,9 +2662,6 @@ a {
   .header-actions {
     margin-inline-start: auto;
   }
-  .mobile-menu-button {
-    display: grid;
-  }
   .mobile-nav {
     position: absolute;
     top: 78px;
@@ -3036,9 +3032,6 @@ a {
   .brand-wordmark strong {
     font-size: 22px;
   }
-  .header-post {
-    display: none;
-  }
   .hero-copy h1 {
     font-size: 37px;
   }
@@ -3213,7 +3206,7 @@ a {
 }
 @media (max-width: 380px) {
   .language-picker .language-switch {
-    min-width: 45px;
+    min-width: 44px;
   }
   .language-picker .language-switch svg:first-child {
     display: none;
@@ -5007,11 +5000,6 @@ a {
     padding: 22px 10px 12px;
   }
 }
-@media (max-width: 430px) {
-  .header-post {
-    display: none;
-  }
-}
 @media (max-width: 380px) {
   .sector-explorer-heading {
     align-items: flex-start;
@@ -5470,7 +5458,7 @@ a {
   background: rgba(255, 255, 255, 0.88);
   color: var(--green);
   font-size: 11px !important;
-  white-space: nowrap;
+  white-space: normal;
   cursor: pointer;
 }
 .candidate-resume-file:hover {
@@ -16315,5 +16303,55 @@ body:has(.pwa-update-toast) .support-widget {
   .package-buy-button .button-icon {
     width: 18px;
     height: 18px;
+  }
+}
+
+/* Mobil iOS otomatik zoom önleyici: arama / filtre input ve select alanları
+   <=740px'te minimum 16px (var(--text-base) eşdeğeri) ile sabit tutulur. */
+@media (max-width: 740px) {
+  .search-field input,
+  .search-field select,
+  .home-job-search-field input,
+  .home-job-search-field select,
+  .jobs-search-input input,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Dokunmatikle duraklatılan hero slayt döngüsünün karelerini durdurur. */
+  .hero-cycle--paused .home-hero-slide {
+    animation-play-state: paused;
+  }
+
+  /* Mobilde hero ışın katmanı sürekli GPU kompozit etmiyor (INP / pil). */
+  .home-page .home-hero-rays {
+    animation: none;
+  }
+
+  /* Mobilde iş ilan kartları tek seferde görünür, animasyon gecikmesi yok. */
+  .job-card {
+    animation-delay: 0s;
+  }
+}
+
+/* <=480px tek-sütun / yığınlı mobil düzenler. */
+@media (max-width: 480px) {
+  .footer-links {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .company-directory-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .admin-console-nav-list {
+    display: flex;
+    flex-direction: column;
+    overflow-x: visible;
+    white-space: normal;
+    gap: 8px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
   }
 }

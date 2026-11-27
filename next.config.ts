@@ -77,6 +77,7 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
+    deviceSizes: [360, 390, 640, 750, 828, 1080],
     qualities: [75, 85, 90, 95, 100],
     formats: ["image/webp"],
     // The optimizer fetches `?url=` on the server, so without an allowlist a
