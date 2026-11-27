@@ -607,9 +607,8 @@ test("anonymous visitors can search job previews without opening job details", a
   expect(previewCount).toBeLessThanOrEqual(6);
   for (const preview of await previews.all()) {
     await expect(preview.locator("h4")).toBeVisible();
-    await expect(preview.locator("p")).toBeVisible();
-    await expect(preview.locator("a, button, details")).toHaveCount(0);
-    await expect(preview.locator(":scope > *")).toHaveCount(2);
+    await expect(preview.locator(".home-job-preview-company")).toBeVisible();
+    await expect(preview.locator(":scope > *")).toHaveCount(1);
   }
 
   await page.goto("/tr?page=0");

@@ -6,7 +6,9 @@ begin;
 --  return type to 3 columns, which cannot be altered via CREATE OR REPLACE
 --  FUNCTION (42P13). Dropping and recreating here restores the extended shape
 --  while preserving the exact WHERE / source_site / company-name search from
---  20261021110000_v4_public_source_jobs_rpc.sql.
+--  20261021110000_v4_public_source_jobs_rpc.sql, and swaps the tsquery config
+--  to public.job_search_unaccent so ASCII queries fold accents the same way the
+--  stored search vector does (20261112100000_v4_job_search_unaccent.sql).
 
 drop function if exists public.search_public_job_previews(text, text, text, text, integer);
 
@@ -104,7 +106,7 @@ begin
       and (
         v_query = ''
         or j.search_vector @@ pg_catalog.websearch_to_tsquery(
-          'pg_catalog.simple'::pg_catalog.regconfig,
+          'public.job_search_unaccent'::pg_catalog.regconfig,
           v_query
         )
         or c.name ilike v_like_query escape E'\\'
