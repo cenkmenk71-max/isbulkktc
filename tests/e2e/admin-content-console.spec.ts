@@ -215,20 +215,14 @@ test("an MFA-verified administrator can delete a verified company from the admin
     await page.goto("/admin/company-profiles");
 
     // The company appears in the admin company management list as verified.
-    const companyCard = page
-        .locator("article.company-review-card")
-        .filter({
-            has: page.getByRole("heading", {
-                level: 3,
-                name: companyName,
-                exact: true,
-            }),
-        });
-    await expect(companyCard).toBeVisible();
-    await expect(companyCard.locator('[data-status="verified"]')).toBeVisible();
+    const companyRow = page
+        .locator("table tbody tr")
+        .filter({ has: page.getByText(companyName, { exact: true }) });
+    await expect(companyRow).toBeVisible();
+    await expect(companyRow.locator('[data-status="verified"]')).toBeVisible();
 
     // One-click delete via the Trash2 button in the actions column.
-    const deleteButton = companyCard.getByRole("button", {
+    const deleteButton = companyRow.getByRole("button", {
         name: `${companyName} adlı şirketi sil`,
     });
     await expect(deleteButton).toBeVisible();
@@ -237,8 +231,8 @@ test("an MFA-verified administrator can delete a verified company from the admin
     page.on("dialog", (dialog) => dialog.accept());
     await deleteButton.click();
 
-    // The card should disappear from the list.
-    await expect(companyCard).toHaveCount(0);
+    // The row should disappear from the list.
+    await expect(companyRow).toHaveCount(0);
 
     // Verify the company is gone from the database.
     const statusResponse = await request.get(
