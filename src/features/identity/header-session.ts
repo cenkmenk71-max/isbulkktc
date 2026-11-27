@@ -16,7 +16,7 @@ export const headerDashboardHrefs = {
 
 export type HeaderSessionState =
   | { signedIn: false }
-  | { signedIn: true; displayName: string; dashboardHref: string };
+  | { signedIn: true; displayName: string; dashboardHref: string; isPlatformAdmin: boolean };
 
 export function resolveHeaderDashboardHref(
   hasEmployerMembership: boolean,

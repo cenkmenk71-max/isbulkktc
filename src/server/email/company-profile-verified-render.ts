@@ -19,6 +19,8 @@ import {
 import { getEmailCopy, resolveEmailLocale } from "../../../supabase/functions/_shared/email-copy.ts";
 import type { RenderedEmail } from "../../../supabase/functions/_shared/email-render.ts";
 import { getCompanyProfileVerifiedCopy } from "./company-profile-verified-copy.ts";
+import { getAppBaseUrl } from "@/server/config/app-url";
+import { getLocalePrefix } from "@/i18n/routing";
 
 type SiteContext = { locale: string; siteUrl: string };
 
@@ -131,6 +133,10 @@ export function renderCompanyProfileVerifiedAdminEmail(
   if (input.publicEmail) contactParts.push(input.publicEmail);
   const contactValue = contactParts.join(" · ") || null;
 
+  const origin = getAppBaseUrl().toString().replace(/\/+$/, "");
+  const prefix = getLocalePrefix(locale);
+  const adminUrl = `${origin}${prefix}/admin/company-profiles`;
+
   const opts = {
     locale,
     preheader: copy.adminLead,
@@ -142,7 +148,7 @@ export function renderCompanyProfileVerifiedAdminEmail(
         html: `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">${detailRow(copy.adminCompanyLabel, input.companyName)}${detailRow(copy.adminCategoriesLabel, input.categories)}${detailRow(copy.adminWebsiteLabel, input.website)}${detailRow(copy.adminContactLabel, contactValue)}${detailRow(copy.adminAddressLabel, input.address)}${detailRow(copy.adminSubmittedByLabel, input.submittedBy)}</table>`,
       },
     ],
-    button: { label: copy.adminReviewLinkText, url: absoluteUrl(input.siteUrl, input.actionUrl) },
+    button: { label: copy.adminReviewLinkText, url: adminUrl },
     footerNote: base.footer.reason,
     siteUrl: input.siteUrl,
   };

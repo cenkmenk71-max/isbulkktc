@@ -7590,6 +7590,18 @@ html:dir(rtl) .company-workspace-action-link:hover > svg {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.home-job-preview-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 10px;
+}
+.home-job-preview-facts > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .home-job-search-empty {
   padding: clamp(22px, 4vw, 40px);
   border: 1px dashed var(--color-vanadium-300);

@@ -87,6 +87,7 @@ test("an employer owner gets the company dashboard and their display name", asyn
     signedIn: true,
     displayName: "Ada Lovelace",
     dashboardHref: "/company/dashboard",
+    isPlatformAdmin: false,
   });
 
   // The membership lookup must be scoped to the session user and to *owner*
@@ -110,6 +111,7 @@ test("a candidate with no owner membership gets the candidate dashboard", async 
     signedIn: true,
     displayName: "Ada Lovelace",
     dashboardHref: "/profile/dashboard",
+    isPlatformAdmin: false,
   });
 });
 
@@ -127,5 +129,6 @@ test("a failed membership lookup fails closed to the candidate dashboard", async
     signedIn: true,
     displayName: "Ada Lovelace",
     dashboardHref: "/profile/dashboard",
+    isPlatformAdmin: false,
   });
 });

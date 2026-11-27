@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { ArrowRight, BookOpenText, BriefcaseBusiness, Building2, ChevronDown, Compass, Globe, LogOut, Mail, Menu, Package, UserRound, X } from 'lucide-react'
+import { ArrowRight, BriefcaseBusiness, Building2, ChevronDown, Compass, Globe, LogOut, Mail, Menu, Package, UserRound, X, BookOpenText } from 'lucide-react'
 import { Logo } from '@/components/brand/logo'
 import NextLink from 'next/link'
 import { Link, usePathname } from '@/i18n/navigation'
@@ -82,6 +82,12 @@ export function SiteHeader() {
                 <Icon size={16} aria-hidden="true" />{label}
               </Link>
             })}
+            {session.signedIn && session.isPlatformAdmin && (
+              <>
+                <Link href="/admin/company-profiles">{navCopy('adminPanel')}</Link>
+                <Link href="/admin/talent-pool">{navCopy('talentPool')}</Link>
+              </>
+            )}
           </nav>
           <div className="header-actions">
             <details className="language-picker">
@@ -147,6 +153,12 @@ export function SiteHeader() {
             {session.signedIn ? (
               <>
                 <Link href={session.dashboardHref} onClick={closeMenu}>{navCopy('account')}<ArrowRight size={15} aria-hidden="true"/></Link>
+                {session.signedIn && session.isPlatformAdmin && (
+                  <>
+                    <Link href="/admin/company-profiles" onClick={closeMenu}>{navCopy('adminPanel')}<ArrowRight size={15} aria-hidden="true"/></Link>
+                    <Link href="/admin/talent-pool" onClick={closeMenu}>{navCopy('talentPool')}<ArrowRight size={15} aria-hidden="true"/></Link>
+                  </>
+                )}
                 <form action={signOut} className="mobile-nav-primary-form">
                   <PendingActionSubmitButton className="mobile-nav-primary"><LogOut size={17} aria-hidden="true"/>{navCopy('signOut')}</PendingActionSubmitButton>
                 </form>
