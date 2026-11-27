@@ -85,7 +85,7 @@ async function main(): Promise<void> {
     }
 
     queued++;
-    const campaignId = `outreach/${new Date().toISOString().slice(0, 10)}`;
+    const campaignId = `outreach/${new Date().toISOString().slice(0, 10)}-${queued}`;
     const accepted = await sendMarketingEmail({
       to: recipient.email,
       locale: LOCALE,
