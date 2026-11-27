@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { applyToJob } from "@/features/jobs/actions";
 import { Link } from "@/i18n/navigation";
+import { getLocalePrefix } from "@/i18n/routing";
 import { useTrackConversionOnSuccess } from "@/lib/analytics/conversion-client";
 
 const initialState = { status: "idle", message: "idle" } as const;
@@ -18,9 +18,7 @@ export function JobApplicationForm({
   slug: string;
   contact: { email: string | null; emailConfirmed: boolean } | null;
 }) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const locale = searchParams.get("locale") ?? pathname.split("/")[1];
+  const locale = useLocale();
   const t = useTranslations("JobApplication");
   const [state, action, pending] = useActionState(applyToJob, initialState);
 
@@ -33,9 +31,10 @@ export function JobApplicationForm({
 
   useTrackConversionOnSuccess(state.status, "apply_to_job", { job_id: jobId });
 
-  const nextPath = `/${locale}/jobs/${slug}`;
-  const signInHref = `/${locale}/sign-in?next=${encodeURIComponent(nextPath)}`;
-  const signUpHref = `/${locale}/sign-up?next=${encodeURIComponent(nextPath)}`;
+  const prefix = getLocalePrefix(locale);
+  const nextPath = `${prefix}/jobs/${slug}`;
+  const signInHref = `${prefix}/sign-in?next=${encodeURIComponent(nextPath)}`;
+  const signUpHref = `${prefix}/sign-up?next=${encodeURIComponent(nextPath)}`;
 
   // Unauthenticated visitor: show high-conversion CTA card instead of form
   if (!contact) {

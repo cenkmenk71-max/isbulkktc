@@ -6,6 +6,7 @@ import {
   resolveHeaderDashboardHref,
   type HeaderSessionState,
 } from "./header-session";
+import { hasAssignedPlatformRole } from "@/server/dal/user";
 
 /**
  * Session state for the global header.
@@ -33,9 +34,12 @@ export async function getHeaderSession(): Promise<HeaderSessionState> {
     });
   }
 
+  const isPlatformAdmin = await hasAssignedPlatformRole("platform_admin");
+
   return {
     signedIn: true,
     displayName: user.displayName,
     dashboardHref: resolveHeaderDashboardHref((count ?? 0) > 0),
+    isPlatformAdmin,
   };
 }
