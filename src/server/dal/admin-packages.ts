@@ -1,7 +1,10 @@
 import "server-only";
 
 import { requirePlatformRole } from "@/server/dal/user";
-import { createSupabaseServerClient } from "@/server/db/supabase-server";
+import {
+  createSupabaseServerClient,
+  createSupabaseServiceClient,
+} from "@/server/db/supabase-server";
 
 export async function getAdminPackageConsoleData() {
   await requirePlatformRole("platform_admin");
@@ -27,8 +30,11 @@ export async function getAdminPackageConsoleData() {
 }
 
 export async function getPackageByCode(code: string) {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  const serviceClient = createSupabaseServiceClient();
+  if (!serviceClient) {
+    throw new Error("Service role client is not configured.");
+  }
+  const { data, error } = await serviceClient
     .from("job_packages")
     .select("id, code, display_name, description, max_active_jobs, job_duration_days, is_active")
     .eq("code", code)

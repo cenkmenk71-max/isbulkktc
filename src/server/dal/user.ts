@@ -167,7 +167,7 @@ export async function getSignedInAuthDestination(
 
   const supabase = await createSupabaseServerClient();
   const { data: membership, error } = await supabase
-    .from("company_memberships")
+    .from("company_members")
     .select("company_id")
     .eq("user_id", user.id)
     .eq("status", "active")
