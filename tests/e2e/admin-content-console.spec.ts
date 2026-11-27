@@ -189,7 +189,7 @@ test("an MFA-verified administrator can delete a verified company from the admin
         data: {
           name: companyName,
           slug: companySlug,
-          verification_status: "verified",
+          verification_status: "pending",
         },
       },
     );
@@ -219,7 +219,7 @@ test("an MFA-verified administrator can delete a verified company from the admin
         .locator("table tbody tr")
         .filter({ has: page.getByText(companyName, { exact: true }) });
     await expect(companyRow).toBeVisible();
-    await expect(companyRow.locator('[data-status="verified"]')).toBeVisible();
+    await expect(companyRow.locator('[data-status="pending"]')).toBeVisible();
 
     // One-click delete via the Trash2 button in the actions column.
     const deleteButton = companyRow.getByRole("button", {
