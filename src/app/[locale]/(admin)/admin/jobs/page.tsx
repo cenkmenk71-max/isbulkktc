@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { AdminMfaGate } from "@/features/identity/admin-mfa-gate";
 import { JobReviewForm } from "@/features/jobs/job-management-forms";
+import { AiPreCheckButton } from "@/features/admin/ai-pre-check-button";
 import { getPendingJobsForReview } from "@/server/dal/jobs";
 import { getPlatformAdminMfaStatus } from "@/server/dal/user";
 import { Link } from "@/i18n/navigation";
@@ -58,10 +59,6 @@ export default async function AdminJobsPage({
         <p className="eyebrow"><span className="eyebrow-rule" /><ShieldCheck size={15} aria-hidden="true" />{copy("pageCount")}: {jobs.length}</p>
         <h1>{copy("title")}</h1>
         <p>{copy("description")}</p>
-        <div className="admin-job-review-links">
-          <Link href="/admin/packages">{copy("backToPackages")}</Link>
-          <Link href="/admin/outreach">{copy("outreachLink")}</Link>
-        </div>
       </header>
 
       {jobs.length ? (
@@ -94,6 +91,22 @@ export default async function AdminJobsPage({
                   {job.responsibilities ? <><h3>{listingCopy("responsibilities")}</h3><p>{job.responsibilities}</p></> : null}
                 </details>
                 <JobReviewForm jobId={job.id} />
+                <AiPreCheckButton
+                  type="job"
+                  data={{
+                    id: job.id,
+                    title: job.title,
+                    slug: job.slug,
+                    summary: job.summary,
+                    description: job.description,
+                    requirements: job.requirements,
+                    responsibilities: job.responsibilities,
+                    job_type: job.job_type,
+                    workplace_mode: job.workplace_mode,
+                    district: job.district,
+                    company_id: job.company_id,
+                  }}
+                />
               </article>
             </li>
           ))}

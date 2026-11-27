@@ -75,11 +75,10 @@ export function AdminMfaGate({
             </div>
           ) : null}
 
-          {beginState.factorId && beginState.challengeId ? (
+          {beginState.factorId ? (
             <form action={verifyAction} className="admin-mfa-verify">
               <input name="mode" type="hidden" value={beginState.mode} />
               <input name="factorId" type="hidden" value={beginState.factorId} />
-              <input name="challengeId" type="hidden" value={beginState.challengeId} />
               <label htmlFor="admin-mfa-code">{copy("codeLabel")}</label>
               <input
                 autoComplete="one-time-code"

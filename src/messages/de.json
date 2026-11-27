@@ -140,7 +140,9 @@
         "unauthorized": "Die Admin-Sitzung konnte nicht bestätigt werden. Melden Sie sich erneut an.",
         "setupFailed": "MFA konnte nicht gestartet werden. Bitte später erneut versuchen.",
         "invalidCode": "Der Code ist ungültig oder abgelaufen. Geben Sie den neuesten App-Code ein.",
-        "verifyFailed": "Die MFA-Prüfung ist fehlgeschlagen. Bitte erneut versuchen."
+        "verifyFailed": "Die MFA-Prüfung ist fehlgeschlagen. Bitte erneut versuchen.",
+        "challengeExpired": "Die Verbindung wurde zurückgesetzt. Bitte geben Sie den aktuellen sechsstelligen Code aus Ihrer Authenticator-App ein.",
+        "ipMismatch": "Die Verbindung wurde zurückgesetzt. Bitte geben Sie den aktuellen sechsstelligen Code aus Ihrer Authenticator-App ein."
       }
     }
   },
@@ -302,7 +304,8 @@
     "summaryInvalid": "Ungültig: {count}",
     "summaryErrors": "Fehler: {count}",
     "removeRecipient": "Empfänger entfernen: {email}",
-    "actionsTitle": "Aktionen"
+    "actionsTitle": "Aktionen",
+    "dismissToast": "Schließen"
   },
   "AdminTalentPool": {
     "eyebrow": "TALENT-POOL",
@@ -1917,7 +1920,11 @@
       "outreachLink": "Akquise-E-Mail",
       "idle": "",
       "pageCount": "Anzeigen auf dieser Seite",
-      "viewDetails": "Alle Anzeigendetails anzeigen"
+      "viewDetails": "Alle Anzeigendetails anzeigen",
+      "aiPreCheck": "KI-Vorprüfung",
+      "aiChecking": "Wird geprüft…",
+      "aiPreCheckResult": "Ergebnis der KI-Vorprüfung",
+      "aiDecisionNote": "Entscheidungsnotiz"
     }
   },
   "TalentPool": {
@@ -1942,7 +1949,22 @@
     "candidateEmail": "E-Mail",
     "title": "Talent Pool",
     "description": "Kandidaten für die Einstellung ansehen.",
-    "empty": "Noch keine Kandidaten-Einträge vorhanden."
+    "empty": "Noch keine Kandidaten-Einträge vorhanden.",
+    "actions": "Aktionen",
+    "addedAt": "Hinzugefügt am",
+    "aiConvertButton": "JSON aus Rohtext / CSV per KI erzeugen",
+    "aiConvertDescription": "Fügen Sie Rohtext, CSV-Zeilen oder CV-Zusammenfassungen ein; die KI wandelt sie in strukturiertes JSON mit full_name, email, phone, headline, location, skills, summary um.",
+    "aiConvertPlaceholder": "Fügen Sie Kandidaten zeilenweise oder als CSV ein (z. B. Ayşe Demir, ayse@example.com, +90 539 111 22 33, Software Engineer, Lefkoşa, React, TypeScript; Summary…)",
+    "aiConvertTitle": "JSON aus Rohtext / CSV per KI erzeugen",
+    "aiConvertedJson": "Erzeugtes JSON",
+    "aiConverting": "Wird umgewandelt…",
+    "aiImportButton": "Zum Pool hinzufügen",
+    "aiImporting": "Wird hinzugefügt…",
+    "confirmDeleteEntry": "Sind Sie sicher, dass Sie diesen Kandidaten-Eintrag löschen möchten? Dies kann nicht rückgängig gemacht werden.",
+    "deleteEntry": "Eintrag {name} löschen",
+    "entriesTitle": "Pool-Einträge",
+    "entryDeleted": "Kandidaten-Eintrag gelöscht.",
+    "headline": "Überschrift"
   },
   "AdminConsole": {
     "ariaLabel": "Admin-Konsole-Navigation",

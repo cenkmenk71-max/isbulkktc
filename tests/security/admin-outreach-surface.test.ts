@@ -142,14 +142,11 @@ test("outreach page shows Resend configuration status", () => {
   assert.match(outreachPage, /hasFromEmail/);
 });
 
-test("outreach page includes outreach link in admin navigation", () => {
-  // Check translation files for the outreach link text
-  assert.match(trMessages.AdminPackages.outreachLink, /Tanıtım Maili/);
-  assert.match(enMessages.AdminPackages.outreachLink, /Outreach Email/);
-  assert.match(trMessages.AdminContent.outreachLink, /Tanıtım Maili/);
-  assert.match(enMessages.AdminContent.outreachLink, /Outreach Email/);
-  assert.match(trMessages.JobManagement.admin.outreachLink, /Tanıtım Maili/);
-  assert.match(enMessages.JobManagement.admin.outreachLink, /Outreach Email/);
-  // Check page uses the translation key
-  assert.match(outreachPage, /adminPackagesCopy\("catalogTitle"\)/); // page uses AdminPackages namespace
+test("outreach page navigates via AdminConsoleNav", () => {
+  // Navigation to outreach is provided by the shared AdminConsoleNav,
+  // not by stale per-page sub-links.
+  assert.match(trMessages.AdminConsole.outreachEmails, /Tanıtım E-Postaları/);
+  assert.match(enMessages.AdminConsole.outreachEmails, /Promotional Emails/);
+  // Check page uses AdminConsoleNav as the single navigation source
+  assert.match(outreachPage, /<AdminConsoleNav \/>/);
 });

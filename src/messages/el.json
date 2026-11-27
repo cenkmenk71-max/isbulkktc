@@ -140,7 +140,9 @@
         "unauthorized": "Δεν ήταν δυνατή η επαλήθευση της συνεδρίας διαχειριστή. Συνδεθείτε ξανά.",
         "setupFailed": "Δεν ήταν δυνατή η έναρξη του MFA. Δοκιμάστε ξανά αργότερα.",
         "invalidCode": "Ο κωδικός είναι λανθασμένος ή έληξε. Εισαγάγετε τον πιο πρόσφατο κωδικό.",
-        "verifyFailed": "Η επαλήθευση MFA απέτυχε. Δοκιμάστε ξανά."
+        "verifyFailed": "Η επαλήθευση MFA απέτυχε. Δοκιμάστε ξανά.",
+        "challengeExpired": "Η σύνδεση επαναφορτώθηκε. Παρακαλώ εισάγετε τον τρέχοντα έξιψήφιο κωδικό από την εφαρμογή επαλήθευσης.",
+        "ipMismatch": "Η σύνδεση επαναφορτώθηκε. Παρακαλώ εισάγετε τον τρέχοντα έξιψήφιο κωδικό από την εφαρμογή επαλήθευσης."
       }
     }
   },
@@ -302,7 +304,8 @@
     "summaryInvalid": "Μη έγκυρα: {count}",
     "summaryErrors": "Σφάλματα: {count}",
     "removeRecipient": "Αφαίρεση παραλήπτη: {email}",
-    "actionsTitle": "Ενέργειες"
+    "actionsTitle": "Ενέργειες",
+    "dismissToast": "Κλείσιμο"
   },
   "AdminTalentPool": {
     "eyebrow": "ΤΑΛΕΝΤΟΠΟΙΟ",
@@ -1917,7 +1920,11 @@
       "outreachLink": "Email προσελκύσεως",
       "idle": "",
       "pageCount": "Αγγελίες σε αυτή τη σελίδα",
-      "viewDetails": "Προβολή πλήρων στοιχείων αγγελίας"
+      "viewDetails": "Προβολή πλήρων στοιχείων αγγελίας",
+      "aiPreCheck": "Προκαταλογική επιθεώρηση ΙΙ",
+      "aiChecking": "Έλεγχος…",
+      "aiPreCheckResult": "Αποτέλεσμα Προκαταλογικής Επιθεώρησης",
+      "aiDecisionNote": "Σημείωμα Απόφασης"
     }
   },
   "TalentPool": {
@@ -1942,7 +1949,22 @@
     "candidateEmail": "Email",
     "title": "Αμιθύτητοι Υπαλλήλοι",
     "description": "Δείτε προσώπους που ταιριάζουν για προσκόμιση.",
-    "empty": "Δεν υπάρχουν ακόμη εγγραφές προσώπων."
+    "empty": "Δεν υπάρχουν ακόμη εγγραφές προσώπων.",
+    "actions": "Ενέργειες",
+    "addedAt": "Ημερομηνία Προσθήκης",
+    "aiConvertButton": "Δημιουργία JSON από Κείμενο / CSV μέσω ΙΙ",
+    "aiConvertDescription": "Επικολλήστε άνετο κείμενο, γραμμές CSV ή επιτομές ζωντανών CV; το ΙΙ τα μετατρέπει σε δομημένο JSON με full_name, email, phone, headline, location, skills, summary.",
+    "aiConvertPlaceholder": "Επικολλήστε υποψήφιους κατά γραμμή ή σε μορφή CSV (π.χ. Ayşe Demir, ayse@example.com, +90 539 111 22 33, Software Engineer, Lefkoşa, React, TypeScript; Summary…)",
+    "aiConvertTitle": "Δημιουργία JSON από Κείμενο / CSV μέσω ΙΙ",
+    "aiConvertedJson": "Δημιουργημένο JSON",
+    "aiConverting": "Μετατροπή…",
+    "aiImportButton": "Πρόσθεση στο Τομέα",
+    "aiImporting": "Προσθήκη…",
+    "confirmDeleteEntry": "Είστε σίγουροι ότι θέλετε να διαγράψετε αυτήν την εγγραφή υποψήφιου; Αυτή η ενέργεια είναι ανιστόρευτη.",
+    "deleteEntry": "Διαγραφή εγγραφής {name}",
+    "entriesTitle": "Εγγραφές Τομέα",
+    "entryDeleted": "Η εγγραφή υποψήφιου διαγράφηκε.",
+    "headline": "Τίτλος"
   },
   "AdminConsole": {
     "ariaLabel": "Πλοήγηση Κονσόλας Διαχείρισης",

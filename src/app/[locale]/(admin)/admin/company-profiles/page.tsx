@@ -8,10 +8,10 @@ import {
 } from "@/server/dal/companies";
 import { deleteCompany } from "@/features/companies/actions";
 import { AdminRoleRequiredError, requirePlatformRole } from "@/server/dal/user";
-import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
 import { DeleteCompanyButton } from "./delete-company-button";
+import { AiPreCheckButton } from "@/features/admin/ai-pre-check-button";
 import { AdminConsoleNav } from "@/components/admin/admin-console-nav";
 
 export const dynamic = "force-dynamic";
@@ -49,10 +49,9 @@ export default async function CompanyProfileReviewPage({
     }
     throw error;
   }
-  const [queues, copy, adminCopy] = await Promise.all([
+  const [queues, copy] = await Promise.all([
     getAdminCompanyProfileReviewQueues(),
     getTranslations("CompanyReview"),
-    getTranslations("AdminPackages"),
   ]);
   const { submissions, verifications } = queues;
 
@@ -71,9 +70,6 @@ export default async function CompanyProfileReviewPage({
         </p>
         <h1>{copy("title")}</h1>
         <p>{copy("description")}</p>
-        <Link className="admin-review-link" href="/admin/packages">
-          {adminCopy("catalogTitle")}
-        </Link>
       </header>
 
       <section aria-labelledby="company-verification-title">
@@ -149,6 +145,20 @@ export default async function CompanyProfileReviewPage({
                   ) : null}
                 </dl>
                 <CompanyVerificationReviewForm companyId={company.id} />
+                <AiPreCheckButton
+                  type="company"
+                  data={{
+                    id: company.id,
+                    name: company.name,
+                    slug: company.slug,
+                    public_email: company.public_email,
+                    phone: company.phone,
+                    website: company.website,
+                    address: company.address,
+                    municipality: company.municipality,
+                    verification_status: company.verification_status,
+                  }}
+                />
               </article>
             ))}
           </div>
@@ -219,6 +229,20 @@ export default async function CompanyProfileReviewPage({
                 ) : null}
               </dl>
               <CompanyProfileReviewForm submissionId={submission.id} />
+              <AiPreCheckButton
+                type="company"
+                data={{
+                  id: submission.id,
+                  name: submission.company_name,
+                  profile_description: submission.profile_description,
+                  categories: submission.categories,
+                  public_email: submission.public_email,
+                  phone: submission.phone,
+                  website: submission.website,
+                  address: submission.address,
+                  municipality: submission.municipality,
+                }}
+              />
             </article>
           ))}
         </div>
