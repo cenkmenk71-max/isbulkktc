@@ -31,25 +31,6 @@ export type ImportTalentPoolState = {
   updated?: number;
 };
 
-const TALENT_POOL_TEMPLATE: TalentPoolEntryInput[] = [
-  {
-    full_name: "Ayşe Demir",
-    email: "ayse.demir@example.com",
-    phone: "+90 539 111 22 33",
-    headline: "Yazılım Mühendisi",
-    location: "Lefkoşa",
-    summary: "React ve TypeScript ile web uygulamaları geliştiren full-stack yazılım mühendisi.",
-    skills: ["React", "TypeScript", "Node.js", "PostgreSQL"],
-    experience: [],
-    education: [],
-    languages: [],
-    certifications: [],
-    links: [],
-    source: "bulk_import",
-    is_searchable: true,
-  },
-];
-
 export async function importTalentPool(
   _previousState: ImportTalentPoolState | null,
   formData: FormData,
