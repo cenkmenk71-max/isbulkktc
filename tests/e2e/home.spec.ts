@@ -187,7 +187,7 @@ test("homepage cycles through local district photos with an animated light-ray l
       quality: "90",
       source: expect.stringMatching(/^\/_next\/static\/media\/.+\.webp$/),
       objectPosition: "50% 78%",
-      loading: "eager",
+      loading: "lazy",
       fetchPriority: "low",
       animationDelay: "7.5s",
       transform: "none",
