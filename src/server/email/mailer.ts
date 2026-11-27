@@ -48,11 +48,11 @@ import { EMAIL_HEALTH_EVENT, reportDeliveryFailure } from "./delivery-health";
  * from here.
  */
 
-const DEFAULT_FROM = "İşBul KKTC <no-reply@isbulkktc.com>";
+const DEFAULT_FROM = "İşBul KKTC <info@isbulkktc.com>";
 
 /**
  * The acquisition family sends from a monitored, reply-able mailbox rather than
- * `no-reply@…`: a prospect who replies to an outreach message must reach a human,
+ * `info@…`: a prospect who replies to an outreach message must reach a human,
  * and `info@` is the address the site already publishes as the contact point.
  * Kept separate from `DEFAULT_FROM` so a transactional send is unaffected.
  */
@@ -104,14 +104,16 @@ export function getCompanyReviewInbox(): string | null {
 
 /**
  * The monitored mailbox a reply to an outbound message should reach. The
- * default `from` is `no-reply@…`, so without a `Reply-To` a reply disappears
- * (#196). Falls back to the sales contact, then to the feedback inbox.
+ * default `from` is `info@…`, so without a `Reply-To` a reply disappears
+ * (#196). Falls back to the sales contact, then the feedback inbox, then to
+ * the monitored `info@` mailbox itself.
  */
 function getReplyToInbox(): string | null {
   const inbox =
     process.env.SALES_INBOX_EMAIL?.trim() ||
     process.env.SALES_CONTACT_EMAIL?.trim() ||
-    getFeedbackInbox();
+    getFeedbackInbox() ||
+    "info@isbulkktc.com";
   return inbox && inbox.includes("@") ? inbox : null;
 }
 

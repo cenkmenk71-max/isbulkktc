@@ -1,53 +1,70 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import { useTranslations } from "next-intl";
-import type { AppLocale } from "@/i18n/routing";
+import { importTalentPool } from "./import-talent-pool";
+import { FileText, Plus, CheckCircle2, AlertCircle } from "lucide-react";
 
-export function AdminTalentPoolClient({ _locale }: { _locale: AppLocale }) {
+const TALENT_POOL_TEMPLATE = [
+  {
+    full_name: "Ayşe Demir",
+    email: "ayse.demir@example.com",
+    phone: "+90 539 111 22 33",
+    headline: "Yazılım Mühendisi",
+    location: "Lefkoşa",
+    summary: "React ve TypeScript ile web uygulamaları geliştiren full-stack yazılım mühendisi.",
+    skills: ["React", "TypeScript", "Node.js", "PostgreSQL"],
+    experience: [],
+    education: [],
+    languages: [],
+    certifications: [],
+    links: [],
+    source: "bulk_import",
+    is_searchable: true,
+  },
+];
+
+const initialState: Awaited<ReturnType<typeof importTalentPool>> = {
+  status: "idle",
+  message: "idle",
+};
+
+export function AdminTalentPoolClient({
+  _locale,
+  totalCandidates,
+  importedCandidates,
+  memberCandidates,
+}: {
+  _locale: string;
+  totalCandidates?: number;
+  importedCandidates?: number;
+  memberCandidates?: number;
+}) {
   const t = useTranslations("TalentPool");
-  const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; count?: number; error?: string } | null>(null);
   const [jsonInput, setJsonInput] = useState("");
+  const [state, formAction, isImporting] = useActionState(importTalentPool, initialState);
 
-  async function handleImport(event: React.FormEvent) {
-    event.preventDefault();
-    setImporting(true);
-    setResult(null);
-
-    try {
-      const entries = JSON.parse(jsonInput);
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      if (!supabaseUrl || !anonKey) throw new Error("Supabase not configured");
-
-      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/admin_bulk_import_talent_pool`, {
-        method: "POST",
-        headers: {
-          apikey: anonKey,
-          Authorization: `Bearer ${anonKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ _entries: entries }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || `Import failed: ${res.status}`);
-      }
-
-      const count = await res.json();
-      setResult({ ok: true, count: count as number });
-    } catch (err) {
-      setResult({ ok: false, error: err instanceof Error ? err.message : "Unknown error" });
-    } finally {
-      setImporting(false);
-    }
+  function handleFillTemplate() {
+    setJsonInput(JSON.stringify(TALENT_POOL_TEMPLATE, null, 2));
   }
 
   return (
-    <div className="admin-talent-pool page-container">
+    <section className="admin-talent-pool page-container">
       <header className="admin-talent-pool-header">
+        <div className="admin-talent-pool-stats">
+          <div className="admin-stat-card">
+            <span className="admin-stat-label">{t("totalCandidates")}</span>
+            <span className="admin-stat-value">{totalCandidates ?? 0}</span>
+          </div>
+          <div className="admin-stat-card">
+            <span className="admin-stat-label">{t("importedCandidates")}</span>
+            <span className="admin-stat-value">{importedCandidates ?? 0}</span>
+          </div>
+          <div className="admin-stat-card">
+            <span className="admin-stat-label">{t("memberCandidates")}</span>
+            <span className="admin-stat-value">{memberCandidates ?? 0}</span>
+          </div>
+        </div>
         <h1>{t("adminTitle")}</h1>
         <p>{t("adminDescription")}</p>
       </header>
@@ -55,30 +72,60 @@ export function AdminTalentPoolClient({ _locale }: { _locale: AppLocale }) {
       <section className="admin-talent-pool-import">
         <h2>{t("importTitle")}</h2>
         <p>{t("importDescription")}</p>
-        <form onSubmit={handleImport} className="admin-talent-pool-form">
+        <form action={formAction} className="admin-talent-pool-form">
+          <input name="jsonData" type="hidden" value={jsonInput} />
+          <div className="admin-talent-pool-actions">
+            <button
+              type="button"
+              onClick={handleFillTemplate}
+              disabled={isImporting}
+              className="button button-outline"
+            >
+              <FileText size={16} aria-hidden="true" />
+              {t("importTemplateButton")}
+            </button>
+            <p className="admin-talent-pool-fields-note">{t("fieldsNote")}</p>
+          </div>
           <textarea
             value={jsonInput}
             onChange={(event) => setJsonInput(event.target.value)}
             placeholder={t("importPlaceholder")}
-            rows={10}
+            rows={12}
             className="admin-talent-pool-json"
+            spellCheck={false}
           />
           <button
             type="submit"
-            disabled={importing}
+            disabled={isImporting || !jsonInput.trim()}
             className="button button-dark"
           >
-            {importing ? t("importing") : t("importButton")}
+            <Plus size={16} aria-hidden="true" />
+            {isImporting ? t("importing") : t("importButton")}
           </button>
         </form>
-        {result && (
-          <div className={`admin-talent-pool-result ${result.ok ? "success" : "error"}`}>
-            {result.ok
-              ? `${t("importedCount", { count: result.count ?? 0 })}`
-              : result.error}
+
+        {state && state.status !== "idle" && (
+          <div
+            className={`admin-talent-pool-result ${state.status}`}
+            role="status"
+            aria-live="polite"
+          >
+            {state.status === "success" ? (
+              <>
+                <CheckCircle2 size={20} aria-hidden="true" className="admin-result-icon" />
+                <span>
+                  {t("importSuccess", { count: state.count ?? 0 })}
+                </span>
+              </>
+            ) : (
+              <>
+                <AlertCircle size={20} aria-hidden="true" className="admin-result-icon" />
+                <span>{state.message}</span>
+              </>
+            )}
           </div>
         )}
       </section>
-    </div>
+    </section>
   );
 }

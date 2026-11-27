@@ -716,17 +716,17 @@ test("marketing email has functional links for every package and contact action 
     for (const target of packageTargets) {
       assert.ok(email.html.includes(target), `${locale}: working package target ${target}`);
     }
-    assert.ok(email.html.includes("https://wa.me/905391316421?text="), `${locale}: WhatsApp deep link`);
+    assert.ok(!email.html.includes("https://wa.me/"), `${locale}: no WhatsApp deep link (external URL)`);
     assert.ok(email.html.includes("mailto:info@isbulkktc.com"), `${locale}: canonical mail address`);
-    assert.ok(email.html.includes("tel:+905391316421"), `${locale}: telephone link`);
-    assert.ok(email.html.includes("0539 131 64 21"), `${locale}: displayed telephone`);
+    assert.ok(!email.html.includes("tel:+905391316421"), `${locale}: no telephone link (plain text only)`);
+    assert.ok(email.html.includes("+90 539 131 64 21"), `${locale}: displayed telephone (plain text)`);
     assert.ok(email.html.includes("info@isbulkktc.com"), `${locale}: support mailbox`);
     assert.ok(email.html.includes(copy.unsubscribeLabel), `${locale}: unsubscribe action`);
     assert.ok(email.html.includes(`${SITE}api/email/unsubscribe?e=x&amp;s=y`), `${locale}: unsubscribe URL`);
     assert.ok(email.text.includes(`${SITE}api/email/unsubscribe?e=x&s=y`), `${locale}: text opt-out URL`);
     assert.ok(email.text.includes("https://isbulkktc.com/packages#package-buyume"), `${locale}: text package links`);
     assert.ok(email.text.includes(MARKETING_CONTACTS.email), `${locale}: text support email`);
-    assert.ok(email.text.includes(MARKETING_CONTACTS.phoneDisplay), `${locale}: text phone`);
+    assert.ok(email.text.includes("+90 539 131 64 21"), `${locale}: text phone (plain text)`);
     assert.ok(email.text.includes(copy.primaryCta), `${locale}: text primary CTA`);
     assert.ok(!email.html.includes("₺1.290") && !email.html.includes("₺2.790") && !email.html.includes("₺3.990"), `${locale}: no stale hard-coded prices`);
   }
@@ -819,8 +819,8 @@ test("the text alternative keeps entity decoding, paragraph breaks and contact d
   const email = renderMarketing("tr");
   assert.ok(!email.text.includes("<"), "marketing copy has no markup-like text");
   assert.ok(email.text.includes(MARKETING_CONTACTS.email));
-  assert.ok(email.text.includes(MARKETING_CONTACTS.phoneDisplay));
-  assert.ok(email.text.includes(MARKETING_CONTACTS.whatsapp));
+  assert.ok(email.text.includes("+90 539 131 64 21"));
+  assert.ok(!email.text.includes(MARKETING_CONTACTS.whatsapp));
   assert.ok(email.text.includes(MARKETING_COPY.tr.primaryCta));
   assert.ok(email.text.includes(MARKETING_COPY.tr.secondaryCta));
 

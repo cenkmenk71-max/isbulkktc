@@ -1928,11 +1928,29 @@
     "importPlaceholder": "Kandidatendaten als JSON-Array einfügen.",
     "importing": "Wird importiert…",
     "importButton": "Importieren",
+    "importTemplateButton": "Beispiel-JSON-Vorlage ausfüllen",
     "importedCount": "{count} Kandidaten importiert.",
+    "importSuccess": "{count} Kandidaten importiert oder aktualisiert.",
     "loading": "Wird geladen…",
     "error": "Ein Fehler ist aufgetreten.",
+    "fieldsNote": "Felder: full_name, email, phone, headline, location, skills, summary",
+    "totalCandidates": "Kandidaten insgesamt",
+    "importedCandidates": "Importiert",
+    "memberCandidates": "Seitenmitglieder",
+    "recentImports": "Kürzlich hinzugefügte Kandidaten",
+    "candidateName": "Name",
+    "candidateEmail": "E-Mail",
     "title": "Talent Pool",
     "description": "Kandidaten für die Einstellung ansehen.",
     "empty": "Noch keine Kandidaten-Einträge vorhanden."
+  },
+  "AdminConsole": {
+    "ariaLabel": "Admin-Konsole-Navigation",
+    "companyManagement": "Unternehmensverwaltung",
+    "talentPool": "Talent Pool",
+    "jobModeration": "Stellenmoderation",
+    "packagesPayments": "Pakete & Zahlungen",
+    "outreachEmails": "Werbe-E-Mails",
+    "returnToSite": "Zur Website"
   }
 }

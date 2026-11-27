@@ -1928,11 +1928,29 @@
     "importPlaceholder": "Paste candidate data as a JSON array.",
     "importing": "Importing…",
     "importButton": "Import",
+    "importTemplateButton": "Fill Example JSON Template",
     "importedCount": "{count} candidates imported.",
+    "importSuccess": "{count} candidates imported or updated.",
     "loading": "Loading…",
     "error": "An error occurred.",
+    "fieldsNote": "Fields: full_name, email, phone, headline, location, skills, summary",
+    "totalCandidates": "Total Candidates",
+    "importedCandidates": "Imported",
+    "memberCandidates": "Site Members",
+    "recentImports": "Recently Added Candidates",
+    "candidateName": "Name",
+    "candidateEmail": "Email",
     "title": "Talent Pool",
     "description": "View candidates suitable for hiring.",
     "empty": "No candidate records yet."
+  },
+  "AdminConsole": {
+    "ariaLabel": "Admin console navigation",
+    "companyManagement": "Company Management",
+    "talentPool": "Talent Pool",
+    "jobModeration": "Job Moderation",
+    "packagesPayments": "Packages & Payments",
+    "outreachEmails": "Promotional Emails",
+    "returnToSite": "Return to Site"
   }
 }

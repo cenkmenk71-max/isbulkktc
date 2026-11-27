@@ -12,6 +12,7 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
 import { DeleteCompanyButton } from "./delete-company-button";
+import { AdminConsoleNav } from "@/components/admin/admin-console-nav";
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
@@ -62,6 +63,7 @@ export default async function CompanyProfileReviewPage({
 
   return (
     <main className="company-review-page page-container">
+      <AdminConsoleNav />
       <header className="company-review-heading">
         <p className="eyebrow">
           <span className="eyebrow-rule" />
