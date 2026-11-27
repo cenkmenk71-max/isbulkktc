@@ -167,15 +167,15 @@ test("an administrator writes content and the public page reflects it immediatel
   expect(cleanup.ok()).toBeTruthy();
 });
 
-test("an MFA-verified administrator can verify a company from the review queue", async ({
+test("an MFA-verified administrator can delete a verified company from the admin list", async ({
   page,
   request,
 }) => {
   const stamp = Date.now();
-  const email = `e2e-company-verification-${stamp}@example.com`;
+  const email = `e2e-company-delete-${stamp}@example.com`;
   const password = "Admin-pass-2026";
-  const companyName = `E2E Verification ${stamp}`;
-  const companySlug = `e2e-verification-${stamp}`;
+  const companyName = `E2E Delete ${stamp}`;
+  const companySlug = `e2e-delete-${stamp}`;
   let adminId: string | undefined;
   let companyId: string | undefined;
 
@@ -189,7 +189,7 @@ test("an MFA-verified administrator can verify a company from the review queue",
         data: {
           name: companyName,
           slug: companySlug,
-          verification_status: "pending",
+          verification_status: "verified",
         },
       },
     );
@@ -214,27 +214,33 @@ test("an MFA-verified administrator can verify a company from the review queue",
     await signInThroughMfa(page, email, password);
     await page.goto("/admin/company-profiles");
 
-    const companyCard = page.locator(".company-review-card").filter({
-      has: page.getByRole("heading", {
-        level: 3,
-        name: companyName,
-        exact: true,
-      }),
-    });
-    await expect(companyCard).toBeVisible();
-    await companyCard
-      .getByRole("button", { name: "Şirketi doğrula" })
-      .click();
-    await expect(companyCard).toHaveCount(0);
+    // The company appears in the admin company management list as verified.
+    const companyRow = page
+      .locator("table tbody tr")
+      .filter({ has: page.getByText(companyName, { exact: true }) });
+    await expect(companyRow).toBeVisible();
+    await expect(companyRow.locator('[data-status="verified"]')).toBeVisible();
 
+    // One-click delete via the Trash2 button in the actions column.
+    const deleteButton = companyRow.getByRole("button", {
+      name: `Şirketi sil: ${companyName}`,
+    });
+    await expect(deleteButton).toBeVisible();
+
+    // Handle the confirm dialog, then click delete.
+    page.on("dialog", (dialog) => dialog.accept());
+    await deleteButton.click();
+
+    // The row should disappear from the list.
+    await expect(companyRow).toHaveCount(0);
+
+    // Verify the company is gone from the database.
     const statusResponse = await request.get(
-      `${supabaseUrl}/rest/v1/companies?id=eq.${companyId}&select=verification_status`,
+      `${supabaseUrl}/rest/v1/companies?id=eq.${companyId}`,
       { headers: serviceRoleHeaders() },
     );
     expect(statusResponse.ok(), await statusResponse.text()).toBeTruthy();
-    expect(await statusResponse.json()).toEqual([
-      { verification_status: "verified" },
-    ]);
+    expect(await statusResponse.json()).toEqual([]);
   } finally {
     if (companyId) {
       const auditCleanup = await request.delete(

@@ -18,7 +18,7 @@ begin;
 -- grant fails CI until it is added here deliberately — the same contract the
 -- function ratchet already enforces.
 
-select plan(14);
+select plan(12);
 
 select is(
   (

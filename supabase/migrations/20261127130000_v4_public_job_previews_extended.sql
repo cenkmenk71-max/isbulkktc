@@ -4,7 +4,9 @@ begin;
 -- (job_title, company_name, job_slug, job_summary, job_type, workplace_mode,
 --  district, total_count). The earlier 20261021110000 migration narrowed the
 --  return type to 3 columns, which cannot be altered via CREATE OR REPLACE
---  FUNCTION (42P13). Dropping and recreating here restores the extended shape.
+--  FUNCTION (42P13). Dropping and recreating here restores the extended shape
+--  while preserving the exact WHERE / source_site / company-name search from
+--  20261021110000_v4_public_source_jobs_rpc.sql.
 
 drop function if exists public.search_public_job_previews(text, text, text, text, integer);
 
@@ -32,6 +34,7 @@ set search_path = ''
 as $$
 declare
   v_query text := pg_catalog.btrim(coalesce(_query, ''));
+  v_like_query text;
 begin
   if pg_catalog.char_length(v_query) > 160
      or _page is null
@@ -59,6 +62,17 @@ begin
       message = 'Invalid public job search filters.';
   end if;
 
+  v_like_query := '%' ||
+    pg_catalog.replace(
+      pg_catalog.replace(
+        pg_catalog.replace(v_query, E'\\', E'\\\\'),
+        '%',
+        E'\\%'
+      ),
+      '_',
+      E'\\_'
+    ) || '%';
+
   return query
   with filtered_jobs as materialized (
     select
@@ -76,7 +90,14 @@ begin
     where j.status = 'published'
       and j.published_at <= pg_catalog.now()
       and j.expires_at > pg_catalog.now()
-      and c.verification_status = 'verified'
+      and (
+        (
+          c.verification_status = 'verified'
+        )
+        or (
+          public.is_public_source_job(j.id)
+        )
+      )
       and (_district is null or j.district = _district)
       and (_job_type is null or j.job_type = _job_type)
       and (_workplace_mode is null or j.workplace_mode = _workplace_mode)
@@ -86,6 +107,7 @@ begin
           'pg_catalog.simple'::pg_catalog.regconfig,
           v_query
         )
+        or c.name ilike v_like_query escape E'\\'
       )
   ),
   page_jobs as (

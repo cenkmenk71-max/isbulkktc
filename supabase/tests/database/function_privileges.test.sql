@@ -16,7 +16,7 @@ begin;
 -- function that forgets to revoke `anon`/`authenticated` fails CI instead of
 -- shipping.
 
-select plan(21);
+select plan(27);
 
 -- ---------------------------------------------------------------------------
 -- The two engagement RPCs are service-role-only.
