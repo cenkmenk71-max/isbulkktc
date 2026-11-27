@@ -1,11 +1,12 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { Building2 } from "lucide-react";
+import { Building2, Trash2 } from "lucide-react";
 import { CompanyProfileReviewForm } from "@/features/companies/company-profile-review-form";
 import { CompanyVerificationReviewForm } from "@/features/companies/company-verification-review-form";
 import {
   getAdminCompanyProfileReviewQueues,
 } from "@/server/dal/companies";
+import { deleteCompany } from "@/features/companies/actions";
 import { requirePlatformRole } from "@/server/dal/user";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
@@ -35,6 +36,10 @@ export default async function CompanyProfileReviewPage({
     getTranslations("AdminPackages"),
   ]);
   const { submissions, verifications } = queues;
+
+  async function handleDeleteCompany(formData: FormData) {
+    await deleteCompany(null, formData);
+  }
 
   return (
     <main className="company-review-page page-container">
@@ -197,6 +202,60 @@ export default async function CompanyProfileReviewPage({
           ))}
         </div>
       )}
+
+      <section className="company-deletion-section">
+        <header className="company-deletion-heading">
+          <p className="eyebrow">
+            <span className="eyebrow-rule" />
+            {copy("deletionEyebrow")}
+          </p>
+          <h2>{copy("deletionTitle")}</h2>
+          <p>{copy("deletionDescription")}</p>
+        </header>
+        <div className="company-deletion-table">
+          <table>
+            <thead>
+              <tr>
+                <th>{copy("company")}</th>
+                <th>{copy("slug")}</th>
+                <th>{copy("verificationStatus")}</th>
+                <th>{copy("actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {verifications.map((company) => (
+                <tr key={company.id}>
+                  <td>{company.name}</td>
+                  <td>{company.slug}</td>
+                  <td>
+                    <span data-status={company.verification_status}>
+                      {company.verification_status}
+                    </span>
+                  </td>
+                  <td>
+                    <form action={handleDeleteCompany}>
+                      <input name="companyId" type="hidden" value={company.id} />
+                      <button
+                        type="submit"
+                        className="button button-outline button-delete"
+                        aria-label={copy("deleteCompany", { name: company.name })}
+                        onClick={(event) => {
+                          if (!window.confirm(copy("confirmDelete", { name: company.name }))) {
+                            event.preventDefault();
+                          }
+                        }}
+                      >
+                        <Trash2 size={16} aria-hidden="true" />
+                        {copy("delete")}
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </main>
   );
 }

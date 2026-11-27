@@ -304,6 +304,23 @@
     "removeRecipient": "Alıcıyı kaldır: {email}",
     "actionsTitle": "İşlemler"
   },
+  "AdminTalentPool": {
+    "eyebrow": "ADAY HAVUZU",
+    "title": "Yetenek Havuzu",
+    "description": "Dışarıdan içe aktarılan ve yetkilendirilmiş adayların kaydı. Bu kayıtlar yalnızca arkaplan eşleştirme motoru tarafından kullanılır; işveren sayfalarında görünmez.",
+    "mfaVerified": "Yönetici MFA doğrulandı",
+    "packagesLink": "İlan Paketleri",
+    "jobsLink": "İş İlanları",
+    "entriesEyebrow": "HAVUZ KAYITLARI",
+    "entriesTitle": "Aday Kayıtları",
+    "searchable": "Aranabilir",
+    "hidden": "Gizli",
+    "location": "Konum",
+    "phone": "Telefon",
+    "skills": "Beceriler",
+    "notAdded": "Eklenmemiş",
+    "emptyEntries": "Henüz kayıt yok."
+  },
   "AccountSceneMedia": {
     "othello": "Othello Kalesi",
     "stHilarion": "St. Hilarion Kalesi",
@@ -330,19 +347,19 @@
     "description": "KKTC ve Kuzey Kıbrıs'ta yayımlanan güncel iş ilanlarını pozisyon, ilçe, çalışma türü ve çalışma düzenine göre arayın."
   },
   "PackagesPage": {
-    "eyebrow": "İŞVERENLER İÇİN İLAN HAKLARI",
-    "title": "İşe alım hakları, açık ve anlaşılır.",
-    "description": "İlan paketlerini inceleyin. Ödeme web sitesinde alınmaz; IBAN ve ödeme talimatı, paket görüşmesi sonrası e-posta veya WhatsApp gibi kanallardan özel olarak iletilir.",
-    "heroLink": "Paket haklarını inceleyin",
+    "eyebrow": "İŞVEREN VE FİRMALAR İÇİN İLAN PAKETLERİ",
+    "title": "Firmanız için en uygun ilan paketini seçin.",
+    "description": "1, 7 veya 30 günlük esnek ilan paketlerinden birini seçin; WhatsApp veya e-posta üzerinden tek tıkla talebinizi iletin, IBAN ödemesi sonrası paketiniz hemen tanımlansın.",
+    "heroLink": "Paketleri inceleyin",
     "locationLine": "KUZEY KIBRIS · TR / EN",
     "catalog": {
       "eyebrow": "ETKİN PAKETLER"
     },
     "showcase": {
-      "eyebrow": "İŞVEREN PAKETLERİ",
-      "title": "İşe alımınıza uygun ilan paketini seçin.",
+      "eyebrow": "İŞVEREN VE FİRMA İLAN PAKETLERİ",
+      "title": "Firmanız için en uygun ilan paketini seçin.",
       "instruction": "İlan adedini belirleyin; her ilan için 1, 7 veya 30 gün seçin.",
-      "brand": "İşBul KKTC · İşveren paketleri",
+      "brand": "İşBul KKTC · İşveren ve firma ilan paketleri",
       "back": "Paket seçimine dön",
       "selectPackage": "İşveren paketi seçin",
       "sceneFallback": "3D sahne kullanılamıyor. Paket seçimi ve ayrıntılar kullanılabilir.",
@@ -369,9 +386,9 @@
         "priceSummary": "Paket toplamı",
         "customPrice": "Özel kapsam · yazılı teklifle",
         "contactTitle": "Seçtiğiniz ilan paketi hakkında ekibimize ulaşın.",
-        "contactInstructions": "WhatsApp veya e-posta taslağı açılır; göndermeden önce bilgileri kontrol edip kendiniz gönderin. Instagram profilinde mesajı kendiniz başlatın.",
-        "whatsappAction": "WhatsApp taslağını aç",
-        "emailAction": "E-posta taslağını aç",
+        "contactInstructions": "WhatsApp veya e-posta ile tek tıkla talep gönderin; IBAN ödemesi sonrası paketiniz tanımlansın.",
+        "whatsappAction": "Satın Al",
+        "emailAction": "Satın Al",
         "instagramAction": "Instagram profilini aç",
         "instagramNote": "Instagram mesajı otomatik doldurulamaz; profil üzerinden manuel mesaj gönderin.",
         "inquirySubject": "İşBul KKTC · İlan paketi talebi",
@@ -416,8 +433,8 @@
         }
       },
       "companySetupSuccess": {
-        "title": "Şirket profiliniz oluşturuldu ve yayınlandı!",
-        "description": "Şirketiniz İşBul KKTC rehberinde görünüyor. Şimdi ilan paketinizi seçerek ilk ilanınızı yayımlayabilirsiniz."
+        "title": "Şirketiniz başarıyla kaydedildi!",
+        "description": "Firmanıza uygun ilan paketini seçip hemen yayınlamaya başlayabilirsiniz."
       }
     }
   },
@@ -1005,6 +1022,11 @@
     "submit": "Başvuruyu gönder",
     "submitting": "Gönderiliyor…",
     "loginAction": "Giriş yapın",
+    "ctaTitle": "Bu ilana başvurmak için giriş yapın",
+    "ctaDescription": "Ücretsiz hesap oluşturun, CV'nizle 30 saniyede profilinizi tamamlayın ve başvurun.",
+    "ctaSignIn": "Giriş yap",
+    "ctaSignUp": "Ücretsiz kayıt ol",
+    "ctaNote": "Zaten hesabınız var mı? Tek tıkla giriş yapıp başvurun.",
     "messages": {
       "idle": "",
       "invalid": "Başvuru bilgileri geçerli değil. Lütfen kontrol edip tekrar deneyin.",
@@ -1487,7 +1509,17 @@
       "branchUnavailable": "Seçilen rehber şubesi artık mevcut değil. Bu başvuruyu onaylamayın.",
       "approved": "Profil onaylandı ve yayımlandı.",
       "rejected": "Profil düzenleme için geri gönderildi."
-    }
+    },
+    "deletionEyebrow": "ŞİRKET SİLME",
+    "deletionTitle": "Şirketleri Sil",
+    "deletionDescription": "Aşağıdaki tabloda kayıtlı tüm şirketler listelenir. 'Şirketi Sil' butonuyla bir şirketi kalıcı olarak silebilirsiniz. Bu işlem geri alınamaz.",
+    "company": "Şirket",
+    "slug": "Kısa Ad",
+    "verificationStatus": "Doğrulama",
+    "actions": "İşlem",
+    "deleteCompany": "{name} adlı şirketi sil",
+    "confirmDelete": "{name} adlı şirketi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+    "delete": "Sil"
   },
   "Freelance": {
     "eyebrow": "SERBEST ÇALIŞANLAR İÇİN",
@@ -1885,5 +1917,20 @@
       "pageCount": "Bu sayfadaki ilanlar",
       "viewDetails": "İlan ayrıntılarını görüntüle"
     }
+  },
+  "TalentPool": {
+    "adminTitle": "Aday Havuzu Yönetimi",
+    "adminDescription": "İşe alım için uygun adayları içe aktarın ve yönetin.",
+    "importTitle": "Toplu İçe Aktarma",
+    "importDescription": "Aday havuzu kayıtlarını JSON formatında içe aktarın.",
+    "importPlaceholder": "JSON dizi şeklinde aday verilerini yapıştırın.",
+    "importing": "İçe aktarılıyor…",
+    "importButton": "İçe Aktar",
+    "importedCount": "{count} aday içe aktarıldı.",
+    "loading": "Yükleniyor…",
+    "error": "Bir hata oluştu.",
+    "title": "Aday Havuzu",
+    "description": "İşe alım için uygun adayları görüntüleyin.",
+    "empty": "Henüz aday kaydı yok."
   }
 }

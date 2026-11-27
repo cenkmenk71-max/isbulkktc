@@ -18,7 +18,7 @@ begin;
 -- grant fails CI until it is added here deliberately — the same contract the
 -- function ratchet already enforces.
 
-select plan(10);
+select plan(14);
 
 select is(
   (
@@ -55,6 +55,7 @@ select is(
     'conversations',
     'credit_accounts',
     'credit_ledger_entries',
+    'job_match_notifications',
     'job_packages',
     'jobs',
     'messages',
@@ -68,6 +69,7 @@ select is(
     'saved_jobs',
     'support_messages',
     'support_threads',
+    'talent_pool_entries',
     'user_roles'
   ]::text[],
   'only reviewed tables are reachable by anon/authenticated'
@@ -96,6 +98,12 @@ select ok(
   and not has_table_privilege('anon', 'public.push_notification_preferences', 'SELECT')
   and not has_table_privilege('authenticated', 'public.push_notification_preferences', 'SELECT'),
   'push credentials and preferences stay behind their RPCs'
+);
+
+select ok(
+  not has_table_privilege('anon', 'public.job_match_email_outbox', 'SELECT')
+  and not has_table_privilege('authenticated', 'public.job_match_email_outbox', 'SELECT'),
+  'job match email outbox stays closed to clients'
 );
 
 select ok(
@@ -149,6 +157,18 @@ select ok(
   and not has_table_privilege('anon', 'public.outbox_events', 'SELECT')
   and not has_table_privilege('authenticated', 'public.outbox_events', 'SELECT'),
   'payment instructions, reconciliations, sync runs and outbox stay closed to clients'
+);
+
+select ok(
+  not has_table_privilege('anon', 'public.job_match_email_outbox', 'SELECT')
+  and not has_table_privilege('authenticated', 'public.job_match_email_outbox', 'SELECT')
+  and not has_table_privilege('anon', 'public.job_match_email_outbox', 'INSERT')
+  and not has_table_privilege('authenticated', 'public.job_match_email_outbox', 'INSERT')
+  and not has_table_privilege('anon', 'public.job_match_email_outbox', 'UPDATE')
+  and not has_table_privilege('authenticated', 'public.job_match_email_outbox', 'UPDATE')
+  and not has_table_privilege('anon', 'public.job_match_email_outbox', 'DELETE')
+  and not has_table_privilege('authenticated', 'public.job_match_email_outbox', 'DELETE'),
+  'job match email outbox stays service-role-only'
 );
 
 -- The reviewed positive surface: a visitor can read the public catalogue, and a

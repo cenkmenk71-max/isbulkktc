@@ -304,6 +304,23 @@
     "removeRecipient": "Remove recipient: {email}",
     "actionsTitle": "Actions"
   },
+  "AdminTalentPool": {
+    "eyebrow": "TALENT POOL",
+    "title": "Talent Pool",
+    "description": "Externally imported and authorized candidate records. These records are used only by the background matching engine and are not visible on employer pages.",
+    "mfaVerified": "Admin MFA verified",
+    "packagesLink": "Job Packages",
+    "jobsLink": "Job Listings",
+    "entriesEyebrow": "POOL RECORDS",
+    "entriesTitle": "Candidate Records",
+    "searchable": "Searchable",
+    "hidden": "Hidden",
+    "location": "Location",
+    "phone": "Phone",
+    "skills": "Skills",
+    "notAdded": "Not added",
+    "emptyEntries": "No records yet."
+  },
   "AccountSceneMedia": {
     "othello": "Othello Castle",
     "stHilarion": "St Hilarion Castle",
@@ -330,19 +347,19 @@
     "description": "Search current jobs and vacancies published in Northern Cyprus (TRNC) by position, district, employment type and workplace."
   },
   "PackagesPage": {
-    "eyebrow": "EMPLOYER JOB ENTITLEMENTS",
-    "title": "Hiring rights, clearly defined.",
-    "description": "Explore job packages. Payment is not collected on the website; IBAN details and payment instructions are shared privately by email or WhatsApp after discussing the package.",
-    "heroLink": "Review package rights",
+    "eyebrow": "JOB PACKAGES FOR EMPLOYERS AND COMPANIES",
+    "title": "Choose the right job package for your company.",
+    "description": "Select from flexible 1, 7 or 30-day job packages; submit your request in one click via WhatsApp or email, and your package is activated once the IBAN payment is completed.",
+    "heroLink": "Explore packages",
     "locationLine": "NORTHERN CYPRUS · EN / TR",
     "catalog": {
       "eyebrow": "ACTIVE PACKAGES"
     },
     "showcase": {
-      "eyebrow": "EMPLOYER PACKAGES",
-      "title": "Choose a job package that fits your hiring.",
+      "eyebrow": "EMPLOYER AND COMPANY JOB PACKAGES",
+      "title": "Choose the right job package for your company.",
       "instruction": "Choose your listing allowance, then select 1, 7 or 30 days per listing.",
-      "brand": "İşBul KKTC · Employer packages",
+      "brand": "İşBul KKTC · Employer and company job packages",
       "back": "Back to package selection",
       "selectPackage": "Select an employer package",
       "sceneFallback": "The 3D scene is unavailable, but package selection and details remain available.",
@@ -369,9 +386,9 @@
         "priceSummary": "Package total",
         "customPrice": "Custom scope · written quote",
         "contactTitle": "Contact our team about this listing package.",
-        "contactInstructions": "A WhatsApp or email draft opens for you to review and send. On Instagram, open the profile and write your message yourself.",
-        "whatsappAction": "Open WhatsApp draft",
-        "emailAction": "Open email draft",
+        "contactInstructions": "Submit your request in one click via WhatsApp or email; your package is activated once the IBAN payment is completed.",
+        "whatsappAction": "Buy Now",
+        "emailAction": "Buy Now",
         "instagramAction": "Open Instagram profile",
         "instagramNote": "Instagram does not support prefilled profile messages; send your message from the profile.",
         "inquirySubject": "İşBul KKTC · Listing package inquiry",
@@ -416,8 +433,8 @@
         }
       },
       "companySetupSuccess": {
-        "title": "Your company profile has been created and published!",
-        "description": "Your company is now visible in the İşBul KKTC directory. Choose a listing package to publish your first job."
+        "title": "Your company has been successfully registered!",
+        "description": "Choose the right job package for your company and start publishing immediately."
       }
     }
   },
@@ -1005,6 +1022,11 @@
     "submit": "Submit application",
     "submitting": "Submitting…",
     "loginAction": "Sign in",
+    "ctaTitle": "Sign in to apply for this role",
+    "ctaDescription": "Create a free account, complete your profile from your CV in 30 seconds, and apply.",
+    "ctaSignIn": "Sign in",
+    "ctaSignUp": "Create free account",
+    "ctaNote": "Already have an account? Sign in with one click and apply.",
     "messages": {
       "idle": "",
       "invalid": "The application details are invalid. Review them and try again.",
@@ -1508,7 +1530,17 @@
       "branchUnavailable": "The selected directory branch no longer exists. Do not approve this request.",
       "approved": "The profile was approved and published.",
       "rejected": "The profile was returned for changes."
-    }
+    },
+    "deletionEyebrow": "COMPANY DELETION",
+    "deletionTitle": "Delete Companies",
+    "deletionDescription": "The table below lists all registered companies. Use the 'Delete Company' button to permanently delete a company. This action cannot be undone.",
+    "company": "Company",
+    "slug": "Slug",
+    "verificationStatus": "Verification",
+    "actions": "Actions",
+    "deleteCompany": "Delete {name} company",
+    "confirmDelete": "Are you sure you want to delete the {name} company? This action cannot be undone.",
+    "delete": "Delete"
   },
   "Freelance": {
     "eyebrow": "FOR INDEPENDENT PROFESSIONALS",
@@ -1885,5 +1917,20 @@
       "pageCount": "Listings on this page",
       "viewDetails": "View full listing details"
     }
+  },
+  "TalentPool": {
+    "adminTitle": "Talent Pool Management",
+    "adminDescription": "Import and manage candidates suitable for hiring.",
+    "importTitle": "Bulk Import",
+    "importDescription": "Import talent pool records in JSON format.",
+    "importPlaceholder": "Paste candidate data as a JSON array.",
+    "importing": "Importing…",
+    "importButton": "Import",
+    "importedCount": "{count} candidates imported.",
+    "loading": "Loading…",
+    "error": "An error occurred.",
+    "title": "Talent Pool",
+    "description": "View candidates suitable for hiring.",
+    "empty": "No candidate records yet."
   }
 }

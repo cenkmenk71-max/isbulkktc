@@ -53,6 +53,14 @@ export type EmailCopyExtras = {
     jobRow: string;
     unsubscribeLabel: string;
   };
+  jobMatch: {
+    subject: string;
+    lead: string;
+    companyHeading: string;
+    matchScoreHeading: string;
+    matchScoreLabel: string;
+    cta: string;
+  };
   labels: {
     profileLabel: string;
     jobLabel: string;
@@ -107,6 +115,14 @@ const tr: EmailCopyExtras = {
     cta: "Tüm ilanları görün",
     jobRow: "{title} · {company}",
     unsubscribeLabel: "Abonelikten çık",
+  },
+  jobMatch: {
+    subject: "{company} · Yeni ilan eşleşmesi",
+    lead: "{company} yeni bir ilan yayımladı ve bu ilan yeteneklerinizle eşleşiyor.",
+    companyHeading: "Şirket",
+    matchScoreHeading: "Eşleşme puanı",
+    matchScoreLabel: "{score}/100",
+    cta: "İlanı incele",
   },
   labels: {
     profileLabel: "Profil",
@@ -163,6 +179,14 @@ const en: EmailCopyExtras = {
     jobRow: "{title} · {company}",
     unsubscribeLabel: "Unsubscribe",
   },
+  jobMatch: {
+    subject: "{company} · New job match",
+    lead: "{company} just posted a new listing that matches your skills.",
+    companyHeading: "Company",
+    matchScoreHeading: "Match score",
+    matchScoreLabel: "{score}/100",
+    cta: "View listing",
+  },
   labels: {
     profileLabel: "Profile",
     jobLabel: "Job",
@@ -217,6 +241,14 @@ const ru: EmailCopyExtras = {
     cta: "Все вакансии",
     jobRow: "{title} · {company}",
     unsubscribeLabel: "Отписаться",
+  },
+  jobMatch: {
+    subject: "{company} · Новое совпадение вакансии",
+    lead: "{company} только что опубликовал новую вакансию, соответствующую вашим навыкам.",
+    companyHeading: "Компания",
+    matchScoreHeading: "Оценка совпадения",
+    matchScoreLabel: "{score}/100",
+    cta: "Открыть вакансию",
   },
   labels: {
     profileLabel: "Профиль",
@@ -273,6 +305,14 @@ const el: EmailCopyExtras = {
     jobRow: "{title} · {company}",
     unsubscribeLabel: "Διαγραφή",
   },
+  jobMatch: {
+    subject: "{company} · Νέα αντιστοίχιση θέσης",
+    lead: "Η {company} appena δημοσίευσε νέα θέση που ταιριάζει στις δεξιότητες σας.",
+    companyHeading: "Εταιρεία",
+    matchScoreHeading: "Βαθμός αντιστοίχισης",
+    matchScoreLabel: "{score}/100",
+    cta: "Προβολή θέσης",
+  },
   labels: {
     profileLabel: "Προφίλ",
     jobLabel: "Θέση",
@@ -328,6 +368,14 @@ const fa: EmailCopyExtras = {
     jobRow: "{title} · {company}",
     unsubscribeLabel: "لغو اشتراک",
   },
+  jobMatch: {
+    subject: "{company} · موقعیت جدید مطابقت‌یافته",
+    lead: "{company} یک موقعیت جدید منتشر کرده که با مهارت‌های شما مطابقت دارد.",
+    companyHeading: "شرکت",
+    matchScoreHeading: "امتیاز مطابقت",
+    matchScoreLabel: "{score}/100",
+    cta: "مشاهده موقعیت",
+  },
   labels: {
     profileLabel: "پروفایل",
     jobLabel: "موقعیت",
@@ -382,6 +430,14 @@ const de: EmailCopyExtras = {
     cta: "Alle Stellen",
     jobRow: "{title} · {company}",
     unsubscribeLabel: "Abmelden",
+  },
+  jobMatch: {
+    subject: "{company} · Neue Stellenübereinstimmung",
+    lead: "{company} hat soeben eine neue Anzeige veröffentlicht, die zu Ihren Fähigkeiten passt.",
+    companyHeading: "Unternehmen",
+    matchScoreHeading: "Übereinstimmung",
+    matchScoreLabel: "{score}/100",
+    cta: "Anzeige ansehen",
   },
   labels: {
     profileLabel: "Profil",

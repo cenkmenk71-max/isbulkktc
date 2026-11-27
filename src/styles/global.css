@@ -12936,6 +12936,41 @@ html[dir="rtl"] input[name="slug"] {
   font-weight: 700;
   text-underline-offset: 3px;
 }
+
+/* High-conversion CTA card for unauthenticated users */
+.job-application-card--cta {
+  text-align: center;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--surface-raised) 92%, var(--color-shade-green-50)) 0%,
+    color-mix(in srgb, var(--surface-raised) 85%, var(--color-shade-green-100)) 100%
+  );
+  border-color: var(--border-green);
+}
+.job-application-card--cta h2 {
+  color: var(--green-deep);
+}
+.job-application-card--cta > p {
+  color: var(--ink-3);
+  max-width: 320px;
+  margin: 0 auto 14px;
+}
+.job-application-cta-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 18px 0 10px;
+}
+.job-application-cta-actions .button {
+  justify-content: center;
+}
+.job-application-cta-note {
+  margin: 0;
+  color: var(--ink-4);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .job-detail-company-card {
   display: grid;
   gap: 7px;
@@ -15060,5 +15095,240 @@ body:has(.pwa-update-toast) .support-widget {
 @media (max-width: 680px) {
   .job-authoring-fields {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Company Setup Celebration Banner with Confetti */
+.company-setup-celebration {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin-bottom: clamp(16px, 2vw, 24px);
+}
+
+.celebration-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.celebration-content {
+  position: relative;
+  z-index: 2;
+}
+
+.celebration-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border: 1px solid var(--border-green);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--green-soft) 85%, transparent) 0%,
+    color-mix(in srgb, var(--green-pale) 60%, transparent) 100%
+  );
+  box-shadow: var(--shadow-green);
+}
+
+.celebration-icon {
+  flex: 0 0 auto;
+  color: var(--green-deep);
+}
+
+.celebration-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.celebration-title {
+  margin: 0;
+  color: var(--green-deep);
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+}
+
+.celebration-description {
+  margin: 0;
+  color: var(--green);
+  font-size: var(--type-supporting);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .celebration-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+  }
+  .celebration-title {
+    font-size: 14px;
+  }
+}
+
+/* Package Buy Buttons with Pulse Glow */
+.package-buy-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 20px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition:
+    transform var(--motion-fast) var(--ease-premium),
+    background var(--motion-base) var(--ease-premium),
+    border-color var(--motion-base) var(--ease-premium),
+    box-shadow var(--motion-base) var(--ease-premium),
+    color var(--motion-base) var(--ease-premium);
+}
+
+.package-buy-button:focus-visible {
+  outline: 3px solid var(--color-shade-green-700);
+  outline-offset: 3px;
+}
+
+.package-buy-button:hover {
+  transform: translateY(-2px);
+}
+
+.package-buy-button:active {
+  transform: translateY(0);
+}
+
+.package-buy-button .button-icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+}
+
+.whatsapp-buy-button {
+  color: var(--color-crayon-highlight);
+  background: linear-gradient(
+    135deg,
+    var(--brand-green-vivid) 0%,
+    #236746 50%,
+    var(--brand-green-vivid) 100%
+  );
+  border-color: rgba(109, 187, 134, 0.5);
+  box-shadow:
+    0 6px 20px rgba(43, 116, 83, 0.35),
+    0 2px 8px rgba(43, 116, 83, 0.2),
+    inset 0 1px 0 rgba(255, 253, 248, 0.2);
+  animation: package-buy-glow-whatsapp 3s var(--ease-premium) infinite;
+}
+
+.whatsapp-buy-button:hover {
+  background: linear-gradient(
+    135deg,
+    #236746 0%,
+    var(--brand-green-vivid) 50%,
+    #1d5d46 100%
+  );
+  border-color: rgba(109, 187, 134, 0.8);
+  box-shadow:
+    0 10px 28px rgba(43, 116, 83, 0.45),
+    0 4px 12px rgba(43, 116, 83, 0.25),
+    inset 0 1px 0 rgba(255, 253, 248, 0.25);
+}
+
+.email-buy-button {
+  color: var(--color-crayon-highlight);
+  background: linear-gradient(
+    135deg,
+    #1e6f9f 0%,
+    #2589c7 50%,
+    #1a5d85 100%
+  );
+  border-color: rgba(70, 160, 210, 0.5);
+  box-shadow:
+    0 6px 20px rgba(30, 111, 159, 0.35),
+    0 2px 8px rgba(30, 111, 159, 0.2),
+    inset 0 1px 0 rgba(255, 253, 248, 0.2);
+  animation: package-buy-glow-email 3s var(--ease-premium) infinite;
+}
+
+.email-buy-button:hover {
+  background: linear-gradient(
+    135deg,
+    #1a5d85 0%,
+    #1e6f9f 50%,
+    #164d70 100%
+  );
+  border-color: rgba(70, 160, 210, 0.8);
+  box-shadow:
+    0 10px 28px rgba(30, 111, 159, 0.45),
+    0 4px 12px rgba(30, 111, 159, 0.25),
+    inset 0 1px 0 rgba(255, 253, 248, 0.25);
+}
+
+@keyframes package-buy-glow-whatsapp {
+  0%,
+  100% {
+    box-shadow:
+      0 6px 20px rgba(43, 116, 83, 0.35),
+      0 2px 8px rgba(43, 116, 83, 0.2),
+      inset 0 1px 0 rgba(255, 253, 248, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 8px 28px rgba(43, 116, 83, 0.5),
+      0 4px 12px rgba(43, 116, 83, 0.3),
+      inset 0 1px 0 rgba(255, 253, 248, 0.2),
+      0 0 0 4px rgba(109, 187, 134, 0.15);
+  }
+}
+
+@keyframes package-buy-glow-email {
+  0%,
+  100% {
+    box-shadow:
+      0 6px 20px rgba(30, 111, 159, 0.35),
+      0 2px 8px rgba(30, 111, 159, 0.2),
+      inset 0 1px 0 rgba(255, 253, 248, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 8px 28px rgba(30, 111, 159, 0.5),
+      0 4px 12px rgba(30, 111, 159, 0.3),
+      inset 0 1px 0 rgba(255, 253, 248, 0.2),
+      0 0 0 4px rgba(70, 160, 210, 0.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .whatsapp-buy-button,
+  .email-buy-button {
+    animation: none;
+  }
+  .whatsapp-buy-button:hover,
+  .email-buy-button:hover {
+    animation: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .package-buy-button {
+    min-height: 44px;
+    padding: 0 16px;
+    font-size: 13px;
+  }
+  .package-buy-button .button-icon {
+    width: 18px;
+    height: 18px;
   }
 }

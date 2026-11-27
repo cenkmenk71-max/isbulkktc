@@ -172,6 +172,67 @@ export type Database = {
           updated_at?: never;
         }
       >;
+      talent_pool_entries: Table<
+        {
+          id: string;
+          email: string;
+          full_name: string;
+          phone: string | null;
+          headline: string | null;
+          location: string | null;
+          summary: string | null;
+          skills: string[];
+          experience: Json;
+          education: Json;
+          languages: Json;
+          certifications: Json;
+          links: Json;
+          source: string;
+          source_ref: string | null;
+          is_searchable: boolean;
+          created_at: string;
+          updated_at: string;
+        },
+        {
+          email: string;
+          full_name: string;
+          phone?: string | null;
+          headline?: string | null;
+          location?: string | null;
+          summary?: string | null;
+          skills?: string[];
+          experience?: Json;
+          education?: Json;
+          languages?: Json;
+          certifications?: Json;
+          links?: Json;
+          source?: string;
+          source_ref?: string | null;
+          is_searchable?: boolean;
+          created_at?: never;
+          updated_at?: never;
+        },
+        {
+          phone?: string | null;
+          headline?: string | null;
+          location?: string | null;
+          summary?: string | null;
+          skills?: string[];
+          experience?: Json;
+          education?: Json;
+          languages?: Json;
+          certifications?: Json;
+          links?: Json;
+          source?: string;
+          source_ref?: string | null;
+          is_searchable?: boolean;
+          id?: never;
+          email?: never;
+          full_name?: never;
+          created_at?: never;
+          updated_at?: never;
+        }
+      >;
       companies: Table<
         {
           id: string;
@@ -420,6 +481,60 @@ export type Database = {
           created_at?: never;
           updated_at?: never;
         }
+      >;
+      job_match_notifications: Table<
+        {
+          id: string;
+          user_id: string;
+          job_id: string;
+          match_score: number;
+          created_at: string;
+          read_at: string | null;
+          email_sent_at: string | null;
+        },
+        {
+          user_id: string;
+          job_id: string;
+          match_score: number;
+          id?: never;
+          created_at?: never;
+          read_at?: never;
+          email_sent_at?: never;
+        },
+        {
+          read_at?: string | null;
+          id?: never;
+          user_id?: never;
+          job_id?: never;
+          match_score?: never;
+          created_at?: never;
+          email_sent_at?: never;
+        }
+      >;
+      job_match_email_outbox: Table<
+        {
+          id: string;
+          notification_id: string;
+          attempt_count: number;
+          next_attempt_at: string;
+          claimed_at: string | null;
+          sent_at: string | null;
+          provider_message_id: string | null;
+          last_error_code: string | null;
+          created_at: string;
+        },
+        {
+          notification_id: string;
+          id?: never;
+          attempt_count?: never;
+          next_attempt_at?: never;
+          claimed_at?: never;
+          sent_at?: never;
+          provider_message_id?: never;
+          last_error_code?: never;
+          created_at?: never;
+        },
+        never
       >;
       applications: Table<
         {
@@ -695,6 +810,10 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      admin_delete_company: {
+        Args: { _company_id: string };
+        Returns: undefined;
+      };
       admin_list_company_verifications: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -761,6 +880,13 @@ export type Database = {
         Args: { _application_id: string };
         Returns: string;
       };
+      get_candidate_contact: {
+        Args: { _user_id: string };
+        Returns: {
+          email: string | null;
+          phone: string | null;
+        }[];
+      };
       list_my_applications: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -826,6 +952,10 @@ export type Database = {
           _is_active: boolean;
         };
         Returns: string;
+      };
+      admin_bulk_import_talent_pool: {
+        Args: { _entries: Json };
+        Returns: number;
       };
       admin_assign_company_job_package: {
         Args: {

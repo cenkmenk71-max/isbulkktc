@@ -304,6 +304,23 @@
     "removeRecipient": "Empfänger entfernen: {email}",
     "actionsTitle": "Aktionen"
   },
+  "AdminTalentPool": {
+    "eyebrow": "TALENT-POOL",
+    "title": "Talent Pool",
+    "description": "Extern importierte und autorisierte Kandidaten-Datensätze. Diese werden nur vom Hintergrund-Matching-Engine verwendet und sind auf Arbeitgeberseiten nicht sichtbar.",
+    "mfaVerified": "Admin-MFA verifiziert",
+    "packagesLink": "Stellenpakete",
+    "jobsLink": "Stellenanzeigen",
+    "entriesEyebrow": "POOL-EINTRÄGE",
+    "entriesTitle": "Kandidaten-Einträge",
+    "searchable": "Durchsuchbar",
+    "hidden": "Ausgeblendet",
+    "location": "Standort",
+    "phone": "Telefon",
+    "skills": "Kenntnisse",
+    "notAdded": "Nicht hinzugefügt",
+    "emptyEntries": "Noch keine Einträge."
+  },
   "AccountSceneMedia": {
     "othello": "Othello-Burg",
     "stHilarion": "Burg St. Hilarion",
@@ -430,19 +447,19 @@
     "supportReference": "Support-Referenz: {digest}"
   },
   "PackagesPage": {
-    "eyebrow": "ANZEIGENRECHTE FÜR ARBEITGEBER",
-    "title": "Klare Rechte für Ihre Personalsuche.",
-    "description": "Entdecken Sie Anzeigenpakete. Die Zahlung erfolgt per IBAN-Überweisung außerhalb der Website; Bankdaten und Anweisungen werden nach Besprechung der Paketbedingungen privat mitgeteilt.",
-    "heroLink": "Paketrechte ansehen",
+    "eyebrow": "STELLENANZEIGEN-PAKETE FÜR ARBEITGEBER UND UNTERNEHMEN",
+    "title": "Wählen Sie das passende Stellenanzeigen-Paket für Ihr Unternehmen.",
+    "description": "Wählen Sie aus flexiblen 1-, 7- oder 30-Tage-Paketen; senden Sie Ihre Anfrage per Klick via WhatsApp oder E-Mail, und Ihr Paket wird aktiviert, sobald die IBAN-Zahlung erfolgt ist.",
+    "heroLink": "Pakete ansehen",
     "locationLine": "NORDZYPERN · DE / TR",
     "catalog": {
       "eyebrow": "AKTIVE PAKETE"
     },
     "showcase": {
-      "eyebrow": "ARBEITGEBERPAKETE",
-      "title": "Wählen Sie ein Stellenpaket passend zu Ihrem Bedarf.",
+      "eyebrow": "STELLENANZEIGEN-PAKETE FÜR ARBEITGEBER UND UNTERNEHMEN",
+      "title": "Wählen Sie das passende Stellenanzeigen-Paket für Ihr Unternehmen.",
       "instruction": "Legen Sie die Anzahl der Anzeigen fest und wählen Sie je Anzeige 1, 7 oder 30 Tage.",
-      "brand": "İşBul KKTC · Arbeitgeberpakete",
+      "brand": "İşBul KKTC · Stellenanzeigen-Pakete für Arbeitgeber und Unternehmen",
       "back": "Zurück zur Paketauswahl",
       "selectPackage": "Arbeitgeberpaket auswählen",
       "sceneFallback": "Die 3D-Szene ist nicht verfügbar. Paketauswahl und Details funktionieren weiterhin.",
@@ -469,9 +486,9 @@
         "priceSummary": "Gesamtpreis des Pakets",
         "customPrice": "Individueller Umfang · schriftliches Angebot",
         "contactTitle": "Kontaktieren Sie uns zu diesem Stellenanzeigenpaket.",
-        "contactInstructions": "Ein WhatsApp- oder E-Mail-Entwurf wird geöffnet, den Sie prüfen und selbst versenden. Öffnen Sie auf Instagram das Profil und schreiben Sie Ihre Nachricht selbst.",
-        "whatsappAction": "WhatsApp-Entwurf öffnen",
-        "emailAction": "E-Mail-Entwurf öffnen",
+        "contactInstructions": "Senden Sie Ihre Anfrage per Klick via WhatsApp oder E-Mail; Ihr Paket wird aktiviert, sobald die IBAN-Zahlung erfolgt ist.",
+        "whatsappAction": "Kaufen",
+        "emailAction": "Kaufen",
         "instagramAction": "Instagram-Profil öffnen",
         "instagramNote": "Instagram unterstützt keine vorausgefüllten Profilnachrichten; senden Sie Ihre Nachricht manuell über das Profil.",
         "inquirySubject": "İşBul KKTC · Anfrage zu Stellenanzeigenpaketen",
@@ -516,8 +533,8 @@
         }
       },
       "companySetupSuccess": {
-        "title": "Ihr Firmenprofil wurde erstellt und veröffentlicht!",
-        "description": "Ihr Unternehmen ist nun im İşBul KKTC-Verzeichnis sichtbar. Wählen Sie ein Anzeigenpaket, um Ihre erste Stellenanzeige zu veröffentlichen."
+        "title": "Ihr Unternehmen wurde erfolgreich registriert!",
+        "description": "Wählen Sie das passende Stellenanzeigen-Paket für Ihr Unternehmen und veröffentlichen Sie sofort."
       }
     }
   },
@@ -1005,6 +1022,11 @@
     "submit": "Bewerbung senden",
     "submitting": "Wird gesendet…",
     "loginAction": "Anmelden",
+    "ctaTitle": "Anmelden, um sich auf diese Stelle zu bewerben",
+    "ctaDescription": "Erstellen Sie ein kostenloses Konto, vervollständigen Sie Ihr Profil aus dem CV in 30 Sekunden und bewerben Sie sich.",
+    "ctaSignIn": "Anmelden",
+    "ctaSignUp": "Kostenloses Konto erstellen",
+    "ctaNote": "Haben Sie bereits ein Konto? Mit einem Klick anmelden und bewerben.",
     "messages": {
       "idle": "",
       "invalid": "Die Bewerbungsangaben sind ungültig. Bitte prüfen Sie sie und versuchen Sie es erneut.",
@@ -1487,7 +1509,17 @@
       "branchUnavailable": "Der ausgewählte Verzeichniseintrag ist nicht mehr verfügbar. Geben Sie diese Anfrage nicht frei.",
       "approved": "Das Profil wurde freigegeben und veröffentlicht.",
       "rejected": "Das Profil wurde zur Überarbeitung zurückgegeben."
-    }
+    },
+    "deletionEyebrow": "UNTERNEHMEN LÖSCHEN",
+    "deletionTitle": "Unternehmen löschen",
+    "deletionDescription": "Die folgende Tabelle listet alle registrierten Unternehmen. Verwenden Sie die Schaltfläche „Unternehmen löschen“, um ein Unternehmen dauerhaft zu löschen. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "company": "Unternehmen",
+    "slug": "Kurzname",
+    "verificationStatus": "Verifizierung",
+    "actions": "Aktionen",
+    "deleteCompany": "Unternehmen {name} löschen",
+    "confirmDelete": "Sind Sie sicher, dass Sie das Unternehmen {name} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "delete": "Löschen"
   },
   "Freelance": {
     "eyebrow": "FÜR SELBSTSTÄNDIGE FACHKRÄFTE",
@@ -1885,5 +1917,20 @@
       "pageCount": "Anzeigen auf dieser Seite",
       "viewDetails": "Alle Anzeigendetails anzeigen"
     }
+  },
+  "TalentPool": {
+    "adminTitle": "Talent Pool Verwaltung",
+    "adminDescription": "Kandidaten für die Einstellung importieren und verwalten.",
+    "importTitle": "Massenimport",
+    "importDescription": "Talent-Pool-Einträge im JSON-Format importieren.",
+    "importPlaceholder": "Kandidatendaten als JSON-Array einfügen.",
+    "importing": "Wird importiert…",
+    "importButton": "Importieren",
+    "importedCount": "{count} Kandidaten importiert.",
+    "loading": "Wird geladen…",
+    "error": "Ein Fehler ist aufgetreten.",
+    "title": "Talent Pool",
+    "description": "Kandidaten für die Einstellung ansehen.",
+    "empty": "Noch keine Kandidaten-Einträge vorhanden."
   }
 }

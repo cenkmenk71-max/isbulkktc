@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/server/db/supabase-server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/server/db/supabase-server";
 import { getCurrentUser, getPlatformAdminMfaStatus } from "@/server/dal/user";
 import { redirectLocalized } from "@/i18n/redirect";
 import { getLocalePrefix } from "@/i18n/routing";
@@ -259,6 +259,19 @@ export async function publishApprovedJob(
     }
     console.error("Approved job publication failed.", { code: error.code });
     return { ...initialJobFormState, status: "error", message: "publishFailed" };
+  }
+
+  // Log how many candidate matches were queued for this job by the DB trigger.
+  const serviceClient = createSupabaseServiceClient();
+  if (serviceClient) {
+    const { count: matchCount } = await serviceClient
+      .from("job_match_notifications")
+      .select("*", { head: true, count: "exact" })
+      .eq("job_id", result.data.jobId);
+    console.log("Job published and matches queued.", {
+      jobId: result.data.jobId,
+      matchCount: matchCount ?? 0,
+    });
   }
 
   // Fetch updated job details (including expires_at) for emails

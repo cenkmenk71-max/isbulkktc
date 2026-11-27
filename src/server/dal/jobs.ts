@@ -341,6 +341,17 @@ export async function searchPublicJobPreviews(input: unknown) {
   const filters = publicJobSearchSchema.parse(input);
   const pageSize = 6;
 
+  type PreviewRow = {
+    job_title: string | null;
+    company_name: string | null;
+    job_slug: string | null;
+    job_summary: string | null;
+    job_type: string | null;
+    workplace_mode: string | null;
+    district: string | null;
+    total_count: number;
+  };
+
   try {
     const supabase = await createSupabaseServerClient();
 
@@ -362,7 +373,7 @@ export async function searchPublicJobPreviews(input: unknown) {
         throw new Error("The public job preview search returned no result data.");
       }
 
-      return data;
+      return data as PreviewRow[];
     };
 
     let rows = await searchPage(filters.page);
@@ -380,7 +391,15 @@ export async function searchPublicJobPreviews(input: unknown) {
       if (row.job_title === null || row.company_name === null) {
         throw new Error("A public job preview is missing its title or company name.");
       }
-      return [{ title: row.job_title, companyName: row.company_name }];
+      return [{
+        title: row.job_title,
+        companyName: row.company_name,
+        slug: row.job_slug ?? "",
+        summary: row.job_summary,
+        jobType: row.job_type ?? "",
+        workplaceMode: row.workplace_mode,
+        district: row.district,
+      }];
     });
 
     return { previews, total, page, pageSize };

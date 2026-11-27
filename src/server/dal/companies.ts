@@ -206,3 +206,40 @@ export async function getPublicCompanyDirectoryOverrides(): Promise<
     return [];
   }
 }
+
+export async function getAllVerifiedCompanies(): Promise<
+  {
+    id: string;
+    name: string;
+    slug: string;
+    verification_status: string;
+    profile_description: string | null;
+    categories: string[];
+    website: string | null;
+    phone: string | null;
+    public_email: string | null;
+    address: string | null;
+    municipality: string | null;
+    directory_entry_id: string | null;
+    directory_location_index: number | null;
+    source_profile_url: string | null;
+    logo_url: string | null;
+    created_at: string;
+    updated_at: string;
+  }[]
+> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("companies")
+    .select(
+      "id, name, slug, verification_status, profile_description, categories, website, phone, public_email, address, municipality, directory_entry_id, directory_location_index, source_profile_url, logo_url, created_at, updated_at",
+    )
+    .eq("verification_status", "verified")
+    .order("name");
+
+  if (error) {
+    throw new Error("Verified companies could not be loaded.", { cause: error });
+  }
+
+  return data ?? [];
+}

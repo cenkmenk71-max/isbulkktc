@@ -555,6 +555,44 @@ export function renderEngagementEmail(input: SiteContext & {
   };
 }
 
+/** Job match alert: a new listing matches the candidate's skills. */
+export function renderJobMatchAlertEmail(input: SiteContext & {
+  jobTitle: string;
+  companyName: string;
+  matchScore: number;
+  jobUrl: string;
+}): RenderedEmail {
+  return render(input, (_copy, locale) => {
+    const copy = getEmailCopyExtras(locale);
+    const subject = copy.jobMatch.subject.replace("{company}", input.companyName);
+    const lead = copy.jobMatch.lead.replace("{company}", input.companyName);
+    const opts = {
+      locale,
+      preheader: lead,
+      heading: subject,
+      introHtml: `${paragraph(lead)}${strongLine(input.jobTitle)}`,
+      sections: [
+        {
+          heading: copy.jobMatch.companyHeading,
+          html: `<p style="margin:0 0 12px;">${escapeHtml(input.companyName)}</p>`,
+        },
+        {
+          heading: copy.jobMatch.matchScoreHeading,
+          html: `<p style="margin:0 0 12px;">${copy.jobMatch.matchScoreLabel.replace("{score}", input.matchScore.toString())}</p>`,
+        },
+      ],
+      button: { label: copy.jobMatch.cta, url: input.jobUrl },
+      footerNote: _copy.footer.reason,
+      siteUrl: input.siteUrl,
+    };
+    return {
+      subject,
+      html: renderEmailLayout(opts),
+      text: renderEmailText(opts),
+    };
+  });
+}
+
 export type MarketingInput = SiteContext & {
   /** A signed recipient-specific opt-out URL is mandatory for promotional mail. */
   unsubscribeUrl: string;

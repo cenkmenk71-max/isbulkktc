@@ -24,6 +24,7 @@ import {
   type CompanyDirectoryAutofillSource,
   type CompanyProfileFields,
 } from "./company-directory-autofill";
+import { DirectoryDropdown } from "./directory-dropdown";
 import {
   applyCompanyDocumentAutofill,
   type CompanyDocumentConflict,
@@ -137,30 +138,7 @@ export function CompanyProfileForm({
     setFields(updatedFields);
   }
 
-  function handleDirectorySearch(value: string) {
-    setDirectorySearch(value);
-    const target = directoryTargets.find((option) => option.label === value);
-    setSelectedDirectoryTarget(target?.value ?? "");
-    setDirectoryMatchApplied(Boolean(target));
-    if (!target) return;
-    setDetailsOpen(true);
-
-    const result = applyCompanyDirectoryAutofill(
-      fieldsRef.current,
-      initialFieldsRef.current,
-      lastAutofillRef.current,
-      getCompanyDirectoryAutofill(target),
-    );
-    lastAutofillRef.current = result.autofilled;
-    fieldsRef.current = result.fields;
-    setFields(result.fields);
-  }
-
   async function handleCompanyDocument(file: File) {
-    setDocumentImporting(true);
-    setDocumentImportStatus("idle");
-    setDocumentFieldsFilled(0);
-    setDocumentConflicts([]);
 
     try {
       const request = new FormData();
@@ -239,27 +217,25 @@ export function CompanyProfileForm({
           <div className="company-management-directory-search">
             <label>
               {copy("directorySearchLabel")}
-              <input
-                autoComplete="off"
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter" || selectedDirectoryTarget) return;
-                  const exactMatch = directoryTargets.find(
-                    (target) => target.label === event.currentTarget.value,
-                  );
-                  if (exactMatch) handleDirectorySearch(exactMatch.label);
-                  event.preventDefault();
-                }}
-                list={`company-directory-${companyId}`}
-                onChange={(event) => handleDirectorySearch(event.currentTarget.value)}
-                placeholder={copy("directorySearchPlaceholder")}
-                type="search"
+              <DirectoryDropdown
+                targets={directoryTargets}
                 value={directorySearch}
+                onSelect={(target) => {
+                  setDirectorySearch(target.label);
+                  setSelectedDirectoryTarget(target.value);
+                  setDirectoryMatchApplied(true);
+                  setDetailsOpen(true);
+                  const result = applyCompanyDirectoryAutofill(
+                    fieldsRef.current,
+                    initialFieldsRef.current,
+                    lastAutofillRef.current,
+                    getCompanyDirectoryAutofill(target),
+                  );
+                  lastAutofillRef.current = result.autofilled;
+                  fieldsRef.current = result.fields;
+                  setFields(result.fields);
+                }}
               />
-              <datalist id={`company-directory-${companyId}`}>
-                {directoryTargets.map((target) => (
-                  <option key={target.value} value={target.label} />
-                ))}
-              </datalist>
             </label>
             <small>{copy("directorySearchHint")}</small>
             {directoryMatchApplied ? (
