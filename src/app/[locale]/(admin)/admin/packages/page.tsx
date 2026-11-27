@@ -12,6 +12,7 @@ import { getPlatformAdminMfaStatus } from "@/server/dal/user";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
+import { AdminConsoleNav } from "@/components/admin/admin-console-nav";
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
@@ -40,6 +41,7 @@ export default async function AdminPackagesPage({
   if (!mfa.aal2) {
     return (
       <main className="admin-packages-page page-container">
+        <AdminConsoleNav />
         <AdminMfaGate verifiedFactorId={mfa.verifiedTotpFactorId} />
       </main>
     );
@@ -49,6 +51,7 @@ export default async function AdminPackagesPage({
 
   return (
     <main className="admin-packages-page page-container">
+      <AdminConsoleNav />
       <header className="admin-packages-heading">
         <p className="eyebrow">
           <span className="eyebrow-rule" />

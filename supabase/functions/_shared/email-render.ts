@@ -616,8 +616,6 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
   const packagePageUrl = new URL("packages#packages-current", baseUrl).toString();
   const packageUrl = (anchor: string) => new URL("packages#" + anchor, baseUrl).toString();
 
-  const whatsappUrl = new URL(MARKETING_CONTACTS.whatsapp);
-  whatsappUrl.searchParams.set("text", copy.whatsappMessage);
   const emailUrl = new URL("mailto:" + MARKETING_CONTACTS.email);
   emailUrl.searchParams.set("subject", copy.subject);
   emailUrl.searchParams.set("body", copy.whatsappMessage + "\n\n" + packagePageUrl);
@@ -657,11 +655,6 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
     outroHtml: paragraph(copy.closing),
     buttons: [
       {
-        label: copy.whatsappCta,
-        url: whatsappUrl.toString(),
-        lead: copy.whatsappLead,
-      },
-      {
         label: copy.secondaryCta,
         url: emailUrl.toString(),
         lead: copy.contactHeading,
@@ -673,16 +666,6 @@ export function renderMarketingEmail(input: MarketingInput): RenderedEmail {
         label: copy.contactLabels.email,
         value: MARKETING_CONTACTS.email,
         url: "mailto:" + MARKETING_CONTACTS.email,
-      },
-      {
-        label: copy.contactLabels.phone,
-        value: MARKETING_CONTACTS.phoneDisplay,
-        url: "tel:" + MARKETING_CONTACTS.phoneTel,
-      },
-      {
-        label: copy.contactLabels.whatsapp,
-        value: MARKETING_CONTACTS.phoneDisplay,
-        url: whatsappUrl.toString(),
       },
     ],
     contactsHeading: copy.contactHeading,

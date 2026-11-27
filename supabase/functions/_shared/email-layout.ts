@@ -467,7 +467,7 @@ function footerBlock(options: EmailLayoutOptions): string {
     : "";
   return `<tr><td class="ibk-foot" style="padding:${SPACE.xl}px ${SPACE.xl}px;background:${BRAND.footer};border-top:1px solid ${BRAND.line};text-align:center;font-size:${TYPE.micro}px;line-height:${LEADING.loose};color:${BRAND.inkSoft};">
 <p style="margin:0 0 ${SPACE.sm}px;">${escapeHtml(options.footerNote)}</p>
-<p style="margin:0 0 ${SPACE.sm}px;"><a href="mailto:info@isbulkktc.com" style="color:${BRAND.green};text-decoration:none;font-weight:600;">info@isbulkktc.com</a> <span aria-hidden="true">·</span> <a href="tel:+905391316421" style="color:${BRAND.green};text-decoration:none;font-weight:600;">0539 131 64 21</a></p>
+<p style="margin:0 0 ${SPACE.sm}px;"><a href="mailto:info@isbulkktc.com" style="color:${BRAND.green};text-decoration:none;font-weight:600;">info@isbulkktc.com</a> <span aria-hidden="true">·</span> Telefon & WhatsApp: +90 539 131 64 21</p>
 <p style="margin:0 0 ${SPACE.sm}px;">${escapeHtml(formatPostalAddress())}</p>
 <p style="margin:0;">© ${new Date().getUTCFullYear()} ${BRAND.name} · <a href="${escapeHtml(
     options.siteUrl,
@@ -596,7 +596,7 @@ ${heroHtml ? `
 <tr><td class="ibk-pad ibk-brand-bg" bgcolor="${BRAND.green}" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-brand-table" style="width:100%;table-layout:fixed;"><tr>
 <td width="56" style="width:56px;vertical-align:middle;">
-<a href="${escapeHtml(options.siteUrl)}" style="display:inline-block;text-decoration:none;"><img src="${LOGO_URL}" width="56" height="33" alt="${BRAND.name}" style="display:block;border:0;outline:none;text-decoration:none;" /></a>
+<a href="${escapeHtml(options.siteUrl)}" style="display:inline-block;text-decoration:none;"><img src="${LOGO_URL}" width="56" height="33" alt="${BRAND.name}" style="display:block;border:0;outline:none;" /></a>
 </td>
 <td class="ibk-brand-copy" style="vertical-align:middle;padding-${dir === "rtl" ? "right" : "left"}:14px;word-wrap:break-word;">
 <div class="ibk-brand-name" style="color:${BRAND.white};font-size:${TYPE.h1}px;font-weight:800;letter-spacing:-0.4px;line-height:1.1;">${BRAND.name}</div>
@@ -608,7 +608,7 @@ ${heroHtml ? `
 <tr><td class="ibk-pad ibk-brand-bg" bgcolor="${BRAND.green}" style="background:${BRAND.green};padding:${SPACE.lg}px ${SPACE.xl}px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ibk-brand-table" style="width:100%;table-layout:fixed;"><tr>
 <td width="56" style="width:56px;vertical-align:middle;">
-<a href="${escapeHtml(options.siteUrl)}" style="display:inline-block;text-decoration:none;"><img src="${LOGO_URL}" width="56" height="33" alt="${BRAND.name}" style="display:block;border:0;outline:none;text-decoration:none;" /></a>
+<a href="${escapeHtml(options.siteUrl)}" style="display:inline-block;text-decoration:none;"><img src="${LOGO_URL}" width="56" height="33" alt="${BRAND.name}" style="display:block;border:0;outline:none;" /></a>
 </td>
 <td class="ibk-brand-copy" style="vertical-align:middle;padding-${dir === "rtl" ? "right" : "left"}:14px;word-wrap:break-word;">
 <div class="ibk-brand-name" style="color:${BRAND.white};font-size:${TYPE.h1}px;font-weight:800;letter-spacing:-0.4px;line-height:1.1;">${BRAND.name}</div>
@@ -679,7 +679,7 @@ export function renderEmailText(options: EmailLayoutOptions): string {
   if ((options.contacts ?? []).length) lines.push("");
   lines.push(options.footerNote);
   lines.push("E-posta: info@isbulkktc.com (mailto:info@isbulkktc.com)");
-  lines.push("Telefon: 0539 131 64 21 (tel:+905391316421)");
+  lines.push("Telefon & WhatsApp: +90 539 131 64 21");
   lines.push(formatPostalAddress(), BRAND.domain);
   if (options.unsubscribeUrl && isSafeUrl(options.unsubscribeUrl)) {
     lines.push(`${options.unsubscribeLabel ?? "Abonelikten çık"}: ${options.unsubscribeUrl}`);

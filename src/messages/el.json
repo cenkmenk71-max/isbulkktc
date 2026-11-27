@@ -1928,11 +1928,29 @@
     "importPlaceholder": "Επικολλήστε τα δεδομένα προσώπων ως πίνακα JSON.",
     "importing": "Εισαγωγή…",
     "importButton": "Εισαγωγή",
+    "importTemplateButton": "Πλήρωση παραδείγματος προτύπου JSON",
     "importedCount": "Εισήχθησαν {count} πρόσωποι.",
+    "importSuccess": "{count} πρόσωποι εισήχθησαν ή ενημερώθηκαν.",
     "loading": "Φόρτωση…",
     "error": "Παρουσιάστηκε σφάλμα.",
+    "fieldsNote": "Πεδία: full_name, email, phone, headline, location, skills, summary",
+    "totalCandidates": "Σύνολο Προσώπων",
+    "importedCandidates": "Εισαγμένα",
+    "memberCandidates": "Μέλη Ιστοτόπου",
+    "recentImports": "Προσφατα Προστέθηκαν Πρόσωποι",
+    "candidateName": "Όνομα",
+    "candidateEmail": "Email",
     "title": "Αμιθύτητοι Υπαλλήλοι",
     "description": "Δείτε προσώπους που ταιριάζουν για προσκόμιση.",
     "empty": "Δεν υπάρχουν ακόμη εγγραφές προσώπων."
+  },
+  "AdminConsole": {
+    "ariaLabel": "Πλοήγηση Κονσόλας Διαχείρισης",
+    "companyManagement": "Διαχείριση Εταιρειών",
+    "talentPool": "Αμιθύτητοι Υπαλλήλοι",
+    "jobModeration": "Ελέγχος Εργασίας",
+    "packagesPayments": "Πακέτα & Πληρωμές",
+    "outreachEmails": "Ενημερωτικά Email",
+    "returnToSite": "Επιστροφή στον Ιστότοπο"
   }
 }

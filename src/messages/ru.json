@@ -1928,11 +1928,29 @@
     "importPlaceholder": "Вставьте данные кандидатов в виде массива JSON.",
     "importing": "Импорт…",
     "importButton": "Импортировать",
+    "importTemplateButton": "Заполнить пример шаблона JSON",
     "importedCount": "Импортировано кандидатов: {count}.",
+    "importSuccess": "{count} кандидатов импортировано или обновлено.",
     "loading": "Загрузка…",
     "error": "Произошла ошибка.",
+    "fieldsNote": "Поля: full_name, email, phone, headline, location, skills, summary",
+    "totalCandidates": "Всего кандидатов",
+    "importedCandidates": "Импортировано",
+    "memberCandidates": "Участники сайта",
+    "recentImports": "Недавно добавленные кандидаты",
+    "candidateName": "Имя",
+    "candidateEmail": "Электронная почта",
     "title": "Кадровый резерв",
     "description": "Просмотрите кандидатов, подходящих для найма.",
     "empty": "Еще нет записей кандидатов."
+  },
+  "AdminConsole": {
+    "ariaLabel": "Навигация консоли администратора",
+    "companyManagement": "Управление компаниями",
+    "talentPool": "Кадровый резерв",
+    "jobModeration": "Модерация вакансий",
+    "packagesPayments": "Пакеты и платежи",
+    "outreachEmails": "Рекламные письма",
+    "returnToSite": "Вернуться на сайт"
   }
 }

@@ -8808,7 +8808,221 @@ main :where(p) {
   text-underline-offset: 4px;
 }
 @media (max-width: 740px) {
-  .admin-packages-page {
+.admin-console-nav {
+  width: min(calc(100% - 2 * var(--page-gutter)), var(--page-max));
+  margin-inline: auto;
+  padding-top: clamp(34px, 4vw, 56px);
+  padding-bottom: clamp(24px, 3vw, 40px);
+}
+
+.admin-console-nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(20px, 3vw, 40px);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: clamp(16px, 2vw, 24px);
+}
+
+.admin-console-nav-list {
+  display: flex;
+  gap: clamp(16px, 2vw, 32px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-console-nav-item {
+  display: flex;
+}
+
+.admin-console-nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  color: var(--ink-3);
+  text-decoration: none;
+  font-size: clamp(15px, 1.8vw, 17px);
+  font-weight: 600;
+  padding: clamp(8px, 1vw, 12px) clamp(6px, 1vw, 10px);
+  border-radius: var(--radius-sm);
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.admin-console-nav-link:hover {
+  color: var(--ink);
+  background: var(--accent);
+}
+
+.admin-console-nav-link--active {
+  color: var(--green);
+  background: var(--green-pale);
+}
+
+.admin-console-nav-link[aria-current="page"] {
+  color: var(--green);
+  background: var(--green-pale);
+}
+
+.admin-console-nav-return {
+  font-size: clamp(14px, 1.6vw, 16px);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-talent-pool-stats {
+  display: flex;
+  gap: clamp(16px, 2vw, 28px);
+  margin-bottom: clamp(24px, 3vw, 36px);
+}
+
+.admin-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: clamp(16px, 2vw, 22px) clamp(20px, 3vw, 28px);
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+
+.admin-stat-label {
+  font-size: clamp(12px, 1.4vw, 14px);
+  color: var(--ink-3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.admin-stat-value {
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.admin-talent-pool-header h1 {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: clamp(28px, 4vw, 42px);
+}
+
+.admin-talent-pool-header p {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: clamp(15px, 1.8vw, 17px);
+}
+
+.admin-talent-pool-import {
+  margin-top: clamp(24px, 3vw, 40px);
+}
+
+.admin-talent-pool-import h2 {
+  margin: 0 0 8px;
+  color: var(--ink-2);
+  font-size: clamp(18px, 2.2vw, 22px);
+}
+
+.admin-talent-pool-import p {
+  margin: 0 0 18px;
+  color: var(--ink-3);
+  font-size: clamp(14px, 1.6vw, 16px);
+}
+
+.admin-talent-pool-actions {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 1.5vw, 20px);
+  margin-bottom: clamp(14px, 1.8vw, 22px);
+  flex-wrap: wrap;
+}
+
+.admin-talent-pool-fields-note {
+  margin: 0;
+  font-size: clamp(13px, 1.5vw, 15px);
+  color: var(--ink-3);
+}
+
+.admin-talent-pool-json {
+  width: 100%;
+  min-height: clamp(220px, 28vw, 340px);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: clamp(13px, 1.5vw, 15px);
+  line-height: 1.55;
+  padding: clamp(14px, 1.8vw, 18px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-talent-pool-json:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 18%, transparent);
+}
+
+.admin-talent-pool-result {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.2vw, 14px);
+  margin-top: clamp(16px, 2vw, 24px);
+  padding: clamp(14px, 1.8vw, 20px) clamp(18px, 2.2vw, 26px);
+  border-radius: var(--radius-md);
+  font-size: clamp(14px, 1.6vw, 16px);
+  font-weight: 600;
+}
+
+.admin-talent-pool-result.success {
+  background: var(--green-pale);
+  border: 1px solid color-mix(in srgb, var(--green) 45%, transparent);
+  color: var(--green-deep);
+}
+
+.admin-talent-pool-result.error {
+  background: color-mix(in srgb, var(--color-vanadium-900) 6%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--color-vanadium-900) 18%, transparent);
+  color: var(--ink);
+}
+
+.admin-result-icon {
+  flex-shrink: 0;
+}
+
+.admin-talent-pool-summary {
+  margin-top: clamp(24px, 3vw, 40px);
+}
+
+.admin-talent-pool-summary h3 {
+  margin: 0 0 12px;
+  color: var(--ink-2);
+  font-size: clamp(16px, 2vw, 20px);
+}
+
+.admin-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: clamp(13px, 1.5vw, 15px);
+}
+
+.admin-summary-table th {
+  text-align: start;
+  padding: clamp(10px, 1.2vw, 14px) clamp(14px, 1.6vw, 20px);
+  border-bottom: 2px solid var(--line);
+  color: var(--ink-3);
+  font-weight: 700;
+}
+
+.admin-summary-table td {
+  padding: clamp(10px, 1.2vw, 14px) clamp(14px, 1.6vw, 20px);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-vanadium-900) 8%, transparent);
+  color: var(--ink);
+}
+
+.admin-packages-page {
     padding-block: 94px 54px;
   }
   .admin-package-fields {

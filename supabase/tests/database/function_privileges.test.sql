@@ -310,6 +310,7 @@ select is(
   array[
     'adjust_credit_balance(_company_id uuid, _quantity_delta integer, _entry_type credit_entry_type, _idempotency_key text, _reason text, _actor_id uuid)',
     'admin_assign_company_job_package(_company_id uuid, _package_id uuid, _expires_at timestamp with time zone)',
+    'admin_bulk_import_talent_pool(_entries jsonb)',
     'admin_confirm_payment(_confirmation_id uuid)',
     'admin_delete_company(_company_id uuid)',
     'admin_delete_directory_company(_directory_entry_id text)',

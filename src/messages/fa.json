@@ -1928,11 +1928,29 @@
     "importPlaceholder": "داده‌های کاندیدا را به صورت آرایه JSON جایگذاری کنید.",
     "importing": "در حال ورود…",
     "importButton": "وارد کردن",
+    "importTemplateButton": "پ начин форми JSON را پر کنید",
     "importedCount": "{count, number} کاندیدا وارد شد.",
+    "importSuccess": "{count, number} کاندیدا وارد یا به‌روزرسانی شد.",
     "loading": "در حال بارگذاری…",
     "error": "یک خطا رخ داد.",
+    "fieldsNote": "فیلدها: full_name, email, phone, headline, location, skills, summary",
+    "totalCandidates": "جمع کل کاندیداها",
+    "importedCandidates": "وارد شده",
+    "memberCandidates": "اعضای سایت",
+    "recentImports": "کاندیداهای اخیراً اضافه شده",
+    "candidateName": "نام",
+    "candidateEmail": "ایمیل",
     "title": "استخر talents",
     "description": "کاندیدای متناسب با استخدام را ببینید.",
     "empty": "هنوز رکوردی از کاندیدا وجود ندارد."
+  },
+  "AdminConsole": {
+    "ariaLabel": "ناوبری کنسول مدیریت",
+    "companyManagement": "مدیریت شرکت‌ها",
+    "talentPool": "استخر talents",
+    "jobModeration": "بررسی مشاغل",
+    "packagesPayments": "بسته‌ها و پرداخت‌ها",
+    "outreachEmails": "ایمیل‌های تبلیغاتی",
+    "returnToSite": "بازگشت به سایت"
   }
 }

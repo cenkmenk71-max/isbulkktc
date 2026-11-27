@@ -8,7 +8,7 @@
  *    one-click unsubscribe on promotional mail. Without them a digest is
  *    throttled or filed as spam, and the recipient's "unsubscribe" affordance
  *    only appears as a link the client has to parse out of the body.
- *  - `Reply-To`: the default `from` is `no-reply@…`, so without a `Reply-To` a
+ *  - `Reply-To`: the default `from` is `info@…`, so without a `Reply-To` a
  *    reply disappears. Pointing it at a monitored inbox is what makes replies
  *    reachable.
  *

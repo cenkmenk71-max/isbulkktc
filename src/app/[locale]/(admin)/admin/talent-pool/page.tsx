@@ -4,6 +4,8 @@ import { AdminRoleRequiredError, requirePlatformRole } from "@/server/dal/user";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
 import { AdminTalentPoolClient } from "@/features/talent-pool/admin-talent-pool-client";
+import { AdminConsoleNav } from "@/components/admin/admin-console-nav";
+import { createSupabaseServerClient } from "@/server/db/supabase-server";
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
@@ -28,6 +30,7 @@ export default async function AdminTalentPoolPage({
     if (error instanceof AdminRoleRequiredError) {
       return (
         <main className="page-container">
+          <AdminConsoleNav />
           <section aria-labelledby="admin-role-required-title">
             <h2 id="admin-role-required-title">Yönetici yetkisi gerekli</h2>
             <p>
@@ -41,5 +44,30 @@ export default async function AdminTalentPoolPage({
     throw error;
   }
 
-  return <AdminTalentPoolClient _locale={locale} />;
+  const supabase = await createSupabaseServerClient();
+  const [importedResult, memberResult] = await Promise.all([
+    supabase
+      .from("talent_pool_entries")
+      .select("id", { head: true, count: "exact" }),
+    supabase
+      .from("candidate_profiles")
+      .select("id", { head: true, count: "exact" })
+      .eq("visibility", "public"),
+  ]);
+
+  const importedCandidates = importedResult.count ?? 0;
+  const memberCandidates = memberResult.count ?? 0;
+  const totalCandidates = importedCandidates + memberCandidates;
+
+  return (
+    <main className="admin-talent-pool-page page-container">
+      <AdminConsoleNav />
+      <AdminTalentPoolClient
+        _locale={locale}
+        totalCandidates={totalCandidates}
+        importedCandidates={importedCandidates}
+        memberCandidates={memberCandidates}
+      />
+    </main>
+  );
 }

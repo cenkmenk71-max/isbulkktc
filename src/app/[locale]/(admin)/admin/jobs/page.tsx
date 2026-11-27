@@ -8,6 +8,7 @@ import { getPlatformAdminMfaStatus } from "@/server/dal/user";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
+import { AdminConsoleNav } from "@/components/admin/admin-console-nav";
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
@@ -35,6 +36,7 @@ export default async function AdminJobsPage({
   if (!mfa.aal2) {
     return (
       <main className="admin-job-review-page page-container">
+        <AdminConsoleNav />
         <AdminMfaGate verifiedFactorId={mfa.verifiedTotpFactorId} />
       </main>
     );
@@ -51,6 +53,7 @@ export default async function AdminJobsPage({
 
   return (
     <main className="admin-job-review-page page-container">
+      <AdminConsoleNav />
       <header className="admin-job-review-heading">
         <p className="eyebrow"><span className="eyebrow-rule" /><ShieldCheck size={15} aria-hidden="true" />{copy("pageCount")}: {jobs.length}</p>
         <h1>{copy("title")}</h1>

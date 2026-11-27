@@ -1928,11 +1928,29 @@
     "importPlaceholder": "JSON dizi şeklinde aday verilerini yapıştırın.",
     "importing": "İçe aktarılıyor…",
     "importButton": "İçe Aktar",
+    "importTemplateButton": "Örnek JSON Şablonunu Doldur",
     "importedCount": "{count} aday içe aktarıldı.",
+    "importSuccess": "{count} aday içe aktarıldı veya güncellendi.",
     "loading": "Yükleniyor…",
     "error": "Bir hata oluştu.",
+    "fieldsNote": "Alanlar: full_name, email, phone, headline, location, skills, summary",
+    "totalCandidates": "Toplam Aday",
+    "importedCandidates": "İçe Aktarılan",
+    "memberCandidates": "Site Üyesi",
+    "recentImports": "Son Eklenen Adaylar",
+    "candidateName": "Ad Soyad",
+    "candidateEmail": "E-posta",
     "title": "Aday Havuzu",
     "description": "İşe alım için uygun adayları görüntüleyin.",
     "empty": "Henüz aday kaydı yok."
+  },
+  "AdminConsole": {
+    "ariaLabel": "Yönetim konsolu navigasyonu",
+    "companyManagement": "Şirket Yönetimi",
+    "talentPool": "Aday Havuzu",
+    "jobModeration": "İlan Moderasyonu",
+    "packagesPayments": "Paket & Ödemeler",
+    "outreachEmails": "Tanıtım E-Postaları",
+    "returnToSite": "Siteye Dön"
   }
 }

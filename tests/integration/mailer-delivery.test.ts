@@ -215,7 +215,7 @@ test("the default sender is used and RESEND_FROM_EMAIL overrides it", async () =
   try {
     const { sendWelcomeEmail } = await mailer();
     await sendWelcomeEmail(WELCOME);
-    assert.equal(sent[0].payload.from, "İşBul KKTC <no-reply@isbulkktc.com>");
+    assert.equal(sent[0].payload.from, "İşBul KKTC <info@isbulkktc.com>");
   } finally {
     restoreDefaultFrom();
     restorePlain();
@@ -396,10 +396,11 @@ test("the acquisition email sends from info@ with the one-click unsubscribe pair
       payload.headers?.["List-Unsubscribe-Post"],
       "List-Unsubscribe=One-Click",
     );
-// The owner's verbatim Turkish copy and both actions reach the body.
+// The owner's verbatim Turkish copy reaches the body; the external WhatsApp
+    // link was removed to keep every <a> on the sending domain.
     // HTML escapes apostrophes as '
     assert.ok(payload.html?.includes("Sayın Yetkili,"));
-    assert.ok(payload.html?.includes(MARKETING_COPY.tr.whatsappCta));
+    assert.ok(!payload.html?.includes(MARKETING_COPY.tr.whatsappCta), "no external WhatsApp link");
     assert.ok(payload.html?.includes(MARKETING_COPY.tr.secondaryCta));
   } finally {
     restoreInbox();
