@@ -1,6 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { Building2, Trash2 } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { CompanyProfileReviewForm } from "@/features/companies/company-profile-review-form";
 import { CompanyVerificationReviewForm } from "@/features/companies/company-verification-review-form";
 import {
@@ -11,6 +11,7 @@ import { requirePlatformRole } from "@/server/dal/user";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
+import { DeleteCompanyButton } from "./delete-company-button";
 
 export const dynamic = "force-dynamic";
 export const metadata = noIndexMetadata;
@@ -37,7 +38,7 @@ export default async function CompanyProfileReviewPage({
   ]);
   const { submissions, verifications } = queues;
 
-  async function handleDeleteCompany(formData: FormData) {
+  async function deleteCompanyAction(formData: FormData) {
     await deleteCompany(null, formData);
   }
 
@@ -233,23 +234,11 @@ export default async function CompanyProfileReviewPage({
                     </span>
                   </td>
                   <td>
-                    <form action={handleDeleteCompany}>
-                      <input name="companyId" type="hidden" value={company.id} />
-                      <button
-                        type="submit"
-                        className="button button-outline button-delete"
-                        aria-label={copy("deleteCompany", { name: company.name })}
-                        onClick={(event) => {
-                          if (!window.confirm(copy("confirmDelete", { name: company.name }))) {
-                            event.preventDefault();
-                          }
-                        }}
-                      >
-                        <Trash2 size={16} aria-hidden="true" />
-                        {copy("delete")}
-                      </button>
-                    </form>
-                  </td>
+                  <form action={deleteCompanyAction}>
+                    <input name="companyId" type="hidden" value={company.id} />
+                    <DeleteCompanyButton companyName={company.name} />
+                  </form>
+                </td>
                 </tr>
               ))}
             </tbody>
