@@ -7,7 +7,7 @@ import {
   getAdminCompanyProfileReviewQueues,
 } from "@/server/dal/companies";
 import { deleteCompany } from "@/features/companies/actions";
-import { requirePlatformRole } from "@/server/dal/user";
+import { AdminRoleRequiredError, requirePlatformRole } from "@/server/dal/user";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { noIndexMetadata } from "@/lib/seo";
@@ -30,7 +30,24 @@ export default async function CompanyProfileReviewPage({
   if (!locale) notFound();
 
   setRequestLocale(locale);
-  await requirePlatformRole("platform_admin");
+  try {
+    await requirePlatformRole("platform_admin");
+  } catch (error) {
+    if (error instanceof AdminRoleRequiredError) {
+      return (
+        <main className="page-container">
+          <section aria-labelledby="admin-role-required-title">
+            <h2 id="admin-role-required-title">Yönetici yetkisi gerekli</h2>
+            <p>
+              Bu sayfaya erişmek için platform yöneticisi
+              (platform_admin) yetkisine sahip olmalısınız.
+            </p>
+          </section>
+        </main>
+      );
+    }
+    throw error;
+  }
   const [queues, copy, adminCopy] = await Promise.all([
     getAdminCompanyProfileReviewQueues(),
     getTranslations("CompanyReview"),

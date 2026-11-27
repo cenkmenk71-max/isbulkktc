@@ -267,11 +267,23 @@ export async function getCandidateWorkspace(): Promise<{
   };
 }
 
+/**
+ * Thrown when a signed-in, active user lacks the requested platform role.
+ * Page components catch this to render an explicit "admin permission required"
+ * warning instead of silently redirecting to the home page.
+ */
+export class AdminRoleRequiredError extends Error {
+  constructor() {
+    super("Platform administrator role is required.");
+    this.name = "AdminRoleRequiredError";
+  }
+}
+
 export async function requirePlatformRole(
   role: PlatformRole,
 ): Promise<CurrentUserDTO> {
   const user = await requireAuthenticatedUser();
-  if (!(await hasAssignedPlatformRole(role))) return redirectLocalized("/");
+  if (!(await hasAssignedPlatformRole(role))) throw new AdminRoleRequiredError();
 
   const supabase = await createSupabaseServerClient();
   const { data: hasRole, error } = await supabase.rpc("has_platform_role", {
