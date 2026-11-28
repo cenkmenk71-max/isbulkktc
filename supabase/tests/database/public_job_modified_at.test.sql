@@ -11,6 +11,26 @@ delete from public.job_source_imports;
 delete from public.jobs where publication_source = 'source_site';
 delete from public.companies where slug like 'source-%';
 
+-- İşBul 6 yeni platform şirketi ve ilanı izolasyonu (20261128150000 seed).
+delete from public.jobs where company_id in (
+  select id from public.companies where slug in (
+    'girne-otel-turizm-isletmesi',
+    'lefkosa-perakende-magazacilik',
+    'serena-group',
+    'kktc-restoran-kafe-isletmesi',
+    'gozel-beauty',
+    'benli-supermarket'
+  )
+);
+delete from public.companies where slug in (
+  'girne-otel-turizm-isletmesi',
+  'lefkosa-perakende-magazacilik',
+  'serena-group',
+  'kktc-restoran-kafe-isletmesi',
+  'gozel-beauty',
+  'benli-supermarket'
+);
+
 select plan(11);
 
 insert into auth.users (id, email, raw_user_meta_data)
