@@ -505,6 +505,7 @@ export async function applyToJob(
     jobId: formData.get("jobId"),
     coverLetter: formData.get("coverLetter") ?? "",
     shareContactEmail: formData.get("shareContactEmail") === "on",
+    resumeId: formData.get("resumeId") || null,
   });
   if (!result.success) {
     return { ...initialApplicationFormState, status: "error", message: "invalid" };
@@ -537,11 +538,20 @@ export async function applyToJob(
     return { ...initialApplicationFormState, status: "error", message: "unauthorized" };
   }
 
-  const { error } = await supabase.rpc("apply_to_job", {
+  const rpcArgs: {
+    _job_id: string;
+    _cover_letter: string;
+    _share_contact_email: boolean;
+    _resume_id?: string;
+  } = {
     _job_id: result.data.jobId,
     _cover_letter: result.data.coverLetter,
     _share_contact_email: result.data.shareContactEmail,
-  });
+  };
+  if (result.data.resumeId) {
+    rpcArgs._resume_id = result.data.resumeId;
+  }
+  const { data: applicationId, error } = await supabase.rpc("apply_to_job", rpcArgs);
   if (error) {
     if (error.code === "42501") {
       return { ...initialApplicationFormState, status: "error", message: "unauthorized" };
@@ -558,7 +568,11 @@ export async function applyToJob(
 
   revalidatePath(`${getLocalePrefix(user.locale)}/profile/dashboard`);
   revalidatePath(`${getLocalePrefix(user.locale)}/company/dashboard`);
-  return { status: "success", message: "applied" };
+  const outcome: ApplicationFormState = { status: "success", message: "applied" };
+  if (typeof applicationId === "string") {
+    outcome.applicationId = applicationId;
+  }
+  return outcome;
 }
 
 export async function markApplicationViewed(formData: FormData): Promise<void> {

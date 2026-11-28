@@ -1,12 +1,19 @@
 import "server-only";
 
+import { z } from "zod";
+
 import {
   createResumeSchema,
   resumeRowSchema,
   type CreateResumeInput,
 } from "@/features/candidates/resume-schemas";
 import { requireAuthenticatedUser } from "@/server/dal/user";
-import { createSupabaseServerClient } from "@/server/db/supabase-server";
+import {
+  createSupabaseServerClient,
+  createSupabaseServiceClient,
+} from "@/server/db/supabase-server";
+
+const applicationIdSchema = z.string().uuid();
 
 export async function registerResume(input: CreateResumeInput): Promise<string> {
   const parsed = createResumeSchema.parse(input);
@@ -50,4 +57,37 @@ export async function listMyResumes() {
     });
   }
   return resumeRowSchema.array().parse(data);
+}
+
+export async function getApplicationResume(applicationId: string) {
+  if (!applicationIdSchema.safeParse(applicationId).success) return null;
+  // Authorization for the resume is established by the caller (the company
+  // application detail page verifies company membership, and the download
+  // route performs its own candidate/company-member check). The service client
+  // is used here so an authorized employer can read the attached resume.
+  const supabase = await createSupabaseServiceClient();
+  if (!supabase) {
+    throw new Error("The resume could not be loaded.");
+  }
+  const { data: application, error } = await supabase
+    .from("applications")
+    .select("resume_id")
+    .eq("id", applicationId)
+    .maybeSingle();
+  if (error) {
+    throw new Error("The application resume could not be loaded.", {
+      cause: error,
+    });
+  }
+  if (!application?.resume_id) return null;
+
+  const { data: resume, error: resumeError } = await supabase
+    .from("resumes")
+    .select("id, original_filename, storage_path")
+    .eq("id", application.resume_id)
+    .maybeSingle();
+  if (resumeError) {
+    throw new Error("The resume could not be loaded.", { cause: resumeError });
+  }
+  return resume;
 }

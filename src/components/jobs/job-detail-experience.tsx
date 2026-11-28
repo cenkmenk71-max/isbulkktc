@@ -11,6 +11,7 @@ import {
 } from "@/features/jobs/presentation";
 import type { AppLocale } from "@/i18n/routing";
 import type { PublicJobListing } from "@/server/dal/jobs";
+import { listMyResumes } from "@/server/dal/resumes";
 
 export async function JobDetailExperience({
   locale,
@@ -31,6 +32,18 @@ export async function JobDetailExperience({
     job.publication_source === "source_site" && job.source_listing_url
       ? new URL(job.source_listing_url).hostname
       : null;
+
+  // Only an authenticated candidate can attach a resume, so only fetch the
+  // candidate's registered resumes when the viewer is signed in. Parsed
+  // resumes are offered for attachment; everything else stays hidden here.
+  let resumes: Awaited<ReturnType<typeof listMyResumes>> = [];
+  if (viewerContact) {
+    try {
+      resumes = (await listMyResumes()) ?? [];
+    } catch {
+      resumes = [];
+    }
+  }
 
   return (
     <div className="job-detail-page">
@@ -117,7 +130,13 @@ export async function JobDetailExperience({
             </div>
             <aside className="job-detail-aside">
               {job.publication_source === "platform" ? (
-                <JobApplicationForm contact={viewerContact} jobId={job.id} slug={job.slug} />
+                <JobApplicationForm
+                  contact={viewerContact}
+                  jobId={job.id}
+                  slug={job.slug}
+                  jobTitle={job.title}
+                  resumes={resumes}
+                />
               ) : null}
               <section className="job-detail-company-card">
                 <span>{t("companyLabel")}</span>

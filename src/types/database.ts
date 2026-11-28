@@ -547,6 +547,7 @@ export type Database = {
           reviewed_at: string | null;
           first_viewed_at: string | null;
           first_viewed_by: string | null;
+          resume_id: string | null;
           created_at: string;
           updated_at: string;
         },
@@ -869,6 +870,7 @@ export type Database = {
           _job_id: string;
           _cover_letter?: string;
           _share_contact_email?: boolean;
+          _resume_id?: string | null;
         };
         Returns: string;
       };

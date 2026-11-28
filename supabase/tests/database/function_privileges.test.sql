@@ -333,6 +333,7 @@ select is(
     'admin_upsert_site_content(_content_key text, _locale text, _document jsonb)',
     'apply_to_job(_job_id uuid, _cover_letter text)',
     'apply_to_job(_job_id uuid, _cover_letter text, _share_contact_email boolean)',
+    'apply_to_job(_job_id uuid, _cover_letter text, _share_contact_email boolean, _resume_id uuid)',
     'archive_conversation(_conversation_id uuid)',
     'create_company(company_name text, company_slug text)',
     'create_order(_company_id uuid, _listing_plan_code text, _duration_days integer)',

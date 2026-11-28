@@ -1024,6 +1024,10 @@
     "contactEmailLabel": "ایمیلی که برای کارفرما ارسال میشود",
     "contactEmailUnverifiedNote": "این نشانی هنوز تأیید نشده است.",
     "verifyEmailAction": "ارسال دوبارهٔ ایمیل تأیید",
+    "resumeLabel": "CV / résumé (optional)",
+    "resumePlaceholder": "Choose a CV",
+    "resumeNoResumes": "You have no registered CV yet. Add one in your profile to attach it when applying.",
+    "resumeRegisterLink": "Go to profile",
     "submit": "ارسال درخواست",
     "submitting": "در حال ارسال…",
     "loginAction": "ورود",
@@ -1041,7 +1045,13 @@
       "contactEmailUnverified": "این نشانی ایمیل تأیید نشده است و نمیتوان آن را به اشتراک گذاشت. پیوند تأیید را در صندوق ورودی خود باز کنید و دوباره تلاش کنید.",
       "duplicate": "پیش‌تر برای این موقعیت درخواست داده‌اید.",
       "transitionFailed": "وضعیت درخواست به‌روزرسانی نشد.",
-      "updated": "وضعیت درخواست به‌روزرسانی شد."
+      "updated": "وضعیت درخواست به‌روزرسانی شد.",
+      "confirmationTitle": "Application received",
+      "confirmationJob": "Application for “{jobTitle}” at {companyName}",
+      "confirmationId": "Application: {applicationId}",
+      "confirmationNext": "The employer will review your application. You will receive status updates by e-mail and push notification.",
+      "confirmationDashboard": "Track your applications",
+      "dashboardLink": "Go to my applications"
     }
   },
   "CompanyDirectory": {
@@ -1351,6 +1361,8 @@
     "candidateContactEmail": "ایمیل تماس نامزد",
     "candidateContactNotShared": "نامزد اشتراک‌گذاری ایمیل تماس را انتخاب نکرده است.",
     "candidateContactConsentNote": "نامزد با اشتراک‌گذاری این ایمیل برای این درخواست موافقت کرده است.",
+    "cvDownloadLabel": "Candidate CV",
+    "cvDownloadButton": "Download CV",
     "applicationStatusLabel": "وضعیت درخواست",
     "updateApplicationStatus": "به‌روزرسانی وضعیت",
     "updatingApplicationStatus": "در حال به‌روزرسانی…",

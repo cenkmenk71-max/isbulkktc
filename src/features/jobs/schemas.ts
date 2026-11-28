@@ -69,6 +69,7 @@ export const applyToJobSchema = z.object({
   jobId: z.string().uuid(),
   coverLetter: z.string().trim().max(5000),
   shareContactEmail: z.boolean().default(false),
+  resumeId: z.string().uuid().nullable().default(null),
 });
 
 export const applicationTransitionSchema = z.object({
@@ -260,6 +261,7 @@ export type ApplicationFormState = {
     | "contactEmailUnverified"
     | "transitionFailed"
     | "updated";
+  applicationId?: string;
 };
 
 export type JobReviewFormState = {

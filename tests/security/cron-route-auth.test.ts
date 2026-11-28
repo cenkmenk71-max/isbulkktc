@@ -116,7 +116,7 @@ for (const route of routes) {
   test(`${route.file} authenticates before it inspects its configuration`, () => {
     const authIndex = authorizationIndex(route.code);
     assert.ok(authIndex > -1, "the bearer comparison was not found");
-    if (route.probeIndex === -1) return; // no configuration probe to order against
+    if (route.probeIndex == null) return; // no configuration probe to order against
     assert.ok(
       authIndex < route.probeIndex,
       "configuration is read before authentication, so an anonymous caller can " +

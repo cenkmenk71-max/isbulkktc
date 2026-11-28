@@ -1024,6 +1024,10 @@
     "contactEmailLabel": "Email που κοινοποιείται στον εργοδότη",
     "contactEmailUnverifiedNote": "Αυτή η διεύθυνση δεν έχει επιβεβαιωθεί ακόμη.",
     "verifyEmailAction": "Επαναποστολή email επιβεβαίωσης",
+    "resumeLabel": "CV / résumé (optional)",
+    "resumePlaceholder": "Choose a CV",
+    "resumeNoResumes": "You have no registered CV yet. Add one in your profile to attach it when applying.",
+    "resumeRegisterLink": "Go to profile",
     "submit": "Αποστολή αίτησης",
     "submitting": "Αποστολή…",
     "loginAction": "Σύνδεση",
@@ -1041,7 +1045,13 @@
       "contactEmailUnverified": "Αυτή η διεύθυνση email δεν έχει επιβεβαιωθεί, οπότε δεν μπορεί να κοινοποιηθεί. Ανοίξτε τον σύνδεσμο επιβεβαίωσης στα εισερχόμενά σας και δοκιμάστε ξανά.",
       "duplicate": "Έχετε ήδη υποβάλει αίτηση για αυτή τη θέση.",
       "transitionFailed": "Δεν ήταν δυνατή η ενημέρωση της κατάστασης της αίτησης.",
-      "updated": "Η κατάσταση της αίτησης ενημερώθηκε."
+      "updated": "Η κατάσταση της αίτησης ενημερώθηκε.",
+      "confirmationTitle": "Application received",
+      "confirmationJob": "Application for “{jobTitle}” at {companyName}",
+      "confirmationId": "Application: {applicationId}",
+      "confirmationNext": "The employer will review your application. You will receive status updates by e-mail and push notification.",
+      "confirmationDashboard": "Track your applications",
+      "dashboardLink": "Go to my applications"
     }
   },
   "CompanyDirectory": {
@@ -1351,6 +1361,8 @@
     "candidateContactEmail": "Email επικοινωνίας υποψηφίου",
     "candidateContactNotShared": "Ο υποψήφιος δεν επέλεξε να κοινοποιήσει email επικοινωνίας.",
     "candidateContactConsentNote": "Ο υποψήφιος συμφώνησε να κοινοποιήσει αυτό το email για την αίτηση.",
+    "cvDownloadLabel": "Candidate CV",
+    "cvDownloadButton": "Download CV",
     "applicationStatusLabel": "Κατάσταση αίτησης",
     "updateApplicationStatus": "Ενημέρωση κατάστασης",
     "updatingApplicationStatus": "Ενημέρωση…",
