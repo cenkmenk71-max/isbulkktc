@@ -1,24 +1,10 @@
 begin;
 
--- İşBul 6 yeni platform şirketi ve ilanı izolasyonu (20261128150000 seed).
-delete from public.jobs where company_id in (
-  select id from public.companies where slug in (
-    'girne-otel-turizm-isletmesi',
-    'lefkosa-perakende-magazacilik',
-    'serena-group',
-    'kktc-restoran-kafe-isletmesi',
-    'gozel-beauty',
-    'benli-supermarket'
-  )
-);
-delete from public.companies where slug in (
-  'girne-otel-turizm-isletmesi',
-  'lefkosa-perakende-magazacilik',
-  'serena-group',
-  'kktc-restoran-kafe-isletmesi',
-  'gozel-beauty',
-  'benli-supermarket'
-);
+-- The local stack may seed pending notifications before this suite runs. Clear
+-- the notification table and its child outbox rows so the claim count
+-- reflects only the fixture inserted below; the transaction rolls back.
+delete from public.notification_email_outbox;
+delete from public.notifications;
 
 select plan(63);
 

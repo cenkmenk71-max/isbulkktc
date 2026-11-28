@@ -1012,7 +1012,9 @@
     "companyLocation": "Τοποθεσία εταιρείας",
     "companyWebsite": "Ιστότοπος",
     "companyDirectoryLink": "Προβολή στον κατάλογο εταιρειών",
-    "sourceAttributionLink": "Άνοιγμα στον ιστότοπο δημοσίευσης"
+    "sourceAttributionLink": "Άνοιγμα στον ιστότοπο δημοσίευσης",
+    "platformBadge": "İşBul platform",
+    "sourceBadge": "Εξωτερική πηγή"
   },
   "JobApplication": {
     "title": "Υποβάλετε αίτηση για τη θέση",
@@ -1036,6 +1038,15 @@
     "ctaSignIn": "Σύνδεση",
     "ctaSignUp": "Δημιουργία δωρεάν λογαριασμού",
     "ctaNote": "Έχετε ήδη λογαριασμό; Συνδεθείτε με ένα κλικ και υποβάλετε αίτηση.",
+    "transparencyTitle": "Διαφάνεια διαδικασίας αίτησης",
+    "transparencyBody": "Η αίτησή σας αποστέλλεται απευθείας στο πανελ του εργοδότη İşBul KKTC και ο εργοδότης ενημερώνεται αμέσως; μπορείτε να παρακολουθείτε την κατάσταση από το πανελ υποψηφίου σας.",
+    "directContactTitle": "Απευθείας επαφή (Γρήγορη πρόσβαση)",
+    "contactWhatsapp": "WhatsApp",
+    "contactCall": "Κλήση",
+    "contactEmail": "Email",
+    "contactWebsite": "Ιστότοπος",
+    "noResumeCardTitle": "Δεν υπάρχει εγγεγραμμένο CV",
+    "noResumeCardBody": "Ανεβάστε το CV σας πρώτα για γρηγορότερη αξιολόγηση.",
     "messages": {
       "idle": "",
       "invalid": "Τα στοιχεία της αίτησης δεν είναι έγκυρα. Ελέγξτε τα και δοκιμάστε ξανά.",

@@ -1012,7 +1012,9 @@
     "companyLocation": "موقعیت شرکت",
     "companyWebsite": "وب‌سایت",
     "companyDirectoryLink": "مشاهده در فهرست شرکت‌ها",
-    "sourceAttributionLink": "باز کردن در وب‌سایت منتشرکننده"
+    "sourceAttributionLink": "باز کردن در وب‌سایت منتشرکننده",
+    "platformBadge": "پلتفرم İşBul",
+    "sourceBadge": "منبع خارجی"
   },
   "JobApplication": {
     "title": "برای این موقعیت درخواست دهید",
@@ -1036,6 +1038,15 @@
     "ctaSignIn": "ورود",
     "ctaSignUp": "ساخت حساب رایگان",
     "ctaNote": "حساب دارید؟ با یک کلیک وارد شوید و درخواست دهید.",
+    "transparencyTitle": "شفافیت فرایند درخواست",
+    "transparencyBody": "درخواست شما مستقیماً به پنل کارفرما در İşBul KKTC ارسال و کارفرما به لحظه مطلع می‌شود؛ وضعیت را از پنل متقاضی خود پیگیری کنید.",
+    "directContactTitle": "ارتباط مستقیم (دسترسی سریع)",
+    "contactWhatsapp": "واتس‌اپ",
+    "contactCall": "تماس",
+    "contactEmail": "ایمیل",
+    "contactWebsite": "وب‌سایت",
+    "noResumeCardTitle": "CV ثبت نشده است",
+    "noResumeCardBody": "ابتدا CV خود را بارگذاری کنید تا ارزیابی سریعتر شود.",
     "messages": {
       "idle": "",
       "invalid": "اطلاعات درخواست معتبر نیست. آن‌ها را بررسی و دوباره تلاش کنید.",

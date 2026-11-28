@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowUpRight, BriefcaseBusiness, CalendarDays, MapPin } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { EmployerLogo } from "@/components/jobs/employer-logo";
-import { JobApplicationForm } from "@/components/jobs/job-application-form";
+import { JobApplicationForm, type DirectContact } from "@/components/jobs/job-application-form";
 import { Link } from "@/i18n/navigation";
 import {
   getDistrictMessageKey,
@@ -12,6 +12,37 @@ import {
 import type { AppLocale } from "@/i18n/routing";
 import type { PublicJobListing } from "@/server/dal/jobs";
 import { listMyResumes } from "@/server/dal/resumes";
+
+function bulletLines(value: string | null): string[] {
+  if (!value) return [];
+  return value
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
+function phoneToWhatsApp(phone: string | null): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, "");
+  if (!digits) return null;
+  return `https://wa.me/${digits}`;
+}
+
+function extractDirectContact(job: PublicJobListing): DirectContact | null {
+  const haystack = [
+    job.description,
+    job.responsibilities,
+    job.requirements,
+    job.company.profile_description,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const email = haystack.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/)?.[0] ?? null;
+  const phone = haystack.match(/(?:\+?90\s*)?\(?\d{3,4}\)?[\s.\-]?\d{3}[\s.\-]?\d{2}[\s.\-]?\d{2}/)?.[0] ?? null;
+  const website = job.company.website ?? null;
+  if (!email && !phone && !website) return null;
+  return { email, phone, whatsapp: phoneToWhatsApp(phone), website };
+}
 
 export async function JobDetailExperience({
   locale,
@@ -45,6 +76,11 @@ export async function JobDetailExperience({
     }
   }
 
+  const directContact = extractDirectContact(job);
+
+  const responsibilities = bulletLines(job.responsibilities);
+  const requirements = bulletLines(job.requirements);
+
   return (
     <div className="job-detail-page">
       <div className="page-container job-detail-content">
@@ -56,7 +92,7 @@ export async function JobDetailExperience({
           <header className="job-detail-header" data-reveal>
             <p className="jobs-section-kicker">{t("eyebrow")}</p>
             <h1>{job.title}</h1>
-            <div className="job-detail-employer">
+            <div className="job-detail-identity">
               <EmployerLogo
                 companyName={job.company.name}
                 logoUrl={job.company.logo_url}
@@ -74,6 +110,9 @@ export async function JobDetailExperience({
                   </p>
                 ) : null}
               </div>
+              <span className="job-detail-badge">
+                {job.publication_source === "platform" ? t("platformBadge") : t("sourceBadge")}
+              </span>
             </div>
             <div className="job-detail-facts">
               <span>
@@ -115,16 +154,28 @@ export async function JobDetailExperience({
                   <p className="job-detail-body">{job.description}</p>
                 </section>
               ) : null}
-              {job.responsibilities ? (
-                <section className="job-detail-section" data-reveal>
+              {responsibilities.length > 0 ? (
+                <section className="job-detail-section job-detail-section--bullets" data-reveal>
                   <h2>{t("responsibilitiesTitle")}</h2>
-                  <p className="job-detail-body">{job.responsibilities}</p>
+                  <ul className="job-detail-list">
+                    {responsibilities.map((line, index) => (
+                      <li key={index} className="job-detail-list-item">
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
                 </section>
               ) : null}
-              {job.requirements ? (
-                <section className="job-detail-section" data-reveal>
+              {requirements.length > 0 ? (
+                <section className="job-detail-section job-detail-section--bullets" data-reveal>
                   <h2>{t("requirementsTitle")}</h2>
-                  <p className="job-detail-body">{job.requirements}</p>
+                  <ul className="job-detail-list">
+                    {requirements.map((line, index) => (
+                      <li key={index} className="job-detail-list-item">
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
                 </section>
               ) : null}
             </div>
@@ -136,6 +187,7 @@ export async function JobDetailExperience({
                   slug={job.slug}
                   jobTitle={job.title}
                   resumes={resumes}
+                  directContact={directContact}
                 />
               ) : null}
               <section className="job-detail-company-card">

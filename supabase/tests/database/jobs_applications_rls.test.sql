@@ -1,32 +1,15 @@
 begin;
 
--- The local stack seeds real source listings (supabase/seed-source-jobs.sql)
--- before this suite runs. The assertions below count only the fixtures defined
--- in this file, so remove any committed source data first; the transaction
--- rolls back, leaving the seed intact for the E2E run that follows.
+-- The local stack seeds real source listings before this suite runs. Clear
+-- every committed job/source/company row so only this suite's fixtures remain;
+-- the transaction rolls back, leaving the seed intact for the E2E run that follows.
 delete from public.job_source_imports;
-delete from public.jobs where publication_source = 'source_site';
-delete from public.companies where slug like 'source-%';
-
--- İşBul 6 yeni platform şirketi ve ilanı izolasyonu (20261128150000 seed).
-delete from public.jobs where company_id in (
-  select id from public.companies where slug in (
-    'girne-otel-turizm-isletmesi',
-    'lefkosa-perakende-magazacilik',
-    'serena-group',
-    'kktc-restoran-kafe-isletmesi',
-    'gozel-beauty',
-    'benli-supermarket'
-  )
-);
-delete from public.companies where slug in (
-  'girne-otel-turizm-isletmesi',
-  'lefkosa-perakende-magazacilik',
-  'serena-group',
-  'kktc-restoran-kafe-isletmesi',
-  'gozel-beauty',
-  'benli-supermarket'
-);
+delete from public.notification_email_outbox;
+delete from public.notifications;
+delete from public.application_events;
+delete from public.applications;
+delete from public.jobs;
+delete from public.companies;
 
 select plan(81);
 

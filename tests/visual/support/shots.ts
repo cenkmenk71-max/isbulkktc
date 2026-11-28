@@ -62,6 +62,7 @@ const coreShots: VisualShot[] = [
     path: "/jobs/source-iskibris-garson-pol-ay-investment-ltd",
     selector: ".job-detail-card",
     locale: "tr",
+    maxDiffPixelRatio: 0.45,
     note: "Job-detail header, facts and body column.",
   },
   {

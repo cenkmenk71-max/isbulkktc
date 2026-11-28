@@ -176,25 +176,15 @@ const nextConfig: NextConfig = {
     // the rest of the app uses for permanent moves.
     return [
       {
-        // Google Search Console eski link otoritesi: kaynak-site ilan slug'ları
-        // artık ana ilan listesine kalıcı (301) yönlendiriliyor.
-        source: "/jobs/source-iskibris-:slug",
-        destination: "/jobs",
+        // Eski `/sign-in` ve `/sign-up` yolları canlı `/login` ve `/register`'
+        // yönlendiriliyor; kalıcı (308) yönlendirme ile eski 404 linkleri toparlanır.
+        source: "/sign-in",
+        destination: "/login",
         permanent: true,
       },
       {
-        source: "/jobs/source-isbulkibris-:slug",
-        destination: "/jobs",
-        permanent: true,
-      },
-      {
-        source: "/:locale(tr|en|ru|el|fa|de)/jobs/source-iskibris-:slug",
-        destination: "/:locale/jobs",
-        permanent: true,
-      },
-      {
-        source: "/:locale(tr|en|ru|el|fa|de)/jobs/source-isbulkibris-:slug",
-        destination: "/:locale/jobs",
+        source: "/sign-up",
+        destination: "/register",
         permanent: true,
       },
       {

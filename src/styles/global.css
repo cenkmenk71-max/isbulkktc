@@ -13678,7 +13678,7 @@ html[dir="rtl"] input[name="slug"] {
 }
 .job-detail-page {
   min-height: 70vh;
-  padding: clamp(112px, 12vw, 156px) 0 clamp(56px, 8vw, 100px);
+  padding: clamp(140px, 14vw, 190px) 0 clamp(64px, 8vw, 110px);
   background:
     radial-gradient(
       ellipse at 88% 0%,
@@ -13998,6 +13998,169 @@ html[dir="rtl"] input[name="slug"] {
   text-underline-offset: 3px;
 }
 
+/* Job detail: corporate header identity, bullet cards and apply-card refinements */
+.job-detail-identity {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.job-detail-badge {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-medium);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.job-detail-section--bullets {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.job-detail-section--bullets + .job-detail-section--bullets {
+  margin-top: 30px;
+  padding-top: 28px;
+  border-top: 1px solid rgba(34, 40, 39, 0.08);
+}
+.job-detail-list {
+  margin: 0;
+  padding-inline-start: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.job-detail-list-item {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-block-start: 10px;
+  padding-inline-end: 12px;
+  padding-block-end: 10px;
+  padding-inline-start: 26px;
+  border: 1px solid var(--border-medium);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.job-detail-list-item::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 8px;
+  top: 0.55em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+/* Application form: transparency box, direct contact, CV card, primary button */
+.job-application-transparency {
+  padding: 16px;
+  border: 1px solid var(--border-medium);
+  border-radius: 12px;
+  background: color-mix(
+    in srgb,
+    var(--surface-raised) 88%,
+    var(--color-shade-green-50)
+  );
+  margin-bottom: 18px;
+}
+.job-application-transparency-title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--green-deep);
+  letter-spacing: -0.02em;
+}
+.job-application-transparency-body {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.job-application-direct-contact {
+  margin: 14px 0 4px;
+}
+.job-application-direct-contact-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.job-application-direct-contact-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.job-application-direct-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 650;
+}
+.job-application-resume-select {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid var(--border-medium);
+  border-radius: 9px;
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-size: 12px;
+}
+.job-application-resume-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 16px;
+  border: 1px solid var(--border-medium);
+  border-radius: 12px;
+  background: var(--surface-raised);
+}
+.job-application-resume-card-title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.job-application-resume-card-body {
+  margin: 0 0 14px;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+}
+.job-application-resume-card-link {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 650;
+}
+.job-application-submit {
+  width: 100%;
+  justify-content: center;
+}
+
 @media (max-width: 1050px) {
   .jobs-filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -14065,7 +14228,7 @@ html[dir="rtl"] input[name="slug"] {
     font-size: 19px;
   }
   .job-detail-page {
-    padding-top: 104px;
+    padding-top: 120px;
   }
   .job-detail-header {
     padding: 25px 21px;

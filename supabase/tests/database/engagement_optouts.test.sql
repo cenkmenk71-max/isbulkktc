@@ -1,23 +1,28 @@
 begin;
 
--- İşBul 6 yeni platform şirketi ve ilanı izolasyonu (20261128150000 seed).
-delete from public.jobs where company_id in (
-  select id from public.companies where slug in (
-    'girne-otel-turizm-isletmesi',
-    'lefkosa-perakende-magazacilik',
-    'serena-group',
-    'kktc-restoran-kafe-isletmesi',
-    'gozel-beauty',
-    'benli-supermarket'
-  )
-);
-delete from public.companies where slug in (
-  'girne-otel-turizm-isletmesi',
-  'lefkosa-perakende-magazacilik',
-  'serena-group',
-  'kktc-restoran-kafe-isletmesi',
-  'gozel-beauty',
-  'benli-supermarket'
+-- The local stack seeds real profiles/users before this suite runs. Clear the
+-- FK-dependent seed rows first (application_events reference applications,
+-- application notifications reference notifications and applications,
+-- applications reference jobs, jobs reference companies, jobs reference
+-- profiles via created_by), then remove every profile this suite did not
+-- create so the digest-recipient count reflects only the four fixtures
+-- inserted below; the transaction rolls back.
+-- notification_email_outbox is cleared both before and after applications:
+-- before for seed rows, after because the applications delete trigger
+-- inserts new outbox rows referencing notifications.
+delete from public.notification_email_outbox;
+delete from public.application_events;
+delete from public.applications;
+delete from public.notification_email_outbox;
+delete from public.notifications;
+delete from public.jobs;
+delete from public.companies;
+delete from public.profiles
+where id not in (
+  '83000000-0000-4000-8000-000000000001',
+  '83000000-0000-4000-8000-000000000002',
+  '83000000-0000-4000-8000-000000000003',
+  '83000000-0000-4000-8000-000000000004'
 );
 
 select plan(13);

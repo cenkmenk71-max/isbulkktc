@@ -15,8 +15,9 @@ create index if not exists applications_resume_id_idx
 -- leaving both `apply_to_job(uuid, text, boolean)` and
 -- `apply_to_job(uuid, text, boolean, uuid)` and making 3-argument calls
 -- ambiguous ("function is not unique"). Drop the old signature first so only
--- the 4-argument form (4th param defaulted to null) remains; 3-argument calls
--- and the 2-argument SQL wrapper both resolve to it unambiguously.
+-- the 4-argument form remains; only `_resume_id` carries a default so 2-arg
+-- calls resolve to the pre-existing `apply_to_job(uuid, text default '')`
+-- wrapper without ambiguity.
 drop function if exists public.apply_to_job(uuid, text, boolean);
 
 create or replace function public.apply_to_job(
@@ -151,6 +152,8 @@ revoke all on function public.apply_to_job(uuid, text, boolean, uuid)
 revoke all on function public.apply_to_job(uuid, text)
   from public, anon, authenticated;
 grant execute on function public.apply_to_job(uuid, text, boolean, uuid)
+  to authenticated;
+grant execute on function public.apply_to_job(uuid, text)
   to authenticated;
 
 commit;

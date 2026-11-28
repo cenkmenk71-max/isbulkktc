@@ -1012,7 +1012,9 @@
     "companyLocation": "Местоположение компании",
     "companyWebsite": "Веб-сайт",
     "companyDirectoryLink": "Открыть в каталоге компаний",
-    "sourceAttributionLink": "Открыть на сайте публикации"
+    "sourceAttributionLink": "Открыть на сайте публикации",
+    "platformBadge": "Платформа İşBul",
+    "sourceBadge": "Внешний источник"
   },
   "JobApplication": {
     "title": "Откликнуться на вакансию",
@@ -1036,6 +1038,15 @@
     "ctaSignIn": "Войти",
     "ctaSignUp": "Создать бесплатный аккаунт",
     "ctaNote": "Уже есть аккаунт? Войдите одним кликом и откликнитесь.",
+    "transparencyTitle": "Прозрачность процесса отклика",
+    "transparencyBody": "Ваш отклик направляется напрямую в панель работодателя İşBul KKTC, и работодатель получает мгновенное уведомление; отслеживайте статус в личном кабинете кандидата.",
+    "directContactTitle": "Прямой контакт (быстрый доступ)",
+    "contactWhatsapp": "WhatsApp",
+    "contactCall": "Позвонить",
+    "contactEmail": "Эл. почта",
+    "contactWebsite": "Сайт",
+    "noResumeCardTitle": "Резюме не зарегистрировано",
+    "noResumeCardBody": "Сначала загрузите резюме для более быстрой оценки.",
     "messages": {
       "idle": "",
       "invalid": "Данные отклика некорректны. Проверьте их и повторите попытку.",
