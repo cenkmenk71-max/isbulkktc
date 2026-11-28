@@ -16433,9 +16433,10 @@ body:has(.pwa-update-toast) .support-widget {
     height: min(440px, 72vw);
     right: 3%;
   }
-  /* Consent kartı kenarlara taşmasın. */
+  /* Consent kartı kenarlara taşmasın (320px - 740px, RTL fa dahil). */
   section.consent-card {
-    inset-inline: 8px;
+    left: 8px;
+    right: 8px;
     max-width: calc(100vw - 16px);
     width: auto;
   }
@@ -16444,7 +16445,9 @@ body:has(.pwa-update-toast) .support-widget {
 /* Tüm ekranlarda yatay taşmayı kısıtlayan büyük kapsayıcılar. */
 .hero-section,
 .freelance-hero,
-.signature-banner {
+.signature-banner,
+.site-header,
+.page-container {
   overflow-x: clip;
 }
 
