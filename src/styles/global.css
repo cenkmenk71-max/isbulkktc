@@ -16363,6 +16363,8 @@ body:has(.pwa-update-toast) .support-widget {
   }
   /* Başlıkta öğeler 390px'e sığmalı: boşlukları ve doldurmaları daralt. */
   .header-inner {
+    max-width: 100%;
+    min-width: 0;
     gap: 8px;
   }
   .header-actions {
