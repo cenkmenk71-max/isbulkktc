@@ -12463,6 +12463,12 @@ main :where(p) {
   }
   .home-page .home-hero-rays {
     animation: none;
+    inset: 0 0 auto 0;
+    width: min(440px, 72vw);
+    height: min(440px, 72vw);
+    right: 3%;
+    bottom: 3%;
+    transform: none;
   }
 }
 
@@ -16365,19 +16371,16 @@ body:has(.pwa-update-toast) .support-widget {
   .header-inner {
     max-width: 100%;
     min-width: 0;
-    gap: 8px;
-  }
-  .header-actions {
     gap: 6px;
   }
   .header-brand {
-    padding-inline-start: 12px;
+    padding-inline-start: 8px;
   }
   .brand-lockup {
-    gap: 6px;
+    gap: 4px;
   }
   .brand-waveform {
-    width: 40px;
+    width: 36px;
     height: auto;
   }
   .brand-wordmark strong {
@@ -16390,11 +16393,17 @@ body:has(.pwa-update-toast) .support-widget {
     letter-spacing: 0.28em;
     padding-inline-start: 1px;
   }
+  .header-actions {
+    gap: 4px;
+  }
   .header-post {
     padding-inline: 8px;
     gap: 5px;
     font-size: 10px;
     min-width: 0;
+  }
+  .header-post.button {
+    padding-inline: 10px;
   }
   .mobile-menu-button {
     width: 44px;
@@ -16419,9 +16428,15 @@ body:has(.pwa-update-toast) .support-widget {
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
   }
-  /* Sürekli GPU ışın animasyonunu mobilde durdur (INP/CLS). */
+  /* Sürekli GPU ışın animasyonunu mobilde durdur ve boyutu kısıtla (INP/CLS, sıfır taşma). */
   .home-page .home-hero-rays {
     animation: none;
+    inset: 0 0 auto 0;
+    width: min(440px, 72vw);
+    height: min(440px, 72vw);
+    right: 3%;
+    bottom: 3%;
+    transform: none;
   }
   /* Gecikmeli kart giriş animasyonunu mobilde kaldır. */
   .job-card {
