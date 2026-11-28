@@ -129,7 +129,7 @@ select throws_ok(
 select throws_ok(
   $$select public.apply_to_job(
       '82000000-0000-4000-8000-000000000003',
-      "This resume belongs to someone else.",
+      'This resume belongs to someone else.',
       false,
       '90000000-0000-4000-8000-000000000003'
     )$$,
