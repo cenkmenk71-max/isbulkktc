@@ -7,6 +7,10 @@ begin;
 -- profiles via created_by), then remove every profile this suite did not
 -- create so the digest-recipient count reflects only the four fixtures
 -- inserted below; the transaction rolls back.
+-- notification_email_outbox is cleared both before and after applications:
+-- before for seed rows, after because the applications delete trigger
+-- inserts new outbox rows referencing notifications.
+delete from public.notification_email_outbox;
 delete from public.application_events;
 delete from public.applications;
 delete from public.notification_email_outbox;

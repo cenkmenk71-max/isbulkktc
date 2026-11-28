@@ -331,6 +331,7 @@ select is(
     'admin_upsert_faq_entry(_id uuid, _locale text, _question text, _answer text, _sort_order integer, _is_published boolean)',
     'admin_upsert_listing_plan(_code text, _audience text, _name text, _blurb text, _features text[], _color text, _listing_count integer, _price_1 integer, _price_7 integer, _price_30 integer, _is_active boolean, _sort_order integer)',
     'admin_upsert_site_content(_content_key text, _locale text, _document jsonb)',
+    'apply_to_job(_job_id uuid, _cover_letter text)',
     'apply_to_job(uuid, text)',
     'apply_to_job(_job_id uuid, _cover_letter text, _share_contact_email boolean, _resume_id uuid)',
     'archive_conversation(_conversation_id uuid)',
