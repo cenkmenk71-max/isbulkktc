@@ -4,6 +4,7 @@ begin;
 -- every committed job/source/company row so only this suite's fixtures remain;
 -- the transaction rolls back, leaving the seed intact for the E2E run that follows.
 delete from public.job_source_imports;
+delete from public.applications;
 delete from public.jobs;
 delete from public.companies;
 
