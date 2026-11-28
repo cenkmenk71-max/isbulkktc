@@ -16371,7 +16371,7 @@ body:has(.pwa-update-toast) .support-widget {
   .header-inner {
     max-width: 100%;
     min-width: 0;
-    gap: 6px;
+    gap: 4px;
   }
   .header-brand {
     padding-inline-start: 8px;
@@ -16380,11 +16380,11 @@ body:has(.pwa-update-toast) .support-widget {
     gap: 4px;
   }
   .brand-waveform {
-    width: 36px;
+    width: 34px;
     height: auto;
   }
   .brand-wordmark strong {
-    font-size: 20px;
+    font-size: 19px;
     line-height: 1;
   }
   .brand-wordmark small {
@@ -16394,16 +16394,16 @@ body:has(.pwa-update-toast) .support-widget {
     padding-inline-start: 1px;
   }
   .header-actions {
-    gap: 4px;
+    gap: 2px;
   }
   .header-post {
-    padding-inline: 8px;
-    gap: 5px;
+    padding-inline: 7px;
+    gap: 4px;
     font-size: 10px;
     min-width: 0;
   }
   .header-post.button {
-    padding-inline: 10px;
+    padding-inline: 9px;
   }
   .mobile-menu-button {
     width: 44px;
