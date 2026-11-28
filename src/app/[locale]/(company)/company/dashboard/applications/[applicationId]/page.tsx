@@ -7,6 +7,7 @@ import {
   getCompanyApplicationDetail,
   getCompanyApplications,
 } from "@/server/dal/jobs";
+import { getApplicationResume } from "@/server/dal/resumes";
 import { getEmployerWorkspace } from "@/server/dal/companies";
 import { requireAuthenticatedUser } from "@/server/dal/user";
 import { Link } from "@/i18n/navigation";
@@ -48,8 +49,9 @@ export default async function CompanyApplicationPage({
     notFound();
   }
 
-  const [application, copy] = await Promise.all([
+  const [application, resume, copy] = await Promise.all([
     getCompanyApplicationDetail(applicationId),
+    getApplicationResume(applicationId),
     getTranslations("CompanyManagement"),
   ]);
   if (!application) notFound();
@@ -102,6 +104,18 @@ export default async function CompanyApplicationPage({
           <section>
             <h2>{copy("coverLetterLabel")}</h2>
             <p>{application.cover_letter}</p>
+          </section>
+        ) : null}
+        {resume ? (
+          <section>
+            <h2>{copy("cvDownloadLabel")}</h2>
+            <a
+              href={`/api/resumes/${resume.id}/download`}
+              download={resume.original_filename}
+              className="button button-outline"
+            >
+              {copy("cvDownloadButton")}
+            </a>
           </section>
         ) : null}
         <section>

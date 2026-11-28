@@ -1024,6 +1024,10 @@
     "contactEmailLabel": "E-mail shared with the employer",
     "contactEmailUnverifiedNote": "This address is not verified yet.",
     "verifyEmailAction": "Resend the verification e-mail",
+    "resumeLabel": "CV / résumé (optional)",
+    "resumePlaceholder": "Choose a CV",
+    "resumeNoResumes": "You have no registered CV yet. Add one in your profile to attach it when applying.",
+    "resumeRegisterLink": "Go to profile",
     "submit": "Submit application",
     "submitting": "Submitting…",
     "loginAction": "Sign in",
@@ -1041,7 +1045,13 @@
       "contactEmailUnverified": "This e-mail address is not verified, so it cannot be shared. Open the verification link in your inbox and try again.",
       "duplicate": "You have already applied for this role.",
       "transitionFailed": "The application status could not be updated.",
-      "updated": "The application status was updated."
+      "updated": "The application status was updated.",
+      "confirmationTitle": "Application received",
+      "confirmationJob": "Application for “{jobTitle}” at {companyName}",
+      "confirmationId": "Application: {applicationId}",
+      "confirmationNext": "The employer will review your application. You will receive status updates by e-mail and push notification.",
+      "confirmationDashboard": "Track your applications",
+      "dashboardLink": "Go to my applications"
     }
   },
   "CompanyDirectory": {
@@ -1372,6 +1382,8 @@
     "candidateContactEmail": "Candidate contact email",
     "candidateContactNotShared": "The candidate chose not to share a contact email.",
     "candidateContactConsentNote": "The candidate agreed to share this email with the employer for this application.",
+    "cvDownloadLabel": "Candidate CV",
+    "cvDownloadButton": "Download CV",
     "applicationStatusLabel": "Application status",
     "updateApplicationStatus": "Update status",
     "updatingApplicationStatus": "Updating…",

@@ -103,6 +103,46 @@ test("application input rejects malformed ids and overlong cover letters", () =>
   );
 });
 
+test("application input accepts an optional resume id and defaults it to null", () => {
+  const base = {
+    jobId: "30000000-0000-4000-8000-000000000001",
+    coverLetter: "I am a good fit for this role.",
+  };
+
+  assert.equal(applyToJobSchema.safeParse({ ...base }).success, true);
+  assert.equal(
+    applyToJobSchema.parse({ ...base }).resumeId,
+    null,
+  );
+
+  assert.equal(
+    applyToJobSchema.safeParse({
+      ...base,
+      resumeId: "40000000-0000-4000-8000-000000000001",
+    }).success,
+    true,
+  );
+  assert.equal(
+    applyToJobSchema.parse({ ...base, resumeId: "40000000-0000-4000-8000-000000000001" }).resumeId,
+    "40000000-0000-4000-8000-000000000001",
+  );
+
+  assert.equal(
+    applyToJobSchema.safeParse({
+      ...base,
+      resumeId: "not-a-uuid",
+    }).success,
+    false,
+  );
+  assert.equal(
+    applyToJobSchema.safeParse({
+      ...base,
+      resumeId: "",
+    }).success,
+    false,
+  );
+});
+
 test("application transitions accept only named workflow states", () => {
   const applicationId = "40000000-0000-4000-8000-000000000001";
 

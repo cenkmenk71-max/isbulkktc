@@ -1024,6 +1024,10 @@
     "contactEmailLabel": "E-Mail für den Arbeitgeber",
     "contactEmailUnverifiedNote": "Diese Adresse ist noch nicht bestätigt.",
     "verifyEmailAction": "Bestätigungs-E-Mail erneut senden",
+    "resumeLabel": "CV / résumé (optional)",
+    "resumePlaceholder": "Choose a CV",
+    "resumeNoResumes": "You have no registered CV yet. Add one in your profile to attach it when applying.",
+    "resumeRegisterLink": "Go to profile",
     "submit": "Bewerbung senden",
     "submitting": "Wird gesendet…",
     "loginAction": "Anmelden",
@@ -1041,7 +1045,13 @@
       "contactEmailUnverified": "Diese E-Mail-Adresse ist nicht bestätigt und kann daher nicht geteilt werden. Öffnen Sie den Bestätigungslink in Ihrem Postfach und versuchen Sie es erneut.",
       "duplicate": "Sie haben sich bereits auf diese Stelle beworben.",
       "transitionFailed": "Der Bewerbungsstatus konnte nicht geändert werden.",
-      "updated": "Der Bewerbungsstatus wurde aktualisiert."
+      "updated": "Der Bewerbungsstatus wurde aktualisiert.",
+      "confirmationTitle": "Application received",
+      "confirmationJob": "Application for “{jobTitle}” at {companyName}",
+      "confirmationId": "Application: {applicationId}",
+      "confirmationNext": "The employer will review your application. You will receive status updates by e-mail and push notification.",
+      "confirmationDashboard": "Track your applications",
+      "dashboardLink": "Go to my applications"
     }
   },
   "CompanyDirectory": {
@@ -1351,6 +1361,8 @@
     "candidateContactEmail": "Kontakt-E-Mail des Bewerbers",
     "candidateContactNotShared": "Der Bewerber hat keine Kontakt-E-Mail freigegeben.",
     "candidateContactConsentNote": "Der Bewerber hat zugestimmt, diese E-Mail für diese Bewerbung mitzuteilen.",
+    "cvDownloadLabel": "Candidate CV",
+    "cvDownloadButton": "Download CV",
     "applicationStatusLabel": "Bewerbungsstatus",
     "updateApplicationStatus": "Status aktualisieren",
     "updatingApplicationStatus": "Wird aktualisiert…",

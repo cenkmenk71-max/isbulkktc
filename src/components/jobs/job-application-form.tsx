@@ -6,37 +6,37 @@ import { applyToJob } from "@/features/jobs/actions";
 import { Link } from "@/i18n/navigation";
 import { getLocalePrefix } from "@/i18n/routing";
 import { useTrackConversionOnSuccess } from "@/lib/analytics/conversion-client";
+import type { ResumeRow } from "@/features/candidates/resume-schemas";
 
 const initialState = { status: "idle", message: "idle" } as const;
 
 export function JobApplicationForm({
   jobId,
   slug,
+  jobTitle,
   contact,
+  resumes = [],
 }: {
   jobId: string;
   slug: string;
+  jobTitle?: string;
   contact: { email: string | null; emailConfirmed: boolean } | null;
+  resumes?: ResumeRow[];
 }) {
   const locale = useLocale();
   const t = useTranslations("JobApplication");
   const [state, action, pending] = useActionState(applyToJob, initialState);
 
-  // An application can only share a verified address, and the RPC refuses the
-  // whole submission otherwise. Naming the address — and blocking the consent
-  // box when it cannot be used — turns a generic failure into something the
-  // candidate can act on. A signed-out visitor has no address to show, so the
-  // box stays enabled and the submit explains the login requirement instead.
   const contactBlocked = Boolean(contact?.email && !contact.emailConfirmed);
+  const parsedResumes = (resumes ?? []).filter((resume) => resume.status === "parsed");
 
   useTrackConversionOnSuccess(state.status, "apply_to_job", { job_id: jobId });
 
   const prefix = getLocalePrefix(locale);
   const nextPath = `${prefix}/jobs/${slug}`;
-  const signInHref = `${prefix}/sign-in?next=${encodeURIComponent(nextPath)}`;
-  const signUpHref = `${prefix}/sign-up?next=${encodeURIComponent(nextPath)}`;
+  const signInHref = `${prefix}/login?next=${encodeURIComponent(nextPath)}`;
+  const signUpHref = `${prefix}/register?next=${encodeURIComponent(nextPath)}`;
 
-  // Unauthenticated visitor: show high-conversion CTA card instead of form
   if (!contact) {
     return (
       <section className="job-application-card job-application-card--cta" aria-labelledby="job-application-cta-title">
@@ -55,12 +55,28 @@ export function JobApplicationForm({
     );
   }
 
-  // Authenticated user: show the application form
   return (
     <section className="job-application-card" aria-labelledby="job-application-title">
-      <h2 id="job-application-title">{t("title")}</h2>
-      <p>{t("description")}</p>
-      <form action={action} className="job-application-form">
+      {state.status === "success" ? (
+        <article className="job-application-confirmation" aria-labelledby="job-application-confirmation-title">
+          <h2 id="job-application-confirmation-title">{t("messages.confirmationTitle")}</h2>
+          {jobTitle ? (
+            <p>{t("messages.confirmationJob", { jobTitle, companyName: "" })}</p>
+          ) : null}
+          {state.applicationId ? (
+            <p>{t("messages.confirmationId", { applicationId: state.applicationId })}</p>
+          ) : null}
+          <p>{t("messages.confirmationNext")}</p>
+          <p>
+            <Link className="button button-outline" href={`${prefix}/profile/dashboard#my-applications`}>
+              {t("messages.dashboardLink")}
+            </Link>
+          </p>
+        </article>
+      ) : null}
+      <form action={action} className="job-application-form" aria-labelledby="job-application-title">
+        <h2 id="job-application-title">{t("title")}</h2>
+        <p>{t("description")}</p>
         <input type="hidden" name="jobId" value={jobId} />
         <label htmlFor="job-cover-letter">{t("coverLetterLabel")}</label>
         <textarea
@@ -71,6 +87,22 @@ export function JobApplicationForm({
           placeholder={t("coverLetterPlaceholder")}
         />
         <p className="job-application-hint">{t("coverLetterHint")}</p>
+        {parsedResumes.length > 0 ? (
+          <>
+            <label htmlFor="job-resume">{t("resumeLabel")}</label>
+            <select id="job-resume" name="resumeId">
+              <option value="">{t("resumePlaceholder")}</option>
+              {parsedResumes.map((resume) => (
+                <option key={resume.id} value={resume.id}>
+                  {resume.original_filename}
+                </option>
+              ))}
+            </select>
+          </>
+        ) : null}
+        <p className="job-application-resume-hint">
+          {t("resumeNoResumes")} <Link href={`${prefix}/profile/dashboard`}>{t("resumeRegisterLink")}</Link>
+        </p>
         {contact?.email ? (
           <p className="job-application-contact-address">
             {t("contactEmailLabel")}: <strong>{contact.email}</strong>{" "}
@@ -98,10 +130,10 @@ export function JobApplicationForm({
           {pending ? t("submitting") : t("submit")}
         </button>
       </form>
-      {state.status !== "idle" ? (
+      {state.status === "error" ? (
         <p
-          className={`job-application-message job-application-message--${state.status}`}
-          role={state.status === "error" ? "alert" : "status"}
+          className="job-application-message job-application-message--error"
+          role="alert"
           aria-live="polite"
         >
           {t(`messages.${state.message}`)}

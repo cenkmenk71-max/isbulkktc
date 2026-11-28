@@ -1024,6 +1024,10 @@
     "contactEmailLabel": "Başvuruda paylaşılacak e-posta",
     "contactEmailUnverifiedNote": "Bu adres henüz doğrulanmadı.",
     "verifyEmailAction": "Doğrulama e-postasını yeniden gönder",
+    "resumeLabel": "CV / özgeçmiş (isteğe bağlı)",
+    "resumePlaceholder": "Bir CV seçin",
+    "resumeNoResumes": "Henüz kayıtlı CV'niz yok. Başvuru yaparken eklemek için profilinize bir CV ekleyin.",
+    "resumeRegisterLink": "Profilye git",
     "submit": "Başvuruyu gönder",
     "submitting": "Gönderiliyor…",
     "loginAction": "Giriş yapın",
@@ -1041,7 +1045,13 @@
       "contactEmailUnverified": "Bu e-posta adresi doğrulanmadığı için paylaşılamadı. Gelen kutunuzdaki doğrulama bağlantısını açıp tekrar deneyin.",
       "duplicate": "Bu ilana daha önce başvurdunuz.",
       "transitionFailed": "Başvuru durumu güncellenemedi.",
-      "updated": "Başvuru durumu güncellendi."
+      "updated": "Başvuru durumu güncellendi.",
+      "confirmationTitle": "Başvurunuz alındı",
+      "confirmationJob": "{companyName}’deki “{jobTitle}” pozisyonuna başvurunuz alındı.",
+      "confirmationId": "Başvuru: {applicationId}",
+      "confirmationNext": "İşveren başvurunuzu inceleyecek. Durum güncellemelerini e-posta ve push bildirimle alacaksınız.",
+      "confirmationDashboard": "Başvurularınızı takip edin",
+      "dashboardLink": "Başvurularıma git"
     }
   },
   "CompanyDirectory": {
@@ -1351,6 +1361,8 @@
     "candidateContactEmail": "Adayın iletişim e-postası",
     "candidateContactNotShared": "Aday iletişim e-postasını paylaşmayı seçmedi.",
     "candidateContactConsentNote": "Aday bu e-posta adresini başvurusu kapsamında işverenle paylaşmayı onayladı.",
+    "cvDownloadLabel": "Aday CV'si",
+    "cvDownloadButton": "CV'yi indir",
     "applicationStatusLabel": "Başvuru durumu",
     "updateApplicationStatus": "Durumu güncelle",
     "updatingApplicationStatus": "Güncelleniyor…",

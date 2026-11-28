@@ -1024,6 +1024,10 @@
     "contactEmailLabel": "Эл. почта для работодателя",
     "contactEmailUnverifiedNote": "Этот адрес ещё не подтверждён.",
     "verifyEmailAction": "Отправить письмо с подтверждением снова",
+    "resumeLabel": "CV / résumé (optional)",
+    "resumePlaceholder": "Choose a CV",
+    "resumeNoResumes": "You have no registered CV yet. Add one in your profile to attach it when applying.",
+    "resumeRegisterLink": "Go to profile",
     "submit": "Отправить отклик",
     "submitting": "Отправка…",
     "loginAction": "Войти",
@@ -1041,7 +1045,13 @@
       "contactEmailUnverified": "Этот адрес эл. почты не подтверждён, поэтому им нельзя поделиться. Откройте ссылку подтверждения в почте и повторите попытку.",
       "duplicate": "Вы уже откликнулись на эту вакансию.",
       "transitionFailed": "Не удалось изменить статус отклика.",
-      "updated": "Статус отклика обновлён."
+      "updated": "Статус отклика обновлён.",
+      "confirmationTitle": "Application received",
+      "confirmationJob": "Application for “{jobTitle}” at {companyName}",
+      "confirmationId": "Application: {applicationId}",
+      "confirmationNext": "The employer will review your application. You will receive status updates by e-mail and push notification.",
+      "confirmationDashboard": "Track your applications",
+      "dashboardLink": "Go to my applications"
     }
   },
   "CompanyDirectory": {
@@ -1372,6 +1382,8 @@
     "candidateContactEmail": "Электронная почта кандидата",
     "candidateContactNotShared": "Кандидат не разрешил показывать контактную почту.",
     "candidateContactConsentNote": "Кандидат согласился поделиться этим адресом для данного отклика.",
+    "cvDownloadLabel": "Candidate CV",
+    "cvDownloadButton": "Download CV",
     "applicationStatusLabel": "Статус отклика",
     "updateApplicationStatus": "Обновить статус",
     "updatingApplicationStatus": "Обновление…",
