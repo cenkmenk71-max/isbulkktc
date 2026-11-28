@@ -36,6 +36,7 @@ import {
 } from "@/components/home/sector-card";
 import { SectorDirectory } from "@/components/home/sector-directory";
 import { SectorExplorer } from "@/components/home/sector-explorer";
+import { HeroCycleControl } from "@/components/home/hero-cycle-control";
 import type { AppLocale } from "@/i18n/routing";
 
 type SectorDefinition = {
@@ -245,43 +246,45 @@ export async function HomeExperience({
 
   return (
     <div className="home-page">
-      <section id="top" className="hero-section" aria-labelledby="home-title">
-        <div className="hero-photo" aria-hidden="true">
-          {homeHeroSlides.map((slide) => (
-            <Image
-              key={slide.district}
-              src={slide.src}
-              alt=""
-              fill
-              loading={slide.district === "girne" || slide.district === "gazimagusa" ? "eager" : "lazy"}
-              fetchPriority={slide.district === "girne" ? "high" : "low"}
-              sizes="100vw"
-              quality={90}
-              className="hero-photo-image home-hero-slide"
-              data-home-hero-photo={slide.district}
-              data-home-hero-source={slide.asset}
-            />
-          ))}
-        </div>
-        <div className="hero-light-layer hero-light-layer--readability" aria-hidden="true" />
-        <div className="hero-light-layer hero-light-layer--warmth" aria-hidden="true" />
-        <div className="hero-light-layer hero-light-layer--vignette" aria-hidden="true" />
-        <div className="home-hero-rays" aria-hidden="true" />
-        <div className="page-container hero-layout">
-          <div className="hero-copy">
-            <div className="eyebrow hero-eyebrow">
-              <span className="hero-eyebrow-dot" aria-hidden="true" />
-              <span>{copy("eyebrow")}</span>
-            </div>
-            <h1 id="home-title" className="hero-title-source-copy">
-              {copy.rich("title", {
-                line: (chunks) => <span className="hero-title-line">{chunks}</span>,
-                accent: (chunks) => <span className="hero-title-accent">{chunks}</span>,
-              })}
-            </h1>
+      <HeroCycleControl>
+        <section id="top" className="hero-section" aria-labelledby="home-title">
+          <div className="hero-photo" aria-hidden="true">
+            {homeHeroSlides.map((slide) => (
+              <Image
+                key={slide.district}
+                src={slide.src}
+                alt=""
+                fill
+                loading={slide.district === "girne" || slide.district === "gazimagusa" ? "eager" : "lazy"}
+                fetchPriority={slide.district === "girne" ? "high" : "low"}
+                sizes="100vw"
+                quality={90}
+                className="hero-photo-image home-hero-slide"
+                data-home-hero-photo={slide.district}
+                data-home-hero-source={slide.asset}
+              />
+            ))}
           </div>
-        </div>
-      </section>
+          <div className="hero-light-layer hero-light-layer--readability" aria-hidden="true" />
+          <div className="hero-light-layer hero-light-layer--warmth" aria-hidden="true" />
+          <div className="hero-light-layer hero-light-layer--vignette" aria-hidden="true" />
+          <div className="home-hero-rays" aria-hidden="true" />
+          <div className="page-container hero-layout">
+            <div className="hero-copy">
+              <div className="eyebrow hero-eyebrow">
+                <span className="hero-eyebrow-dot" aria-hidden="true" />
+                <span>{copy("eyebrow")}</span>
+              </div>
+              <h1 id="home-title" className="hero-title-source-copy">
+                {copy.rich("title", {
+                  line: (chunks) => <span className="hero-title-line">{chunks}</span>,
+                  accent: (chunks) => <span className="hero-title-accent">{chunks}</span>,
+                })}
+              </h1>
+            </div>
+          </div>
+        </section>
+      </HeroCycleControl>
 
       <HomeJobSearch locale={locale} {...jobSearch} />
 

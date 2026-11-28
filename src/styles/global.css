@@ -79,6 +79,7 @@
   --type-supporting: 0.875rem;
   --type-label: 0.75rem;
   --type-caption: 0.6875rem;
+  --text-base: 1rem;
   --leading-copy: 1.72;
   --tracking-display: -0.045em;
   --radius-sm: 7px;
@@ -16315,5 +16316,103 @@ body:has(.pwa-update-toast) .support-widget {
   .package-buy-button .button-icon {
     width: 18px;
     height: 18px;
+  }
+}
+
+/* Hero cycle pause control: toggled by HeroCycleControl on touch and while the
+   tab is hidden. Specificity ties the existing per-slide rule, so this source
+   order wins when the attribute is present. */
+.hero-cycle-control[data-cycle-paused] .home-hero-slide,
+.hero-cycle-control[data-cycle-paused] .home-hero-rays {
+  animation-play-state: paused;
+}
+
+/* 320px dar ekranlar (ve RTL fa): kaydı/ilan ver linki zaten mobil menüde. */
+@media (max-width: 359px) {
+  .header-post {
+    display: none;
+  }
+  .header-inner,
+  .header-actions {
+    max-width: 100%;
+    min-width: 0;
+    gap: 8px;
+  }
+  section.consent-card {
+    inset-inline: 8px;
+    max-width: calc(100vw - 16px);
+    width: auto;
+  }
+}
+
+/* 360px - 740px: header-post görünür, mobil menü butonu sadece bu aralıkta
+   grid, dokunma hedefleri minimum 44x44. */
+@media (min-width: 360px) and (max-width: 740px) {
+  .header-post {
+    display: inline-flex;
+  }
+  .mobile-menu-button {
+    display: grid;
+  }
+  .language-switch,
+  .mobile-nav a,
+  .mobile-nav button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Tüm ekranlarda yatay taşmayı kısıtlayan büyük kapsayıcılar. */
+.hero-section,
+.freelance-hero,
+.signature-banner {
+  overflow-x: clip;
+}
+
+.company-directory-category,
+.company-directory-hero {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 740px) {
+  /* iOS Safari: input/select/textarea altındaki 16px eşik, otomatik zoom'u
+     engeller (hero arama, iş arama, /jobs filtreleri ve tüm form alanları). */
+  input,
+  select,
+  textarea {
+    font-size: var(--text-base);
+  }
+  /* Ağır backdrop-filter katlamalarını mobilde hafiflet. */
+  .site-header,
+  .home-page .site-header,
+  .mobile-nav {
+    backdrop-filter: blur(8px) saturate(110%);
+    -webkit-backdrop-filter: blur(8px) saturate(110%);
+  }
+  .hero-eyebrow {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  /* Sürekli GPU ışın animasyonunu mobilde durdur (INP/CLS). */
+  .home-page .home-hero-rays {
+    animation: none;
+  }
+  /* Gecikmeli kart giriş animasyonunu mobilde kaldır. */
+  .job-card {
+    animation: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .company-directory-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .footer-links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .candidate-resume-file {
+    white-space: normal;
   }
 }
