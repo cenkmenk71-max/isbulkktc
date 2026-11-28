@@ -489,5 +489,4 @@ revoke all on function public.transition_application(uuid, text) from public, an
 
 grant execute on function public.submit_job_for_review(uuid) to authenticated;
 grant execute on function public.review_job(uuid, text, text) to authenticated;
-grant execute on function public.apply_to_job(uuid, text) to authenticated;
 grant execute on function public.transition_application(uuid, text) to authenticated;

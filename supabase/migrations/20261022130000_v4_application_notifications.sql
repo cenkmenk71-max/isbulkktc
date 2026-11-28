@@ -730,8 +730,6 @@ revoke all on function public.claim_notification_email_outbox(integer)
   from public, anon, authenticated;
 revoke all on function public.finish_notification_email(uuid, text, text)
   from public, anon, authenticated;
-grant execute on function public.apply_to_job(uuid, text, boolean) to authenticated;
-grant execute on function public.apply_to_job(uuid, text) to authenticated;
 grant execute on function public.mark_application_viewed(uuid) to authenticated;
 grant execute on function public.get_application_contact_email(uuid) to authenticated;
 grant execute on function public.list_my_applications() to authenticated;

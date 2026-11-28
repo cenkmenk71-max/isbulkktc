@@ -152,7 +152,5 @@ revoke all on function public.apply_to_job(uuid, text)
   from public, anon, authenticated;
 grant execute on function public.apply_to_job(uuid, text, boolean, uuid)
   to authenticated;
-grant execute on function public.apply_to_job(uuid, text)
-  to authenticated;
 
 commit;
