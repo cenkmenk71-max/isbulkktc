@@ -79,6 +79,7 @@
   --type-supporting: 0.875rem;
   --type-label: 0.75rem;
   --type-caption: 0.6875rem;
+  --text-base: 1rem;
   --leading-copy: 1.72;
   --tracking-display: -0.045em;
   --radius-sm: 7px;
@@ -4831,7 +4832,7 @@ a {
   }
   .editorial-page-scene-copy {
     left: 7.5%;
-    bottom: 140px;
+    bottom: 175px;
     width: 85%;
     padding: 16px;
     border-radius: 13px;
@@ -12462,6 +12463,12 @@ main :where(p) {
   }
   .home-page .home-hero-rays {
     animation: none;
+    inset: 0 0 auto 0;
+    width: min(440px, 72vw);
+    height: min(440px, 72vw);
+    right: 3%;
+    bottom: 3%;
+    transform: none;
   }
 }
 
@@ -16315,5 +16322,199 @@ body:has(.pwa-update-toast) .support-widget {
   .package-buy-button .button-icon {
     width: 18px;
     height: 18px;
+  }
+}
+
+/* Hero cycle pause control: toggled by HeroCycleControl on touch and while the
+   tab is hidden. Specificity ties the existing per-slide rule, so this source
+   order wins when the attribute is present. */
+.hero-cycle-control[data-cycle-paused] .home-hero-slide,
+.hero-cycle-control[data-cycle-paused] .home-hero-rays {
+  animation-play-state: paused;
+}
+
+/* 320px dar ekranlar (ve RTL fa): kaydı/ilan ver linki zaten mobil menüde. */
+@media (max-width: 359px) {
+  .header-post {
+    display: none;
+  }
+  .header-inner,
+  .header-actions {
+    max-width: 100%;
+    min-width: 0;
+    gap: 8px;
+  }
+  section.consent-card {
+    inset-inline: 8px;
+    max-width: calc(100vw - 16px);
+    width: auto;
+  }
+}
+
+/* 360px - 740px: header-post görünür, mobil menü butonu sadece bu aralıkta
+   grid, dokunma hedefleri minimum 44x44. Tüm başlık ve hero katmanları 390px
+   görünüm alanına sığmalı, sıfır yatay taşma. */
+@media (min-width: 360px) and (max-width: 740px) {
+  .header-post {
+    display: inline-flex;
+  }
+  .mobile-menu-button {
+    display: grid;
+  }
+  .language-switch,
+  .mobile-nav a,
+  .mobile-nav button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* Başlıkta öğeler 390px'e sığmalı: boşlukları ve doldurmaları daralt. */
+  .header-inner {
+    max-width: 100%;
+    min-width: 0;
+    gap: 4px;
+    overflow-x: hidden;
+  }
+  .header-brand {
+    padding-inline-start: 8px;
+  }
+  .brand-lockup {
+    gap: 4px;
+  }
+  .brand-waveform {
+    width: 34px;
+    height: auto;
+  }
+  .brand-wordmark strong {
+    font-size: 19px;
+    line-height: 1;
+  }
+  .brand-wordmark small {
+    font-size: 10px;
+    line-height: 1;
+    letter-spacing: 0.28em;
+    padding-inline-start: 1px;
+  }
+  .header-actions {
+    gap: 2px;
+  }
+  .header-post {
+    padding-inline: 7px;
+    gap: 4px;
+    font-size: 10px;
+    min-width: 0;
+  }
+  .header-post.button {
+    padding-inline: 9px;
+  }
+  .mobile-menu-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* iOS zoom önlemesi: form alanları 16px. */
+  input,
+  select,
+  textarea {
+    font-size: var(--text-base);
+  }
+  /* Ağır backdrop-filter katlamalarını mobilde hafiflet. */
+  .site-header,
+  .home-page .site-header,
+  .mobile-nav {
+    backdrop-filter: blur(8px) saturate(110%);
+    -webkit-backdrop-filter: blur(8px) saturate(110%);
+  }
+  .hero-eyebrow {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  /* Sürekli GPU ışın animasyonunu mobilde durdur ve boyutu kısıtla (INP/CLS, sıfır taşma). */
+  .home-page .home-hero-rays {
+    animation: none;
+    inset: 0 0 auto 0;
+    width: min(440px, 72vw);
+    height: min(440px, 72vw);
+    right: 3%;
+    bottom: 3%;
+    transform: none;
+  }
+  /* Gecikmeli kart giriş animasyonunu mobilde kaldır. */
+  .job-card {
+    animation: none;
+  }
+  /* Freelance hero ışın katmanı 390px'ten büyük olmasın. */
+  .freelance-hero-glow {
+    width: min(440px, 72vw);
+    height: min(440px, 72vw);
+    right: 3%;
+  }
+  /* Consent kartı kenarlara taşmasın (320px - 740px, RTL fa dahil). */
+  section.consent-card {
+    left: 8px;
+    right: 8px;
+    max-width: calc(100vw - 16px);
+    width: auto;
+  }
+}
+
+/* Tüm ekranlarda yatay taşmayı kısıtlayan büyük kapsayıcılar. */
+.hero-section,
+.freelance-hero,
+.signature-banner {
+  overflow-x: clip;
+}
+
+.company-directory-category,
+.company-directory-hero {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 740px) {
+  /* iOS Safari: input/select/textarea altındaki 16px eşik, otomatik zoom'u
+     engeller (hero arama, iş arama, /jobs filtreleri ve tüm form alanları). */
+  input,
+  select,
+  textarea {
+    font-size: var(--text-base);
+  }
+  /* Ağır backdrop-filter katlamalarını mobilde hafiflet. */
+  .site-header,
+  .home-page .site-header,
+  .mobile-nav {
+    backdrop-filter: blur(8px) saturate(110%);
+    -webkit-backdrop-filter: blur(8px) saturate(110%);
+  }
+  .hero-eyebrow {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  /* Sürekli GPU ışın animasyonunu mobilde durdur (INP/CLS). */
+  .home-page .home-hero-rays {
+    animation: none;
+  }
+  /* Gecikmeli kart giriş animasyonunu mobilde kaldır. */
+  .job-card {
+    animation: none;
+  }
+  /* Freelance hero ışın katmanı 390px'ten büyük olmasın. */
+  .freelance-hero-glow {
+    width: min(440px, 72vw);
+    height: min(440px, 72vw);
+    right: 3%;
+  }
+}
+
+@media (max-width: 480px) {
+  .company-directory-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .footer-links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .candidate-resume-file {
+    white-space: normal;
   }
 }

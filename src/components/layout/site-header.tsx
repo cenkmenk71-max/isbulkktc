@@ -17,6 +17,7 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false)
   const [session, setSession] = useState<HeaderSessionState>({ signedIn: false })
   const menuButtonRef = useRef<HTMLButtonElement | null>(null)
+  const navRef = useRef<HTMLDivElement | null>(null)
   const locale = useLocale()
   const pathname = usePathname()
   const navCopy = useTranslations('Nav')
@@ -34,6 +35,23 @@ export function SiteHeader() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open])
+
+  // Mobil menü açıkken menü butonu ve menü kapsayıcısı dışına dokunulduğunda
+  // (pointerdown / mousedown) menüyü kapat. Menü butonuna yapılan tıklama
+  // çakışmasın: buton hedefi erken dönülüp bileşenin kendi onClick'i toggle
+  // işini görür.
+  useEffect(() => {
+    if (!open) return
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null
+      if (!target) return
+      if (menuButtonRef.current?.contains(target)) return
+      if (navRef.current?.contains(target)) return
+      setOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [open])
 
   // The layout is shared with statically prerendered public routes, so the
@@ -135,6 +153,7 @@ export function SiteHeader() {
           </div>
         </div>
         <nav
+          ref={navRef}
           id="mobile-primary-navigation"
           className="mobile-nav page-container"
           aria-label={navCopy('primaryNavigation')}
