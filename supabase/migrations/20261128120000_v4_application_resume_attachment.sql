@@ -4,9 +4,20 @@ alter table public.applications
   add column if not exists resume_id uuid
     references public.resumes (id) on delete set null;
 
+-- Non-partial index: the unindexed_foreign_keys pgTAP ratchet excludes partial
+-- indexes (`indpred is null`), so the FK on resume_id needs a plain leading
+-- column index to count as covered.
 create index if not exists applications_resume_id_idx
-  on public.applications (resume_id)
-  where resume_id is not null;
+  on public.applications (resume_id);
+
+-- Replace the 3-argument apply_to_job in place. `CREATE OR REPLACE` with a
+-- different argument list would add a second overload instead of replacing,
+-- leaving both `apply_to_job(uuid, text, boolean)` and
+-- `apply_to_job(uuid, text, boolean, uuid)` and making 3-argument calls
+-- ambiguous ("function is not unique"). Drop the old signature first so only
+-- the 4-argument form (4th param defaulted to null) remains; 3-argument calls
+-- and the 2-argument SQL wrapper both resolve to it unambiguously.
+drop function if exists public.apply_to_job(uuid, text, boolean);
 
 create or replace function public.apply_to_job(
   _job_id uuid,
