@@ -1,8 +1,9 @@
 begin;
 
 -- The local stack may seed pending notifications before this suite runs. Clear
--- the notification table this suite uses so the claim count reflects only the
--- fixture inserted below; the transaction rolls back.
+-- the notification table and its child outbox rows so the claim count
+-- reflects only the fixture inserted below; the transaction rolls back.
+delete from public.notification_email_outbox;
 delete from public.notifications;
 
 select plan(63);

@@ -1,10 +1,12 @@
 begin;
 
 -- The local stack seeds real profiles/users before this suite runs. Clear the
--- FK-dependent seed rows first (applications reference jobs, jobs reference
--- companies, jobs reference profiles via created_by), then remove every
--- profile this suite did not create so the digest-recipient count reflects
--- only the four fixtures inserted below; the transaction rolls back.
+-- FK-dependent seed rows first (application_events reference applications,
+-- applications reference jobs, jobs reference companies, jobs reference
+-- profiles via created_by), then remove every profile this suite did not
+-- create so the digest-recipient count reflects only the four fixtures
+-- inserted below; the transaction rolls back.
+delete from public.application_events;
 delete from public.applications;
 delete from public.jobs;
 delete from public.companies;
