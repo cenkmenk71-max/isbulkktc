@@ -1,23 +1,14 @@
 begin;
 
--- İşBul 6 yeni platform şirketi ve ilanı izolasyonu (20261128150000 seed).
-delete from public.jobs where company_id in (
-  select id from public.companies where slug in (
-    'girne-otel-turizm-isletmesi',
-    'lefkosa-perakende-magazacilik',
-    'serena-group',
-    'kktc-restoran-kafe-isletmesi',
-    'gozel-beauty',
-    'benli-supermarket'
-  )
-);
-delete from public.companies where slug in (
-  'girne-otel-turizm-isletmesi',
-  'lefkosa-perakende-magazacilik',
-  'serena-group',
-  'kktc-restoran-kafe-isletmesi',
-  'gozel-beauty',
-  'benli-supermarket'
+-- The local stack seeds real profiles/users before this suite runs. Remove
+-- every profile this suite did not create so the digest-recipient count
+-- reflects only the four fixtures inserted below; the transaction rolls back.
+delete from public.profiles
+where id not in (
+  '83000000-0000-4000-8000-000000000001',
+  '83000000-0000-4000-8000-000000000002',
+  '83000000-0000-4000-8000-000000000003',
+  '83000000-0000-4000-8000-000000000004'
 );
 
 select plan(13);
