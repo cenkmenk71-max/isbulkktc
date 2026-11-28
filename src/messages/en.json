@@ -1012,7 +1012,9 @@
     "companyLocation": "Company location",
     "companyWebsite": "Website",
     "companyDirectoryLink": "View in company directory",
-    "sourceAttributionLink": "Open on the publishing site"
+    "sourceAttributionLink": "Open on the publishing site",
+    "platformBadge": "İşBul platform",
+    "sourceBadge": "External source"
   },
   "JobApplication": {
     "title": "Apply for this role",
@@ -1036,6 +1038,15 @@
     "ctaSignIn": "Sign in",
     "ctaSignUp": "Create free account",
     "ctaNote": "Already have an account? Sign in with one click and apply.",
+    "transparencyTitle": "Application Process Transparency",
+    "transparencyBody": "Your application is sent directly to the employer's İşBul KKTC panel and the employer is notified instantly; you can track its status from your Candidate Panel.",
+    "directContactTitle": "Direct Contact (Quick Access)",
+    "contactWhatsapp": "WhatsApp",
+    "contactCall": "Call",
+    "contactEmail": "E-mail",
+    "contactWebsite": "Website",
+    "noResumeCardTitle": "No registered CV",
+    "noResumeCardBody": "Upload your CV first for faster evaluation.",
     "messages": {
       "idle": "",
       "invalid": "The application details are invalid. Review them and try again.",

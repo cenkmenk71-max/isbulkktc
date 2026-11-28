@@ -1012,7 +1012,9 @@
     "companyLocation": "Şirket konumu",
     "companyWebsite": "Web sitesi",
     "companyDirectoryLink": "Şirket rehberinde görüntüle",
-    "sourceAttributionLink": "İlanı yayımlayan sitede aç"
+    "sourceAttributionLink": "İlanı yayımlayan sitede aç",
+    "platformBadge": "İşBul platformu",
+    "sourceBadge": "Harici kaynak"
   },
   "JobApplication": {
     "title": "Bu ilana başvurun",
@@ -1036,6 +1038,15 @@
     "ctaSignIn": "Giriş yap",
     "ctaSignUp": "Ücretsiz kayıt ol",
     "ctaNote": "Zaten hesabınız var mı? Tek tıkla giriş yapıp başvurun.",
+    "transparencyTitle": "Başvuru Süreci Şeffaflığı",
+    "transparencyBody": "Başvurunuz doğrudan işverenin İşBul KKTC paneline iletilir ve işverene anlık bildirim gönderilir; durumunu Aday Panelinizden takip edebilirsiniz.",
+    "directContactTitle": "Doğrudan İletişim (Hızlı Ulaşım)",
+    "contactWhatsapp": "WhatsApp",
+    "contactCall": "Ara",
+    "contactEmail": "E-posta",
+    "contactWebsite": "Web sitesi",
+    "noResumeCardTitle": "Kayıtlı PDF CV'niz bulunmuyor",
+    "noResumeCardBody": "Daha hızlı değerlendirilmek için önce CV'nizi yükleyin.",
     "messages": {
       "idle": "",
       "invalid": "Başvuru bilgileri geçerli değil. Lütfen kontrol edip tekrar deneyin.",

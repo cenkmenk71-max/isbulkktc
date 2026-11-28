@@ -1012,7 +1012,9 @@
     "companyLocation": "Unternehmensstandort",
     "companyWebsite": "Website",
     "companyDirectoryLink": "Im Unternehmensverzeichnis ansehen",
-    "sourceAttributionLink": "Auf der Veröffentlichungswebsite öffnen"
+    "sourceAttributionLink": "Auf der Veröffentlichungswebsite öffnen",
+    "platformBadge": "İşBul Plattform",
+    "sourceBadge": "Externe Quelle"
   },
   "JobApplication": {
     "title": "Auf diese Stelle bewerben",
@@ -1036,6 +1038,15 @@
     "ctaSignIn": "Anmelden",
     "ctaSignUp": "Kostenloses Konto erstellen",
     "ctaNote": "Haben Sie bereits ein Konto? Mit einem Klick anmelden und bewerben.",
+    "transparencyTitle": "Transparenz des Bewerbungsprozesses",
+    "transparencyBody": "Ihre Bewerbung wird direkt an das İşBul KKTC-Panel des Arbeitgebers übermittelt und der Arbeitgeber wird sofort benachrichtigt; den Status können Sie in Ihrem Bewerberpanel verfolgen.",
+    "directContactTitle": "Direkter Kontakt (Schnellzugriff)",
+    "contactWhatsapp": "WhatsApp",
+    "contactCall": "Anrufen",
+    "contactEmail": "E-Mail",
+    "contactWebsite": "Website",
+    "noResumeCardTitle": "Kein registrierter CV",
+    "noResumeCardBody": "Laden Sie zuerst Ihren CV hoch, um schneller ausgewertet zu werden.",
     "messages": {
       "idle": "",
       "invalid": "Die Bewerbungsangaben sind ungültig. Bitte prüfen Sie sie und versuchen Sie es erneut.",
