@@ -16372,6 +16372,7 @@ body:has(.pwa-update-toast) .support-widget {
     max-width: 100%;
     min-width: 0;
     gap: 4px;
+    overflow-x: hidden;
   }
   .header-brand {
     padding-inline-start: 8px;
