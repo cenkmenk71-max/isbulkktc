@@ -8,9 +8,9 @@ begin;
 -- create so the digest-recipient count reflects only the four fixtures
 -- inserted below; the transaction rolls back.
 delete from public.application_events;
+delete from public.applications;
 delete from public.notification_email_outbox;
 delete from public.notifications;
-delete from public.applications;
 delete from public.jobs;
 delete from public.companies;
 delete from public.profiles
