@@ -16445,9 +16445,7 @@ body:has(.pwa-update-toast) .support-widget {
 /* Tüm ekranlarda yatay taşmayı kısıtlayan büyük kapsayıcılar. */
 .hero-section,
 .freelance-hero,
-.signature-banner,
-.site-header,
-.page-container {
+.signature-banner {
   overflow-x: clip;
 }
 
